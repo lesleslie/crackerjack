@@ -8,7 +8,6 @@ from collections.abc import Iterable
 from datetime import datetime
 from typing import Any
 
-from acb.adapters import import_adapter
 from acb.depends import depends
 from sqlalchemy import desc
 from sqlmodel import select
@@ -26,9 +25,13 @@ LOGGER = logging.getLogger(__name__)
 class QualityBaselineRepository:
     """Repository for reading and writing quality baseline records."""
 
-    def __init__(self, sql_adapter: Any | None = None) -> None:
-        SQLAdapter = import_adapter("sql")
-        self._sql = sql_adapter or depends.get(SQLAdapter)
+    def __init__(self, sql_adapter: Any) -> None:
+        """Initialize repository with SQL adapter.
+
+        Args:
+            sql_adapter: SQL adapter instance (required - must be passed from DI)
+        """
+        self._sql = sql_adapter
         self._initialized = False
         self._init_lock = asyncio.Lock()
 
@@ -119,9 +122,13 @@ class QualityBaselineRepository:
 class HealthMetricsRepository:
     """Repository for storing project health metrics."""
 
-    def __init__(self, sql_adapter: Any | None = None) -> None:
-        SQLAdapter = import_adapter("sql")
-        self._sql = sql_adapter or depends.get(SQLAdapter)
+    def __init__(self, sql_adapter: Any) -> None:
+        """Initialize repository with SQL adapter.
+
+        Args:
+            sql_adapter: SQL adapter instance (required - must be passed from DI)
+        """
+        self._sql = sql_adapter
         self._initialized = False
         self._init_lock = asyncio.Lock()
 
@@ -188,9 +195,13 @@ class HealthMetricsRepository:
 class DependencyMonitorRepository:
     """Repository for dependency monitor cache state."""
 
-    def __init__(self, sql_adapter: Any | None = None) -> None:
-        SQLAdapter = import_adapter("sql")
-        self._sql = sql_adapter or depends.get(SQLAdapter)
+    def __init__(self, sql_adapter: Any) -> None:
+        """Initialize repository with SQL adapter.
+
+        Args:
+            sql_adapter: SQL adapter instance (required - must be passed from DI)
+        """
+        self._sql = sql_adapter
         self._initialized = False
         self._init_lock = asyncio.Lock()
 

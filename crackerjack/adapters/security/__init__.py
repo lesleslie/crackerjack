@@ -3,6 +3,7 @@
 Adapters:
 - bandit: Python security vulnerability scanner
 - gitleaks: Secret and credential detection in git history
+- pyscn: Python static code security analyzer (experimental)
 """
 
 # ACB will auto-discover these adapters via depends.set() in module files

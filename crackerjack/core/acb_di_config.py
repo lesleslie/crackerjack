@@ -28,7 +28,6 @@ Usage:
 import typing as t
 from pathlib import Path
 
-from acb.adapters import import_adapter
 from acb.depends import depends
 from rich.console import Console
 
@@ -200,10 +199,13 @@ def configure_acb_dependencies(
     os.environ.setdefault("SQL_DATABASE_URL", default_db_url)
     os.environ.setdefault("DATABASE_URL", default_db_url)
 
-    SQLAdapter = import_adapter("sql")
+    # Import SQLAdapter directly instead of using import_adapter() to avoid async event loop issues
+    from acb.adapters.sql.sqlite import SqlBase as SQLAdapter
+
     try:
         sql_adapter = depends.get(SQLAdapter)
     except Exception:
+        # Instantiate SQLAdapter directly with explicit config
         sql_adapter = SQLAdapter()
         ACBDependencyRegistry.register(SQLAdapter, sql_adapter)
     else:
