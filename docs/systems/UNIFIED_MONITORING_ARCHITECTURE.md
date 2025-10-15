@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Unified Monitoring Dashboard consolidates real-time metrics, historical trends, and quality analytics into a single, comprehensive interface. It builds upon existing WebSocket infrastructure and quality baseline services to provide enterprise-grade monitoring capabilities.
+The Unified Monitoring Dashboard consolidates real-time metrics, historical trends, and quality analytics into a single, comprehensive interface. It builds upon existing WebSocket infrastructure and quality baseline services to provide advanced-grade monitoring capabilities.
 
 ## Architecture Components
 

@@ -167,7 +167,7 @@ ______________________________________________________________________
 **Documentation Coverage Assessment**:
 
 - **Core Flags Documented**: ~21 flags (20% coverage)
-- **Advanced/Enterprise Flags**: ~82 flags (mostly undocumented)
+- **Advanced/Advanced Flags**: ~82 flags (mostly undocumented)
 
 #### Core Flags Well-Documented ✅
 
@@ -182,9 +182,9 @@ ______________________________________________________________________
 
 #### Advanced Flags NOT Documented (82 flags)
 
-**Enterprise Features**:
+**Advanced Features**:
 
-- `--enterprise-optimization`, `--enterprise-profiling`, `--enterprise-reporting`
+- `--advanced-optimization`, `--advanced-profiling`, `--advanced-reporting`
 - `--analytics-dashboard`, `--predictive-analytics`, `--prediction-period`
 - `--anomaly-detection`, `--anomaly-report`, `--anomaly-sensitivity`
 
@@ -228,7 +228,7 @@ ______________________________________________________________________
 **Rationale**:
 
 - Core 20% represents 80% of actual usage (Pareto principle)
-- Advanced/enterprise features are niche use cases
+- Advanced/advanced features are niche use cases
 - README.md correctly focuses on common workflows
 - CLAUDE.md correctly focuses on developer essentials
 

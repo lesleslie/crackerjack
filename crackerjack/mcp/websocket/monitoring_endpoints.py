@@ -12,22 +12,22 @@ from fastapi.responses import HTMLResponse, JSONResponse
 from pydantic import BaseModel
 
 from crackerjack.events import WorkflowEventTelemetry
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.dependency_analyzer import (
     DependencyAnalyzer,
     DependencyGraph,
 )
-from crackerjack.services.error_pattern_analyzer import (
+from crackerjack.services.monitoring.error_pattern_analyzer import (
     ErrorPatternAnalyzer,
 )
-from crackerjack.services.quality_baseline_enhanced import (
+from crackerjack.services.quality.quality_baseline_enhanced import (
     EnhancedQualityBaselineService,
     QualityAlert,
     SystemHealthStatus,
     TrendDirection,
     UnifiedMetrics,
 )
-from crackerjack.services.quality_intelligence import (
+from crackerjack.services.quality.quality_intelligence import (
     QualityIntelligenceService,
 )
 from crackerjack.ui.dashboard_renderer import render_monitoring_dashboard
@@ -191,7 +191,7 @@ def create_monitoring_endpoints(
 
 def _initialize_monitoring_services(progress_dir: Path) -> dict[str, t.Any]:
     """Initialize all monitoring services."""
-    cache = ACBCrackerjackCache()
+    cache =CrackerjackCache()
     quality_service = EnhancedQualityBaselineService(cache=cache)
     intelligence_service = QualityIntelligenceService(quality_service)
     dependency_analyzer = DependencyAnalyzer(progress_dir.parent)
@@ -1698,7 +1698,7 @@ async def _handle_error_patterns_request(
 
 
 async def _handle_trigger_error_analysis_request(
-    error_analyzer: ErrorPatternAnalyzer, cache: ACBCrackerjackCache, request: dict
+    error_analyzer: ErrorPatternAnalyzer, cache:CrackerjackCache, request: dict
 ) -> JSONResponse:
     """Handle trigger error analysis API request."""
     try:

@@ -83,7 +83,7 @@ This document describes all command-line options and usage patterns.
 - `--dev` (bool):
 - `--dashboard` (bool):
 - `--max_iterations` (int):
-- `--enterprise_batch` (str | None):
+- `--advanced_batch` (str | None):
 - `--monitor_dashboard` (str | None):
 - `--coverage_status` (bool):
 - `--coverage_goal` (float | None):

@@ -16,7 +16,7 @@ class TestHookManagerImpl:
 
     @pytest.fixture
     def hook_manager(self, console):
-        return HookManagerImpl(console=console)
+        return HookManagerImpl()
 
     def test_init(self, hook_manager, console):
         """Test HookManagerImpl initialization"""

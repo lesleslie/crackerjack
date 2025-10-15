@@ -1,7 +1,7 @@
-"""Tool command registry for direct tool invocation (Phase 8).
+"""Tool command registry for direct tool invocation.
 
 This module provides mappings from hook names to direct tool commands,
-eliminating the need for pre-commit wrapper commands.
+replacing the legacy pre-commit wrapper approach.
 
 Each command is a list of strings that can be passed directly to subprocess.run().
 Commands use 'uv run' for Python-based tools to leverage dependency management.

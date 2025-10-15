@@ -1,95 +1,78 @@
+"""Workflow Orchestrator for ACB integration.
+
+ACB-powered orchestration layer managing workflow lifecycle, dependency resolution,
+and execution strategies. Supports dual execution modes for gradual migration.
+
+ACB Patterns:
+- MODULE_ID and MODULE_STATUS at module level
+- depends.set() registration after class definition
+- Structured logging with context fields
+- Protocol-based interfaces
+"""
+
+from __future__ import annotations
+
 import asyncio
 import time
 import typing as t
 from pathlib import Path
 
-from acb.depends import depends
+from acb.config import Config
+from acb.console import Console
+from acb.depends import Inject, depends
 from acb.events import Event, EventHandlerResult
-from rich.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.events import WorkflowEvent, WorkflowEventBus
 from crackerjack.models.protocols import (
-    LoggerProtocol,
+    DebugServiceProtocol,
     MemoryOptimizerProtocol,
     OptionsProtocol,
     PerformanceBenchmarkProtocol,
     PerformanceCacheProtocol,
     PerformanceMonitorProtocol,
-    QualityBaselineProtocol,
     QualityIntelligenceProtocol,
 )
-from crackerjack.services.debug import (
-    AIAgentDebugger,
-    NoOpDebugger,
-    get_ai_agent_debugger,
-)
-from crackerjack.services.logging import (
-    LoggingContext,
-    get_logger,
-    setup_structured_logging,
-)
-from crackerjack.services.memory_optimizer import get_memory_optimizer, memory_optimized
-from crackerjack.services.performance_benchmarks import PerformanceBenchmarkService
-from crackerjack.services.performance_cache import get_performance_cache
-from crackerjack.services.performance_monitor import (
-    get_performance_monitor,
-    phase_monitor,
-)
-from crackerjack.services.quality.quality_baseline_enhanced import (
-    EnhancedQualityBaselineService,
-)
-from crackerjack.services.quality.quality_intelligence import QualityIntelligenceService
+from crackerjack.services.memory_optimizer import memory_optimized
+from crackerjack.services.monitoring.performance_monitor import phase_monitor
 
 from .phase_coordinator import PhaseCoordinator
-from session_mgmt_mcp import SessionManager
+from .session_coordinator import SessionController, SessionCoordinator
 
 
 class WorkflowPipeline:
     @depends.inject
     def __init__(
         self,
-        console: Console = depends(),
-        pkg_path: Path = depends(),
-        session: SessionManager = depends(),
-        phases: PhaseCoordinator = depends(),
+        console: Inject[Console],
+        config: Inject[Config],
+        performance_monitor: Inject[PerformanceMonitorProtocol],
+        memory_optimizer: Inject[MemoryOptimizerProtocol],
+        performance_cache: Inject[PerformanceCacheProtocol],
+        debugger: Inject[DebugServiceProtocol],
+        session: Inject[SessionCoordinator],
+        phases: Inject[PhaseCoordinator],
+        quality_intelligence: Inject[QualityIntelligenceProtocol] | None = None,
+        performance_benchmarks: Inject[PerformanceBenchmarkProtocol] | None = None,
     ) -> None:
         self.console = console
-        self.pkg_path = pkg_path
+        self.config = config
+        self.pkg_path = config.root_path
         self.session = session
         self.phases = phases
         self._mcp_state_manager: t.Any = None
         self._last_security_audit: t.Any = None
 
-        self.logger: LoggerProtocol = get_logger("crackerjack.pipeline")
-        self._debugger: AIAgentDebugger | NoOpDebugger | None = None
+        # Services injected via ACB DI
+        self._debugger = debugger
+        self._performance_monitor = performance_monitor
+        self._memory_optimizer = memory_optimizer
+        self._cache = performance_cache
+        self._quality_intelligence = quality_intelligence
+        self._performance_benchmarks = performance_benchmarks
 
-        self._performance_monitor: PerformanceMonitorProtocol = (
-            get_performance_monitor()
-        )
-        self._memory_optimizer: MemoryOptimizerProtocol = get_memory_optimizer()
-        self._cache: PerformanceCacheProtocol = get_performance_cache()
-
-        # Initialize quality intelligence for advanced decision making
-        self._quality_intelligence: QualityIntelligenceProtocol | None
-        try:
-            quality_baseline: QualityBaselineProtocol = EnhancedQualityBaselineService()
-            self._quality_intelligence = QualityIntelligenceService(quality_baseline)
-        except Exception:
-            # Fallback gracefully if quality intelligence is not available
-            self._quality_intelligence = None
-
-        # Initialize performance benchmarking for workflow analysis
-        self._performance_benchmarks: PerformanceBenchmarkProtocol | None
-        try:
-            self._performance_benchmarks = PerformanceBenchmarkService(
-                console, pkg_path
-            )
-        except Exception:
-            # Fallback gracefully if benchmarking is not available
-            self._performance_benchmarks = None
-
+        # Event bus with graceful fallback
         try:
             self._event_bus: WorkflowEventBus | None = depends.get(WorkflowEventBus)
         except Exception as e:
@@ -99,9 +82,8 @@ class WorkflowPipeline:
         self._session_controller = SessionController(self)
 
     @property
-    def debugger(self) -> AIAgentDebugger | NoOpDebugger:
-        if self._debugger is None:
-            self._debugger = get_ai_agent_debugger()
+    def debugger(self) -> DebugServiceProtocol:
+        """Get debug service (already injected via DI)."""
         return self._debugger
 
     def _should_debug(self) -> bool:
@@ -196,7 +178,12 @@ class WorkflowPipeline:
 
         return EventHandlerResult(success=success)
 
-    async def _publish_workflow_failure(self, event_context: dict[str, t.Any], stage: str, error: Exception | None = None) -> None:
+    async def _publish_workflow_failure(
+        self,
+        event_context: dict[str, t.Any],
+        stage: str,
+        error: Exception | None = None,
+    ) -> None:
         """Publish workflow failure event."""
         payload: dict[str, t.Any] = {
             **event_context,
@@ -238,15 +225,12 @@ class WorkflowPipeline:
             )
             if not config_success:
                 await self._publish_workflow_failure(
-                    {"workflow_id": workflow_id}, 
-                    "configuration"
+                    {"workflow_id": workflow_id}, "configuration"
                 )
             return EventHandlerResult(success=config_success)
         except Exception as exc:  # pragma: no cover - defensive
             await self._publish_workflow_failure(
-                {"workflow_id": workflow_id}, 
-                "configuration", 
-                exc
+                {"workflow_id": workflow_id}, "configuration", exc
             )
             return EventHandlerResult(success=False, error_message=str(exc))
 
@@ -269,9 +253,7 @@ class WorkflowPipeline:
                 WorkflowEvent.QUALITY_PHASE_STARTED,
                 {"workflow_id": workflow_id},
             )
-            quality_success = await self._execute_quality_phase(
-                options, workflow_id
-            )
+            quality_success = await self._execute_quality_phase(options, workflow_id)
             await self._publish_event(
                 WorkflowEvent.QUALITY_PHASE_COMPLETED,
                 {
@@ -281,15 +263,12 @@ class WorkflowPipeline:
             )
             if not quality_success:
                 await self._publish_workflow_failure(
-                    {"workflow_id": workflow_id}, 
-                    "quality"
+                    {"workflow_id": workflow_id}, "quality"
                 )
             return EventHandlerResult(success=quality_success)
         except Exception as exc:  # pragma: no cover - defensive
             await self._publish_workflow_failure(
-                {"workflow_id": workflow_id}, 
-                "quality", 
-                exc
+                {"workflow_id": workflow_id}, "quality", exc
             )
             return EventHandlerResult(success=False, error_message=str(exc))
 
@@ -326,8 +305,7 @@ class WorkflowPipeline:
                 )
                 if not publishing_success:
                     await self._publish_workflow_failure(
-                        {"workflow_id": workflow_id}, 
-                        "publishing"
+                        {"workflow_id": workflow_id}, "publishing"
                     )
                     return EventHandlerResult(success=False)
             else:
@@ -342,9 +320,7 @@ class WorkflowPipeline:
             return EventHandlerResult(success=True)
         except Exception as exc:  # pragma: no cover - defensive
             await self._publish_workflow_failure(
-                {"workflow_id": workflow_id}, 
-                "publishing", 
-                exc
+                {"workflow_id": workflow_id}, "publishing", exc
             )
             return EventHandlerResult(success=False, error_message=str(exc))
 
@@ -383,8 +359,7 @@ class WorkflowPipeline:
                 )
                 if not commit_success:
                     await self._publish_workflow_failure(
-                        {"workflow_id": workflow_id}, 
-                        "commit"
+                        {"workflow_id": workflow_id}, "commit"
                     )
                     return EventHandlerResult(success=False)
             else:
@@ -404,9 +379,7 @@ class WorkflowPipeline:
             return EventHandlerResult(success=True)
         except Exception as exc:  # pragma: no cover - defensive
             await self._publish_workflow_failure(
-                {"workflow_id": workflow_id}, 
-                "commit", 
-                exc
+                {"workflow_id": workflow_id}, "commit", exc
             )
             return EventHandlerResult(success=False, error_message=str(exc))
 
@@ -420,7 +393,12 @@ class WorkflowPipeline:
     ) -> EventHandlerResult:
         """Handle workflow completed event."""
         return await self._finalize_workflow(
-            start_time, workflow_id, True, completion_future, subscriptions, event.payload
+            start_time,
+            workflow_id,
+            True,
+            completion_future,
+            subscriptions,
+            event.payload,
         )
 
     async def _handle_workflow_failed(
@@ -433,7 +411,12 @@ class WorkflowPipeline:
     ) -> EventHandlerResult:
         """Handle workflow failed event."""
         return await self._finalize_workflow(
-            start_time, workflow_id, False, completion_future, subscriptions, event.payload
+            start_time,
+            workflow_id,
+            False,
+            completion_future,
+            subscriptions,
+            event.payload,
         )
 
     async def _run_event_driven_workflow(
@@ -491,8 +474,13 @@ class WorkflowPipeline:
             self._event_bus.subscribe(
                 WorkflowEvent.PUBLISH_PHASE_COMPLETED,
                 lambda event: self._handle_publish_completed(
-                    event, state_flags, workflow_id, options, 
-                    commit_requested, publish_requested, event_context
+                    event,
+                    state_flags,
+                    workflow_id,
+                    options,
+                    commit_requested,
+                    publish_requested,
+                    event_context,
                 ),
             )
         )
@@ -803,7 +791,8 @@ class WorkflowPipeline:
         """Display time improvement percentage if available."""
         if result.time_improvement_percentage > 0:
             self.console.print(
-                f"[green]⚡[/green] {result.test_name}: {result.time_improvement_percentage:.1f}% faster"
+                f"[green]⚡[/green] {result.test_name}:"
+                f" {result.time_improvement_percentage:.1f}% faster"
             )
 
     def _display_cache_efficiency(self, result: t.Any) -> None:
@@ -1263,7 +1252,7 @@ class WorkflowPipeline:
         ):
             self._show_security_audit_warning()
         elif publishing_requested and not success:
-            self.console.print(
+            console.print(
                 "[red]❌ Quality checks failed - cannot proceed to publishing[/red]"
             )
 
@@ -2045,7 +2034,7 @@ class WorkflowPipeline:
             return publishing_requested, security_blocks_publishing
         except Exception as e:
             self.logger.warning(f"Security check failed: {e} - blocking publishing")
-            self.console.print(
+            console.print(
                 "[red]🔒 SECURITY CHECK FAILED: Unable to verify security status - publishing BLOCKED[/red]"
             )
 
@@ -2062,9 +2051,7 @@ class WorkflowPipeline:
 
     def _display_security_gate_failure_message(self) -> None:
         """Display initial security gate failure message."""
-        self.console.print(
-            "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
-        )
+        console.print("[red]🔒 SECURITY GATE: Critical security checks failed[/red]")
 
     async def _attempt_ai_assisted_security_fix(self, options: OptionsProtocol) -> bool:
         """Attempt to fix security issues using AI assistance.
@@ -2085,10 +2072,10 @@ class WorkflowPipeline:
 
     def _display_ai_fixing_messages(self) -> None:
         """Display messages about AI-assisted security fixing."""
-        self.console.print(
+        console.print(
             "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
         )
-        self.console.print(
+        console.print(
             "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
         )
 
@@ -2101,12 +2088,12 @@ class WorkflowPipeline:
         try:
             security_still_blocks = self._check_security_critical_failures()
             if not security_still_blocks:
-                self.console.print(
+                console.print(
                     "[green]✅ AI agents resolved security issues - publishing allowed[/green]"
                 )
                 return True
             else:
-                self.console.print(
+                console.print(
                     "[red]🔒 Security issues persist after AI fixing - publishing still BLOCKED[/red]"
                 )
                 return False
@@ -2120,7 +2107,7 @@ class WorkflowPipeline:
         Returns:
             Always False since manual intervention is required
         """
-        self.console.print(
+        console.print(
             "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
         )
         return False
@@ -2150,15 +2137,13 @@ class WorkflowPipeline:
     def _show_verbose_failure_details(
         self, testing_passed: bool, comprehensive_passed: bool
     ) -> None:
-        self.console.print(
+        console.print(
             f"[yellow]⚠️ Quality phase results - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
         )
         if not testing_passed:
-            self.console.print("[yellow] → Tests reported failure[/yellow]")
+            console.print("[yellow] → Tests reported failure[/yellow]")
         if not comprehensive_passed:
-            self.console.print(
-                "[yellow] → Comprehensive hooks reported failure[/yellow]"
-            )
+            console.print("[yellow] → Comprehensive hooks reported failure[/yellow]")
 
     def _check_security_critical_failures(self) -> bool:
         try:
@@ -2259,30 +2244,30 @@ class WorkflowPipeline:
         audit_report = getattr(self, "_last_security_audit", None)
 
         if audit_report:
-            self.console.print(
+            console.print(
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
 
             for warning in audit_report.security_warnings:
                 if "CRITICAL" in warning:
-                    self.console.print(f"[red]{warning}[/red]")
+                    console.print(f"[red]{warning}[/red]")
                 elif "HIGH" in warning:
-                    self.console.print(f"[yellow]{warning}[/yellow]")
+                    console.print(f"[yellow]{warning}[/yellow]")
                 else:
-                    self.console.print(f"[blue]{warning}[/blue]")
+                    console.print(f"[blue]{warning}[/blue]")
 
             if audit_report.recommendations:
-                self.console.print("[bold]Security Recommendations: [/bold]")
+                console.print("[bold]Security Recommendations: [/bold]")
                 for rec in audit_report.recommendations[:3]:
-                    self.console.print(f"[dim]{rec}[/dim]")
+                    console.print(f"[dim]{rec}[/dim]")
         else:
-            self.console.print(
+            console.print(
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
-            self.console.print(
+            console.print(
                 "[yellow]✅ Security-critical checks (bandit, pyright, gitleaks) have passed[/yellow]"
             )
-            self.console.print(
+            console.print(
                 "[yellow]⚠️ Some non-critical quality checks failed - consider reviewing before production deployment[/yellow]"
             )
 
@@ -2352,21 +2337,17 @@ class WorkflowPipeline:
             )
 
             coverage_orchestrator = await create_coverage_improvement_orchestrator(
-                self.pkg_path, console=self.console
+                self.pkg_path
             )
 
             should_improve = await coverage_orchestrator.should_improve_coverage()
             if not should_improve:
-                self.console.print(
-                    "[dim]📈 Coverage at 100% - no improvement needed[/dim]"
-                )
+                console.print("[dim]📈 Coverage at 100% - no improvement needed[/dim]")
                 return
 
             # Create agent context for coverage improvement
             from crackerjack.agents.base import AgentContext
-            from crackerjack.services.filesystem import FileSystemService
 
-            FileSystemService()
             agent_context = AgentContext(
                 project_path=self.pkg_path,
             )
@@ -2379,7 +2360,7 @@ class WorkflowPipeline:
                 # Coverage orchestrator already printed success message
                 pass
             elif result["status"] == "skipped":
-                self.console.print(
+                console.print(
                     f"[dim]📈 Coverage improvement skipped: {result.get('reason', 'Unknown')}[/dim]"
                 )
             else:
@@ -2476,9 +2457,7 @@ class WorkflowPipeline:
         }
 
     async def _publish_event(
-        self,
-        event: WorkflowEvent,
-        payload: dict[str, t.Any],
+        self, event: WorkflowEvent, payload: dict[str, t.Any]
     ) -> None:
         """Publish workflow events when the bus is available."""
         if not getattr(self, "_event_bus", None):
@@ -2496,7 +2475,6 @@ class WorkflowPipeline:
 class WorkflowOrchestrator:
     def __init__(
         self,
-        console: Console | None = None,
         pkg_path: Path | None = None,
         dry_run: bool = False,
         web_job_id: str | None = None,
@@ -2504,19 +2482,11 @@ class WorkflowOrchestrator:
         debug: bool = False,
     ) -> None:
         # Initialize console and pkg_path first
-        self.console = console or Console(force_terminal=True)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
         self.web_job_id = web_job_id
         self.verbose = verbose
         self.debug = debug
-
-        # Configure ACB dependency injection using native patterns
-        from acb.depends import depends
-
-        # Register core dependencies directly with ACB
-        depends.set(Console, self.console)
-        depends.set(Path, self.pkg_path)
 
         # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
@@ -2533,7 +2503,7 @@ class WorkflowOrchestrator:
 
         self._initialize_logging()
 
-        self.logger = get_logger("crackerjack.orchestrator")
+        self.logger = depends.get(LoggerProtocol)
 
         # Create coordinators - dependencies retrieved via ACB's depends.get()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
@@ -2573,7 +2543,6 @@ class WorkflowOrchestrator:
             SecurityServiceProtocol,
             TestManagerProtocol,
         )
-        from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
         from crackerjack.services.config_merge import ConfigMergeService
         from crackerjack.services.coverage_ratchet import CoverageRatchetService
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
@@ -2585,38 +2554,69 @@ class WorkflowOrchestrator:
         depends.set(FileSystemInterface, filesystem)
 
         # Register git service
-        git_service = GitService(self.console, self.pkg_path)
+        git_service = GitService(self.pkg_path)
         depends.set(GitInterface, git_service)
 
         # Register hook manager
-        hook_manager = HookManagerImpl(
-            self.console, self.pkg_path, verbose=self.verbose
-        )
+        hook_manager = HookManagerImpl(self.pkg_path, verbose=self.verbose)
         depends.set(HookManager, hook_manager)
 
-        # Register test manager
-        test_manager = TestManager(self.console, self.pkg_path)
+        from crackerjack.models.protocols import (
+            CoverageBadgeServiceProtocol,
+            UnifiedConfigurationServiceProtocol,
+        )
+        from crackerjack.services.config_integrity import ConfigIntegrityService
+        from crackerjack.services.coverage_badge_service import CoverageBadgeService
+        from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
+        from crackerjack.services.git import GitService
+        from crackerjack.services.hook_lock_manager import HookLockManager
+        from crackerjack.services.smart_scheduling import SmartSchedulingService
+        from crackerjack.services.unified_config import UnifiedConfigurationService
+
+        # Register core services
+        depends.set(UnifiedConfigurationServiceProtocol, UnifiedConfigurationService())
+        depends.set(ConfigIntegrityServiceProtocol, ConfigIntegrityService(project_path=pkg_path))
+        depends.set(ConfigMergeServiceProtocol, ConfigMergeService())
+        depends.set(SmartSchedulingServiceProtocol, SmartSchedulingService())
+        depends.set(EnhancedFileSystemServiceProtocol, EnhancedFileSystemService())
+        depends.set(SecurityServiceProtocol, SecurityService())
+        depends.set(HookLockManagerProtocol, HookLockManager())
+
+        # Register Git service (needed by many managers)
+        git_service = GitService(project_root=pkg_path)
+        depends.set(GitServiceProtocol, git_service)
+
+        # Register managers
+        depends.set(HookManagerProtocol, HookManagerImpl())
+        depends.set(PublishManagerProtocol, PublishManagerImpl())
+
+        # Register Coverage Ratchet Service
+        coverage_ratchet = CoverageRatchetService(pkg_path)
+        depends.set(CoverageRatchetProtocol, coverage_ratchet)
+
+        # Register Coverage Badge Service
+        coverage_badge = depends.inject_sync(CoverageBadgeService, console=depends.get_sync(Console), project_root=pkg_path)
+        depends.set(CoverageBadgeServiceProtocol, coverage_badge)
+
+        # Register test manager (ACB DI injects all dependencies)
+        test_manager = TestManager()
         depends.set(TestManagerProtocol, test_manager)
 
-        # Register publish manager
-        publish_manager = PublishManagerImpl(self.console, self.pkg_path, git_service)
+        # Register publish manager (ACB DI injects all dependencies)
+        publish_manager = PublishManagerImpl()
         depends.set(PublishManager, publish_manager)
 
         # Register config merge service
-        config_merge = ConfigMergeService(self.console, filesystem, git_service)
+        config_merge = ConfigMergeService(filesystem, git_service)
         depends.set(ConfigMergeServiceProtocol, config_merge)
 
         # Register security service
         security = SecurityService()
         depends.set(SecurityServiceProtocol, security)
 
-        # Register coverage ratchet
-        coverage_ratchet = CoverageRatchetService(self.pkg_path, self.console)
-        depends.set(CoverageRatchetProtocol, coverage_ratchet)
-
         # Register cache adapter
-        cache = ACBCrackerjackCache()
-        depends.set(ACBCrackerjackCache, cache)
+        cache = CrackerjackCache()
+        depends.set(CrackerjackCache, cache)
 
         # Setup event system
         self._setup_event_system()
@@ -2654,7 +2654,7 @@ class WorkflowOrchestrator:
             level=log_level, json_output=False, log_file=debug_log_file
         )
 
-        temp_logger = get_logger("crackerjack.orchestrator.init")
+        temp_logger = depends.get(LoggerProtocol)
         temp_logger.debug(
             "Structured logging initialized",
             log_file=str(debug_log_file),

@@ -4,7 +4,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from .git import GitService
 
@@ -33,7 +34,8 @@ class ChangelogEntry:
 class ChangelogGenerator:
     """Generate and update changelogs based on git commits."""
 
-    def __init__(self, console: Console, git_service: GitService) -> None:
+    @depends.inject
+    def __init__(self, console: Inject[Console], git_service: GitService) -> None:
         self.console = console
         self.git = git_service
 

@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 
-from crackerjack.services.dependency_monitor import DependencyMonitorService
+from crackerjack.services.monitoring.dependency_monitor import DependencyMonitorService
 
 
 class DummyFilesystem:

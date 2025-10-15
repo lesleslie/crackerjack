@@ -686,7 +686,7 @@ Want to monitor?
 ## Additional Resources
 
 - **User Guide**: `README.md` - Comprehensive command reference
-- **Advanced Features**: `docs/ADVANCED-FEATURES.md` - 82 enterprise/power user flags
+- **Advanced Features**: `docs/ADVANCED-FEATURES.md` - 82 advanced/power user flags
 - **Error Patterns**: `docs/ai/ERROR-PATTERNS.yaml` - Automated fix patterns
 - **Agent Capabilities**: `docs/ai/AGENT-CAPABILITIES.json` - Structured agent data
 - **Architecture**: `CLAUDE.md` - Modular DI architecture details

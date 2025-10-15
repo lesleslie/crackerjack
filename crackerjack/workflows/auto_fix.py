@@ -12,6 +12,7 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from acb import console as acb_console
 from rich.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
@@ -96,7 +97,7 @@ class AutoFixWorkflow:
             enable_external_agents: Enable Claude Code external agent integration
         """
         self.project_path = project_path or Path.cwd()
-        self.console = console or Console()
+        self.console = console or acb_console
         self.logger = logging.getLogger(__name__)
 
         # Initialize agent context

@@ -226,7 +226,8 @@ class DataCompactionManager:
 
         return rules
 
-    def _create_metrics_raw_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_metrics_raw_config() -> dict[str, t.Any]:
         """Create configuration for raw metrics data."""
         return {
             "retention_days": 7,
@@ -234,7 +235,8 @@ class DataCompactionManager:
             "aggregation_method": "downsample",
         }
 
-    def _create_metrics_hourly_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_metrics_hourly_config() -> dict[str, t.Any]:
         """Create configuration for hourly metrics data."""
         return {
             "retention_days": 30,
@@ -242,7 +244,8 @@ class DataCompactionManager:
             "aggregation_method": "statistical",
         }
 
-    def _create_metrics_daily_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_metrics_daily_config() -> dict[str, t.Any]:
         """Create configuration for daily metrics data."""
         return {
             "retention_days": 365,
@@ -250,7 +253,8 @@ class DataCompactionManager:
             "aggregation_method": "statistical",
         }
 
-    def _create_error_patterns_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_error_patterns_config() -> dict[str, t.Any]:
         """Create configuration for error patterns data."""
         return {
             "retention_days": 90,
@@ -258,7 +262,8 @@ class DataCompactionManager:
             "aggregation_method": "deduplication",
         }
 
-    def _create_dependency_graphs_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def _create_dependency_graphs_config() -> dict[str, t.Any]:
         """Create configuration for dependency graphs data."""
         return {
             "retention_days": 30,
@@ -278,7 +283,8 @@ class DataCompactionManager:
 
         return self._build_compaction_result(data_type, rules, compaction_stats)
 
-    def _calculate_cutoff_date(self, rules: dict[str, t.Any]) -> datetime:
+    @staticmethod
+    def _calculate_cutoff_date(rules: dict[str, t.Any]) -> datetime:
         """Calculate the cutoff date for data retention."""
         return datetime.now() - timedelta(days=rules["retention_days"])
 
@@ -304,7 +310,8 @@ class DataCompactionManager:
             "freed_space_mb": freed_space_mb,
         }
 
-    def _should_compact_file(self, file_path: Path, cutoff_date: datetime) -> bool:
+    @staticmethod
+    def _should_compact_file(file_path: Path, cutoff_date: datetime) -> bool:
         """Determine if a file should be compacted based on age."""
         if not file_path.is_file():
             return False
@@ -312,8 +319,9 @@ class DataCompactionManager:
         file_mtime = datetime.fromtimestamp(file_path.stat().st_mtime)
         return file_mtime < cutoff_date
 
+    @staticmethod
     def _build_compaction_result(
-        self, data_type: str, rules: dict[str, t.Any], stats: dict[str, int]
+        data_type: str, rules: dict[str, t.Any], stats: dict[str, int]
     ) -> dict[str, t.Any]:
         """Build the compaction result dictionary."""
         return {
@@ -577,8 +585,9 @@ class AdvancedOptimizer:
         self.optimization_recommendations = recommendations
         return recommendations
 
+    @staticmethod
     def _generate_cpu_recommendations(
-        self, metrics: ResourceMetrics
+        metrics: ResourceMetrics
     ) -> list[OptimizationRecommendation]:
         """Generate CPU-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []
@@ -600,8 +609,9 @@ class AdvancedOptimizer:
 
         return recommendations
 
+    @staticmethod
     def _generate_memory_recommendations(
-        self, metrics: ResourceMetrics
+        metrics: ResourceMetrics
     ) -> list[OptimizationRecommendation]:
         """Generate memory-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []
@@ -623,8 +633,9 @@ class AdvancedOptimizer:
 
         return recommendations
 
+    @staticmethod
     def _generate_storage_recommendations(
-        self, storage_usage: dict[str, t.Any]
+        storage_usage: dict[str, t.Any]
     ) -> list[OptimizationRecommendation]:
         """Generate storage-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []
@@ -668,6 +679,7 @@ class AdvancedOptimizer:
 
         return recommendations
 
+    @staticmethod
     def _generate_scaling_recommendations(
         self, scaling_metrics: ScalingMetrics
     ) -> list[OptimizationRecommendation]:
@@ -764,8 +776,9 @@ class AdvancedOptimizer:
 
         return optimizations
 
+    @staticmethod
     def _build_optimization_result(
-        self, strategy: str, optimizations_applied: list[str]
+        strategy: str, optimizations_applied: list[str]
     ) -> dict[str, t.Any]:
         """Build the optimization result dictionary."""
         return {

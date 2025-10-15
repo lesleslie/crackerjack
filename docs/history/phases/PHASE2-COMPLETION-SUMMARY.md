@@ -28,7 +28,7 @@ Phase 2 consistency review has been completed successfully. All critical cross-r
 
 - **Total Flags**: 103 discovered
 - **Core Flags Documented**: 21 flags (~20%)
-- **Advanced Flags**: 82 flags (enterprise/niche features)
+- **Advanced Flags**: 82 flags (advanced/niche features)
 - **Assessment**: ✅ Coverage appropriate for user-facing docs
 
 ### 4. Architecture Validation ✅
@@ -78,7 +78,7 @@ Phase 2 consistency review has been completed successfully. All critical cross-r
 1. **Advanced Features Documentation**
 
    - 82 advanced flags undocumented
-   - Enterprise features could benefit from appendix
+   - Advanced features could benefit from appendix
    - Recommendation: Add "Advanced Features" section for power users
 
 1. **Generated API Docs**

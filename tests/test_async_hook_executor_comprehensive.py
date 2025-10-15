@@ -17,7 +17,7 @@ class TestAsyncHookExecutor:
 
     @pytest.fixture
     def executor(self, console):
-        return AsyncHookExecutor(console=console)
+        return AsyncHookExecutor(pkg_path=pkg_path)
 
     def test_init(self, executor, console):
         """Test AsyncHookExecutor initialization"""

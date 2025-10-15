@@ -5,10 +5,7 @@ import typing as t
 from collections import defaultdict
 from itertools import starmap
 
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
-from crackerjack.services.debug import get_ai_agent_debugger
-
-from .base import (
+from crackerjack.agents.base import (
     AgentContext,
     FixResult,
     Issue,
@@ -16,31 +13,33 @@ from .base import (
     SubAgent,
     agent_registry,
 )
-from .error_middleware import agent_error_boundary
-from .tracker import get_agent_tracker
+from crackerjack.agents.error_middleware import agent_error_boundary
+from crackerjack.agents.tracker import get_agent_tracker
+from crackerjack.services.cache import CrackerjackCache
+from crackerjack.services.debug import get_ai_agent_debugger
 
-# Static mapping for O(1) agent lookup by issue type
-ISSUE_TYPE_TO_AGENTS = {
+ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
+    IssueType.FORMATTING: ["FormattingAgent"],
+    IssueType.TYPE_ERROR: ["TestCreationAgent", "RefactoringAgent"],
+    IssueType.SECURITY: ["SecurityAgent"],
+    IssueType.TEST_FAILURE: ["TestSpecialistAgent", "TestCreationAgent"],
+    IssueType.IMPORT_ERROR: ["ImportOptimizationAgent"],
     IssueType.COMPLEXITY: ["RefactoringAgent"],
     IssueType.DEAD_CODE: ["RefactoringAgent", "ImportOptimizationAgent"],
-    IssueType.SECURITY: ["SecurityAgent"],
-    IssueType.PERFORMANCE: ["PerformanceAgent", "RefactoringAgent"],
-    IssueType.TEST_FAILURE: ["TestCreationAgent", "TestSpecialistAgent"],
-    IssueType.TYPE_ERROR: ["TestCreationAgent", "RefactoringAgent"],
-    IssueType.FORMATTING: ["FormattingAgent", "ImportOptimizationAgent"],
+    IssueType.DEPENDENCY: ["ImportOptimizationAgent"],
+    IssueType.DRY_VIOLATION: ["DRYAgent"],
+    IssueType.PERFORMANCE: ["PerformanceAgent"],
     IssueType.DOCUMENTATION: ["DocumentationAgent"],
-    IssueType.DRY_VIOLATION: ["DRYAgent", "RefactoringAgent"],
-    IssueType.IMPORT_ERROR: ["ImportOptimizationAgent", "RefactoringAgent"],
-    IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent", "TestSpecialistAgent"],
-    IssueType.TEST_ORGANIZATION: ["TestSpecialistAgent", "TestCreationAgent"],
-    IssueType.DEPENDENCY: ["RefactoringAgent"],
+    IssueType.TEST_ORGANIZATION: ["TestSpecialistAgent"],
+    IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
     IssueType.REGEX_VALIDATION: ["SecurityAgent", "RefactoringAgent"],
+    IssueType.SEMANTIC_CONTEXT: ["SemanticAgent", "ArchitectAgent"],
 }
 
 
 class AgentCoordinator:
     def __init__(
-        self, context: AgentContext, cache: ACBCrackerjackCache | None = None
+        self, context: AgentContext, cache: CrackerjackCache | None = None
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -50,7 +49,7 @@ class AgentCoordinator:
         self.tracker = get_agent_tracker()
         self.debugger = get_ai_agent_debugger()
         self.proactive_mode = True
-        self.cache = cache or ACBCrackerjackCache()
+        self.cache = cache or CrackerjackCache()
 
     def initialize_agents(self) -> None:
         self.agents = agent_registry.create_all(self.context)

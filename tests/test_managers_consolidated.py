@@ -111,7 +111,7 @@ class TestHookManagerImpl:
 
 class TestTestManagementImpl:
     def test_initialization(self, console, temp_project) -> None:
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         assert manager.console is console
         assert manager.pkg_path == temp_project
 
@@ -211,7 +211,7 @@ class TestTestManagementImpl:
 
 class TestPublishManagerImpl:
     def test_initialization(self, console, temp_project) -> None:
-        manager = PublishManagerImpl(console=console, pkg_path=temp_project)
+        manager = PublishManagerImpl(pkg_path=temp_project)
         assert manager.console is console
         assert manager.pkg_path == temp_project
 
@@ -284,9 +284,8 @@ class TestPublishManagerImpl:
 
 class TestManagersIntegration:
     def test_managers_work_together(self, console, temp_project) -> None:
-        hook_manager = HookManagerImpl(console=console, pkg_path=temp_project)
-        test_manager = TestManagementImpl(console=console, pkg_path=temp_project)
-        publish_manager = PublishManagerImpl(console=console, pkg_path=temp_project)
+        test_manager = TestManagementImpl(pkg_path=temp_project)
+        publish_manager = PublishManagerImpl(pkg_path=temp_project)
 
         assert hook_manager.console is console
         assert test_manager.console is console

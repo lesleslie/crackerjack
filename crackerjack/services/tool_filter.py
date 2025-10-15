@@ -4,6 +4,7 @@ Phase 10.3.3: Implements --tool and --changed-only filtering to run only
 specific tools or limit execution to changed files.
 """
 
+import fnmatch
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -175,7 +176,6 @@ class ToolFilter:
         Returns:
             Filtered file list
         """
-        import fnmatch
 
         matching_files: set[Path] = set()
 

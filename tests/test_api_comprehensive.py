@@ -32,7 +32,7 @@ class TestCrackerjackAPI:
 
     @pytest.fixture
     def api(self, console, pkg_path):
-        return CrackerjackAPI(project_path=pkg_path, console=console)
+        return CrackerjackAPI(project_path=pkg_path)
 
     def test_init(self, api, console, pkg_path):
         """Test CrackerjackAPI initialization"""

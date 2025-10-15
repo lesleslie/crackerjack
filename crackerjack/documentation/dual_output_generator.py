@@ -9,9 +9,10 @@ from pathlib import Path
 
 import yaml
 from rich.console import Console
+from acb import console as acb_console
 
 from crackerjack.agents.coordinator import AgentCoordinator
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.services.acb_cache_adapter importCrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -57,11 +58,11 @@ class DualOutputGenerator:
         self,
         project_path: Path | None = None,
         console: Console | None = None,
-        cache: ACBCrackerjackCache | None = None,
+        cache:CrackerjackCache | None = None,
     ):
         self.project_path = project_path or Path.cwd()
-        self.console = console or Console()
-        self.cache = cache or ACBCrackerjackCache()
+        self.console = console or acb_console
+        self.cache = cache orCrackerjackCache()
 
         # Documentation paths
         self.ai_reference_path = self.project_path / "ai" / "AI-REFERENCE.md"

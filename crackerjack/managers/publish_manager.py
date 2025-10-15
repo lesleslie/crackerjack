@@ -3,34 +3,43 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from acb.depends import Inject, depends
 from rich.console import Console
 
-from crackerjack.models.protocols import FileSystemInterface, SecurityServiceProtocol
+from crackerjack.models.protocols import (
+    ChangelogGeneratorProtocol,
+    FileSystemInterface,
+    GitServiceProtocol,
+    RegexPatternsProtocol,
+    SecurityServiceProtocol,
+    VersionAnalyzerProtocol,
+)
 
 
 class PublishManagerImpl:
+    @depends.inject
     def __init__(
         self,
-        console: Console,
-        pkg_path: Path,
+        git_service: Inject[GitServiceProtocol],
+        version_analyzer: Inject[VersionAnalyzerProtocol],
+        changelog_generator: Inject[ChangelogGeneratorProtocol],
+        filesystem: Inject[FileSystemInterface],
+        security: Inject[SecurityServiceProtocol],
+        regex_patterns: Inject[RegexPatternsProtocol],
+        console: Console = depends(),
+        pkg_path: Path = depends(),
         dry_run: bool = False,
-        filesystem: FileSystemInterface | None = None,
-        security: SecurityServiceProtocol | None = None,
     ) -> None:
+        # Foundation dependencies
         self.console = console
         self.pkg_path = pkg_path
         self.dry_run = dry_run
 
-        if filesystem is None:
-            from crackerjack.services.filesystem import FileSystemService
-
-            filesystem = FileSystemService()
-
-        if security is None:
-            from crackerjack.services.security import SecurityService
-
-            security = SecurityService()
-
+        # Services injected via ACB DI
+        self._git_service = git_service
+        self._version_analyzer = version_analyzer
+        self._changelog_generator = changelog_generator
+        self._regex_patterns = regex_patterns
         self.filesystem = filesystem
         self.security = security
 
@@ -77,9 +86,15 @@ class PublishManagerImpl:
         pyproject_path = self.pkg_path / "pyproject.toml"
         try:
             content = self.filesystem.read_file(pyproject_path)
-            from crackerjack.services.regex_patterns import update_pyproject_version
+            
+            # Use injected service or get through ACB DI
+            if self._regex_patterns is not None:
+                update_pyproject_version_func = self._regex_patterns.update_pyproject_version
+            else:
+                from acb.depends import depends
+                update_pyproject_version_func = depends.get(RegexPatternsProtocol).update_pyproject_version
 
-            new_content = update_pyproject_version(content, new_version)
+            new_content = update_pyproject_version_func(content, new_version)
             if content != new_content:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
@@ -183,12 +198,8 @@ class PublishManagerImpl:
         try:
             import asyncio
 
-            from crackerjack.services.git import GitService
-            from crackerjack.services.version_analyzer import VersionAnalyzer
-
-            # Initialize services
-            git_service = GitService(self.console, self.pkg_path)
-            version_analyzer = VersionAnalyzer(self.console, git_service)
+            # Use injected version analyzer service
+            version_analyzer = self._version_analyzer
 
             # Get recommendation asynchronously
             try:
@@ -556,12 +567,8 @@ class PublishManagerImpl:
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
         """Update changelog with entries from git commits since last version."""
         try:
-            from crackerjack.services.changelog_automation import ChangelogGenerator
-            from crackerjack.services.git import GitService
-
-            # Initialize services
-            git_service = GitService(self.console, self.pkg_path)
-            changelog_generator = ChangelogGenerator(self.console, git_service)
+            # Use injected changelog generator service
+            changelog_generator = self._changelog_generator
 
             # Look for changelog file
             changelog_path = self.pkg_path / "CHANGELOG.md"

@@ -7,11 +7,8 @@ from contextlib import suppress
 from typing import Any
 
 import aiohttp
-from rich.console import Console
+from acb import console
 from rich.table import Table
-
-console = Console()
-
 
 watchdog_event_queue: asyncio.Queue[dict[str, Any]] | None = None
 

@@ -6,19 +6,29 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
+from acb.depends import Inject, depends
+from acb.logger import Logger
 
 from crackerjack.errors import FileError
-from crackerjack.models.protocols import FileSystemInterface
-from crackerjack.services.logging import LoggingContext, get_logger
+from crackerjack.models.protocols import (
+    EnhancedFileSystemServiceProtocol,
+    ServiceProtocol,
+)
 
 
 class FileCache:
-    def __init__(self, max_size: int = 1000, default_ttl: float = 300.0) -> None:
+    @depends.inject
+    def __init__(
+        self,
+        logger: Inject[Logger],
+        max_size: int = 1000,
+        default_ttl: float = 300.0,
+    ) -> None:
         self.max_size = max_size
         self.default_ttl = default_ttl
         self._cache: dict[str, dict[str, Any]] = {}
         self._access_times: dict[str, float] = {}
-        self.logger = get_logger("crackerjack.filesystem.cache")
+        self.logger = logger
 
     def get(self, key: str) -> str | None:
         if key not in self._cache:
@@ -78,11 +88,16 @@ class FileCache:
 
 
 class BatchFileOperations:
-    def __init__(self, batch_size: int = 10) -> None:
+    @depends.inject
+    def __init__(
+        self,
+        logger: Inject[Logger],
+        batch_size: int = 10,
+    ) -> None:
         self.batch_size = batch_size
         self.read_queue: list[tuple[Path, asyncio.Future[str]]] = []
         self.write_queue: list[tuple[Path, str, asyncio.Future[None]]] = []
-        self.logger = get_logger("crackerjack.filesystem.batch")
+        self.logger = logger
 
     async def queue_read(self, path: Path) -> str:
         future: asyncio.Future[str] = asyncio.Future()
@@ -161,9 +176,11 @@ class BatchFileOperations:
             future.set_exception(e)
 
 
-class EnhancedFileSystemService(FileSystemInterface):
+class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtocol):
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
         cache_size: int = 1000,
         cache_ttl: float = 300.0,
         batch_size: int = 10,
@@ -172,7 +189,7 @@ class EnhancedFileSystemService(FileSystemInterface):
         self.cache = FileCache(cache_size, cache_ttl)
         self.batch_ops = BatchFileOperations(batch_size) if enable_async else None
         self.enable_async = enable_async
-        self.logger = get_logger("crackerjack.filesystem.enhanced")
+        self.logger = logger
 
         self._file_timestamps: dict[str, float] = {}
 
@@ -441,3 +458,21 @@ class EnhancedFileSystemService(FileSystemInterface):
                 details=str(e),
                 recovery="Check parent directory permissions",
             ) from e
+
+    async def _on_start(self) -> None:
+        """
+        Lifecycle method called when the service is started.
+        """
+        self.logger.debug("EnhancedFileSystemService started.")
+
+    async def _on_stop(self) -> None:
+        """
+        Lifecycle method called when the service is stopped.
+        """
+        self.logger.debug("EnhancedFileSystemService stopped.")
+
+    async def _on_reload(self) -> None:
+        """
+        Lifecycle method called when the service is reloaded.
+        """
+        self.logger.debug("EnhancedFileSystemService reloaded.")

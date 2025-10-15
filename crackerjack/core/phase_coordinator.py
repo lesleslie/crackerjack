@@ -1,20 +1,48 @@
+from __future__ import annotations
+
 import logging
-import time
 import typing as t
 from pathlib import Path
 
+from acb.depends import Inject, depends
 from rich.console import Console
 
-from acb.depends import depends
-from crackerjack.code_cleaner import CodeCleaner, PackageCleaningResult
+from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
-from acb.decorators import handle_errors
+from crackerjack.decorators import handle_errors
+from crackerjack.services.memory_optimizer import create_lazy_service
+
+if t.TYPE_CHECKING:
+    from crackerjack.core.session_coordinator import SessionCoordinator
+    from crackerjack.models.protocols import (
+        ConfigMergeServiceProtocol,
+        FileSystemInterface,
+        GitInterface,
+        HookManager,
+        MemoryOptimizerProtocol,
+        OptionsProtocol,
+        PublishManager,
+        TestManagerProtocol,
+    )
+    from crackerjack.services.monitoring.performance_cache import (
+        FileSystemCache,
+        GitOperationCache,
+    )
+    from crackerjack.services.parallel_executor import (
+        AsyncCommandExecutor,
+        ParallelHookExecutor,
+    )
 
 class PhaseCoordinator:
     @depends.inject
     def __init__(
         self,
-        console: Console = depends(),
+        console: Inject[Console],
+        memory_optimizer: Inject[MemoryOptimizerProtocol],
+        parallel_executor: Inject[ParallelHookExecutor],
+        async_executor: Inject[AsyncCommandExecutor],
+        git_cache: Inject[GitOperationCache],
+        filesystem_cache: Inject[FileSystemCache],
         pkg_path: Path = depends(),
         session: SessionCoordinator = depends(),
         # Dependencies provided by WorkflowOrchestrator via depends.get()
@@ -38,7 +66,6 @@ class PhaseCoordinator:
         self.config_merge_service = config_merge_service
 
         self.code_cleaner = CodeCleaner(
-            console=console,
             base_directory=pkg_path,
             file_processor=None,
             error_handler=None,
@@ -48,20 +75,17 @@ class PhaseCoordinator:
             backup_service=None,
         )
 
-        from crackerjack.services.config import ConfigurationService
-
-        self.config_service = ConfigurationService(console=console, pkg_path=pkg_path)
-
         self.logger = logging.getLogger("crackerjack.phases")
 
-        self._memory_optimizer: MemoryOptimizerProtocol = get_memory_optimizer()
-        self._parallel_executor: ParallelHookExecutor = get_parallel_executor()
-        self._async_executor: AsyncCommandExecutor = get_async_executor()
-        self._git_cache: PerformanceCacheProtocol = get_git_cache()
-        self._filesystem_cache: PerformanceCacheProtocol = get_filesystem_cache()
+        # Services injected via ACB DI
+        self._memory_optimizer = memory_optimizer
+        self._parallel_executor = parallel_executor
+        self._async_executor = async_executor
+        self._git_cache = git_cache
+        self._filesystem_cache = filesystem_cache
 
         self._lazy_autofix = create_lazy_service(
-            lambda: AutofixCoordinator(console=console, pkg_path=pkg_path),
+            lambda: AutofixCoordinator(pkg_path=pkg_path),
             "autofix_coordinator",
         )
 
@@ -87,10 +111,6 @@ class PhaseCoordinator:
     def run_hooks_phase(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             return True
-
-        temp_config = self.config_service.get_temp_config_path()
-        if temp_config:
-            self.hook_manager.set_config_path(temp_config)
 
         if not self.run_fast_hooks_only(options):
             return False

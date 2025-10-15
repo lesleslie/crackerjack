@@ -7,7 +7,7 @@ from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.models.task import HookResult
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.file_hasher import FileHasher
 
 from .hook_executor import HookExecutionResult, HookExecutor
@@ -18,12 +18,12 @@ class CachedHookExecutor:
         self,
         console: Console,
         pkg_path: Path,
-        cache: ACBCrackerjackCache | None = None,
+        cache: CrackerjackCache | None = None,
         cache_ttl_seconds: int = 1800,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.cache = cache or ACBCrackerjackCache()
+        self.cache = cache or CrackerjackCache()
         self.cache_ttl_seconds = cache_ttl_seconds
         self.file_hasher = FileHasher(self.cache)
         self.base_executor = HookExecutor(console, pkg_path, quiet=True)

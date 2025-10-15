@@ -1,16 +1,17 @@
-from acb.decorators import retry, timeout, validate_args
-
 from .error_handling import (
     graceful_degradation,
     handle_errors,
     log_errors,
+    retry,
+    validate_args,
+    with_timeout,
 )
 from .patterns import cache_errors
 
 __all__ = [
     "retry",
     "handle_errors",
-    "timeout",
+    "with_timeout",
     "log_errors",
     "graceful_degradation",
     "validate_args",

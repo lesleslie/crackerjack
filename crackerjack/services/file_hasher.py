@@ -3,12 +3,12 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from .acb_cache_adapter import ACBCrackerjackCache
+from .cache import CrackerjackCache
 
 
 class FileHasher:
-    def __init__(self, cache: ACBCrackerjackCache | None = None) -> None:
-        self.cache = cache or ACBCrackerjackCache()
+    def __init__(self, cache: CrackerjackCache | None = None) -> None:
+        self.cache = cache or CrackerjackCache()
         self._executor = ThreadPoolExecutor(max_workers=4)
 
     def get_file_hash(self, file_path: Path, algorithm: str = "md5") -> str:

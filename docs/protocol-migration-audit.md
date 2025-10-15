@@ -87,7 +87,7 @@ Based on concrete imports analysis:
    - Methods: `execute_parallel()`, `get_results()`
 
 7. **PerformanceBenchmarkProtocol** - Benchmarking service
-   - Used in: `workflow_orchestrator.py`
+   - Used in: `workflow_orchestrator.py`, `crackerjack/services/monitoring/performance_benchmarks.py`
    - Methods: `run_benchmark()`, `get_report()`
 
 ---
@@ -103,8 +103,8 @@ from crackerjack.services.debug import (...)
 from crackerjack.services.logging import (...)
 from crackerjack.services.memory_optimizer import get_memory_optimizer, memory_optimized
 from crackerjack.services.performance_benchmarks import PerformanceBenchmarkService
-from crackerjack.services.performance_cache import get_performance_cache
-from crackerjack.services.performance_monitor import (...)
+from crackerjack.services.monitoring.performance_cache import get_performance_cache
+from crackerjack.services.monitoring.performance_monitor import (...)
 from crackerjack.services.quality_baseline_enhanced import (...)
 from crackerjack.services.quality_intelligence import QualityIntelligenceService
 ```
@@ -120,7 +120,7 @@ from crackerjack.services.quality_intelligence import QualityIntelligenceService
 ```python
 from crackerjack.services.memory_optimizer import (...)
 from crackerjack.services.parallel_executor import (...)
-from crackerjack.services.performance_cache import get_filesystem_cache, get_git_cache
+from crackerjack.services.monitoring.performance_cache import get_filesystem_cache, get_git_cache
 ```
 
 **Migration Strategy:**

@@ -5,7 +5,7 @@ from typing import Any
 
 import pytest
 
-from crackerjack.core.session_controller import SessionController
+from crackerjack.core.session_coordinator import SessionController
 
 
 @dataclass

@@ -116,7 +116,7 @@ class CleanupSettings(Settings):
     keep_debug_logs: int = 5
     keep_coverage_files: int = 10
 
-class EnterpriseSettings(Settings):
+class AdvancedSettings(Settings):
     enabled: bool = False
     license_key: str | None = None
     organization: str | None = None
@@ -154,7 +154,7 @@ class CrackerjackSettings(Settings):
     execution: ExecutionSettings = ExecutionSettings()
     progress: ProgressSettings = ProgressSettings()
     cleanup: CleanupSettings = CleanupSettings()
-    enterprise: EnterpriseSettings = EnterpriseSettings()
+    advanced: AdvancedSettings = AdvancedSettings()
     mcp_server: MCPServerSettings = MCPServerSettings()
     zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()

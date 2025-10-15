@@ -19,7 +19,7 @@ def pkg_path(tmp_path):
 
 @pytest.fixture
 def hook_manager(console, pkg_path):
-    return HookManagerImpl(console, pkg_path)
+    return HookManagerImpl(pkg_path)
 
 
 class TestHookManager:

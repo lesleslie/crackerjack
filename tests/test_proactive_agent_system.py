@@ -9,7 +9,7 @@ from crackerjack.agents.architect_agent import ArchitectAgent
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.agents.proactive_agent import ProactiveAgent
-from crackerjack.services.pattern_cache import CachedPattern, PatternCache
+from crackerjack.services.quality.pattern_cache import CachedPattern, PatternCache
 
 
 class TestProactiveAgent:

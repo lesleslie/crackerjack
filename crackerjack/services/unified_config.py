@@ -1,31 +1,32 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
+from acb.logger import Logger
 
-from acb.depends import depends
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.errors import ValidationError
 from crackerjack.models.protocols import OptionsProtocol
-from crackerjack.services.logging import LoggingContext, get_logger
 
 
 class UnifiedConfigurationService:
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        console: Inject[Console],
+        logger: Inject[Logger],
         pkg_path: Path,
         options: OptionsProtocol | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.logger = get_logger("crackerjack.config.unified")
+        self.logger = logger
         self._config: CrackerjackSettings | None = None
 
     def get_config(self, reload: bool = False) -> CrackerjackSettings:
         if self._config is None or reload:
-            with LoggingContext("load_unified_config"):
-                self._config = self._load_unified_config()
+            self._config = self._load_unified_config()
 
         return self._config
 
@@ -52,7 +53,7 @@ class UnifiedConfigurationService:
         return "comprehensive"
 
     def get_logging_config(self) -> dict[str, t.Any]:
-        config = self.get_config()
+        self.get_config()
 
         return {
             "level": "INFO",
@@ -82,7 +83,8 @@ class UnifiedConfigurationService:
             "min_coverage": 10.0,
         }
 
-    def get_cache_config(self) -> dict[str, t.Any]:
+    @staticmethod
+    def get_cache_config() -> dict[str, t.Any]:
         return {
             "enabled": True,
             "size": 1000,

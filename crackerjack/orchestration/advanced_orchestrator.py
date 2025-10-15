@@ -23,7 +23,7 @@ from crackerjack.executors.individual_hook_executor import (
 from crackerjack.managers.test_manager import TestManagementImpl
 from crackerjack.models.protocols import OptionsProtocol
 from crackerjack.models.task import HookResult
-from crackerjack.services.metrics import get_metrics_collector
+from crackerjack.services.monitoring.metrics import get_metrics_collector
 
 from .execution_strategies import (
     AICoordinationMode,

@@ -5,7 +5,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
-from crackerjack.services.embeddings import EmbeddingService
+from crackerjack.services.ai.embeddings import EmbeddingService
 from crackerjack.services.input_validator import get_input_validator
 from crackerjack.services.vector_store import VectorStore
 

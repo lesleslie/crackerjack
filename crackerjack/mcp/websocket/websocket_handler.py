@@ -4,14 +4,14 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
+from acb import console
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from rich.console import Console
 
 from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
 
 from .jobs import JobManager
 
-console = Console()
+# console imported from acb
 
 
 # Phase 9.4: WebSocket Security Configuration

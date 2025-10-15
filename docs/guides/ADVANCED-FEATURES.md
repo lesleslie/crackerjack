@@ -2,13 +2,13 @@
 
 ## Crackerjack Power User Guide
 
-This document covers advanced CLI flags and enterprise features not included in the main README. These features are designed for power users, enterprise deployments, CI/CD pipelines, and specialized workflows.
+This document covers advanced CLI flags and advanced features not included in the main README. These features are designed for power users, advanced deployments, CI/CD pipelines, and specialized workflows.
 
 ______________________________________________________________________
 
 ## Table of Contents
 
-1. \[[#enterprise-features|Enterprise Features]\]
+1. [Advanced Features](<#advanced-features>)
 1. \[[#ai--intelligence|AI & Intelligence]\]
 1. \[[#documentation-generation|Documentation Generation]\]
 1. \[[#quality-analytics|Quality Analytics]\]
@@ -25,11 +25,11 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-## Enterprise Features
+## Advanced Features
 
-### Enterprise Optimization Engine
+### Advanced Optimization Engine
 
-Enable enterprise-scale optimization with resource monitoring and scaling analysis:
+Enable advanced-scale optimization with resource monitoring and scaling analysis:
 
 ```bash
 python -m crackerjack --enterprise-optimization

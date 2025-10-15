@@ -5,7 +5,8 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from ..ui.server_panels import create_server_panels
 from .secure_subprocess import execute_secure_subprocess
@@ -198,10 +199,8 @@ def stop_process(pid: int, force: bool = False) -> bool:
         return True
 
 
-def stop_mcp_server(console: Console | None = None) -> bool:
-    if console is None:
-        console = Console()
-
+@depends.inject
+def stop_mcp_server(console: Inject[Console]) -> bool:
     panels = create_server_panels(console)
     processes = find_mcp_server_processes()
 
@@ -226,10 +225,8 @@ def stop_mcp_server(console: Console | None = None) -> bool:
     return success
 
 
-def stop_websocket_server(console: Console | None = None) -> bool:
-    if console is None:
-        console = Console()
-
+@depends.inject
+def stop_websocket_server(console: Inject[Console]) -> bool:
     processes = find_websocket_server_processes()
 
     if not processes:
@@ -248,11 +245,9 @@ def stop_websocket_server(console: Console | None = None) -> bool:
     return success
 
 
-def stop_zuban_lsp(console: Console | None = None) -> bool:
+@depends.inject
+def stop_zuban_lsp(console: Inject[Console]) -> bool:
     """Stop running zuban LSP server processes."""
-    if console is None:
-        console = Console()
-
     processes = find_zuban_lsp_processes()
 
     if not processes:
@@ -271,28 +266,24 @@ def stop_zuban_lsp(console: Console | None = None) -> bool:
     return success
 
 
-def stop_all_servers(console: Console | None = None) -> bool:
-    if console is None:
-        console = Console()
-
-    mcp_success = stop_mcp_server(console)
-    websocket_success = stop_websocket_server(console)
-    zuban_lsp_success = stop_zuban_lsp(console)
+@depends.inject
+def stop_all_servers(console: Inject[Console]) -> bool:
+    mcp_success = stop_mcp_server()
+    websocket_success = stop_websocket_server()
+    zuban_lsp_success = stop_zuban_lsp()
 
     return mcp_success and websocket_success and zuban_lsp_success
 
 
+@depends.inject
 def restart_mcp_server(
     websocket_port: int | None = None,
-    console: Console | None = None,
+    console: Inject[Console] = None,
 ) -> bool:
-    if console is None:
-        console = Console()
-
     panels = create_server_panels(console)
     panels.restart_header()
 
-    stop_mcp_server(console)
+    stop_mcp_server()
 
     panels.cleanup_wait()
     time.sleep(2)
@@ -339,14 +330,12 @@ def restart_mcp_server(
         return False
 
 
-def restart_zuban_lsp(console: Console | None = None) -> bool:
+@depends.inject
+def restart_zuban_lsp(console: Inject[Console]) -> bool:
     """Restart zuban LSP server."""
-    if console is None:
-        console = Console()
-
     console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/ bold cyan]")
 
-    stop_zuban_lsp(console)
+    stop_zuban_lsp()
 
     console.print("⏳ Waiting for cleanup...")
     time.sleep(2)
@@ -378,10 +367,8 @@ def restart_zuban_lsp(console: Console | None = None) -> bool:
         return False
 
 
-def list_server_status(console: Console | None = None) -> None:
-    if console is None:
-        console = Console()
-
+@depends.inject
+def list_server_status(console: Inject[Console]) -> None:
     console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
 
     mcp_processes = find_mcp_server_processes()

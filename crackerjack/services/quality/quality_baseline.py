@@ -9,7 +9,8 @@ from acb.depends import depends
 
 from crackerjack.data.models import QualityBaselineRecord
 from crackerjack.data.repository import QualityBaselineRepository
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.models.protocols import QualityBaselineProtocol
+from crackerjack.services.cache import CrackerjackCache
 
 
 @dataclass
@@ -41,15 +42,15 @@ class QualityMetrics:
         return cls(**data)
 
 
-class QualityBaselineService:
+class QualityBaselineService(QualityBaselineProtocol):
     """Service for tracking and persisting quality baselines across sessions."""
 
     def __init__(
         self,
-        cache: ACBCrackerjackCache | None = None,
+        cache: CrackerjackCache | None = None,
         repository: QualityBaselineRepository | None = None,
     ) -> None:
-        self.cache = cache or ACBCrackerjackCache()
+        self.cache = cache or CrackerjackCache()
         self._logger = logging.getLogger(__name__)
         if repository is not None:
             self._repository: QualityBaselineRepository | None = repository

@@ -207,21 +207,21 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 
 
 def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
-    from rich.console import Console
-
-    from crackerjack.services.initialization import InitializationService
-
-    console = Console()
+    from acb.console import Console
+    from acb.depends import Inject, depends
 
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
-
-    filesystem = FileSystemService()
-    git_service = GitService(console)
-    return InitializationService(
-        console, filesystem, git_service, target_path
-    ).initialize_project_full(force=force)
-
+    from crackerjack.services.initialization import InitializationService
+    
+    
+    @depends.inject
+    def _execute_initialization(target_path: t.Any, force: bool, console: Inject[Console]) -> dict[str, t.Any]:
+        filesystem = FileSystemService()
+        git_service = GitService(target_path)
+        return InitializationService(
+            filesystem, git_service, target_path
+        ).initialize_project_full(force=force)
 
 def _create_init_error_response(message: str) -> str:
     return json.dumps(

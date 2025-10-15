@@ -14,16 +14,14 @@ The QA framework adapters are organized by check type in subdirectories:
 ACB 0.19.0+ auto-discovers adapters via depends.set() at module level.
 """
 
-from crackerjack.lsp import (
-    DeadCodeIssue,
+from .lsp._base import (
     Issue,
     RustToolAdapter,
-    RustToolHookManager,
-    SkylosAdapter,
     ToolResult,
-    TypeIssue,
-    ZubanAdapter,
 )
+from .lsp._manager import RustToolHookManager
+from .lsp.skylos import DeadCodeIssue, SkylosAdapter
+from .lsp.zuban import TypeIssue, ZubanAdapter
 
 # NOTE: ACB 0.19.0+ uses depends.set() for adapter registration at module level
 # AI adapter registration moved to crackerjack.adapters.ai.claude module

@@ -10,9 +10,6 @@ import structlog
 
 from crackerjack.services.logging import (
     LoggingContext,
-    add_correlation_id,
-    add_timestamp,
-    get_correlation_id,
     get_logger,
     log_performance,
     set_correlation_id,

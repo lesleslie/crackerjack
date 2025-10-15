@@ -4,21 +4,12 @@ import logging
 from collections.abc import Awaitable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-try:
-    from acb.adapters import AdapterNotInstalled, import_adapter
-except ImportError:  # pragma: no cover - acb package not available
-    AdapterNotInstalled = RuntimeError  # type: ignore[assignment]
-    import_adapter = None  # type: ignore[assignment]
+from acb.adapters import AdapterNotInstalled, import_adapter
+from acb.depends import depends
 
-try:
-    from acb.depends import depends
-except ImportError:  # pragma: no cover - acb DI not available
-    depends = None  # type: ignore[assignment]
-
-if TYPE_CHECKING:
-    from crackerjack.models.task import HookResult
+from crackerjack.models.task import HookResult
 
 logger = logging.getLogger(__name__)
 
@@ -28,12 +19,15 @@ _cache_import_error: Exception | None = None
 if import_adapter is not None:
     try:
         Cache = import_adapter("cache")
-    except AdapterNotInstalled as exc:  # pragma: no cover - depends on env
-        _cache_import_error = exc
+        print(1)
+    except AdapterNotInstalled as e:  # pragma: no cover - depends on env
+        _cache_import_error = e
         Cache = None
-    except Exception as exc:  # pragma: no cover - defensive
-        _cache_import_error = exc
+    except Exception as e:  # pragma: no cover - defensive
+        _cache_import_error = e
         Cache = None
+        print("exception", e)
+print(Cache)
 
 
 @dataclass
@@ -75,15 +69,15 @@ def get_cache() -> Any:
         raise RuntimeError(msg)
     try:
         return depends.get(Cache)
-    except Exception as exc:  # pragma: no cover - runtime safety
+    except Exception as exception:  # pragma: no cover - runtime safety
         msg = (
             "Failed to resolve ACB cache adapter via dependency injection. "
             "Ensure adapters.yml specifies a valid cache adapter."
         )
-        raise RuntimeError(msg) from exc
+        raise RuntimeError(msg) from exception
 
 
-class ACBCrackerjackCache:
+class CrackerjackCache:
     """ACB-backed cache adapter with in-memory fallback when adapter missing."""
 
     EXPENSIVE_HOOKS = {
@@ -123,14 +117,15 @@ class ACBCrackerjackCache:
         else:
             self._backend = get_cache()
 
-    def _run_async(self, coro: Awaitable[Any]) -> Any:
+    @staticmethod
+    def _run_async(coro: Awaitable[Any]) -> Any:
         async def _await(value: Awaitable[Any]) -> Any:
             return await value
 
         try:
             return asyncio.run(_await(coro))
-        except RuntimeError as exc:
-            message = str(exc)
+        except RuntimeError as exception:
+            message = str(exception)
             if "asyncio.run()" not in message:
                 raise
             loop = asyncio.new_event_loop()
@@ -270,13 +265,15 @@ class ACBCrackerjackCache:
             return
         self._run_async(self._backend.set(f"baseline:{git_hash}", metrics, ttl=2592000))
 
-    def invalidate_hook_cache(self, hook_name: str | None = None) -> None:
+    @staticmethod
+    def invalidate_hook_cache(hook_name: str | None = None) -> None:
         logger.warning(
             "ACB cache fallback does not support selective invalidation (hook=%s).",
             hook_name,
         )
 
-    def cleanup_all(self) -> dict[str, int]:
+    @staticmethod
+    def cleanup_all() -> dict[str, int]:
         return {
             "hook_results": 0,
             "file_hashes": 0,
@@ -287,7 +284,8 @@ class ACBCrackerjackCache:
     def get_cache_stats(self) -> dict[str, Any]:
         return {"acb_cache": self.stats.to_dict()}
 
-    def _get_hook_cache_key(self, hook_name: str, file_hashes: list[str]) -> str:
+    @staticmethod
+    def _get_hook_cache_key(hook_name: str, file_hashes: list[str]) -> str:
         hash_signature = hashlib.md5(
             ",".join(sorted(file_hashes)).encode(),
             usedforsecurity=False,
@@ -305,4 +303,4 @@ class ACBCrackerjackCache:
         return f"{base_key}{version_part}"
 
 
-__all__ = ["ACBCrackerjackCache", "CacheStats", "Cache", "get_cache"]
+__all__ = ["CrackerjackCache", "CacheStats", "Cache", "get_cache"]

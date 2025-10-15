@@ -127,7 +127,7 @@ class Options(BaseModel):
     unified_dashboard: bool = False
     unified_dashboard_port: int | None = None
     max_iterations: int = 5
-    enterprise_batch: str | None = None
+    advanced_batch: str | None = None
     monitor_dashboard: str | None = None
     coverage_status: bool = False
     coverage_goal: float | None = None
@@ -190,12 +190,10 @@ class Options(BaseModel):
     apply_config_updates: bool = False
     diff_config: str | None = None
     config_interactive: bool = False
-    refresh_cache: bool = False
-
-    # Enterprise features
-    enterprise_optimizer: bool = False
-    enterprise_profile: str | None = None
-    enterprise_report: str | None = None
+    # Advanced features
+    advanced_optimizer: bool = False
+    advanced_profile: str | None = None
+    advanced_report: str | None = None
     mkdocs_integration: bool = False
     mkdocs_serve: bool = False
     mkdocs_theme: str = "material"
@@ -333,8 +331,8 @@ CLI_OPTIONS = {
     "update_precommit": typer.Option(
         False,
         "-u",
-        "--update-precommit",
-        help="Update pre-commit hooks configuration.",
+        "--update-hooks",
+        help="Update hooks configuration.",
     ),
     "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
     "debug": typer.Option(False, "--debug", help="Enable debug output."),
@@ -392,7 +390,7 @@ CLI_OPTIONS = {
         False,
         "-s",
         "--skip-hooks",
-        help="Skip running pre-commit hooks (useful with -t).",
+        help="Skip running hooks (useful with -t).",
     ),
     "fast": typer.Option(
         False,
@@ -453,7 +451,7 @@ CLI_OPTIONS = {
     "experimental_hooks": typer.Option(
         False,
         "--experimental-hooks",
-        help="Enable experimental pre-commit hooks (includes pyrefly and ty).",
+        help="Enable experimental hooks (includes pyrefly and ty).",
     ),
     "enable_pyrefly": typer.Option(
         False,
@@ -877,21 +875,21 @@ CLI_OPTIONS = {
         "--analytics-dashboard",
         help="Output file path for analytics dashboard (HTML format).",
     ),
-    # Enterprise features
-    "enterprise_optimizer": typer.Option(
+    # Advanced features
+    "advanced_optimizer": typer.Option(
         False,
-        "--enterprise-optimizer",
-        help="Enable enterprise-scale optimization engine with resource monitoring and scaling analysis.",
+        "--advanced-optimizer",
+        help="Enable advanced-scale optimization engine with resource monitoring and scaling analysis.",
     ),
-    "enterprise_profile": typer.Option(
+    "advanced_profile": typer.Option(
         None,
-        "--enterprise-profile",
-        help="Enterprise optimization profile: balanced, performance, memory, throughput.",
+        "--advanced-profile",
+        help="Advanced optimization profile: balanced, performance, memory, throughput.",
     ),
-    "enterprise_report": typer.Option(
+    "advanced_report": typer.Option(
         None,
-        "--enterprise-report",
-        help="Output file path for enterprise optimization report (JSON format).",
+        "--advanced-report",
+        help="Output file path for advanced optimization report (JSON format).",
     ),
     "mkdocs_integration": typer.Option(
         False,
@@ -952,7 +950,7 @@ CLI_OPTIONS = {
     "refresh_cache": typer.Option(
         False,
         "--refresh-cache",
-        help="Refresh pre-commit cache to ensure fresh environment.",
+        help="Refresh cache to ensure fresh environment.",
     ),
     # Semantic search options
     "index": typer.Option(
@@ -1052,10 +1050,10 @@ def create_options(
     predictive_analytics: bool,
     prediction_periods: int,
     analytics_dashboard: str | None,
-    # Enterprise features
-    enterprise_optimizer: bool,
-    enterprise_profile: str | None,
-    enterprise_report: str | None,
+    # Advanced features
+    advanced_optimizer: bool,
+    advanced_profile: str | None,
+    advanced_report: str | None,
     mkdocs_integration: bool,
     mkdocs_serve: bool,
     mkdocs_theme: str,
@@ -1153,10 +1151,10 @@ def create_options(
         predictive_analytics=predictive_analytics,
         prediction_periods=prediction_periods,
         analytics_dashboard=analytics_dashboard,
-        # Enterprise features
-        enterprise_optimizer=enterprise_optimizer,
-        enterprise_profile=enterprise_profile,
-        enterprise_report=enterprise_report,
+        # Advanced features
+        advanced_optimizer=advanced_optimizer,
+        advanced_profile=advanced_profile,
+        advanced_report=advanced_report,
         mkdocs_integration=mkdocs_integration,
         mkdocs_serve=mkdocs_serve,
         mkdocs_theme=mkdocs_theme,

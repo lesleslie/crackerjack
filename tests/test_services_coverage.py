@@ -38,13 +38,11 @@ class TestUnifiedConfigService:
 
 
 class TestMetricsService:
-    def test_metrics_import(self) -> None:
-        from crackerjack.services.metrics import MetricsCollector
+        from crackerjack.services.monitoring.metrics import MetricsCollector
 
         assert MetricsCollector is not None
 
-    def test_metrics_basic(self) -> None:
-        from crackerjack.services.metrics import MetricsCollector
+        def test_metrics_basic(self) -> None:        from crackerjack.services.metrics import MetricsCollector
 
         collector = MetricsCollector()
         assert collector is not None
@@ -66,28 +64,28 @@ class TestToolVersionService:
 
 class TestPerformanceBenchmarks:
     def test_performance_benchmarks_import(self) -> None:
-        import crackerjack.services.performance_benchmarks as perf_module
+        import crackerjack.services.monitoring.performance_benchmarks as perf_module
 
         assert perf_module is not None
 
 
 class TestHealthMetrics:
     def test_health_metrics_import(self) -> None:
-        import crackerjack.services.health_metrics as health_module
+        import crackerjack.services.monitoring.health_metrics as health_module
 
         assert health_module is not None
 
 
 class TestDependencyMonitor:
     def test_dependency_monitor_import(self) -> None:
-        import crackerjack.services.dependency_monitor as dep_module
+        import crackerjack.services.monitoring.dependency_monitor as dep_module
 
         assert dep_module is not None
 
 
 class TestContextualAIAssistant:
     def test_contextual_ai_import(self) -> None:
-        import crackerjack.services.contextual_ai_assistant as ai_module
+        import crackerjack.services.ai.contextual_ai_assistant as ai_module
 
         assert ai_module is not None
 

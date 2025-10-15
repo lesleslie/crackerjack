@@ -1,10 +1,12 @@
 import asyncio
+import concurrent.futures
 import subprocess
 import typing as t
 from pathlib import Path
 from typing import Protocol
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 from rich.progress import (
     BarColumn,
     Progress,
@@ -36,8 +38,9 @@ class ProgressCallback(Protocol):
 class RealTimeTypingFeedback:
     """Provides real-time feedback during type checking operations."""
 
-    def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+    @depends.inject
+    def __init__(self, console: Inject[Console]) -> None:
+        self.console = console
         self._total_errors = 0
         self._files_checked = 0
 
@@ -143,8 +146,9 @@ class JSONRPCClient:
 class LSPClient:
     """Client for communicating with Zuban LSP server."""
 
-    def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+    @depends.inject
+    def __init__(self, console: Inject[Console]) -> None:
+        self.console = console
         self._server_port: int | None = None
         self._server_host: str = "127.0.0.1"
         self._lsp_service: ZubanLSPService | None = None
@@ -243,7 +247,7 @@ class LSPClient:
     ) -> dict[str, list[dict[str, t.Any]]]:
         """Check files with progress display."""
         diagnostics = {}
-        feedback = RealTimeTypingFeedback(self.console)
+        feedback = RealTimeTypingFeedback()
 
         with feedback.create_progress_display() as progress:
             task = progress.add_task("Type checking files...", total=total_files)
@@ -300,8 +304,6 @@ class LSPClient:
             try:
                 asyncio.get_running_loop()
                 # We're already in an async context, use a thread pool
-                import concurrent.futures
-
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
                         self._run_async_lsp_check,
@@ -408,8 +410,7 @@ class LSPClient:
         total_files: int,
     ) -> dict[str, list[dict[str, t.Any]]]:
         """Process files with progress display."""
-        diagnostics = {}
-        feedback = RealTimeTypingFeedback(self.console)
+        feedback = RealTimeTypingFeedback()
 
         with feedback.create_progress_display() as progress:
             task = progress.add_task("LSP type checking files...", total=total_files)
@@ -508,8 +509,6 @@ class LSPClient:
 
     def _execute_zuban_check(self, file_path: str) -> subprocess.CompletedProcess[str]:
         """Execute zuban check command for a file."""
-        import subprocess
-
         return subprocess.run(
             ["zuban", "check", file_path],
             capture_output=True,
@@ -610,7 +609,7 @@ class LSPClient:
         if not python_files:
             return {}, "📁 No Python files found to check"
 
-        feedback = RealTimeTypingFeedback(self.console)
+        feedback = RealTimeTypingFeedback()
 
         self.console.print(
             f"🔍 Starting type check of {len(python_files)} files...", style="bold blue"

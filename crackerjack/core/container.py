@@ -1,15 +1,8 @@
 import typing as t
 from pathlib import Path
 
+from acb import console as acb_console
 from rich.console import Console
-
-from crackerjack.models.protocols import (
-    FileSystemInterface,
-    GitInterface,
-    HookManager,
-    PublishManager,
-    TestManagerProtocol,
-)
 
 
 class DependencyContainer:
@@ -44,7 +37,7 @@ class DependencyContainer:
         verbose: bool = False,
     ) -> "DependencyContainer":
         if console is None:
-            console = Console(force_terminal=True)
+            console = acb_console
 
         if pkg_path is None:
             pkg_path = Path.cwd()
@@ -57,7 +50,7 @@ class DependencyContainer:
 
         self.register_transient(
             GitInterface,
-            lambda: GitService(console=console, pkg_path=pkg_path),
+            lambda: GitService(pkg_path=pkg_path),
         )
 
         from crackerjack.managers.hook_manager import HookManagerImpl
@@ -91,11 +84,13 @@ class DependencyContainer:
 
 
 def create_container(
-    console: Console | None = None,
+    console: Console | None = None,  # defaults to acb_console if None
     pkg_path: Path | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> DependencyContainer:
+    if console is None:
+        console = acb_console
     return DependencyContainer().create_default_container(
         console=console,
         pkg_path=pkg_path,

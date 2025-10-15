@@ -266,7 +266,6 @@ class CreosoteAdapter(BaseToolAdapter):
                     "black",
                     "ruff",
                     "mypy",
-                    "pre-commit",
                     "sphinx",
                     "tox",
                 ],

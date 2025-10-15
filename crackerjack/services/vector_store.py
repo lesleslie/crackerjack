@@ -9,6 +9,8 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
+from crackerjack.services.ai.embeddings import EmbeddingService
+
 from ..models.semantic_models import (
     EmbeddingVector,
     IndexingProgress,
@@ -17,7 +19,6 @@ from ..models.semantic_models import (
     SearchResult,
     SemanticConfig,
 )
-from .embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 

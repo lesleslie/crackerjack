@@ -1,5 +1,4 @@
 import hashlib
-import subprocess
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
@@ -378,7 +377,7 @@ class ConfigTemplateService:
                 )
 
             self._update_version_tracking(project_path, "pre-commit", template.version)
-            self._invalidate_precommit_cache(project_path)
+            self._invalidate_cache(project_path)
 
             self.console.print(
                 f"[green]✅[/green] Updated {config_file.name} to version {template.version}"
@@ -473,23 +472,10 @@ class ConfigTemplateService:
             with version_file.open("w") as f:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
-    def _invalidate_precommit_cache(self, project_path: Path) -> None:
-        """Invalidate pre-commit cache to ensure fresh environment."""
-        with suppress(Exception):
-            subprocess.run(
-                ["pre-commit", "clean"],
-                cwd=project_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            subprocess.run(
-                ["pre-commit", "install"],
-                cwd=project_path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
+    def _invalidate_cache(self, project_path: Path) -> None:
+        """Invalidate cache to ensure fresh environment."""
+        # No-op in the new system - cache invalidation handled differently
+        pass
 
     def get_config_hash(self, config_path: Path) -> str:
         """Generate hash of configuration file for cache invalidation."""

@@ -1,8 +1,13 @@
 import tempfile
+import time
 import typing as t
+from contextlib import suppress
 from enum import Enum
 from pathlib import Path
 
+from crackerjack.models.protocols import SecureStatusFormatterProtocol, ServiceProtocol
+
+from .regex_patterns import SAFE_PATTERNS, CompiledPatternCache, sanitize_internal_urls
 from .security_logger import get_security_logger
 
 
@@ -13,7 +18,7 @@ class StatusVerbosity(str, Enum):
     FULL = "full"
 
 
-class SecureStatusFormatter:
+class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
     SENSITIVE_PATTERNS = {
         "absolute_paths": [
             r"(/[^/\s]*){2, }",
@@ -63,6 +68,42 @@ class SecureStatusFormatter:
     def __init__(self, project_root: Path | None = None):
         self.project_root = project_root or Path.cwd()
         self.security_logger = get_security_logger()
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def format_status(
         self,
@@ -181,8 +222,6 @@ class SecureStatusFormatter:
         return text
 
     def _sanitize_paths(self, text: str) -> str:
-        from .regex_patterns import SAFE_PATTERNS
-
         unix_path_pattern = SAFE_PATTERNS.get("detect_absolute_unix_paths")
 
         if not unix_path_pattern:
@@ -202,10 +241,6 @@ class SecureStatusFormatter:
         return text
 
     def _process_path_pattern(self, text: str, pattern_str: str) -> str:
-        from contextlib import suppress
-
-        from .regex_patterns import CompiledPatternCache
-
         with suppress(Exception):
             compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
             matches = compiled.findall(text)
@@ -236,8 +271,6 @@ class SecureStatusFormatter:
             return text.replace(match, "[REDACTED_PATH]")
 
     def _sanitize_internal_urls(self, text: str) -> str:
-        from .regex_patterns import sanitize_internal_urls
-
         return sanitize_internal_urls(text)
 
     def _mask_potential_secrets(self, text: str) -> str:
@@ -254,8 +287,6 @@ class SecureStatusFormatter:
         return "[INTERNAL_URL]" in text or "[REDACTED_PATH]" in text
 
     def _get_validated_secret_patterns(self) -> list[t.Any]:
-        from .regex_patterns import SAFE_PATTERNS
-
         patterns = []
         long_alphanumeric = SAFE_PATTERNS.get("detect_long_alphanumeric_tokens")
         base64_like = SAFE_PATTERNS.get("detect_base64_like_strings")
@@ -278,8 +309,6 @@ class SecureStatusFormatter:
     def _apply_fallback_secret_patterns(self, text: str) -> str:
         for pattern_str in self.SENSITIVE_PATTERNS["secrets"]:
             try:
-                from .regex_patterns import CompiledPatternCache
-
                 compiled = CompiledPatternCache.get_compiled_pattern(pattern_str)
                 text = self._mask_pattern_matches(text, compiled.findall(text))
             except Exception:
@@ -317,8 +346,6 @@ class SecureStatusFormatter:
         return obj
 
     def _get_timestamp(self) -> float:
-        import time
-
         return time.time()
 
     def format_error_response(

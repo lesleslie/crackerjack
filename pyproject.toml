@@ -388,7 +388,16 @@ enable_diagnostics = true
 real_time_feedback = true
 
 [dependency-groups]
+cache = [
+    "acb>=0.25.2",
+]
 dev = [
     "excalidraw-mcp>=0.34.0",
     "session-mgmt-mcp>=0.4.0",
+]
+logger = [
+    "acb>=0.25.2",
+]
+sql = [
+    "acb>=0.25.2",
 ]

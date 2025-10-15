@@ -119,13 +119,13 @@ options.cleanup.keep_debug_logs     → settings.keep_debug_logs
 options.cleanup.keep_coverage_files → settings.keep_coverage_files
 ```
 
-**Enterprise Config**
+**Advanced Config**
 
 ```python
 # OLD
-options.enterprise.enabled      → settings.enterprise_enabled
-options.enterprise.license_key  → settings.license_key
-options.enterprise.organization → settings.organization
+options.advanced.enabled      → settings.advanced_enabled
+options.advanced.license_key  → settings.license_key
+options.advanced.organization → settings.organization
 ```
 
 **MCP Server Config**

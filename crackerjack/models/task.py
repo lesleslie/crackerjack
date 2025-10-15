@@ -3,8 +3,9 @@ import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
+from acb.console import Console
+from acb.depends import Inject, depends
 from pydantic import BaseModel
-from rich.console import Console
 
 
 class TaskStatus(Enum):
@@ -68,7 +69,6 @@ class TaskStatusData:
 
 
 class SessionTracker(BaseModel, arbitrary_types_allowed=True):
-    console: Console
     session_id: str
     start_time: float
     progress_file: t.Any = None
@@ -76,8 +76,10 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     current_task: str | None = None
     metadata: dict[str, t.Any] = {}
 
-    def __init__(self, **data: t.Any) -> None:
+    @depends.inject
+    def __init__(self, console: Inject[Console], **data: t.Any) -> None:
         super().__init__(**data)
+        self.console = console
         if not self.tasks:
             self.tasks = {}
         if not self.metadata:

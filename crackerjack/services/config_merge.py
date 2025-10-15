@@ -6,27 +6,30 @@ from pathlib import Path
 import tomli
 import tomli_w
 import yaml
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
+from acb.logger import Logger
 
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
     FileSystemInterface,
     GitInterface,
 )
-from crackerjack.services.logging import get_logger
 
 
 class ConfigMergeService(ConfigMergeServiceProtocol):
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        console: Inject[Console],
         filesystem: FileSystemInterface,
         git_service: GitInterface,
+        logger: Inject[Logger],
     ) -> None:
         self.console = console
         self.filesystem = filesystem
         self.git_service = git_service
-        self.logger = get_logger("crackerjack.config_merge")
+        self.logger = logger
 
     def smart_merge_pyproject(
         self,

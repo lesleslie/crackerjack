@@ -1,14 +1,22 @@
 import asyncio
+import subprocess
 import time
 import typing as t
-from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
+from acb.depends import Inject, depends
+from acb.logger import Logger
+
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
-from crackerjack.services.logging import get_logger
-from crackerjack.services.performance_cache import get_performance_cache
+from crackerjack.models.protocols import (
+    AsyncCommandExecutorProtocol,
+    ParallelHookExecutorProtocol,
+    PerformanceCacheProtocol,
+    ServiceProtocol,
+)
+from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
 
 
 class ExecutionStrategy(Enum):
@@ -27,42 +35,18 @@ class ExecutionGroup:
     security_level: SecurityLevel = SecurityLevel.MEDIUM
 
 
-@dataclass
-class ExecutionResult:
-    operation_id: str
-    success: bool
-    duration_seconds: float
-    output: str = ""
-    error: str = ""
-    exit_code: int = 0
-    metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
+class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
+    """Executes hooks in parallel or sequentially based on defined strategies.
 
-
-@dataclass
-class ParallelExecutionResult:
-    group_name: str
-    total_operations: int
-    successful_operations: int
-    failed_operations: int
-    total_duration_seconds: float
-    results: list[ExecutionResult]
-
-    @property
-    def success_rate(self) -> float:
-        return (
-            self.successful_operations / self.total_operations
-            if self.total_operations > 0
-            else 0.0
-        )
-
-    @property
-    def overall_success(self) -> bool:
-        return self.failed_operations == 0
-
-
-class ParallelHookExecutor:
+    This service manages the concurrent execution of various hooks (e.g., linting, formatting)
+    to optimize performance and provide faster feedback loops. It supports different execution
+    strategies and handles dependencies between hooks.
+    """
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
+        cache: Inject[PerformanceCacheProtocol],
         max_workers: int = 3,
         timeout_seconds: int = 300,
         strategy: ExecutionStrategy = ExecutionStrategy.PARALLEL_SAFE,
@@ -70,8 +54,44 @@ class ParallelHookExecutor:
         self.max_workers = max_workers
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
-        self._logger = get_logger("crackerjack.parallel_executor")
-        self._cache = get_performance_cache()
+        self._logger = logger
+        self._cache = cache
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def analyze_hook_dependencies(
         self,
@@ -249,17 +269,52 @@ class ParallelHookExecutor:
         return processed_results
 
 
-class AsyncCommandExecutor:
+class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
+    """Executes shell commands asynchronously, with caching capabilities.
+
+    This service provides a robust way to run external commands without blocking
+    the main event loop, supporting parallel execution and caching of results
+    to improve performance and responsiveness.
+    """
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
+        cache: Inject[PerformanceCacheProtocol],
         max_workers: int = 4,
         cache_results: bool = True,
     ):
         self.max_workers = max_workers
         self.cache_results = cache_results
-        self._logger = get_logger("crackerjack.async_executor")
-        self._cache = get_performance_cache()
-        self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)
+        self._logger = logger
+        self._cache = cache
+    def shutdown(self) -> None:
+        if hasattr(self, "_thread_pool"):
+            self._thread_pool.shutdown(wait=True)
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     async def execute_command(
         self,
@@ -325,7 +380,6 @@ class AsyncCommandExecutor:
         loop = asyncio.get_event_loop()
 
         def run_sync_command() -> ExecutionResult:
-            import subprocess
 
             try:
                 result = subprocess.run(
@@ -370,9 +424,7 @@ class AsyncCommandExecutor:
         command: list[str],
         cwd: Path | None = None,
     ) -> ExecutionResult | None:
-        from crackerjack.services.performance_cache import get_command_cache
-
-        cache_result = get_command_cache().get_command_result(command, cwd)
+        cache_result = self._cache.get(self._get_cache_key(command, cwd))
         return t.cast(ExecutionResult | None, cache_result)
 
     async def _cache_result(
@@ -382,14 +434,19 @@ class AsyncCommandExecutor:
         ttl_seconds: int,
         cwd: Path | None = None,
     ) -> None:
-        from crackerjack.services.performance_cache import get_command_cache
+        self._cache.set(self._get_cache_key(command, cwd), result, ttl_seconds)
 
-        command_cache = get_command_cache()
-        command_cache.set_command_result(command, result, cwd, ttl_seconds)
+    def _get_cache_key(self, command: list[str], cwd: Path | None) -> str:
+        key_parts = [" ".join(command)]
+        if cwd:
+            key_parts.append(str(cwd))
+        return ":".join(key_parts)
 
-    def __del__(self) -> None:
-        if hasattr(self, "_thread_pool"):
-            self._thread_pool.shutdown(wait=False)
+    def _get_cache_key(self, command: list[str], cwd: Path | None) -> str:
+        key_parts = [" ".join(command)]
+        if cwd:
+            key_parts.append(str(cwd))
+        return ":".join(key_parts)
 
 
 _parallel_executor: ParallelHookExecutor | None = None
@@ -403,6 +460,8 @@ def get_parallel_executor(
     global _parallel_executor
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
+            logger=depends.get_sync(Logger),
+            cache=depends.get_sync(PerformanceCacheProtocol),
             max_workers=max_workers,
             strategy=strategy,
         )
@@ -412,5 +471,9 @@ def get_parallel_executor(
 def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
     global _async_executor
     if _async_executor is None:
-        _async_executor = AsyncCommandExecutor(max_workers=max_workers)
+        _async_executor = AsyncCommandExecutor(
+            logger=depends.get_sync(Logger),
+            cache=depends.get_sync(PerformanceCacheProtocol),
+            max_workers=max_workers,
+        )
     return _async_executor

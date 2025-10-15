@@ -16,7 +16,7 @@ class TestHookExecutor:
 
     @pytest.fixture
     def executor(self, console):
-        return HookExecutor(console=console)
+        return HookExecutor(pkg_path=pkg_path)
 
     def test_init(self, executor, console):
         """Test HookExecutor initialization"""

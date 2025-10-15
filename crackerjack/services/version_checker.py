@@ -3,7 +3,8 @@ import typing as t
 from dataclasses import dataclass
 
 import aiohttp
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 
 @dataclass
@@ -16,7 +17,8 @@ class VersionInfo:
 
 
 class VersionChecker:
-    def __init__(self, console: Console) -> None:
+    @depends.inject
+    def __init__(self, console: Inject[Console]) -> None:
         self.console = console
         self.tools_to_check = {
             "ruff": self._get_ruff_version,

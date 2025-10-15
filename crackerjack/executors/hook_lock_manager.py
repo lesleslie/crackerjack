@@ -8,7 +8,7 @@ from collections import defaultdict
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
 from pathlib import Path
 
-from ..config.global_lock_config import GlobalLockConfig
+from ..config.global_lock_config import GlobalLockConfig, get_global_lock_config
 
 
 class HookLockManager:
@@ -30,7 +30,7 @@ class HookLockManager:
 
         self._hook_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
-        self._global_config = GlobalLockConfig()
+        self._global_config = get_global_lock_config()
         self._global_lock_enabled = self._global_config.enabled
         self._active_global_locks: set[str] = set()
         self._heartbeat_tasks: dict[str, asyncio.Task[None]] = {}
@@ -638,8 +638,8 @@ class HookLockManager:
 
         return stats
 
-    def configure_from_options(self, options: t.Any) -> None:
-        self._global_config = GlobalLockConfig.from_options(options)
+    async def configure_from_options(self, options: t.Any) -> None:
+        self._global_config = await GlobalLockConfig.from_options(options)
         self._global_lock_enabled = self._global_config.enabled
 
         if hasattr(options, "global_lock_cleanup") and options.global_lock_cleanup:

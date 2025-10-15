@@ -29,9 +29,9 @@ The following core modules import directly from services:
 - `from crackerjack.services.debug` imports `AIAgentDebugger`, `NoOpDebugger`, `get_ai_agent_debugger`
 - `from crackerjack.services.logging` imports logging utilities
 - `from crackerjack.services.memory_optimizer` imports optimization utilities
-- `from crackerjack.services.performance_benchmarks` imports `PerformanceBenchmarkService`
-- `from crackerjack.services.performance_cache` imports cache utilities
-- `from crackerjack.services.performance_monitor` imports monitoring utilities
+- `from crackerjack.services.monitoring.performance_benchmarks` imports `PerformanceBenchmarkService`
+- `from crackerjack.services.monitoring.performance_cache` imports cache utilities
+- `from crackerjack.services.monitoring.performance_monitor` imports monitoring utilities
 - `from crackerjack.services.quality.quality_baseline_enhanced` imports quality services
 - `from crackerjack.services.quality.quality_intelligence` imports quality services
 - `from crackerjack.services.server_manager` imports server utilities

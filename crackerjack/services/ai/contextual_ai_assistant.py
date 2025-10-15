@@ -6,7 +6,8 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from crackerjack.models.protocols import FileSystemInterface
 
@@ -38,13 +39,14 @@ class ProjectContext:
 
 
 class ContextualAIAssistant:
+    @depends.inject
     def __init__(
         self,
         filesystem: FileSystemInterface,
-        console: Console | None = None,
+        console: Inject[Console],
     ) -> None:
         self.filesystem = filesystem
-        self.console = console or Console()
+        self.console = console
         self.project_root = Path.cwd()
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.cache_file = self.project_root / ".crackerjack" / "ai_context.json"

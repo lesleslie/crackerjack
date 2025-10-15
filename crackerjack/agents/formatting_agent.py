@@ -134,10 +134,9 @@ class FormattingAgent(SubAgent):
             [
                 "uv",
                 "run",
-                "pre-commit",
-                "run",
-                "trailing-whitespace",
-                "--all-files",
+                "python",
+                "-m",
+                "crackerjack.tools.trailing_whitespace",
             ],
         )
 
@@ -149,10 +148,9 @@ class FormattingAgent(SubAgent):
             [
                 "uv",
                 "run",
-                "pre-commit",
-                "run",
-                "end-of-file-fixer",
-                "--all-files",
+                "python",
+                "-m",
+                "crackerjack.tools.end_of_file_fixer",
             ],
         )
 

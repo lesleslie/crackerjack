@@ -7,6 +7,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
+from acb import console as acb_console
 from rich.console import Console
 from rich.table import Table
 
@@ -69,7 +70,7 @@ class ServiceStatus:
 
 class ServiceWatchdog:
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+        self.console = console or acb_console
         self.timeout_manager = get_timeout_manager()
         self.services: dict[str, ServiceStatus] = {}
         self.is_running = False

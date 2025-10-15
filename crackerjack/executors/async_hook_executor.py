@@ -4,12 +4,13 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
+from acb.depends import Inject, depends
+from acb.logger import Logger
 from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
-from crackerjack.services.logging import LoggingContext, get_logger
 
 
 @dataclass
@@ -52,8 +53,10 @@ class AsyncHookExecutionResult:
 
 
 class AsyncHookExecutor:
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
         console: Console,
         pkg_path: Path,
         max_concurrent: int = 4,
@@ -66,7 +69,7 @@ class AsyncHookExecutor:
         self.max_concurrent = max_concurrent
         self.timeout = timeout
         self.quiet = quiet
-        self.logger = get_logger("crackerjack.async_hook_executor")
+        self.logger = logger
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
 

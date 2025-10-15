@@ -27,12 +27,15 @@ import tempfile
 import typing as t
 from contextlib import suppress
 from datetime import datetime
+from fnmatch import fnmatch
 from pathlib import Path
 
 from loguru import logger
 
+from crackerjack.models.protocols import SafeFileModifierProtocol, ServiceProtocol
 
-class SafeFileModifier:
+
+class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
     """Safely modify files with backups and validation.
 
     Features:
@@ -95,6 +98,42 @@ class SafeFileModifier:
         self._backup_dir = backup_dir or Path(".backups")
         self._max_file_size = max_file_size
         self._ensure_backup_dir()
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def _ensure_backup_dir(self) -> None:
         """Create backup directory if it doesn't exist."""
@@ -375,8 +414,6 @@ class SafeFileModifier:
 
         # SECURITY: Check forbidden file patterns
         file_str = str(path)
-        from fnmatch import fnmatch
-
         for pattern in self.FORBIDDEN_PATTERNS:
             if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
                 return {

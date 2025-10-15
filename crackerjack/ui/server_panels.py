@@ -2,6 +2,7 @@
 
 from pathlib import Path
 
+from acb import console as acb_console
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
@@ -13,7 +14,7 @@ class ServerPanels:
     WIDTH = 74  # Match session-mgmt-mcp width constraint
 
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+        self.console = console or acb_console
 
     def restart_header(self) -> None:
         """Display server restart header panel."""

@@ -76,6 +76,7 @@ Crackerjack is built on the following core principles:
 - [Core Workflow](<#core-workflow>)
 - [Core Features](<#core-features>)
 - [ACB Architecture & Performance](<#-acb-architecture--performance>)
+- [Configuration Management](<#-configuration-management-acb-settings--configuration-templates>)
 - [MCP Server Configuration](<#mcp-server-configuration>)
 - [Pre-commit Hook Modes](<#pre-commit-hook-modes>)
 - [Command Reference](<#command-reference>)
@@ -266,7 +267,7 @@ Auto-fix requires:
 #### Security & Safety Features
 
 - **Command Validation**: All AI modifications are validated for safety
-- **Enterprise-Grade Regex**: Centralized pattern system eliminates dangerous regex issues
+- **Advanced-Grade Regex**: Centralized pattern system eliminates dangerous regex issues
 - **No Shell Injection**: Uses secure subprocess execution with validated patterns
 - **Rollback Support**: All changes can be reverted via git
 - **Human Review**: Review AI-generated changes before commit
@@ -327,7 +328,7 @@ python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
 - `--ai-fix` flag enables automatic error resolution with specialized sub-agents
 - MCP server allows AI agents to run crackerjack commands with real-time progress tracking
 - Structured error output for programmatic fixes with confidence scoring
-- Enterprise-grade regex pattern system ensures safe automated text transformations
+- Advanced-grade regex pattern system ensures safe automated text transformations
 
 ## Core Features
 
@@ -386,7 +387,7 @@ python -m crackerjack --run-tests
 
 ## ⚡ ACB Architecture & Performance
 
-Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, providing enterprise-grade dependency injection, intelligent caching, and parallel execution.
+Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, providing advanced-grade dependency injection, intelligent caching, and parallel execution.
 
 ### What is ACB?
 
@@ -399,8 +400,16 @@ Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, pro
 
 ### Architecture Overview
 
+**Layered ACB Architecture with Protocol-Based DI**
+
 ```
 User Command → WorkflowOrchestrator (DI Container)
+    ↓
+SessionCoordinator (✅ Gold Standard: @depends.inject + protocols)
+    ↓
+PhaseCoordinator (Orchestration Layer: 70% ACB compliant)
+    ↓
+HookManager + TestManager (Manager Layer: 80% compliant)
     ↓
 HookOrchestratorAdapter (Strategy Selection)
     ↓
@@ -411,6 +420,37 @@ ToolProxyCacheAdapter (Content-based caching, 70% hit rate)
 Parallel Execution (Up to 11 concurrent adapters)
     ↓
 Results Aggregation
+```
+
+**Architecture Compliance (Phase 2-4 Audit Results)**
+
+| Layer | Compliance | Status | Notes |
+|-------|-----------|--------|-------|
+| **CLI Handlers** | 90% | ✅ Excellent | Gold standard: `@depends.inject` + `Inject[Protocol]` |
+| **Services** | 95% | ✅ Excellent | Phase 3 refactored, consistent constructors |
+| **Managers** | 80% | ✅ Good | Protocol-based injection, minor improvements needed |
+| **Orchestration** | 70% | ⚠️ Mixed | `SessionCoordinator` ✅, `ServiceWatchdog` ⚠️ |
+| **Coordinators** | 70% | ⚠️ Mixed | Phase coordinators ✅, async needs standardization |
+| **Agent System** | 40% | 📋 Legacy | Uses `AgentContext` pattern (predates ACB) |
+
+**Key Architectural Patterns**
+
+```python
+# ✅ GOLD STANDARD Pattern (from CLI Handlers)
+from acb.depends import depends, Inject
+from crackerjack.models.protocols import Console
+
+@depends.inject
+def setup_environment(
+    console: Inject[Console] = None,
+    verbose: bool = False
+) -> None:
+    """Protocol-based injection with @depends.inject decorator."""
+    console.print("[green]Environment ready[/green]")
+
+# ❌ ANTI-PATTERN: Avoid manual fallbacks
+def setup_environment_wrong(console: Console | None = None):
+    self.console = console or Console()  # Bypasses DI container
 ```
 
 ### Performance Benefits
@@ -495,9 +535,13 @@ python -m crackerjack --fast  # Direct Python API, 70% faster
 
 **Migration Guide:** See `/docs/ACB-MIGRATION-GUIDE.md` for complete details
 
-### Configuration Management (ACB Settings)
+### Configuration Management (ACB Settings & Configuration Templates)
 
-Crackerjack has consolidated its configuration system using **ACB Settings** (Pydantic BaseSettings):
+Crackerjack utilizes a **dual configuration system** to handle both runtime application settings and project configuration templates:
+
+#### 1. Runtime Configuration (ACB Settings)
+
+**ACB Settings** manages application runtime configuration:
 
 **Before (11 config files, ~1,808 LOC):**
 
@@ -522,8 +566,49 @@ settings = depends.get(CrackerjackSettings)
 - **83% LOC reduction** in configuration code
 - **Automatic environment variable loading** (CRACKERJACK\_\* prefix)
 - **Type validation** via Pydantic
-- **Single source of truth** for all settings
+- **Single source of truth** for all runtime settings
 - **Backward compatible** - Public API unchanged (`create_workflow_options()`)
+
+#### 2. Project Configuration Templates (ConfigTemplateService)
+
+**ConfigTemplateService** manages project-level configuration templates for files like `.pre-commit-config.yaml` and `pyproject.toml`:
+
+```bash
+# Check for available configuration updates
+python -m crackerjack --check-config-updates
+
+# Show diff for specific configuration type
+python -m crackerjack --diff-config pre-commit
+
+# Apply configuration updates interactively
+python -m crackerjack --apply-config-updates --config-interactive
+
+# Refresh configuration cache
+python -m crackerjack --refresh-cache
+```
+
+**ConfigTemplateService Benefits:**
+
+- **Version-based tracking** - Each configuration has version control
+- **User-controlled updates** - Explicit approval required for changes
+- **Diff visibility** - Shows changes before applying
+- **Cache management** - Automatic pre-commit cache invalidation
+- **Template management** - Centralized configuration templates as code
+
+**Config Merge Service (Initialization)**
+
+The ConfigMergeService handles intelligent configuration merging during project initialization:
+
+```python
+# Used by InitializationService for new project setup
+merge_result = config_merge_service.smart_merge_pyproject(
+    source_config, 
+    target_path, 
+    project_name
+)
+```
+
+**For Complete Configuration System Details:** See `/docs/CONFIGURATION_SYSTEMS_GUIDE.md` for comprehensive documentation of all three configuration systems.
 
 **Migration Details:** See `/docs/ACB-SETTINGS-MIGRATION-PLAN.md` for complete migration documentation
 
@@ -599,7 +684,7 @@ with suppress(Exception):
 
 **Status:** ✅ Production Ready (as of 2025-10-09)
 
-## 🛡️ Enterprise-Grade Pattern Management System
+## 🛡️ Advanced-Grade Pattern Management System
 
 ### Advanced Regex Pattern Validation
 
@@ -703,7 +788,7 @@ yaml.load(file) → yaml.safe_load(file)
 python -m crackerjack.tools.validate_regex_usage
 ```
 
-This enterprise-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
+This advanced-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
 
 ## MCP Server Configuration
 
@@ -935,7 +1020,7 @@ python -m crackerjack --ai-fix
 | **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
 | **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
 | **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
-| **Advanced Features** | See [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) | 82 enterprise/power user flags |
+| **Advanced Features** | See [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) | 82 advanced/power user flags |
 
 **📑 Alphabetical Flag Reference**
 
@@ -976,7 +1061,7 @@ python -m crackerjack --ai-fix
 
 **🔗 Related Documentation**
 
-- **Advanced Features**: [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) - 82 enterprise/power user flags
+- **Advanced Features**: [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) - 82 advanced/power user flags
 - **Developer Guide**: [CLAUDE.md](<./CLAUDE.md>) - AI assistant guidelines and developer commands
 - **Phase 2 Analysis**: [PHASE2-CROSS-REFERENCE-ANALYSIS.md](<./docs/history/phases/PHASE2-CROSS-REFERENCE-ANALYSIS.md>) - CLI flag audit (archived)
 

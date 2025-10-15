@@ -3,7 +3,8 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from ..models.protocols import (
     APIExtractorProtocol,
@@ -17,17 +18,18 @@ from .documentation_generator import DocumentationGeneratorImpl
 class DocumentationServiceImpl(DocumentationServiceProtocol):
     """Main service for automated documentation generation and maintenance."""
 
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        console: Inject[Console],
         pkg_path: Path,
         api_extractor: APIExtractorProtocol | None = None,
         doc_generator: DocumentationGeneratorProtocol | None = None,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.api_extractor = api_extractor or APIExtractorImpl(console)
-        self.doc_generator = doc_generator or DocumentationGeneratorImpl(console)
+        self.api_extractor = api_extractor or APIExtractorImpl()
+        self.doc_generator = doc_generator or DocumentationGeneratorImpl()
 
         # Define standard paths
         self.docs_dir = pkg_path / "docs"

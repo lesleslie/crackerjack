@@ -328,21 +328,24 @@ class _AdaptedOptions:
         return False
 
 
-def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
+from acb.console import Console
+from acb.depends import Inject
+
+from crackerjack.services.filesystem import FileSystemService
+from crackerjack.services.git import GitService
+from crackerjack.services.initialization import InitializationService
+
+
+def _execute_init_stage(orchestrator: "WorkflowOrchestrator", console: Inject[Console]) -> bool:
     try:
         from pathlib import Path
 
-        from crackerjack.services.filesystem import FileSystemService
-        from crackerjack.services.git import GitService
-        from crackerjack.services.initialization import InitializationService
-
-        console = orchestrator.console
         pkg_path = orchestrator.pkg_path
 
         filesystem = FileSystemService()
-        git_service = GitService(console, pkg_path)
+        git_service = GitService(pkg_path)
 
-        init_service = InitializationService(console, filesystem, git_service, pkg_path)
+        init_service = InitializationService(filesystem, git_service, pkg_path)
 
         results = init_service.initialize_project_full(target_path=Path.cwd())
 

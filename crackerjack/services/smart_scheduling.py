@@ -1,17 +1,58 @@
 import os
 import subprocess
+from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
+
+from crackerjack.models.protocols import ServiceProtocol, SmartSchedulingServiceProtocol
 
 
-class SmartSchedulingService:
-    def __init__(self, console: Console, project_path: Path) -> None:
+class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
+    @depends.inject
+    def __init__(self, console: Inject[Console], project_path: Path) -> None:
         self.console = console
         self.project_path = project_path
         self.cache_dir = Path.home() / ".cache" / "crackerjack"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def should_scheduled_init(self) -> bool:
         init_schedule = os.environ.get("CRACKERJACK_INIT_SCHEDULE", "weekly")
@@ -77,8 +118,6 @@ class SmartSchedulingService:
         timestamp_file = self.cache_dir / f"{self.project_path.name}.init_timestamp"
 
         if timestamp_file.exists():
-            from contextlib import suppress
-
             with suppress(OSError, ValueError):
                 timestamp_str = timestamp_file.read_text().strip()
                 return datetime.fromisoformat(timestamp_str)

@@ -2,7 +2,8 @@ import typing as t
 from pathlib import Path
 
 import typer
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
@@ -41,7 +42,6 @@ from .cli.semantic_handlers import (
     handle_semantic_stats,
 )
 
-console = Console(force_terminal=True)
 app = typer.Typer(
     help="Crackerjack: Your Python project setup and style enforcement tool.",
 )
@@ -169,7 +169,7 @@ def _handle_server_commands(
             start_websocket_server,
             stop_websocket_server,
             restart_websocket_server,
-            websocket_port,
+websocket_port,
         )
         or _handle_mcp_commands(
             start_mcp_server,
@@ -187,7 +187,8 @@ def _handle_server_commands(
     )
 
 
-def _generate_documentation(doc_service: t.Any, console: t.Any) -> bool:
+@depends.inject
+def _generate_documentation(doc_service: t.Any, console: Inject[Console]) -> bool:
     """Generate API documentation.
 
     Returns True if successful, False if failed.
@@ -204,7 +205,8 @@ def _generate_documentation(doc_service: t.Any, console: t.Any) -> bool:
         return False
 
 
-def _validate_documentation_files(doc_service: t.Any, console: t.Any) -> None:
+@depends.inject
+def _validate_documentation_files(doc_service: t.Any, console: Inject[Console]) -> None:
     """Validate existing documentation files."""
     from pathlib import Path
 
@@ -228,7 +230,7 @@ def _validate_documentation_files(doc_service: t.Any, console: t.Any) -> None:
 
 
 def _handle_documentation_commands(
-    generate_docs: bool, validate_docs: bool, console: Console, options: t.Any
+    generate_docs: bool, validate_docs: bool, options: t.Any
 ) -> bool:
     """Handle documentation generation and validation commands.
 
@@ -243,14 +245,14 @@ def _handle_documentation_commands(
     from crackerjack.services.documentation_service import DocumentationServiceImpl
 
     pkg_path = Path("crackerjack")
-    doc_service = DocumentationServiceImpl(pkg_path=pkg_path, console=console)
+    doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
     if generate_docs:
-        if not _generate_documentation(doc_service, console):
+        if not _generate_documentation(doc_service):
             return False
 
     if validate_docs:
-        _validate_documentation_files(doc_service, console)
+        _validate_documentation_files(doc_service)
 
     # Check if we should continue with other operations
     return any(
@@ -269,7 +271,6 @@ def _handle_changelog_commands(
     changelog_dry_run: bool,
     changelog_version: str | None,
     changelog_since: str | None,
-    console: Console,
     options: t.Any,
 ) -> bool:
     """Handle changelog generation commands.
@@ -280,28 +281,23 @@ def _handle_changelog_commands(
     if not (generate_changelog or changelog_dry_run):
         return True
 
-    services = _setup_changelog_services(console)
+    services = _setup_changelog_services()
     changelog_path = services["pkg_path"] / "CHANGELOG.md"
 
     if changelog_dry_run:
         return _handle_changelog_dry_run(
-            services["generator"], changelog_since, console, options
+            services["generator"], changelog_since, options
         )
 
     if generate_changelog:
         return _handle_changelog_generation(
-            services,
-            changelog_path,
-            changelog_version,
-            changelog_since,
-            console,
-            options,
+            services, changelog_path, changelog_version, changelog_since, options
         )
 
     return _should_continue_after_changelog(options)
 
 
-def _setup_changelog_services(console: Console) -> dict[str, t.Any]:
+def _setup_changelog_services() -> dict[str, t.Any]:
     """Setup changelog services and dependencies."""
     from pathlib import Path
 
@@ -309,8 +305,8 @@ def _setup_changelog_services(console: Console) -> dict[str, t.Any]:
     from crackerjack.services.git import GitService
 
     pkg_path = Path()
-    git_service = GitService(console, pkg_path)
-    changelog_generator = ChangelogGenerator(console, git_service)
+    git_service = GitService()
+    changelog_generator = ChangelogGenerator(git_service)
 
     return {
         "pkg_path": pkg_path,
@@ -319,11 +315,9 @@ def _setup_changelog_services(console: Console) -> dict[str, t.Any]:
     }
 
 
+@depends.inject
 def _handle_changelog_dry_run(
-    generator: "ChangelogGenerator",
-    changelog_since: str | None,
-    console: Console,
-    options: t.Any,
+    generator: "ChangelogGenerator", changelog_since: str | None, options: t.Any, console: Inject[Console]
 ) -> bool:
     """Handle changelog dry run preview."""
     console.print("🔍 [bold blue]Previewing changelog generation...[/bold blue]")
@@ -337,19 +331,20 @@ def _handle_changelog_dry_run(
     return _should_continue_after_changelog(options)
 
 
+@depends.inject
 def _handle_changelog_generation(
     services: dict[str, t.Any],
     changelog_path: "Path",
     changelog_version: str | None,
     changelog_since: str | None,
-    console: Console,
     options: t.Any,
+    console: Inject[Console]
 ) -> bool:
     """Handle actual changelog generation."""
     console.print("📝 [bold blue]Generating changelog...[/bold blue]")
 
     version = _determine_changelog_version(
-        services["git_service"], changelog_version, changelog_since, console, options
+        services["git_service"], changelog_version, changelog_since, options
     )
 
     success = services["generator"].generate_changelog_from_commits(
@@ -368,12 +363,13 @@ def _handle_changelog_generation(
         return False
 
 
+@depends.inject
 def _determine_changelog_version(
     git_service: GitService,
     changelog_version: str | None,
     changelog_since: str | None,
-    console: Console,
     options: t.Any,
+    console: Inject[Console],
 ) -> str:
     """Determine the version to use for changelog generation."""
     if getattr(options, "auto_version", False) and not changelog_version:
@@ -382,7 +378,7 @@ def _determine_changelog_version(
 
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            version_analyzer = VersionAnalyzer(console, git_service)
+            version_analyzer = VersionAnalyzer(git_service)
             console.print(
                 "[cyan]🔍[/cyan] Analyzing version changes for intelligent changelog..."
             )
@@ -413,12 +409,9 @@ def _should_continue_after_changelog(options: t.Any) -> bool:
     )
 
 
+@depends.inject
 def _handle_version_analysis(
-    auto_version: bool,
-    version_since: str | None,
-    accept_version: bool,
-    console: Console,
-    options: t.Any,
+    auto_version: bool, version_since: str | None, accept_version: bool, options: t.Any, console: Inject[Console]
 ) -> bool:
     """Handle automatic version analysis and recommendations.
 
@@ -435,9 +428,9 @@ def _handle_version_analysis(
     from crackerjack.services.git import GitService
     from crackerjack.services.version_analyzer import VersionAnalyzer
 
-    pkg_path = Path()
-    git_service = GitService(console, pkg_path)
-    version_analyzer = VersionAnalyzer(console, git_service)
+    Path()
+    git_service = GitService()
+    version_analyzer = VersionAnalyzer(git_service)
 
     try:
         import asyncio
@@ -495,11 +488,12 @@ def _setup_debug_and_verbose_flags(
     return ai_fix, verbose
 
 
+@depends.inject
 def _handle_heatmap_generation(
     heatmap: bool,
     heatmap_type: str,
     heatmap_output: str | None,
-    console: Console,
+    console: Inject[Console],
 ) -> bool:
     """Handle heat map generation and visualization.
 
@@ -577,285 +571,830 @@ def _handle_heatmap_generation(
         return False
 
 
-def _generate_anomaly_sample_data(detector: t.Any, console: Console) -> None:
+@depends.inject
+
+
+def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> None:
+
+
     """Generate sample anomaly detection data for demonstration."""
+
+
     from datetime import datetime, timedelta
 
+
+
+
+
     base_time = datetime.now() - timedelta(hours=24)
+
+
     metric_types = [
+
+
         "test_pass_rate",
+
+
         "coverage_percentage",
+
+
         "complexity_score",
+
+
         "execution_time",
+
+
         "error_count",
+
+
     ]
+
+
+
+
 
     console.print("[dim]  • Collecting quality metrics from recent runs...")
 
+
+
+
+
     # Add historical data points to establish baselines
+
+
     for i in range(50):
+
+
         timestamp = base_time + timedelta(minutes=i * 30)
+
+
         for metric_type in metric_types:
+
+
             value = _get_sample_metric_value(metric_type)
+
+
             detector.add_metric(metric_type, value, timestamp)
 
 
+
+
+
+
+
+
 def _get_sample_metric_value(metric_type: str) -> float:
+
+
     """Generate sample metric value with occasional anomalies."""
+
+
     import random
+
+
+
+
 
     is_anomaly = random.random() <= 0.1
 
+
+
+
+
     if metric_type == "test_pass_rate":
+
+
         return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)
+
+
     elif metric_type == "coverage_percentage":
+
+
         return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)
+
+
     elif metric_type == "complexity_score":
+
+
         return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)
+
+
     elif metric_type == "execution_time":
+
+
         return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)
+
+
     # error_count
+
+
     return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)
 
 
+
+
+
+
+
+
+@depends.inject
+
+
 def _display_anomaly_results(
-    anomalies: list[t.Any], baselines: dict[str, t.Any], console: Console
+
+
+    anomalies: list[t.Any], baselines: dict[str, t.Any], console: Inject[Console]
+
+
 ) -> None:
+
+
     """Display anomaly detection analysis results."""
+
+
     console.print("[cyan]📊[/cyan] Analysis complete:")
+
+
     console.print(f"[dim]  • Baselines established for {len(baselines)} metrics")
+
+
     console.print(f"[dim]  • {len(anomalies)} anomalies detected")
 
+
+
+
+
     if anomalies:
+
+
         console.print("\n[yellow]⚠️[/yellow] Detected anomalies:")
+
+
         for anomaly in anomalies[:5]:  # Show top 5 anomalies
+
+
             severity_color = {
+
+
                 "low": "yellow",
+
+
                 "medium": "orange",
+
+
                 "high": "red",
+
+
                 "critical": "bright_red",
+
+
             }.get(anomaly.severity, "white")
 
+
+
+
+
             console.print(
+
+
                 f"  • [{severity_color}]{anomaly.severity.upper()}[/{severity_color}] "
+
+
                 f"{anomaly.metric_type}: {anomaly.description}"
+
+
             )
 
 
+
+
+
+
+
+
+@depends.inject
+
+
 def _save_anomaly_report(
+
+
     anomalies: list[t.Any],
+
+
     baselines: dict[str, t.Any],
+
+
     anomaly_sensitivity: float,
+
+
     anomaly_report: str,
-    console: Console,
+
+
+    console: Inject[Console],
+
+
 ) -> None:
+
+
     """Save anomaly detection report to file."""
+
+
     import json
     from datetime import datetime
     from pathlib import Path
 
+
+
+
+
     report_data = {
+
+
         "timestamp": datetime.now().isoformat(),
+
+
         "summary": {
+
+
             "total_anomalies": len(anomalies),
+
+
             "baselines_count": len(baselines),
+
+
             "sensitivity": anomaly_sensitivity,
+
+
         },
+
+
         "anomalies": [
+
+
             {
+
+
                 "timestamp": a.timestamp.isoformat(),
+
+
                 "metric_type": a.metric_type,
+
+
                 "value": a.value,
+
+
                 "expected_range": a.expected_range,
+
+
                 "severity": a.severity,
+
+
                 "confidence": a.confidence,
+
+
                 "description": a.description,
+
+
             }
+
+
             for a in anomalies
+
+
         ],
+
+
         "baselines": baselines,
+
+
     }
 
+
+
+
+
     report_path = Path(anomaly_report)
+
+
     report_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
+
+
     console.print(f"[green]✅[/green] Anomaly detection report saved to: {report_path}")
 
 
+
+
+
+
+
+
+@depends.inject
+
+
 def _handle_anomaly_detection(
-    anomaly_detection: bool,
-    anomaly_sensitivity: float,
-    anomaly_report: str | None,
-    console: Console,
+
+
+    anomaly_detection: bool, anomaly_sensitivity: float, anomaly_report: str | None, console: Inject[Console]
+
+
 ) -> bool:
+
+
     """Handle ML-based anomaly detection for quality metrics.
 
+
+
+
+
     Returns True if execution should continue, False if should return early.
+
+
     """
+
+
     if not anomaly_detection:
+
+
         return True
 
-    from crackerjack.services.anomaly_detector import AnomalyDetector
+
+
+
+
+    from crackerjack.services.quality.anomaly_detector import AnomalyDetector
+
+
+
+
 
     console.print("[cyan]🔍[/cyan] Running ML-based anomaly detection...")
 
+
+
+
+
     try:
+
+
         detector = AnomalyDetector(sensitivity=anomaly_sensitivity)
 
+
+
+
+
         # Generate sample data for demonstration
-        _generate_anomaly_sample_data(detector, console)
+
+
+        _generate_anomaly_sample_data(detector)
+
+
+
+
 
         # Generate analysis results
+
+
         anomalies = detector.get_anomalies()
+
+
         baselines = detector.get_baseline_summary()
 
+
+
+
+
         # Display results
-        _display_anomaly_results(anomalies, baselines, console)
+
+
+        _display_anomaly_results(anomalies, baselines)
+
+
+
+
 
         # Save report if requested
+
+
         if anomaly_report:
+
+
             _save_anomaly_report(
-                anomalies, baselines, anomaly_sensitivity, anomaly_report, console
+
+
+                anomalies, baselines, anomaly_sensitivity, anomaly_report
+
+
             )
+
+
+
+
 
         return False  # Exit after anomaly detection
 
+
+
+
+
     except Exception as e:
+
+
         console.print(f"[red]❌[/red] Anomaly detection failed: {e}")
+
+
         return False
 
 
+
+
+
+
+
+
 def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
+
+
     """Generate sample historical data for predictive analytics."""
+
+
     import random
     from datetime import datetime, timedelta
 
+
+
+
+
     base_time = datetime.now() - timedelta(hours=72)  # 3 days of history
+
+
     metric_types = [
+
+
         "test_pass_rate",
+
+
         "coverage_percentage",
+
+
         "execution_time",
+
+
         "memory_usage",
+
+
         "complexity_score",
+
+
     ]
 
+
+
+
+
     base_values = {
+
+
         "test_pass_rate": 0.95,
+
+
         "coverage_percentage": 0.85,
+
+
         "execution_time": 120.0,
+
+
         "memory_usage": 512.0,
+
+
         "complexity_score": 10.0,
+
+
     }
 
+
+
+
+
     # Generate sample historical data
+
+
     for metric_type in metric_types:
+
+
         base_value = base_values[metric_type]
+
+
         for i in range(48):  # 48 hours of data points
+
+
             timestamp = base_time + timedelta(hours=i)
+
+
             # Add some trend and random variation
+
+
             trend_factor = 1.0 + (i * 0.001)  # Slight upward trend
+
+
             noise = random.uniform(0.9, 1.1)  # 10% noise
+
+
             value = base_value * trend_factor * noise
+
+
             engine.add_metric(metric_type, value, timestamp)
+
+
+
+
 
     return metric_types
 
 
+
+
+
+
+
+
 def _generate_predictions_summary(
+
+
     engine: t.Any, metric_types: list[str], prediction_periods: int
+
+
 ) -> dict[str, t.Any]:
+
+
     """Generate predictions summary for all metric types."""
+
+
     predictions_summary = {}
+
+
     trend_summary = engine.get_trend_summary()
 
+
+
+
+
     for metric_type in metric_types:
+
+
         predictions = engine.predict_metric(metric_type, prediction_periods)
+
+
         if predictions:
+
+
             predictions_summary[metric_type] = {
+
+
                 "trend": trend_summary.get(metric_type, {}),
+
+
                 "predictions": [
+
+
                     {
+
+
                         "predicted_for": p.predicted_for.isoformat(),
+
+
                         "predicted_value": round(p.predicted_value, 3),
+
+
                         "confidence_interval": [
+
+
                             round(p.confidence_interval[0], 3),
+
+
                             round(p.confidence_interval[1], 3),
+
+
                         ],
+
+
                         "model_accuracy": round(p.model_accuracy, 3),
+
+
                     }
+
+
                     for p in predictions[:5]  # Show first 5 predictions
+
+
                 ],
+
+
             }
+
+
+
+
 
     return predictions_summary
 
 
-def _display_trend_analysis(
-    predictions_summary: dict[str, t.Any], console: Console
-) -> None:
+
+
+
+
+
+
+@depends.inject
+
+
+def _display_trend_analysis(predictions_summary: dict[str, t.Any], console: Inject[Console]) -> None:
+
+
     """Display trend analysis summary."""
+
+
     console.print("\n[green]📈[/green] Trend Analysis Summary:")
 
+
+
+
+
     for metric_type, data in predictions_summary.items():
+
+
         trend_info = data.get("trend", {})
+
+
         direction = trend_info.get("trend_direction", "unknown")
+
+
         strength = trend_info.get("trend_strength", 0)
 
+
+
+
+
         direction_color = {
+
+
             "increasing": "green",
+
+
             "decreasing": "red",
+
+
             "stable": "blue",
+
+
             "volatile": "yellow",
+
+
         }.get(direction, "white")
 
+
+
+
+
         console.print(
+
+
             f"  • {metric_type}: [{direction_color}]{direction}[/{direction_color}] "
+
+
             f"(strength: {strength:.2f})"
+
+
         )
 
+
+
+
+
         if data["predictions"]:
+
+
             next_pred = data["predictions"][0]
+
+
             console.print(
+
+
                 f"    Next prediction: {next_pred['predicted_value']} "
+
+
                 f"(confidence: {next_pred['model_accuracy']:.2f})"
+
+
             )
 
 
+
+
+
+
+
+
+@depends.inject
+
+
 def _save_analytics_dashboard(
+
+
     predictions_summary: dict[str, t.Any],
+
+
     trend_summary: dict[str, t.Any],
+
+
     metric_types: list[str],
+
+
     prediction_periods: int,
+
+
     analytics_dashboard: str,
-    console: Console,
+
+
+    console: Inject[Console],
+
+
 ) -> None:
+
+
     """Save analytics dashboard data to file."""
+
+
     import json
     from datetime import datetime
     from pathlib import Path
 
+
+
+
+
     dashboard_data = {
+
+
         "timestamp": datetime.now().isoformat(),
+
+
         "summary": {
+
+
             "prediction_periods": prediction_periods,
+
+
             "metrics_analyzed": len(metric_types),
+
+
             "total_predictions": sum(
+
+
                 len(data["predictions"]) for data in predictions_summary.values()
+
+
             ),
+
+
         },
+
+
         "trends": trend_summary,
+
+
         "predictions": predictions_summary,
+
+
     }
 
+
+
+
+
     dashboard_path = Path(analytics_dashboard)
+
+
     dashboard_path.write_text(json.dumps(dashboard_data, indent=2), encoding="utf-8")
+
+
     console.print(f"[green]✅[/green] Analytics dashboard saved to: {dashboard_path}")
 
 
+
+
+
+
+
+
+@depends.inject
+
+
 def _handle_predictive_analytics(
-    predictive_analytics: bool,
-    prediction_periods: int,
-    analytics_dashboard: str | None,
-    console: Console,
+
+
+    predictive_analytics: bool, prediction_periods: int, analytics_dashboard: str | None, console: Inject[Console]
+
+
 ) -> bool:
     """Handle predictive analytics and trend forecasting.
 
@@ -864,8 +1403,7 @@ def _handle_predictive_analytics(
     if not predictive_analytics:
         return True
 
-    from crackerjack.services.predictive_analytics import PredictiveAnalyticsEngine
-
+    from crackerjack.services.ai.predictive_analytics import PredictiveAnalyticsEngine
     console.print(
         "[cyan]📊[/cyan] Running predictive analytics and trend forecasting..."
     )
@@ -887,7 +1425,7 @@ def _handle_predictive_analytics(
         trend_summary = engine.get_trend_summary()
 
         # Display analysis results
-        _display_trend_analysis(predictions_summary, console)
+        _display_trend_analysis(predictions_summary)
 
         # Save dashboard if requested
         if analytics_dashboard:
@@ -897,7 +1435,6 @@ def _handle_predictive_analytics(
                 metric_types,
                 prediction_periods,
                 analytics_dashboard,
-                console,
             )
 
         return False  # Exit after predictive analytics
@@ -907,50 +1444,49 @@ def _handle_predictive_analytics(
         return False
 
 
-def _handle_enterprise_optimizer(
-    enterprise_optimizer: bool,
-    enterprise_profile: str | None,
-    enterprise_report: str | None,
-    console: Console,
+def _handle_advanced_optimizer(
+    advanced_optimizer: bool,
+    advanced_profile: str | None,
+    advanced_report: str | None,
 ) -> bool:
-    """Handle enterprise-scale optimization engine.
+    """Handle advanced-scale optimization engine.
 
     Returns True if execution should continue, False if should return early.
     """
-    if not enterprise_optimizer:
+    if not advanced_optimizer:
         return True
 
-    console.print("[cyan]🏢[/cyan] Running enterprise-scale optimization analysis...")
-
+    console.print("[cyan]🏢[/cyan] Running advanced-scale optimization analysis...")
     try:
-        optimizer = _setup_enterprise_optimizer(enterprise_profile)
-        result = _run_enterprise_optimization(optimizer, console)
-        _display_enterprise_results(result, enterprise_report, console)
-        return False  # Exit after enterprise optimization
+        optimizer = _setup_advanced_optimizer(advanced_profile)
+        result = _run_advanced_optimization(optimizer)
+        _display_advanced_results(result, advanced_report)
+        return False  # Exit after advanced optimization
 
     except Exception as e:
-        console.print(f"[red]❌[/red] Enterprise optimizer error: {e}")
+        console.print(f"[red]❌[/red] Advanced optimizer error: {e}")
         return False
 
 
-def _setup_enterprise_optimizer(enterprise_profile: str | None) -> t.Any:
-    """Setup enterprise optimizer with directories and profile."""
+def _setup_advanced_optimizer(advanced_profile: str | None) -> t.Any:
+    """Setup advanced optimizer with directories and profile."""
     import tempfile
     from pathlib import Path
 
-    from crackerjack.services.enterprise_optimizer import EnterpriseOptimizer
+    from crackerjack.services.ai.advanced_optimizer import AdvancedOptimizer
 
     config_dir = Path.cwd() / ".crackerjack"
     storage_dir = Path(tempfile.gettempdir()) / "crackerjack_storage"
-    optimizer = EnterpriseOptimizer(config_dir, storage_dir)
+    optimizer = AdvancedOptimizer(config_dir, storage_dir)
 
-    if enterprise_profile:
-        optimizer.performance_profile.optimization_strategy = enterprise_profile
+    if advanced_profile:
+        optimizer.performance_profile.optimization_strategy = advanced_profile
 
     return optimizer
 
 
-def _run_enterprise_optimization(optimizer: t.Any, console: t.Any) -> t.Any:
+@depends.inject
+def _run_advanced_optimization(optimizer: t.Any, console: Inject[Console]) -> t.Any:
     """Run the optimization cycle and return results."""
     import asyncio
 
@@ -958,31 +1494,30 @@ def _run_enterprise_optimization(optimizer: t.Any, console: t.Any) -> t.Any:
     return asyncio.run(optimizer.run_optimization_cycle())
 
 
-def _display_enterprise_results(
-    result: t.Any, enterprise_report: str | None, console: t.Any
-) -> None:
+@depends.inject
+def _display_advanced_results(result: t.Any, advanced_report: str | None, console: Inject[Console]) -> None:
     """Display optimization results and save report if requested."""
     if result["status"] == "success":
-        console.print(
-            "[green]✅[/green] Enterprise optimization completed successfully"
-        )
-        _display_enterprise_metrics(result["metrics"], console)
-        _display_enterprise_recommendations(result["recommendations"], console)
-        _save_enterprise_report(result, enterprise_report, console)
+        console.print("[green]✅[/green] Advanced optimization completed successfully")
+        _display_advanced_metrics(result["metrics"])
+        _display_advanced_recommendations(result["recommendations"])
+        _save_advanced_report(result, advanced_report)
     else:
         console.print(
-            f"[red]❌[/red] Enterprise optimization failed: {result.get('message', 'Unknown error')}"
+            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}"
         )
 
 
-def _display_enterprise_metrics(metrics: t.Any, console: t.Any) -> None:
+@depends.inject
+def _display_advanced_metrics(metrics: t.Any, console: Inject[Console]) -> None:
     """Display key system metrics."""
     console.print(f"[blue]CPU Usage:[/blue] {metrics['cpu_percent']:.1f}%")
     console.print(f"[blue]Memory Usage:[/blue] {metrics['memory_percent']:.1f}%")
     console.print(f"[blue]Storage Usage:[/blue] {metrics['disk_usage_percent']:.1f}%")
 
 
-def _display_enterprise_recommendations(recommendations: t.Any, console: t.Any) -> None:
+@depends.inject
+def _display_advanced_recommendations(recommendations: t.Any, console: Inject[Console]) -> None:
     """Display optimization recommendations."""
     if recommendations:
         console.print(
@@ -997,26 +1532,24 @@ def _display_enterprise_recommendations(recommendations: t.Any, console: t.Any) 
             )
 
 
-def _save_enterprise_report(
-    result: t.Any, enterprise_report: str | None, console: t.Any
-) -> None:
-    """Save enterprise report to file if requested."""
-    if enterprise_report:
+@depends.inject
+def _save_advanced_report(result: t.Any, advanced_report: str | None, console: Inject[Console]) -> None:
+    """Save advanced report to file if requested."""
+    if advanced_report:
         import json
 
-        with open(enterprise_report, "w") as f:
+        with open(advanced_report, "w") as f:
             json.dump(result, f, indent=2)
-        console.print(
-            f"[green]📄[/green] Enterprise report saved to: {enterprise_report}"
-        )
+        console.print(f"[green]📄[/green] Advanced report saved to: {advanced_report}")
 
 
+@depends.inject
 def _handle_mkdocs_integration(
     mkdocs_integration: bool,
     mkdocs_serve: bool,
     mkdocs_theme: str,
     mkdocs_output: str | None,
-    console: Console,
+    console: Inject[Console],
 ) -> bool:
     """Handle MkDocs documentation site generation.
 
@@ -1039,7 +1572,7 @@ def _handle_mkdocs_integration(
 
         _build_mkdocs_site(builder, docs_content, output_dir, mkdocs_serve)
         site = None  # _build_mkdocs_site returns None
-        _handle_mkdocs_build_result(site, mkdocs_serve, console)
+        _handle_mkdocs_build_result(site, mkdocs_serve)
 
         return False  # Exit after MkDocs generation
 
@@ -1171,9 +1704,7 @@ def _build_mkdocs_site(
     )
 
 
-def _handle_mkdocs_build_result(
-    site: t.Any, mkdocs_serve: bool, console: Console
-) -> None:
+def _handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
     """Handle the result of MkDocs site building."""
     if site:
         console.print(
@@ -1192,11 +1723,12 @@ def _handle_mkdocs_build_result(
         console.print("[red]❌[/red] Failed to generate MkDocs site")
 
 
+@depends.inject
 def _handle_contextual_ai(
     contextual_ai: bool,
     ai_recommendations: int,
     ai_help_query: str | None,
-    console: Console,
+    console: Inject[Console],
 ) -> bool:
     """Handle contextual AI assistant features.
 
@@ -1205,7 +1737,7 @@ def _handle_contextual_ai(
     if not contextual_ai and not ai_help_query:
         return True
 
-    from crackerjack.services.contextual_ai_assistant import ContextualAIAssistant
+    from crackerjack.services.ai.contextual_ai_assistant import ContextualAIAssistant
 
     console.print("[cyan]🤖[/cyan] Running contextual AI assistant analysis...")
 
@@ -1227,7 +1759,7 @@ def _handle_contextual_ai(
                 Path(path).mkdir(parents=parents, exist_ok=True)
 
         filesystem = FileSystemImpl()
-        assistant = ContextualAIAssistant(filesystem, console)
+        assistant = ContextualAIAssistant(filesystem)
 
         # Handle help query
         if ai_help_query:
@@ -1345,10 +1877,10 @@ def main(
     predictive_analytics: bool = CLI_OPTIONS["predictive_analytics"],
     prediction_periods: int = CLI_OPTIONS["prediction_periods"],
     analytics_dashboard: str | None = CLI_OPTIONS["analytics_dashboard"],
-    # Enterprise features
-    enterprise_optimizer: bool = CLI_OPTIONS["enterprise_optimizer"],
-    enterprise_profile: str | None = CLI_OPTIONS["enterprise_profile"],
-    enterprise_report: str | None = CLI_OPTIONS["enterprise_report"],
+    # Advanced features
+    advanced_optimizer: bool = CLI_OPTIONS["advanced_optimizer"],
+    advanced_profile: str | None = CLI_OPTIONS["advanced_profile"],
+    advanced_report: str | None = CLI_OPTIONS["advanced_report"],
     mkdocs_integration: bool = CLI_OPTIONS["mkdocs_integration"],
     mkdocs_serve: bool = CLI_OPTIONS["mkdocs_serve"],
     mkdocs_theme: str = CLI_OPTIONS["mkdocs_theme"],
@@ -1368,27 +1900,20 @@ def main(
     semantic_stats: bool = CLI_OPTIONS["semantic_stats"],
     remove_from_index: str | None = CLI_OPTIONS["remove_from_index"],
 ) -> None:
-    from acb.main import get_app as get_acb
     from acb.depends import depends
-    from acb.config import Config
+
+    from crackerjack.config import register_services
+    from crackerjack.config.loader import load_settings
     from crackerjack.config.settings import CrackerjackSettings
 
-    # Initialize acb
-    acb = get_acb()
-    acb.setup(
-        app_name="crackerjack",
-        app_version="0.41.3",
-        app_description="Crackerjack: Your Python project setup and style enforcement tool.",
-        settings_class=CrackerjackSettings,
-    )
+    # Load Crackerjack settings directly and register with DI
+    settings = load_settings(CrackerjackSettings)
+    depends.set(CrackerjackSettings, settings)
 
-    # Get the config from acb
-    config = depends.get(Config)
-    settings = config.get_settings(CrackerjackSettings)
+    # Register all services with ACB DI system
+    # Must be called after settings are loaded but before any services are used
+    register_services()
 
-    # Make the settings available via depends.set()
-    depends.set(settings)
-    
     options = create_options(
         commit,
         interactive,
@@ -1463,10 +1988,10 @@ def main(
         predictive_analytics,
         prediction_periods,
         analytics_dashboard,
-        # Enterprise features
-        enterprise_optimizer,
-        enterprise_profile,
-        enterprise_report,
+        # Advanced features
+        advanced_optimizer,
+        advanced_profile,
+        advanced_report,
         mkdocs_integration,
         mkdocs_serve,
         mkdocs_theme,
@@ -1495,7 +2020,7 @@ def main(
     setup_ai_agent_env(ai_fix, ai_debug or debug)
 
     # Process all commands - returns True if should continue to main workflow
-    if not _process_all_commands(locals(), console, options):
+    if not _process_all_commands(locals(), options):
         return
 
     # Execute main workflow (interactive or standard mode)
@@ -1505,12 +2030,10 @@ def main(
         handle_standard_mode(options, async_mode, job_id, orchestrated)
 
 
-def _process_all_commands(local_vars: t.Any, console: t.Any, options: t.Any) -> bool:
+def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     """Process all command-line commands and return True if should continue to main workflow."""
     # Handle cache management commands early (they exit after execution)
-    if _handle_cache_commands(
-        local_vars["clear_cache"], local_vars["cache_stats"], console
-    ):
+    if _handle_cache_commands(local_vars["clear_cache"], local_vars["cache_stats"]):
         return False
 
     # Handle configuration management commands early (they exit after execution)
@@ -1529,7 +2052,6 @@ def _process_all_commands(local_vars: t.Any, console: t.Any, options: t.Any) -> 
         local_vars["search"],
         local_vars["semantic_stats"],
         local_vars["remove_from_index"],
-        console,
         options,
     ):
         return False
@@ -1559,20 +2081,18 @@ def _process_all_commands(local_vars: t.Any, console: t.Any, options: t.Any) -> 
         return False
 
     # Handle coverage status command
-    if not _handle_coverage_status(local_vars["coverage_status"], console, options):
+    if not _handle_coverage_status(local_vars["coverage_status"], options):
         return False
 
     # Handle documentation and analysis commands
-    return _handle_analysis_commands(local_vars, console, options)
+    return _handle_analysis_commands(local_vars, options)
 
 
-def _handle_analysis_commands(
-    local_vars: t.Any, console: t.Any, options: t.Any
-) -> bool:
+def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
     """Handle documentation and analysis commands."""
     # Handle documentation commands
     if not _handle_documentation_commands(
-        local_vars["generate_docs"], local_vars["validate_docs"], console, options
+        local_vars["generate_docs"], local_vars["validate_docs"], options
     ):
         return False
 
@@ -1582,7 +2102,6 @@ def _handle_analysis_commands(
         local_vars["changelog_dry_run"],
         local_vars["changelog_version"],
         local_vars["changelog_since"],
-        console,
         options,
     ):
         return False
@@ -1592,23 +2111,19 @@ def _handle_analysis_commands(
         local_vars["auto_version"],
         local_vars["version_since"],
         local_vars["accept_version"],
-        console,
         options,
     ):
         return False
 
     # Handle specialized analytics
-    return _handle_specialized_analytics(local_vars, console)
+    return _handle_specialized_analytics(local_vars)
 
 
-def _handle_specialized_analytics(local_vars: t.Any, console: t.Any) -> bool:
-    """Handle specialized analytics and enterprise features."""
+def _handle_specialized_analytics(local_vars: t.Any) -> bool:
+    """Handle specialized analytics and advanced features."""
     # Handle heatmap generation
     if not _handle_heatmap_generation(
-        local_vars["heatmap"],
-        local_vars["heatmap_type"],
-        local_vars["heatmap_output"],
-        console,
+        local_vars["heatmap"], local_vars["heatmap_type"], local_vars["heatmap_output"]
     ):
         return False
 
@@ -1617,7 +2132,6 @@ def _handle_specialized_analytics(local_vars: t.Any, console: t.Any) -> bool:
         local_vars["anomaly_detection"],
         local_vars["anomaly_sensitivity"],
         local_vars["anomaly_report"],
-        console,
     ):
         return False
 
@@ -1626,15 +2140,15 @@ def _handle_specialized_analytics(local_vars: t.Any, console: t.Any) -> bool:
         local_vars["predictive_analytics"],
         local_vars["prediction_periods"],
         local_vars["analytics_dashboard"],
-        console,
     ):
         return False
 
-    # Handle enterprise features
-    return _handle_enterprise_features(local_vars, console)
+    # Handle advanced features
+    return _handle_advanced_features(local_vars)
 
 
-def _display_coverage_info(console: t.Any, coverage_info: dict[str, t.Any]) -> None:
+@depends.inject
+def _display_coverage_info(coverage_info: dict[str, t.Any], console: Inject[Console]) -> None:
     """Display basic coverage information."""
     coverage_percent = coverage_info.get("coverage_percent", 0.0)
     coverage_source = coverage_info.get("source", "unknown")
@@ -1652,14 +2166,16 @@ def _display_coverage_info(console: t.Any, coverage_info: dict[str, t.Any]) -> N
         console.print(f"[dim]{status_message}[/dim]")
 
 
-def _display_coverage_report(console: t.Any, test_manager: t.Any) -> None:
+@depends.inject
+def _display_coverage_report(test_manager: t.Any, console: Inject[Console]) -> None:
     """Display detailed coverage report if available."""
     coverage_report = test_manager.get_coverage_report()
     if coverage_report:
         console.print(f"[cyan]Details:[/cyan] {coverage_report}")
 
 
-def _display_ratchet_status(console: t.Any, test_manager: t.Any) -> None:
+@depends.inject
+def _display_ratchet_status(test_manager: t.Any, console: Inject[Console]) -> None:
     """Display coverage ratchet status if available."""
     from contextlib import suppress
 
@@ -1675,9 +2191,8 @@ def _display_ratchet_status(console: t.Any, test_manager: t.Any) -> None:
                 console.print(f"[green]Milestones Achieved:[/green] {len(milestones)}")
 
 
-def _handle_coverage_status(
-    coverage_status: bool, console: t.Any, options: t.Any
-) -> bool:
+@depends.inject
+def _handle_coverage_status(coverage_status: bool, options: t.Any, console: Inject[Console]) -> bool:
     """Handle coverage status display command."""
     if not coverage_status:
         return True
@@ -1691,20 +2206,20 @@ def _handle_coverage_status(
         pkg_path = Path.cwd()
 
         # Create test manager directly
-        test_manager = TestManager(console, pkg_path)
+        test_manager = TestManager(pkg_path)
 
         console.print("[cyan]📊[/cyan] Coverage Status Report")
         console.print("=" * 50)
 
         # Get coverage information
         coverage_info = test_manager.get_coverage()
-        _display_coverage_info(console, coverage_info)
+        _display_coverage_info(coverage_info)
 
         # Try to get more detailed coverage report
-        _display_coverage_report(console, test_manager)
+        _display_coverage_report(test_manager)
 
         # Show coverage ratchet status if available
-        _display_ratchet_status(console, test_manager)
+        _display_ratchet_status(test_manager)
 
         console.print()
         return False  # Exit after showing status
@@ -1717,13 +2232,14 @@ def _handle_coverage_status(
         return False
 
 
+@depends.inject
 def _handle_semantic_commands(
     index: str | None,
     search: str | None,
     semantic_stats: bool,
     remove_from_index: str | None,
-    console: Console,
     options: t.Any,
+    console: Inject[Console],
 ) -> bool:
     """Handle semantic search commands.
 
@@ -1775,14 +2291,13 @@ def _execute_semantic_operations(
     return []
 
 
-def _handle_enterprise_features(local_vars: t.Any, console: t.Any) -> bool:
-    """Handle enterprise features."""
-    # Handle enterprise optimizer
-    if not _handle_enterprise_optimizer(
-        local_vars["enterprise_optimizer"],
-        local_vars["enterprise_profile"],
-        local_vars["enterprise_report"],
-        console,
+def _handle_advanced_features(local_vars: t.Any) -> bool:
+    """Handle advanced features."""
+    # Handle advanced optimizer
+    if not _handle_advanced_optimizer(
+        local_vars["advanced_optimizer"],
+        local_vars["advanced_profile"],
+        local_vars["advanced_report"],
     ):
         return False
 
@@ -1792,7 +2307,6 @@ def _handle_enterprise_features(local_vars: t.Any, console: t.Any) -> bool:
         local_vars["mkdocs_serve"],
         local_vars["mkdocs_theme"],
         local_vars["mkdocs_output"],
-        console,
     ):
         return False
 
@@ -1801,7 +2315,6 @@ def _handle_enterprise_features(local_vars: t.Any, console: t.Any) -> bool:
         local_vars["contextual_ai"],
         local_vars["ai_recommendations"],
         local_vars["ai_help_query"],
-        console,
     ):
         return False
 

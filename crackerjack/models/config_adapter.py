@@ -1,10 +1,10 @@
 import typing as t
 
 from .config import (
+    AdvancedConfig,
     AIConfig,
     CleaningConfig,
     CleanupConfig,
-    EnterpriseConfig,
     ExecutionConfig,
     GitConfig,
     HookConfig,
@@ -97,8 +97,8 @@ class OptionsAdapter:
                 keep_debug_logs=getattr(options, "keep_debug_logs", 5),
                 keep_coverage_files=getattr(options, "keep_coverage_files", 10),
             ),
-            enterprise=EnterpriseConfig(
-                enabled=getattr(options, "enterprise_batch", None) is not None,
+            advanced=AdvancedConfig(
+                enabled=getattr(options, "advanced_batch", None) is not None,
                 license_key=getattr(options, "license_key", None),
                 organization=getattr(options, "organization", None),
             ),
@@ -257,7 +257,7 @@ class LegacyOptionsWrapper:
         return self._options.publishing.skip_version_check
 
     @property
-    def enterprise_batch(self) -> str | None:
+    def advanced_batch(self) -> str | None:
         return None
 
     @property

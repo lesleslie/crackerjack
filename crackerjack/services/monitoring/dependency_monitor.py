@@ -8,9 +8,11 @@ import typing as t
 from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import urlparse
 
-from acb.depends import depends
-from rich.console import Console
+import requests
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from crackerjack.data.repository import DependencyMonitorRepository
 from crackerjack.models.protocols import FileSystemInterface
@@ -37,13 +39,14 @@ class MajorUpdate:
 
 
 class DependencyMonitorService:
+    @depends.inject
     def __init__(
         self,
         filesystem: FileSystemInterface,
-        console: Console | None = None,
+        console: Inject[Console],
     ) -> None:
         self.filesystem = filesystem
-        self.console = console or Console()
+        self.console = console
         self.project_root = Path.cwd()
         self.pyproject_path = self.project_root / "pyproject.toml"
         self._legacy_cache_file = (
@@ -470,9 +473,6 @@ class DependencyMonitorService:
             return None
 
     def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
-        from urllib.parse import urlparse
-
-        import requests
 
         url = f"https://pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
@@ -488,7 +488,6 @@ class DependencyMonitorService:
         return t.cast(dict[str, t.Any], response.json())
 
     def _validate_pypi_url(self, url: str) -> None:
-        from urllib.parse import urlparse
 
         parsed = urlparse(url)
 

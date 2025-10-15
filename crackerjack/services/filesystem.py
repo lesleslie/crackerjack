@@ -3,9 +3,10 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from crackerjack.errors import ErrorCode, FileError, ResourceError
+from crackerjack.models.protocols import FileSystemInterface
 
 
-class FileSystemService:
+class FileSystemService(FileSystemInterface):
     @staticmethod
     def clean_trailing_whitespace_and_newlines(content: str) -> str:
         lines = content.splitlines()

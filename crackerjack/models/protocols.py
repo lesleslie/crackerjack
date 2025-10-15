@@ -2,6 +2,63 @@ import subprocess
 import typing as t
 from pathlib import Path
 
+from crackerjack.config.hooks import HookDefinition
+from crackerjack.config.settings import CrackerjackSettings
+from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
+
+
+@t.runtime_checkable
+class ServiceProtocol(t.Protocol):
+    """Base protocol for ACB services with standardized lifecycle methods."""
+
+    def initialize(self) -> None:
+        """Initialize service with proper lifecycle management."""
+        ...
+
+    def cleanup(self) -> None:
+        """Cleanup service resources."""
+        ...
+
+    def health_check(self) -> bool:
+        """Perform health check for service."""
+        ...
+
+    def shutdown(self) -> None:
+        """Shutdown service gracefully."""
+        ...
+
+    def metrics(self) -> dict[str, t.Any]:
+        """Get service metrics."""
+        ...
+
+    def is_healthy(self) -> bool:
+        """Check if service is healthy."""
+        ...
+
+    def register_resource(self, resource: t.Any) -> None:
+        """Register resource for cleanup."""
+        ...
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        """Cleanup specific resource."""
+        ...
+
+    def record_error(self, error: Exception) -> None:
+        """Record service error for monitoring."""
+        ...
+
+    def increment_requests(self) -> None:
+        """Increment request counter."""
+        ...
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        """Get custom service metric."""
+        ...
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        """Set custom service metric."""
+        ...
+
 
 @t.runtime_checkable
 class CommandRunner(t.Protocol):
@@ -47,7 +104,7 @@ class OptionsProtocol(t.Protocol):
     fast_iteration: bool = False
     tool: str | None = None
     changed_only: bool = False
-    enterprise_batch: str | None = None
+    advanced_batch: str | None = None
     monitor_dashboard: str | None = None
     skip_config_merge: bool = False
     disable_global_locks: bool = False
@@ -124,7 +181,7 @@ class SecurityAwareHookManager(HookManager, t.Protocol):
 
 
 @t.runtime_checkable
-class CoverageRatchetProtocol(t.Protocol):
+class CoverageRatchetProtocol(ServiceProtocol, t.Protocol):
     def get_baseline_coverage(self) -> float: ...
 
     def update_baseline_coverage(self, new_coverage: float) -> bool: ...
@@ -141,16 +198,7 @@ class CoverageRatchetProtocol(t.Protocol):
 
 
 @t.runtime_checkable
-class ConfigurationServiceProtocol(t.Protocol):
-    def update_precommit_config(self, options: OptionsProtocol) -> bool: ...
-
-    def update_pyproject_config(self, options: OptionsProtocol) -> bool: ...
-
-    def get_temp_config_path(self) -> str | None: ...
-
-
-@t.runtime_checkable
-class SecurityServiceProtocol(t.Protocol):
+class SecurityServiceProtocol(ServiceProtocol, t.Protocol):
     def validate_file_safety(self, path: str | Path) -> bool: ...
 
     def check_hardcoded_secrets(self, content: str) -> list[dict[str, t.Any]]: ...
@@ -165,7 +213,7 @@ class SecurityServiceProtocol(t.Protocol):
 
 
 @t.runtime_checkable
-class InitializationServiceProtocol(t.Protocol):
+class InitializationServiceProtocol(ServiceProtocol, t.Protocol):
     def initialize_project(self, project_path: str | Path) -> bool: ...
 
     def validate_project_structure(self) -> bool: ...
@@ -174,16 +222,41 @@ class InitializationServiceProtocol(t.Protocol):
 
 
 @t.runtime_checkable
-class UnifiedConfigurationServiceProtocol(t.Protocol):
-    def merge_configurations(self) -> dict[str, t.Any]: ...
+class SmartSchedulingServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for smart scheduling service."""
 
-    def validate_configuration(self, config: dict[str, t.Any]) -> bool: ...
+    def should_scheduled_init(self) -> bool: ...
 
-    def get_merged_config(self) -> dict[str, t.Any]: ...
+    def record_init_timestamp(self) -> None: ...
 
 
 @t.runtime_checkable
-class TestManagerProtocol(t.Protocol):
+class UnifiedConfigurationServiceProtocol(ServiceProtocol, t.Protocol):
+    def get_config(self, reload: bool = False) -> CrackerjackSettings: ...
+
+    def get_precommit_config_mode(self) -> str: ...
+
+    def get_logging_config(self) -> dict[str, t.Any]: ...
+
+    def get_hook_execution_config(self) -> dict[str, t.Any]: ...
+
+    def get_testing_config(self) -> dict[str, t.Any]: ...
+
+    @staticmethod
+    def get_cache_config() -> dict[str, t.Any]: ...
+
+    def validate_current_config(self) -> bool: ...
+
+
+@t.runtime_checkable
+class ConfigIntegrityServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for config integrity service."""
+
+    def check_config_integrity(self) -> bool: ...
+
+
+@t.runtime_checkable
+class TestManagerProtocol(ServiceProtocol, t.Protocol):
     def run_tests(self, options: OptionsProtocol) -> bool: ...
 
     def get_test_failures(self) -> list[str]: ...
@@ -191,6 +264,24 @@ class TestManagerProtocol(t.Protocol):
     def validate_test_environment(self) -> bool: ...
 
     def get_coverage(self) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class BoundedStatusOperationsProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for bounded status operations service."""
+
+    async def execute_bounded_operation(
+        self,
+        operation_type: str,
+        client_id: str,
+        operation_func: t.Callable[..., t.Awaitable[t.Any]],
+        *args: t.Any,
+        **kwargs: t.Any,
+    ) -> t.Any: ...
+
+    def get_operation_status(self) -> dict[str, t.Any]: ...
+
+    def reset_circuit_breaker(self, operation_type: str) -> bool: ...
 
 
 @t.runtime_checkable
@@ -207,7 +298,7 @@ class PublishManager(t.Protocol):
 
 
 @t.runtime_checkable
-class ConfigMergeServiceProtocol(t.Protocol):
+class ConfigMergeServiceProtocol(ServiceProtocol, t.Protocol):
     def smart_merge_pyproject(
         self,
         source_content: dict[str, t.Any],
@@ -278,7 +369,7 @@ class HookLockManagerProtocol(t.Protocol):
 
 
 @t.runtime_checkable
-class DocumentationServiceProtocol(t.Protocol):
+class DocumentationServiceProtocol(ServiceProtocol, t.Protocol):
     """Service for automated documentation generation and maintenance."""
 
     def extract_api_documentation(
@@ -392,6 +483,41 @@ class FileSystemServiceProtocol(t.Protocol):
     def mkdir(self, path: str | Path, parents: bool = False) -> None: ...
 
     def ensure_directory(self, path: str | Path) -> None: ...
+
+
+@t.runtime_checkable
+class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for enhanced file system service."""
+
+    def read_file(self, path: str | Path) -> str: ...
+
+    def write_file(self, path: str | Path, content: str) -> None: ...
+
+    async def read_file_async(self, path: Path) -> str: ...
+
+    async def write_file_async(self, path: Path, content: str) -> None: ...
+
+    async def read_multiple_files(self, paths: list[Path]) -> dict[Path, str]: ...
+
+    async def write_multiple_files(self, file_data: dict[Path, str]) -> None: ...
+
+    def file_exists(self, path: str | Path) -> bool: ...
+
+    def create_directory(self, path: str | Path) -> None: ...
+
+    def delete_file(self, path: str | Path) -> None: ...
+
+    def list_files(self, path: str | Path, pattern: str = "*") -> t.Iterator[Path]: ...
+
+    async def flush_operations(self) -> None: ...
+
+    def get_cache_stats(self) -> dict[str, t.Any]: ...
+
+    def clear_cache(self) -> None: ...
+
+    def exists(self, path: str | Path) -> bool: ...
+
+    def mkdir(self, path: str | Path, parents: bool = False) -> None: ...
 
 
 @t.runtime_checkable
@@ -706,11 +832,11 @@ class MemoryOptimizerProtocol(t.Protocol):
 class PerformanceCacheProtocol(t.Protocol):
     """Protocol for performance caching."""
 
-    def get(self, key: str) -> t.Any | None:
+    def get(self, key: str) -> ExecutionResult | None:
         """Get cached value."""
         ...
 
-    def set(self, key: str, value: t.Any, ttl: int = 3600) -> None:
+    def set(self, key: str, value: ExecutionResult, ttl: int = 3600) -> None:
         """Set cached value with TTL."""
         ...
 
@@ -720,23 +846,6 @@ class PerformanceCacheProtocol(t.Protocol):
 
     def clear_all(self) -> None:
         """Clear all cache entries."""
-        ...
-
-
-@t.runtime_checkable
-class QualityIntelligenceProtocol(t.Protocol):
-    """Protocol for quality intelligence analysis."""
-
-    def analyze(self, metrics: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Analyze quality metrics."""
-        ...
-
-    def get_recommendations(self) -> list[dict[str, t.Any]]:
-        """Get quality improvement recommendations."""
-        ...
-
-    def predict_quality_trend(self) -> dict[str, t.Any]:
-        """Predict quality trend."""
         ...
 
 
@@ -775,21 +884,688 @@ class ParallelExecutorProtocol(t.Protocol):
 
 
 @t.runtime_checkable
+class ParallelHookExecutorProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for parallel hook executor service."""
+
+    async def execute_hooks_parallel(
+        self,
+        hooks: list[HookDefinition],
+        hook_runner: t.Callable[[HookDefinition], t.Awaitable[ExecutionResult]],
+    ) -> ParallelExecutionResult: ...
+
+
+@t.runtime_checkable
+class AsyncCommandExecutorProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for async command executor service."""
+
+    async def execute_command(
+        self,
+        command: list[str],
+        cwd: Path | None = None,
+        timeout: int = 60,
+        cache_ttl: int = 120,
+    ) -> ExecutionResult: ...
+
+    async def execute_commands_batch(
+        self,
+        commands: list[tuple[list[str], Path | None]],
+        timeout: int = 60,
+    ) -> list[ExecutionResult]: ...
+
+
+@t.runtime_checkable
 class PerformanceBenchmarkProtocol(t.Protocol):
     """Protocol for performance benchmarking."""
 
-    def run_benchmark(self, operation: str) -> dict[str, t.Any]:
-        """Run benchmark for operation."""
-        ...
+    def run_benchmark(self, operation: str) -> dict[str, t.Any]: ...
 
-    def get_report(self) -> dict[str, t.Any]:
-        """Get benchmark report."""
-        ...
+    def get_report(self) -> dict[str, t.Any]: ...
 
     def compare_benchmarks(
         self,
         baseline: dict[str, t.Any],
         current: dict[str, t.Any],
+    ) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class PerformanceBenchmarkServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for performance benchmark service."""
+
+    async def run_benchmark_suite(self) -> t.Any | None: ... # BenchmarkSuite
+
+    def export_results(self, suite: t.Any, output_path: Path) -> None: ... # BenchmarkSuite
+
+
+@t.runtime_checkable
+class DebugServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for AI agent debugging services."""
+    
+def start_debug_session(self, session_id: str) -> None: ...
+
+@t.runtime_checkable
+class MemoryOptimizerProtocol(t.Protocol):
+    """Protocol for memory optimization services."""
+
+    def optimize_memory(self) -> None:
+        """Perform memory optimization."""
+        ...
+
+    def get_memory_usage(self) -> dict[str, t.Any]:
+        """Get current memory usage statistics."""
+        ...
+
+    def cleanup_memory(self) -> None:
+        """Clean up unused memory."""
+        ...
+
+    def get_optimization_report(self) -> dict[str, t.Any]:
+        """Get memory optimization report."""
+        ...
+
+
+@t.runtime_checkable
+class PerformanceMonitorProtocol(t.Protocol):
+    """Protocol for performance monitoring services."""
+
+    def start_monitoring(self, operation: str) -> str:
+        """Start monitoring an operation and return operation ID."""
+        ...
+
+    def stop_monitoring(self, operation_id: str) -> dict[str, t.Any]:
+        """Stop monitoring and return performance metrics."""
+        ...
+
+    def get_performance_metrics(self) -> dict[str, t.Any]:
+        """Get all collected performance metrics."""
+        ...
+
+    def reset_metrics(self) -> None:
+        """Reset all collected performance metrics."""
+        ...
+
+
+@t.runtime_checkable
+class QualityBaselineProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for quality baseline services."""
+
+    def get_current_baseline(self) -> dict[str, t.Any]:
+        """Get current quality baselines."""
+        ...
+
+    def update_baseline(self, new_metrics: dict[str, t.Any]) -> bool:
+        """Update quality baselines."""
+        ...
+
+    def compare_against_baseline(self, current_metrics: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Compare current metrics against baseline."""
+        ...
+
+    def needs_improvement(self, metric_name: str, current_value: float) -> bool:
+        """Check if a metric needs improvement."""
+        ...
+
+
+@t.runtime_checkable
+class QualityIntelligenceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for quality intelligence services."""
+
+    def analyze_quality_trends(self) -> dict[str, t.Any]:
+        """Analyze quality trends."""
+        ...
+
+    def predict_quality_issues(self) -> list[dict[str, t.Any]]:
+        """Predict potential quality issues."""
+        ...
+
+    def recommend_improvements(self) -> list[dict[str, t.Any]]:
+        """Recommend quality improvements."""
+        ...
+
+    def get_intelligence_report(self) -> dict[str, t.Any]:
+        """Get quality intelligence report."""
+        ...
+
+
+@t.runtime_checkable
+class ConfigMergeServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for configuration merge services."""
+
+    def smart_merge_pyproject(
+        self, 
+        source_content: dict[str, t.Any], 
+        target_path: str | t.Any, 
+        project_name: str
     ) -> dict[str, t.Any]:
-        """Compare two benchmark results."""
+        """Smart merge pyproject.toml configurations."""
+        ...
+
+    def smart_merge_pre_commit_config(
+        self, 
+        source_content: dict[str, t.Any], 
+        target_path: str | t.Any, 
+        project_name: str
+    ) -> dict[str, t.Any]:
+        """Smart merge pre-commit configuration."""
+        ...
+
+    def smart_merge_gitignore(
+        self, 
+        patterns: list[str], 
+        target_path: str | t.Any
+    ) -> str:
+        """Smart merge gitignore configurations."""
+        ...
+
+    def write_pyproject_config(self, config: dict[str, t.Any], target_path: str | t.Any) -> None:
+        """Write pyproject.toml configuration."""
+        ...
+
+    def write_pre_commit_config(self, config: dict[str, t.Any], target_path: str | t.Any) -> None:
+        """Write pre-commit configuration."""
+        ...
+
+
+@t.runtime_checkable
+class CoverageRatchetServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for coverage ratchet services."""
+
+    def get_current_coverage(self) -> float:
+        """Get current test coverage percentage."""
+        ...
+
+    def get_coverage_history(self) -> list[dict[str, t.Any]]:
+        """Get coverage history."""
+        ...
+
+    def check_coverage_increase(self) -> bool:
+        """Check if coverage has increased."""
+        ...
+
+    def get_next_milestone(self) -> float | None:
+        """Get the next coverage milestone."""
+        ...
+
+    def update_coverage_baseline(self, new_baseline: float) -> bool:
+        """Update the coverage baseline."""
+        ...
+
+
+@t.runtime_checkable
+class ServerManagerProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for server management services."""
+
+    def find_processes(self, process_name: str) -> list[dict[str, t.Any]]:
+        """Find running processes matching name."""
+        ...
+
+    def start_server(self, command: list[str]) -> bool:
+        """Start a server."""
+        ...
+
+    def stop_server(self, process_id: int) -> bool:
+        """Stop a server."""
+        ...
+
+    def restart_server(self, command: list[str]) -> bool:
+        """Restart a server."""
+        ...
+
+    def get_server_status(self) -> dict[str, t.Any]:
+        """Get server status information."""
+        ...
+
+
+@t.runtime_checkable
+class LogManagementProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for log management services."""
+
+    def get_log_manager(self) -> t.Any:
+        """Get log management instance."""
+        ...
+
+    def setup_structured_logging(
+        self,
+        *,
+        level: str = "INFO",
+        json_output: bool = False,
+        log_file: Path | None = None,
+    ) -> None:
+        """Setup structured logging."""
+        ...
+
+    def write_log(self, message: str, level: str = "INFO") -> None:
+        """Write a log message."""
+        ...
+
+    def get_logs(self, filter_criteria: dict[str, t.Any] | None = None) -> list[dict[str, t.Any]]:
+        """Get logs based on filter criteria."""
+        ...
+
+
+# Protocol definitions for services imported directly in managers
+
+@t.runtime_checkable
+class RegexPatternsProtocol(t.Protocol):
+    """Protocol for regex patterns service."""
+    
+    def update_pyproject_version(self, content: str, new_version: str) -> str: ...
+
+    def remove_coverage_fail_under(self, content: str) -> str: ...
+
+    def update_version_in_changelog(self, content: str, new_version: str) -> str: ...
+
+    def mask_tokens_in_text(self, text: str) -> str: ...
+
+
+@t.runtime_checkable
+class SecureStatusFormatterProtocol(t.Protocol):
+    """Protocol for secure status formatter service."""
+
+    def format_status(
+        self,
+        status_data: dict[str, t.Any],
+        verbosity: t.Any, # StatusVerbosity
+        user_context: str | None = None,
+    ) -> dict[str, t.Any]: ...
+
+    def format_error_response(
+        self,
+        error_message: str,
+        verbosity: t.Any, # StatusVerbosity
+        include_details: bool = False,
+    ) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class GitServiceProtocol(t.Protocol):
+    """Protocol for Git service."""
+    
+    def get_current_branch(self) -> str: ...
+
+    def get_commit_history(self, since_commit: str | None = None) -> list[str]: ...
+
+    def create_new_branch(self, branch_name: str) -> bool: ...
+
+    def commit_changes(self, message: str) -> bool: ...
+
+    def push_changes(self) -> bool: ...
+
+    def create_pull_request(self, title: str, body: str) -> bool: ...
+
+    def get_changed_files_since(self, since: str, project_root: Path) -> list[Path]: ...
+
+    def get_staged_files(self, project_root: Path) -> list[Path]: ...
+
+    def get_unstaged_files(self, project_root: Path) -> list[Path]: ...
+
+
+@t.runtime_checkable
+class SmartFileFilterProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for smart file filter service."""
+
+    def get_changed_files(self, since: str = "HEAD") -> list[Path]: ...
+
+    def get_staged_files(self) -> list[Path]: ...
+
+    def get_unstaged_files(self) -> list[Path]: ...
+
+    def filter_by_pattern(self, files: list[Path], pattern: str) -> list[Path]: ...
+
+    def filter_by_tool(self, files: list[Path], tool: str) -> list[Path]: ...
+
+    def get_all_modified_files(self) -> list[Path]: ...
+
+    def filter_by_extensions(
+        self, files: list[Path], extensions: list[str]
+    ) -> list[Path]: ...
+
+    def get_python_files(self, files: list[Path]) -> list[Path]: ...
+
+    def get_markdown_files(self, files: list[Path]) -> list[Path]: ...
+
+
+@t.runtime_checkable
+class SafeFileModifierProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for safe file modification service."""
+
+    async def apply_fix(
+        self,
+        file_path: str,
+        fixed_content: str,
+        dry_run: bool = False,
+        create_backup: bool = True,
+    ) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class VersionAnalyzerProtocol(t.Protocol):
+    """Protocol for version analysis service."""
+    
+    def analyze_changes(self, commit_messages: list[str]) -> dict[str, t.Any]: ...
+
+    def recommend_next_version(self) -> str: ...
+
+    def get_version_bump_type(self, changes: dict[str, t.Any]) -> str: ...
+
+
+@t.runtime_checkable
+class HealthMetricsServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for health metrics service."""
+
+    def collect_current_metrics(self) -> t.Any: ... # ProjectHealth
+
+    def analyze_project_health(self, save_metrics: bool = True) -> t.Any: ... # ProjectHealth
+
+    def report_health_status(self, health: t.Any) -> None: ... # ProjectHealth
+
+    def get_health_trend_summary(self, days: int = 30) -> dict[str, t.Any]: ...
+
+
+@t.runtime_checkable
+class ChangelogGeneratorProtocol(t.Protocol):
+    """Protocol for changelog generation service."""
+    
+    def generate_changelog_entries(self, changes: dict[str, t.Any]) -> list[str]: ...
+
+    def write_changelog(self, entries: list[str], changelog_file: str | Path) -> bool: ...
+
+    def update_changelog_with_version(self, changelog_file: str | Path, version: str) -> bool: ...
+
+
+@t.runtime_checkable
+class CoverageBadgeServiceProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for coverage badge service."""
+
+    def update_readme_coverage_badge(self, coverage_percent: float) -> bool: ...
+
+    def should_update_badge(self, coverage_percent: float) -> bool: ...
+
+
+# ============================================================================
+# Agent System Protocols (Phase 4)
+# ============================================================================
+
+
+@t.runtime_checkable
+class AgentCoordinatorProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for agent coordination and issue handling.
+
+    The AgentCoordinator manages a pool of specialized AI agents that can
+    diagnose and fix various code quality issues. It routes issues to
+    appropriate agents, handles agent execution, and aggregates results.
+    """
+
+    def initialize_agents(self) -> None:
+        """Initialize all registered agents."""
+        ...
+
+    async def handle_issues(self, issues: list[t.Any]) -> t.Any:  # list[Issue] -> FixResult
+        """Handle a batch of issues using appropriate specialist agents.
+
+        Args:
+            issues: List of Issue objects to be processed
+
+        Returns:
+            FixResult containing success status, confidence, and applied fixes
+        """
+        ...
+
+    async def handle_issues_proactively(self, issues: list[t.Any]) -> t.Any:  # list[Issue] -> FixResult
+        """Handle issues with proactive architectural planning.
+
+        Uses ArchitectAgent to create a strategic plan before applying fixes.
+
+        Args:
+            issues: List of Issue objects to be processed
+
+        Returns:
+            FixResult containing success status, confidence, and applied fixes
+        """
+        ...
+
+    def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
+        """Get capabilities of all registered agents.
+
+        Returns:
+            Dict mapping agent names to their supported issue types and metadata
+        """
+        ...
+
+    def set_proactive_mode(self, enabled: bool) -> None:
+        """Enable or disable proactive architectural planning mode.
+
+        Args:
+            enabled: Whether to use proactive planning
+        """
+        ...
+
+
+@t.runtime_checkable
+class AgentTrackerProtocol(t.Protocol):
+    """Protocol for tracking agent execution and metrics.
+
+    The AgentTracker monitors agent activity, collects performance metrics,
+    and provides insights into agent effectiveness and success rates.
+    """
+
+    def register_agents(self, agent_types: list[str]) -> None:
+        """Register agent types for tracking.
+
+        Args:
+            agent_types: List of agent class names
+        """
+        ...
+
+    def set_coordinator_status(self, status: str) -> None:
+        """Set the overall coordinator status.
+
+        Args:
+            status: Status string (e.g., 'active', 'idle', 'processing')
+        """
+        ...
+
+    def track_agent_processing(
+        self, agent_name: str, issue: t.Any, confidence: float
+    ) -> None:  # issue: Issue
+        """Track when an agent begins processing an issue.
+
+        Args:
+            agent_name: Name of the agent
+            issue: Issue being processed
+            confidence: Agent's confidence in handling this issue (0.0-1.0)
+        """
+        ...
+
+    def track_agent_complete(self, agent_name: str, result: t.Any) -> None:  # result: FixResult
+        """Track agent completion and results.
+
+        Args:
+            agent_name: Name of the agent
+            result: FixResult from agent execution
+        """
+        ...
+
+    def get_agent_stats(self) -> dict[str, t.Any]:
+        """Get aggregate statistics for all agents.
+
+        Returns:
+            Dict containing success rates, average confidence, etc.
+        """
+        ...
+
+
+@t.runtime_checkable
+class AgentDebuggerProtocol(t.Protocol):
+    """Protocol for agent debugging and activity logging.
+
+    The AgentDebugger provides detailed logging for agent activities,
+    enabling troubleshooting and performance analysis.
+    """
+
+    def log_agent_activity(
+        self,
+        agent_name: str,
+        activity: str,
+        **metadata: t.Any,
+    ) -> None:
+        """Log an agent activity with optional metadata.
+
+        Args:
+            agent_name: Name of the agent
+            activity: Activity type (e.g., 'processing_started', 'processing_completed')
+            **metadata: Additional context (issue_id, confidence, result, etc.)
+        """
+        ...
+
+    def get_activity_log(
+        self, agent_name: str | None = None, limit: int = 100
+    ) -> list[dict[str, t.Any]]:
+        """Get recent activity log entries.
+
+        Args:
+            agent_name: Optional filter by agent name
+            limit: Maximum number of entries to return
+
+        Returns:
+            List of activity log entries
+        """
+        ...
+
+    def enable_verbose_mode(self, enabled: bool = True) -> None:
+        """Enable or disable verbose debugging mode.
+
+        Args:
+            enabled: Whether to enable verbose output
+        """
+        ...
+
+
+# ============================================================================
+# Orchestration Protocols (Phase 4)
+# ============================================================================
+
+
+@t.runtime_checkable
+class ServiceWatchdogProtocol(ServiceProtocol, t.Protocol):
+    """Protocol for service health monitoring and restart coordination.
+
+    The ServiceWatchdog monitors long-running services (MCP server, WebSocket
+    server, LSP servers) and automatically restarts them on failure.
+    """
+
+    def register_service(self, config: t.Any) -> None:  # config: ServiceConfig
+        """Register a service for monitoring.
+
+        Args:
+            config: ServiceConfig with command, health checks, and restart policy
+        """
+        ...
+
+    async def start(self) -> None:
+        """Start the watchdog monitoring loop."""
+        ...
+
+    async def stop(self) -> None:
+        """Stop the watchdog and shutdown monitored services."""
+        ...
+
+    async def restart_service(self, service_name: str) -> bool:
+        """Manually restart a specific service.
+
+        Args:
+            service_name: Name of service to restart
+
+        Returns:
+            True if restart successful
+        """
+        ...
+
+    def get_service_status(self, service_name: str) -> t.Any | None:  # ServiceStatus | None
+        """Get current status of a specific service.
+
+        Args:
+            service_name: Name of service
+
+        Returns:
+            ServiceStatus object or None if not found
+        """
+        ...
+
+    def get_all_services_status(self) -> dict[str, t.Any]:  # dict[str, ServiceStatus]
+        """Get status of all monitored services.
+
+        Returns:
+            Dict mapping service names to ServiceStatus objects
+        """
+        ...
+
+    async def health_check(self, service_name: str) -> bool:
+        """Perform health check on a specific service.
+
+        Args:
+            service_name: Name of service to check
+
+        Returns:
+            True if service is healthy
+        """
+        ...
+
+
+@t.runtime_checkable
+class TimeoutManagerProtocol(t.Protocol):
+    """Protocol for timeout management and strategies.
+
+    The TimeoutManager provides centralized timeout configuration for
+    various operations (hooks, tests, service startups, etc).
+    """
+
+    def get_timeout(self, operation: str) -> float:
+        """Get timeout for a specific operation type.
+
+        Args:
+            operation: Operation type (e.g., 'hook_execution', 'test_run')
+
+        Returns:
+            Timeout in seconds
+        """
+        ...
+
+    def set_timeout(self, operation: str, timeout: float) -> None:
+        """Set timeout for a specific operation type.
+
+        Args:
+            operation: Operation type
+            timeout: Timeout in seconds
+        """
+        ...
+
+    def get_strategy(self, operation: str) -> t.Any:  # TimeoutStrategy
+        """Get timeout strategy for an operation.
+
+        Args:
+            operation: Operation type
+
+        Returns:
+            TimeoutStrategy enum value
+        """
+        ...
+
+    def apply_timeout(
+        self, operation: str, func: t.Callable[..., t.Any], *args: t.Any, **kwargs: t.Any
+    ) -> t.Any:
+        """Apply timeout to a function execution.
+
+        Args:
+            operation: Operation type (determines timeout value)
+            func: Function to execute with timeout
+            *args: Positional arguments for function
+            **kwargs: Keyword arguments for function
+
+        Returns:
+            Function result
+
+        Raises:
+            TimeoutError: If operation exceeds timeout
+        """
         ...

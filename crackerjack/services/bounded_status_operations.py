@@ -1,10 +1,18 @@
 import asyncio
+import os
 import time
 import typing as t
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
 from threading import RLock
+
+import psutil
+
+from crackerjack.models.protocols import (
+    BoundedStatusOperationsProtocol,
+    ServiceProtocol,
+)
 
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
@@ -59,7 +67,7 @@ class CircuitBreakerOpenError(Exception):
     pass
 
 
-class BoundedStatusOperations:
+class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
     def __init__(self, limits: OperationLimits | None = None):
         self.limits = limits or OperationLimits()
         self.security_logger = get_security_logger()
@@ -90,6 +98,42 @@ class BoundedStatusOperations:
             "get_metrics": "Metrics collection",
             "health_check": "Health check operation",
         }
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     async def execute_bounded_operation(
         self,
@@ -293,9 +337,8 @@ class BoundedStatusOperations:
                 pass
 
     async def _monitor_operation(self, metrics: OperationMetrics) -> None:
-        import os
 
-        import psutil
+
 
         try:
             process = psutil.Process(os.getpid())

@@ -1,6 +1,8 @@
-from acb.config import Settings
-from pathlib import Path
 import typing as t
+from pathlib import Path
+
+from acb.config import Settings
+
 
 class CleaningSettings(Settings):
     clean: bool = True
@@ -55,7 +57,7 @@ class CleanupSettings(Settings):
     keep_debug_logs: int = 5
     keep_coverage_files: int = 10
 
-class EnterpriseSettings(Settings):
+class AdvancedSettings(Settings):
     enabled: bool = False
     license_key: str | None = None
     organization: str | None = None
@@ -93,7 +95,24 @@ class CrackerjackSettings(Settings):
     execution: ExecutionSettings = ExecutionSettings()
     progress: ProgressSettings = ProgressSettings()
     cleanup: CleanupSettings = CleanupSettings()
-    enterprise: EnterpriseSettings = EnterpriseSettings()
+    advanced: AdvancedSettings = AdvancedSettings()
     mcp_server: MCPServerSettings = MCPServerSettings()
     zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()
+    enable_orchestration: bool = False
+    orchestration_mode: str = "acb"
+    enable_caching: bool = True
+    cache_backend: str = "memory"
+    cache_ttl: int = 3600
+    cache_max_entries: int = 100
+    max_parallel_hooks: int = 4
+    default_timeout: int = 600
+    stop_on_critical_failure: bool = True
+    enable_dependency_resolution: bool = True
+    log_cache_stats: bool = False
+    log_execution_timing: bool = False
+    enable_strategy_parallelism: bool = True
+    enable_adaptive_execution: bool = True
+    max_concurrent_strategies: int = 2
+    enable_tool_proxy: bool = True
+    use_precommit_legacy: bool = True

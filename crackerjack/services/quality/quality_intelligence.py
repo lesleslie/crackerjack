@@ -10,6 +10,8 @@ from pathlib import Path
 import numpy as np
 from scipy import stats
 
+from crackerjack.models.protocols import QualityIntelligenceProtocol
+
 from .quality_baseline_enhanced import (
     AlertSeverity,
     EnhancedQualityBaselineService,
@@ -152,7 +154,7 @@ class QualityInsights:
         }
 
 
-class QualityIntelligenceService:
+class QualityIntelligenceService(QualityIntelligenceProtocol):
     """Advanced ML-based quality intelligence service."""
 
     def __init__(

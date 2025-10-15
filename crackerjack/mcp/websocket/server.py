@@ -8,14 +8,12 @@ import typing as t
 from pathlib import Path
 
 import uvicorn
-from rich.console import Console
+from acb import console
 
 from crackerjack.core.timeout_manager import get_timeout_manager
 
 from .app import create_websocket_app
 from .jobs import JobManager
-
-console = Console()
 
 
 class WebSocketServer:

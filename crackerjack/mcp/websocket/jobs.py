@@ -8,8 +8,8 @@ from pathlib import Path
 from typing import Any, Final
 from uuid import UUID, uuid4
 
+from acb import console
 from acb.depends import depends
-from rich.console import Console
 
 from crackerjack.core.timeout_manager import TimeoutStrategy, get_timeout_manager
 from crackerjack.services.input_validator import get_input_validator
@@ -21,7 +21,7 @@ from crackerjack.services.secure_path_utils import SecurePathValidator
 MODULE_ID: Final[UUID] = uuid4()
 MODULE_STATUS: Final[str] = "stable"
 
-console = Console()
+# console imported from acb
 
 
 class JobManager:

@@ -2,7 +2,6 @@ import typing as t
 from pathlib import Path
 
 from acb.depends import depends
-from rich.console import Console
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
@@ -17,7 +16,6 @@ if t.TYPE_CHECKING:
 class HookManagerImpl:
     def __init__(
         self,
-        console: Console,
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
@@ -30,17 +28,16 @@ class HookManagerImpl:
         enable_caching: bool = True,
         cache_backend: str = "memory",
     ) -> None:
-        self.console = console
         self.pkg_path = pkg_path
         self.executor: HookExecutor
 
         # Use LSP-aware executor if optimization is enabled
         if enable_lsp_optimization:
             self.executor = LSPAwareHookExecutor(
-                console, pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
+                pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
             )
         else:
-            self.executor = HookExecutor(console, pkg_path, verbose, quiet)
+            self.executor = HookExecutor(pkg_path, verbose, quiet)
 
         self.config_loader = HookConfigLoader()
         self._config_path: Path | None = None
@@ -48,7 +45,7 @@ class HookManagerImpl:
         self.tool_proxy_enabled = enable_tool_proxy
 
         # Get settings from ACB dependency injection
-        self._settings = depends.get(CrackerjackSettings)
+        self._settings = depends.get_sync(CrackerjackSettings)
 
         # Load orchestration config with priority:
         # 1. Explicit orchestration_config param (highest - for testing)
@@ -355,7 +352,8 @@ class HookManagerImpl:
             if self._config_path:
                 pass  # Config path handled at manager level
 
-    def validate_hooks_config(self) -> bool:
+    @staticmethod
+    def validate_hooks_config() -> bool:
         """Validate hooks configuration.
 
         Phase 8.5: This method is deprecated. Direct tool invocation doesn't require

@@ -22,11 +22,9 @@ This slash command initializes a new Python project with crackerjack's best prac
 1. **Checks Project State**: Verifies which configuration files exist
 1. **Smart Merge Configuration**:
    - `pyproject.toml` - Intelligently merges tool configurations, preserves higher coverage requirements
-   - `.pre-commit-config.yaml` - Adds missing repos, preserves existing hooks
    - `CLAUDE.md` - Appends crackerjack guidelines without overwriting existing content
    - `RULES.md` - Copies only if missing, preserves existing coding standards
 1. **Preserves Project Identity**: Never overwrites existing project metadata, dependencies, or configurations
-1. **Installs Pre-commit Hooks**: Sets up git hooks for quality enforcement
 
 ## When to Use /crackerjack:init
 
@@ -34,9 +32,8 @@ This slash command initializes a new Python project with crackerjack's best prac
 
 The MCP server can detect when initialization is needed:
 
-- **Missing Core Files**: No pyproject.toml or .pre-commit-config.yaml
+- **Missing Core Files**: No pyproject.toml
 - **New Project**: Git repository just initialized
-- **Outdated Hooks**: Pre-commit hooks older than 30 days
 - **Manual Request**: User explicitly asks for initialization
 
 ### Recommended Frequency
@@ -62,7 +59,6 @@ AI: I'll initialize crackerjack configuration for your project.
 
 The project has been initialized with:
 ✅ pyproject.toml - Project configuration
-✅ .pre-commit-config.yaml - Quality hooks
 ✅ CLAUDE.md - AI guidelines
 ✅ RULES.md - Coding standards
 
@@ -75,7 +71,7 @@ When connected via MCP, crackerjack can automatically suggest initialization whe
 
 1. Running `/crackerjack:run` in an uninitialized project
 1. Detecting missing critical configuration files
-1. Finding outdated pre-commit hooks (>30 days old)
+1. Finding configuration files that need updates
 
 This ensures projects always have up-to-date quality standards without manual intervention.
 
@@ -96,12 +92,6 @@ This ensures projects always have up-to-date quality standards without manual in
 - **Non-Destructive**: Appends crackerjack guidelines with clear markers
 - **Prevents Duplicates**: Skips if crackerjack section already exists
 - **Clear Boundaries**: Uses `<!-- CRACKERJACK_START -->` and `<!-- CRACKERJACK_END -->` markers
-
-### .pre-commit-config.yaml Smart Merge
-
-- **Adds Missing Repos**: Only adds pre-commit repos that don't already exist
-- **Preserves Existing Hooks**: Never modifies existing hook configurations
-- **Skips if No New Repos**: Intelligent detection prevents unnecessary changes
 
 ### Universal Compatibility
 

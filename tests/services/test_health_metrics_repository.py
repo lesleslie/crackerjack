@@ -6,7 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from crackerjack.data.models import ProjectHealthRecord
-from crackerjack.services.health_metrics import HealthMetricsService, ProjectHealth
+from crackerjack.services.monitoring.health_metrics import HealthMetricsService, ProjectHealth
 
 
 class DummyFilesystem:

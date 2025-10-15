@@ -7,12 +7,17 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from acb.depends import Inject, depends
+from acb.logger import Logger
 from rich.console import Console
 
-from crackerjack.services.logging import get_logger
-from crackerjack.services.memory_optimizer import get_memory_optimizer
-from crackerjack.services.performance_cache import get_performance_cache
-from crackerjack.services.performance_monitor import get_performance_monitor
+from crackerjack.models.protocols import (
+    PerformanceBenchmarkServiceProtocol,
+    ServiceProtocol,
+)
+from crackerjack.services.memory_optimizer import LazyLoader, MemoryOptimizer
+from crackerjack.services.monitoring.performance_cache import get_performance_cache
+from crackerjack.services.monitoring.performance_monitor import get_performance_monitor
 
 
 @dataclass
@@ -90,10 +95,11 @@ class BenchmarkSuite:
 
 
 class PerformanceBenchmarker:
-    def __init__(self) -> None:
-        self._logger = get_logger("crackerjack.benchmarker")
+    @depends.inject
+    def __init__(self, logger: Inject[Logger]) -> None:
+        self._logger = logger
         self._monitor = get_performance_monitor()
-        self._memory_optimizer = get_memory_optimizer()
+        self._memory_optimizer = MemoryOptimizer.get_instance()
         self._cache = get_performance_cache()
 
         self._test_iterations = 3
@@ -145,8 +151,6 @@ class PerformanceBenchmarker:
         optimized_memory_start = self._memory_optimizer.record_checkpoint(
             "optimized_start"
         )
-
-        from crackerjack.services.memory_optimizer import LazyLoader
 
         lazy_objects = []
         for i in range(50):
@@ -300,14 +304,51 @@ class PerformanceBenchmarker:
         self._logger.info(f"Exported benchmark results to {output_path}")
 
 
-class PerformanceBenchmarkService:
+class PerformanceBenchmarkService(PerformanceBenchmarkServiceProtocol, ServiceProtocol):
     """Service wrapper for performance benchmarking in workflow orchestration."""
 
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    @depends.inject
+    def __init__(self, console: Console, logger: Inject[Logger], pkg_path: Path) -> None:
         self._console = console
         self._pkg_path = pkg_path
-        self._benchmarker = PerformanceBenchmarker()
-        self._logger = get_logger("crackerjack.benchmark_service")
+        self._benchmarker = PerformanceBenchmarker(logger=logger)
+        self._logger = logger
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     async def run_benchmark_suite(self) -> BenchmarkSuite | None:
         """Run comprehensive benchmark suite and return results."""
@@ -323,4 +364,4 @@ class PerformanceBenchmarkService:
 
 
 def get_benchmarker() -> PerformanceBenchmarker:
-    return PerformanceBenchmarker()
+    return PerformanceBenchmarker(logger=depends.get_sync(Logger))

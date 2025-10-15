@@ -195,8 +195,7 @@ class TestPhaseCoordinator:
 
     @pytest.fixture
     def coordinator(self, console, temp_path, mock_dependencies):
-        with patch("crackerjack.services.config.ConfigurationService"):
-            with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
+        with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
                 coordinator = PhaseCoordinator(
                     console=console,
                     pkg_path=temp_path,

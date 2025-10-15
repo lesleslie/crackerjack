@@ -2,17 +2,21 @@ import logging
 import typing as t
 from pathlib import Path
 
+from acb.console import Console
+from acb.depends import Inject, depends
+
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.agents.test_creation_agent import TestCreationAgent
 from crackerjack.services.coverage_ratchet import CoverageRatchetService
 
 
 class CoverageImprovementOrchestrator:
-    def __init__(self, project_path: Path, console: t.Any = None) -> None:
+    @depends.inject
+    def __init__(self, project_path: Path, console: Inject[Console]) -> None:
         self.project_path = project_path
         self.logger = logging.getLogger(__name__)
         self.console = console
-        self.coverage_service = CoverageRatchetService(project_path, console)
+        self.coverage_service = CoverageRatchetService(project_path)
         self.min_coverage_improvement = 2.0
 
     async def should_improve_coverage(
@@ -171,6 +175,6 @@ class CoverageImprovementOrchestrator:
 
 
 async def create_coverage_improvement_orchestrator(
-    project_path: Path, console: t.Any = None
+    project_path: Path
 ) -> CoverageImprovementOrchestrator:
-    return CoverageImprovementOrchestrator(project_path, console)
+    return CoverageImprovementOrchestrator(project_path)

@@ -212,7 +212,13 @@ class TestSessionCoordinator:
 class TestWorkflowOrchestrator:
     @pytest.fixture
     def orchestrator(self, console, pkg_path):
-        return WorkflowOrchestrator(console, pkg_path)
+        from acb.depends import depends
+        from acb.console import Console
+        from pathlib import Path
+
+        depends.set(Console, console)
+        depends.set(Path, pkg_path)
+        return WorkflowOrchestrator()
 
     def test_init(self, orchestrator, console, pkg_path) -> None:
         assert orchestrator.console == console

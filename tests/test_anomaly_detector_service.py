@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from crackerjack.services.anomaly_detector import (
+from crackerjack.services.quality.anomaly_detector import (
     AnomalyDetector,
     AnomalyDetection,
     BaselineModel,

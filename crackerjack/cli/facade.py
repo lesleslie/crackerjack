@@ -111,15 +111,15 @@ class CrackerjackCLIFacade:
     def _should_handle_special_mode(self, options: OptionsProtocol) -> bool:
         return (
             getattr(options, "start_mcp_server", False)
-            or getattr(options, "enterprise_batch", False)
+            or getattr(options, "advanced_batch", False)
             or getattr(options, "monitor_dashboard", False)
         )
 
     def _handle_special_modes(self, options: OptionsProtocol) -> None:
         if getattr(options, "start_mcp_server", False):
             self._start_mcp_server()
-        elif getattr(options, "enterprise_batch", False):
-            self._handle_enterprise_batch(options)
+        elif getattr(options, "advanced_batch", False):
+            self._handle_advanced_batch(options)
         elif getattr(options, "monitor_dashboard", False):
             self._handle_monitor_dashboard(options)
 
@@ -141,9 +141,9 @@ class CrackerjackCLIFacade:
             self.console.print(f"[red]❌ Failed to start MCP server: {e}[/ red]")
             raise SystemExit(1)
 
-    def _handle_enterprise_batch(self, options: OptionsProtocol) -> None:
+    def _handle_advanced_batch(self, options: OptionsProtocol) -> None:
         self.console.print(
-            "[red]❌ Enterprise batch processing is not yet implemented[/ red]"
+            "[red]❌ Advanced batch processing is not yet implemented[/ red]"
         )
         raise SystemExit(1)
 

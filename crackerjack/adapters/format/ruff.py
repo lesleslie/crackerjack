@@ -3,9 +3,7 @@
 Ruff is a fast Python linter and formatter that combines the functionality
 of multiple tools (Flake8, isort, Black, etc.) into a single executable.
 
-This adapter handles both lint checking and formatting, replacing 2 pre-commit hooks:
-- ruff-check (linting with auto-fix)
-- ruff-format (code formatting)
+This adapter handles both lint checking and formatting.
 
 ACB Patterns:
 - MODULE_ID and MODULE_STATUS at module level

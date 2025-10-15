@@ -4,7 +4,8 @@ import sys
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from .options import Options
 
@@ -15,7 +16,8 @@ if t.TYPE_CHECKING:
     )
 
 
-def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
+@depends.inject
+def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None) -> None:
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -26,7 +28,6 @@ def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
             os.environ["AI_AGENT_DEBUG"] = "1"
             os.environ["AI_AGENT_VERBOSE"] = "1"
 
-            console = Console()
             console.print(
                 "[bold cyan]🐛 AI Agent Debug Mode Configuration: [/ bold cyan]",
             )
@@ -51,10 +52,10 @@ def handle_mcp_server(websocket_port: int | None = None) -> None:
         start_mcp_main(project_path)
 
 
-def handle_monitor_mode(dev_mode: bool = False) -> None:
+@depends.inject
+def handle_monitor_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
     from crackerjack.mcp.progress_monitor import run_progress_monitor
 
-    console = Console()
     console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/ bold cyan]")
     console.print(
         "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/ bold yellow]",
@@ -66,10 +67,10 @@ def handle_monitor_mode(dev_mode: bool = False) -> None:
         console.print("\n[yellow]🛑 Monitor stopped[/ yellow]")
 
 
-def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
+@depends.inject
+def handle_enhanced_monitor_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
     from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
 
-    console = Console()
     console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/ bold magenta]")
     console.print(
         "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/ bold cyan]",
@@ -81,10 +82,10 @@ def handle_enhanced_monitor_mode(dev_mode: bool = False) -> None:
         console.print("\n[yellow]🛑 Enhanced Monitor stopped[/ yellow]")
 
 
-def handle_dashboard_mode(dev_mode: bool = False) -> None:
+@depends.inject
+def handle_dashboard_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
     from crackerjack.mcp.dashboard import run_dashboard
 
-    console = Console()
     console.print("[bold green]🎯 Starting Comprehensive Dashboard[/ bold green]")
     console.print(
         "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/ bold cyan]",
@@ -96,10 +97,10 @@ def handle_dashboard_mode(dev_mode: bool = False) -> None:
         console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
 
 
-def handle_unified_dashboard_mode(port: int = 8675, dev_mode: bool = False) -> None:
+@depends.inject
+def handle_unified_dashboard_mode(port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None) -> None:
     from crackerjack.monitoring.websocket_server import CrackerjackMonitoringServer
 
-    console = Console()
     console.print("[bold green]🚀 Starting Unified Monitoring Dashboard[/bold green]")
     console.print(
         f"[bold cyan]🌐 WebSocket server on port {port} with real-time streaming and web UI[/bold cyan]",
@@ -114,10 +115,10 @@ def handle_unified_dashboard_mode(port: int = 8675, dev_mode: bool = False) -> N
         console.print(f"\n[red]❌ Unified Dashboard failed: {e}[/red]")
 
 
-def handle_watchdog_mode() -> None:
+@depends.inject
+def handle_watchdog_mode(console: Inject[Console] = None) -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 
-    console = Console()
     try:
         asyncio.run(start_watchdog())
     except KeyboardInterrupt:
@@ -142,13 +143,13 @@ def handle_restart_websocket_server(port: int = 8675) -> None:
     handle_websocket_server_command(restart=True, port=port)
 
 
-def handle_stop_mcp_server() -> None:
-    from crackerjack.services.monitoring.server_manager import (
+@depends.inject
+def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
+    from crackerjack.services.server_manager import (
         list_server_status,
         stop_all_servers,
     )
 
-    console = Console()
     console.print("[bold red]🛑 Stopping MCP Servers[/ bold red]")
 
     list_server_status(console)
@@ -160,10 +161,10 @@ def handle_stop_mcp_server() -> None:
         raise SystemExit(1)
 
 
-def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
-    from crackerjack.services.monitoring.server_manager import restart_mcp_server
+@depends.inject
+def handle_restart_mcp_server(websocket_port: int | None = None, console: Inject[Console] = None) -> None:
+    from crackerjack.services.server_manager import restart_mcp_server
 
-    console = Console()
     if restart_mcp_server(websocket_port, console):
         console.print("\n[bold green]✅ MCP server restart completed[/ bold green]")
     else:
@@ -171,13 +172,13 @@ def handle_restart_mcp_server(websocket_port: int | None = None) -> None:
         raise SystemExit(1)
 
 
-def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
+@depends.inject
+def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp", console: Inject[Console] = None) -> None:
     """Start Zuban LSP server."""
-    from crackerjack.services.monitoring.zuban_lsp_service import (
+    from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
     )
 
-    console = Console()
     console.print("[bold cyan]🚀 Starting Zuban LSP Server[/bold cyan]")
 
     async def _start() -> None:
@@ -198,11 +199,11 @@ def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
         console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
 
 
-def handle_stop_zuban_lsp() -> None:
+@depends.inject
+def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
     """Stop Zuban LSP server."""
-    from crackerjack.services.monitoring.server_manager import stop_zuban_lsp
+    from crackerjack.services.server_manager import stop_zuban_lsp
 
-    console = Console()
     console.print("[bold red]🛑 Stopping Zuban LSP Server[/bold red]")
 
     if stop_zuban_lsp(console):
@@ -214,11 +215,11 @@ def handle_stop_zuban_lsp() -> None:
         raise SystemExit(1)
 
 
-def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
+@depends.inject
+def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp", console: Inject[Console] = None) -> None:
     """Restart Zuban LSP server."""
-    from crackerjack.services.monitoring.server_manager import restart_zuban_lsp
+    from crackerjack.services.server_manager import restart_zuban_lsp
 
-    console = Console()
     if restart_zuban_lsp(console):
         console.print(
             "\n[bold green]✅ Zuban LSP server restart completed[/bold green]"
@@ -237,19 +238,34 @@ def handle_interactive_mode(options: Options) -> None:
     launch_interactive_cli(pkg_version, options)
 
 
+@depends.inject
 def handle_standard_mode(
     options: Options,
     async_mode: bool,
     job_id: str | None = None,
     orchestrated: bool = False,
+    console: Inject[Console] = None,
 ) -> None:
-    from rich.console import Console
-
-    console = Console()
+    # Run the async configure method in an isolated event loop
+    import asyncio
+    import threading
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
-
-    hook_lock_manager.configure_from_options(options)
+    
+    # Check if we're already in an event loop
+    try:
+        asyncio.get_running_loop()
+        # We're already in an event loop, which shouldn't happen at this level
+        # Create a new thread with its own event loop
+        def run_async_config():
+            asyncio.run(hook_lock_manager.configure_from_options(options))
+        
+        thread = threading.Thread(target=run_async_config)
+        thread.start()
+        thread.join()
+    except RuntimeError:
+        # No event loop is running, safe to use asyncio.run
+        asyncio.run(hook_lock_manager.configure_from_options(options))
 
     if orchestrated:
         handle_orchestrated_mode(options, job_id)
@@ -275,7 +291,6 @@ def handle_standard_mode(
             )
         else:
             sync_orchestrator = WorkflowOrchestrator(
-                console=console,
                 pkg_path=pkg_path,
                 dry_run=getattr(options, "dry_run", False),
                 web_job_id=job_id,
@@ -288,15 +303,30 @@ def handle_standard_mode(
             raise SystemExit(1)
 
 
-def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> None:
-    from rich.console import Console
-
-    console = Console()
+@depends.inject
+def handle_orchestrated_mode(options: Options, job_id: str | None = None, console: Inject[Console] = None) -> None:
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
-    from crackerjack.executors.hook_lock_manager import hook_lock_manager
+    # Run the async configure method in an isolated event loop
+    import asyncio
+    import threading
 
-    hook_lock_manager.configure_from_options(options)
+    from crackerjack.executors.hook_lock_manager import hook_lock_manager
+    
+    # Check if we're already in an event loop
+    try:
+        asyncio.get_running_loop()
+        # We're already in an event loop, which shouldn't happen at this level
+        # Create a new thread with its own event loop
+        def run_async_config():
+            asyncio.run(hook_lock_manager.configure_from_options(options))
+        
+        thread = threading.Thread(target=run_async_config)
+        thread.start()
+        thread.join()
+    except RuntimeError:
+        # No event loop is running, safe to use asyncio.run
+        asyncio.run(hook_lock_manager.configure_from_options(options))
 
     try:
         from crackerjack.core.session_coordinator import SessionCoordinator
@@ -368,11 +398,11 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None) -> Non
         sys.exit(1)
 
 
-def handle_config_updates(options: Options) -> None:
+@depends.inject
+def handle_config_updates(options: Options, console: Inject[Console] = None) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService
 
-    console = Console()
     pkg_path = Path.cwd()
     config_service = ConfigTemplateService(console, pkg_path)
 
@@ -388,8 +418,9 @@ def handle_config_updates(options: Options) -> None:
         _handle_refresh_cache(config_service, pkg_path, console)
 
 
+@depends.inject
 def _handle_check_updates(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Console
+    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
 ) -> None:
     """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
@@ -408,11 +439,12 @@ def _handle_check_updates(
     console.print("\nUse --apply-config-updates to apply these updates")
 
 
+@depends.inject
 def _handle_apply_updates(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
     interactive: bool,
-    console: Console,
+    console: Inject[Console],
 ) -> None:
     """Handle applying configuration updates."""
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
@@ -433,11 +465,12 @@ def _handle_apply_updates(
     _report_update_results(success_count, len(configs_to_update), console)
 
 
+@depends.inject
 def _handle_diff_config(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
     config_type: str,
-    console: Console,
+    console: Inject[Console],
 ) -> None:
     """Handle showing configuration diff."""
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
@@ -446,17 +479,19 @@ def _handle_diff_config(
     console.print(diff_preview)
 
 
+@depends.inject
 def _handle_refresh_cache(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Console
+    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
 ) -> None:
-    """Handle refreshing pre-commit cache."""
-    console.print("[bold cyan]🧹 Refreshing pre-commit cache...[/bold cyan]")
-    config_service._invalidate_precommit_cache(pkg_path)
-    console.print("[green]✅ Pre-commit cache refreshed[/green]")
+    """Handle refreshing cache."""
+    console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
+    config_service._invalidate_cache(pkg_path)
+    console.print("[green]✅ Cache refreshed[/green]")
 
 
+@depends.inject
 def _display_available_updates(
-    updates: dict[str, "ConfigUpdateInfo"], console: Console
+    updates: dict[str, "ConfigUpdateInfo"], console: Inject[Console]
 ) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
@@ -476,12 +511,13 @@ def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[
     ]
 
 
+@depends.inject
 def _apply_config_updates_batch(
     config_service: "ConfigTemplateService",
     configs: list[str],
     pkg_path: Path,
     interactive: bool,
-    console: Console,
+    console: Inject[Console],
 ) -> int:
     """Apply configuration updates in batch and return success count."""
     success_count = 0
@@ -491,8 +527,9 @@ def _apply_config_updates_batch(
     return success_count
 
 
+@depends.inject
 def _report_update_results(
-    success_count: int, total_count: int, console: Console
+    success_count: int, total_count: int, console: Inject[Console]
 ) -> None:
     """Report the results of configuration updates."""
     if success_count == total_count:

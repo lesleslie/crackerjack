@@ -1,4 +1,5 @@
 import re
+import signal
 import threading
 import time
 import typing as t
@@ -152,7 +153,6 @@ class ValidatedPattern:
         return result
 
     def apply_with_timeout(self, text: str, timeout_seconds: float = 1.0) -> str:
-        import signal
 
         def timeout_handler(signum: int, frame: t.Any) -> None:
             raise TimeoutError(
@@ -2761,7 +2761,6 @@ def fix_multi_word_hyphenation(text: str) -> str:
 
 
 def update_pyproject_version(content: str, new_version: str) -> str:
-    import re
 
     pattern_obj = SAFE_PATTERNS["update_pyproject_version"]
 
@@ -2781,7 +2780,6 @@ def update_pyproject_version(content: str, new_version: str) -> str:
 
 
 def apply_formatting_fixes(content: str) -> str:
-    import re
 
     pattern = SAFE_PATTERNS["remove_trailing_whitespace"]
     content = re.compile(pattern.pattern, re.MULTILINE).sub(
@@ -2821,7 +2819,6 @@ def remove_coverage_fail_under(addopts: str) -> str:
 
 
 def update_coverage_requirement(content: str, new_coverage: float) -> str:
-    import re
 
     pattern_obj = SAFE_PATTERNS["update_coverage_requirement"]
 
@@ -2839,7 +2836,6 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
 
 
 def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
-    import re
 
     escaped_url = re.escape(repo_url)
     pattern = rf'("repo": "{escaped_url}".*?"rev": )"([^"]+)"'

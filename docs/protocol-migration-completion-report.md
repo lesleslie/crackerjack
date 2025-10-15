@@ -191,9 +191,9 @@ The following imports are **intentionally not migrated** and are correct:
 
 ### 1. Factory Functions (Singleton Accessors)
 ```python
-from crackerjack.services.performance_monitor import get_performance_monitor
+from crackerjack.services.monitoring.performance_monitor import get_performance_monitor
 from crackerjack.services.memory_optimizer import get_memory_optimizer, memory_optimized
-from crackerjack.services.performance_cache import get_performance_cache
+from crackerjack.services.monitoring.performance_cache import get_performance_cache
 ```
 **Reason**: Factory functions that return protocol-compliant instances. The orchestrator doesn't care about the concrete type, just that it gets a protocol instance.
 
@@ -215,7 +215,7 @@ from crackerjack.services.logging import LoggingContext, setup_structured_loggin
 ### 4. Decorator Imports
 ```python
 from crackerjack.services.memory_optimizer import memory_optimized
-from crackerjack.services.performance_monitor import phase_monitor
+from crackerjack.services.monitoring.performance_monitor import phase_monitor
 ```
 **Reason**: Decorators are compile-time constructs, not runtime dependencies.
 

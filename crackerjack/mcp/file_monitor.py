@@ -29,11 +29,11 @@ except ImportError:
 
 import contextlib
 
-from rich.console import Console
+from acb import console
 
 from crackerjack.services.secure_path_utils import SecurePathValidator
 
-console = Console()
+# console imported from acb
 
 
 if WATCHDOG_AVAILABLE:

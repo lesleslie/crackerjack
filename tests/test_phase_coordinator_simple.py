@@ -41,7 +41,6 @@ class TestPhaseCoordinatorBasics:
     @pytest.fixture
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
-            with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
                 coordinator = PhaseCoordinator(**mock_dependencies)
 
                 coordinator.config_service = Mock()
@@ -228,7 +227,6 @@ class TestPhaseCoordinatorHooks:
     @pytest.fixture
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
-            with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
                 coordinator = PhaseCoordinator(**mock_dependencies)
 
                 coordinator.config_service = Mock()
@@ -327,7 +325,6 @@ class TestPhaseCoordinatorPublishing:
     @pytest.fixture
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
-            with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
                 coordinator = PhaseCoordinator(**mock_dependencies)
 
                 coordinator.config_service = Mock()
@@ -512,7 +509,6 @@ class TestPhaseCoordinatorCommitMessages:
     @pytest.fixture
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
-            with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
                 coordinator = PhaseCoordinator(**mock_dependencies)
 
                 coordinator.config_service = Mock()
@@ -609,7 +605,6 @@ class TestPhaseCoordinatorInternalMethods:
     @pytest.fixture
     def phase_coordinator(self, mock_dependencies):
         with patch("crackerjack.core.phase_coordinator.CodeCleaner"):
-            with patch("crackerjack.core.phase_coordinator.ConfigurationService"):
                 coordinator = PhaseCoordinator(**mock_dependencies)
 
                 coordinator.config_service = Mock()

@@ -7,9 +7,11 @@ from pathlib import Path
 from threading import Lock
 from typing import Any
 
-from crackerjack.services.logging import get_logger
+from acb.depends import Inject, depends
+from acb.logger import Logger
+
 from crackerjack.services.memory_optimizer import MemoryOptimizer
-from crackerjack.services.performance_cache import get_performance_cache
+from crackerjack.services.monitoring.performance_cache import get_performance_cache
 
 
 @dataclass
@@ -119,15 +121,17 @@ class PerformanceBenchmark:
 
 
 class PerformanceMonitor:
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
         data_retention_days: int = 30,
         benchmark_history_size: int = 100,
     ):
         self.data_retention_days = data_retention_days
         self.benchmark_history_size = benchmark_history_size
         self._initialize_data_structures(benchmark_history_size)
-        self._initialize_services()
+        self._initialize_services(logger)
         self._initialize_thresholds()
 
     def _initialize_data_structures(self, history_size: int) -> None:
@@ -140,9 +144,9 @@ class PerformanceMonitor:
             lambda: deque(maxlen=history_size)  # type: ignore[arg-type]
         )
 
-    def _initialize_services(self) -> None:
+    def _initialize_services(self, logger: Logger) -> None:
         self._lock = Lock()
-        self._logger = get_logger("crackerjack.performance_monitor")
+        self._logger = logger
         self._memory_optimizer = MemoryOptimizer.get_instance()
         self._cache = get_performance_cache()
 
@@ -532,7 +536,7 @@ def get_performance_monitor() -> PerformanceMonitor:
     global _global_monitor
     with _monitor_lock:
         if _global_monitor is None:
-            _global_monitor = PerformanceMonitor()
+            _global_monitor = PerformanceMonitor(logger=depends.get_sync(Logger))
         return _global_monitor
 
 

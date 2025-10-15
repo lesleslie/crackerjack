@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from .config_integrity import ConfigIntegrityService
 from .smart_scheduling import SmartSchedulingService
@@ -15,13 +16,14 @@ __all__ = [
 
 
 class ToolVersionService:
-    def __init__(self, console: Console, project_path: Path | None = None) -> None:
+    @depends.inject
+    def __init__(self, console: Inject[Console], project_path: Path | None = None) -> None:
         self.console = console
         self.project_path = project_path or Path.cwd()
 
-        self._version_checker = VersionChecker(console)
-        self._config_integrity = ConfigIntegrityService(console, self.project_path)
-        self._scheduling = SmartSchedulingService(console, self.project_path)
+        self._version_checker = VersionChecker()
+        self._config_integrity = ConfigIntegrityService(self.project_path)
+        self._scheduling = SmartSchedulingService(self.project_path)
 
     async def check_tool_updates(self) -> dict[str, VersionInfo]:
         return await self._version_checker.check_tool_updates()

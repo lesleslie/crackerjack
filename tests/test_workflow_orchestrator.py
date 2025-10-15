@@ -1,6 +1,9 @@
 import pytest
 
-from crackerjack.core.workflow_orchestrator import version
+from crackerjack.core.workflow_orchestrator import (
+    WorkflowPipeline,
+    WorkflowOrchestrator,
+)
 
 
 def test_version_basic() -> None:

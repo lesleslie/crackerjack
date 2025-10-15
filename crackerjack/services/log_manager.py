@@ -6,9 +6,9 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
+from acb import console
 
-console = Console()
+# console imported from acb
 
 
 class LogManager:

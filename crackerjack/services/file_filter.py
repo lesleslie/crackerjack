@@ -4,13 +4,18 @@ Filters files based on git changes, patterns, and tool requirements.
 Part of Phase 10.2: Development Velocity Improvements.
 """
 
-import subprocess
+import typing as t
+from fnmatch import fnmatch
 from pathlib import Path
 
-from crackerjack.models.protocols import GitInterface
+from crackerjack.models.protocols import (
+    GitServiceProtocol,
+    ServiceProtocol,
+    SmartFileFilterProtocol,
+)
 
 
-class SmartFileFilter:
+class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
     """Filter files for tool execution based on git changes and patterns.
 
     Provides intelligent file filtering to enable incremental execution,
@@ -18,16 +23,54 @@ class SmartFileFilter:
     """
 
     def __init__(
-        self, git_service: GitInterface | None = None, project_root: Path | None = None
+        self,
+        git_service: GitServiceProtocol,
+        project_root: Path | None = None,
     ):
         """Initialize file filter.
 
         Args:
-            git_service: Git service for repository operations (optional, not currently used)
+            git_service: Git service for repository operations
             project_root: Project root directory (defaults to cwd)
         """
-        self.git = git_service
+        self._git_service = git_service
         self.project_root = project_root or Path.cwd()
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def get_changed_files(self, since: str = "HEAD") -> list[Path]:
         """Get files changed since a git reference.
@@ -38,29 +81,7 @@ class SmartFileFilter:
         Returns:
             List of changed file paths relative to project root
         """
-        try:
-            # Get diff between working tree and specified reference
-            result = subprocess.run(
-                ["git", "diff", "--name-only", since],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=True,
-            )
-
-            changed_files = []
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    file_path = self.project_root / line
-                    if file_path.exists():
-                        changed_files.append(file_path)
-
-            return changed_files
-
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            # Fallback: return empty list if git command fails
-            return []
+        return self._git_service.get_changed_files_since(since, self.project_root)
 
     def get_staged_files(self) -> list[Path]:
         """Get currently staged files (in git index).
@@ -68,27 +89,7 @@ class SmartFileFilter:
         Returns:
             List of staged file paths relative to project root
         """
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--name-only", "--cached"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=True,
-            )
-
-            staged_files = []
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    file_path = self.project_root / line
-                    if file_path.exists():
-                        staged_files.append(file_path)
-
-            return staged_files
-
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            return []
+        return self._git_service.get_staged_files(self.project_root)
 
     def get_unstaged_files(self) -> list[Path]:
         """Get unstaged modified files (working tree changes).
@@ -96,27 +97,7 @@ class SmartFileFilter:
         Returns:
             List of unstaged file paths relative to project root
         """
-        try:
-            result = subprocess.run(
-                ["git", "diff", "--name-only"],
-                cwd=self.project_root,
-                capture_output=True,
-                text=True,
-                timeout=10,
-                check=True,
-            )
-
-            unstaged_files = []
-            for line in result.stdout.strip().split("\n"):
-                if line:
-                    file_path = self.project_root / line
-                    if file_path.exists():
-                        unstaged_files.append(file_path)
-
-            return unstaged_files
-
-        except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            return []
+        return self._git_service.get_unstaged_files(self.project_root)
 
     def filter_by_pattern(self, files: list[Path], pattern: str) -> list[Path]:
         """Filter files by glob pattern.
@@ -128,8 +109,6 @@ class SmartFileFilter:
         Returns:
             List of files matching the pattern
         """
-        from fnmatch import fnmatch
-
         filtered = []
         for file_path in files:
             # Check both absolute and relative patterns

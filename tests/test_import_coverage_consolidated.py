@@ -94,7 +94,7 @@ class TestServiceImports:
 
     def test_contextual_ai_assistant(self) -> None:
         try:
-            from crackerjack.services.contextual_ai_assistant import (
+            from crackerjack.services.ai.contextual_ai_assistant import (
                 AIRecommendation,
                 ContextualAIAssistant,
                 ProjectContext,
@@ -108,7 +108,7 @@ class TestServiceImports:
 
     def test_dependency_monitor(self) -> None:
         try:
-            from crackerjack.services.dependency_monitor import (
+            from crackerjack.services.monitoring.dependency_monitor import (
                 DependencyMonitorService,
                 DependencyVulnerability,
                 MajorUpdate,
@@ -122,7 +122,7 @@ class TestServiceImports:
 
     def test_health_metrics(self) -> None:
         try:
-            from crackerjack.services.health_metrics import (
+            from crackerjack.services.monitoring.health_metrics import (
                 HealthMetricsService,
                 MetricCollector,
                 SystemHealthMonitor,
@@ -136,11 +136,11 @@ class TestServiceImports:
 
     def test_performance_benchmarks(self) -> None:
         try:
-            from crackerjack.services.performance_benchmarks import (
+            from crackerjack.services.monitoring.performance_benchmarks import (
                 BenchmarkRunner,
                 PerformanceBenchmarkService,
             )
-            from crackerjack.services.performance_benchmarks import (
+            from crackerjack.services.monitoring.performance_benchmarks import (
                 MetricCollector as PerfMetricCollector,
             )
 

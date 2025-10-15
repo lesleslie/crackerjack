@@ -3,20 +3,62 @@ import typing as t
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
+from crackerjack.models.protocols import CoverageRatchetProtocol
+from crackerjack.services.filesystem import FileSystemService
+from crackerjack.services.regex_patterns import update_coverage_requirement
 
-class CoverageRatchetService:
+
+class CoverageRatchetService(CoverageRatchetProtocol):
     MILESTONES = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95, 100]
 
     TOLERANCE_MARGIN = 2.0
 
-    def __init__(self, pkg_path: Path, console: Console) -> None:
+    @depends.inject
+    def __init__(self, pkg_path: Path, console: Inject[Console]) -> None:
         self.pkg_path = pkg_path
         self.console = console
         self.ratchet_file = pkg_path / ".coverage-ratchet.json"
         self.pyproject_file = pkg_path / "pyproject.toml"
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def initialize_baseline(self, initial_coverage: float) -> None:
         if self.ratchet_file.exists():
@@ -184,13 +226,9 @@ class CoverageRatchetService:
         try:
             content = self.pyproject_file.read_text()
 
-            from crackerjack.services.regex_patterns import update_coverage_requirement
-
             updated_content = update_coverage_requirement(content, new_coverage)
 
             if updated_content != content:
-                from crackerjack.services.filesystem import FileSystemService
-
                 updated_content = (
                     FileSystemService.clean_trailing_whitespace_and_newlines(
                         updated_content

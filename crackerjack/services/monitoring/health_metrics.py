@@ -9,13 +9,18 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import requests
-from acb.depends import depends
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from crackerjack.data.repository import HealthMetricsRepository
-from crackerjack.models.protocols import FileSystemInterface
+from crackerjack.models.protocols import (
+    FileSystemInterface,
+    HealthMetricsServiceProtocol,
+    ServiceProtocol,
+)
 
 
 @dataclass
@@ -124,14 +129,15 @@ class ProjectHealth:
         return recommendations
 
 
-class HealthMetricsService:
+class HealthMetricsService(HealthMetricsServiceProtocol, ServiceProtocol):
+    @depends.inject
     def __init__(
         self,
         filesystem: FileSystemInterface,
-        console: Console | None = None,
+        console: Inject[Console],
     ) -> None:
         self.filesystem = filesystem
-        self.console = console or Console()
+        self.console = console
         self.project_root = Path.cwd()
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.max_trend_points = 20
@@ -141,6 +147,42 @@ class HealthMetricsService:
             )
         except Exception:
             self._repository = None
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def _run_async(self, coro: t.Awaitable[t.Any]) -> t.Any:
         try:
@@ -404,8 +446,6 @@ class HealthMetricsService:
 
     def _fetch_package_data(self, package_name: str) -> dict[str, t.Any] | None:
         try:
-            from urllib.parse import urlparse
-
             url = f"https://pypi.org/pypi/{package_name}/json"
 
             parsed = urlparse(url)

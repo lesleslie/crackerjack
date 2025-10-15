@@ -2,7 +2,8 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
@@ -19,18 +20,19 @@ except ImportError:
 class LSPAwareHookExecutor(HookExecutor):
     """Hook executor that can leverage LSP server for enhanced performance."""
 
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        console: Inject[Console],
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
         use_tool_proxy: bool = True,
     ) -> None:
         super().__init__(console, pkg_path, verbose, quiet)
-        self.lsp_client = LSPClient(console)
+        self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None
-        self.tool_proxy = ToolProxy(console) if self.use_tool_proxy else None
+        self.tool_proxy = ToolProxy() if self.use_tool_proxy else None
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         """Execute hook strategy with LSP optimization where possible."""

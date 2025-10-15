@@ -1,22 +1,24 @@
 import typing as t
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.services.cache import CrackerjackCache
 
 
-def handle_clear_cache(console: Console) -> None:
+@depends.inject
+def handle_clear_cache(console: Inject[Console]) -> None:
     """Clear all caches and display results."""
     try:
-        cache = ACBCrackerjackCache()
+        cache = CrackerjackCache()
 
         # Clear memory caches and get cleanup stats
         cleanup_results = cache.cleanup_all()
 
-        # Note: ACBCrackerjackCache uses memory-only caching (no disk cache to clear)
+        # Note:CrackerjackCache uses memory-only caching (no disk cache to clear)
 
         # Calculate total items cleared
         total_cleared = sum(cleanup_results.values())
@@ -42,10 +44,11 @@ def handle_clear_cache(console: Console) -> None:
         console.print(f"\n❌ Error clearing cache: {e}", style="bold red")
 
 
-def handle_cache_stats(console: Console) -> None:
+@depends.inject
+def handle_cache_stats(console: Inject[Console]) -> None:
     """Display detailed cache statistics."""
     try:
-        cache = ACBCrackerjackCache()
+        cache = CrackerjackCache()
         stats = cache.get_cache_stats()
 
         main_table = _create_cache_stats_table()
@@ -55,8 +58,8 @@ def handle_cache_stats(console: Console) -> None:
         console.print()
         console.print(main_table)
 
-        _display_performance_insights(console, totals)
-        _display_cache_directory_info(console, cache)
+        _display_performance_insights(totals)
+        _display_cache_directory_info(cache)
 
     except Exception as e:
         console.print(f"\n❌ Error retrieving cache stats: {e}", style="bold red")
@@ -132,7 +135,8 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
     )
 
 
-def _display_performance_insights(console: Console, totals: dict[str, t.Any]) -> None:
+@depends.inject
+def _display_performance_insights(totals: dict[str, t.Any], console: Inject[Console]) -> None:
     """Display performance insights panel based on cache statistics."""
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
@@ -173,7 +177,8 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
     return insights
 
 
-def _display_cache_directory_info(console: Console, cache: ACBCrackerjackCache) -> None:
+@depends.inject
+def _display_cache_directory_info(cache: CrackerjackCache, console: Inject[Console]) -> None:
     """Display cache directory information."""
     if not (cache.enable_disk_cache and cache.cache_dir):
         return
@@ -187,16 +192,14 @@ def _display_cache_directory_info(console: Console, cache: ACBCrackerjackCache) 
     console.print(cache_dir_info)
 
 
-def _handle_cache_commands(
-    clear_cache: bool, cache_stats: bool, console: Console
-) -> bool:
+def _handle_cache_commands(clear_cache: bool, cache_stats: bool) -> bool:
     """Handle cache management commands. Returns True if a cache command was executed."""
     if clear_cache:
-        handle_clear_cache(console)
+        handle_clear_cache()
         return True
 
     if cache_stats:
-        handle_cache_stats(console)
+        handle_cache_stats()
         return True
 
     return False

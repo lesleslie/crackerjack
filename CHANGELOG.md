@@ -1,5 +1,104 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-15
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-15
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-15
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-15
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-14
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [Unreleased] - 2025-10-10
 
 ### Added

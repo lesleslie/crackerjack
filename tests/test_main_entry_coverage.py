@@ -1,6 +1,5 @@
 from crackerjack.__main__ import (
     app,
-    console,
 )
 from crackerjack.cli.options import BumpOption, Options
 

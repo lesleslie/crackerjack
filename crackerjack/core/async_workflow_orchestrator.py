@@ -1,9 +1,10 @@
 import asyncio
-import logging
 import time
 import typing as t
 from pathlib import Path
 
+from acb.depends import Inject, depends
+from acb.logger import Logger
 from rich.console import Console
 
 from crackerjack.agents.base import FixResult, Issue, IssueType, Priority
@@ -15,9 +16,11 @@ from .timeout_manager import TimeoutStrategy, get_timeout_manager
 
 
 class AsyncWorkflowPipeline:
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        logger: Inject[Logger],
+        console: Inject[Console],
         pkg_path: Path,
         session: SessionCoordinator,
         phases: PhaseCoordinator,
@@ -26,7 +29,7 @@ class AsyncWorkflowPipeline:
         self.pkg_path = pkg_path
         self.session = session
         self.phases = phases
-        self.logger = logging.getLogger("crackerjack.async_pipeline")
+        self.logger = logger
         self.timeout_manager = get_timeout_manager()
         self._active_tasks: list[asyncio.Task[t.Any]] = []
         self.resource_context: t.Any | None = None
@@ -603,9 +606,11 @@ class AsyncWorkflowPipeline:
 
 
 class AsyncWorkflowOrchestrator:
+    @depends.inject
     def __init__(
         self,
-        console: Console | None = None,
+        logger: Inject[Logger],
+        console: Inject[Console],
         pkg_path: Path | None = None,
         dry_run: bool = False,
         web_job_id: str | None = None,
@@ -613,7 +618,7 @@ class AsyncWorkflowOrchestrator:
         debug: bool = False,
     ) -> None:
         # Initialize console and pkg_path first
-        self.console = console or Console(force_terminal=True)
+        self.console = console
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
         self.web_job_id = web_job_id
@@ -624,7 +629,6 @@ class AsyncWorkflowOrchestrator:
         from acb.depends import depends
 
         # Register core dependencies directly with ACB
-        depends.set(Console, self.console)
         depends.set(Path, self.pkg_path)
 
         # Import protocols for retrieving dependencies via ACB
@@ -649,7 +653,7 @@ class AsyncWorkflowOrchestrator:
 
         self._initialize_logging()
 
-        self.logger = logging.getLogger("crackerjack.async_orchestrator")
+        self.logger = logger
 
         # Create coordinators - dependencies retrieved via ACB's depends.get()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
@@ -666,7 +670,6 @@ class AsyncWorkflowOrchestrator:
         )
 
         self.async_pipeline = AsyncWorkflowPipeline(
-            console=self.console,
             pkg_path=self.pkg_path,
             session=self.session,
             phases=self.phases,
@@ -674,16 +677,14 @@ class AsyncWorkflowOrchestrator:
 
     def _initialize_logging(self) -> None:
         from crackerjack.services.log_manager import get_log_manager
-        from crackerjack.services.logging import setup_structured_logging
 
         log_manager = get_log_manager()
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
         debug_log_file = log_manager.create_debug_log_file(session_id)
 
         log_level = "DEBUG" if self.debug else "INFO"
-        setup_structured_logging(
-            level=log_level, json_output=False, log_file=debug_log_file
-        )
+        self.logger.set_level(log_level)
+        self.logger.add_file_handler(debug_log_file)
 
     async def run_complete_workflow_async(self, options: OptionsProtocol) -> bool:
         return await self.async_pipeline.run_complete_workflow_async(options)

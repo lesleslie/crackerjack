@@ -5,10 +5,11 @@ from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.errors import FileError, SecurityError
+from crackerjack.models.protocols import SecurityServiceProtocol
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
-class SecurityService:
+class SecurityService(SecurityServiceProtocol):
     TOKEN_PATTERN_NAMES = [
         "mask_pypi_token",
         "mask_github_token",

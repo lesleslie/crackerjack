@@ -116,7 +116,7 @@ class InteractiveWorkflowManager:
             deps = ["cleaning"] if options.clean else []
             self.add_task(
                 "hooks",
-                "Run pre-commit hooks (fast + comprehensive)",
+                "Run quality hooks (fast + comprehensive)",
                 "run_hooks_phase",
                 dependencies=deps,
             )

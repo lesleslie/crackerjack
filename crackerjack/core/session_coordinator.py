@@ -5,21 +5,23 @@ import typing as t
 import uuid
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from crackerjack.models.task import SessionTracker
 
 if t.TYPE_CHECKING:
-    from crackerjack.models.protocols import OptionsProtocol
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+    from crackerjack.models.protocols import OptionsProtocol
 
 
 class SessionCoordinator:
     """Lightweight session tracking and cleanup coordinator."""
 
+    @depends.inject
     def __init__(
         self,
-        console: Console,
+        console: Inject[Console],
         pkg_path: Path,
         web_job_id: str | None = None,
     ) -> None:
@@ -34,13 +36,12 @@ class SessionCoordinator:
         self.current_task: str | None = None
 
         self.session_tracker = SessionTracker(
-            console=console,
             session_id=self.session_id,
             start_time=self.start_time,
         )
         self.tasks = self.session_tracker.tasks
 
-    def initialize_session_tracking(self, options: "OptionsProtocol") -> None:
+    def initialize_session_tracking(self, options: OptionsProtocol) -> None:
         """Initialize session metadata and baseline tracking."""
         self.session_tracker.metadata.update(
             {
@@ -144,10 +145,10 @@ class SessionCoordinator:
 class SessionController:
     """Coordinates session setup for the workflow pipeline."""
 
-    def __init__(self, pipeline: "WorkflowPipeline") -> None:
+    def __init__(self, pipeline: WorkflowPipeline) -> None:
         self._pipeline = pipeline
 
-    def initialize(self, options: "OptionsProtocol") -> None:
+    def initialize(self, options: OptionsProtocol) -> None:
         """Initialize session state and ancillary services."""
         pipeline = self._pipeline
         pipeline.session.initialize_session_tracking(options)

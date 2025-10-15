@@ -14,7 +14,7 @@ import pytest
 from crackerjack.models.protocols import QAAdapterProtocol, QAOrchestratorProtocol
 from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
-from crackerjack.services.qa_orchestrator import QAOrchestrator
+from crackerjack.services.quality.qa_orchestrator import QAOrchestrator
 
 
 class TestQAOrchestratorProtocolCompliance:

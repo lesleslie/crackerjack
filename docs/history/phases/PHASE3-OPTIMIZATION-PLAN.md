@@ -10,14 +10,14 @@ Building on Phase 1 (critical fixes) and Phase 2 (consistency review), Phase 3 f
 
 ### 1. **Advanced Features Documentation** 📚
 
-**Current Gap**: 82 advanced/enterprise CLI flags undocumented (80% of total flags)
-**Target Users**: Power users, enterprise deployments, advanced workflows
+**Current Gap**: 82 advanced/advanced CLI flags undocumented (80% of total flags)
+**Target Users**: Power users, advanced deployments, advanced workflows
 
 **Proposed Solution**: Create "Advanced Features" appendix
 
 - Location: `docs/ADVANCED-FEATURES.md`
 - Content Structure:
-  - Enterprise optimization features
+  - Advanced optimization features
   - Documentation generation tools
   - Visualization capabilities
   - Semantic search integration

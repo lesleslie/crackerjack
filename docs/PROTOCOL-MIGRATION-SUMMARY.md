@@ -47,7 +47,7 @@ class MyOrchestrator:
 
 ### ❌ Incorrect: Concrete Type DI
 ```python
-from crackerjack.services.performance_monitor import PerformanceMonitor
+from crackerjack.services.monitoring.performance_monitor import PerformanceMonitor
 
 class MyOrchestrator:
     def __init__(self, monitor: PerformanceMonitor):  # Concrete type

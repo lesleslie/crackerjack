@@ -111,12 +111,9 @@ class ZubanAdapter(BaseRustToolAdapter):
 
         try:
             # Import here to avoid circular imports
-            from rich.console import Console
-
             from crackerjack.services.lsp_client import LSPClient
 
-            console = getattr(self.context, "console", Console())
-            self._lsp_client = LSPClient(console=console)
+            self._lsp_client = LSPClient()
             self._lsp_available = self._lsp_client.is_server_running()
 
         except ImportError:

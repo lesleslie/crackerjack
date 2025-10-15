@@ -272,7 +272,7 @@ class ZubanAdapter:
 
 
 # Performance caching
-from crackerjack.services.performance_cache import get_performance_cache
+from crackerjack.services.monitoring.performance_cache import get_performance_cache
 
 cache = get_performance_cache()
 await cache.start()

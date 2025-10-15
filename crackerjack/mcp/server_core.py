@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
+from acb import console
 from acb.depends import depends
-from rich.console import Console
 
 from ..ui.server_panels import create_server_panels
 
@@ -49,7 +49,7 @@ from .tools import (
     register_utility_tools,
 )
 
-console = Console()
+# console imported from acb
 
 
 def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:

@@ -8,7 +8,8 @@ from pathlib import Path
 from threading import Lock
 from weakref import WeakValueDictionary
 
-from crackerjack.services.logging import get_logger
+from acb.depends import Inject, depends
+from acb.logger import Logger
 
 
 @dataclass
@@ -45,8 +46,10 @@ class CacheStats:
 
 
 class PerformanceCache:
+    @depends.inject
     def __init__(
         self,
+        logger: Inject[Logger],
         max_memory_mb: int = 50,
         default_ttl_seconds: int = 300,
         cleanup_interval_seconds: int = 60,
@@ -58,7 +61,7 @@ class PerformanceCache:
         self._cache: dict[str, CacheEntry] = {}
         self._lock = Lock()
         self._stats = CacheStats()
-        self._logger = get_logger("crackerjack.performance_cache")
+        self._logger = logger
         self._cleanup_task: asyncio.Task[None] | None = None
         self._invalidation_map: dict[str, set[str]] = {}
 
@@ -241,9 +244,9 @@ class PerformanceCache:
 
 
 class GitOperationCache:
-    def __init__(self, cache: PerformanceCache):
+    def __init__(self, cache: PerformanceCache, logger: Logger):
         self.cache = cache
-        self._logger = get_logger("crackerjack.git_cache")
+        self._logger = logger
 
     def _make_repo_key(self, repo_path: Path, operation: str, params: str = "") -> str:
         repo_hash = hashlib.md5(
@@ -290,9 +293,9 @@ class GitOperationCache:
 
 
 class FileSystemCache:
-    def __init__(self, cache: PerformanceCache):
+    def __init__(self, cache: PerformanceCache, logger: Logger):
         self.cache = cache
-        self._logger = get_logger("crackerjack.filesystem_cache")
+        self._logger = logger
 
     def _make_file_key(self, file_path: Path, operation: str) -> str:
         file_hash = hashlib.md5(
@@ -319,9 +322,9 @@ class FileSystemCache:
 
 
 class CommandResultCache:
-    def __init__(self, cache: PerformanceCache):
+    def __init__(self, cache: PerformanceCache, logger: Logger):
         self.cache = cache
-        self._logger = get_logger("crackerjack.command_cache")
+        self._logger = logger
 
     def _make_command_key(self, command: list[str], cwd: Path | None = None) -> str:
         cmd_str = " ".join(command)
@@ -371,12 +374,15 @@ def get_performance_cache() -> PerformanceCache:
 
 
 def get_git_cache() -> GitOperationCache:
-    return GitOperationCache(get_performance_cache())
+    performance_cache = get_performance_cache()
+    return GitOperationCache(performance_cache, logger=performance_cache._logger)
 
 
 def get_filesystem_cache() -> FileSystemCache:
-    return FileSystemCache(get_performance_cache())
+    performance_cache = get_performance_cache()
+    return FileSystemCache(performance_cache, logger=performance_cache._logger)
 
 
 def get_command_cache() -> CommandResultCache:
-    return CommandResultCache(get_performance_cache())
+    performance_cache = get_performance_cache()
+    return CommandResultCache(performance_cache, logger=performance_cache._logger)

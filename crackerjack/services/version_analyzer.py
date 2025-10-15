@@ -6,7 +6,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
 
 from .changelog_automation import ChangelogEntry, ChangelogGenerator
 from .git import GitService
@@ -194,7 +195,8 @@ class ConventionalCommitAnalyzer:
 class VersionAnalyzer:
     """Main service for analyzing changes and recommending version bumps."""
 
-    def __init__(self, console: Console, git_service: GitService) -> None:
+    @depends.inject
+    def __init__(self, console: Inject[Console], git_service: GitService) -> None:
         self.console = console
         self.git = git_service
 
@@ -204,7 +206,7 @@ class VersionAnalyzer:
         self.commit_analyzer = ConventionalCommitAnalyzer()
 
         # Initialize changelog generator for getting entries
-        self.changelog_generator = ChangelogGenerator(console, git_service)
+        self.changelog_generator = ChangelogGenerator(git_service)
 
     def _get_current_version(self) -> str | None:
         """Get current version from pyproject.toml."""

@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 from rich.console import Console
 
 from crackerjack.monitoring.ai_agent_watchdog import AgentPerformanceMetrics
-from crackerjack.services.acb_cache_adapter import ACBCrackerjackCache
+from crackerjack.services.acb_cache_adapter importCrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -110,9 +110,9 @@ class MetricsCollector:
     - AI agent performance (fixes, confidence, cache hits)
     """
 
-    def __init__(self, cache: ACBCrackerjackCache | None = None):
+    def __init__(self, cache:CrackerjackCache | None = None):
         self.console = Console()
-        self.cache = cache or ACBCrackerjackCache()
+        self.cache = cache orCrackerjackCache()
 
         self.is_collecting = False
         self.collection_interval = 5.0  # seconds

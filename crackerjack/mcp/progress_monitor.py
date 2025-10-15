@@ -9,7 +9,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
+from acb import console
 from textual.app import App, ComposeResult
 from textual.containers import Container
 from textual.widget import Widget
@@ -583,7 +583,6 @@ class CrackerjackDashboard(App):
 
         except Exception as e:
             with suppress(Exception):
-                console = Console()
                 console.print(f"[red]Dashboard refresh error: {e}[/red]")
 
     async def _discover_jobs(self) -> dict[str, t.Any]:
@@ -957,7 +956,6 @@ async def run_progress_monitor(
     dev_mode: bool = False,
 ) -> None:
     with suppress(Exception):
-        console = Console()
         console.print(
             "[bold green]🚀 Starting Crackerjack Progress Monitor[/ bold green]",
         )
@@ -980,7 +978,6 @@ async def run_crackerjack_with_progress(
     command: str = " / crackerjack: run",
 ) -> None:
     with suppress(Exception):
-        console = Console()
         console.print(
             "[bold green]🚀 Starting Crackerjack Progress Monitor[/ bold green]",
         )

@@ -1,6 +1,8 @@
 import gc
+import os
 import sys
 import time
+import tracemalloc
 import typing as t
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -9,7 +11,9 @@ from threading import Lock
 from typing import Any
 from weakref import WeakSet
 
-from crackerjack.services.logging import get_logger
+import psutil
+from acb.depends import Inject, depends
+from acb.logger import Logger
 
 
 @dataclass
@@ -27,6 +31,7 @@ class LazyLoader:
     def __init__(
         self,
         factory: Callable[[], Any],
+        logger: Logger,
         name: str = "unnamed",
         auto_dispose: bool = True,
     ):
@@ -37,8 +42,7 @@ class LazyLoader:
         self._loaded = False
         self._lock = Lock()
         self._access_count = 0
-        self._last_access = time.time()
-        self._logger = get_logger(f"crackerjack.lazy_loader.{name}")
+        self._logger = logger
 
         MemoryOptimizer.get_instance().register_lazy_object(self)
 
@@ -102,6 +106,7 @@ class ResourcePool:
     def __init__(
         self,
         factory: Callable[[], Any],
+        logger: Logger,
         max_size: int = 5,
         name: str = "unnamed",
     ):
@@ -113,7 +118,7 @@ class ResourcePool:
         self._lock = Lock()
         self._created_count = 0
         self._reused_count = 0
-        self._logger = get_logger(f"crackerjack.resource_pool.{name}")
+        self._logger = logger
 
     def acquire(self) -> Any:
         with self._lock:
@@ -177,11 +182,11 @@ class ResourcePool:
 
 
 class MemoryProfiler:
-    def __init__(self) -> None:
+    def __init__(self, logger: Logger) -> None:
         self._start_memory = 0.0
         self._peak_memory = 0.0
         self._measurements: list[tuple[float, float]] = []
-        self._logger = get_logger("crackerjack.memory_profiler")
+        self._logger = logger
 
     def start_profiling(self) -> None:
         self._start_memory = self._get_memory_usage()
@@ -218,15 +223,11 @@ class MemoryProfiler:
 
     def _get_memory_usage(self) -> float:
         try:
-            import os
-
-            import psutil
 
             process = psutil.Process(os.getpid())
             memory_mb: float = process.memory_info().rss / 1024 / 1024
             return memory_mb
         except ImportError:
-            import tracemalloc
 
             if tracemalloc.is_tracing():
                 current, _peak = tracemalloc.get_traced_memory()
@@ -239,16 +240,20 @@ class MemoryOptimizer:
     _instance: t.Optional["MemoryOptimizer"] = None
     _lock = Lock()
 
-    def __init__(self) -> None:
+    @depends.inject
+    def __init__(
+        self,
+        logger: Inject[Logger],
+    ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
-        self._profiler = MemoryProfiler()
+        self._profiler = MemoryProfiler(logger=logger)
         self._stats_lock = Lock()
         self._lazy_created_count = 0
         self._lazy_loaded_count = 0
         self._gc_threshold = 100
         self._auto_gc = True
-        self._logger = get_logger("crackerjack.memory_optimizer")
+        self._logger = logger
 
     @classmethod
     def get_instance(cls) -> "MemoryOptimizer":
@@ -356,7 +361,7 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
         attr_name = f"_lazy_{factory.__name__}"
 
         if not hasattr(self, attr_name):
-            loader = LazyLoader(factory, factory.__name__)
+            loader = LazyLoader(factory, factory.__name__, logger=MemoryOptimizer.get_instance()._logger)
             setattr(self, attr_name, loader)
 
         return getattr(self, attr_name).get()
@@ -391,12 +396,11 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
     return wrapper
 
 
-def get_memory_optimizer() -> MemoryOptimizer:
-    return MemoryOptimizer.get_instance()
+
 
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
-    return LazyLoader(factory, name)
+    return LazyLoader(factory, name, logger=MemoryOptimizer.get_instance()._logger)
 
 
 def create_resource_pool(
@@ -404,6 +408,6 @@ def create_resource_pool(
     max_size: int = 5,
     name: str = "unnamed",
 ) -> ResourcePool:
-    pool = ResourcePool(factory, max_size, name)
+    pool = ResourcePool(factory, max_size, name, logger=MemoryOptimizer.get_instance()._logger)
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool

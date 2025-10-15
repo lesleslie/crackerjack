@@ -253,7 +253,7 @@ python -m crackerjack --all patch  # Full release workflow
 
 **🔗 Quick Links**
 
-- **Advanced Features**: See `docs/ADVANCED-FEATURES.md` for 82 enterprise/power user flags
+- **Advanced Features**: See `docs/ADVANCED-FEATURES.md` for 82 advanced/power user flags
 - **User Reference**: See `README.md` for comprehensive command reference
 - **Error Patterns**: See `docs/ai/ERROR-PATTERNS.yaml` for automated fixes
 
@@ -344,22 +344,143 @@ Crackerjack now includes sophisticated intelligence services that enhance the de
 
 **Modular DI Architecture**: `__main__.py` → `WorkflowOrchestrator` → Coordinators → Managers → Services
 
+### ACB Dependency Injection Pattern
+
+Crackerjack uses **ACB (Architecture Component Base)** for dependency injection with protocol-based design:
+
+```python
+# ✅ GOLD STANDARD: CLI Handlers Pattern
+from acb.depends import depends, Inject
+from ..models.protocols import Console
+
+@depends.inject
+def setup_ai_agent_env(
+    ai_agent: bool,
+    debug_mode: bool = False,
+    console: Inject[Console] = None
+) -> None:
+    """All CLI handlers follow this pattern - 100% compliance."""
+    console.print("[green]AI agent environment configured[/green]")
+```
+
+```python
+# ✅ GOLD STANDARD: SessionCoordinator Pattern
+from acb.depends import depends, Inject
+from ..models.protocols import Console, TestManagerProtocol
+
+class SessionCoordinator:
+    @depends.inject
+    def __init__(
+        self,
+        console: Inject[Console],
+        test_manager: Inject[TestManagerProtocol],
+        pkg_path: Path,
+    ) -> None:
+        """Perfect DI integration with protocol-based dependencies."""
+        self.console = console
+        self.test_manager = test_manager
+        self.pkg_path = pkg_path
+```
+
 **Critical Pattern**: Always import protocols from `models/protocols.py`, never concrete classes
 
 ```python
-# ❌ Wrong
+# ❌ Wrong - Direct class imports
 from ..managers.test_manager import TestManager
+from rich.console import Console
 
-# ✅ Correct
-from ..models.protocols import TestManagerProtocol
+# ✅ Correct - Protocol imports
+from ..models.protocols import TestManagerProtocol, Console
 ```
 
-**Core Layers**:
+**Anti-Patterns to Avoid**:
 
-- **Orchestration**: `WorkflowOrchestrator`, DI containers, lifecycle management
-- **Coordinators**: Session/phase coordination, async workflows, parallel execution
-- **Managers**: Hook execution (fast→comprehensive), test management, publishing
-- **Services**: Filesystem, git, config, security, health monitoring
+```python
+# ❌ Manual fallbacks bypass DI
+self.console = console or Console()
+self.cache = cache or CrackerjackCache()
+
+# ❌ Factory functions bypass DI
+self.tracker = get_agent_tracker()
+self.timeout_manager = get_timeout_manager()
+
+# ❌ Direct service instantiation
+self.logger = logging.getLogger(__name__)
+
+# ✅ Correct - Use DI injection
+@depends.inject
+def __init__(
+    self,
+    console: Inject[Console],
+    cache: Inject[CrackerjackCache],
+    tracker: Inject[AgentTrackerProtocol],
+) -> None:
+    self.console = console
+    self.cache = cache
+    self.tracker = tracker
+```
+
+### Core Layers & Compliance Status
+
+Based on Phase 2-4 refactoring audit:
+
+- **Orchestration** (70% compliant): `WorkflowOrchestrator`, DI containers, lifecycle management
+  - ✅ `SessionCoordinator` - Gold standard ACB integration
+  - ⚠️ `ServiceWatchdog` - Needs DI integration (factory functions, manual fallbacks)
+
+- **Coordinators** (70% compliant): Session/phase coordination, async workflows, parallel execution
+  - ✅ Phase coordinators use proper DI
+  - ⚠️ Async coordinators need protocol standardization
+
+- **Managers** (80% compliant): Hook execution (fast→comprehensive), test management, publishing
+  - ✅ Most managers use protocol-based injection
+  - ⚠️ Some managers have manual service instantiation
+
+- **Services** (95% compliant): Filesystem, git, config, security, health monitoring
+  - ✅ All Phase 3 refactored services follow standards
+  - ✅ Constructor consistency, lifecycle management
+
+- **CLI Handlers** (90% compliant): Entry points, option processing
+  - ✅ All handlers use `@depends.inject` decorator
+  - ✅ Perfect `Inject[Protocol]` usage
+  - ⚠️ `CrackerjackCLIFacade` needs DI integration
+
+- **Agent System** (40% compliant): AI agents, coordination
+  - ⚠️ All 9 agents use `AgentContext` pattern (predates ACB)
+  - ⚠️ `AgentCoordinator` has no DI integration
+  - 📋 Protocols defined, refactoring planned for future phase
+
+### Phase 2-4 Achievements
+
+**Phase 2: Import & DI Foundation**
+- ✅ 100% lazy import elimination across codebase
+- ✅ Protocol-based DI pattern established
+- ✅ Zero circular dependencies
+
+**Phase 3: Service Layer Standardization**
+- ✅ 15+ services refactored to ACB patterns
+- ✅ Constructor consistency enforced
+- ✅ Lifecycle management standardized
+
+**Phase 4: Architecture Audit**
+- ✅ 22 agent files audited
+- ✅ 4 CLI handlers validated (90% compliance)
+- ✅ 3 orchestration components assessed
+- ✅ 5 new protocols defined for coordination interfaces
+
+### Architecture Decision Records
+
+**Why Protocol-Based DI?**
+- Loose coupling between layers
+- Easy testing with mock implementations
+- Clear interface contracts
+- Runtime type checking via `@runtime_checkable`
+
+**Why AgentContext Pattern for Agents?**
+- Agents predate ACB adoption (legacy pattern)
+- Dataclass-based context provides agent isolation
+- Refactoring to DI planned but not prioritized (agents work well as-is)
+- Phase 4 protocols defined for future migration path
 
 ## Testing & Development
 

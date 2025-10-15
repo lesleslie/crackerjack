@@ -3,46 +3,41 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-from crackerjack.models.protocols import CoverageRatchetProtocol, OptionsProtocol
+from acb.config import root_path
+from acb.console import Console
+from acb.depends import Inject, depends
+from crackerjack.models.protocols import CoverageBadgeServiceProtocol, CoverageRatchetProtocol, OptionsProtocol, TestManagerProtocol, ServiceProtocol
+from crackerjack.services.coverage_badge_service import CoverageBadgeService
+from crackerjack.services.lsp_client import LSPClient
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
 
 
 class TestManager:
+    @depends.inject
     def __init__(
         self,
-        console: Console,
-        pkg_path: Path,
-        coverage_ratchet: CoverageRatchetProtocol | None = None,
+        console: Inject[Console],
+        coverage_ratchet: Inject[CoverageRatchetProtocol],
+        coverage_badge: Inject[CoverageBadgeServiceProtocol],
+        lsp_client: Inject[LSPClient] | None = None,
     ) -> None:
         self.console = console
-        self.pkg_path = pkg_path
+        self.pkg_path = root_path
 
-        self.executor = TestExecutor(console, pkg_path)
-        self.command_builder = TestCommandBuilder(pkg_path)
+        self.executor = TestExecutor(console, root_path)
+        self.command_builder = TestCommandBuilder(root_path)
 
-        if coverage_ratchet is None:
-            from crackerjack.services.coverage_ratchet import CoverageRatchetService
-
-            coverage_ratchet_obj = CoverageRatchetService(pkg_path, console)
-            self.coverage_ratchet: CoverageRatchetProtocol | None = t.cast(
-                CoverageRatchetProtocol, coverage_ratchet_obj
-            )
-        else:
-            self.coverage_ratchet = coverage_ratchet
+        # Services injected via ACB DI
+        self.coverage_ratchet = coverage_ratchet
+        self._coverage_badge_service = coverage_badge
+        self._lsp_client = lsp_client
 
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
         self.coverage_ratchet_enabled = True
         self.use_lsp_diagnostics = True
-
-        # Initialize coverage badge service
-        from crackerjack.services.coverage_badge_service import CoverageBadgeService
-
-        self._coverage_badge_service = CoverageBadgeService(console, pkg_path)
 
     def set_progress_callback(
         self,
@@ -426,13 +421,12 @@ class TestManager:
 
     async def run_pre_test_lsp_diagnostics(self) -> bool:
         """Run LSP diagnostics before tests to catch type errors early."""
-        if not self.use_lsp_diagnostics:
+        if not self.use_lsp_diagnostics or self._lsp_client is None:
             return True
 
         try:
-            from crackerjack.services.lsp_client import LSPClient
-
-            lsp_client = LSPClient(self.console)
+            # Use injected LSP client (already instantiated)
+            lsp_client = self._lsp_client
 
             # Check if LSP server is available
             if not lsp_client.is_server_running():
