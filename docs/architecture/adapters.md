@@ -1,75 +1,67 @@
 # Adapter Architecture & Migration Notes
 
-**Last Updated:** 2025-10-17  
+**Last Updated:** 2025-10-15
 **Maintainers:** Architecture Council, ACB Specialist, CLI Integrations
 
 ## Overview
 
-Phase 3.4 introduced the domain-focused service layout for Crackerjack. Service
-implementations now live in purpose-specific packages (e.g.
-`crackerjack/services/ai`, `crackerjack/services/monitoring`,
-`crackerjack/services/quality`) with thin compatibility shims that continue to
-expose legacy import paths. Phase 4 requires all new development – and updated
-entrypoints – to depend on the domain namespaces so we can safely deprecate the
-legacy shims after adoption is complete.
+Phase 3 completed the service layer cleanup, removing facade files and standardizing
+import paths. All services now use direct import paths from `crackerjack.services.*`
+without subdirectory facades. The domain-focused organization (ai/, monitoring/,
+quality/ subdirectories) was evaluated but the facade pattern was removed in favor
+of flat service imports for simplicity.
 
-This document records the adapter migration strategy, lists the canonical import
-paths, and outlines best practices when wiring dependencies through ACB.
+This document records the final adapter architecture and canonical import paths
+after Phase 3 completion.
 
 ## Canonical Import Paths
 
-| Domain | Preferred Import | Legacy Shim (temporary) | Notes |
-|--------|------------------|-------------------------|-------|
-| AI & Semantic services | `crackerjack.services.ai.vector_store` | `crackerjack.services.vector_store` | CLI semantic handlers now use the domain path; shim will be removed in Phase 4.3. |
-| Monitoring & Telemetry | `crackerjack.services.monitoring.server_manager`<br>`crackerjack.services.monitoring.zuban_lsp_service` | `crackerjack.services.server_manager`<br>`crackerjack.services.zuban_lsp_service` | Monitoring dashboard and CLI operations use the domain namespace. |
-| Quality & Baselines | `crackerjack.services.quality.config_template` | `crackerjack.services.config_template` | Used by configuration templating and quality baseline tooling. |
+| Service | Canonical Import Path | Notes |
+|---------|----------------------|-------|
+| Vector Store | `crackerjack.services.vector_store` | AI/semantic search service |
+| Server Manager | `crackerjack.services.server_manager` | MCP server lifecycle management |
+| Zuban LSP Service | `crackerjack.services.zuban_lsp_service` | LSP integration for Zuban type checker |
+| Config Template | `crackerjack.services.config_template` | Configuration templating utilities |
 
-All new adapters added during Phase 4 must follow the same pattern:
+All new services added during future phases must follow this pattern:
 
-1. Place implementations inside the appropriate domain package.
-2. Export types/functions via the domain `__init__.py`.
-3. Optionally provide a short-term shim in the legacy module (re-export only).
-4. Update consumers (CLI, orchestrators, services) to import from the domain.
+1. Place implementations directly in `crackerjack/services/`
+2. Use protocol-based interfaces in `crackerjack/models/protocols.py`
+3. Register with ACB dependency injection in `core/container.py`
+4. Import using full path: `from crackerjack.services.<service_name> import ...`
 
-## CLI Adoption Status
+## CLI Import Status
 
-| CLI Module | Status | Notes |
-|------------|--------|-------|
-| `cache_handlers` | ✅ Legacy path still valid (no domain split required) |
-| `handlers` | ✅ Uses monitoring & quality domains for server/config utilities |
-| `semantic_handlers` | ✅ Imports vector store via AI domain |
+| CLI Module | Status | Import Pattern |
+|------------|--------|----------------|
+| `cache_handlers` | ✅ Complete | Direct service imports |
+| `handlers` | ✅ Complete | Uses `services.server_manager` |
+| `semantic_handlers` | ✅ Complete | Uses `services.vector_store` |
 
-Remaining CLI commands should be audited after each sprint to ensure no new
-references to the legacy paths are introduced. ACB dependency graph checks will
-flag regressions starting in Phase 4.2.
+All CLI modules now use direct service imports without facade indirection.
 
-## Using ACB With Domain Services
+## Using ACB With Services
 
-The `configure_acb_dependencies` function (see
-`crackerjack/core/acb_di_config.py`) registers domain services directly. When
-introducing a new adapter or service:
+The `configure_acb_dependencies` function (see `crackerjack/core/container.py`)
+registers services for dependency injection. When introducing a new service:
 
-1. Implement the service inside the domain package.
-2. Register the type via `ACBDependencyRegistry.register`.
-3. Retrieve dependencies using `depends.get(<InterfaceOrClass>)`.
-4. Write tests that call `reset_dependencies()` to avoid cross-test leakage.
+1. Implement the service directly in `crackerjack/services/`
+2. Define a protocol interface in `crackerjack/models/protocols.py`
+3. Register the type via ACB's `depends` system in `core/container.py`
+4. Retrieve dependencies using `depends.get(<Protocol>)` or `@depends.inject`
+5. Write tests that call `reset_dependencies()` to avoid cross-test leakage
 
-When a legacy shim is still required (e.g. third-party integrations), annotate
-the re-export module with a TODO documenting the removal plan and link to
-tracking issues.
+## Phase 3 Completion Checklist
 
-## Migration Checklist
-
-- [x] Expose vector store service through AI domain.
-- [x] Expose MPC server management helpers through Monitoring domain.
-- [x] Expose configuration templating through Quality domain.
-- [ ] Update orchestrators to consume only domain imports (Phase 4.2).
-- [ ] Remove legacy re-export modules once coverage reaches ≥65% (Phase 4.3).
+- [x] Remove facade files from ai/ and monitoring/ subdirectories
+- [x] Standardize all imports to use direct service paths
+- [x] Update CLI modules to use canonical import paths
+- [x] Remove re-exports from package __init__.py files
+- [x] Achieve 26.6% service duplication reduction (94→69 files)
 
 ## References
 
-- `docs/COMPREHENSIVE-IMPROVEMENT-PLAN.md`
-- `crackerjack/core/acb_di_config.py`
-- `crackerjack/services/ai/__init__.py`
-- `crackerjack/services/monitoring/__init__.py`
-- `crackerjack/services/quality/__init__.py`
+- `docs/UPDATED_ARCHITECTURE_REFACTORING_PLAN.md` - Phase 3 completion details
+- `docs/progress/PHASE3_COMPLETION_SUMMARY.md` - Comprehensive Phase 3 report
+- `crackerjack/core/container.py` - ACB dependency registration
+- `crackerjack/models/protocols.py` - Service protocol definitions
