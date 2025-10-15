@@ -35,6 +35,14 @@ from crackerjack.services.regex_patterns import (
 class TestCompiledPatternCache:
     """Test the CompiledPatternCache class."""
 
+    @pytest.fixture(autouse=True)
+    def clear_cache_before_test(self):
+        """Clear the pattern cache before each test to ensure isolation."""
+        CompiledPatternCache.clear_cache()
+        yield
+        # Optionally clear after test as well
+        CompiledPatternCache.clear_cache()
+
     def test_get_compiled_pattern(self) -> None:
         """Test getting a compiled pattern."""
         pattern = r"\d+"
