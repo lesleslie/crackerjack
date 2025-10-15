@@ -1,14 +1,57 @@
+import tomllib
+import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import Inject, depends
+
+from crackerjack.exceptions.config import ConfigIntegrityError
+from crackerjack.models.protocols import ConfigIntegrityServiceProtocol, ServiceProtocol
 
 
-class ConfigIntegrityService:
-    def __init__(self, console: Console, project_path: Path) -> None:
+class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
+    @depends.inject
+    def __init__(self, console: Inject[Console], project_path: Path) -> None:
         self.console = console
         self.project_path = project_path
         self.cache_dir = Path.home() / ".cache" / "crackerjack"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    def initialize(self) -> None:
+        pass
+
+    def cleanup(self) -> None:
+        pass
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {}
+
+    def is_healthy(self) -> bool:
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        pass
+
+    def increment_requests(self) -> None:
+        pass
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return None
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        pass
 
     def check_config_integrity(self) -> bool:
         config_files = [
@@ -20,13 +63,19 @@ class ConfigIntegrityService:
 
         for file_name in config_files:
             file_path = self.project_path / file_name
-            if file_path.exists() and self._check_file_drift(file_path):
-                drift_detected = True
+            if file_path.exists():
+                try:
+                    if self._check_file_drift(file_path):
+                        drift_detected = True
+                except ConfigIntegrityError as e:
+                    self.console.print(f"[red]❌ Error checking {file_path.name}: {e}[/ red]")
+                    drift_detected = True
 
-        if not self._has_required_config_sections():
-            self.console.print(
-                "[yellow]⚠️ Configuration missing required sections[/ yellow]",
-            )
+        try:
+            if not self._has_required_config_sections():
+                drift_detected = True
+        except ConfigIntegrityError as e:
+            self.console.print(f"[red]❌ Configuration integrity error: {e}[/ red]")
             drift_detected = True
 
         return drift_detected
@@ -39,50 +88,41 @@ class ConfigIntegrityService:
             current_hash = hash(current_content)
 
             if cache_file.exists():
-                from contextlib import suppress
-
-                with suppress(OSError, ValueError):
-                    cached_hash = int(cache_file.read_text().strip())
-                    if current_hash != cached_hash:
-                        self.console.print(
-                            f"[yellow]⚠️ {file_path.name} has been modified manually[/ yellow]",
-                        )
-                        return True
+                cached_hash = int(cache_file.read_text().strip())
+                if current_hash != cached_hash:
+                    self.console.print(
+                        f"[yellow]⚠️ {file_path.name} has been modified manually[/ yellow]",
+                    )
+                    return True
 
             cache_file.write_text(str(current_hash))
             return False
 
         except OSError as e:
-            self.console.print(f"[red]❌ Error checking {file_path.name}: {e}[/ red]")
-            return False
+            raise ConfigIntegrityError(f"Failed to check file drift for {file_path.name}: {e}") from e
 
     def _has_required_config_sections(self) -> bool:
         pyproject = self.project_path / "pyproject.toml"
         if not pyproject.exists():
-            return False
+            raise ConfigIntegrityError("pyproject.toml not found.")
 
         try:
-            import tomllib
-
             with pyproject.open("rb") as f:
                 config = tomllib.load(f)
-
-            required = ["tool.ruff", "tool.pyright", "tool.pytest.ini_options"]
-
-            for section in required:
-                keys = section.split(".")
-                current = config
-
-                for key in keys:
-                    if key not in current:
-                        self.console.print(
-                            f"[yellow]⚠️ Missing required config section: {section}[/ yellow]",
-                        )
-                        return False
-                    current = current[key]
-
-            return True
-
         except Exception as e:
-            self.console.print(f"[red]❌ Error parsing pyproject.toml: {e}[/ red]")
-            return False
+            raise ConfigIntegrityError(f"Error parsing pyproject.toml: {e}") from e
+
+        required = ["tool.ruff", "tool.pyright", "tool.pytest.ini_options"]
+
+        for section in required:
+            keys = section.split(".")
+            current = config
+
+            for key in keys:
+                if key not in current:
+                    raise ConfigIntegrityError(
+                        f"Missing required config section: {section} in pyproject.toml"
+                    )
+                current = current[key]
+
+        return True
