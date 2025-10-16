@@ -197,7 +197,7 @@ def _initialize_monitoring_services(progress_dir: Path) -> dict[str, t.Any]:
     dependency_analyzer = DependencyAnalyzer(progress_dir.parent)
     error_analyzer = ErrorPatternAnalyzer(progress_dir.parent)
     try:
-        telemetry = depends.get(WorkflowEventTelemetry)
+        telemetry = depends.get_sync(WorkflowEventTelemetry)
     except Exception:
         telemetry = WorkflowEventTelemetry()
 

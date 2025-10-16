@@ -655,18 +655,18 @@ class AsyncWorkflowOrchestrator:
 
         self.logger = logger
 
-        # Create coordinators - dependencies retrieved via ACB's depends.get()
+        # Create coordinators - dependencies retrieved via ACB's depends.get_sync()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
         self.phases = PhaseCoordinator(
             console=self.console,
             pkg_path=self.pkg_path,
             session=self.session,
-            filesystem=depends.get(FileSystemInterface),
-            git_service=depends.get(GitInterface),
-            hook_manager=depends.get(HookManager),
-            test_manager=depends.get(TestManagerProtocol),
-            publish_manager=depends.get(PublishManager),
-            config_merge_service=depends.get(ConfigMergeServiceProtocol),
+            filesystem=depends.get_sync(FileSystemInterface),
+            git_service=depends.get_sync(GitInterface),
+            hook_manager=depends.get_sync(HookManager),
+            test_manager=depends.get_sync(TestManagerProtocol),
+            publish_manager=depends.get_sync(PublishManager),
+            config_merge_service=depends.get_sync(ConfigMergeServiceProtocol),
         )
 
         self.async_pipeline = AsyncWorkflowPipeline(

@@ -205,8 +205,8 @@ class VersionAnalyzer:
         self.feature_analyzer = FeatureAnalyzer()
         self.commit_analyzer = ConventionalCommitAnalyzer()
 
-        # Initialize changelog generator for getting entries
-        self.changelog_generator = ChangelogGenerator(git_service)
+        # Initialize changelog generator for getting entries (ACB DI injects dependencies)
+        self.changelog_generator = ChangelogGenerator()
 
     def _get_current_version(self) -> str | None:
         """Get current version from pyproject.toml."""

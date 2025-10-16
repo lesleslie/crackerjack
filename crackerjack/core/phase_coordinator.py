@@ -10,20 +10,20 @@ from rich.console import Console
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.decorators import handle_errors
+from crackerjack.models.protocols import (
+    ConfigMergeServiceProtocol,
+    FileSystemInterface,
+    GitInterface,
+    HookManager,
+    MemoryOptimizerProtocol,
+    OptionsProtocol,
+    PublishManager,
+    TestManagerProtocol,
+)
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 if t.TYPE_CHECKING:
     from crackerjack.core.session_coordinator import SessionCoordinator
-    from crackerjack.models.protocols import (
-        ConfigMergeServiceProtocol,
-        FileSystemInterface,
-        GitInterface,
-        HookManager,
-        MemoryOptimizerProtocol,
-        OptionsProtocol,
-        PublishManager,
-        TestManagerProtocol,
-    )
     from crackerjack.services.monitoring.performance_cache import (
         FileSystemCache,
         GitOperationCache,

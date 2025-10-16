@@ -27,6 +27,7 @@ from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator
 from crackerjack.events import WorkflowEvent, WorkflowEventBus
 from crackerjack.models.protocols import (
     DebugServiceProtocol,
+    LoggerProtocol,
     MemoryOptimizerProtocol,
     OptionsProtocol,
     PerformanceBenchmarkProtocol,
@@ -74,7 +75,7 @@ class WorkflowPipeline:
 
         # Event bus with graceful fallback
         try:
-            self._event_bus: WorkflowEventBus | None = depends.get(WorkflowEventBus)
+            self._event_bus: WorkflowEventBus | None = depends.get_sync(WorkflowEventBus)
         except Exception as e:
             print(f"WARNING: WorkflowEventBus not available: {type(e).__name__}: {e}")
             self._event_bus = None
@@ -2482,6 +2483,9 @@ class WorkflowOrchestrator:
         debug: bool = False,
     ) -> None:
         # Initialize console and pkg_path first
+        from acb.console import Console
+
+        self.console = depends.get_sync(Console)
         self.pkg_path = pkg_path or Path.cwd()
         self.dry_run = dry_run
         self.web_job_id = web_job_id
@@ -2503,20 +2507,20 @@ class WorkflowOrchestrator:
 
         self._initialize_logging()
 
-        self.logger = depends.get(LoggerProtocol)
+        self.logger = depends.get_sync(LoggerProtocol)
 
-        # Create coordinators - dependencies retrieved via ACB's depends.get()
+        # Create coordinators - dependencies retrieved via ACB's depends.get_sync()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
         self.phases = PhaseCoordinator(
             console=self.console,
             pkg_path=self.pkg_path,
             session=self.session,
-            filesystem=depends.get(FileSystemInterface),
-            git_service=depends.get(GitInterface),
-            hook_manager=depends.get(HookManager),
-            test_manager=depends.get(TestManagerProtocol),
-            publish_manager=depends.get(PublishManager),
-            config_merge_service=depends.get(ConfigMergeServiceProtocol),
+            filesystem=depends.get_sync(FileSystemInterface),
+            git_service=depends.get_sync(GitInterface),
+            hook_manager=depends.get_sync(HookManager),
+            test_manager=depends.get_sync(TestManagerProtocol),
+            publish_manager=depends.get_sync(PublishManager),
+            config_merge_service=depends.get_sync(ConfigMergeServiceProtocol),
         )
 
         self.pipeline = WorkflowPipeline(
@@ -2543,6 +2547,7 @@ class WorkflowOrchestrator:
             SecurityServiceProtocol,
             TestManagerProtocol,
         )
+        from crackerjack.services.cache import CrackerjackCache
         from crackerjack.services.config_merge import ConfigMergeService
         from crackerjack.services.coverage_ratchet import CoverageRatchetService
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
@@ -2586,7 +2591,7 @@ class WorkflowOrchestrator:
         # Register core services
         depends.set(UnifiedConfigurationServiceProtocol, UnifiedConfigurationService(pkg_path=self.pkg_path))
         depends.set(ConfigIntegrityServiceProtocol, ConfigIntegrityService(project_path=self.pkg_path))
-        depends.set(ConfigMergeServiceProtocol, ConfigMergeService(filesystem=filesystem, git_service=git_service))
+        depends.set(ConfigMergeServiceProtocol, ConfigMergeService())  # ACB DI injects dependencies
         depends.set(SmartSchedulingServiceProtocol, SmartSchedulingService(project_path=self.pkg_path))
         depends.set(EnhancedFileSystemServiceProtocol, EnhancedFileSystemService())
         depends.set(SecurityServiceProtocol, SecurityService())
@@ -2600,9 +2605,7 @@ class WorkflowOrchestrator:
         depends.set(CoverageRatchetProtocol, coverage_ratchet)
 
         # Register Coverage Badge Service
-        coverage_badge = depends.inject_sync(CoverageBadgeService,
-                                             console=depends.get_sync(Console),
-                                             project_root=self.pkg_path)
+        coverage_badge = CoverageBadgeService(project_root=self.pkg_path)
         depends.set(CoverageBadgeServiceProtocol, coverage_badge)
 
         # Register test manager (ACB DI injects all dependencies)
@@ -2615,12 +2618,24 @@ class WorkflowOrchestrator:
         version_analyzer = VersionAnalyzer(git_service=git_service)
         depends.set(VersionAnalyzerProtocol, version_analyzer)
 
+        # Register changelog generator (ACB DI injects dependencies)
+        from crackerjack.models.protocols import ChangelogGeneratorProtocol
+        from crackerjack.services.changelog_automation import ChangelogGenerator
+        changelog_generator = ChangelogGenerator()
+        depends.set(ChangelogGeneratorProtocol, changelog_generator)
+
+        # Register regex patterns service
+        from crackerjack.models.protocols import RegexPatternsProtocol
+        from crackerjack.services.regex_patterns import RegexPatternsService
+        regex_patterns = RegexPatternsService()
+        depends.set(RegexPatternsProtocol, regex_patterns)
+
         # Register publish manager (ACB DI injects all dependencies)
         publish_manager = PublishManagerImpl()
         depends.set(PublishManager, publish_manager)
 
-        # Register config merge service
-        config_merge = ConfigMergeService(filesystem, git_service)
+        # Register config merge service (ACB DI injects dependencies)
+        config_merge = ConfigMergeService()
         depends.set(ConfigMergeServiceProtocol, config_merge)
 
         # Register security service
@@ -2657,6 +2672,7 @@ class WorkflowOrchestrator:
 
     def _initialize_logging(self) -> None:
         from crackerjack.services.log_manager import get_log_manager
+        from crackerjack.services.logging import setup_structured_logging
 
         log_manager = get_log_manager()
         session_id = getattr(self, "web_job_id", None) or str(int(time.time()))[:8]
@@ -2667,7 +2683,7 @@ class WorkflowOrchestrator:
             level=log_level, json_output=False, log_file=debug_log_file
         )
 
-        temp_logger = depends.get(LoggerProtocol)
+        temp_logger = depends.get_sync(LoggerProtocol)
         temp_logger.debug(
             "Structured logging initialized",
             log_file=str(debug_log_file),

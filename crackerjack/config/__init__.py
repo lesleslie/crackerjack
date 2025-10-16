@@ -11,6 +11,7 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     DebugServiceProtocol,
     GitServiceProtocol,
+    LoggerProtocol,
     MemoryOptimizerProtocol,
     PerformanceBenchmarkProtocol,
     PerformanceCacheProtocol,
@@ -72,6 +73,7 @@ depends.set(CrackerjackSettings, settings_instance)
 # Register ACB Logger (auto-registers itself, but set explicitly for clarity)
 logger_instance = Logger()
 depends.set(Logger, logger_instance)
+depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
 
 
 def register_services() -> None:
@@ -175,8 +177,8 @@ def register_services() -> None:
         version_analyzer = VersionAnalyzer(git_service)
         depends.set(VersionAnalyzerProtocol, version_analyzer)
 
-        # 10e. Changelog Generator (protocol-based, depends on git_service)
-        changelog_generator = ChangelogGenerator(git_service)
+        # 10e. Changelog Generator (protocol-based, ACB DI injects dependencies)
+        changelog_generator = ChangelogGenerator()
         depends.set(ChangelogGeneratorProtocol, changelog_generator)
 
         # 10f. LSP Client (concrete type - optional service with graceful fallback)

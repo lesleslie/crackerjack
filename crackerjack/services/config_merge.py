@@ -22,8 +22,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
     def __init__(
         self,
         console: Inject[Console],
-        filesystem: FileSystemInterface,
-        git_service: GitInterface,
+        filesystem: Inject[FileSystemInterface],
+        git_service: Inject[GitInterface],
         logger: Inject[Logger],
     ) -> None:
         self.console = console

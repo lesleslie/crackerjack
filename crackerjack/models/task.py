@@ -75,6 +75,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     tasks: dict[str, TaskStatusData] = {}
     current_task: str | None = None
     metadata: dict[str, t.Any] = {}
+    console: t.Any = None  # Console instance from DI
 
     @depends.inject
     def __init__(self, console: Inject[Console], **data: t.Any) -> None:

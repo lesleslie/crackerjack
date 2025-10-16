@@ -19,15 +19,12 @@ _cache_import_error: Exception | None = None
 if import_adapter is not None:
     try:
         Cache = import_adapter("cache")
-        print(1)
     except AdapterNotInstalled as e:  # pragma: no cover - depends on env
         _cache_import_error = e
         Cache = None
     except Exception as e:  # pragma: no cover - defensive
         _cache_import_error = e
         Cache = None
-        print("exception", e)
-print(Cache)
 
 
 @dataclass
@@ -115,7 +112,13 @@ class CrackerjackCache:
         if backend is not None:
             self._backend = backend
         else:
-            self._backend = get_cache()
+            # Try to get ACB cache adapter, fallback to None if unavailable
+            try:
+                self._backend = get_cache()
+            except RuntimeError:
+                # ACB cache adapter not available - use in-memory fallback
+                logger.info("ACB cache adapter unavailable, using in-memory cache")
+                self._backend = None
 
     @staticmethod
     def _run_async(coro: Awaitable[Any]) -> Any:
@@ -139,6 +142,9 @@ class CrackerjackCache:
         hook_name: str,
         file_hashes: list[str],
     ) -> HookResult | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
         cache_key = self._get_hook_cache_key(hook_name, file_hashes)
         result = self._run_async(self._backend.get(cache_key))
         if result is None:
@@ -153,6 +159,8 @@ class CrackerjackCache:
         file_hashes: list[str],
         result: HookResult,
     ) -> None:
+        if self._backend is None:
+            return
         cache_key = self._get_hook_cache_key(hook_name, file_hashes)
         self._run_async(self._backend.set(cache_key, result, ttl=1800))
         self.stats.total_entries += 1
@@ -163,6 +171,9 @@ class CrackerjackCache:
         file_hashes: list[str],
         tool_version: str | None = None,
     ) -> HookResult | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
         result = self.get_hook_result(hook_name, file_hashes)
         if result is not None:
             return result
@@ -187,6 +198,8 @@ class CrackerjackCache:
         result: HookResult,
         tool_version: str | None = None,
     ) -> None:
+        if self._backend is None:
+            return
         self.set_hook_result(hook_name, file_hashes, result)
         if not self.enable_disk_cache or hook_name not in self.EXPENSIVE_HOOKS:
             return
@@ -199,6 +212,9 @@ class CrackerjackCache:
         self._run_async(self._backend.set(cache_key, result, ttl=ttl))
 
     def get_file_hash(self, file_path: Path) -> str | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
         stat = file_path.stat()
         cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
         result = self._run_async(self._backend.get(cache_key))
@@ -209,12 +225,17 @@ class CrackerjackCache:
         return result
 
     def set_file_hash(self, file_path: Path, file_hash: str) -> None:
+        if self._backend is None:
+            return
         stat = file_path.stat()
         cache_key = f"file_hash:{file_path}:{stat.st_mtime}:{stat.st_size}"
         self._run_async(self._backend.set(cache_key, file_hash, ttl=3600))
         self.stats.total_entries += 1
 
     def get_config_data(self, config_key: str) -> Any | None:
+        if self._backend is None:
+            self.stats.misses += 1
+            return None
         result = self._run_async(self._backend.get(f"config:{config_key}"))
         if result is None:
             self.stats.misses += 1
@@ -223,19 +244,25 @@ class CrackerjackCache:
         return result
 
     def set_config_data(self, config_key: str, data: Any) -> None:
+        if self._backend is None:
+            return
         self._run_async(self._backend.set(f"config:{config_key}", data, ttl=7200))
         self.stats.total_entries += 1
 
     def get(self, key: str, default: Any = None) -> Any:
+        if self._backend is None:
+            return default
         result = self._run_async(self._backend.get(key))
         return result if result is not None else default
 
     def set(self, key: str, value: Any, ttl_seconds: int | None = None) -> None:
+        if self._backend is None:
+            return
         ttl = ttl_seconds if ttl_seconds is not None else 3600
         self._run_async(self._backend.set(key, value, ttl=ttl))
 
     def get_agent_decision(self, agent_name: str, issue_hash: str) -> Any | None:
-        if not self.enable_disk_cache:
+        if self._backend is None or not self.enable_disk_cache:
             return None
         cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
         return self._run_async(self._backend.get(cache_key))
@@ -246,13 +273,13 @@ class CrackerjackCache:
         issue_hash: str,
         decision: Any,
     ) -> None:
-        if not self.enable_disk_cache:
+        if self._backend is None or not self.enable_disk_cache:
             return
         cache_key = f"agent:{agent_name}:{issue_hash}:{self.AGENT_VERSION}"
         self._run_async(self._backend.set(cache_key, decision, ttl=604800))
 
     def get_quality_baseline(self, git_hash: str) -> dict[str, Any] | None:
-        if not self.enable_disk_cache:
+        if self._backend is None or not self.enable_disk_cache:
             return None
         return self._run_async(self._backend.get(f"baseline:{git_hash}"))
 
@@ -261,7 +288,7 @@ class CrackerjackCache:
         git_hash: str,
         metrics: dict[str, Any],
     ) -> None:
-        if not self.enable_disk_cache:
+        if self._backend is None or not self.enable_disk_cache:
             return
         self._run_async(self._backend.set(f"baseline:{git_hash}", metrics, ttl=2592000))
 

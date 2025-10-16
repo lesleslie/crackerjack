@@ -306,7 +306,7 @@ def _setup_changelog_services() -> dict[str, t.Any]:
 
     pkg_path = Path()
     git_service = GitService()
-    changelog_generator = ChangelogGenerator(git_service)
+    changelog_generator = ChangelogGenerator()  # ACB DI injects dependencies
 
     return {
         "pkg_path": pkg_path,

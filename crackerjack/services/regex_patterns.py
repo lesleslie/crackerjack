@@ -2973,6 +2973,30 @@ def validate_path_security(path_str: str) -> dict[str, list[str]]:
     }
 
 
+class RegexPatternsService:
+    """Service class that implements RegexPatternsProtocol.
+
+    Wraps module-level regex pattern functions to provide a protocol-compliant interface.
+    """
+
+    def update_pyproject_version(self, content: str, new_version: str) -> str:
+        """Update version in pyproject.toml content."""
+        return update_pyproject_version(content, new_version)
+
+    def remove_coverage_fail_under(self, content: str) -> str:
+        """Remove --cov-fail-under from pytest addopts."""
+        return remove_coverage_fail_under(content)
+
+    def update_version_in_changelog(self, content: str, new_version: str) -> str:
+        """Update version in changelog content."""
+        # Placeholder implementation - can be enhanced later
+        return content
+
+    def mask_tokens_in_text(self, text: str) -> str:
+        """Mask sensitive tokens in text."""
+        return sanitize_internal_urls(text)
+
+
 if __name__ == "__main__":
     results = validate_all_patterns()
     if all(results.values()):

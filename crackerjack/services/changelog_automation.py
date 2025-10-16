@@ -7,7 +7,7 @@ from pathlib import Path
 from acb.console import Console
 from acb.depends import Inject, depends
 
-from .git import GitService
+from crackerjack.models.protocols import GitServiceProtocol
 
 
 class ChangelogEntry:
@@ -35,7 +35,7 @@ class ChangelogGenerator:
     """Generate and update changelogs based on git commits."""
 
     @depends.inject
-    def __init__(self, console: Inject[Console], git_service: GitService) -> None:
+    def __init__(self, console: Inject[Console], git_service: Inject[GitServiceProtocol]) -> None:
         self.console = console
         self.git = git_service
 
