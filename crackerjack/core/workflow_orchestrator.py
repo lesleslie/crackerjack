@@ -2562,45 +2562,58 @@ class WorkflowOrchestrator:
         depends.set(HookManager, hook_manager)
 
         from crackerjack.models.protocols import (
+            ConfigIntegrityServiceProtocol,
+            ConfigMergeServiceProtocol,
             CoverageBadgeServiceProtocol,
+            CoverageRatchetProtocol,
+            EnhancedFileSystemServiceProtocol,
+            GitServiceProtocol,
+            HookLockManagerProtocol,
+            HookManager,
+            PublishManager,
+            SecurityServiceProtocol,
+            SmartSchedulingServiceProtocol,
             UnifiedConfigurationServiceProtocol,
         )
         from crackerjack.services.config_integrity import ConfigIntegrityService
         from crackerjack.services.coverage_badge_service import CoverageBadgeService
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
         from crackerjack.services.git import GitService
-        from crackerjack.services.hook_lock_manager import HookLockManager
+        from crackerjack.executors.hook_lock_manager import HookLockManager
         from crackerjack.services.smart_scheduling import SmartSchedulingService
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
         # Register core services
-        depends.set(UnifiedConfigurationServiceProtocol, UnifiedConfigurationService())
-        depends.set(ConfigIntegrityServiceProtocol, ConfigIntegrityService(project_path=pkg_path))
-        depends.set(ConfigMergeServiceProtocol, ConfigMergeService())
-        depends.set(SmartSchedulingServiceProtocol, SmartSchedulingService())
+        depends.set(UnifiedConfigurationServiceProtocol, UnifiedConfigurationService(pkg_path=self.pkg_path))
+        depends.set(ConfigIntegrityServiceProtocol, ConfigIntegrityService(project_path=self.pkg_path))
+        depends.set(ConfigMergeServiceProtocol, ConfigMergeService(filesystem=filesystem, git_service=git_service))
+        depends.set(SmartSchedulingServiceProtocol, SmartSchedulingService(project_path=self.pkg_path))
         depends.set(EnhancedFileSystemServiceProtocol, EnhancedFileSystemService())
         depends.set(SecurityServiceProtocol, SecurityService())
         depends.set(HookLockManagerProtocol, HookLockManager())
 
-        # Register Git service (needed by many managers)
-        git_service = GitService(project_root=pkg_path)
+        # Register Git service protocol mapping (needed by many managers)
         depends.set(GitServiceProtocol, git_service)
 
-        # Register managers
-        depends.set(HookManagerProtocol, HookManagerImpl())
-        depends.set(PublishManagerProtocol, PublishManagerImpl())
-
         # Register Coverage Ratchet Service
-        coverage_ratchet = CoverageRatchetService(pkg_path)
+        coverage_ratchet = CoverageRatchetService(self.pkg_path)
         depends.set(CoverageRatchetProtocol, coverage_ratchet)
 
         # Register Coverage Badge Service
-        coverage_badge = depends.inject_sync(CoverageBadgeService, console=depends.get_sync(Console), project_root=pkg_path)
+        coverage_badge = depends.inject_sync(CoverageBadgeService,
+                                             console=depends.get_sync(Console),
+                                             project_root=self.pkg_path)
         depends.set(CoverageBadgeServiceProtocol, coverage_badge)
 
         # Register test manager (ACB DI injects all dependencies)
         test_manager = TestManager()
         depends.set(TestManagerProtocol, test_manager)
+
+        # Register version analyzer (needed by publish manager)
+        from crackerjack.models.protocols import VersionAnalyzerProtocol
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+        version_analyzer = VersionAnalyzer(git_service=git_service)
+        depends.set(VersionAnalyzerProtocol, version_analyzer)
 
         # Register publish manager (ACB DI injects all dependencies)
         publish_manager = PublishManagerImpl()
