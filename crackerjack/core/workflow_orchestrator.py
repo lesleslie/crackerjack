@@ -35,6 +35,7 @@ from crackerjack.models.protocols import (
     PerformanceMonitorProtocol,
     QualityIntelligenceProtocol,
 )
+from crackerjack.services.logging import LoggingContext
 from crackerjack.services.memory_optimizer import memory_optimized
 from crackerjack.services.monitoring.performance_monitor import phase_monitor
 
@@ -2511,6 +2512,10 @@ class WorkflowOrchestrator:
 
         # Create coordinators - dependencies retrieved via ACB's depends.get_sync()
         self.session = SessionCoordinator(self.console, self.pkg_path, self.web_job_id)
+
+        # Register SessionCoordinator in DI for WorkflowPipeline injection
+        depends.set(SessionCoordinator, self.session)
+
         self.phases = PhaseCoordinator(
             console=self.console,
             pkg_path=self.pkg_path,
@@ -2523,12 +2528,11 @@ class WorkflowOrchestrator:
             config_merge_service=depends.get_sync(ConfigMergeServiceProtocol),
         )
 
-        self.pipeline = WorkflowPipeline(
-            console=self.console,
-            pkg_path=self.pkg_path,
-            session=self.session,
-            phases=self.phases,
-        )
+        # Register PhaseCoordinator in DI for WorkflowPipeline injection
+        depends.set(PhaseCoordinator, self.phases)
+
+        # WorkflowPipeline uses @depends.inject, so all parameters are auto-injected
+        self.pipeline = WorkflowPipeline()
 
     def _setup_acb_services(self) -> None:
         """Setup all services using ACB dependency injection."""

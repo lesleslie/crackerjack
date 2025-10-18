@@ -251,7 +251,7 @@ def handle_standard_mode(
     import threading
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
-    
+
     # Check if we're already in an event loop
     try:
         asyncio.get_running_loop()
@@ -259,7 +259,7 @@ def handle_standard_mode(
         # Create a new thread with its own event loop
         def run_async_config():
             asyncio.run(hook_lock_manager.configure_from_options(options))
-        
+
         thread = threading.Thread(target=run_async_config)
         thread.start()
         thread.join()

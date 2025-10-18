@@ -9,6 +9,7 @@ from rich.console import Console
 
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.decorators import handle_errors
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
@@ -21,17 +22,17 @@ from crackerjack.models.protocols import (
     TestManagerProtocol,
 )
 from crackerjack.services.memory_optimizer import create_lazy_service
+from crackerjack.services.monitoring.performance_cache import (
+    FileSystemCache,
+    GitOperationCache,
+)
+from crackerjack.services.parallel_executor import (
+    AsyncCommandExecutor,
+    ParallelHookExecutor,
+)
 
 if t.TYPE_CHECKING:
-    from crackerjack.core.session_coordinator import SessionCoordinator
-    from crackerjack.services.monitoring.performance_cache import (
-        FileSystemCache,
-        GitOperationCache,
-    )
-    from crackerjack.services.parallel_executor import (
-        AsyncCommandExecutor,
-        ParallelHookExecutor,
-    )
+    pass  # All imports moved to top-level for runtime availability
 
 class PhaseCoordinator:
     @depends.inject
@@ -66,6 +67,7 @@ class PhaseCoordinator:
         self.config_merge_service = config_merge_service
 
         self.code_cleaner = CodeCleaner(
+            console=console,
             base_directory=pkg_path,
             file_processor=None,
             error_handler=None,

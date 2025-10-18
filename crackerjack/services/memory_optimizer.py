@@ -361,7 +361,9 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
         attr_name = f"_lazy_{factory.__name__}"
 
         if not hasattr(self, attr_name):
-            loader = LazyLoader(factory, factory.__name__, logger=MemoryOptimizer.get_instance()._logger)
+            # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
+            logger = depends.get_sync(Logger)
+            loader = LazyLoader(factory, logger=logger, name=factory.__name__)
             setattr(self, attr_name, loader)
 
         return getattr(self, attr_name).get()
@@ -400,7 +402,9 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
 
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
-    return LazyLoader(factory, name, logger=MemoryOptimizer.get_instance()._logger)
+    # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
+    logger = depends.get_sync(Logger)
+    return LazyLoader(factory, logger=logger, name=name)
 
 
 def create_resource_pool(
@@ -408,6 +412,8 @@ def create_resource_pool(
     max_size: int = 5,
     name: str = "unnamed",
 ) -> ResourcePool:
-    pool = ResourcePool(factory, max_size, name, logger=MemoryOptimizer.get_instance()._logger)
+    # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
+    logger = depends.get_sync(Logger)
+    pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool
