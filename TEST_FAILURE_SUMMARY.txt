@@ -1,0 +1,209 @@
+================================================================================
+                    TEST FAILURE PATTERN SUMMARY
+                       Crackerjack Project
+================================================================================
+
+TOTAL FAILURES: 467 tests failing
+AFFECTED TEST FILES: 50+ test files
+
+================================================================================
+                           TOP 10 FAILING FILES
+================================================================================
+
+Rank | File                                      | Failures | Pattern
+-----|-------------------------------------------|----------|----------------------------------
+  1  | test_publish_manager_coverage.py          |   54     | DI Constructor Mismatch
+  2  | test_session_coordinator_coverage.py      |   33     | DI Constructor Mismatch
+  3  | test_global_lock_config.py                |   25     | Parameter Name Mismatch
+  4  | test_managers_consolidated.py             |   23     | DI Constructor Mismatch
+  5  | test_hook_manager_orchestration.py        |   20     | DI Constructor Mismatch
+  6  | test_hook_lock_manager.py                 |   19     | Parameter Name Mismatch
+  7  | test_session_coordinator_comprehensive.py |   18     | DI Constructor Mismatch
+  8  | test_models_task_coverage.py              |   17     | String Value Mismatch
+  9  | test_cli/test_global_lock_options.py      |   15     | Parameter Name Mismatch
+ 10  | test_unified_config.py                    |   14     | Parameter Name Mismatch
+
+SUBTOTAL (Top 10):                              238/467 (51% of all failures)
+
+================================================================================
+                         FAILURE PATTERN BREAKDOWN
+================================================================================
+
+PATTERN 1: DI Constructor Signature Mismatch
+  Severity:  CRITICAL
+  Count:     ~120 tests (26% of failures)
+  Error:     TypeError: unexpected keyword argument 'console'
+             TypeError: unexpected keyword argument 'pkg_path'
+  Files:     6 major test files
+  Classes:   - PublishManagerImpl
+             - HookManagerImpl
+             - SessionCoordinator
+             - TestManagementImpl
+             - WorkflowOrchestrator
+
+  Root Cause: Classes refactored to use @depends.inject decorator but tests
+              still use old constructor signature
+  
+  Fix Impact: Fixing this pattern alone would resolve 120+ tests
+
+
+PATTERN 2: Constructor Parameter Name Mismatch
+  Severity:  HIGH
+  Count:     ~40-50 tests (9-11% of failures)
+  Error:     TypeError: unexpected keyword argument 'lock_directory'
+  Files:     3 major test files
+  Classes:   - GlobalLockConfig
+             - Config-related classes
+
+  Root Cause: Constructor parameters were renamed/refactored but tests
+              still use old parameter names
+  
+  Fix Impact: Fixing this pattern would resolve 40-50 tests
+
+
+PATTERN 3: String Value/Formatting Mismatch
+  Severity:  MEDIUM
+  Count:     ~17 tests (4% of failures)
+  Error:     AssertionError: 'pre-commit' != 'pre - commit'
+  Files:     1 major test file
+  Classes:   - HookResult
+             - TaskStatus
+
+  Root Cause: String formatting changed; tests expect 'pre - commit' 
+              (spaces) but code returns 'pre-commit' (hyphenated)
+  
+  Fix Impact: Fixing this pattern would resolve 17 tests
+
+
+PATTERN 4: Object Type Mismatch
+  Severity:  MEDIUM
+  Count:     ~15 tests (3% of failures)
+  Error:     AssertionError: Console type mismatch
+             AttributeError: 'coroutine' object has no attribute
+  Files:     2 major test files
+
+  Root Cause: Tests use Mock(spec=Console) but code uses 
+              acb.console.Console from DI
+
+
+PATTERN 5: Coroutine Awaiting Issues
+  Severity:  LOW
+  Count:     ~10 tests (2% of failures)
+  Error:     RuntimeWarning: coroutine 'Depends.get' was never awaited
+  Files:     Multiple
+
+  Root Cause: Tests calling async code synchronously
+
+================================================================================
+                         IMPACT ANALYSIS MATRIX
+================================================================================
+
+Pattern                              | Test Count | % of Total | Fix Effort | ROI
+------------------------------------|------------|-----------|-----------|------
+DI Constructor Mismatch             | ~120       | 26%       | 2-3 hrs   | HIGH
+Parameter Name Mismatch             | ~40-50     | 9-11%     | 1-2 hrs   | HIGH
+String Value Mismatch               | ~17        | 4%        | 30 min    | MED
+Object Type Mismatch                | ~15        | 3%        | 1 hr      | MED
+Coroutine Awaiting Issues           | ~10        | 2%        | 1 hr      | LOW
+Other/Unclassified                  | ~165       | 35%       | TBD       | ?
+
+================================================================================
+                      RECOMMENDED FIX SEQUENCE
+================================================================================
+
+PHASE 1 (Priority: CRITICAL) - 2-3 hours
+  Target: DI Constructor Signature Mismatches (120+ tests)
+  Files:
+    - tests/test_publish_manager_coverage.py (54 failures)
+    - tests/test_session_coordinator_coverage.py (33 failures)
+    - tests/test_session_coordinator_comprehensive.py (18 failures)
+    - tests/managers/test_hook_manager_orchestration.py (20 failures)
+    - tests/test_managers_consolidated.py (23 failures)
+    - tests/managers/test_hook_manager_triple_parallel.py (13 failures)
+
+  Strategy:
+    1. Create DI-aware test fixture helper
+    2. Update test classes to use proper DI initialization
+    3. Or create wrapper constructors for testing
+
+  Expected Result: +120 tests passing (26% reduction in failures)
+
+
+PHASE 2 (Priority: HIGH) - 1-2 hours
+  Target: Constructor Parameter Name Mismatches (40-50 tests)
+  Files:
+    - tests/test_global_lock_config.py (25 failures)
+    - tests/test_hook_lock_manager.py (19 failures)
+    - tests/test_cli/test_global_lock_options.py (15 failures)
+
+  Strategy:
+    1. Investigate actual GlobalLockConfig parameter names
+    2. Update test calls to use correct parameter names
+    3. Verify no API breaking changes needed
+
+  Expected Result: +40-50 tests passing (additional 9-11% reduction)
+
+
+PHASE 3 (Priority: MEDIUM) - 30 minutes
+  Target: String Value/Formatting Mismatches (17 tests)
+  Files:
+    - tests/test_models_task_coverage.py (17 failures)
+
+  Strategy:
+    1. Check HookResult.__post_init__ for string normalization
+    2. Update test expectations to match actual output
+    3. Verify string format is intentional
+
+  Expected Result: +17 tests passing (additional 4% reduction)
+
+
+TOTAL ACHIEVABLE: ~177 tests fixed (38% of all 467 failures)
+
+================================================================================
+                    ERROR MESSAGE EXAMPLES
+================================================================================
+
+PATTERN 1 - DI Constructor Mismatch:
+  TypeError: PublishManagerImpl.__init__() got an unexpected keyword 
+             argument 'console'
+  TypeError: SessionCoordinator.__init__() got an unexpected keyword 
+             argument 'console'
+
+PATTERN 2 - Parameter Name Mismatch:
+  TypeError: GlobalLockConfig.__init__() got an unexpected keyword 
+             argument 'lock_directory'
+
+PATTERN 3 - String Value Mismatch:
+  AssertionError: assert 'pre-commit' == 'pre - commit'
+    - pre - commit
+    ?    - -
+
+PATTERN 4 - Type Mismatch:
+  AssertionError: assert <console width=80 None> == <Mock spec='Console' ...>
+
+PATTERN 5 - Coroutine Issues:
+  RuntimeWarning: coroutine 'Depends.get' was never awaited
+
+================================================================================
+                        KEY INSIGHTS
+================================================================================
+
+1. REFACTORING DEBT: Recent ACB DI refactoring (Phase 4) changed core
+   constructor signatures but tests were not updated. This is the
+   biggest issue affecting 26% of failures.
+
+2. PARAMETER RENAME PATTERN: GlobalLockConfig and related config classes
+   had parameter names changed but tests were not updated. This affects
+   9-11% of failures.
+
+3. STRING FORMATTING: Some string values changed format during refactoring
+   (e.g., 'pre - commit' -> 'pre-commit'). Only 4% of failures.
+
+4. TWO MAIN CULPRITS: DI Constructor mismatches + Parameter name
+   mismatches account for 35-37% of all failures. Fixing these two
+   patterns could resolve 160+ tests.
+
+5. FIXABLE: Most issues are straightforward fixes - not fundamental
+   bugs but rather test updates needed after refactoring.
+
+================================================================================

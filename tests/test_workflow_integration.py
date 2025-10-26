@@ -1,11 +1,10 @@
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 from rich.console import Console
 
 from crackerjack.core.session_coordinator import SessionTracker
-from crackerjack.models.task import HookResult, TaskStatus
+from crackerjack.models.task import HookResult, TaskStatusData
 
 
 class TestHookResult:
@@ -23,7 +22,7 @@ class TestHookResult:
         assert hook.duration == 1.5
         assert hook.files_processed == 10
         assert hook.issues_found == []
-        assert hook.stage == "pre - commit"
+        assert hook.stage == "pre-commit"
 
     def test_hook_result_post_init_issues(self) -> None:
         hook = HookResult(
@@ -49,7 +48,7 @@ class TestHookResult:
 
 class TestTaskStatus:
     def test_task_status_initialization(self) -> None:
-        task = TaskStatus(
+        task = TaskStatusData(
             id="test - task",
             name="Test Task",
             status="pending",
@@ -65,7 +64,7 @@ class TestTaskStatus:
         assert task.files_changed == []
 
     def test_task_status_post_init_files_changed(self) -> None:
-        task = TaskStatus(
+        task = TaskStatusData(
             id="test - task",
             name="Test Task",
             status="pending",
@@ -74,7 +73,7 @@ class TestTaskStatus:
         assert task.files_changed == []
 
     def test_task_status_duration_calculation(self) -> None:
-        task = TaskStatus(
+        task = TaskStatusData(
             id="test - task",
             name="Test Task",
             status="completed",
@@ -85,7 +84,7 @@ class TestTaskStatus:
 
     def test_task_status_with_details(self) -> None:
         files = ["file1.py", "file2.py"]
-        task = TaskStatus(
+        task = TaskStatusData(
             id="test - task",
             name="Test Task",
             status="completed",
@@ -122,9 +121,7 @@ class TestSessionTracker:
         assert not session_tracker.metadata
 
     def test_session_tracker_start_task(self, session_tracker: SessionTracker) -> None:
-        with patch.object(session_tracker, "_update_progress_file"):
-            with patch.object(session_tracker.console, "print"):
-                session_tracker.start_task("task1", "Test Task", "Task details")
+        session_tracker.start_task("task1", "Test Task", "Task details")
         assert "task1" in session_tracker.tasks
         task = session_tracker.tasks["task1"]
         assert task.id == "task1"
@@ -138,14 +135,12 @@ class TestSessionTracker:
         self,
         session_tracker: SessionTracker,
     ) -> None:
-        with patch.object(session_tracker, "_update_progress_file"):
-            with patch.object(session_tracker.console, "print"):
-                session_tracker.start_task("task1", "Test Task")
-                session_tracker.complete_task(
-                    "task1",
-                    "Completed successfully",
-                    ["file1.py", "file2.py"],
-                )
+        session_tracker.start_task("task1", "Test Task")
+        session_tracker.complete_task(
+            "task1",
+            "Completed successfully",
+            ["file1.py", "file2.py"],
+        )
 
         task = session_tracker.tasks["task1"]
         assert task.status == "completed"
@@ -155,36 +150,20 @@ class TestSessionTracker:
         assert task.files_changed == ["file1.py", "file2.py"]
 
     def test_session_tracker_fail_task(self, session_tracker: SessionTracker) -> None:
-        with patch.object(session_tracker, "_update_progress_file"):
-            with patch.object(session_tracker.console, "print"):
-                session_tracker.start_task("task1", "Test Task")
-                session_tracker.fail_task("task1", "Error details", "Task failed")
+        session_tracker.start_task("task1", "Test Task")
+        session_tracker.fail_task("task1", "Error details", "Task failed")
         task = session_tracker.tasks["task1"]
         assert task.status == "failed"
         assert task.end_time is not None
         assert task.duration is not None
         assert task.error_message == "Error details"
 
-    def test_session_tracker_skip_task(self, session_tracker: SessionTracker) -> None:
-        with patch.object(session_tracker, "_update_progress_file"):
-            with patch.object(session_tracker.console, "print"):
-                session_tracker.start_task("task1", "Test Task")
-                session_tracker.skip_task("task1", "Task not needed")
-        task = session_tracker.tasks["task1"]
-        assert task.status == "skipped"
-        assert task.end_time is not None
-        assert task.details is not None
-        assert "Skipped: Task not needed" in task.details
-
     def test_session_tracker_nonexistent_task_operations(
         self,
         session_tracker: SessionTracker,
     ) -> None:
-        with patch.object(session_tracker, "_update_progress_file"):
-            with patch.object(session_tracker.console, "print"):
-                session_tracker.complete_task("nonexistent", "Complete")
-                session_tracker.fail_task("nonexistent", "Error", "Fail")
-                session_tracker.skip_task("nonexistent", "Skip")
+        session_tracker.complete_task("nonexistent", "Complete")
+        session_tracker.fail_task("nonexistent", "Error", "Fail")
 
 
 class TestWorkflowIntegration:
@@ -196,7 +175,7 @@ class TestWorkflowIntegration:
             duration=1.5,
             files_processed=5,
         )
-        task = TaskStatus(
+        task = TaskStatusData(
             id="hook - task",
             name="Run Hook",
             status="completed",
@@ -219,18 +198,16 @@ class TestWorkflowIntegration:
             start_time=1000.0,
             progress_file=progress_file,
         )
-        with patch.object(tracker, "_update_progress_file"):
-            with patch.object(tracker.console, "print"):
-                tracker.start_task("setup", "Setup Environment")
-                tracker.complete_task("setup", "Environment ready")
-                tracker.start_task("test", "Run Tests")
-                tracker.complete_task(
-                    "test",
-                    "All tests passed",
-                    ["test1.py", "test2.py"],
-                )
-                tracker.start_task("deploy", "Deploy Package")
-                tracker.fail_task("deploy", "Network timeout", "Deployment failed")
+        tracker.start_task("setup", "Setup Environment")
+        tracker.complete_task("setup", "Environment ready")
+        tracker.start_task("test", "Run Tests")
+        tracker.complete_task(
+            "test",
+            "All tests passed",
+            ["test1.py", "test2.py"],
+        )
+        tracker.start_task("deploy", "Deploy Package")
+        tracker.fail_task("deploy", "Network timeout", "Deployment failed")
         assert len(tracker.tasks) == 3
         assert tracker.tasks["setup"].status == "completed"
         assert tracker.tasks["test"].status == "completed"

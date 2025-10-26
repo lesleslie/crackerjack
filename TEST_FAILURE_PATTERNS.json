@@ -1,0 +1,279 @@
+{
+  "metadata": {
+    "project": "Crackerjack",
+    "analysis_date": "2025-10-26",
+    "total_test_failures": 467,
+    "total_test_files_affected": 50,
+    "top_10_failures_count": 238,
+    "top_10_percentage": "51%"
+  },
+  "patterns": [
+    {
+      "id": 1,
+      "name": "DI Constructor Signature Mismatch",
+      "severity": "CRITICAL",
+      "test_count": 120,
+      "percentage_of_total": "26%",
+      "error_type": "TypeError: unexpected keyword argument",
+      "affected_files": [
+        "tests/test_publish_manager_coverage.py",
+        "tests/test_session_coordinator_coverage.py",
+        "tests/test_session_coordinator_comprehensive.py",
+        "tests/managers/test_hook_manager_orchestration.py",
+        "tests/test_managers_consolidated.py",
+        "tests/managers/test_hook_manager_triple_parallel.py"
+      ],
+      "affected_classes": [
+        "PublishManagerImpl",
+        "HookManagerImpl",
+        "SessionCoordinator",
+        "TestManagementImpl",
+        "WorkflowOrchestrator"
+      ],
+      "root_cause": "Phase 4 refactoring converted core managers to use ACB @depends.inject decorator but test fixtures were not updated",
+      "example_error": "TypeError: PublishManagerImpl.__init__() got an unexpected keyword argument 'console'",
+      "test_code_example": "manager = PublishManagerImpl(mock_console, temp_pkg_path, dry_run=False)",
+      "fix_effort_hours": "2-3",
+      "fix_impact": "+120 tests passing (26% reduction in failures)",
+      "roi": "HIGH"
+    },
+    {
+      "id": 2,
+      "name": "Constructor Parameter Name Mismatch",
+      "severity": "HIGH",
+      "test_count": 45,
+      "percentage_of_total": "10%",
+      "error_type": "TypeError: unexpected keyword argument",
+      "affected_files": [
+        "tests/test_global_lock_config.py",
+        "tests/test_hook_lock_manager.py",
+        "tests/test_cli/test_global_lock_options.py",
+        "tests/test_unified_config.py"
+      ],
+      "affected_classes": [
+        "GlobalLockConfig",
+        "Config-related classes"
+      ],
+      "root_cause": "Constructor parameters were renamed during refactoring but tests still use old parameter names",
+      "example_error": "TypeError: GlobalLockConfig.__init__() got an unexpected keyword argument 'lock_directory'",
+      "test_code_example": "GlobalLockConfig(lock_directory=temp_path)",
+      "fix_effort_hours": "1-2",
+      "fix_impact": "+45 tests passing (10% reduction in failures)",
+      "roi": "HIGH"
+    },
+    {
+      "id": 3,
+      "name": "String Value/Formatting Mismatch",
+      "severity": "MEDIUM",
+      "test_count": 17,
+      "percentage_of_total": "4%",
+      "error_type": "AssertionError: string equality",
+      "affected_files": [
+        "tests/test_models_task_coverage.py"
+      ],
+      "affected_classes": [
+        "HookResult",
+        "TaskStatus"
+      ],
+      "root_cause": "String formatting changed during refactoring (e.g., 'pre - commit' -> 'pre-commit') but tests expect old format",
+      "example_error": "AssertionError: assert 'pre-commit' == 'pre - commit'",
+      "test_code_example": "assert result.stage == 'pre - commit'",
+      "fix_effort_hours": "0.5",
+      "fix_impact": "+17 tests passing (4% reduction in failures)",
+      "roi": "MEDIUM"
+    },
+    {
+      "id": 4,
+      "name": "Object Type Mismatch",
+      "severity": "MEDIUM",
+      "test_count": 15,
+      "percentage_of_total": "3%",
+      "error_type": "AssertionError/AttributeError",
+      "affected_files": [
+        "tests/test_session_coordinator_coverage.py",
+        "tests/test_acb_settings_integration.py"
+      ],
+      "affected_classes": [
+        "SessionCoordinator",
+        "Console"
+      ],
+      "root_cause": "Tests use Mock(spec=Console) but actual code uses acb.console.Console from DI",
+      "example_error": "AssertionError: assert <console width=80 None> == <Mock spec='Console'>",
+      "test_code_example": "console = Mock(spec=Console)\nassert coordinator.console == console",
+      "fix_effort_hours": "1",
+      "fix_impact": "+15 tests passing (3% reduction in failures)",
+      "roi": "MEDIUM"
+    },
+    {
+      "id": 5,
+      "name": "Coroutine Awaiting Issues",
+      "severity": "LOW",
+      "test_count": 10,
+      "percentage_of_total": "2%",
+      "error_type": "RuntimeWarning/AttributeError",
+      "affected_files": [
+        "tests/test_acb_settings_integration.py",
+        "tests/orchestration/test_execution_strategies.py"
+      ],
+      "affected_classes": [
+        "Depends"
+      ],
+      "root_cause": "Tests calling async code synchronously without proper awaiting",
+      "example_error": "RuntimeWarning: coroutine 'Depends.get' was never awaited",
+      "test_code_example": "depends.get(SomeService)  # Should be: await depends.get(SomeService)",
+      "fix_effort_hours": "1",
+      "fix_impact": "+10 tests passing (2% reduction in failures)",
+      "roi": "LOW"
+    },
+    {
+      "id": 6,
+      "name": "Other/Unclassified",
+      "severity": "UNKNOWN",
+      "test_count": 165,
+      "percentage_of_total": "35%",
+      "error_type": "Various",
+      "affected_files": [
+        "Multiple other test files"
+      ],
+      "affected_classes": [
+        "Various"
+      ],
+      "root_cause": "Requires further investigation",
+      "example_error": "Various",
+      "test_code_example": "N/A",
+      "fix_effort_hours": "TBD",
+      "fix_impact": "Unknown",
+      "roi": "UNKNOWN"
+    }
+  ],
+  "top_10_failing_files": [
+    {
+      "rank": 1,
+      "file": "tests/test_publish_manager_coverage.py",
+      "failure_count": 54,
+      "primary_pattern": "DI Constructor Mismatch",
+      "root_class": "PublishManagerImpl"
+    },
+    {
+      "rank": 2,
+      "file": "tests/test_session_coordinator_coverage.py",
+      "failure_count": 33,
+      "primary_pattern": "DI Constructor Mismatch + Console Type Mismatch",
+      "root_class": "SessionCoordinator"
+    },
+    {
+      "rank": 3,
+      "file": "tests/test_global_lock_config.py",
+      "failure_count": 25,
+      "primary_pattern": "Parameter Name Mismatch",
+      "root_class": "GlobalLockConfig"
+    },
+    {
+      "rank": 4,
+      "file": "tests/test_managers_consolidated.py",
+      "failure_count": 23,
+      "primary_pattern": "DI Constructor Mismatch",
+      "root_class": "HookManagerImpl, TestManagementImpl, PublishManagerImpl"
+    },
+    {
+      "rank": 5,
+      "file": "tests/managers/test_hook_manager_orchestration.py",
+      "failure_count": 20,
+      "primary_pattern": "DI Constructor Mismatch",
+      "root_class": "HookManagerImpl"
+    },
+    {
+      "rank": 6,
+      "file": "tests/test_hook_lock_manager.py",
+      "failure_count": 19,
+      "primary_pattern": "Parameter Name Mismatch",
+      "root_class": "GlobalLockConfig"
+    },
+    {
+      "rank": 7,
+      "file": "tests/test_session_coordinator_comprehensive.py",
+      "failure_count": 18,
+      "primary_pattern": "DI Constructor Mismatch + Type Mismatch",
+      "root_class": "SessionCoordinator"
+    },
+    {
+      "rank": 8,
+      "file": "tests/test_models_task_coverage.py",
+      "failure_count": 17,
+      "primary_pattern": "String Value Mismatch",
+      "root_class": "HookResult, TaskStatus"
+    },
+    {
+      "rank": 9,
+      "file": "tests/test_cli/test_global_lock_options.py",
+      "failure_count": 15,
+      "primary_pattern": "Parameter Name Mismatch + DI Issues",
+      "root_class": "GlobalLockConfig"
+    },
+    {
+      "rank": 10,
+      "file": "tests/test_unified_config.py",
+      "failure_count": 14,
+      "primary_pattern": "Parameter Name Mismatch",
+      "root_class": "Config-related classes"
+    }
+  ],
+  "fix_phases": [
+    {
+      "phase": 1,
+      "name": "DI Constructor Signature Mismatches",
+      "priority": "CRITICAL",
+      "target_test_count": 120,
+      "estimated_time_hours": "2-3",
+      "files_to_fix": [
+        "tests/test_publish_manager_coverage.py",
+        "tests/test_session_coordinator_coverage.py",
+        "tests/test_session_coordinator_comprehensive.py",
+        "tests/managers/test_hook_manager_orchestration.py",
+        "tests/test_managers_consolidated.py",
+        "tests/managers/test_hook_manager_triple_parallel.py"
+      ],
+      "strategy": "Create DI-aware test fixtures or wrapper constructors",
+      "expected_improvement_percentage": "26%"
+    },
+    {
+      "phase": 2,
+      "name": "Constructor Parameter Name Mismatches",
+      "priority": "HIGH",
+      "target_test_count": 45,
+      "estimated_time_hours": "1-2",
+      "files_to_fix": [
+        "tests/test_global_lock_config.py",
+        "tests/test_hook_lock_manager.py",
+        "tests/test_cli/test_global_lock_options.py",
+        "tests/test_unified_config.py"
+      ],
+      "strategy": "Investigate GlobalLockConfig actual parameters and update test calls",
+      "expected_improvement_percentage": "10%"
+    },
+    {
+      "phase": 3,
+      "name": "String Value/Formatting Mismatches",
+      "priority": "MEDIUM",
+      "target_test_count": 17,
+      "estimated_time_hours": "0.5",
+      "files_to_fix": [
+        "tests/test_models_task_coverage.py"
+      ],
+      "strategy": "Update test expectations to match actual string format",
+      "expected_improvement_percentage": "4%"
+    }
+  ],
+  "summary": {
+    "critical_patterns": 1,
+    "high_patterns": 1,
+    "medium_patterns": 2,
+    "low_patterns": 1,
+    "achievable_improvements": 177,
+    "achievable_improvements_percentage": "38%",
+    "key_insight_1": "DI refactoring debt from Phase 4 refactoring - constructors changed but tests not updated",
+    "key_insight_2": "Parameter renames in config classes - tests still use old names",
+    "key_insight_3": "Two main culprits (DI + Parameter mismatches) account for 35-37% of all failures",
+    "recommendation": "Fix Phase 1 and Phase 2 to resolve 165 tests (35% of total failures)"
+  }
+}

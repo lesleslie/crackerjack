@@ -6,10 +6,13 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
-from acb import console
+from acb import console as acb_console
 from acb.depends import depends
 
 from ..ui.server_panels import create_server_panels
+
+# Get the actual Console instance
+console = acb_console.console
 
 try:
     import tomli

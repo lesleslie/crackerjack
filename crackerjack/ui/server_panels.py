@@ -14,7 +14,7 @@ class ServerPanels:
     WIDTH = 74  # Match session-mgmt-mcp width constraint
 
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or acb_console
+        self.console = console or acb_console.console
 
     def restart_header(self) -> None:
         """Display server restart header panel."""
