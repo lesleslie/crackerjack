@@ -639,7 +639,7 @@ class HookLockManager:
         return stats
 
     async def configure_from_options(self, options: t.Any) -> None:
-        self._global_config = await GlobalLockConfig.from_options(options)
+        self._global_config = GlobalLockConfig.from_options(options)
         self._global_lock_enabled = self._global_config.enabled
 
         if hasattr(options, "global_lock_cleanup") and options.global_lock_cleanup:
