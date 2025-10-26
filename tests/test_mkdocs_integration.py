@@ -1,4 +1,4 @@
-def test_generate_site_basic(self):
+def test_generate_site_basic():
     """Test basic functionality of generate_site."""
     try:
         result = generate_site()
@@ -10,7 +10,7 @@ def test_generate_site_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in generate_site: {e}")
 
-def test_build_site_basic(self):
+def test_build_site_basic():
     """Test basic functionality of build_site."""
     try:
         result = build_site()
@@ -22,7 +22,7 @@ def test_build_site_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in build_site: {e}")
 
-def test_create_config_from_project_basic(self):
+def test_create_config_from_project_basic():
     """Test basic functionality of create_config_from_project."""
     try:
         result = create_config_from_project()
@@ -34,7 +34,7 @@ def test_create_config_from_project_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_config_from_project: {e}")
 
-def test_build_documentation_site_basic(self):
+def test_build_documentation_site_basic():
     """Test basic functionality of build_documentation_site."""
     try:
         result = build_documentation_site()

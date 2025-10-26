@@ -1,4 +1,4 @@
-def test_get_variable_basic(self):
+def test_get_variable_basic():
     """Test basic functionality of get_variable."""
     try:
         result = get_variable()
@@ -10,7 +10,7 @@ def test_get_variable_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_variable: {e}")
 
-def test_set_variable_basic(self):
+def test_set_variable_basic():
     """Test basic functionality of set_variable."""
     try:
         result = set_variable()
@@ -22,7 +22,7 @@ def test_set_variable_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in set_variable: {e}")
 
-def test_get_section_basic(self):
+def test_get_section_basic():
     """Test basic functionality of get_section."""
     try:
         result = get_section()
@@ -34,7 +34,7 @@ def test_get_section_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_section: {e}")
 
-def test_set_section_basic(self):
+def test_set_section_basic():
     """Test basic functionality of set_section."""
     try:
         result = set_section()
@@ -46,7 +46,7 @@ def test_set_section_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in set_section: {e}")
 
-def test_extract_placeholders_basic(self):
+def test_extract_placeholders_basic():
     """Test basic functionality of extract_placeholders."""
     try:
         result = extract_placeholders()
@@ -58,7 +58,7 @@ def test_extract_placeholders_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in extract_placeholders: {e}")
 
-def test_render_template_basic(self):
+def test_render_template_basic():
     """Test basic functionality of render_template."""
     try:
         result = render_template()
@@ -70,7 +70,7 @@ def test_render_template_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in render_template: {e}")
 
-def test_register_template_basic(self):
+def test_register_template_basic():
     """Test basic functionality of register_template."""
     try:
         result = register_template()
@@ -82,7 +82,7 @@ def test_register_template_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in register_template: {e}")
 
-def test_create_ai_reference_template_basic(self):
+def test_create_ai_reference_template_basic():
     """Test basic functionality of create_ai_reference_template."""
     try:
         result = create_ai_reference_template()
@@ -94,7 +94,7 @@ def test_create_ai_reference_template_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_ai_reference_template: {e}")
 
-def test_create_user_guide_template_basic(self):
+def test_create_user_guide_template_basic():
     """Test basic functionality of create_user_guide_template."""
     try:
         result = create_user_guide_template()
@@ -106,7 +106,7 @@ def test_create_user_guide_template_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_user_guide_template: {e}")
 
-def test_replace_section_basic(self):
+def test_replace_section_basic():
     """Test basic functionality of replace_section."""
     try:
         result = replace_section()
@@ -118,7 +118,7 @@ def test_replace_section_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in replace_section: {e}")
 
-def test_enhance_command_block_basic(self):
+def test_enhance_command_block_basic():
     """Test basic functionality of enhance_command_block."""
     try:
         result = enhance_command_block()
@@ -130,7 +130,7 @@ def test_enhance_command_block_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in enhance_command_block: {e}")
 
-def test_enhance_step_basic(self):
+def test_enhance_step_basic():
     """Test basic functionality of enhance_step."""
     try:
         result = enhance_step()

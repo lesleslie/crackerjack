@@ -53,7 +53,6 @@ class CrackerjackAPI:
         self.verbose = verbose
 
         self.orchestrator = WorkflowOrchestrator(
-            console=self.console,
             pkg_path=self.project_path,
             verbose=self.verbose,
         )

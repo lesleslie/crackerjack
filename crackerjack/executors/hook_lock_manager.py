@@ -28,7 +28,10 @@ class HookLockManager:
             "complexipy",
         }
 
-        self._hook_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        # Create locks for all hooks that require them
+        self._hook_locks: dict[str, asyncio.Lock] = {
+            hook_name: asyncio.Lock() for hook_name in self._hooks_requiring_locks
+        }
 
         self._global_config = get_global_lock_config()
         self._global_lock_enabled = self._global_config.enabled
@@ -239,7 +242,9 @@ class HookLockManager:
             temp_path.chmod(0o600)
 
             try:
-                temp_path.rename(lock_path)
+                # Use os.link() for atomic exclusive creation - fails if target exists
+                # (Path.rename() will replace existing file, which breaks lock semantics)
+                os.link(str(temp_path), str(lock_path))
                 self.logger.debug(f"Successfully created global lock file: {lock_path}")
             except FileExistsError:
                 with suppress(OSError):
@@ -473,6 +478,9 @@ class HookLockManager:
 
     def add_hook_to_lock_list(self, hook_name: str) -> None:
         self._hooks_requiring_locks.add(hook_name)
+        # Create lock for this hook if it doesn't already exist
+        if hook_name not in self._hook_locks:
+            self._hook_locks[hook_name] = asyncio.Lock()
         self.logger.info(f"Added {hook_name} to hooks requiring locks")
 
     def remove_hook_from_lock_list(self, hook_name: str) -> None:
@@ -533,18 +541,11 @@ class HookLockManager:
     def _process_lock_file(
         self, lock_file: Path, max_age_hours: float, current_time: float
     ) -> int:
-        try:
-            file_age_hours = (current_time - lock_file.stat().st_mtime) / 3600
-
-            if file_age_hours > max_age_hours:
-                return self._cleanup_stale_lock_file(
-                    lock_file, max_age_hours, current_time
-                )
-            return 0
-
-        except OSError as e:
-            self.logger.warning(f"Could not process lock file {lock_file}: {e}")
-            return 0
+        # Always attempt to check lock file data (file mtime is unreliable in tests)
+        # The JSON data's last_heartbeat is the source of truth for staleness
+        return self._cleanup_stale_lock_file(
+            lock_file, max_age_hours, current_time
+        )
 
     def _cleanup_stale_lock_file(
         self, lock_file: Path, max_age_hours: float, current_time: float
@@ -638,7 +639,12 @@ class HookLockManager:
 
         return stats
 
-    async def configure_from_options(self, options: t.Any) -> None:
+    def configure_from_options(self, options: t.Any) -> None:
+        """Configure lock manager from CLI options.
+
+        This is a synchronous method because it only performs configuration
+        updates without needing to await any async operations.
+        """
         self._global_config = GlobalLockConfig.from_options(options)
         self._global_lock_enabled = self._global_config.enabled
 

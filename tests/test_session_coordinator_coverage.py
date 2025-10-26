@@ -3,19 +3,49 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from rich.console import Console
+from acb.console import Console
 
+from acb.depends import depends
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.task import SessionTracker
 
 
+# Module-level DI context setup for SessionCoordinator testing
+@pytest.fixture
+def mock_console_di() -> MagicMock:
+    """Mock Console for DI context."""
+    return MagicMock(spec=Console)
+
+
+@pytest.fixture
+def session_coordinator_di_context(mock_console_di: MagicMock):
+    """Set up DI context for SessionCoordinator testing."""
+    injection_map = {Console: mock_console_di}
+
+    original_values = {}
+    try:
+        # Register Console mock with DI
+        try:
+            original_values[Console] = depends.get_sync(Console)
+        except Exception:
+            original_values[Console] = None
+        depends.set(Console, mock_console_di)
+
+        yield injection_map, mock_console_di
+    finally:
+        # Restore original values after test
+        if original_values[Console] is not None:
+            depends.set(Console, original_values[Console])
+
+
 class TestSessionCoordinator:
     @pytest.fixture
-    def console(self):
-        return Mock(spec=Console)
+    def console(self, mock_console_di):
+        """Provide console mock for tests."""
+        return mock_console_di
 
     @pytest.fixture
     def temp_dir(self):
@@ -23,8 +53,10 @@ class TestSessionCoordinator:
             yield Path(temp_dir)
 
     @pytest.fixture
-    def coordinator(self, console, temp_dir):
-        return SessionCoordinator(console=console, pkg_path=temp_dir)
+    def coordinator(self, session_coordinator_di_context, mock_console_di, temp_dir):
+        """Create SessionCoordinator with mocked Console via DI."""
+        injection_map, mock_console = session_coordinator_di_context
+        return SessionCoordinator(console=mock_console, pkg_path=temp_dir)
 
     @pytest.fixture
     def mock_options(self):

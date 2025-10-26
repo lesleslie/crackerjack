@@ -1,4 +1,4 @@
-def test_process_command_output_basic(self):
+def test_process_command_output_basic():
     """Test basic functionality of process_command_output."""
     try:
         result = process_command_output()
@@ -10,7 +10,7 @@ def test_process_command_output_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in process_command_output: {e}")
 
-def test_analyze_hook_result_basic(self):
+def test_analyze_hook_result_basic():
     """Test basic functionality of analyze_hook_result."""
     try:
         result = analyze_hook_result()
@@ -22,7 +22,7 @@ def test_analyze_hook_result_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in analyze_hook_result: {e}")
 
-def test_categorize_file_basic(self):
+def test_categorize_file_basic():
     """Test basic functionality of categorize_file."""
     try:
         result = categorize_file()
@@ -34,7 +34,7 @@ def test_categorize_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in categorize_file: {e}")
 
-def test_process_hook_results_basic(self):
+def test_process_hook_results_basic():
     """Test basic functionality of process_hook_results."""
     try:
         result = process_hook_results()
@@ -46,7 +46,7 @@ def test_process_hook_results_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in process_hook_results: {e}")
 
-def test_clean_python_code_basic(self):
+def test_clean_python_code_basic():
     """Test basic functionality of clean_python_code."""
     try:
         result = clean_python_code()
@@ -58,7 +58,7 @@ def test_clean_python_code_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in clean_python_code: {e}")
 
-def test_run_command_basic(self):
+def test_run_command_basic():
     """Test basic functionality of run_command."""
     try:
         result = run_command()
@@ -70,7 +70,7 @@ def test_run_command_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_command: {e}")
 
-def test_load_basic(self):
+def test_load_basic():
     """Test basic functionality of load."""
     try:
         result = load()
@@ -82,7 +82,7 @@ def test_load_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in load: {e}")
 
-def test_update_basic(self):
+def test_update_basic():
     """Test basic functionality of update."""
     try:
         result = update()
@@ -94,7 +94,7 @@ def test_update_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in update: {e}")
 
-def test_save_basic(self):
+def test_save_basic():
     """Test basic functionality of save."""
     try:
         result = save()
@@ -106,7 +106,7 @@ def test_save_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in save: {e}")
 
-def test_run_basic(self):
+def test_run_basic():
     """Test basic functionality of run."""
     try:
         result = run()
@@ -118,7 +118,7 @@ def test_run_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run: {e}")
 
-def test_handle_result_basic(self):
+def test_handle_result_basic():
     """Test basic functionality of handle_result."""
     try:
         result = handle_result()

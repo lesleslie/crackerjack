@@ -1,4 +1,4 @@
-def test_memoize_with_ttl_basic(self):
+def test_memoize_with_ttl_basic():
     """Test basic functionality of memoize_with_ttl."""
     try:
         result = memoize_with_ttl()
@@ -10,7 +10,7 @@ def test_memoize_with_ttl_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in memoize_with_ttl: {e}")
 
-def test_batch_file_operations_basic(self):
+def test_batch_file_operations_basic():
     """Test basic functionality of batch_file_operations."""
     try:
         result = batch_file_operations()
@@ -22,7 +22,7 @@ def test_batch_file_operations_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in batch_file_operations: {e}")
 
-def test_optimize_subprocess_calls_basic(self):
+def test_optimize_subprocess_calls_basic():
     """Test basic functionality of optimize_subprocess_calls."""
     try:
         result = optimize_subprocess_calls()
@@ -34,7 +34,7 @@ def test_optimize_subprocess_calls_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in optimize_subprocess_calls: {e}")
 
-def test_get_performance_monitor_basic(self):
+def test_get_performance_monitor_basic():
     """Test basic functionality of get_performance_monitor."""
     try:
         result = get_performance_monitor()
@@ -46,7 +46,7 @@ def test_get_performance_monitor_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_performance_monitor: {e}")
 
-def test_reset_performance_monitor_basic(self):
+def test_reset_performance_monitor_basic():
     """Test basic functionality of reset_performance_monitor."""
     try:
         result = reset_performance_monitor()
@@ -58,7 +58,7 @@ def test_reset_performance_monitor_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in reset_performance_monitor: {e}")
 
-def test_get_basic(self):
+def test_get_basic():
     """Test basic functionality of get."""
     try:
         result = get()
@@ -70,7 +70,7 @@ def test_get_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get: {e}")
 
-def test_set_basic(self):
+def test_set_basic():
     """Test basic functionality of set."""
     try:
         result = set()
@@ -82,7 +82,7 @@ def test_set_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in set: {e}")
 
-def test_clear_basic(self):
+def test_clear_basic():
     """Test basic functionality of clear."""
     try:
         result = clear()
@@ -94,7 +94,7 @@ def test_clear_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in clear: {e}")
 
-def test_size_basic(self):
+def test_size_basic():
     """Test basic functionality of size."""
     try:
         result = size()
@@ -106,7 +106,7 @@ def test_size_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in size: {e}")
 
-def test_time_operation_basic(self):
+def test_time_operation_basic():
     """Test basic functionality of time_operation."""
     try:
         result = time_operation()
@@ -118,7 +118,7 @@ def test_time_operation_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in time_operation: {e}")
 
-def test_record_metric_basic(self):
+def test_record_metric_basic():
     """Test basic functionality of record_metric."""
     try:
         result = record_metric()
@@ -130,7 +130,7 @@ def test_record_metric_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_metric: {e}")
 
-def test_get_stats_basic(self):
+def test_get_stats_basic():
     """Test basic functionality of get_stats."""
     try:
         result = get_stats()
@@ -142,7 +142,7 @@ def test_get_stats_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_stats: {e}")
 
-def test_print_stats_basic(self):
+def test_print_stats_basic():
     """Test basic functionality of print_stats."""
     try:
         result = print_stats()
@@ -154,7 +154,7 @@ def test_print_stats_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in print_stats: {e}")
 
-def test_decorator_basic(self):
+def test_decorator_basic():
     """Test basic functionality of decorator."""
     try:
         result = decorator()
@@ -166,7 +166,7 @@ def test_decorator_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in decorator: {e}")
 
-def test_get_python_files_basic(self):
+def test_get_python_files_basic():
     """Test basic functionality of get_python_files."""
     try:
         result = get_python_files()
@@ -178,7 +178,7 @@ def test_get_python_files_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_python_files: {e}")
 
-def test_get_modified_files_basic(self):
+def test_get_modified_files_basic():
     """Test basic functionality of get_modified_files."""
     try:
         result = get_modified_files()
@@ -190,7 +190,7 @@ def test_get_modified_files_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_modified_files: {e}")
 
-def test_clear_cache_basic(self):
+def test_clear_cache_basic():
     """Test basic functionality of clear_cache."""
     try:
         result = clear_cache()
@@ -202,7 +202,7 @@ def test_clear_cache_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in clear_cache: {e}")
 
-def test_execute_tasks_basic(self):
+def test_execute_tasks_basic():
     """Test basic functionality of execute_tasks."""
     try:
         result = execute_tasks()
@@ -214,7 +214,7 @@ def test_execute_tasks_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in execute_tasks: {e}")
 
-def test_run_command_basic(self):
+def test_run_command_basic():
     """Test basic functionality of run_command."""
     try:
         result = run_command()
@@ -226,7 +226,7 @@ def test_run_command_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_command: {e}")
 
-def test_wrapper_basic(self):
+def test_wrapper_basic():
     """Test basic functionality of wrapper."""
     try:
         result = wrapper()
@@ -238,7 +238,7 @@ def test_wrapper_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in wrapper: {e}")
 
-def test_wrapper_basic(self):
+def test_wrapper_basic():
     """Test basic functionality of wrapper."""
     try:
         result = wrapper()

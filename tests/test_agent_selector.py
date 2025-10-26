@@ -1,4 +1,4 @@
-def test_get_registry_basic(self):
+def test_get_registry_basic():
     """Test basic functionality of get_registry."""
     try:
         result = get_registry()

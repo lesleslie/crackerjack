@@ -1,17 +1,45 @@
 import subprocess
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from rich.console import Console
+from acb.console import Console
 
+from acb.depends import depends
 from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.managers.publish_manager import PublishManagerImpl
 from crackerjack.managers.test_manager import TestManagementImpl
 
 
+# Module-level DI context setup
 @pytest.fixture
-def console():
-    return Console(force_terminal=True)
+def mock_console_di() -> MagicMock:
+    """Mock Console for DI context."""
+    return MagicMock(spec=Console)
+
+
+@pytest.fixture
+def managers_di_context(mock_console_di: MagicMock):
+    """Set up DI context for managers testing."""
+    injection_map = {Console: mock_console_di}
+
+    original_values = {}
+    try:
+        try:
+            original_values[Console] = depends.get_sync(Console)
+        except Exception:
+            original_values[Console] = None
+        depends.set(Console, mock_console_di)
+
+        yield injection_map, mock_console_di
+    finally:
+        if original_values[Console] is not None:
+            depends.set(Console, original_values[Console])
+
+
+@pytest.fixture
+def console(mock_console_di):
+    """Provide console mock for tests."""
+    return mock_console_di
 
 
 @pytest.fixture
@@ -66,15 +94,14 @@ class MockOptions:
 
 class TestHookManagerImpl:
     def test_initialization(self, console, temp_project) -> None:
-        manager = HookManagerImpl(console=console, pkg_path=temp_project)
-        assert manager.console is console
+        manager = HookManagerImpl(pkg_path=temp_project)
         assert manager.pkg_path == temp_project
 
     @patch("subprocess.run")
     def test_run_fast_hooks_success(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
-        manager = HookManagerImpl(console=console, pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
@@ -88,7 +115,7 @@ class TestHookManagerImpl:
     ) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
-        manager = HookManagerImpl(console=console, pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project)
 
         results = manager.run_comprehensive_hooks()
         assert isinstance(results, list)
@@ -97,13 +124,13 @@ class TestHookManagerImpl:
     def test_run_hooks_failure(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=1, stdout="", stderr="Hook failed")
 
-        manager = HookManagerImpl(console=console, pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
 
     def test_skip_hooks_option(self, console, temp_project) -> None:
-        manager = HookManagerImpl(console=console, pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
@@ -112,7 +139,6 @@ class TestHookManagerImpl:
 class TestTestManagementImpl:
     def test_initialization(self, console, temp_project) -> None:
         manager = TestManagementImpl(pkg_path=temp_project)
-        assert manager.console is console
         assert manager.pkg_path == temp_project
 
     @patch("subprocess.run")
@@ -123,7 +149,7 @@ class TestTestManagementImpl:
             stderr="",
         )
 
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True)
 
         result = manager.run_tests(options)
@@ -157,7 +183,7 @@ class TestTestManagementImpl:
         mock_process.poll.return_value = 1
         mock_popen.return_value = mock_process
 
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
 
         options = MockOptions(
             test=True,
@@ -168,7 +194,7 @@ class TestTestManagementImpl:
         assert result is False
 
     def test_test_disabled(self, console, temp_project) -> None:
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=False)
 
         result = manager.run_tests(options)
@@ -182,7 +208,7 @@ class TestTestManagementImpl:
             stderr="",
         )
 
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True, benchmark=True)
 
         result = manager.run_tests(options)
@@ -192,7 +218,7 @@ class TestTestManagementImpl:
     def test_test_workers_configuration(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="Tests completed", stderr="")
 
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True, test_workers=4)
 
         result = manager.run_tests(options)
@@ -202,7 +228,7 @@ class TestTestManagementImpl:
     def test_test_timeout_configuration(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="Tests completed", stderr="")
 
-        manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True, test_timeout=300)
 
         result = manager.run_tests(options)
@@ -211,7 +237,7 @@ class TestTestManagementImpl:
 
 class TestPublishManagerImpl:
     def test_initialization(self, console, temp_project) -> None:
-        manager = PublishManagerImpl(pkg_path=temp_project)
+        manager = PublishManagerImpl(console=console, pkg_path=temp_project)
         assert manager.console is console
         assert manager.pkg_path == temp_project
 

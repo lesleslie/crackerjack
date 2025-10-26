@@ -1,4 +1,4 @@
-def test_timeout_async_basic(self):
+def test_timeout_async_basic():
     """Test basic functionality of timeout_async."""
     try:
         result = timeout_async()
@@ -10,7 +10,7 @@ def test_timeout_async_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in timeout_async: {e}")
 
-def test_get_timeout_manager_basic(self):
+def test_get_timeout_manager_basic():
     """Test basic functionality of get_timeout_manager."""
     try:
         result = get_timeout_manager()
@@ -22,7 +22,7 @@ def test_get_timeout_manager_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_timeout_manager: {e}")
 
-def test_configure_timeouts_basic(self):
+def test_configure_timeouts_basic():
     """Test basic functionality of configure_timeouts."""
     try:
         result = configure_timeouts()
@@ -34,7 +34,7 @@ def test_configure_timeouts_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in configure_timeouts: {e}")
 
-def test_get_performance_report_basic(self):
+def test_get_performance_report_basic():
     """Test basic functionality of get_performance_report."""
     try:
         result = get_performance_report()
@@ -46,7 +46,7 @@ def test_get_performance_report_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_performance_report: {e}")
 
-def test_record_operation_start_basic(self):
+def test_record_operation_start_basic():
     """Test basic functionality of record_operation_start."""
     try:
         result = record_operation_start()
@@ -58,7 +58,7 @@ def test_record_operation_start_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_start: {e}")
 
-def test_record_operation_success_basic(self):
+def test_record_operation_success_basic():
     """Test basic functionality of record_operation_success."""
     try:
         result = record_operation_success()
@@ -70,7 +70,7 @@ def test_record_operation_success_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_success: {e}")
 
-def test_record_operation_failure_basic(self):
+def test_record_operation_failure_basic():
     """Test basic functionality of record_operation_failure."""
     try:
         result = record_operation_failure()
@@ -82,7 +82,7 @@ def test_record_operation_failure_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_failure: {e}")
 
-def test_record_operation_timeout_basic(self):
+def test_record_operation_timeout_basic():
     """Test basic functionality of record_operation_timeout."""
     try:
         result = record_operation_timeout()
@@ -94,7 +94,7 @@ def test_record_operation_timeout_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_operation_timeout: {e}")
 
-def test_record_circuit_breaker_event_basic(self):
+def test_record_circuit_breaker_event_basic():
     """Test basic functionality of record_circuit_breaker_event."""
     try:
         result = record_circuit_breaker_event()
@@ -106,7 +106,7 @@ def test_record_circuit_breaker_event_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in record_circuit_breaker_event: {e}")
 
-def test_get_summary_stats_basic(self):
+def test_get_summary_stats_basic():
     """Test basic functionality of get_summary_stats."""
     try:
         result = get_summary_stats()
@@ -118,7 +118,7 @@ def test_get_summary_stats_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_summary_stats: {e}")
 
-def test_get_all_metrics_basic(self):
+def test_get_all_metrics_basic():
     """Test basic functionality of get_all_metrics."""
     try:
         result = get_all_metrics()
@@ -130,7 +130,7 @@ def test_get_all_metrics_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_all_metrics: {e}")
 
-def test_get_performance_alerts_basic(self):
+def test_get_performance_alerts_basic():
     """Test basic functionality of get_performance_alerts."""
     try:
         result = get_performance_alerts()
@@ -142,7 +142,7 @@ def test_get_performance_alerts_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_performance_alerts: {e}")
 
-def test_get_recent_timeout_events_basic(self):
+def test_get_recent_timeout_events_basic():
     """Test basic functionality of get_recent_timeout_events."""
     try:
         result = get_recent_timeout_events()
@@ -154,7 +154,7 @@ def test_get_recent_timeout_events_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_recent_timeout_events: {e}")
 
-def test_performance_monitor_basic(self):
+def test_performance_monitor_basic():
     """Test basic functionality of performance_monitor."""
     try:
         result = performance_monitor()
@@ -166,7 +166,7 @@ def test_performance_monitor_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in performance_monitor: {e}")
 
-def test_timeout_context_basic(self):
+def test_timeout_context_basic():
     """Test basic functionality of timeout_context."""
     try:
         result = timeout_context()
@@ -178,7 +178,7 @@ def test_timeout_context_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in timeout_context: {e}")
 
-def test_with_timeout_basic(self):
+def test_with_timeout_basic():
     """Test basic functionality of with_timeout."""
     try:
         result = with_timeout()
@@ -190,7 +190,7 @@ def test_with_timeout_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in with_timeout: {e}")
 
-def test_get_stats_basic(self):
+def test_get_stats_basic():
     """Test basic functionality of get_stats."""
     try:
         result = get_stats()
@@ -202,7 +202,7 @@ def test_get_stats_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get_stats: {e}")
 
-def test_decorator_basic(self):
+def test_decorator_basic():
     """Test basic functionality of decorator."""
     try:
         result = decorator()
@@ -214,7 +214,7 @@ def test_decorator_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in decorator: {e}")
 
-def test_wrapper_basic(self):
+def test_wrapper_basic():
     """Test basic functionality of wrapper."""
     try:
         result = wrapper()

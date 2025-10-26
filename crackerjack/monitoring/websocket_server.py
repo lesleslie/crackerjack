@@ -18,7 +18,7 @@ from crackerjack.monitoring.metrics_collector import (
     MetricsCollector,
     UnifiedDashboardMetrics,
 )
-from crackerjack.services.acb_cache_adapter importCrackerjackCache
+from crackerjack.services.acb_cache_adapter import CrackerjackCache
 from crackerjack.ui.dashboard_renderer import render_monitoring_dashboard
 
 logger = logging.getLogger(__name__)

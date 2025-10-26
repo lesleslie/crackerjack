@@ -65,7 +65,7 @@ def test_load_basic():
     # Skip this test since load() function requires specific arguments
     pytest.skip("Function requires specific arguments - manual implementation needed")
 
-def test_debug_basic(self):
+def test_debug_basic():
     """Test basic functionality of debug."""
     try:
         result = debug()
@@ -77,7 +77,7 @@ def test_debug_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in debug: {e}")
 
-def test_info_basic(self):
+def test_info_basic():
     """Test basic functionality of info."""
     try:
         result = info()
@@ -89,7 +89,7 @@ def test_info_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in info: {e}")
 
-def test_warning_basic(self):
+def test_warning_basic():
     """Test basic functionality of warning."""
     try:
         result = warning()
@@ -101,7 +101,7 @@ def test_warning_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in warning: {e}")
 
-def test_error_basic(self):
+def test_error_basic():
     """Test basic functionality of error."""
     try:
         result = error()

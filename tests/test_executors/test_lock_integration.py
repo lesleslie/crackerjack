@@ -8,6 +8,7 @@ Tests cover:
 
 import asyncio
 import json
+import logging
 import tempfile
 import unittest.mock
 from pathlib import Path
@@ -34,9 +35,10 @@ class TestAsyncHookExecutorIntegration:
         mock_lock_manager.acquire_hook_lock = unittest.mock.AsyncMock()
 
         # Configure AsyncHookExecutor with mock lock manager
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager
         )
 
         # Verify lock manager is properly injected
@@ -54,8 +56,10 @@ class TestAsyncHookExecutorIntegration:
         lock_manager.enable_global_lock(True)
 
         # Create executor
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -91,8 +95,10 @@ class TestAsyncHookExecutorIntegration:
         lock_manager._global_config = test_config
         lock_manager.enable_global_lock(False)
 
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -133,9 +139,11 @@ class TestAsyncHookExecutorIntegration:
         lock_manager.set_hook_timeout(hook_name, 0.5)  # Short timeout for test
 
         # Create two executors (simulating different sessions)
+        logger = logging.getLogger(__name__)
         console = Console()
 
         executor1 = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -143,6 +151,7 @@ class TestAsyncHookExecutorIntegration:
         )
 
         executor2 = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -248,10 +257,12 @@ class TestHookExecutorLockCoordination:
         coordinated_hook = "cross_executor_test"
         lock_manager.add_hook_to_lock_list(coordinated_hook)
 
+        logger = logging.getLogger(__name__)
         console = Console()
 
         # Create both executor types with same lock manager
         async_executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -316,8 +327,10 @@ class TestHookExecutorLockCoordination:
         stats_hook = "statistics_test_hook"
         lock_manager.add_hook_to_lock_list(stats_hook)
 
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -408,10 +421,11 @@ class TestExecutorConfigurationFlow:
         assert lock_manager._global_config.enabled is False
 
         # Create executors with disabled global locks
+        logger = logging.getLogger(__name__)
         console = Console()
 
         async_executor = AsyncHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
         )
 
         individual_executor = IndividualHookExecutor(
@@ -439,9 +453,10 @@ class TestExecutorConfigurationFlow:
         assert lock_manager._global_config.timeout_seconds == float(custom_timeout)
 
         # Create executor and verify timeout
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
         )
 
         assert executor.hook_lock_manager._global_config.timeout_seconds == float(
@@ -467,8 +482,10 @@ class TestExecutorErrorHandling:
             lock_manager._global_config = test_config
             lock_manager.enable_global_lock(True)
 
+            logger = logging.getLogger(__name__)
             console = Console()
             executor = AsyncHookExecutor(
+                logger=logger,
                 console=console,
                 pkg_path=tmp_path,
                 hook_lock_manager=lock_manager,
@@ -528,8 +545,10 @@ class TestExecutorErrorHandling:
         with open(lock_path, "w", encoding="utf-8") as f:
             json.dump(blocking_lock_data, f)
 
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=lock_manager,
@@ -561,8 +580,9 @@ class TestExecutorDefaultLockManager:
 
     def test_async_executor_default_lock_manager(self, tmp_path):
         """Test that AsyncHookExecutor uses default lock manager when none provided."""
+        logger = logging.getLogger(__name__)
         console = Console()
-        executor = AsyncHookExecutor(console=console, pkg_path=tmp_path)
+        executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=tmp_path)
 
         # Should have default lock manager injected
         assert executor.hook_lock_manager is not None
@@ -588,9 +608,10 @@ class TestExecutorDefaultLockManager:
     @pytest.mark.asyncio
     async def test_executors_share_default_lock_manager(self, tmp_path):
         """Test that both executor types share the same default lock manager."""
+        logger = logging.getLogger(__name__)
         console = Console()
 
-        async_executor = AsyncHookExecutor(console=console, pkg_path=tmp_path)
+        async_executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=tmp_path)
         individual_executor = IndividualHookExecutor(console=console, pkg_path=tmp_path)
 
         # Both should use the same singleton lock manager
@@ -620,8 +641,10 @@ class TestExecutorLockManagerMocking:
         mock_context.__aenter__ = unittest.mock.AsyncMock(return_value=None)
         mock_context.__aexit__ = unittest.mock.AsyncMock(return_value=None)
 
+        logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
+            logger=logger,
             console=console,
             pkg_path=tmp_path,
             hook_lock_manager=mock_lock_manager,
@@ -669,9 +692,11 @@ class TestExecutorLockManagerMocking:
                 "global_enabled"
             ]
 
+            logger = logging.getLogger(__name__)
             console = Console()
             with tempfile.TemporaryDirectory() as tmp_dir:
                 executor = AsyncHookExecutor(
+                    logger=logger,
                     console=console,
                     pkg_path=Path(tmp_dir),
                     hook_lock_manager=mock_lock_manager,

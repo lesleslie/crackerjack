@@ -1,4 +1,4 @@
-def test_run_complete_workflow_with_planning_basic(self):
+def test_run_complete_workflow_with_planning_basic():
     """Test basic functionality of run_complete_workflow_with_planning."""
     try:
         result = run_complete_workflow_with_planning()

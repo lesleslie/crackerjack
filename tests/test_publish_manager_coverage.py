@@ -2,30 +2,198 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
+from typing import Any
 
 import pytest
 
 from crackerjack.managers.publish_manager import PublishManagerImpl
+from acb.depends import depends
+from acb.console import Console
+
+
+# Module-level fixtures available to all test classes
+@pytest.fixture
+def mock_console() -> MagicMock:
+    """Mock Console for all tests."""
+    return MagicMock(spec=Console)
+
+
+@pytest.fixture
+def mock_git_service() -> MagicMock:
+    """Mock GitServiceProtocol for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_version_analyzer() -> MagicMock:
+    """Mock VersionAnalyzerProtocol for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_changelog_generator() -> MagicMock:
+    """Mock ChangelogGeneratorProtocol for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_filesystem() -> MagicMock:
+    """Mock FileSystemInterface for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_security_service() -> MagicMock:
+    """Mock SecurityServiceProtocol for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def mock_regex_patterns() -> MagicMock:
+    """Mock RegexPatternsProtocol for all tests."""
+    return MagicMock()
+
+
+@pytest.fixture
+def temp_pkg_path() -> Path:
+    """Temporary package path for all tests."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+        yield Path(temp_dir)
+
+
+@pytest.fixture
+def publish_manager_di_context(
+    mock_console: MagicMock,
+    mock_git_service: MagicMock,
+    mock_version_analyzer: MagicMock,
+    mock_changelog_generator: MagicMock,
+    mock_filesystem: MagicMock,
+    mock_security_service: MagicMock,
+    mock_regex_patterns: MagicMock,
+    temp_pkg_path: Path,
+):
+    """Set up DI context for PublishManagerImpl testing."""
+    from crackerjack.models.protocols import (
+        ChangelogGeneratorProtocol,
+        FileSystemInterface,
+        GitServiceProtocol,
+        RegexPatternsProtocol,
+        SecurityServiceProtocol,
+        VersionAnalyzerProtocol,
+    )
+    from acb.logger import Logger
+
+    injection_map = {
+        Console: mock_console,
+        Logger: MagicMock(spec=Logger),
+        GitServiceProtocol: mock_git_service,
+        VersionAnalyzerProtocol: mock_version_analyzer,
+        ChangelogGeneratorProtocol: mock_changelog_generator,
+        FileSystemInterface: mock_filesystem,
+        SecurityServiceProtocol: mock_security_service,
+        RegexPatternsProtocol: mock_regex_patterns,
+        Path: temp_pkg_path,
+    }
+
+    # Save original values
+    original_values = {}
+    try:
+        # Register all dependencies
+        for dep_type, dep_value in injection_map.items():
+            try:
+                original_values[dep_type] = depends.get_sync(dep_type)
+            except Exception:
+                original_values[dep_type] = None
+            depends.set(dep_type, dep_value)
+
+        yield injection_map, temp_pkg_path
+    finally:
+        # Restore original values after test completes
+        for dep_type, original_value in original_values.items():
+            if original_value is not None:
+                depends.set(dep_type, original_value)
+
+
+def create_publish_manager(
+    mock_console: MagicMock,
+    mock_git_service: MagicMock,
+    mock_version_analyzer: MagicMock,
+    mock_changelog_generator: MagicMock,
+    mock_filesystem: MagicMock,
+    mock_security_service: MagicMock,
+    mock_regex_patterns: MagicMock,
+    temp_pkg_path: Path,
+    dry_run: bool = False,
+) -> PublishManagerImpl:
+    """Helper function to create PublishManagerImpl with mocked dependencies."""
+    return PublishManagerImpl(
+        git_service=mock_git_service,
+        version_analyzer=mock_version_analyzer,
+        changelog_generator=mock_changelog_generator,
+        filesystem=mock_filesystem,
+        security=mock_security_service,
+        regex_patterns=mock_regex_patterns,
+        console=mock_console,
+        pkg_path=temp_pkg_path,
+        dry_run=dry_run,
+    )
 
 
 class TestPublishManagerCore:
     @pytest.fixture
-    def mock_console(self):
-        return Mock()
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     @pytest.fixture
-    def temp_pkg_path(self):
-        with tempfile.TemporaryDirectory() as temp_dir:
-            yield Path(temp_dir)
-
-    @pytest.fixture
-    def publish_manager(self, mock_console, temp_pkg_path):
-        return PublishManagerImpl(mock_console, temp_pkg_path, dry_run=False)
-
-    @pytest.fixture
-    def dry_run_manager(self, mock_console, temp_pkg_path):
-        return PublishManagerImpl(mock_console, temp_pkg_path, dry_run=True)
+    def dry_run_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl in dry-run mode with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=True,
+        )
 
     def test_initialization(self, publish_manager, mock_console, temp_pkg_path) -> None:
         assert publish_manager.console == mock_console
@@ -182,12 +350,31 @@ description = "Test package"
 
 class TestPublishManagerVersionBumping:
     @pytest.fixture
-    def temp_pkg_path(self, tmp_path):
-        return tmp_path
-
-    @pytest.fixture
-    def publish_manager(self, temp_pkg_path):
-        return PublishManagerImpl(Mock(), temp_pkg_path, dry_run=False)
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     def test_bump_version_success(self, publish_manager) -> None:
         with (
@@ -243,12 +430,31 @@ class TestPublishManagerVersionBumping:
 
 class TestPublishManagerAuthentication:
     @pytest.fixture
-    def temp_pkg_path(self, tmp_path):
-        return tmp_path
-
-    @pytest.fixture
-    def publish_manager(self, temp_pkg_path):
-        return PublishManagerImpl(Mock(), temp_pkg_path, dry_run=False)
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     @patch.dict(os.environ, {"UV_PUBLISH_TOKEN": "pypi - valid - token"})
     def test_check_env_token_auth_valid(self, publish_manager) -> None:
@@ -339,12 +545,31 @@ class TestPublishManagerAuthentication:
 
 class TestPublishManagerBuildPackage:
     @pytest.fixture
-    def temp_pkg_path(self, tmp_path):
-        return tmp_path
-
-    @pytest.fixture
-    def publish_manager(self, temp_pkg_path):
-        return PublishManagerImpl(Mock(), temp_pkg_path, dry_run=False)
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     def test_build_package_success(self, publish_manager) -> None:
         mock_result = Mock()
@@ -407,12 +632,31 @@ class TestPublishManagerBuildPackage:
 
 class TestPublishManagerPublishPackage:
     @pytest.fixture
-    def temp_pkg_path(self, tmp_path):
-        return tmp_path
-
-    @pytest.fixture
-    def publish_manager(self, temp_pkg_path):
-        return PublishManagerImpl(Mock(), temp_pkg_path, dry_run=False)
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     def test_publish_package_success(self, publish_manager) -> None:
         with (
@@ -508,12 +752,31 @@ class TestPublishManagerPublishPackage:
 
 class TestPublishManagerUtilities:
     @pytest.fixture
-    def temp_pkg_path(self, tmp_path):
-        return tmp_path
-
-    @pytest.fixture
-    def publish_manager(self, temp_pkg_path):
-        return PublishManagerImpl(Mock(), temp_pkg_path, dry_run=False)
+    def publish_manager(
+        self,
+        publish_manager_di_context,
+        mock_console,
+        mock_git_service,
+        mock_version_analyzer,
+        mock_changelog_generator,
+        mock_filesystem,
+        mock_security_service,
+        mock_regex_patterns,
+        temp_pkg_path,
+    ):
+        """Create PublishManagerImpl with mocked dependencies."""
+        injection_map, pkg_path = publish_manager_di_context
+        return create_publish_manager(
+            mock_console=mock_console,
+            mock_git_service=mock_git_service,
+            mock_version_analyzer=mock_version_analyzer,
+            mock_changelog_generator=mock_changelog_generator,
+            mock_filesystem=mock_filesystem,
+            mock_security_service=mock_security_service,
+            mock_regex_patterns=mock_regex_patterns,
+            temp_pkg_path=temp_pkg_path,
+            dry_run=False,
+        )
 
     def test_get_package_name_success(self, publish_manager) -> None:
         pyproject_content = """

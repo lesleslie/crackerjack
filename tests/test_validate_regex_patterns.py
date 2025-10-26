@@ -1,4 +1,4 @@
-def test_validate_file_basic(self):
+def test_validate_file_basic():
     """Test basic functionality of validate_file."""
     try:
         result = validate_file()
@@ -10,7 +10,7 @@ def test_validate_file_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in validate_file: {e}")
 
-def test_main_basic(self):
+def test_main_basic():
     """Test basic functionality of main."""
     try:
         result = main()
@@ -22,7 +22,7 @@ def test_main_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in main: {e}")
 
-def test_visit_Import_basic(self):
+def test_visit_Import_basic():
     """Test basic functionality of visit_Import."""
     try:
         result = visit_Import()
@@ -34,7 +34,7 @@ def test_visit_Import_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in visit_Import: {e}")
 
-def test_visit_ImportFrom_basic(self):
+def test_visit_ImportFrom_basic():
     """Test basic functionality of visit_ImportFrom."""
     try:
         result = visit_ImportFrom()
@@ -46,7 +46,7 @@ def test_visit_ImportFrom_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in visit_ImportFrom: {e}")
 
-def test_visit_Call_basic(self):
+def test_visit_Call_basic():
     """Test basic functionality of visit_Call."""
     try:
         result = visit_Call()

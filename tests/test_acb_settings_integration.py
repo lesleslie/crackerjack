@@ -44,7 +44,7 @@ class TestACBSettingsLoading:
         settings = depends.get(CrackerjackSettings)
         options = _adapt_settings_to_protocol(settings)
 
-        orchestrator = WorkflowOrchestrator(console=Console(), pkg_path=Path.cwd())
+        orchestrator = WorkflowOrchestrator(pkg_path=Path.cwd())
 
         # Should accept OptionsProtocol (no type error)
         assert orchestrator is not None

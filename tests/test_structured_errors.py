@@ -101,7 +101,7 @@ class TestErrorHandlingIntegration:
         from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
         console = Console(file=io.StringIO(), force_terminal=False)
-        orchestrator = WorkflowOrchestrator(console=console, pkg_path=Path.cwd())
+        orchestrator = WorkflowOrchestrator(pkg_path=Path.cwd())
 
         with patch.object(orchestrator, "run_complete_workflow", return_value=False):
             from unittest.mock import Mock

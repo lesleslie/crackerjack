@@ -1,4 +1,4 @@
-def test_to_dict_basic(self):
+def test_to_dict_basic():
     """Test basic functionality of to_dict."""
     try:
         result = to_dict()
@@ -10,7 +10,7 @@ def test_to_dict_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in to_dict: {e}")
 
-def test_generate_documentation_basic(self):
+def test_generate_documentation_basic():
     """Test basic functionality of generate_documentation."""
     try:
         result = generate_documentation()

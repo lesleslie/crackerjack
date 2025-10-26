@@ -1,4 +1,4 @@
-def test_create_container_basic(self):
+def test_create_container_basic():
     """Test basic functionality of create_container."""
     try:
         result = create_container()
@@ -10,7 +10,7 @@ def test_create_container_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_container: {e}")
 
-def test_register_singleton_basic(self):
+def test_register_singleton_basic():
     """Test basic functionality of register_singleton."""
     try:
         result = register_singleton()
@@ -22,7 +22,7 @@ def test_register_singleton_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in register_singleton: {e}")
 
-def test_register_transient_basic(self):
+def test_register_transient_basic():
     """Test basic functionality of register_transient."""
     try:
         result = register_transient()
@@ -34,7 +34,7 @@ def test_register_transient_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in register_transient: {e}")
 
-def test_get_basic(self):
+def test_get_basic():
     """Test basic functionality of get."""
     try:
         result = get()
@@ -46,7 +46,7 @@ def test_get_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in get: {e}")
 
-def test_create_default_container_basic(self):
+def test_create_default_container_basic():
     """Test basic functionality of create_default_container."""
     try:
         result = create_default_container()

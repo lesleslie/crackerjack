@@ -1,4 +1,4 @@
-def test_has_trailing_whitespace_basic(self):
+def test_has_trailing_whitespace_basic():
     """Test basic functionality of has_trailing_whitespace."""
     try:
         result = has_trailing_whitespace()

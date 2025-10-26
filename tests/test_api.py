@@ -58,7 +58,7 @@ def test_publish_package_basic():
     except Exception as e:
         pytest.fail(f"Unexpected error in publish_package: {e}")
 
-def test_code_cleaner_basic(self):
+def test_code_cleaner_basic():
     """Test basic functionality of code_cleaner."""
     try:
         result = code_cleaner()
@@ -70,7 +70,7 @@ def test_code_cleaner_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in code_cleaner: {e}")
 
-def test_interactive_cli_basic(self):
+def test_interactive_cli_basic():
     """Test basic functionality of interactive_cli."""
     try:
         result = interactive_cli()
@@ -82,7 +82,7 @@ def test_interactive_cli_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in interactive_cli: {e}")
 
-def test_run_interactive_workflow_basic(self):
+def test_run_interactive_workflow_basic():
     """Test basic functionality of run_interactive_workflow."""
     try:
         result = run_interactive_workflow()
@@ -94,7 +94,7 @@ def test_run_interactive_workflow_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in run_interactive_workflow: {e}")
 
-def test_create_workflow_options_basic(self):
+def test_create_workflow_options_basic():
     """Test basic functionality of create_workflow_options."""
     try:
         result = create_workflow_options()
@@ -106,7 +106,7 @@ def test_create_workflow_options_basic(self):
     except Exception as e:
         pytest.fail(f"Unexpected error in create_workflow_options: {e}")
 
-def test_get_project_info_basic(self):
+def test_get_project_info_basic():
     """Test basic functionality of get_project_info."""
     try:
         result = get_project_info()
