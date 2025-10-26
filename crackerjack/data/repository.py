@@ -18,6 +18,22 @@ from acb.depends import depends
 
 try:
     from acb.adapters.models._hybrid import ACBQuery  # type: ignore[attr-defined]
+    from acb.adapters.models._query import registry  # type: ignore[attr-defined]
+    from acb.adapters.models._memory import MemoryDatabaseAdapter  # type: ignore[attr-defined]
+    from acb.adapters.models._pydantic import PydanticModelAdapter  # type: ignore[attr-defined]
+
+    # Register in-memory adapters for default usage
+    registry.register_database_adapter("memory", MemoryDatabaseAdapter())
+    registry.register_model_adapter("pydantic", PydanticModelAdapter())
+
+    # ACB hybrid query is available - use in-memory adapter as default
+    # (SQL/NoSQL adapters can be configured when those databases are set up)
+    _query_instance = ACBQuery(
+        database_adapter_name="memory",
+        model_adapter_name="pydantic",
+    )
+    depends.set(ACBQuery, _query_instance)
+
 except ImportError:  # pragma: no cover - fallback when hybrid query missing
     LOGGER.warning(
         "ACB hybrid query adapter not available; using in-memory query fallback.",
@@ -110,7 +126,7 @@ except ImportError:  # pragma: no cover - fallback when hybrid query missing
 
 class QualityBaselineRepository:
     def __init__(self) -> None:
-        self.query = depends.get(ACBQuery)
+        self.query = depends.get_sync(ACBQuery)
 
     async def upsert(self, data: dict[str, Any]) -> QualityBaselineRecord:
         return await self.query.for_model(QualityBaselineRecord).simple.create_or_update(data, "git_hash")
@@ -128,7 +144,7 @@ class QualityBaselineRepository:
 
 class HealthMetricsRepository:
     def __init__(self) -> None:
-        self.query = depends.get(ACBQuery)
+        self.query = depends.get_sync(ACBQuery)
 
     async def upsert(
         self,
@@ -144,7 +160,7 @@ class HealthMetricsRepository:
 
 class DependencyMonitorRepository:
     def __init__(self) -> None:
-        self.query = depends.get(ACBQuery)
+        self.query = depends.get_sync(ACBQuery)
 
     async def upsert(
         self,
