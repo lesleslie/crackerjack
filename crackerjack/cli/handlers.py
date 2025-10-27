@@ -252,20 +252,8 @@ def handle_standard_mode(
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
 
-    # Check if we're already in an event loop
-    try:
-        asyncio.get_running_loop()
-        # We're already in an event loop, which shouldn't happen at this level
-        # Create a new thread with its own event loop
-        def run_async_config():
-            asyncio.run(hook_lock_manager.configure_from_options(options))
-
-        thread = threading.Thread(target=run_async_config)
-        thread.start()
-        thread.join()
-    except RuntimeError:
-        # No event loop is running, safe to use asyncio.run
-        asyncio.run(hook_lock_manager.configure_from_options(options))
+    # Call the synchronous method directly
+    hook_lock_manager.configure_from_options(options)
 
     if orchestrated:
         handle_orchestrated_mode(options, job_id)
@@ -313,20 +301,8 @@ def handle_orchestrated_mode(options: Options, job_id: str | None = None, consol
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
     
-    # Check if we're already in an event loop
-    try:
-        asyncio.get_running_loop()
-        # We're already in an event loop, which shouldn't happen at this level
-        # Create a new thread with its own event loop
-        def run_async_config():
-            asyncio.run(hook_lock_manager.configure_from_options(options))
-        
-        thread = threading.Thread(target=run_async_config)
-        thread.start()
-        thread.join()
-    except RuntimeError:
-        # No event loop is running, safe to use asyncio.run
-        asyncio.run(hook_lock_manager.configure_from_options(options))
+    # Call the synchronous method directly
+    hook_lock_manager.configure_from_options(options)
 
     try:
         from crackerjack.core.session_coordinator import SessionCoordinator
