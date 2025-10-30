@@ -1,8 +1,8 @@
 # ADR 004: Workflow Session Controller Extraction
 
-**Status:** Accepted  
-**Date:** 2025-10-17  
-**Deciders:** Architecture Council  
+**Status:** Accepted
+**Date:** 2025-10-17
+**Deciders:** Architecture Council
 **Context**
 
 `WorkflowPipeline` in `crackerjack/core/workflow_orchestrator.py` has grown past

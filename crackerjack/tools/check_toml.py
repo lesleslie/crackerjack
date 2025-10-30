@@ -18,6 +18,8 @@ import sys
 import tomllib
 from pathlib import Path
 
+from ._git_utils import get_files_by_extension
+
 
 def validate_toml_file(file_path: Path) -> tuple[bool, str | None]:
     """Validate a TOML file's syntax.
@@ -60,9 +62,13 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Default to all TOML files if none specified
+    # Default to all git-tracked TOML files if none specified
     if not args.files:
-        files = list(Path.cwd().rglob("*.toml"))
+        # Get all tracked TOML files (respects .gitignore via git ls-files)
+        files = get_files_by_extension([".toml"])
+        if not files:
+            # Fallback to rglob if not in git repo
+            files = list(Path.cwd().rglob("*.toml"))
     else:
         files = args.files
 

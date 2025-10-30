@@ -1,7 +1,7 @@
 # Monitoring Dashboard Design Draft
 
-**Sprint:** Phase 4 – Sprint 1  
-**Authors:** Monitoring Team, Architecture Council  
+**Sprint:** Phase 4 – Sprint 1
+**Authors:** Monitoring Team, Architecture Council
 **Date:** 2025-10-17
 
 ## Objectives

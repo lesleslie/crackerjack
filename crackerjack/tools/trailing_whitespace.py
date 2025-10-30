@@ -18,6 +18,8 @@ import argparse
 import sys
 from pathlib import Path
 
+from ._git_utils import get_files_by_extension
+
 
 def has_trailing_whitespace(line: str) -> bool:
     """Check if a line has trailing whitespace.
@@ -105,10 +107,15 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Default to all tracked files if none specified
+    # Default to all git-tracked files if none specified
     if not args.files:
-        # Get all Python files in current directory
-        files = list(Path.cwd().rglob("*.py"))
+        # Get all tracked text files (respects .gitignore via git ls-files)
+        files = get_files_by_extension(
+            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
+        )
+        if not files:
+            # Fallback to Python files if not in git repo
+            files = list(Path.cwd().rglob("*.py"))
     else:
         files = args.files
 

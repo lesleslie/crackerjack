@@ -79,7 +79,7 @@ Located in: `tests/conftest.py`
 @contextmanager
 def acb_depends_context(injection_map: dict[type, Any]) -> Generator[None, None, None]:
     """Set up ACB dependency injection for tests.
-    
+
     Usage:
         with acb_depends_context({Console: mock_console}):
             coordinator = SessionCoordinator(console=mock_console, ...)

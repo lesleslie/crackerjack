@@ -142,9 +142,12 @@ zuban_lsp_timeout = 10.0
 zuban_lsp_strict_mode = true
 
 [tool.codespell]
-skip = "*/data/*,htmlcov/*,tests/*,*_test.py,test_*.py"
+# Note: Native wrapper (crackerjack.tools.codespell_wrapper) uses git ls-files
+# to discover files, automatically respecting .gitignore patterns.
+# No skip patterns needed.
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
+ignore-words = ".codespell-ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

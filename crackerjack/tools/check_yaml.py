@@ -19,6 +19,8 @@ from pathlib import Path
 
 import yaml
 
+from ._git_utils import get_files_by_extension
+
 
 def validate_yaml_file(file_path: Path) -> tuple[bool, str | None]:
     """Validate a YAML file's syntax.
@@ -66,10 +68,14 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Default to all YAML files if none specified
+    # Default to all git-tracked YAML files if none specified
     if not args.files:
-        files = list(Path.cwd().rglob("*.yaml"))
-        files.extend(Path.cwd().rglob("*.yml"))
+        # Get all tracked YAML files (respects .gitignore via git ls-files)
+        files = get_files_by_extension([".yaml", ".yml"])
+        if not files:
+            # Fallback to rglob if not in git repo
+            files = list(Path.cwd().rglob("*.yaml"))
+            files.extend(Path.cwd().rglob("*.yml"))
     else:
         files = args.files
 

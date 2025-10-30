@@ -708,8 +708,8 @@ The ConfigMergeService handles intelligent configuration merging during project 
 ```python
 # Used by InitializationService for new project setup
 merge_result = config_merge_service.smart_merge_pyproject(
-    source_config, 
-    target_path, 
+    source_config,
+    target_path,
     project_name
 )
 ```

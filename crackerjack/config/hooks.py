@@ -120,7 +120,7 @@ FAST_HOOKS = [
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.66s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=0.66s) + safety margin
         retry_on_failure=True,
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -129,7 +129,7 @@ FAST_HOOKS = [
         name="trailing-whitespace",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=0.38s) + safety margin
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -139,7 +139,7 @@ FAST_HOOKS = [
         name="end-of-file-fixer",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.38s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=0.38s) + safety margin
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -148,7 +148,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-yaml",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.53s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=0.53s) + safety margin
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
@@ -164,28 +164,21 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-added-large-files",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.27s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=0.27s) + safety margin
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="uv-lock",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=1.99s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=1.99s) + safety margin
         security_level=SecurityLevel.HIGH,
-        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
-    ),
-    HookDefinition(
-        name="gitleaks",
-        command=[],
-        timeout=11,  # Phase 10.4.1: Profiled P95=3.82s, safety=3x
-        security_level=SecurityLevel.CRITICAL,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="codespell",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=1.33s, safety=3x
+        timeout=45,  # UV init (~10s) + tool execution + large repo scanning overhead
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level spell checker
@@ -194,7 +187,7 @@ FAST_HOOKS = [
         name="ruff-check",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=3.16s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=3.16s) + safety margin
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -204,7 +197,7 @@ FAST_HOOKS = [
         name="ruff-format",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=1.53s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=1.53s) + safety margin
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -227,7 +220,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="zuban",
         command=[],
-        timeout=32,  # Phase 10.4.1: Profiled P95=10.97s, safety=3x
+        timeout=40,  # UV init (~10s) + tool execution (P95=10.97s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -236,7 +229,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="bandit",
         command=[],
-        timeout=19,  # Phase 10.4.1: Profiled P95=6.52s, safety=3x
+        timeout=30,  # UV init (~10s) + tool execution (P95=6.52s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -244,9 +237,18 @@ COMPREHENSIVE_HOOKS = [
         accepts_file_paths=True,  # Phase 10.4.4: File-level security scanner
     ),
     HookDefinition(
+        name="gitleaks",
+        command=[],
+        timeout=120,  # UV init (~10s) + extensive git history scanning + cryptographic analysis
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+    ),
+    HookDefinition(
         name="skylos",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=2.76s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=2.76s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -255,7 +257,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=15,  # Phase 10.4.1: Profiled P95=5.15s, safety=3x
+        timeout=25,  # UV init (~10s) + tool execution (P95=5.15s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -264,7 +266,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="creosote",
         command=[],
-        timeout=10,  # Phase 10.4.1: Profiled P95=3.62s, safety=3x
+        timeout=20,  # UV init (~10s) + tool execution (P95=3.62s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
@@ -273,7 +275,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],
-        timeout=13,  # Phase 10.4.1: Profiled P95=4.49s, safety=3x
+        timeout=25,  # UV init (~10s) + tool execution (P95=4.49s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

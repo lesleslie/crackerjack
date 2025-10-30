@@ -145,3 +145,4 @@ settings/local.yaml
 
 # Local settings overrides (ACB configuration)
 settings/local.yaml
+/.uv-cache/

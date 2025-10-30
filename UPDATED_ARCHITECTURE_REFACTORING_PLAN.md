@@ -346,7 +346,7 @@ class PerformanceMonitorService(Service):  # Follow ACB service pattern
 - **Mitigation**: Profile and optimize critical paths; use ACB efficiently
 
 ### Risk 3: Breaking Changes to Public APIs
-- **Risk**: Refactoring may break external consumers of Crackerjack APIs  
+- **Risk**: Refactoring may break external consumers of Crackerjack APIs
 - **Mitigation**: Maintain backward compatibility with adapters where needed; provide deprecation warnings
 
 ## Success Metrics Summary

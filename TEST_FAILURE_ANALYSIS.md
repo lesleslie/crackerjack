@@ -140,7 +140,7 @@ class PublishManagerImpl:
 
 **Root Cause**: Phase 4 refactoring converted core managers to use ACB DI, but test fixtures and calls were not updated.
 
-**Fix Strategy**: 
+**Fix Strategy**:
 1. Update all test fixtures to work with DI-based initialization
 2. For tests that need specific instances, either:
    - Use real DI container with proper setup
@@ -169,7 +169,7 @@ class GlobalLockConfig:
         # Uses different parameter name, not 'lock_directory'
 ```
 
-**Root Cause**: 
+**Root Cause**:
 1. Class constructor was renamed/refactored
 2. Tests were written for old API and not updated
 3. Parameter names changed during refactoring
@@ -232,7 +232,7 @@ def test_hook_result_creation_minimal(self):
 ### Phase 1: DI Constructor Mismatch (120+ tests) - 2-3 hours
 **Target Files**:
 1. `tests/test_publish_manager_coverage.py` (54 failures) - PublishManagerImpl
-2. `tests/test_session_coordinator_coverage.py` (33 failures) - SessionCoordinator  
+2. `tests/test_session_coordinator_coverage.py` (33 failures) - SessionCoordinator
 3. `tests/test_session_coordinator_comprehensive.py` (18 failures) - SessionCoordinator
 4. `tests/managers/test_hook_manager_orchestration.py` (20 failures) - HookManagerImpl
 5. `tests/test_managers_consolidated.py` (23 failures) - Multiple managers

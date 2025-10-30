@@ -17,7 +17,7 @@ Adapters → Services → Managers → Core → CLI
 However, the current codebase exhibits reverse dependencies:
 
 - **Core** imports from **Services** (major violation)
-- **Adapters** import from **Services** (major violation) 
+- **Adapters** import from **Services** (major violation)
 - **Managers** import from **Services** (minor violation)
 
 ### 2. Specific Violations Identified
@@ -91,7 +91,7 @@ The following core modules import directly from services:
 ### Intended Architecture Pattern
 ```
 CLI Layer
-├── Core Layer (orchestration)  
+├── Core Layer (orchestration)
 │   ├── Managers (coordination)
 │   │   ├── Services (business logic)
 │   │   │   ├── Adapters (interface to external tools)
@@ -222,7 +222,7 @@ CLI Layer
 - Components can be tested in isolation with mock implementations
 - Faster unit tests with fewer external dependencies
 
-### 2. **Better Maintainability**  
+### 2. **Better Maintainability**
 - Changes in lower layers won't affect higher layers
 - Easier to swap implementations or add new services
 
@@ -251,7 +251,7 @@ CLI Layer
 ## Success Metrics
 
 - [ ] Zero direct imports from services in core layer
-- [ ] Zero direct imports from services in adapter layer  
+- [ ] Zero direct imports from services in adapter layer
 - [ ] All core components use dependency injection patterns
 - [ ] All tests pass with refactored code
 - [ ] Performance remains equivalent or better

@@ -90,7 +90,7 @@ REUSABLE PATTERNS CREATED
       @contextmanager
       def acb_depends_context(injection_map: dict[type, Any]):
           # Save originals, inject mocks, restore on exit
-          
+
    Status: ✅ READY TO USE
 
 DOCUMENTATION CREATED
@@ -127,7 +127,7 @@ TIME INVESTMENT ESTIMATE
 ─────────────────────────────────────────────────────────────────────────────
 
 Pattern 1 Fixes (120 tests):   2-3 hours    → -26% failure rate
-Pattern 2 Fixes (45 tests):    1-2 hours    → -10% failure rate  
+Pattern 2 Fixes (45 tests):    1-2 hours    → -10% failure rate
 Pattern 3 Fixes (17 tests):    0.5 hours    → -4% failure rate
 Investigation (165 tests):     Variable     → Up to -35% failure rate
 

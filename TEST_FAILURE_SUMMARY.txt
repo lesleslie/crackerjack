@@ -43,7 +43,7 @@ PATTERN 1: DI Constructor Signature Mismatch
 
   Root Cause: Classes refactored to use @depends.inject decorator but tests
               still use old constructor signature
-  
+
   Fix Impact: Fixing this pattern alone would resolve 120+ tests
 
 
@@ -57,7 +57,7 @@ PATTERN 2: Constructor Parameter Name Mismatch
 
   Root Cause: Constructor parameters were renamed/refactored but tests
               still use old parameter names
-  
+
   Fix Impact: Fixing this pattern would resolve 40-50 tests
 
 
@@ -69,9 +69,9 @@ PATTERN 3: String Value/Formatting Mismatch
   Classes:   - HookResult
              - TaskStatus
 
-  Root Cause: String formatting changed; tests expect 'pre - commit' 
+  Root Cause: String formatting changed; tests expect 'pre - commit'
               (spaces) but code returns 'pre-commit' (hyphenated)
-  
+
   Fix Impact: Fixing this pattern would resolve 17 tests
 
 
@@ -82,7 +82,7 @@ PATTERN 4: Object Type Mismatch
              AttributeError: 'coroutine' object has no attribute
   Files:     2 major test files
 
-  Root Cause: Tests use Mock(spec=Console) but code uses 
+  Root Cause: Tests use Mock(spec=Console) but code uses
               acb.console.Console from DI
 
 
@@ -164,13 +164,13 @@ TOTAL ACHIEVABLE: ~177 tests fixed (38% of all 467 failures)
 ================================================================================
 
 PATTERN 1 - DI Constructor Mismatch:
-  TypeError: PublishManagerImpl.__init__() got an unexpected keyword 
+  TypeError: PublishManagerImpl.__init__() got an unexpected keyword
              argument 'console'
-  TypeError: SessionCoordinator.__init__() got an unexpected keyword 
+  TypeError: SessionCoordinator.__init__() got an unexpected keyword
              argument 'console'
 
 PATTERN 2 - Parameter Name Mismatch:
-  TypeError: GlobalLockConfig.__init__() got an unexpected keyword 
+  TypeError: GlobalLockConfig.__init__() got an unexpected keyword
              argument 'lock_directory'
 
 PATTERN 3 - String Value Mismatch:

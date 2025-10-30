@@ -79,7 +79,7 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "-r",
         "crackerjack",
     ],
-    "codespell": ["uv", "run", "codespell"],
+    "codespell": ["uv", "run", "python", "-m", "crackerjack.tools.codespell_wrapper"],
     "ruff-check": ["uv", "run", "ruff", "check", "."],
     "ruff-format": ["uv", "run", "ruff", "format", "."],
     "mdformat": ["uv", "run", "mdformat", "--check", "."],

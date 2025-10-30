@@ -5,7 +5,7 @@
 Crackerjack uses two complementary configuration systems that serve different purposes in the application lifecycle:
 
 1. **ACB Settings** - Runtime application configuration (handled by ACB dependency injection system)
-2. **Config Template Service** - Project-level configuration management 
+2. **Config Template Service** - Project-level configuration management
 3. **Config Merge Service** - Project initialization configuration merging
 
 ## System 1: ACB Settings (Runtime Configuration)
@@ -74,7 +74,7 @@ Used during project initialization to intelligently merge configuration files wh
 
 ### Features
 - Smart merging of pyproject.toml
-- Smart merging of .pre-commit-config.yaml 
+- Smart merging of .pre-commit-config.yaml
 - Smart merging of .gitignore
 - Preserves existing user configurations while adding new settings
 
@@ -84,7 +84,7 @@ Used during project initialization to intelligently merge configuration files wh
    - When `python -m crackerjack` is run for a new project
    - Uses ConfigMergeService to intelligently merge template configs
 
-2. **Ongoing Development** (ConfigTemplateService) 
+2. **Ongoing Development** (ConfigTemplateService)
    - When users want to update project configurations
    - Uses ConfigTemplateService for version-controlled updates
 
