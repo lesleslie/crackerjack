@@ -92,7 +92,7 @@ graph TD
 | Level | Command | Duration | Use Case |
 |-------|---------|----------|----------|
 | **Skip** | `--skip-hooks` | \<1s | Active development iteration |
-| **Fast** | `--fast` or default | ~5s | Quick pre-commit check |
+| **Fast** | `--fast` or default | ~5s | Quick quality check |
 | **Comprehensive** | `--comp` | ~30s | Full quality analysis |
 | **With Tests** | `--run-tests` | Variable | Complete validation |
 | **CI/CD** | `--quick` | ~15s | Automated pipeline (max 3 iterations) |
@@ -155,7 +155,7 @@ python -m crackerjack --ai-debug --run-tests
 **When to transition:**
 
 - `--skip-hooks` → Fast iteration when hooks slow you down
-- Fast hooks → Standard pre-commit check
+- Fast hooks → Standard quality check
 - `--ai-fix --run-tests` → When you want automated issue resolution
 - `--ai-debug` → When AI agents behave unexpectedly
 
@@ -284,7 +284,7 @@ python -m crackerjack --ai-fix --quick
 
 | Flag | Purpose | When to Use |
 |------|---------|-------------|
-| `--skip-hooks` | Bypass pre-commit hooks | During active coding/debugging |
+| `--skip-hooks` | Bypass quality hooks | During active coding/debugging |
 | `--fast` | Fast hooks only (~5s) | Quick validation |
 | `--comp` | Comprehensive hooks (~30s) | Thorough quality check |
 | `--run-tests` | Execute full test suite | Before commits/PRs |
@@ -674,7 +674,7 @@ Want to monitor?
 1. Stability (no crashes/inconsistencies)
 1. Value added (unique issue detection)
 1. Performance (within time budgets)
-1. Integration (pre-commit compatibility)
+1. Integration (quality workflow compatibility)
 
 **Promotion Lifecycle**:
 

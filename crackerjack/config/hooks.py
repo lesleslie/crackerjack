@@ -210,16 +210,17 @@ FAST_HOOKS = [
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level Python formatter
     ),
-    HookDefinition(
-        name="mdformat",
-        command=[],
-        is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.80s, safety=3x
-        retry_on_failure=True,
-        security_level=SecurityLevel.LOW,
-        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
-        accepts_file_paths=True,  # Phase 10.4.4: File-level Markdown formatter
-    ),
+    # TODO: Enable mdformat once binary is available or add to dependencies
+    # HookDefinition(
+    #     name="mdformat",
+    #     command=["mdformat", "--check"],  # Would need mdformat binary
+    #     is_formatting=True,
+    #     timeout=10,  # Phase 10.4.1: Profiled P95=0.80s, safety=3x
+    #     retry_on_failure=True,
+    #     security_level=SecurityLevel.LOW,
+    #     use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+    #     accepts_file_paths=True,  # Phase 10.4.4: File-level Markdown formatter
+    # ),
 ]
 
 COMPREHENSIVE_HOOKS = [

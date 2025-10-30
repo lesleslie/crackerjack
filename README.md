@@ -5,7 +5,7 @@
 [![pytest](https://img.shields.io/badge/pytest-coverage%20ratchet-blue)](https://pytest.org)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
-[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+[![Quality Hooks](https://img.shields.io/badge/quality%20hooks-17%20tools-brightgreen)](https://github.com/lesleslie/crackerjack)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
 ![Coverage](https://img.shields.io/badge/coverage-19.6%25-red)
 
@@ -33,9 +33,9 @@ Just as the name suggests, Crackerjack makes your Python projects first-rate thr
 
 ```bash
 # Traditional workflow
-pip install black isort flake8 mypy pytest pre-commit
+pip install black isort flake8 mypy pytest
 # Configure each tool individually
-# Set up pre-commit hooks manually
+# Set up git hooks manually
 # Remember different commands for each tool
 ```
 
@@ -68,8 +68,114 @@ Crackerjack is built on the following core principles:
 - **Auto-Discovery:** Prefer intelligent auto-discovery of configurations and settings over manual configuration whenever possible, reducing setup friction and configuration errors
 - **Static Typing:** Static typing is essential for all development
 
+## Crackerjack vs Pre-commit: Architecture & Features
+
+Crackerjack and pre-commit solve related but different problems. While pre-commit is a language-agnostic git hook manager, Crackerjack is a comprehensive Python development platform with quality enforcement built-in.
+
+### Architectural Differences
+
+| Aspect | Pre-commit | Crackerjack |
+|--------|-----------|-------------|
+| **Execution Model** | Wrapper framework that spawns subprocesses for each hook | Direct tool invocation with ACB adapter architecture |
+| **Concurrency** | Synchronous sequential execution (one hook at a time) | **Async-first with 11 concurrent adapters** - true parallel execution |
+| **Performance** | Overhead from framework wrapper + subprocess spawning | Zero wrapper overhead, 70% cache hit rate, 50% faster workflows |
+| **Language Focus** | Language-agnostic (Python, Go, Rust, Docker, etc.) | Python-first with native tool implementations |
+| **Configuration** | YAML-based `.pre-commit-config.yaml` with repo URLs | Python-based configuration with intelligent defaults |
+| **Hook Management** | Clones repos, manages environments per hook | Native Python tools + direct UV invocation |
+
+### Feature Comparison
+
+#### Quality Hooks & Tools
+
+| Feature | Pre-commit | Crackerjack |
+|---------|-----------|-------------|
+| **Code Formatting** | ✅ Via hooks (black, ruff, etc.) | ✅ Native Ruff integration + mdformat |
+| **Linting** | ✅ Via hooks (flake8, pylint, etc.) | ✅ Native Ruff + codespell |
+| **Type Checking** | ✅ Via hooks (mypy, pyright) | ✅ **Zuban** (20-200x faster than pyright) |
+| **Security Scanning** | ✅ Via hooks (bandit, gitleaks) | ✅ Native bandit + gitleaks integration |
+| **Dead Code Detection** | ✅ Via vulture hook | ✅ **Skylos** (20x faster than vulture) |
+| **Complexity Analysis** | ❌ Not built-in | ✅ Native complexipy integration |
+| **Dependency Validation** | ❌ Not built-in | ✅ Native creosote unused dependency detection |
+| **Custom Python Tools** | ✅ Via `repo: local` hooks | ✅ 6 native tools in `crackerjack/tools/` |
+
+#### Development Workflow
+
+| Feature | Pre-commit | Crackerjack |
+|---------|-----------|-------------|
+| **Git Integration** | ✅ Pre-commit, pre-push, commit-msg hooks | ✅ Git hooks + intelligent commit messages |
+| **Testing Framework** | ❌ Not included | ✅ Built-in pytest with coverage ratchet |
+| **CI/CD Integration** | ✅ Via `pre-commit run --all-files` | ✅ Unified `--ci` mode with quality + tests |
+| **Version Management** | ❌ Not included | ✅ Intelligent version bumping + AI recommendations |
+| **Publishing** | ❌ Not included | ✅ PyPI publishing with UV authentication |
+| **Hook Stages** | ✅ Multiple stages (commit, push, merge, manual) | ✅ Fast (~5s) vs Comprehensive (~30s) strategies |
+| **Retry Logic** | ❌ No built-in retry | ✅ Automatic retry for formatting hooks |
+| **Parallel Execution** | ✅ Limited parallelism (sequential by default) | ✅ **Async-first architecture**: 11 concurrent adapters, 76% speedup |
+
+#### Advanced Features
+
+| Feature | Pre-commit | Crackerjack |
+|---------|-----------|-------------|
+| **AI Integration** | ❌ Not built-in | ✅ 12 specialized AI agents + auto-fixing |
+| **Dependency Injection** | ❌ Not applicable | ✅ ACB framework with protocol-based DI |
+| **Caching** | ✅ Per-file hash caching | ✅ Content-based caching (70% hit rate) |
+| **MCP Server** | ❌ Not included | ✅ Built-in MCP server for Claude integration |
+| **Monitoring Dashboard** | ❌ Not included | ✅ Real-time WebSocket dashboard |
+| **Configuration Management** | ✅ YAML + `--config` flag | ✅ ACB Settings with YAML + local overrides |
+| **Auto-Update** | ✅ `pre-commit autoupdate` | ⚠️ Manual UV dependency updates |
+| **Language Support** | ✅ 15+ languages (Python, Go, Rust, Docker, etc.) | ✅ Python + external tools (gitleaks, etc.) |
+
+#### Configuration & Ease of Use
+
+| Feature | Pre-commit | Crackerjack |
+|---------|-----------|-------------|
+| **Setup Complexity** | Medium (YAML config + `pre-commit install`) | Low (single `python -m crackerjack`) |
+| **Configuration Format** | YAML with repo URLs and hook IDs | Python settings with intelligent defaults |
+| **Hook Discovery** | Manual (add repos to `.pre-commit-config.yaml`) | Automatic (17 tools pre-configured) |
+| **Tool Installation** | Auto (pre-commit manages environments) | UV-based (one virtual environment) |
+| **Learning Curve** | Medium (understand repos, hooks, stages) | Low (unified Python commands) |
+
+### When to Use Each
+
+**Choose Pre-commit when:**
+- ✅ Working with multiple languages (Go, Rust, Docker, etc.)
+- ✅ Need language-agnostic hook framework
+- ✅ Want to use hooks from community repositories
+- ✅ Polyglot projects requiring diverse tooling
+- ✅ Simple YAML-based configuration preferred
+
+**Choose Crackerjack when:**
+- ✅ Python-focused development (Python 3.13+)
+- ✅ Want comprehensive development platform (testing, publishing, AI)
+- ✅ Need maximum performance (async architecture, Rust tools, caching, 11x parallelism)
+- ✅ Desire AI-powered auto-fixing and recommendations
+- ✅ Want unified workflow (quality + tests + publishing in one command)
+- ✅ Prefer Python-based configuration over YAML
+- ✅ Need advanced features (coverage ratchet, MCP integration, dashboards)
+
+### Migration from Pre-commit
+
+Crackerjack can **coexist** with pre-commit if needed, but most Python projects can fully migrate:
+
+```bash
+# Remove pre-commit (optional)
+pre-commit uninstall
+rm .pre-commit-config.yaml
+
+# Install crackerjack
+uv tool install crackerjack
+
+# Run quality checks (replaces pre-commit run --all-files)
+python -m crackerjack
+
+# With tests (comprehensive workflow)
+python -m crackerjack --run-tests
+```
+
+**Note**: Crackerjack Phase 8 successfully migrated from pre-commit framework to direct tool invocation, achieving 50% performance improvement while maintaining full compatibility with existing quality standards.
+
 ## Table of Contents
 
+- [Crackerjack vs Pre-commit](<#crackerjack-vs-pre-commit-architecture--features>)
 - [Installation](<#installation>)
 - [Quick Start](<#quick-start>)
 - [AI Auto-Fix Features](<#ai-auto-fix-features>)
@@ -78,7 +184,7 @@ Crackerjack is built on the following core principles:
 - [ACB Architecture & Performance](<#-acb-architecture--performance>)
 - [Configuration Management](<#-configuration-management-acb-settings--configuration-templates>)
 - [MCP Server Configuration](<#mcp-server-configuration>)
-- [Pre-commit Hook Modes](<#pre-commit-hook-modes>)
+- [Quality Hook Modes](<#quality-hook-modes>)
 - [Command Reference](<#command-reference>)
 - [Style Guide](<#style-guide>)
 - [Publishing & Version Management](<#publishing--version-management>)
@@ -279,7 +385,7 @@ Auto-fix requires:
 - **🦅 Skylos** (Dead Code Detection): Replaces vulture with **20x performance improvement**
 
   - Rust-powered dead code detection and import analysis
-  - Seamlessly integrates with existing pre-commit workflows
+  - Seamlessly integrates with crackerjack's quality workflow
   - Zero configuration changes required
 
 - **🔍 Zuban** (Type Checking): Replaces pyright with **20-200x performance improvement**
@@ -290,7 +396,7 @@ Auto-fix requires:
 
 **Performance Benefits**:
 
-- **Faster Development Cycles**: Pre-commit hooks complete in seconds, not minutes
+- **Faster Development Cycles**: Quality hooks complete in seconds, not minutes
 - **Improved Developer Experience**: Near-instantaneous feedback during development
 - **Seamless Integration**: Works transparently with existing crackerjack workflows
 - **Zero Breaking Changes**: Same CLI interface, dramatically better performance
@@ -342,8 +448,8 @@ python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
 
 - **Automated Code Cleaning:** Removes unnecessary docstrings, line comments, and trailing whitespace
 - **Consistent Code Formatting:** Enforces a unified style using [Ruff](https://github.com/astral-sh/ruff), the lightning-fast Python linter and formatter
-- **Comprehensive Pre-commit Hooks:** Installs and manages a robust suite of pre-commit hooks
-- **Interactive Checks:** Supports interactive pre-commit hooks (like `refurb`, `bandit`, and `pyright`) to fix issues in real-time
+- **Comprehensive Quality Hooks:** Direct tool invocation with no wrapper overhead - runs Python tools, Rust analyzers, and security scanners efficiently
+- **Interactive Checks:** Supports interactive quality checks (like `refurb`, `bandit`, and `pyright`) to fix issues in real-time
 - **Static Type Checking:** Enforces type safety with Pyright integration
 
 ### Testing & Coverage Ratchet System
@@ -383,7 +489,7 @@ python -m crackerjack --run-tests
 - **Intelligent Commit Messages:** Analyzes git changes and suggests descriptive commit messages based on file types and modifications
 - **Commit and Push:** Commits and pushes your changes with standardized commit messages
 - **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
-- **Pre-commit Integration:** Ensures code quality before commits
+- **Git Hook Integration:** Ensures code quality before commits with fast, direct tool execution
 
 ## ⚡ ACB Architecture & Performance
 
@@ -955,9 +1061,9 @@ keyring set https://upload.pypi.org/legacy/ __token__
 }
 ```
 
-## Pre-commit Hook Modes
+## Quality Hook Modes
 
-Crackerjack runs hooks in a two-stage process for optimal development workflow:
+Crackerjack runs quality checks in a two-stage process for optimal development workflow:
 
 ### Hook Details
 

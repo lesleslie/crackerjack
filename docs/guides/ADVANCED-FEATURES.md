@@ -398,7 +398,7 @@ python -m crackerjack --no-zuban-lsp
 - 20-200x faster type checking vs pyright
 - Real-time feedback
 - Editor integration
-- Reduced pre-commit time
+- Reduced quality check time
 
 ______________________________________________________________________
 
@@ -522,7 +522,7 @@ python -m crackerjack --diff-config pyproject.toml
 ### Cache Management
 
 ```bash
-# Refresh pre-commit cache
+# Refresh quality check cache
 python -m crackerjack --refresh-cache
 
 # Display cache statistics
@@ -702,7 +702,7 @@ ______________________________________________________________________
 # After dependency updates
 uv sync && python -m crackerjack --clear-cache
 
-# After pre-commit config changes
+# After hook configuration changes
 python -m crackerjack --refresh-cache
 
 # For clean baseline metrics

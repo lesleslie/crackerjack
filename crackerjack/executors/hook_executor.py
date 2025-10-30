@@ -224,12 +224,15 @@ class HookExecutor:
 
         issues_found = self._extract_issues_from_process_output(hook, result, status)
 
+        # Parse hook output to extract file count
+        parsed_output = self._parse_hook_output(result)
+
         return HookResult(
             id=hook.name,
             name=hook.name,
             status=status,
             duration=duration,
-            files_processed=0,
+            files_processed=parsed_output["files_processed"],
             issues_found=issues_found,
             stage=hook.stage.value,
         )
@@ -284,10 +287,30 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
     ) -> dict[str, t.Any]:
         output = result.stdout + result.stderr
+
+        # Attempt to extract file count from output
+        files_processed = 0
+
+        # Check for common patterns in hook output
+        if "files" in output.lower():
+            import re
+
+            # Pattern for "N file(s)" in output
+            file_count_patterns = [
+                r"(\d+)\s+files?",  # "5 files" or "1 file"
+                r"Checking\s+(\d+)\s+files?",  # "Checking 5 files"
+                r"Found\s+(\d+)\s+files?",  # "Found 5 files"
+            ]
+            for pattern in file_count_patterns:
+                match = re.search(pattern, output, re.IGNORECASE)
+                if match:
+                    files_processed = int(match.group(1))
+                    break
+
         return {
             "hook_id": None,
             "exit_code": result.returncode,
-            "files_processed": 0,
+            "files_processed": files_processed,
             "issues": [],
             "raw_output": output,
         }
