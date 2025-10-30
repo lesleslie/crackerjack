@@ -42,6 +42,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
     to optimize performance and provide faster feedback loops. It supports different execution
     strategies and handles dependencies between hooks.
     """
+
     @depends.inject
     def __init__(
         self,
@@ -276,6 +277,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
     the main event loop, supporting parallel execution and caching of results
     to improve performance and responsiveness.
     """
+
     @depends.inject
     def __init__(
         self,
@@ -288,6 +290,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         self.cache_results = cache_results
         self._logger = logger
         self._cache = cache
+
     def shutdown(self) -> None:
         if hasattr(self, "_thread_pool"):
             self._thread_pool.shutdown(wait=True)
@@ -380,7 +383,6 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         loop = asyncio.get_event_loop()
 
         def run_sync_command() -> ExecutionResult:
-
             try:
                 result = subprocess.run(
                     command,

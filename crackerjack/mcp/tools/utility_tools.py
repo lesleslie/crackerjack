@@ -32,6 +32,7 @@ async def clean_temp_files(
         patterns = ["*.log", ".coverage.*"]
     if directories is None:
         from acb.config import tmp_path
+
         directories = [Path(tmp_path)]
 
     cutoff = datetime.now() - timedelta(hours=older_than_hours)
@@ -75,7 +76,13 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
         try:
             patterns = []
             if clean_config["scope"] in ("temp", "all"):
-                patterns.extend(["crackerjack-*.log", "crackerjack - task - error-*.log", ".coverage.*"])
+                patterns.extend(
+                    [
+                        "crackerjack-*.log",
+                        "crackerjack - task - error-*.log",
+                        ".coverage.*",
+                    ]
+                )
             if clean_config["scope"] in ("progress", "all"):
                 patterns.append("*.json")
 
@@ -83,12 +90,13 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
                 older_than_hours=clean_config["older_than_hours"],
                 dry_run=clean_config["dry_run"],
                 patterns=patterns,
-                directories=[context.progress_dir] if clean_config["scope"] in ("progress", "all") else None
+                directories=[context.progress_dir]
+                if clean_config["scope"] in ("progress", "all")
+                else None,
             )
             return _create_cleanup_response(clean_config, cleanup_results)
         except Exception as e:
             return _create_error_response(f"Cleanup failed: {e}")
-
 
 
 def _parse_clean_configuration(args: str, kwargs: str) -> dict[str, t.Any]:
@@ -154,7 +162,6 @@ def _create_cleanup_response(
     )
 
 
-
 @depends.inject
 def _register_config_tool(mcp_app: t.Any, config: Inject[Config]) -> None:
     @mcp_app.tool()
@@ -189,8 +196,6 @@ def _register_config_tool(mcp_app: t.Any, config: Inject[Config]) -> None:
             return _create_error_response(f"Config operation failed: {e}")
 
 
-
-
 async def analyze_project(
     scope: str = "all", report_format: str = "summary"
 ) -> dict[str, t.Any]:
@@ -220,7 +225,9 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
         report_format = extra_kwargs.get("report_format", "summary")
 
         try:
-            analysis_results = await analyze_project(scope=scope, report_format=report_format)
+            analysis_results = await analyze_project(
+                scope=scope, report_format=report_format
+            )
 
             return json.dumps(
                 {
@@ -237,4 +244,3 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
         except Exception as e:
             return _create_error_response(f"Analysis failed: {e}")
-

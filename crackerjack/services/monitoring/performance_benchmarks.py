@@ -308,7 +308,9 @@ class PerformanceBenchmarkService(PerformanceBenchmarkServiceProtocol, ServicePr
     """Service wrapper for performance benchmarking in workflow orchestration."""
 
     @depends.inject
-    def __init__(self, console: Console, logger: Inject[Logger], pkg_path: Path) -> None:
+    def __init__(
+        self, console: Console, logger: Inject[Logger], pkg_path: Path
+    ) -> None:
         self._console = console
         self._pkg_path = pkg_path
         self._benchmarker = PerformanceBenchmarker(logger=logger)

@@ -18,9 +18,13 @@ from acb.depends import depends
 
 try:
     from acb.adapters.models._hybrid import ACBQuery  # type: ignore[attr-defined]
+    from acb.adapters.models._memory import (
+        MemoryDatabaseAdapter,  # type: ignore[attr-defined]
+    )
+    from acb.adapters.models._pydantic import (
+        PydanticModelAdapter,  # type: ignore[attr-defined]
+    )
     from acb.adapters.models._query import registry  # type: ignore[attr-defined]
-    from acb.adapters.models._memory import MemoryDatabaseAdapter  # type: ignore[attr-defined]
-    from acb.adapters.models._pydantic import PydanticModelAdapter  # type: ignore[attr-defined]
 
     # Register in-memory adapters for default usage
     registry.register_database_adapter("memory", MemoryDatabaseAdapter())
@@ -65,14 +69,20 @@ except ImportError:  # pragma: no cover - fallback when hybrid query missing
 
         async def find(self, **filters: Any) -> Any | None:
             for existing in self._store:
-                if all(getattr(existing, key, None) == value for key, value in filters.items()):
+                if all(
+                    getattr(existing, key, None) == value
+                    for key, value in filters.items()
+                ):
                     return existing
             return None
 
         async def delete(self, **filters: Any) -> bool:
             to_remove: list[Any] = []
             for existing in self._store:
-                if all(getattr(existing, key, None) == value for key, value in filters.items()):
+                if all(
+                    getattr(existing, key, None) == value
+                    for key, value in filters.items()
+                ):
                     to_remove.append(existing)
             for item in to_remove:
                 self._store.remove(item)
@@ -129,17 +139,27 @@ class QualityBaselineRepository:
         self.query = depends.get_sync(ACBQuery)
 
     async def upsert(self, data: dict[str, Any]) -> QualityBaselineRecord:
-        return await self.query.for_model(QualityBaselineRecord).simple.create_or_update(data, "git_hash")
+        return await self.query.for_model(
+            QualityBaselineRecord
+        ).simple.create_or_update(data, "git_hash")
 
     async def get_by_git_hash(self, git_hash: str) -> QualityBaselineRecord | None:
-        return await self.query.for_model(QualityBaselineRecord).simple.find(git_hash=git_hash)
+        return await self.query.for_model(QualityBaselineRecord).simple.find(
+            git_hash=git_hash
+        )
 
     async def list_recent(self, limit: int = 10) -> list[QualityBaselineRecord]:
-        return await self.query.for_model(QualityBaselineRecord).advanced.order_by_desc("recorded_at").limit(limit).all()
+        return (
+            await self.query.for_model(QualityBaselineRecord)
+            .advanced.order_by_desc("recorded_at")
+            .limit(limit)
+            .all()
+        )
 
     async def delete_for_git_hash(self, git_hash: str) -> bool:
-        return await self.query.for_model(QualityBaselineRecord).simple.delete(git_hash=git_hash)
-
+        return await self.query.for_model(QualityBaselineRecord).simple.delete(
+            git_hash=git_hash
+        )
 
 
 class HealthMetricsRepository:
@@ -151,11 +171,14 @@ class HealthMetricsRepository:
         project_root: str,
         data: dict[str, Any],
     ) -> ProjectHealthRecord:
-        return await self.query.for_model(ProjectHealthRecord).simple.create_or_update(data, "project_root")
+        return await self.query.for_model(ProjectHealthRecord).simple.create_or_update(
+            data, "project_root"
+        )
 
     async def get(self, project_root: str) -> ProjectHealthRecord | None:
-        return await self.query.for_model(ProjectHealthRecord).simple.find(project_root=project_root)
-
+        return await self.query.for_model(ProjectHealthRecord).simple.find(
+            project_root=project_root
+        )
 
 
 class DependencyMonitorRepository:
@@ -167,7 +190,11 @@ class DependencyMonitorRepository:
         project_root: str,
         cache_data: dict[str, Any],
     ) -> DependencyMonitorCacheRecord:
-        return await self.query.for_model(DependencyMonitorCacheRecord).simple.create_or_update(cache_data, "project_root")
+        return await self.query.for_model(
+            DependencyMonitorCacheRecord
+        ).simple.create_or_update(cache_data, "project_root")
 
     async def get(self, project_root: str) -> DependencyMonitorCacheRecord | None:
-        return await self.query.for_model(DependencyMonitorCacheRecord).simple.find(project_root=project_root)
+        return await self.query.for_model(DependencyMonitorCacheRecord).simple.find(
+            project_root=project_root
+        )

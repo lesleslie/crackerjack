@@ -153,7 +153,6 @@ class ValidatedPattern:
         return result
 
     def apply_with_timeout(self, text: str, timeout_seconds: float = 1.0) -> str:
-
         def timeout_handler(signum: int, frame: t.Any) -> None:
             raise TimeoutError(
                 f"Pattern '{self.name}' timed out after {timeout_seconds}s"
@@ -2761,7 +2760,6 @@ def fix_multi_word_hyphenation(text: str) -> str:
 
 
 def update_pyproject_version(content: str, new_version: str) -> str:
-
     pattern_obj = SAFE_PATTERNS["update_pyproject_version"]
 
     temp_pattern = ValidatedPattern(
@@ -2780,7 +2778,6 @@ def update_pyproject_version(content: str, new_version: str) -> str:
 
 
 def apply_formatting_fixes(content: str) -> str:
-
     pattern = SAFE_PATTERNS["remove_trailing_whitespace"]
     content = re.compile(pattern.pattern, re.MULTILINE).sub(
         pattern.replacement, content
@@ -2819,7 +2816,6 @@ def remove_coverage_fail_under(addopts: str) -> str:
 
 
 def update_coverage_requirement(content: str, new_coverage: float) -> str:
-
     pattern_obj = SAFE_PATTERNS["update_coverage_requirement"]
 
     temp_pattern = ValidatedPattern(
@@ -2836,7 +2832,6 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
 
 
 def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
-
     escaped_url = re.escape(repo_url)
     pattern = rf'("repo": "{escaped_url}".*?"rev": )"([^"]+)"'
     replacement = rf'\1"{new_revision}"'

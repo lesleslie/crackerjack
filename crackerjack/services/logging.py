@@ -149,6 +149,7 @@ def log_performance(
 
     Maintains Crackerjack's API while delegating to ACB's logger.
     """
+
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args: Any, **func_kwargs: Any) -> Any:
             logger = get_logger(f"crackerjack.perf.{func.__name__}")

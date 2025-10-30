@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from acb.depends import Inject, depends
+from acb.depends import depends
 from acb.logger import Logger
 from rich.console import Console
 
@@ -166,7 +166,9 @@ def register_services() -> None:
         depends.set(CoverageRatchetProtocol, coverage_ratchet)
 
         # 10b. Coverage Badge Service (protocol-based)
-        coverage_badge = depends.inject_sync(CoverageBadgeService, console=console, project_root=pkg_path)
+        coverage_badge = depends.inject_sync(
+            CoverageBadgeService, console=console, project_root=pkg_path
+        )
         depends.set(CoverageBadgeServiceProtocol, coverage_badge)
 
         # 10c. Git Service (protocol-based, foundation for dependent services)

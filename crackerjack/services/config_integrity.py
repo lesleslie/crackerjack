@@ -68,7 +68,9 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
                     if self._check_file_drift(file_path):
                         drift_detected = True
                 except ConfigIntegrityError as e:
-                    self.console.print(f"[red]❌ Error checking {file_path.name}: {e}[/ red]")
+                    self.console.print(
+                        f"[red]❌ Error checking {file_path.name}: {e}[/ red]"
+                    )
                     drift_detected = True
 
         try:
@@ -99,7 +101,9 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
             return False
 
         except OSError as e:
-            raise ConfigIntegrityError(f"Failed to check file drift for {file_path.name}: {e}") from e
+            raise ConfigIntegrityError(
+                f"Failed to check file drift for {file_path.name}: {e}"
+            ) from e
 
     def _has_required_config_sections(self) -> bool:
         pyproject = self.project_path / "pyproject.toml"

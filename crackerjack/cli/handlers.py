@@ -17,7 +17,9 @@ if t.TYPE_CHECKING:
 
 
 @depends.inject
-def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None) -> None:
+def setup_ai_agent_env(
+    ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
+) -> None:
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -53,7 +55,9 @@ def handle_mcp_server(websocket_port: int | None = None) -> None:
 
 
 @depends.inject
-def handle_monitor_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
+def handle_monitor_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
     from crackerjack.mcp.progress_monitor import run_progress_monitor
 
     console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/ bold cyan]")
@@ -68,7 +72,9 @@ def handle_monitor_mode(dev_mode: bool = False, console: Inject[Console] = None)
 
 
 @depends.inject
-def handle_enhanced_monitor_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
+def handle_enhanced_monitor_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
     from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
 
     console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/ bold magenta]")
@@ -83,7 +89,9 @@ def handle_enhanced_monitor_mode(dev_mode: bool = False, console: Inject[Console
 
 
 @depends.inject
-def handle_dashboard_mode(dev_mode: bool = False, console: Inject[Console] = None) -> None:
+def handle_dashboard_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
     from crackerjack.mcp.dashboard import run_dashboard
 
     console.print("[bold green]🎯 Starting Comprehensive Dashboard[/ bold green]")
@@ -98,7 +106,9 @@ def handle_dashboard_mode(dev_mode: bool = False, console: Inject[Console] = Non
 
 
 @depends.inject
-def handle_unified_dashboard_mode(port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None) -> None:
+def handle_unified_dashboard_mode(
+    port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
     from crackerjack.monitoring.websocket_server import CrackerjackMonitoringServer
 
     console.print("[bold green]🚀 Starting Unified Monitoring Dashboard[/bold green]")
@@ -162,7 +172,9 @@ def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
 
 
 @depends.inject
-def handle_restart_mcp_server(websocket_port: int | None = None, console: Inject[Console] = None) -> None:
+def handle_restart_mcp_server(
+    websocket_port: int | None = None, console: Inject[Console] = None
+) -> None:
     from crackerjack.services.server_manager import restart_mcp_server
 
     if restart_mcp_server(websocket_port, console):
@@ -173,7 +185,9 @@ def handle_restart_mcp_server(websocket_port: int | None = None, console: Inject
 
 
 @depends.inject
-def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp", console: Inject[Console] = None) -> None:
+def handle_start_zuban_lsp(
+    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
+) -> None:
     """Start Zuban LSP server."""
     from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
@@ -216,7 +230,9 @@ def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
 
 
 @depends.inject
-def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp", console: Inject[Console] = None) -> None:
+def handle_restart_zuban_lsp(
+    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
+) -> None:
     """Restart Zuban LSP server."""
     from crackerjack.services.server_manager import restart_zuban_lsp
 
@@ -248,7 +264,6 @@ def handle_standard_mode(
 ) -> None:
     # Run the async configure method in an isolated event loop
     import asyncio
-    import threading
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
 
@@ -292,15 +307,16 @@ def handle_standard_mode(
 
 
 @depends.inject
-def handle_orchestrated_mode(options: Options, job_id: str | None = None, console: Inject[Console] = None) -> None:
+def handle_orchestrated_mode(
+    options: Options, job_id: str | None = None, console: Inject[Console] = None
+) -> None:
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
     # Run the async configure method in an isolated event loop
     import asyncio
-    import threading
 
     from crackerjack.executors.hook_lock_manager import hook_lock_manager
-    
+
     # Call the synchronous method directly
     hook_lock_manager.configure_from_options(options)
 

@@ -175,6 +175,6 @@ class CoverageImprovementOrchestrator:
 
 
 async def create_coverage_improvement_orchestrator(
-    project_path: Path
+    project_path: Path,
 ) -> CoverageImprovementOrchestrator:
     return CoverageImprovementOrchestrator(project_path)

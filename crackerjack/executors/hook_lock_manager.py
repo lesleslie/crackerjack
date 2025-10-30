@@ -543,9 +543,7 @@ class HookLockManager:
     ) -> int:
         # Always attempt to check lock file data (file mtime is unreliable in tests)
         # The JSON data's last_heartbeat is the source of truth for staleness
-        return self._cleanup_stale_lock_file(
-            lock_file, max_age_hours, current_time
-        )
+        return self._cleanup_stale_lock_file(lock_file, max_age_hours, current_time)
 
     def _cleanup_stale_lock_file(
         self, lock_file: Path, max_age_hours: float, current_time: float

@@ -191,7 +191,7 @@ def create_monitoring_endpoints(
 
 def _initialize_monitoring_services(progress_dir: Path) -> dict[str, t.Any]:
     """Initialize all monitoring services."""
-    cache =CrackerjackCache()
+    cache = CrackerjackCache()
     quality_service = EnhancedQualityBaselineService(cache=cache)
     intelligence_service = QualityIntelligenceService(quality_service)
     dependency_analyzer = DependencyAnalyzer(progress_dir.parent)
@@ -1698,7 +1698,7 @@ async def _handle_error_patterns_request(
 
 
 async def _handle_trigger_error_analysis_request(
-    error_analyzer: ErrorPatternAnalyzer, cache:CrackerjackCache, request: dict
+    error_analyzer: ErrorPatternAnalyzer, cache: CrackerjackCache, request: dict
 ) -> JSONResponse:
     """Handle trigger error analysis API request."""
     try:

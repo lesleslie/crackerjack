@@ -53,6 +53,7 @@ class WorkflowPipeline:
         memory_optimizer: Inject[MemoryOptimizerProtocol],
         performance_cache: Inject[PerformanceCacheProtocol],
         debugger: Inject[DebugServiceProtocol],
+        logger: Inject[LoggerProtocol],
         session: Inject[SessionCoordinator],
         phases: Inject[PhaseCoordinator],
         quality_intelligence: Inject[QualityIntelligenceProtocol] | None = None,
@@ -73,10 +74,13 @@ class WorkflowPipeline:
         self._cache = performance_cache
         self._quality_intelligence = quality_intelligence
         self._performance_benchmarks = performance_benchmarks
+        self.logger = logger
 
         # Event bus with graceful fallback
         try:
-            self._event_bus: WorkflowEventBus | None = depends.get_sync(WorkflowEventBus)
+            self._event_bus: WorkflowEventBus | None = depends.get_sync(
+                WorkflowEventBus
+            )
         except Exception as e:
             print(f"WARNING: WorkflowEventBus not available: {type(e).__name__}: {e}")
             self._event_bus = None
@@ -97,6 +101,7 @@ class WorkflowPipeline:
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         workflow_id = f"workflow_{int(time.time())}"
         event_context = self._workflow_context(workflow_id, options)
+        start_time = time.time()
 
         self._performance_monitor.start_workflow(workflow_id)
 
@@ -104,16 +109,41 @@ class WorkflowPipeline:
 
         await self._publish_event(WorkflowEvent.WORKFLOW_STARTED, event_context)
 
+        success = False
         try:
             with LoggingContext(
                 "workflow_execution",
                 testing=getattr(options, "test", False),
                 skip_hooks=getattr(options, "skip_hooks", False),
             ):
-                await self._publish_event(
-                    WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
-                    event_context,
-                )
+                if self._event_bus:
+                    success = await self._run_event_driven_workflow(
+                        options, workflow_id, event_context, start_time
+                    )
+                else:
+                    await self._publish_event(
+                        WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
+                        event_context,
+                    )
+                    self._session_controller.initialize(options)
+                    await self._publish_event(
+                        WorkflowEvent.WORKFLOW_SESSION_READY,
+                        event_context,
+                    )
+                    success = await self._execute_workflow_with_timing(
+                        options, start_time, workflow_id
+                    )
+                    final_event = (
+                        WorkflowEvent.WORKFLOW_COMPLETED
+                        if success
+                        else WorkflowEvent.WORKFLOW_FAILED
+                    )
+                    await self._publish_event(
+                        final_event,
+                        {**event_context, "success": success},
+                    )
+                    self._performance_monitor.end_workflow(workflow_id, success)
+            return success
         except KeyboardInterrupt:
             self._performance_monitor.end_workflow(workflow_id, False)
             await self._publish_event(
@@ -448,58 +478,76 @@ class WorkflowPipeline:
         }
 
         # Subscribe to events
+        async def on_session_ready(event: Event) -> EventHandlerResult:
+            return await self._handle_session_ready(
+                event, state_flags, workflow_id, options
+            )
+
+        async def on_config_completed(event: Event) -> EventHandlerResult:
+            return await self._handle_config_completed(
+                event, state_flags, workflow_id, options
+            )
+
+        async def on_quality_completed(event: Event) -> EventHandlerResult:
+            return await self._handle_quality_completed(
+                event, state_flags, workflow_id, options, publish_requested
+            )
+
+        async def on_publish_completed(event: Event) -> EventHandlerResult:
+            return await self._handle_publish_completed(
+                event,
+                state_flags,
+                workflow_id,
+                options,
+                commit_requested,
+                publish_requested,
+                event_context,
+            )
+
+        async def on_workflow_completed(event: Event) -> EventHandlerResult:
+            return await self._handle_workflow_completed(
+                event, start_time, workflow_id, completion_future, subscriptions
+            )
+
+        async def on_workflow_failed(event: Event) -> EventHandlerResult:
+            return await self._handle_workflow_failed(
+                event, start_time, workflow_id, completion_future, subscriptions
+            )
+
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_SESSION_READY,
-                lambda event: self._handle_session_ready(
-                    event, state_flags, workflow_id, options
-                ),
+                on_session_ready,
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.CONFIG_PHASE_COMPLETED,
-                lambda event: self._handle_config_completed(
-                    event, state_flags, workflow_id, options
-                ),
+                on_config_completed,
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.QUALITY_PHASE_COMPLETED,
-                lambda event: self._handle_quality_completed(
-                    event, state_flags, workflow_id, options, publish_requested
-                ),
+                on_quality_completed,
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.PUBLISH_PHASE_COMPLETED,
-                lambda event: self._handle_publish_completed(
-                    event,
-                    state_flags,
-                    workflow_id,
-                    options,
-                    commit_requested,
-                    publish_requested,
-                    event_context,
-                ),
+                on_publish_completed,
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_COMPLETED,
-                lambda event: self._handle_workflow_completed(
-                    event, start_time, workflow_id, completion_future, subscriptions
-                ),
+                on_workflow_completed,
             )
         )
         subscriptions.append(
             self._event_bus.subscribe(
                 WorkflowEvent.WORKFLOW_FAILED,
-                lambda event: self._handle_workflow_failed(
-                    event, start_time, workflow_id, completion_future, subscriptions
-                ),
+                on_workflow_failed,
             )
         )
 
@@ -2570,17 +2618,14 @@ class WorkflowOrchestrator:
         hook_manager = HookManagerImpl(self.pkg_path, verbose=self.verbose)
         depends.set(HookManager, hook_manager)
 
+        from crackerjack.executors.hook_lock_manager import HookLockManager
         from crackerjack.models.protocols import (
             ConfigIntegrityServiceProtocol,
-            ConfigMergeServiceProtocol,
             CoverageBadgeServiceProtocol,
-            CoverageRatchetProtocol,
             EnhancedFileSystemServiceProtocol,
             GitServiceProtocol,
             HookLockManagerProtocol,
             HookManager,
-            PublishManager,
-            SecurityServiceProtocol,
             SmartSchedulingServiceProtocol,
             UnifiedConfigurationServiceProtocol,
         )
@@ -2588,15 +2633,25 @@ class WorkflowOrchestrator:
         from crackerjack.services.coverage_badge_service import CoverageBadgeService
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
         from crackerjack.services.git import GitService
-        from crackerjack.executors.hook_lock_manager import HookLockManager
         from crackerjack.services.smart_scheduling import SmartSchedulingService
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
         # Register core services
-        depends.set(UnifiedConfigurationServiceProtocol, UnifiedConfigurationService(pkg_path=self.pkg_path))
-        depends.set(ConfigIntegrityServiceProtocol, ConfigIntegrityService(project_path=self.pkg_path))
-        depends.set(ConfigMergeServiceProtocol, ConfigMergeService())  # ACB DI injects dependencies
-        depends.set(SmartSchedulingServiceProtocol, SmartSchedulingService(project_path=self.pkg_path))
+        depends.set(
+            UnifiedConfigurationServiceProtocol,
+            UnifiedConfigurationService(pkg_path=self.pkg_path),
+        )
+        depends.set(
+            ConfigIntegrityServiceProtocol,
+            ConfigIntegrityService(project_path=self.pkg_path),
+        )
+        depends.set(
+            ConfigMergeServiceProtocol, ConfigMergeService()
+        )  # ACB DI injects dependencies
+        depends.set(
+            SmartSchedulingServiceProtocol,
+            SmartSchedulingService(project_path=self.pkg_path),
+        )
         depends.set(EnhancedFileSystemServiceProtocol, EnhancedFileSystemService())
         depends.set(SecurityServiceProtocol, SecurityService())
         depends.set(HookLockManagerProtocol, HookLockManager())
@@ -2619,18 +2674,21 @@ class WorkflowOrchestrator:
         # Register version analyzer (needed by publish manager)
         from crackerjack.models.protocols import VersionAnalyzerProtocol
         from crackerjack.services.version_analyzer import VersionAnalyzer
+
         version_analyzer = VersionAnalyzer(git_service=git_service)
         depends.set(VersionAnalyzerProtocol, version_analyzer)
 
         # Register changelog generator (ACB DI injects dependencies)
         from crackerjack.models.protocols import ChangelogGeneratorProtocol
         from crackerjack.services.changelog_automation import ChangelogGenerator
+
         changelog_generator = ChangelogGenerator()
         depends.set(ChangelogGeneratorProtocol, changelog_generator)
 
         # Register regex patterns service
         from crackerjack.models.protocols import RegexPatternsProtocol
         from crackerjack.services.regex_patterns import RegexPatternsService
+
         regex_patterns = RegexPatternsService()
         depends.set(RegexPatternsProtocol, regex_patterns)
 

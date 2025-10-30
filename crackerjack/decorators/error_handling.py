@@ -70,7 +70,10 @@ def handle_errors(
     transform_to: type[CrackerjackError] | None = None,
     console: Console | None = None,
     suppress: bool = False,
-) -> t.Callable[..., t.Any] | t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
+) -> (
+    t.Callable[..., t.Any]
+    | t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]
+):
     """
     Centralized error handling with transformation and fallback support.
 
@@ -330,7 +333,9 @@ def with_timeout(
             @wraps(func)
             async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
                 try:
-                    return await asyncio.wait_for(func(*args, **kwargs), timeout=seconds)
+                    return await asyncio.wait_for(
+                        func(*args, **kwargs), timeout=seconds
+                    )
                 except TimeoutError as exc:
                     message = error_message or f"Operation timed out after {seconds}s"
                     raise CrackerjackTimeoutError(message=message) from exc
@@ -352,9 +357,78 @@ def with_timeout(
     return decorator
 
 
+def _execute_single_validator(
+    validate: t.Callable[[t.Any], bool], param: str, value: t.Any
+) -> None:
+    """Execute a single validator and raise ValidationError if it fails."""
+    try:
+        result = validate(value)
+    except Exception as exc:  # pragma: no cover - defensive
+        raise ValidationError(
+            message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
+        ) from exc
+    if result is False:
+        raise ValidationError(
+            message=f"Validation failed for parameter '{param}'",
+        )
+
+
+def _check_type_annotation_against_signature(
+    name: str, value: t.Any, signature: inspect.Signature
+) -> None:
+    """Check if value matches parameter type annotation."""
+    parameter = signature.parameters.get(name)
+    if not parameter or parameter.annotation is inspect.Signature.empty:
+        return
+    if not isinstance(value, parameter.annotation):  # type: ignore[arg-type]
+        raise ValidationError(
+            message=(
+                f"Parameter '{name}' expected "
+                f"{parameter.annotation!r}, got {type(value)!r}"
+            ),
+        )
+
+
+def _create_async_validation_wrapper(
+    func: t.Callable[..., t.Any],
+    signature: inspect.Signature,
+    validate_fn: t.Callable[[inspect.BoundArguments], None],
+) -> t.Callable[..., t.Any]:
+    """Create async wrapper with validation."""
+
+    @wraps(func)
+    async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        bound = signature.bind_partial(*args, **kwargs)
+        bound.apply_defaults()
+        validate_fn(bound)
+        return await func(*args, **kwargs)
+
+    return async_wrapper
+
+
+def _create_sync_validation_wrapper(
+    func: t.Callable[..., t.Any],
+    signature: inspect.Signature,
+    validate_fn: t.Callable[[inspect.BoundArguments], None],
+) -> t.Callable[..., t.Any]:
+    """Create sync wrapper with validation."""
+
+    @wraps(func)
+    def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        bound = signature.bind_partial(*args, **kwargs)
+        bound.apply_defaults()
+        validate_fn(bound)
+        return func(*args, **kwargs)
+
+    return sync_wrapper
+
+
 def validate_args(
     *,
-    validators: dict[str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]] | None = None,
+    validators: dict[
+        str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
+    ]
+    | None = None,
     type_check: bool = False,
 ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
     """
@@ -374,16 +448,7 @@ def validate_args(
         if not isinstance(funcs, (list, tuple, set)):
             funcs = [funcs]  # type: ignore[list-item]
         for validate in funcs:
-            try:
-                result = validate(value)
-            except Exception as exc:  # pragma: no cover - defensive
-                raise ValidationError(
-                    message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
-                ) from exc
-            if result is False:
-                raise ValidationError(
-                    message=f"Validation failed for parameter '{param}'",
-                )
+            _execute_single_validator(validate, param, value)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         signature = inspect.signature(func)
@@ -391,41 +456,15 @@ def validate_args(
         def _validate(bound: inspect.BoundArguments) -> None:
             if type_check:
                 for name, value in bound.arguments.items():
-                    parameter = signature.parameters.get(name)
-                    if (
-                        parameter
-                        and parameter.annotation is not inspect.Signature.empty
-                        and not isinstance(value, parameter.annotation)  # type: ignore[arg-type]
-                    ):
-                        raise ValidationError(
-                            message=(
-                                f"Parameter '{name}' expected "
-                                f"{parameter.annotation!r}, got {type(value)!r}"
-                            ),
-                        )
+                    _check_type_annotation_against_signature(name, value, signature)
 
             for name, value in bound.arguments.items():
                 _run_validators(name, value)
 
         if is_async_function(func):
+            return _create_async_validation_wrapper(func, signature, _validate)
 
-            @wraps(func)
-            async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                bound = signature.bind_partial(*args, **kwargs)
-                bound.apply_defaults()
-                _validate(bound)
-                return await func(*args, **kwargs)
-
-            return async_wrapper
-
-        @wraps(func)
-        def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-            bound = signature.bind_partial(*args, **kwargs)
-            bound.apply_defaults()
-            _validate(bound)
-            return func(*args, **kwargs)
-
-        return sync_wrapper
+        return _create_sync_validation_wrapper(func, signature, _validate)
 
     return decorator
 

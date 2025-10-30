@@ -587,7 +587,7 @@ class AdvancedOptimizer:
 
     @staticmethod
     def _generate_cpu_recommendations(
-        metrics: ResourceMetrics
+        metrics: ResourceMetrics,
     ) -> list[OptimizationRecommendation]:
         """Generate CPU-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []
@@ -611,7 +611,7 @@ class AdvancedOptimizer:
 
     @staticmethod
     def _generate_memory_recommendations(
-        metrics: ResourceMetrics
+        metrics: ResourceMetrics,
     ) -> list[OptimizationRecommendation]:
         """Generate memory-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []
@@ -635,7 +635,7 @@ class AdvancedOptimizer:
 
     @staticmethod
     def _generate_storage_recommendations(
-        storage_usage: dict[str, t.Any]
+        storage_usage: dict[str, t.Any],
     ) -> list[OptimizationRecommendation]:
         """Generate storage-related optimization recommendations."""
         recommendations: list[OptimizationRecommendation] = []

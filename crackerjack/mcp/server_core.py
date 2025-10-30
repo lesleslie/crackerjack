@@ -27,6 +27,14 @@ except ImportError:
     _mcp_available = False
     FastMCP = None  # type: ignore[misc,assignment,no-redef]
 
+# Import FastMCP rate limiting middleware (Phase 3 Security Hardening)
+try:
+    from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
+
+    RATE_LIMITING_AVAILABLE = True
+except ImportError:
+    RATE_LIMITING_AVAILABLE = False
+
 MCP_AVAILABLE: Final[bool] = _mcp_available
 
 # Phase 9.1: ACB Integration - Module registration for dependency injection
@@ -138,6 +146,16 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
     mcp_app = FastMCP("crackerjack-mcp-server", streamable_http_path="/mcp")
+
+    # Add rate limiting middleware (Phase 3 Security Hardening)
+    if RATE_LIMITING_AVAILABLE:
+        rate_limiter = RateLimitingMiddleware(
+            max_requests_per_second=12.0,  # Sustainable rate for code quality operations
+            burst_capacity=35,  # Allow bursts for test/lint operations
+            global_limit=True,  # Protect the crackerjack server globally
+        )
+        # Use public API (Phase 3.1 C1 fix: standardize middleware access)
+        mcp_app.add_middleware(rate_limiter)
 
     from crackerjack.slash_commands import get_slash_command_path
 

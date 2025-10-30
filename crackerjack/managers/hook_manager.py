@@ -33,11 +33,21 @@ class HookManagerImpl:
 
         # Use LSP-aware executor if optimization is enabled
         if enable_lsp_optimization:
+            # Create a console for the executor
+            from rich.console import Console
+
+            console = Console()
+            self.console = console  # Store console for later use
             self.executor = LSPAwareHookExecutor(
-                pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
+                console, pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
             )
         else:
-            self.executor = HookExecutor(pkg_path, verbose, quiet)
+            # Create a console for the executor
+            from rich.console import Console
+
+            console = Console()
+            self.console = console  # Store console for later use
+            self.executor = HookExecutor(console, pkg_path, verbose, quiet)
 
         self.config_loader = HookConfigLoader()
         self._config_path: Path | None = None

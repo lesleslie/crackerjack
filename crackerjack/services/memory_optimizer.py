@@ -223,12 +223,10 @@ class MemoryProfiler:
 
     def _get_memory_usage(self) -> float:
         try:
-
             process = psutil.Process(os.getpid())
             memory_mb: float = process.memory_info().rss / 1024 / 1024
             return memory_mb
         except ImportError:
-
             if tracemalloc.is_tracing():
                 current, _peak = tracemalloc.get_traced_memory()
                 return current / 1024 / 1024
@@ -396,9 +394,6 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
                 optimizer._run_memory_cleanup()
 
     return wrapper
-
-
-
 
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:

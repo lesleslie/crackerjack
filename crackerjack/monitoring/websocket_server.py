@@ -42,7 +42,7 @@ class CrackerjackMonitoringServer:
 
         # Core services
         self.app = FastAPI(title="Crackerjack Monitoring", version="1.0.0")
-        self.cache =CrackerjackCache()
+        self.cache = CrackerjackCache()
         self.metrics_collector = MetricsCollector(self.cache)
         self.websocket_manager = MonitoringWebSocketManager()
         self.ai_watchdog = AIAgentWatchdog()

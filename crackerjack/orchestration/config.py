@@ -246,7 +246,9 @@ class OrchestrationConfig:
             errors.append("Invalid orchestration_mode; expected 'acb' or 'legacy'")
 
         if self.cache_backend not in {"memory", "tool_proxy", "redis"}:
-            errors.append("Invalid cache_backend; expected 'memory', 'tool_proxy', or 'redis'")
+            errors.append(
+                "Invalid cache_backend; expected 'memory', 'tool_proxy', or 'redis'"
+            )
 
         if self.cache_ttl <= 0:
             errors.append("cache_ttl must be positive")

@@ -11,6 +11,7 @@ class CleaningSettings(Settings):
     compress_docs: bool = False
     auto_compress_docs: bool = False
 
+
 class HookSettings(Settings):
     skip_hooks: bool = False
     update_precommit: bool = False
@@ -19,11 +20,13 @@ class HookSettings(Settings):
     enable_ty: bool = False
     enable_lsp_optimization: bool = False
 
+
 class TestSettings(Settings):
     test: bool = False
     benchmark: bool = False
     test_workers: int = 0
     test_timeout: int = 0
+
 
 class PublishSettings(Settings):
     publish: t.Any | None = None
@@ -32,9 +35,11 @@ class PublishSettings(Settings):
     no_git_tags: bool = False
     skip_version_check: bool = False
 
+
 class GitSettings(Settings):
     commit: bool = False
     create_pr: bool = False
+
 
 class AISettings(Settings):
     ai_agent: bool = False
@@ -43,24 +48,29 @@ class AISettings(Settings):
     autofix: bool = True
     ai_agent_autofix: bool = False
 
+
 class ExecutionSettings(Settings):
     interactive: bool = False
     verbose: bool = False
     async_mode: bool = False
     no_config_updates: bool = False
 
+
 class ProgressSettings(Settings):
     enabled: bool = False
+
 
 class CleanupSettings(Settings):
     auto_cleanup: bool = True
     keep_debug_logs: int = 5
     keep_coverage_files: int = 10
 
+
 class AdvancedSettings(Settings):
     enabled: bool = False
     license_key: str | None = None
     organization: str | None = None
+
 
 class MCPServerSettings(Settings):
     http_port: int = 8676
@@ -68,12 +78,14 @@ class MCPServerSettings(Settings):
     websocket_port: int = 8675
     http_enabled: bool = False
 
+
 class ZubanLSPSettings(Settings):
     enabled: bool = True
     auto_start: bool = True
     port: int = 8677
     mode: str = "stdio"
     timeout: int = 30
+
 
 class GlobalLockSettings(Settings):
     enabled: bool = True
@@ -84,6 +96,7 @@ class GlobalLockSettings(Settings):
     max_retry_attempts: int = 3
     retry_delay_seconds: float = 5.0
     enable_lock_monitoring: bool = True
+
 
 class CrackerjackSettings(Settings):
     cleaning: CleaningSettings = CleaningSettings()

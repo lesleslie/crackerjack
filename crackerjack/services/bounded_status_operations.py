@@ -337,9 +337,6 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                 pass
 
     async def _monitor_operation(self, metrics: OperationMetrics) -> None:
-
-
-
         try:
             process = psutil.Process(os.getpid())
             initial_cpu_time = process.cpu_times().user + process.cpu_times().system

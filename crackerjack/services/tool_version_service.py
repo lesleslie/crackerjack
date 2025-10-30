@@ -17,7 +17,9 @@ __all__ = [
 
 class ToolVersionService:
     @depends.inject
-    def __init__(self, console: Inject[Console], project_path: Path | None = None) -> None:
+    def __init__(
+        self, console: Inject[Console], project_path: Path | None = None
+    ) -> None:
         self.console = console
         self.project_path = project_path or Path.cwd()
 

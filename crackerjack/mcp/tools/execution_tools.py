@@ -213,15 +213,17 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
-    
-    
+
     @depends.inject
-    def _execute_initialization(target_path: t.Any, force: bool, console: Inject[Console]) -> dict[str, t.Any]:
+    def _execute_initialization(
+        target_path: t.Any, force: bool, console: Inject[Console]
+    ) -> dict[str, t.Any]:
         filesystem = FileSystemService()
         git_service = GitService(target_path)
         return InitializationService(
             filesystem, git_service, target_path
         ).initialize_project_full(force=force)
+
 
 def _create_init_error_response(message: str) -> str:
     return json.dumps(

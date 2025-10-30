@@ -49,7 +49,9 @@ def _get_project_files(console: Inject[Console]) -> list[str]:
 
 
 @depends.inject
-def _fallback_to_zuban_check(console: Inject[Console], files_to_check: list[str]) -> int:
+def _fallback_to_zuban_check(
+    console: Inject[Console], files_to_check: list[str]
+) -> int:
     """Fall back to regular zuban execution when LSP server is not running."""
     console.print("⚠️  Zuban LSP server not running, falling back to direct zuban check")
     # Fall back to regular zuban execution

@@ -559,6 +559,15 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 - **Terminal stuck**: `stty sane; reset; exec $SHELL -l`
 - **Slow tests**: Customize `--test-workers N` or use `--skip-hooks`
 
+**Hook Timeouts**:
+
+- **Symptom**: Multiple pre-commit hooks timeout after 10-11 seconds during `python -m crackerjack`
+- **Root Cause**: `uv run` spawns a new virtual environment for each hook invocation (~10s startup overhead)
+- **Workaround**: Use `python -m crackerjack --skip-hooks` during active development/debugging
+- **Not a Code Issue**: Timeouts indicate environment initialization delay, not code problems
+- **Tools Affected**: validate_regex_patterns, trailing-whitespace, end-of-file-fixer, check-yaml, gitleaks, codespell, mdformat
+- **Verification**: If hooks pass on retry or `--skip-hooks` works, it's the timeout issue
+
 ## MCP Server Integration
 
 **Features**: Dual protocol (MCP + WebSocket), real-time progress, job tracking

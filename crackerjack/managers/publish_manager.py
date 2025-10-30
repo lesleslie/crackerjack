@@ -86,13 +86,18 @@ class PublishManagerImpl:
         pyproject_path = self.pkg_path / "pyproject.toml"
         try:
             content = self.filesystem.read_file(pyproject_path)
-            
+
             # Use injected service or get through ACB DI
             if self._regex_patterns is not None:
-                update_pyproject_version_func = self._regex_patterns.update_pyproject_version
+                update_pyproject_version_func = (
+                    self._regex_patterns.update_pyproject_version
+                )
             else:
                 from acb.depends import depends
-                update_pyproject_version_func = depends.get_sync(RegexPatternsProtocol).update_pyproject_version
+
+                update_pyproject_version_func = depends.get_sync(
+                    RegexPatternsProtocol
+                ).update_pyproject_version
 
             new_content = update_pyproject_version_func(content, new_version)
             if content != new_content:

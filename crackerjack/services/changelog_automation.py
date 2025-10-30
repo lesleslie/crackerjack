@@ -35,7 +35,9 @@ class ChangelogGenerator:
     """Generate and update changelogs based on git commits."""
 
     @depends.inject
-    def __init__(self, console: Inject[Console], git_service: Inject[GitServiceProtocol]) -> None:
+    def __init__(
+        self, console: Inject[Console], git_service: Inject[GitServiceProtocol]
+    ) -> None:
         self.console = console
         self.git = git_service
 

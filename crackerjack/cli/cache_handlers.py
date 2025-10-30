@@ -136,7 +136,9 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
 
 
 @depends.inject
-def _display_performance_insights(totals: dict[str, t.Any], console: Inject[Console]) -> None:
+def _display_performance_insights(
+    totals: dict[str, t.Any], console: Inject[Console]
+) -> None:
     """Display performance insights panel based on cache statistics."""
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
@@ -178,7 +180,9 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
 
 
 @depends.inject
-def _display_cache_directory_info(cache: CrackerjackCache, console: Inject[Console]) -> None:
+def _display_cache_directory_info(
+    cache: CrackerjackCache, console: Inject[Console]
+) -> None:
     """Display cache directory information."""
     if not (cache.enable_disk_cache and cache.cache_dir):
         return

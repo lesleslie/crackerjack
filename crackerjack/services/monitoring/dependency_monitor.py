@@ -473,7 +473,6 @@ class DependencyMonitorService:
             return None
 
     def _fetch_pypi_data(self, package: str) -> dict[str, t.Any]:
-
         url = f"https://pypi.org/pypi/{package}/json"
         self._validate_pypi_url(url)
 
@@ -488,7 +487,6 @@ class DependencyMonitorService:
         return t.cast(dict[str, t.Any], response.json())
 
     def _validate_pypi_url(self, url: str) -> None:
-
         parsed = urlparse(url)
 
         if parsed.scheme != "https":

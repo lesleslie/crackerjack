@@ -644,7 +644,11 @@ class WorkflowOptions:
             "create_pr",
             "dry_run",
         ]
-        kwargs = {field: getattr(args, field) for field in simple_fields if hasattr(args, field)}
+        kwargs = {
+            field: getattr(args, field)
+            for field in simple_fields
+            if hasattr(args, field)
+        }
         return cls(**kwargs)
 
     def to_dict(self) -> dict[str, Any]:

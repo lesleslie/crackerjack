@@ -1,0 +1,68 @@
+{
+  "mcpServers": {
+    "session-mgmt": {
+      "url": "http://localhost:8678/mcp",
+      "type": "http"
+    },
+    "crackerjack": {
+      "url": "http://localhost:8676/mcp",
+      "type": "http"
+    },
+    "macos_automator": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@steipete/macos-automator-mcp@0.4.1"
+      ],
+      "type": "stdio"
+    },
+    "peekaboo": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@steipete/peekaboo-mcp@2.0.3"
+      ],
+      "type": "stdio"
+    },
+    "gitlab": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@zereight/mcp-gitlab@2.0.6"
+      ],
+      "type": "stdio"
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory@2025.9.25"
+      ],
+      "type": "stdio"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking@2025.7.1"
+      ],
+      "type": "stdio"
+    },
+    "mermaid": {
+      "url": "http://localhost:3033/mcp",
+      "type": "http"
+    },
+    "context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp@1.0.20"
+      ],
+      "type": "stdio"
+    },
+    "excalidraw": {
+      "url": "http://localhost:3032/mcp",
+      "type": "http"
+    }
+  }
+}

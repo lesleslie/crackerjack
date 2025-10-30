@@ -336,7 +336,9 @@ from crackerjack.services.git import GitService
 from crackerjack.services.initialization import InitializationService
 
 
-def _execute_init_stage(orchestrator: "WorkflowOrchestrator", console: Inject[Console]) -> bool:
+def _execute_init_stage(
+    orchestrator: "WorkflowOrchestrator", console: Inject[Console]
+) -> bool:
     try:
         from pathlib import Path
 
