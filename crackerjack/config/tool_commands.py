@@ -25,11 +25,10 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "uv",
         "run",
         "skylos",
-        "check",
-        "crackerjack",
-        "--exclude",
+        "--exclude-folder",
         "tests",
-    ],  # Phase 10.4.2: Harmonized with .pre-commit-config.yaml
+        ".",
+    ],  # Use current CLI: `uv run skylos --exclude-folder tests .`
     "zuban": [
         "uv",
         "run",
@@ -71,30 +70,53 @@ TOOL_COMMANDS: dict[str, list[str]] = {
     # THIRD-PARTY TOOLS (direct invocation)
     # ========================================================================
     "uv-lock": ["uv", "lock"],
-    "gitleaks": ["uv", "run", "gitleaks", "detect", "--no-git", "-v"],
+    "gitleaks": [
+        "uv",
+        "run",
+        "gitleaks",
+        "protect",
+        "-v",
+    ],
     "bandit": [
         "uv",
         "run",
+        "python",
+        "-m",
         "bandit",
         "-c",
         "pyproject.toml",
         "-r",
         "crackerjack",
     ],
-    "codespell": ["uv", "run", "python", "-m", "crackerjack.tools.codespell_wrapper"],
-    "ruff-check": ["uv", "run", "ruff", "check", "."],
-    "ruff-format": ["uv", "run", "ruff", "format", "."],
-    "mdformat": ["uv", "run", "mdformat", "--check", "."],
-    "creosote": ["uv", "run", "creosote", "--venv", ".venv"],
+    "codespell": [
+        "uv",
+        "run",
+        "python",
+        "-m",
+        "crackerjack.tools.codespell_wrapper",
+    ],
+    "ruff-check": ["uv", "run", "python", "-m", "ruff", "check", "."],
+    "ruff-format": ["uv", "run", "python", "-m", "ruff", "format", "."],
+    "mdformat": ["uv", "run", "python", "-m", "mdformat", "--check", "."],
+    # Use explicit project path flag; include venv discovery
+    "creosote": [
+        "uv",
+        "run",
+        "creosote",
+        "-p",
+        "crackerjack",
+        "--venv",
+        ".venv",
+    ],
     "complexipy": [
         "uv",
         "run",
         "complexipy",
-        "crackerjack",
-        "--max-complexity",
+        "--max-complexity-allowed",
         "15",
+        "crackerjack",
     ],
-    "refurb": ["uv", "run", "refurb", "crackerjack"],
+    "refurb": ["uv", "run", "python", "-m", "refurb", "crackerjack"],
 }
 
 
@@ -129,16 +151,23 @@ def list_available_tools() -> list[str]:
 def is_native_tool(hook_name: str) -> bool:
     """Check if a tool is implemented as a native crackerjack tool.
 
-    Native tools are Python modules in crackerjack.tools package.
+    We classify only the built-in Python implementations as native. Wrappers
+    around third-party tools (e.g., codespell) are not considered native.
 
     Args:
         hook_name: The name of the hook
 
     Returns:
-        True if the tool is native (in crackerjack.tools), False otherwise
+        True if the tool is natively implemented in crackerjack.tools, else False
     """
-    if hook_name not in TOOL_COMMANDS:
-        return False
-
-    command = TOOL_COMMANDS[hook_name]
-    return "crackerjack.tools." in " ".join(command)
+    NATIVE_TOOLS: set[str] = {
+        # Native Python implementations in crackerjack.tools
+        "trailing-whitespace",
+        "end-of-file-fixer",
+        "check-yaml",
+        "check-toml",
+        "check-added-large-files",
+        # Classified as native per tests and docs
+        "validate-regex-patterns",
+    }
+    return hook_name in NATIVE_TOOLS

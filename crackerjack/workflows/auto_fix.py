@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from acb import console as acb_console
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
 from crackerjack.agents.enhanced_coordinator import EnhancedAgentCoordinator

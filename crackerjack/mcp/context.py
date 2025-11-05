@@ -10,7 +10,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import TracebackType
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from crackerjack.core.resource_manager import (
     ResourceManager,
@@ -291,10 +292,10 @@ class MCPServerContext:
     def _setup_console(self) -> None:
         """Setup console based on configuration mode."""
         if self.config.stdio_mode:
-            null_file = io.StringIO()
-            self.console = Console(file=null_file, force_terminal=False)
+            io.StringIO()
+            self.console = depends.get_sync(Console)
         else:
-            self.console = Console(force_terminal=True)
+            self.console = depends.get_sync(Console)
 
     def _setup_directories(self) -> None:
         """Setup required directories."""
@@ -779,7 +780,7 @@ def clear_context() -> None:
 
 
 def get_console() -> Console:
-    return get_context().console or Console()
+    return get_context().console or depends.get_sync(Console)
 
 
 def get_state_manager() -> StateManager | None:

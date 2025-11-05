@@ -2339,7 +2339,10 @@ class WorkflowPipeline:
 
         with phase_monitor(workflow_id, "fast_hooks") as monitor:
             monitor.record_sequential_op()
-            fast_hooks_success = self._run_fast_hooks_phase(options)
+            # FIX: Run blocking sync method in thread to avoid blocking event loop
+            fast_hooks_success = await asyncio.to_thread(
+                self._run_fast_hooks_phase, options
+            )
 
             # Delegate to AI workflow completion handler if AI agent enabled
             if options.ai_agent:
@@ -2356,7 +2359,10 @@ class WorkflowPipeline:
 
         with phase_monitor(workflow_id, "comprehensive_hooks") as monitor:
             monitor.record_sequential_op()
-            comprehensive_success = self._run_comprehensive_hooks_phase(options)
+            # FIX: Run blocking sync method in thread to avoid blocking event loop
+            comprehensive_success = await asyncio.to_thread(
+                self._run_comprehensive_hooks_phase, options
+            )
 
             # Delegate to AI workflow completion handler if AI agent enabled
             if options.ai_agent:
@@ -2429,8 +2435,9 @@ class WorkflowPipeline:
         with phase_monitor(workflow_id, "hooks") as monitor:
             self._update_hooks_status_running()
 
-            fast_hooks_success = self._execute_monitored_fast_hooks_phase(
-                options, monitor
+            # FIX: Run blocking sync method in thread to avoid blocking event loop
+            fast_hooks_success = await asyncio.to_thread(
+                self._execute_monitored_fast_hooks_phase, options, monitor
             )
             if not fast_hooks_success:
                 self._handle_hooks_completion(False)
@@ -2441,12 +2448,17 @@ class WorkflowPipeline:
                     )
                 return False
 
-            if not self._execute_monitored_cleaning_phase(options):
+            # FIX: Run blocking sync method in thread to avoid blocking event loop
+            cleaning_success = await asyncio.to_thread(
+                self._execute_monitored_cleaning_phase, options
+            )
+            if not cleaning_success:
                 self._handle_hooks_completion(False)
                 return False
 
-            comprehensive_success = self._execute_monitored_comprehensive_phase(
-                options, monitor
+            # FIX: Run blocking sync method in thread to avoid blocking event loop
+            comprehensive_success = await asyncio.to_thread(
+                self._execute_monitored_comprehensive_phase, options, monitor
             )
 
             hooks_success = fast_hooks_success and comprehensive_success

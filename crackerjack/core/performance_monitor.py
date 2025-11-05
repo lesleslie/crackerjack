@@ -7,7 +7,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
+from rich.panel import Panel
 from rich.table import Table
 
 logger = logging.getLogger("crackerjack.performance_monitor")
@@ -285,7 +287,7 @@ class AsyncPerformanceMonitor:
 
     def print_performance_report(self, console: Console | None = None) -> None:
         if console is None:
-            console = Console()
+            console = depends.get_sync(Console)
 
         console.print("\n[bold blue]🔍 Async Performance Monitor Report[/bold blue]")
         console.print("=" * 60)
@@ -318,7 +320,7 @@ class AsyncPerformanceMonitor:
                         str(metrics.timeout_calls),
                     )
 
-            console.print(table)
+            console.print(Panel(table, title="Operation Metrics", border_style="cyan"))
 
         alerts = self.get_performance_alerts()
         if alerts:

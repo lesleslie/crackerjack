@@ -5,12 +5,14 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
+from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
+from crackerjack.utils.console_utils import separator as make_separator
 
 
 @dataclass
@@ -602,8 +604,8 @@ class IndividualHookExecutor:
         ):
             self.progress_callback(progress)
 
+    @staticmethod
     async def _wait_for_process_completion(
-        self,
         process: asyncio.subprocess.Process,
         tasks: list[asyncio.Task[None]],
         timeout: int,
@@ -611,8 +613,8 @@ class IndividualHookExecutor:
         await asyncio.wait_for(process.wait(), timeout=timeout)
         await asyncio.gather(*tasks, return_exceptions=True)
 
+    @staticmethod
     def _handle_process_timeout(
-        self,
         process: asyncio.subprocess.Process,
         tasks: list[asyncio.Task[None]],
     ) -> None:
@@ -620,8 +622,8 @@ class IndividualHookExecutor:
         for task in tasks:
             task.cancel()
 
+    @staticmethod
     def _create_completed_process(
-        self,
         cmd: list[str],
         process: asyncio.subprocess.Process,
         stdout_lines: list[str],
@@ -680,7 +682,7 @@ class IndividualHookExecutor:
         total_warnings = sum(p.warnings_found for p in progress_list)
         total_duration = sum(p.duration or 0 for p in progress_list)
 
-        self.console.print("\n" + "-" * 74)
+        self.console.print("\n" + make_separator("-", get_console_width()))
         self.console.print(
             f"[bold]📊 INDIVIDUAL EXECUTION SUMMARY[/ bold]-{strategy.name.upper()}",
         )
@@ -702,4 +704,4 @@ class IndividualHookExecutor:
                     )
                     self.console.print(f" ❌ {progress.hook_name}-{error_summary}")
 
-        self.console.print("-" * 74)
+        self.console.print(make_separator("-", get_console_width()))

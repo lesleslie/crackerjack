@@ -5,7 +5,8 @@ from enum import Enum, auto
 from functools import partial
 from typing import Protocol
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.table import Table
@@ -413,7 +414,7 @@ class WorkflowManager:
 
 class InteractiveCLI:
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+        self.console = console or depends.get_sync(Console)
         self.workflow = WorkflowManager(self.console)
         import logging
 
@@ -667,6 +668,8 @@ class InteractiveCLI:
 
         self.console.print("\n[bold]📊 Workflow Summary[/ bold]")
 
+        from rich.panel import Panel
+
         table = Table(show_header=True, header_style="bold magenta")
         table.add_column("Status", style="cyan")
         table.add_column("Count", justify="right")
@@ -683,11 +686,13 @@ class InteractiveCLI:
                 style = status_styles.get(status, "white")
                 table.add_row(f"[{style}]{status.title()}[/{style}]", str(count))
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="Workflow Summary", border_style="magenta")
+        )
 
 
 def launch_interactive_cli(version: str, options: t.Any = None) -> None:
-    console = Console()
+    console = depends.get_sync(Console)
     cli = InteractiveCLI(console)
 
     title = Text("Crackerjack", style="bold cyan")

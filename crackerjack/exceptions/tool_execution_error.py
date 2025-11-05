@@ -6,7 +6,7 @@ Part of Phase 10.2.3: Development Velocity Improvements.
 
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 from rich.panel import Panel
 
 
@@ -66,8 +66,12 @@ class ToolExecutionError(Exception):
         content_parts = []
 
         # Tool and exit code
-        content_parts.append(f"[bold red]Tool:[/bold red] {self.tool}")
-        content_parts.append(f"[bold red]Exit Code:[/bold red] {self.exit_code}")
+        content_parts.extend(
+            (
+                f"[bold red]Tool:[/bold red] {self.tool}",
+                f"[bold red]Exit Code:[/bold red] {self.exit_code}",
+            )
+        )
 
         # Duration if available
         if self.duration is not None:

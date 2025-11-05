@@ -226,7 +226,7 @@ class TestOrchestrationConfigValidation:
 
         assert len(errors) == 1
         assert "orchestration_mode" in errors[0]
-        assert "invalid" in errors[0]
+        assert "invalid" in errors[0].lower()
 
     def test_invalid_cache_backend(self):
         """Test validation of invalid cache backend."""

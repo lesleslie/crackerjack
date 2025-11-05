@@ -2,7 +2,7 @@ import typing as t
 from pathlib import Path
 
 from acb import console as acb_console
-from rich.console import Console
+from acb.console import Console
 
 
 class DependencyContainer:

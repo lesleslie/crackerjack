@@ -7,9 +7,9 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import Inject, depends
 from acb.logger import Logger
-from rich.console import Console
 
 from crackerjack.models.protocols import (
     PerformanceBenchmarkServiceProtocol,

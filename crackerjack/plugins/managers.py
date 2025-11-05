@@ -2,7 +2,7 @@ import logging
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.models.protocols import OptionsProtocol
 

@@ -2,8 +2,9 @@ import time
 import typing as t
 from enum import Enum, auto
 
+from acb.console import Console
+from acb.depends import depends
 from rich.box import ROUNDED
-from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
@@ -383,8 +384,10 @@ class InteractiveWorkflowManager:
                 duration_text,
                 details,
             )
+        from rich.panel import Panel
+
         self.console.print("\n")
-        self.console.print(table)
+        self.console.print(Panel(table, border_style="magenta"))
         if failed_count == 0:
             self.console.print(
                 f"\n[bold green]🎉 Workflow completed ! {success_count} / {len(self.tasks)} tasks successful[/ bold green]",
@@ -398,8 +401,8 @@ class InteractiveWorkflowManager:
 class InteractiveCLI:
     def __init__(self, pkg_version: str, console: Console | None = None) -> None:
         self.pkg_version = pkg_version
-        self.console = console or Console(force_terminal=True)
-        self.orchestrator = WorkflowOrchestrator(console=self.console)
+        self.console = console or depends.get_sync(Console)
+        self.orchestrator = WorkflowOrchestrator()
         self.workflow_manager = InteractiveWorkflowManager(
             self.console,
             self.orchestrator,

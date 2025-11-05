@@ -7,7 +7,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Quality Hooks](https://img.shields.io/badge/quality%20hooks-17%20tools-brightgreen)](https://github.com/lesleslie/crackerjack)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-19.6%25-red)
+![Coverage](https://img.shields.io/badge/coverage-22.0%25-red)
 
 ## 🎯 Purpose
 
@@ -182,6 +182,7 @@ python -m crackerjack --run-tests
 - [Core Workflow](<#core-workflow>)
 - [Core Features](<#core-features>)
 - [ACB Architecture & Performance](<#-acb-architecture--performance>)
+- [Adapters](<#adapters>)
 - [Configuration Management](<#-configuration-management-acb-settings--configuration-templates>)
 - [MCP Server Configuration](<#mcp-server-configuration>)
 - [Quality Hook Modes](<#quality-hook-modes>)
@@ -639,7 +640,7 @@ pre-commit run ruff --all-files  # Subprocess overhead
 python -m crackerjack --fast  # Direct Python API, 70% faster
 ```
 
-**Migration Guide:** See `/docs/ACB-MIGRATION-GUIDE.md` for complete details
+**Migration Guide:** See `docs/README.md` (Migration Notes)
 
 ### Configuration Management (ACB Settings & Configuration Templates)
 
@@ -714,9 +715,9 @@ merge_result = config_merge_service.smart_merge_pyproject(
 )
 ```
 
-**For Complete Configuration System Details:** See `/docs/CONFIGURATION_SYSTEMS_GUIDE.md` for comprehensive documentation of all three configuration systems.
+**For Complete Configuration System Details:** See `docs/README.md` (Project Structure and Coding Standards).
 
-**Migration Details:** See `/docs/ACB-SETTINGS-MIGRATION-PLAN.md` for complete migration documentation
+**Migration Details:** See `docs/README.md` (Migration Notes)
 
 ### Using ACB Dependency Injection
 
@@ -783,9 +784,7 @@ with suppress(Exception):
 
 ### Documentation
 
-- **Architecture Details:** `/docs/ACB-INTEGRATION-PLAN.md`
-- **Migration Guide:** `/docs/ACB-MIGRATION-GUIDE.md`
-- **Performance Benchmarks:** `/docs/ACB-PERFORMANCE-BENCHMARKS.md`
+- See `docs/README.md` for consolidated documentation and references.
 - **Code Review Report:** Available from maintainers
 
 **Status:** ✅ Production Ready (as of 2025-10-09)
@@ -895,6 +894,22 @@ python -m crackerjack.tools.validate_regex_usage
 ```
 
 This advanced-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
+
+## Adapters
+
+Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using ACB patterns. Each adapter exposes typed settings, async initialization, and standardized results.
+
+- AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](<./crackerjack/adapters/ai/README.md>)
+- Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](<./crackerjack/adapters/complexity/README.md>)
+- Format — Python/Markdown formatting (Ruff, Mdformat): [crackerjack/adapters/format/README.md](<./crackerjack/adapters/format/README.md>)
+- Lint — Spelling and simple linters (Codespell): [crackerjack/adapters/lint/README.md](<./crackerjack/adapters/lint/README.md>)
+- LSP — Rust tools with LSP (Zuban, Skylos): [crackerjack/adapters/lsp/README.md](<./crackerjack/adapters/lsp/README.md>)
+- Refactor — Modernization, dead code, unused deps (Refurb, Skylos, Creosote): [crackerjack/adapters/refactor/README.md](<./crackerjack/adapters/refactor/README.md>)
+- Security — Static analysis and secrets (Bandit, Gitleaks, Pyscn): [crackerjack/adapters/security/README.md](<./crackerjack/adapters/security/README.md>)
+- Type — Static type checking (Zuban, Pyrefly, Ty): [crackerjack/adapters/type/README.md](<./crackerjack/adapters/type/README.md>)
+- Utility — Config-driven checks (EOF newline, regex, size, lock): [crackerjack/adapters/utility/README.md](<./crackerjack/adapters/utility/README.md>)
+
+Quick index: [crackerjack/adapters/README.md](<./crackerjack/adapters/README.md>).
 
 ## MCP Server Configuration
 
@@ -1126,7 +1141,7 @@ python -m crackerjack --ai-fix
 | **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
 | **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
 | **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
-| **Advanced Features** | See [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) | 82 advanced/power user flags |
+| **Advanced Features** | See `docs/README.md` | Advanced flags and workflows |
 
 **📑 Alphabetical Flag Reference**
 
@@ -1167,9 +1182,8 @@ python -m crackerjack --ai-fix
 
 **🔗 Related Documentation**
 
-- **Advanced Features**: [ADVANCED-FEATURES.md](<./docs/guides/ADVANCED-FEATURES.md>) - 82 advanced/power user flags
+- **Advanced Features**: See `docs/README.md` - consolidated advanced flags
 - **Developer Guide**: [CLAUDE.md](<./CLAUDE.md>) - AI assistant guidelines and developer commands
-- **Phase 2 Analysis**: [PHASE2-CROSS-REFERENCE-ANALYSIS.md](<./docs/history/phases/PHASE2-CROSS-REFERENCE-ANALYSIS.md>) - CLI flag audit (archived)
 
 ______________________________________________________________________
 

@@ -8,7 +8,8 @@ from dataclasses import dataclass
 from enum import Enum
 
 from acb import console as acb_console
-from rich.console import Console
+from acb.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from ..services.security_logger import get_security_logger
@@ -398,7 +399,7 @@ class ServiceWatchdog:
             return
 
         table = self._create_status_table()
-        self.console.print(table)
+        self.console.print(Panel(table, title="Service Status", border_style="blue"))
 
     def _print_report_header(self) -> None:
         """Print the status report header."""

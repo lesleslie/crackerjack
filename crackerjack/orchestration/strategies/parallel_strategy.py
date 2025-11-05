@@ -224,7 +224,7 @@ class ParallelExecutionStrategy:
             duration=0.0,
         )
 
-    def _error_result(self, hook: HookDefinition, error: Exception) -> HookResult:
+    def _error_result(self, hook: HookDefinition, error: BaseException) -> HookResult:
         """Create error HookResult from exception."""
         return HookResult(
             id=hook.name,

@@ -2,6 +2,8 @@
 # at package initialization time. Agents are imported when actually needed.
 # This enables fast startup for lightweight tools like check_yaml.
 
+from typing import Any
+
 from .base import AgentContext, FixResult, Issue, IssueType, Priority, SubAgent
 from .coordinator import AgentCoordinator
 from .error_middleware import agent_error_boundary
@@ -34,7 +36,7 @@ __all__ = [
 
 
 # Lazy module loader for agent modules
-def __getattr__(name: str):
+def __getattr__(name: str) -> Any:
     """Lazily import agent modules when accessed.
 
     This prevents heavy ML dependencies from being loaded at package init time.

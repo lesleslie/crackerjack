@@ -70,6 +70,13 @@ def _build_pipeline(
     pipeline._event_bus = WorkflowEventBus()
     pipeline._quality_intelligence = None
     pipeline._performance_benchmarks = None
+    # Minimal logger stub
+    pipeline.logger = SimpleNamespace(
+        info=lambda *_args, **_kwargs: None,
+        debug=lambda *_args, **_kwargs: None,
+        warning=lambda *_args, **_kwargs: None,
+        exception=lambda *_args, **_kwargs: None,
+    )
 
     pipeline._log_workflow_startup_debug = lambda *_: None
     pipeline._configure_session_cleanup = lambda *_: None
@@ -92,6 +99,10 @@ def _build_pipeline(
         return commit_result
 
     pipeline._initialize_workflow_session = fake_initialize.__get__(pipeline)
+    # Session controller shim for current event-driven workflow
+    pipeline._session_controller = SimpleNamespace(
+        initialize=pipeline._initialize_workflow_session
+    )
     pipeline._execute_quality_phase = fake_quality.__get__(pipeline)
     pipeline._execute_publishing_workflow = fake_publish.__get__(pipeline)
     pipeline._execute_commit_workflow = fake_commit.__get__(pipeline)

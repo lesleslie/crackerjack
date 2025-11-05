@@ -56,7 +56,8 @@ class OrchestrationConfig:
         """Build configuration from CrackerjackSettings via DI."""
         if settings is None:
             try:
-                settings = depends.get(CrackerjackSettings)
+                # Use synchronous DI retrieval to avoid coroutine leakage in tests
+                settings = depends.get_sync(CrackerjackSettings)  # type: ignore[attr-defined]
             except Exception:
                 settings = None
 
@@ -90,7 +91,8 @@ class OrchestrationConfig:
             raise FileNotFoundError(msg)
 
         try:
-            data = yaml.safe_load(config_path.read_text(encoding="utf-8")) or {}
+            raw = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+            data: dict[str, Any] = raw if isinstance(raw, dict) else {}
         except yaml.YAMLError as exc:
             msg = f"Invalid YAML in {config_path}: {exc}"
             raise ValueError(msg) from exc
@@ -99,9 +101,8 @@ class OrchestrationConfig:
             msg = f"Invalid config structure in {config_path}"
             raise ValueError(msg)
 
-        section = data.get("orchestration", {})
-        if not isinstance(section, dict):
-            section = {}
+        section_any = data.get("orchestration", {})
+        section: dict[str, Any] = section_any if isinstance(section_any, dict) else {}
 
         config = cls()
         config.config_file_path = config_path
@@ -179,8 +180,13 @@ class OrchestrationConfig:
     # ------------------------------------------------------------------ #
 
     def _apply_dict(self, values: dict[str, Any]) -> None:
+        # Accept aliases from YAML where keys are shorter (e.g., enable, mode)
+        aliases = {
+            "enable": "enable_orchestration",
+            "mode": "orchestration_mode",
+        }
         for key, value in values.items():
-            attr = key
+            attr = aliases.get(key, key)
             if not hasattr(self, attr):
                 continue
             if isinstance(value, str):
@@ -196,7 +202,8 @@ class OrchestrationConfig:
         return merged
 
     def with_overrides(self, **overrides: Any) -> OrchestrationConfig:
-        updated = dataclasses.replace(self)
+        # Create a shallow copy without using dataclasses.replace to satisfy type checker
+        updated = OrchestrationConfig(**dataclasses.asdict(self))
         for key, value in overrides.items():
             if value is not None and hasattr(updated, key):
                 setattr(updated, key, value)
@@ -263,7 +270,7 @@ class OrchestrationConfig:
 
         return errors
 
-    def to_orchestrator_settings(self):
+    def to_orchestrator_settings(self) -> Any:
         from crackerjack.orchestration.hook_orchestrator import HookOrchestratorSettings
 
         execution_mode = self.orchestration_mode

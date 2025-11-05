@@ -4,8 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
+from acb.console import Console
 from pydantic import BaseModel, ConfigDict
-from rich.console import Console
 
 from .errors import ErrorCode, ExecutionError
 from .services.backup_service import BackupMetadata, PackageBackupService

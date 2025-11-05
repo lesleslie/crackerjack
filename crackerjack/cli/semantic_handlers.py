@@ -147,7 +147,9 @@ def handle_semantic_search(query: str) -> None:
                 content_preview,
             )
 
-        console.print(table)
+        console.print(
+            Panel(table, title="Semantic Search Results", border_style="cyan")
+        )
 
         # Show detailed content for top result
         if results:
@@ -222,7 +224,7 @@ def handle_semantic_stats() -> None:
                 "Last Updated", stats.last_updated.strftime("%Y-%m-%d %H:%M:%S")
             )
 
-        console.print(table)
+        console.print(Panel(table, border_style="cyan"))
 
         if stats.total_files == 0:
             console.print(

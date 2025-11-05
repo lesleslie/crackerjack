@@ -63,7 +63,7 @@ class WorkflowEventTelemetry:
             if event.metadata.event_type == WorkflowEvent.WORKFLOW_FAILED.value:
                 self._last_error = entry
 
-        if self.state_file:
+        if self.state_file is not None:
             await self._schedule_persist()
         await self._ensure_rollup_task()
 
@@ -100,7 +100,7 @@ class WorkflowEventTelemetry:
                 await self._rollup_task
 
     async def _schedule_persist(self) -> None:
-        if not self.state_file:
+        if self.state_file is None:
             return
 
         if self._persist_task and not self._persist_task.done():
@@ -108,14 +108,15 @@ class WorkflowEventTelemetry:
 
         async def _persist() -> None:
             snapshot = await self.snapshot()
-            try:
-                self.state_file.parent.mkdir(parents=True, exist_ok=True)
+            state_file = self.state_file
+            if state_file is None:
+                return
+            with suppress(Exception):
+                state_file.parent.mkdir(parents=True, exist_ok=True)
                 await asyncio.to_thread(
-                    self.state_file.write_text,
+                    state_file.write_text,
                     json.dumps(snapshot, indent=2),
                 )
-            except Exception:
-                pass
 
         self._persist_task = asyncio.create_task(_persist())
 
@@ -147,11 +148,13 @@ class WorkflowEventTelemetry:
             "last_error": snapshot["last_error"],
         }
 
+        rollup_file = self.rollup_file
+
         def _write() -> None:
-            if self.rollup_file is None:
+            if rollup_file is None:
                 return
-            self.rollup_file.parent.mkdir(parents=True, exist_ok=True)
-            with self.rollup_file.open("a", encoding="utf-8") as fh:
+            rollup_file.parent.mkdir(parents=True, exist_ok=True)
+            with rollup_file.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(rollup_entry))
                 fh.write("\n")
 

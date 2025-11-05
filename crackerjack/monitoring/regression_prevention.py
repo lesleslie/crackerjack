@@ -6,7 +6,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 from rich.panel import Panel
 from rich.table import Table
 
@@ -40,7 +41,7 @@ class RegressionAlert:
 
 class RegressionPreventionSystem:
     def __init__(self, console: Console | None = None):
-        self.console = console or Console()
+        self.console = console or depends.get_sync(Console)
         self.known_patterns: dict[str, RegressionPattern] = {}
         self.regression_alerts: list[RegressionAlert] = []
         self.prevention_active = True
@@ -565,7 +566,7 @@ async def monitor_for_regressions(
 
 
 if __name__ == "__main__":
-    console = Console()
+    console = depends.get_sync(Console)
     system = RegressionPreventionSystem(console)
 
     console.print(system.create_prevention_dashboard())

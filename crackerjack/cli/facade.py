@@ -2,7 +2,8 @@ import asyncio
 import shlex
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.models.protocols import OptionsProtocol
@@ -75,10 +76,9 @@ class CrackerjackCLIFacade:
         console: Console | None = None,
         pkg_path: Path | None = None,
     ) -> None:
-        self.console = console or Console(force_terminal=True)
+        self.console = console or depends.get_sync(Console)
         self.pkg_path = pkg_path or Path.cwd()
         self.orchestrator = WorkflowOrchestrator(
-            console=self.console,
             pkg_path=self.pkg_path,
         )
 

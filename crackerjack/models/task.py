@@ -77,7 +77,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     metadata: dict[str, t.Any] = {}
     console: t.Any = None  # Console instance from DI
 
-    @depends.inject
+    @depends.inject  # type: ignore[misc]
     def __init__(self, console: Inject[Console], **data: t.Any) -> None:
         super().__init__(**data)
         self.console = console

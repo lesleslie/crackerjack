@@ -5,7 +5,11 @@ from crackerjack.models.protocols import OptionsProtocol
 
 class TestCommandBuilder:
     def __init__(self, pkg_path: Path) -> None:
-        self.pkg_path = pkg_path
+        # Normalize to pathlib.Path to avoid async path methods
+        try:
+            self.pkg_path = Path(str(pkg_path))
+        except Exception:
+            self.pkg_path = Path(pkg_path)
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]

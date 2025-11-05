@@ -82,7 +82,6 @@ class TestStrategyParallelismBenchmarks:
         parallel_times = []
         for _ in range(num_iterations):
             manager = HookManagerImpl(
-                console=console,
                 pkg_path=pkg_path,
                 orchestration_config=parallel_config,
             )
@@ -107,7 +106,6 @@ class TestStrategyParallelismBenchmarks:
         sequential_times = []
         for _ in range(num_iterations):
             manager = HookManagerImpl(
-                console=console,
                 pkg_path=pkg_path,
                 orchestration_config=sequential_config,
             )
@@ -184,7 +182,6 @@ class TestStrategyParallelismBenchmarks:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -437,7 +434,6 @@ class TestEndToEndWorkflowBenchmarks:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -525,7 +521,6 @@ class TestMemoryAndResourceBenchmarks:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )

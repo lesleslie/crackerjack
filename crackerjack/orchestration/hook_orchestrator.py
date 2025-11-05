@@ -17,6 +17,7 @@ import logging
 import typing as t
 from collections import Counter
 from contextlib import suppress
+from typing import cast
 from uuid import UUID
 
 from acb.depends import depends
@@ -125,7 +126,7 @@ class HookOrchestratorAdapter:
     def _resolve_event_bus(self) -> WorkflowEventBus | None:
         """Resolve workflow event bus from dependency injection."""
         try:
-            return depends.get(WorkflowEventBus)
+            return cast(WorkflowEventBus, depends.get(WorkflowEventBus))
         except Exception:
             logger.debug("Workflow event bus not available during orchestrator setup")
             return None
@@ -701,7 +702,7 @@ class HookOrchestratorAdapter:
 
         return result
 
-    def _error_result(self, hook: HookDefinition, error: Exception) -> HookResult:
+    def _error_result(self, hook: HookDefinition, error: BaseException) -> HookResult:
         """Create error HookResult from exception.
 
         Args:

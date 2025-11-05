@@ -90,7 +90,7 @@ class OptionsAdapter:
                 no_config_updates=getattr(options, "no_config_updates", False),
             ),
             progress=ProgressConfig(
-                enabled=getattr(options, "track_progress", False),
+                track_progress=getattr(options, "track_progress", False),
             ),
             cleanup=CleanupConfig(
                 auto_cleanup=getattr(options, "auto_cleanup", True),
@@ -230,7 +230,7 @@ class LegacyOptionsWrapper:
 
     @property
     def track_progress(self) -> bool:
-        return self._options.progress.enabled
+        return self._options.progress.track_progress
 
     @property
     def experimental_hooks(self) -> bool:

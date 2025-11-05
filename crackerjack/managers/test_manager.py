@@ -24,10 +24,17 @@ class TestManager:
         lsp_client: Inject[LSPClient] | None = None,
     ) -> None:
         self.console = console
-        self.pkg_path = root_path
+        # Ensure a concrete pathlib.Path instance to avoid async Path behaviors
+        # and to guarantee sync filesystem operations in this manager.
+        try:
+            self.pkg_path = Path(str(root_path))
+        except Exception:
+            # Fallback in the unlikely event root_path lacks __str__
+            self.pkg_path = Path(root_path)
 
-        self.executor = TestExecutor(console, root_path)
-        self.command_builder = TestCommandBuilder(root_path)
+        # Ensure downstream components receive a concrete pathlib.Path
+        self.executor = TestExecutor(console, self.pkg_path)
+        self.command_builder = TestCommandBuilder(self.pkg_path)
 
         # Services injected via ACB DI
         self.coverage_ratchet = coverage_ratchet
@@ -235,11 +242,11 @@ class TestManager:
             test_path = self.pkg_path / test_dir
             if test_path.exists() and test_path.is_dir():
                 for test_file_pattern in test_files:
-                    if list[t.Any](test_path.glob(f"**/{test_file_pattern}")):
+                    if list(test_path.glob(f"**/{test_file_pattern}")):
                         return True
 
         for test_file_pattern in test_files:
-            if list[t.Any](self.pkg_path.glob(test_file_pattern)):
+            if list(self.pkg_path.glob(test_file_pattern)):
                 return True
 
         return False

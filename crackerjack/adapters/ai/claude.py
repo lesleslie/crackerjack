@@ -815,7 +815,7 @@ Respond with ONLY the JSON, no additional text."""
         # Base delay: 1s, 2s, 4s, 8s, ...
         base_delay = 2**attempt
         # Add jitter: ±25%
-        jitter = random.uniform(-0.25, 0.25) * base_delay
+        jitter = random.uniform(-0.25, 0.25) * base_delay  # nosec B311 - not cryptographic
         delay = base_delay + jitter
 
         logger.info(f"Backing off for {delay:.2f}s before retry")

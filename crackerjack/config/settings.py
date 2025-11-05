@@ -72,6 +72,12 @@ class AdvancedSettings(Settings):
     organization: str | None = None
 
 
+class ConsoleSettings(Settings):
+    """Console/UI related settings."""
+
+    width: int = 70
+
+
 class MCPServerSettings(Settings):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
@@ -99,6 +105,7 @@ class GlobalLockSettings(Settings):
 
 
 class CrackerjackSettings(Settings):
+    console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
     hooks: HookSettings = HookSettings()
     testing: TestSettings = TestSettings()

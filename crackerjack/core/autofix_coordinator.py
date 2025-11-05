@@ -1,9 +1,9 @@
 import subprocess
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import Inject, depends
 from acb.logger import Logger
-from rich.console import Console
 
 
 class AutofixCoordinator:

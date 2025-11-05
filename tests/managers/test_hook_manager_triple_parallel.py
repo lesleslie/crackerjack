@@ -51,7 +51,6 @@ class TestStrategyLevelParallelism:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -113,7 +112,6 @@ class TestStrategyLevelParallelism:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -164,7 +162,6 @@ class TestStrategyLevelParallelism:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -213,7 +210,6 @@ class TestStrategyLevelParallelism:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -248,7 +244,6 @@ class TestConfigurationOptions:
         )
 
         manager_enabled = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config_enabled,
         )
@@ -262,7 +257,6 @@ class TestConfigurationOptions:
         )
 
         manager_disabled = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config_disabled,
         )
@@ -277,7 +271,6 @@ class TestConfigurationOptions:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -296,7 +289,6 @@ class TestConfigurationOptions:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -316,7 +308,7 @@ orchestration:
 """
         config_path.write_text(config_content)
 
-        manager = HookManagerImpl(console=console, pkg_path=tmp_path)
+        manager = HookManagerImpl(pkg_path=tmp_path)
 
         assert manager.orchestration_enabled is True
         assert manager._orchestration_config.enable_strategy_parallelism is True
@@ -328,7 +320,6 @@ orchestration:
         config = OrchestrationConfig(enable_orchestration=True)
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -353,7 +344,6 @@ class TestIntegrationScenarios:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )
@@ -373,7 +363,6 @@ class TestIntegrationScenarios:
     def test_backward_compatibility_legacy_mode(self, console: Console, pkg_path: Path):
         """Test that legacy mode (orchestration disabled) still works."""
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             enable_orchestration=False,
         )
@@ -402,7 +391,6 @@ class TestIntegrationScenarios:
         )
 
         manager_parallel = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config_parallel,
         )
@@ -431,7 +419,6 @@ class TestIntegrationScenarios:
         )
 
         manager_sequential = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config_sequential,
         )
@@ -473,7 +460,6 @@ class TestIntegrationScenarios:
         )
 
         manager = HookManagerImpl(
-            console=console,
             pkg_path=pkg_path,
             orchestration_config=config,
         )

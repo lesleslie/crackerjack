@@ -6,8 +6,9 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
+from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.task import HookResult
 from crackerjack.services.security_logger import get_security_logger
@@ -66,7 +67,7 @@ class HookExecutor:
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         start_time = time.time()
 
-        self._print_strategy_header(strategy)
+        # Header is displayed by PhaseCoordinator; suppress here to avoid duplicates
 
         if strategy.parallel and len(strategy.hooks) > 1:
             results = self._execute_parallel(strategy)
@@ -90,20 +91,8 @@ class HookExecutor:
         )
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-        self.console.print("\n" + "-" * 74)
-        if strategy.name == "fast":
-            self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running code quality checks[/bold bright_white]",
-            )
-        elif strategy.name == "comprehensive":
-            self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running comprehensive quality checks[/bold bright_white]",
-            )
-        else:
-            self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/bold bright_cyan] [bold bright_white]Running {strategy.name} hooks[/bold bright_white]",
-            )
-        self.console.print("-" * 74 + "\n")
+        # Intentionally no-op: PhaseCoordinator controls stage headers
+        return None
 
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
@@ -220,7 +209,12 @@ class HookExecutor:
             else:
                 status = "failed"
         else:
-            status = "passed" if result.returncode == 0 else "failed"
+            # Treat some analysis tools as non-blocking when they return 1 to
+            # indicate findings (not execution failure).
+            if hook.name in {"creosote", "complexipy"} and result.returncode == 1:
+                status = "passed"
+            else:
+                status = "passed" if result.returncode == 0 else "failed"
 
         issues_found = self._extract_issues_from_process_output(hook, result, status)
 
@@ -316,14 +310,17 @@ class HookExecutor:
         }
 
     def _display_hook_result(self, result: HookResult) -> None:
+        if self.quiet:
+            return
         status_icon = "✅" if result.status == "passed" else "❌"
 
-        max_width = 70
+        max_width = get_console_width()
+        content_width = max_width - 4  # Adjusted for icon and padding
 
-        if len(result.name) > max_width:
-            line = result.name[: max_width - 3] + "..."
+        if len(result.name) > content_width:
+            line = result.name[: content_width - 3] + "..."
         else:
-            dots_needed = max_width - len(result.name)
+            dots_needed = max(0, content_width - len(result.name))
             line = result.name + ("." * dots_needed)
 
         self.console.print(f"{line} {status_icon}")

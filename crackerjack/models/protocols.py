@@ -1418,7 +1418,7 @@ class ServiceWatchdogProtocol(ServiceProtocol, t.Protocol):
         """
         ...
 
-    async def health_check(self, service_name: str) -> bool:
+    async def check_service_health(self, service_name: str) -> bool:
         """Perform health check on a specific service.
 
         Args:

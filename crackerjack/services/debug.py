@@ -8,7 +8,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 from rich.panel import Panel
 from rich.table import Table
 
@@ -20,7 +21,7 @@ class AIAgentDebugger:
     def __init__(self, enabled: bool = False, verbose: bool = False) -> None:
         self.enabled = enabled
         self.verbose = verbose
-        self.console = Console(force_terminal=True, stderr=True)
+        self.console = depends.get_sync(Console)
         self.logger = get_logger("crackerjack.ai_agent.debug")
         self.session_id = f"debug_{int(time.time())}"
 
@@ -351,7 +352,9 @@ class AIAgentDebugger:
             f"Total test fixes: {self.total_test_fixes}, hook fixes: {self.total_hook_fixes}",
         )
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="AI Agent Debug Summary", border_style=border_style)
+        )
 
         if self.iteration_stats:
             self._print_iteration_breakdown(border_style)
@@ -397,7 +400,9 @@ class AIAgentDebugger:
                 else "N / A",
             )
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="Iteration Breakdown", border_style=border_style)
+        )
 
     def _print_agent_activity_breakdown(self, border_style: str = "red") -> None:
         agent_stats: dict[str, dict[str, t.Any]] = {}
@@ -436,7 +441,9 @@ class AIAgentDebugger:
             )
             table.add_row(agent, str(stats["activities"]), confidence_text)
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="Agent Activity Breakdown", border_style=border_style)
+        )
 
     def _print_total_statistics(self, border_style: str = "red") -> None:
         success_icon = "✅" if self.workflow_success else "❌"
@@ -475,7 +482,9 @@ class AIAgentDebugger:
             f"{total_fixes}/{total_issues} issues resolved",
         )
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="Total Workflow Statistics", border_style=border_style)
+        )
 
     def _print_mcp_operation_breakdown(self, border_style: str = "red") -> None:
         tool_stats = {}
@@ -510,7 +519,9 @@ class AIAgentDebugger:
                 f"{avg_duration: .2f}s" if avg_duration > 0 else "N / A",
             )
 
-        self.console.print(table)
+        self.console.print(
+            Panel(table, title="MCP Tool Usage", border_style=border_style)
+        )
 
     def log_iteration_start(self, iteration_number: int) -> None:
         if not self.enabled:

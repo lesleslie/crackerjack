@@ -350,7 +350,7 @@ class WorkflowOptions:
 
     @clean.setter
     def clean(self, value: bool) -> None:
-        self.cleaning.clean = bool(value)
+        self.cleaning.clean = value
 
     @property
     def update_docs(self) -> bool:
@@ -358,7 +358,7 @@ class WorkflowOptions:
 
     @update_docs.setter
     def update_docs(self, value: bool) -> None:
-        self.cleaning.update_docs = bool(value)
+        self.cleaning.update_docs = value
 
     @property
     def test(self) -> bool:
@@ -366,7 +366,7 @@ class WorkflowOptions:
 
     @test.setter
     def test(self, value: bool) -> None:
-        self.testing.test = bool(value)
+        self.testing.test = value
 
     @property
     def benchmark(self) -> bool:
@@ -374,7 +374,7 @@ class WorkflowOptions:
 
     @benchmark.setter
     def benchmark(self, value: bool) -> None:
-        self.testing.benchmark = bool(value)
+        self.testing.benchmark = value
 
     @property
     def benchmark_regression(self) -> bool:
@@ -382,7 +382,7 @@ class WorkflowOptions:
 
     @benchmark_regression.setter
     def benchmark_regression(self, value: bool) -> None:
-        self.testing.benchmark_regression = bool(value)
+        self.testing.benchmark_regression = value
 
     @property
     def benchmark_regression_threshold(self) -> float:
@@ -390,7 +390,7 @@ class WorkflowOptions:
 
     @benchmark_regression_threshold.setter
     def benchmark_regression_threshold(self, value: float) -> None:
-        self.testing.benchmark_regression_threshold = float(value)
+        self.testing.benchmark_regression_threshold = value
 
     @property
     def test_workers(self) -> int:
@@ -398,7 +398,7 @@ class WorkflowOptions:
 
     @test_workers.setter
     def test_workers(self, value: int) -> None:
-        self.testing.test_workers = int(value)
+        self.testing.test_workers = value
 
     @property
     def test_timeout(self) -> int:
@@ -406,7 +406,7 @@ class WorkflowOptions:
 
     @test_timeout.setter
     def test_timeout(self, value: int) -> None:
-        self.testing.test_timeout = int(value)
+        self.testing.test_timeout = value
 
     @property
     def publish(self) -> str | None:
@@ -438,7 +438,7 @@ class WorkflowOptions:
 
     @commit.setter
     def commit(self, value: bool) -> None:
-        self.git.commit = bool(value)
+        self.git.commit = value
 
     @property
     def create_pr(self) -> bool:
@@ -446,7 +446,7 @@ class WorkflowOptions:
 
     @create_pr.setter
     def create_pr(self, value: bool) -> None:
-        self.git.create_pr = bool(value)
+        self.git.create_pr = value
 
     @property
     def ai_agent(self) -> bool:
@@ -454,7 +454,7 @@ class WorkflowOptions:
 
     @ai_agent.setter
     def ai_agent(self, value: bool) -> None:
-        self.ai.ai_agent = bool(value)
+        self.ai.ai_agent = value
 
     @property
     def autofix(self) -> bool:
@@ -462,7 +462,7 @@ class WorkflowOptions:
 
     @autofix.setter
     def autofix(self, value: bool) -> None:
-        self.ai.autofix = bool(value)
+        self.ai.autofix = value
 
     @property
     def ai_agent_autofix(self) -> bool:
@@ -470,7 +470,7 @@ class WorkflowOptions:
 
     @ai_agent_autofix.setter
     def ai_agent_autofix(self, value: bool) -> None:
-        self.ai.ai_agent_autofix = bool(value)
+        self.ai.ai_agent_autofix = value
 
     @property
     def start_mcp_server(self) -> bool:
@@ -478,7 +478,7 @@ class WorkflowOptions:
 
     @start_mcp_server.setter
     def start_mcp_server(self, value: bool) -> None:
-        self.ai.start_mcp_server = bool(value)
+        self.ai.start_mcp_server = value
 
     @property
     def max_iterations(self) -> int:
@@ -486,7 +486,7 @@ class WorkflowOptions:
 
     @max_iterations.setter
     def max_iterations(self, value: int) -> None:
-        self.ai.max_iterations = int(value)
+        self.ai.max_iterations = value
 
     @property
     def interactive(self) -> bool:
@@ -494,7 +494,7 @@ class WorkflowOptions:
 
     @interactive.setter
     def interactive(self, value: bool) -> None:
-        self.execution.interactive = bool(value)
+        self.execution.interactive = value
 
     @property
     def verbose(self) -> bool:
@@ -502,7 +502,7 @@ class WorkflowOptions:
 
     @verbose.setter
     def verbose(self, value: bool) -> None:
-        self.execution.verbose = bool(value)
+        self.execution.verbose = value
 
     @property
     def async_mode(self) -> bool:
@@ -510,7 +510,7 @@ class WorkflowOptions:
 
     @async_mode.setter
     def async_mode(self, value: bool) -> None:
-        self.execution.async_mode = bool(value)
+        self.execution.async_mode = value
 
     @property
     def no_config_updates(self) -> bool:
@@ -518,7 +518,7 @@ class WorkflowOptions:
 
     @no_config_updates.setter
     def no_config_updates(self, value: bool) -> None:
-        self.execution.no_config_updates = bool(value)
+        self.execution.no_config_updates = value
 
     @property
     def dry_run(self) -> bool:
@@ -526,7 +526,7 @@ class WorkflowOptions:
 
     @dry_run.setter
     def dry_run(self, value: bool) -> None:
-        self.execution.dry_run = bool(value)
+        self.execution.dry_run = value
 
     @property
     def skip_hooks(self) -> bool:
@@ -534,7 +534,7 @@ class WorkflowOptions:
 
     @skip_hooks.setter
     def skip_hooks(self, value: bool) -> None:
-        self.hooks.skip_hooks = bool(value)
+        self.hooks.skip_hooks = value
 
     @property
     def update_precommit(self) -> bool:
@@ -542,7 +542,7 @@ class WorkflowOptions:
 
     @update_precommit.setter
     def update_precommit(self, value: bool) -> None:
-        self.hooks.update_precommit = bool(value)
+        self.hooks.update_precommit = value
 
     @property
     def experimental_hooks(self) -> bool:
@@ -550,7 +550,7 @@ class WorkflowOptions:
 
     @experimental_hooks.setter
     def experimental_hooks(self, value: bool) -> None:
-        self.hooks.experimental_hooks = bool(value)
+        self.hooks.experimental_hooks = value
 
     @property
     def enable_pyrefly(self) -> bool:
@@ -558,7 +558,7 @@ class WorkflowOptions:
 
     @enable_pyrefly.setter
     def enable_pyrefly(self, value: bool) -> None:
-        self.hooks.enable_pyrefly = bool(value)
+        self.hooks.enable_pyrefly = value
 
     @property
     def enable_ty(self) -> bool:
@@ -566,7 +566,7 @@ class WorkflowOptions:
 
     @enable_ty.setter
     def enable_ty(self, value: bool) -> None:
-        self.hooks.enable_ty = bool(value)
+        self.hooks.enable_ty = value
 
     @property
     def enable_lsp_optimization(self) -> bool:
@@ -574,7 +574,7 @@ class WorkflowOptions:
 
     @enable_lsp_optimization.setter
     def enable_lsp_optimization(self, value: bool) -> None:
-        self.hooks.enable_lsp_optimization = bool(value)
+        self.hooks.enable_lsp_optimization = value
 
     @property
     def track_progress(self) -> bool:
@@ -582,7 +582,7 @@ class WorkflowOptions:
 
     @track_progress.setter
     def track_progress(self, value: bool) -> None:
-        self.progress.track_progress = bool(value)
+        self.progress.track_progress = value
 
     @property
     def resume_from(self) -> str | None:
@@ -668,8 +668,11 @@ class WorkflowOptions:
         }
 
 
+from typing import cast
+
+
 def get_workflow_options() -> CrackerjackSettings:
-    return depends.get(CrackerjackSettings)
+    return cast(CrackerjackSettings, depends.get(CrackerjackSettings))
 
 
 __all__ = [

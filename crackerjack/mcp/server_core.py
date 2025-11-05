@@ -8,8 +8,7 @@ from uuid import UUID, uuid4
 
 from acb import console as acb_console
 from acb.depends import depends
-
-from ..ui.server_panels import create_server_panels
+from mcp_common.ui import ServerPanels
 
 # Get the actual Console instance
 console = acb_console.console
@@ -291,8 +290,6 @@ def _print_server_info(
     websocket_port: int | None,
     http_mode: bool,
 ) -> None:
-    panels = create_server_panels(console)
-
     if mcp_config.get("http_enabled", False) or http_mode:
         mode = "HTTP"
         http_endpoint = (
@@ -301,12 +298,19 @@ def _print_server_info(
     else:
         mode = "STDIO"
         http_endpoint = None
-
-    panels.start_panel(
-        project_path=project_path,
-        mode=mode,
-        http_endpoint=http_endpoint,
-        websocket_port=websocket_port,
+    # Use mcp-common ServerPanels info panel
+    items: dict[str, str] = {
+        "Project": project_path.name,
+        "Mode": mode,
+    }
+    if http_endpoint:
+        items["HTTP"] = http_endpoint
+    if websocket_port:
+        items["WebSocket Port"] = str(websocket_port)
+    ServerPanels.info(
+        title="Server Configuration",
+        message="Starting Crackerjack MCP Server...",
+        items=items,
     )
 
 
@@ -369,8 +373,6 @@ def main(
                 )
 
         # Show final success panel before starting the server
-        panels = create_server_panels(console)
-
         if mcp_config.get("http_enabled", False) or http_mode:
             http_endpoint = (
                 f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
@@ -381,12 +383,18 @@ def main(
         websocket_monitor = (
             f"ws://127.0.0.1:{websocket_port}" if websocket_port else None
         )
-
-        panels.success_panel(
-            http_endpoint=http_endpoint,
-            websocket_monitor=websocket_monitor,
-            process_id=None,  # Will be set by the process manager
-        )
+        # Final startup success panel via mcp-common
+        if websocket_monitor:
+            ServerPanels.startup_success(
+                server_name="Crackerjack MCP",
+                endpoint=http_endpoint,
+                websocket_monitor=websocket_monitor,  # type: ignore[arg-type]
+            )
+        else:
+            ServerPanels.startup_success(
+                server_name="Crackerjack MCP",
+                endpoint=http_endpoint,
+            )
 
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 

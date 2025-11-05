@@ -4,8 +4,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+from acb.console import Console
+from acb.depends import depends
 from mcp import stdio_client
-from rich.console import Console
 
 from .progress_monitor import (
     run_crackerjack_with_enhanced_progress as run_crackerjack_with_progress,
@@ -22,7 +23,7 @@ def is_mcp_server_running(host: str = "localhost", port: int = 5173) -> bool:
 
 
 async def ensure_mcp_server_running() -> subprocess.Popen[bytes] | None:
-    console = Console()
+    console = depends.get_sync(Console)
 
     if is_mcp_server_running():
         console.print("[green]✅ MCP server already running[/ green]")
@@ -49,7 +50,7 @@ async def ensure_mcp_server_running() -> subprocess.Popen[bytes] | None:
 
 
 async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
-    console = Console()
+    console = depends.get_sync(Console)
 
     server_process = await ensure_mcp_server_running()
 
@@ -95,7 +96,9 @@ def main() -> None:
     try:
         asyncio.run(run_with_mcp_server(args.command))
     except KeyboardInterrupt:
-        Console().print("\n[yellow]Operation cancelled by user[/ yellow]")
+        depends.get_sync(Console).print(
+            "\n[yellow]Operation cancelled by user[/ yellow]"
+        )
         sys.exit(1)
 
 

@@ -34,7 +34,7 @@ def get_file_size(file_path: Path) -> int:
         return 0
 
 
-def format_size(size_bytes: int) -> str:
+def format_size(size_bytes: int | float) -> str:
     """Format file size in human-readable format.
 
     Args:
@@ -43,11 +43,12 @@ def format_size(size_bytes: int) -> str:
     Returns:
         Human-readable size string (e.g., "1.5 MB")
     """
-    for unit in ["B", "KB", "MB", "GB"]:
-        if size_bytes < 1024.0:
-            return f"{size_bytes:.1f} {unit}"
-        size_bytes /= 1024.0
-    return f"{size_bytes:.1f} TB"
+    size: float = float(size_bytes)
+    for unit in ("B", "KB", "MB", "GB"):
+        if size < 1024.0:
+            return f"{size:.1f} {unit}"
+        size /= 1024.0
+    return f"{size:.1f} TB"
 
 
 def get_git_tracked_files() -> list[Path]:

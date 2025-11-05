@@ -1,5 +1,77 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-10-31
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [Unreleased] - 2025-10-30
 
 ### Added
@@ -629,7 +701,7 @@ ______________________________________________________________________
   - ⚠️ No functional impact - structural improvement only
   - Eliminates circular dependency when installing dev group
   - Follows modern UV and PEP 735 best practices
-  - See [MIGRATION-0.41.0.md](<./MIGRATION-0.41.0.md>) for details
+  - See `docs/README.md` (Migration Notes) for details
 
 ### Changed
 

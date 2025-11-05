@@ -5,6 +5,8 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
+from acb.console import Console
+from acb.depends import depends
 from textual.app import App, ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.reactive import reactive
@@ -461,9 +463,7 @@ async def run_enhanced_progress_monitor(
         app = EnhancedCrackerjackDashboard(progress_dir, websocket_url)
 
         if dev_mode:
-            from rich.console import Console
-
-            console = Console()
+            console = depends.get_sync(Console)
             console.print("[bold cyan]🛠️ Development Mode: Enabled[/bold cyan]")
             app.dev = True
 

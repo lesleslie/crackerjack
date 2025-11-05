@@ -1,8 +1,8 @@
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import depends
 from acb.logger import Logger
-from rich.console import Console
 
 # Import protocols for service registration
 from crackerjack.models.protocols import (
@@ -65,6 +65,46 @@ from .hooks import (
 )
 from .loader import load_settings, load_settings_async
 from .settings import CrackerjackSettings
+
+
+def get_console_width() -> int:
+    """Return the preferred console width from settings or pyproject.
+
+    Priority:
+    1) ACB settings (CrackerjackSettings.console.width)
+    2) pyproject.toml [tool.crackerjack].terminal_width
+    3) Default: 70
+    """
+    # 1) Try ACB settings via DI
+    try:
+        settings = depends.get_sync(CrackerjackSettings)
+        width = getattr(getattr(settings, "console", None), "width", None)
+        if isinstance(width, int) and width > 0:
+            return width
+    except Exception:
+        pass
+
+    # 2) Try pyproject.toml
+    try:
+        from pathlib import Path as _P
+
+        import tomli
+
+        pyproj = _P("pyproject.toml")
+        if pyproj.exists():
+            with pyproj.open("rb") as f:
+                data = tomli.load(f)
+            width = (
+                data.get("tool", {}).get("crackerjack", {}).get("terminal_width", None)
+            )
+            if isinstance(width, int) and width > 0:
+                return width
+    except Exception:
+        pass
+
+    # 3) Default
+    return 70
+
 
 # Load settings from YAML files using layered configuration
 settings_instance = load_settings(CrackerjackSettings)
@@ -213,4 +253,5 @@ __all__ = [
     "load_settings",
     "load_settings_async",
     "register_services",
+    "get_console_width",
 ]

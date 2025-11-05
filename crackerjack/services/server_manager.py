@@ -7,8 +7,8 @@ from pathlib import Path
 
 from acb.console import Console
 from acb.depends import Inject, depends
+from mcp_common.ui import ServerPanels
 
-from ..ui.server_panels import create_server_panels
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
@@ -201,14 +201,15 @@ def stop_process(pid: int, force: bool = False) -> bool:
 
 @depends.inject
 def stop_mcp_server(console: Inject[Console]) -> bool:
-    panels = create_server_panels(console)
     processes = find_mcp_server_processes()
 
     if not processes:
         console.print("[yellow]⚠️ No MCP server processes found[/ yellow]")
         return True
 
-    panels.stop_servers(len(processes))
+    ServerPanels.info(
+        title="MCP Server", message=f"Stopping {len(processes)} process(es)..."
+    )
 
     success = True
     for proc in processes:
@@ -220,7 +221,10 @@ def stop_mcp_server(console: Inject[Console]) -> bool:
             success = False
 
     if success:
-        panels.stop_complete(len(processes))
+        ServerPanels.info(
+            title="MCP Server",
+            message=f"Successfully stopped {len(processes)} process(es)",
+        )
 
     return success
 
@@ -280,15 +284,16 @@ def restart_mcp_server(
     websocket_port: int | None = None,
     console: Inject[Console] = None,
 ) -> bool:
-    panels = create_server_panels(console)
-    panels.restart_header()
+    ServerPanels.info(
+        title="MCP Server", message="Restarting Crackerjack MCP Server..."
+    )
 
     stop_mcp_server()
 
-    panels.cleanup_wait()
+    ServerPanels.simple_message("⏳ Waiting for cleanup...", style="dim")
     time.sleep(2)
 
-    panels.starting_server()
+    ServerPanels.simple_message("🚀 Starting new server instance...", style="green")
     try:
         cmd = [sys.executable, "-m", "crackerjack", "--start-mcp-server"]
         if websocket_port:
@@ -314,19 +319,16 @@ def restart_mcp_server(
 
         # Display success panel with server details
         http_endpoint = "http://127.0.0.1:8676/mcp"
-        websocket_monitor = (
-            f"ws://127.0.0.1:{websocket_port or 8675}" if websocket_port else None
-        )
 
-        panels.success_panel(
-            http_endpoint=http_endpoint,
-            websocket_monitor=websocket_monitor,
+        ServerPanels.startup_success(
+            server_name="Crackerjack MCP",
+            endpoint=http_endpoint,
             process_id=process.pid,
         )
         return True
 
     except Exception as e:
-        panels.failure_panel(str(e))
+        ServerPanels.error(title="MCP Restart Error", message=str(e))
         return False
 
 

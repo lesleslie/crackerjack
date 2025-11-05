@@ -9,7 +9,7 @@ from pathlib import Path
 
 import yaml
 from acb import console as acb_console
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.services.acb_cache_adapter import CrackerjackCache

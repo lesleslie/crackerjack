@@ -533,14 +533,15 @@ class TestCreationAgent(SubAgent):
 
     async def _get_existing_coverage_data(self) -> dict[str, Any] | None:
         try:
-            json_report = self.context.project_path / "coverage.json"
+            project_path = Path(str(self.context.project_path))
+            json_report = project_path / "coverage.json"
             if json_report.exists():
                 content = self.context.get_file_content(json_report)
                 if content:
                     coverage_json = json.loads(content)
                     return self._parse_coverage_json(coverage_json)
 
-            coverage_file = self.context.project_path / ".coverage"
+            coverage_file = project_path / ".coverage"
             if coverage_file.exists():
                 return await self._process_coverage_results_enhanced()
 
@@ -675,7 +676,8 @@ class TestCreationAgent(SubAgent):
     async def _find_uncovered_modules_enhanced(self) -> list[dict[str, Any]]:
         uncovered: list[dict[str, Any]] = []
 
-        package_dir = self.context.project_path / "crackerjack"
+        project_path = Path(str(self.context.project_path))
+        package_dir = project_path / "crackerjack"
         if not package_dir.exists():
             return uncovered[:15]
 

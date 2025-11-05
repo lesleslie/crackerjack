@@ -61,7 +61,7 @@ class WorkflowEvent(str, Enum):
     HOOK_EXECUTION_FAILED = "hooks.execution.failed"
 
     def __str__(self) -> str:  # pragma: no cover - trivial
-        return self.value
+        return str(self.value)
 
 
 @dataclass

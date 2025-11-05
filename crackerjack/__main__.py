@@ -1420,6 +1420,7 @@ def main(
     diff_config: str | None = CLI_OPTIONS["diff_config"],
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
     refresh_cache: bool = CLI_OPTIONS["refresh_cache"],
+    use_acb_workflows: bool = CLI_OPTIONS["use_acb_workflows"],
     # Semantic search options
     index: str | None = CLI_OPTIONS["index"],
     search: str | None = CLI_OPTIONS["search"],
@@ -1530,6 +1531,7 @@ def main(
         diff_config,
         config_interactive,
         refresh_cache,
+        use_acb_workflows,
         # New semantic parameters use defaults
         run_tests=run_tests,
     )

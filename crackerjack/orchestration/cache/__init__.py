@@ -20,7 +20,10 @@ __all__ = [
 
 
 # Lazy imports
-def __getattr__(name: str):
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
     if name == "ToolProxyCacheAdapter":
         from crackerjack.orchestration.cache.tool_proxy_cache import (
             ToolProxyCacheAdapter,

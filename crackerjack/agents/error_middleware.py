@@ -5,7 +5,7 @@ from __future__ import annotations
 import typing as t
 from functools import wraps
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.agents.base import FixResult, Issue, SubAgent
 

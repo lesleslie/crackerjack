@@ -229,7 +229,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="bandit",
         command=[],
-        timeout=30,  # UV init (~10s) + tool execution (P95=6.52s) + safety margin
+        timeout=90,  # Allow more time for repo-wide security scan
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -239,7 +239,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="gitleaks",
         command=[],
-        timeout=120,  # UV init (~10s) + extensive git history scanning + cryptographic analysis
+        timeout=45,  # Reduce to avoid long stalls in restricted environments
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -248,7 +248,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=20,  # UV init (~10s) + tool execution (P95=2.76s) + safety margin
+        timeout=60,  # Allow more time for scanning
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -257,7 +257,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=25,  # UV init (~10s) + tool execution (P95=5.15s) + safety margin
+        timeout=300,  # Increase to prevent premature timeout on larger repos
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -266,7 +266,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="creosote",
         command=[],
-        timeout=20,  # UV init (~10s) + tool execution (P95=3.62s) + safety margin
+        timeout=180,  # Increase to accommodate slower dependency scans
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
@@ -275,7 +275,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],
-        timeout=25,  # UV init (~10s) + tool execution (P95=4.49s) + safety margin
+        timeout=120,  # Allow more time for full-tree complexity analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

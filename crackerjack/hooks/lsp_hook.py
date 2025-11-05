@@ -11,14 +11,13 @@ import sys
 from pathlib import Path
 
 from acb.console import Console
-from acb.depends import Inject, depends
 
 from crackerjack.services.lsp_client import LSPClient
 
 
-@depends.inject
-def main(console: Inject[Console]) -> int:
+def main(console: Console | None = None) -> int:
     """Main entry point for LSP hook."""
+    console = console or Console()
     # Get files to check from command line arguments
     files_to_check = sys.argv[1:] if len(sys.argv) > 1 else []
 
@@ -34,24 +33,20 @@ def main(console: Inject[Console]) -> int:
 
     # Check if LSP server is running
     if not lsp_client.is_server_running():
-        return _fallback_to_zuban_check(files_to_check)
+        return _fallback_to_zuban_check(console, files_to_check)
 
     # Use LSP server for type checking
-    return _check_files_with_lsp(lsp_client, files_to_check)
+    return _check_files_with_lsp(console, lsp_client, files_to_check)
 
 
-@depends.inject
-def _get_project_files(console: Inject[Console]) -> list[str]:
+def _get_project_files() -> list[str]:
     """Get project files to check."""
     project_path = Path.cwd()
     lsp_client = LSPClient()
     return lsp_client.get_project_files(project_path)
 
 
-@depends.inject
-def _fallback_to_zuban_check(
-    console: Inject[Console], files_to_check: list[str]
-) -> int:
+def _fallback_to_zuban_check(console: Console, files_to_check: list[str]) -> int:
     """Fall back to regular zuban execution when LSP server is not running."""
     console.print("⚠️  Zuban LSP server not running, falling back to direct zuban check")
     # Fall back to regular zuban execution
@@ -74,9 +69,8 @@ def _fallback_to_zuban_check(
         return 1
 
 
-@depends.inject
 def _check_files_with_lsp(
-    console: Inject[Console], lsp_client: LSPClient, files_to_check: list[str]
+    console: Console, lsp_client: LSPClient, files_to_check: list[str]
 ) -> int:
     """Check files using LSP server."""
     server_info = lsp_client.get_server_info()

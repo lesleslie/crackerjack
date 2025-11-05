@@ -3,8 +3,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import Inject, depends
-from rich.console import Console
 
 from crackerjack.models.protocols import (
     ChangelogGeneratorProtocol,
@@ -17,7 +17,7 @@ from crackerjack.models.protocols import (
 
 
 class PublishManagerImpl:
-    @depends.inject
+    @depends.inject  # type: ignore[misc]
     def __init__(
         self,
         git_service: Inject[GitServiceProtocol],

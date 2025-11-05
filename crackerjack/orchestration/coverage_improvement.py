@@ -11,7 +11,7 @@ from crackerjack.services.coverage_ratchet import CoverageRatchetService
 
 
 class CoverageImprovementOrchestrator:
-    @depends.inject
+    @depends.inject  # type: ignore[misc]
     def __init__(self, project_path: Path, console: Inject[Console]) -> None:
         self.project_path = project_path
         self.logger = logging.getLogger(__name__)

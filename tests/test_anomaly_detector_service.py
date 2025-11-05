@@ -224,7 +224,7 @@ class TestAnomalyDetector:
 
         # Add metrics with clear hourly patterns
         base_time = datetime(2023, 1, 1, 0, 0, 0)
-        for i in range(48):  # Two days of hourly data
+        for i in range(72):  # Three days of hourly data (>=3 samples/hour)
             timestamp = base_time + timedelta(hours=i)
             # Create pattern where even hours have higher values
             value = 20.0 if i % 2 == 0 else 10.0

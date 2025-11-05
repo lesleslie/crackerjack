@@ -8,6 +8,7 @@ from typing import Any
 
 import aiohttp
 from acb import console
+from rich.panel import Panel
 from rich.table import Table
 
 watchdog_event_queue: asyncio.Queue[dict[str, Any]] | None = None
@@ -404,7 +405,9 @@ class ServiceWatchdog:
 
             table.add_row(service.name, status, health, restarts, error)
 
-        console.print(table)
+        console.print(
+            Panel(table, title="Crackerjack Service Watchdog", border_style="cyan")
+        )
         console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
 
     def _create_status_table(self) -> Table:

@@ -3,7 +3,7 @@ import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStage
 from crackerjack.models.protocols import OptionsProtocol

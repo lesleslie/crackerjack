@@ -2,7 +2,7 @@ import asyncio
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor
@@ -89,7 +89,8 @@ class AsyncHookManager:
     def update_hooks(self) -> bool:
         return asyncio.run(self.update_hooks_async())
 
-    def get_hook_summary(self, results: list[HookResult]) -> dict[str, t.Any]:
+    @staticmethod
+    def get_hook_summary(results: list[HookResult]) -> dict[str, t.Any]:
         if not results:
             return {
                 "total": 0,

@@ -9,7 +9,7 @@ from rich.text import Text
 from crackerjack.services.cache import CrackerjackCache
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_clear_cache(console: Inject[Console]) -> None:
     """Clear all caches and display results."""
     try:
@@ -37,14 +37,14 @@ def handle_clear_cache(console: Inject[Console]) -> None:
         table.add_row("Total", str(total_cleared), style="bold green")
 
         console.print()
-        console.print(table)
+        console.print(Panel(table, title="Cache Cleared", border_style="green"))
         console.print(f"\n✅ Successfully cleared {total_cleared} cache entries")
 
     except Exception as e:
         console.print(f"\n❌ Error clearing cache: {e}", style="bold red")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_cache_stats(console: Inject[Console]) -> None:
     """Display detailed cache statistics."""
     try:
@@ -56,7 +56,7 @@ def handle_cache_stats(console: Inject[Console]) -> None:
         _add_cache_totals_row(main_table, totals)
 
         console.print()
-        console.print(main_table)
+        console.print(Panel(main_table, border_style="blue"))
 
         _display_performance_insights(totals)
         _display_cache_directory_info(cache)
@@ -135,7 +135,7 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
     )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_performance_insights(
     totals: dict[str, t.Any], console: Inject[Console]
 ) -> None:
@@ -179,7 +179,7 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
     return insights
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_cache_directory_info(
     cache: CrackerjackCache, console: Inject[Console]
 ) -> None:
@@ -189,7 +189,7 @@ def _display_cache_directory_info(
 
     cache_dir_info = f"📁 Cache Directory: {cache.cache_dir}"
     if cache.cache_dir.exists():
-        disk_files = len(list[t.Any](cache.cache_dir.rglob("*.cache")))
+        disk_files = len(list(cache.cache_dir.rglob("*.cache")))
         cache_dir_info += f" ({disk_files} files)"
 
     console.print()

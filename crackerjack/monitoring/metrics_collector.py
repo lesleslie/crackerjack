@@ -9,7 +9,8 @@ from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from crackerjack.monitoring.ai_agent_watchdog import AgentPerformanceMetrics
 from crackerjack.services.acb_cache_adapter import CrackerjackCache
@@ -111,7 +112,7 @@ class MetricsCollector:
     """
 
     def __init__(self, cache: CrackerjackCache | None = None):
-        self.console = Console()
+        self.console = depends.get_sync(Console)
         self.cache = cache or CrackerjackCache()
 
         self.is_collecting = False

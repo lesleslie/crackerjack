@@ -5,7 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 from rich.live import Live
 from rich.table import Table
 
@@ -39,7 +40,7 @@ class WatchdogAlert:
 
 class AIAgentWatchdog:
     def __init__(self, console: Console | None = None):
-        self.console = console or Console()
+        self.console = console or depends.get_sync(Console)
         self.performance_metrics: dict[str, AgentPerformanceMetrics] = {}
         self.alerts: list[WatchdogAlert] = []
         self.known_regressions: set[str] = {
@@ -358,7 +359,7 @@ class AIAgentWatchdog:
 
 
 async def run_agent_monitoring_demo() -> None:
-    console = Console()
+    console = depends.get_sync(Console)
     watchdog = AIAgentWatchdog(console)
 
     from crackerjack.agents.base import AgentContext

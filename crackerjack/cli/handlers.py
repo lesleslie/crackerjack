@@ -270,7 +270,10 @@ def handle_standard_mode(
     # Call the synchronous method directly
     hook_lock_manager.configure_from_options(options)
 
-    if orchestrated:
+    # Phase 1 POC: Route to ACB workflows if flag is set
+    if getattr(options, "use_acb_workflows", False):
+        handle_acb_workflow_mode(options, job_id, console)
+    elif orchestrated:
         handle_orchestrated_mode(options, job_id)
     else:
         from crackerjack.core.async_workflow_orchestrator import (
@@ -304,6 +307,79 @@ def handle_standard_mode(
 
         if not success:
             raise SystemExit(1)
+
+
+@depends.inject
+def handle_acb_workflow_mode(
+    options: Options,
+    job_id: str | None = None,
+    console: Inject[Console] = None,
+) -> None:
+    """Execute workflow using ACB workflow engine (Phase 1 POC).
+
+    This handler routes execution to the CrackerjackWorkflowEngine when
+    the --use-acb-workflows flag is set. It selects the appropriate workflow
+    definition based on CLI options and executes it with the event bridge
+    enabled for backward compatibility.
+
+    Args:
+        options: CLI options with use_acb_workflows=True
+        job_id: Optional WebSocket job ID for progress tracking
+        console: Rich console for output
+    """
+    import asyncio
+
+    from acb.depends import depends
+
+    from crackerjack.events.workflow_bus import WorkflowEventBus
+    from crackerjack.workflows import (
+        CrackerjackWorkflowEngine,
+        EventBridgeAdapter,
+        register_actions,
+        select_workflow_for_options,
+    )
+
+    console.print("[bold cyan]🚀 ACB Workflow Mode (Phase 1 POC)[/bold cyan]")
+
+    try:
+        # Register WorkflowEventBus with DI container
+        event_bus = WorkflowEventBus()
+        depends.set(WorkflowEventBus, event_bus)
+
+        # Register EventBridgeAdapter with DI container
+        event_bridge = EventBridgeAdapter()
+        depends.set(EventBridgeAdapter, event_bridge)
+
+        # Phase 1 POC: Skip WorkflowOrchestrator registration
+        # Phase 2 will implement proper DI setup for all dependencies
+
+        # Initialize engine and register action handlers
+        engine = CrackerjackWorkflowEngine()
+        register_actions(engine)
+
+        # Select workflow based on options (fast/comp/test/standard)
+        workflow = select_workflow_for_options(options)
+
+        console.print(f"[dim]Selected workflow: {workflow.name}[/dim]")
+
+        # Execute workflow with options in context
+        result = asyncio.run(engine.execute(workflow, context={"options": options}))
+
+        # Check result and exit with appropriate code
+        from acb.workflows import WorkflowState
+
+        if result.state != WorkflowState.COMPLETED:
+            console.print(f"[red]Workflow failed: {result.error}[/red]")
+            raise SystemExit(1)
+
+        console.print("[bold green]✓ Workflow completed successfully[/bold green]")
+
+    except Exception as e:
+        console.print(f"[red]ACB workflow execution failed: {e}[/red]")
+        console.print("[yellow]Falling back to legacy orchestrator[/yellow]")
+        # Disable ACB flag and retry with legacy orchestrator
+        options.use_acb_workflows = False
+        handle_standard_mode(options, False, job_id, False, console)
 
 
 @depends.inject

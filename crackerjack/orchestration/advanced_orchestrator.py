@@ -2,7 +2,8 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console, Group
+from acb.console import Console
+from rich.console import Group
 from rich.panel import Panel
 from rich.table import Table
 

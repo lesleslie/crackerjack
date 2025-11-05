@@ -3,14 +3,18 @@
 from __future__ import annotations
 
 import asyncio
+import errno
 import inspect
+import sys
 import time
 import typing as t
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import TimeoutError as FutureTimeoutError
+from contextlib import suppress
 from functools import wraps
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from ..errors import (
     CrackerjackError,
@@ -20,6 +24,49 @@ from ..errors import (
     TimeoutError as CrackerjackTimeoutError,
 )
 from .utils import format_exception_chain, get_function_context, is_async_function
+
+
+def _safe_console_print(
+    console: Console,
+    message: str,
+    *,
+    include_traceback: bool = False,
+    retries: int = 3,
+    retry_delay: float = 0.05,
+) -> None:
+    """Safely print to a Rich Console, tolerating non-blocking streams.
+
+    Some environments set stdout/stderr to non-blocking (e.g., PTY pipes),
+    which can raise BlockingIOError (EWOULDBLOCK/EAGAIN). This helper retries
+    briefly and then degrades silently if output still cannot be written.
+    """
+    for attempt in range(retries + 1):
+        try:
+            console.print(message)
+            if include_traceback:
+                console.print_exception()
+            return
+        except (BlockingIOError, BrokenPipeError, OSError) as e:  # pragma: no cover
+            # Only retry on would-block conditions; otherwise degrade silently
+            err_no = getattr(e, "errno", None)
+            would_block = (
+                err_no in {errno.EAGAIN, errno.EWOULDBLOCK}
+                if err_no is not None
+                else isinstance(e, BlockingIOError)
+            )
+            if would_block and attempt < retries:
+                time.sleep(retry_delay)
+                continue
+            # Final fallback: try bare stderr write; ignore all errors
+            with suppress(Exception):
+                err = sys.__stderr__
+                if err is not None:
+                    err.write(message + "\n")
+                    if include_traceback:
+                        # Avoid rich rendering here to prevent further issues
+                        err.write("(traceback suppressed due to I/O constraints)\n")
+                    err.flush()
+            return
 
 
 def _handle_exception(
@@ -34,13 +81,14 @@ def _handle_exception(
     context = get_function_context(func)
 
     # Log error with context
-    console.print(
-        f"[red]❌ Error in {context['function_name']}: {type(e).__name__}: {e}[/red]"
+    _safe_console_print(
+        console,
+        f"[red]❌ Error in {context['function_name']}: {type(e).__name__}: {e}[/red]",
     )
 
     # Transform to CrackerjackError if requested
     if transform_to:
-        transformed = transform_to(
+        transformed = transform_to(  # type: ignore[call-arg]
             message=str(e),
             details={
                 "original_error": type(e).__name__,
@@ -110,7 +158,7 @@ def handle_errors(
         - With suppress=True, errors are logged but not raised
         - Integrates with Rich console for beautiful output
     """
-    _console = console or Console()
+    _console = console or depends.get_sync(Console)
     _error_types = tuple(error_types) if error_types else (Exception,)
 
     def decorator(inner_func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
@@ -179,7 +227,7 @@ def log_errors(
         - Includes function context in logs
         - Supports structured logging if logger supports it
     """
-    _console = console or Console()
+    _console = console or depends.get_sync(Console)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
@@ -206,12 +254,12 @@ def log_errors(
                             },
                         )
                     else:
-                        _console.print(
+                        _safe_console_print(
+                            _console,
                             f"[red]Error in {context['function_name']}: "
-                            f"{type(e).__name__}: {e}[/red]"
+                            f"{type(e).__name__}: {e}[/red]",
+                            include_traceback=include_traceback,
                         )
-                        if include_traceback:
-                            _console.print_exception()
 
                     raise
 
@@ -240,12 +288,12 @@ def log_errors(
                             },
                         )
                     else:
-                        _console.print(
+                        _safe_console_print(
+                            _console,
                             f"[red]Error in {context['function_name']}: "
-                            f"{type(e).__name__}: {e}[/red]"
+                            f"{type(e).__name__}: {e}[/red]",
+                            include_traceback=include_traceback,
                         )
-                        if include_traceback:
-                            _console.print_exception()
 
                     raise
 
@@ -367,7 +415,7 @@ def _execute_single_validator(
         raise ValidationError(
             message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
         ) from exc
-    if result is False:
+    if not result:
         raise ValidationError(
             message=f"Validation failed for parameter '{param}'",
         )
@@ -501,7 +549,7 @@ def graceful_degradation(
         - Logs/warns about failures if warn=True
         - Useful for optional features that shouldn't break the app
     """
-    _console = console or Console()
+    _console = console or depends.get_sync(Console)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
@@ -513,9 +561,10 @@ def graceful_degradation(
                 except Exception as e:
                     if warn:
                         context = get_function_context(func)
-                        _console.print(
+                        _safe_console_print(
+                            _console,
                             f"[yellow]⚠️  {context['function_name']} failed, using fallback: "
-                            f"{type(e).__name__}[/yellow]"
+                            f"{type(e).__name__}[/yellow]",
                         )
 
                     if callable(fallback_value):
@@ -533,9 +582,10 @@ def graceful_degradation(
                 except Exception as e:
                     if warn:
                         context = get_function_context(func)
-                        _console.print(
+                        _safe_console_print(
+                            _console,
                             f"[yellow]⚠️  {context['function_name']} failed, using fallback: "
-                            f"{type(e).__name__}[/yellow]"
+                            f"{type(e).__name__}[/yellow]",
                         )
 
                     if callable(fallback_value):

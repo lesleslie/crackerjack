@@ -148,6 +148,10 @@ class Options(BaseModel):
     remove_from_index: str | None = None
     cache_stats: bool = False
 
+    # ACB workflow integration (Phase 1 POC)
+    use_acb_workflows: bool = False  # Feature flag for ACB workflow migration
+    refresh_cache: bool = False
+
     # Semantic field names (new primary interface)
     strip_code: bool | None = None  # Replaces clean
     run_tests: bool = False  # Replaces test
@@ -952,6 +956,13 @@ CLI_OPTIONS = {
         "--refresh-cache",
         help="Refresh cache to ensure fresh environment.",
     ),
+    # ACB workflow integration (Phase 1 POC)
+    "use_acb_workflows": typer.Option(
+        False,
+        "--use-acb-workflows",
+        help="Use ACB workflow engine for orchestration (Phase 1 POC feature flag).",
+        hidden=True,  # Hide during POC phase
+    ),
     # Semantic search options
     "index": typer.Option(
         None,
@@ -1066,6 +1077,7 @@ def create_options(
     diff_config: str | None,
     config_interactive: bool,
     refresh_cache: bool,
+    use_acb_workflows: bool,
     # New semantic parameters
     strip_code: bool | None = None,
     run_tests: bool = False,
@@ -1167,6 +1179,7 @@ def create_options(
         diff_config=diff_config,
         config_interactive=config_interactive,
         refresh_cache=refresh_cache,
+        use_acb_workflows=use_acb_workflows,
         # New semantic parameters
         strip_code=strip_code,
         run_tests=run_tests,

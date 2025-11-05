@@ -74,9 +74,10 @@ dependencies = [
     "types-pyyaml>=6.0.12.12",
     "types-psutil>=6.0.0.12",
     "types-aiofiles>=24.1.0.20240626",
-    "acb>=0.25.2",
     "scipy-stubs==1.16.2.3",
     "session-mgmt-mcp>=0.4.0",
+    "mcp-common>=0.2.0",
+    "acb>=0.28.1",
 ]
 
 [project.license]
@@ -140,6 +141,7 @@ zuban_lsp_host = "127.0.0.1"
 zuban_lsp_port = 8677
 zuban_lsp_timeout = 10.0
 zuban_lsp_strict_mode = true
+terminal_width = 70
 
 [tool.codespell]
 # Note: Native wrapper (crackerjack.tools.codespell_wrapper) uses git ls-files
@@ -391,16 +393,7 @@ enable_diagnostics = true
 real_time_feedback = true
 
 [dependency-groups]
-cache = [
-    "acb>=0.25.2",
-]
 dev = [
     "excalidraw-mcp>=0.34.0",
     "session-mgmt-mcp>=0.4.0",
-]
-logger = [
-    "acb>=0.25.2",
-]
-sql = [
-    "acb>=0.25.2",
 ]

@@ -1,6 +1,8 @@
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import depends
 
 from crackerjack.config import CrackerjackSettings
@@ -33,19 +35,14 @@ class HookManagerImpl:
 
         # Use LSP-aware executor if optimization is enabled
         if enable_lsp_optimization:
-            # Create a console for the executor
-            from rich.console import Console
-
-            console = Console()
+            console = depends.get_sync(Console)
             self.console = console  # Store console for later use
             self.executor = LSPAwareHookExecutor(
                 console, pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
             )
         else:
             # Create a console for the executor
-            from rich.console import Console
-
-            console = Console()
+            console = depends.get_sync(Console)
             self.console = console  # Store console for later use
             self.executor = HookExecutor(console, pkg_path, verbose, quiet)
 
@@ -188,11 +185,19 @@ class HookManagerImpl:
                 # We're in an event loop, run in thread
                 import concurrent.futures
 
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run, self._run_fast_hooks_orchestrated()
-                    )
-                    return future.result()
+                # Suppress executor printing while running in a background thread
+                prev_quiet = getattr(self.executor, "quiet", False)
+                with suppress(Exception):
+                    self.executor.quiet = True  # type: ignore[attr-defined]
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run, self._run_fast_hooks_orchestrated()
+                        )
+                        return future.result()
+                finally:
+                    with suppress(Exception):
+                        self.executor.quiet = prev_quiet  # type: ignore[attr-defined]
             except RuntimeError:
                 # No event loop running, safe to use asyncio.run()
                 return asyncio.run(self._run_fast_hooks_orchestrated())
@@ -217,11 +222,19 @@ class HookManagerImpl:
                 # We're in an event loop, run in thread
                 import concurrent.futures
 
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run, self._run_comprehensive_hooks_orchestrated()
-                    )
-                    return future.result()
+                # Suppress executor printing while running in a background thread
+                prev_quiet = getattr(self.executor, "quiet", False)
+                with suppress(Exception):
+                    self.executor.quiet = True  # type: ignore[attr-defined]
+                try:
+                    with concurrent.futures.ThreadPoolExecutor() as executor:
+                        future = executor.submit(
+                            asyncio.run, self._run_comprehensive_hooks_orchestrated()
+                        )
+                        return future.result()
+                finally:
+                    with suppress(Exception):
+                        self.executor.quiet = prev_quiet  # type: ignore[attr-defined]
             except RuntimeError:
                 # No event loop running, safe to use asyncio.run()
                 return asyncio.run(self._run_comprehensive_hooks_orchestrated())
@@ -271,46 +284,6 @@ class HookManagerImpl:
         fast_results = self.run_fast_hooks()
         comprehensive_results = self.run_comprehensive_hooks()
         return fast_results + comprehensive_results
-
-    async def get_orchestration_stats(self) -> dict[str, t.Any] | None:
-        """Get orchestration statistics if orchestrator is initialized.
-
-        Returns:
-            Dictionary with orchestration stats, or None if orchestration disabled
-        """
-        if not self.orchestration_enabled or self._orchestrator is None:
-            return None
-
-        return await self._orchestrator.get_cache_stats()
-
-    def get_execution_info(self) -> dict[str, t.Any]:
-        """Get information about current execution mode and capabilities."""
-        info = {
-            "lsp_optimization_enabled": self.lsp_optimization_enabled,
-            "tool_proxy_enabled": self.tool_proxy_enabled,
-            "executor_type": type(self.executor).__name__,
-            # Use instance properties which may override settings via constructor params
-            "orchestration_enabled": self.orchestration_enabled,
-            "orchestration_mode": (
-                self.orchestration_mode if self.orchestration_enabled else None
-            ),
-            "caching_enabled": (
-                self._orchestration_config.enable_caching
-                if self.orchestration_enabled
-                else False
-            ),
-            "cache_backend": (
-                self._orchestration_config.cache_backend
-                if self.orchestration_enabled
-                else None
-            ),
-        }
-
-        # Get LSP-specific info if available
-        if hasattr(self.executor, "get_execution_mode_summary"):
-            info.update(self.executor.get_execution_mode_summary())
-
-        return info
 
     def configure_lsp_optimization(self, enable: bool) -> None:
         """Enable or disable LSP optimization by switching executors."""
@@ -362,6 +335,46 @@ class HookManagerImpl:
             if self._config_path:
                 pass  # Config path handled at manager level
 
+    async def get_orchestration_stats(self) -> dict[str, t.Any] | None:
+        """Get orchestration statistics if orchestrator is initialized.
+
+        Returns:
+            Dictionary with orchestration stats, or None if orchestration disabled
+        """
+        if not self.orchestration_enabled or self._orchestrator is None:
+            return None
+
+        return await self._orchestrator.get_cache_stats()
+
+    def get_execution_info(self) -> dict[str, t.Any]:
+        """Get information about current execution mode and capabilities."""
+        info = {
+            "lsp_optimization_enabled": self.lsp_optimization_enabled,
+            "tool_proxy_enabled": self.tool_proxy_enabled,
+            "executor_type": type(self.executor).__name__,
+            # Use instance properties which may override settings via constructor params
+            "orchestration_enabled": self.orchestration_enabled,
+            "orchestration_mode": (
+                self.orchestration_mode if self.orchestration_enabled else None
+            ),
+            "caching_enabled": (
+                self._orchestration_config.enable_caching
+                if self.orchestration_enabled
+                else False
+            ),
+            "cache_backend": (
+                self._orchestration_config.cache_backend
+                if self.orchestration_enabled
+                else None
+            ),
+        }
+
+        # Get LSP-specific info if available
+        if hasattr(self.executor, "get_execution_mode_summary"):
+            info.update(self.executor.get_execution_mode_summary())
+
+        return info
+
     @staticmethod
     def validate_hooks_config() -> bool:
         """Validate hooks configuration.
@@ -400,7 +413,8 @@ class HookManagerImpl:
         )
         return True
 
-    def get_hook_summary(self, results: list[HookResult]) -> dict[str, t.Any]:
+    @staticmethod
+    def get_hook_summary(results: list[HookResult]) -> dict[str, t.Any]:
         if not results:
             return {
                 "total": 0,

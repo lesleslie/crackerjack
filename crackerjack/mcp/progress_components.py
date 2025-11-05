@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from crackerjack.core.timeout_manager import get_timeout_manager
 
@@ -17,7 +18,7 @@ class JobDataCollector:
     def __init__(self, progress_dir: Path, websocket_url: str) -> None:
         self.progress_dir = progress_dir
         self.websocket_url = websocket_url
-        self.console = Console()
+        self.console = depends.get_sync(Console)
 
     async def discover_jobs(self) -> dict[str, Any]:
         jobs_data = self._init_jobs_data()
@@ -212,7 +213,7 @@ class JobDataCollector:
 
 class ServiceHealthChecker:
     def __init__(self) -> None:
-        self.console = Console()
+        self.console = depends.get_sync(Console)
 
     async def collect_services_data(self) -> list[tuple[str, str, str]]:
         services = []
@@ -297,7 +298,7 @@ class ServiceHealthChecker:
 
 class ErrorCollector:
     def __init__(self) -> None:
-        self.console = Console()
+        self.console = depends.get_sync(Console)
 
     async def collect_recent_errors(self) -> list[tuple[str, str, str, str]]:
         errors: list[tuple[str, str, str, str]] = []
@@ -416,7 +417,7 @@ class ErrorCollector:
 class ServiceManager:
     def __init__(self) -> None:
         self.started_services: list[tuple[str, subprocess.Popen[bytes]]] = []
-        self.console = Console()
+        self.console = depends.get_sync(Console)
 
     async def ensure_services_running(self) -> None:
         with suppress(Exception):

@@ -303,6 +303,38 @@ class BaseToolAdapter(QAAdapterBase):
             start_time=start_time,
         )
 
+    async def _get_target_files(
+        self, files: list[Path] | None, config: QACheckConfig | None
+    ) -> list[Path]:
+        """Collect target files based on provided list or config patterns.
+
+        If explicit files are provided, return them. Otherwise, scan the project
+        root for files matching include patterns and not matching exclude patterns.
+        """
+        if files:
+            return files
+
+        # Fallback to default configuration if none provided
+        cfg = config or self.get_default_config()
+
+        root = Path.cwd() / "crackerjack"
+        if not root.exists():
+            root = Path.cwd()
+
+        candidates = [p for p in root.rglob("*.py")]
+        result: list[Path] = []
+        for path in candidates:
+            # Include if matches include patterns
+            include = any(path.match(pattern) for pattern in cfg.file_patterns)
+            if not include:
+                continue
+            # Exclude if matches any exclude pattern
+            if any(path.match(pattern) for pattern in cfg.exclude_patterns):
+                continue
+            result.append(path)
+
+        return result
+
     async def _execute_tool(
         self,
         command: list[str],

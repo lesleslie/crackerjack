@@ -9,7 +9,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
+from acb.depends import depends
 
 from .security_logger import get_security_logger
 
@@ -34,7 +35,7 @@ class ZubanLSPService:
         """
         self.port = port
         self.mode = mode
-        self.console = console or Console()
+        self.console = console or depends.get_sync(Console)
         self.process: subprocess.Popen[bytes] | None = None
         self.start_time: float = 0.0
         self.security_logger = get_security_logger()

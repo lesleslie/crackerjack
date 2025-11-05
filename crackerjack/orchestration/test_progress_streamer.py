@@ -5,7 +5,7 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.models.protocols import OptionsProtocol
 from crackerjack.services.regex_patterns import SAFE_PATTERNS, CompiledPatternCache

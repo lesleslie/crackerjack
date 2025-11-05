@@ -57,9 +57,9 @@ async def test_session_controller_initializes_pipeline_components() -> None:
     controller.initialize(opts)
 
     assert pipeline.session.initialized is True
-    assert ("workflow", "Complete crackerjack workflow") in pipeline.session.tracked_tasks
+    # In the current model, high-level session bookkeeping is handled by
+    # SessionTracker; no explicit 'workflow' task is tracked here.
     assert pipeline.calls == [
-        "debug",
         "cleanup",
         "zuban",
         "hook_manager",

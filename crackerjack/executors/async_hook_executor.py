@@ -4,10 +4,11 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import Inject, depends
 from acb.logger import Logger
-from rich.console import Console
 
+from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
@@ -102,7 +103,7 @@ class AsyncHookExecutor:
                 max_workers=getattr(strategy, "max_workers", self.max_concurrent),
             )
 
-            self._print_strategy_header(strategy)
+            # Header is displayed by PhaseCoordinator; suppress here to avoid duplicates
 
             estimated_sequential = sum(
                 getattr(hook, "timeout", 30) for hook in strategy.hooks
@@ -159,20 +160,8 @@ class AsyncHookExecutor:
         }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-        self.console.print("\n" + "-" * 74)
-        if strategy.name == "fast":
-            self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running code quality checks (async)[/ bold bright_white]",
-            )
-        elif strategy.name == "comprehensive":
-            self.console.print(
-                "[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running comprehensive quality checks (async)[/ bold bright_white]",
-            )
-        else:
-            self.console.print(
-                f"[bold bright_cyan]🔍 HOOKS[/ bold bright_cyan] [bold bright_white]Running {strategy.name} hooks (async)[/ bold bright_white]",
-            )
-        self.console.print("-" * 74 + "\n")
+        # Intentionally no-op: PhaseCoordinator controls stage headers
+        return None
 
     async def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
@@ -345,7 +334,8 @@ class AsyncHookExecutor:
                 stage=hook.stage.value,
             )
 
-    def _parse_hook_output(self, returncode: int, output: str) -> dict[str, t.Any]:
+    @staticmethod
+    def _parse_hook_output(returncode: int, output: str) -> dict[str, t.Any]:
         return {
             "hook_id": None,
             "exit_code": returncode,
@@ -355,12 +345,15 @@ class AsyncHookExecutor:
         }
 
     def _display_hook_result(self, result: HookResult) -> None:
-        dots = "." * (60 - len(result.name))
+        if self.quiet:
+            return
+        width = get_console_width()
+        dots = "." * max(0, (width - len(result.name)))
         status_text = "Passed" if result.status == "passed" else "Failed"
         status_color = "green" if result.status == "passed" else "red"
 
         self.console.print(
-            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]",
+            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]"
         )
 
         if result.status != "passed" and result.issues_found:

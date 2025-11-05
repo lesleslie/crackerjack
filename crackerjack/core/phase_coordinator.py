@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-import logging
+import re
 import typing as t
 from pathlib import Path
 
+from acb.console import Console
 from acb.depends import Inject, depends
+from acb.logger import Logger
 from rich import box
-from rich.console import Console
+from rich.panel import Panel
 from rich.table import Table
 
 from crackerjack.code_cleaner import CodeCleaner
+from crackerjack.config import get_console_width
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.decorators import handle_errors
@@ -33,6 +36,7 @@ from crackerjack.services.parallel_executor import (
     AsyncCommandExecutor,
     ParallelHookExecutor,
 )
+from crackerjack.utils.console_utils import separator as make_separator
 
 if t.TYPE_CHECKING:
     pass  # All imports moved to top-level for runtime availability
@@ -43,6 +47,7 @@ class PhaseCoordinator:
     def __init__(
         self,
         console: Inject[Console],
+        logger: Inject[Logger],
         memory_optimizer: Inject[MemoryOptimizerProtocol],
         parallel_executor: Inject[ParallelHookExecutor],
         async_executor: Inject[AsyncCommandExecutor],
@@ -81,7 +86,7 @@ class PhaseCoordinator:
             backup_service=None,
         )
 
-        self.logger = logging.getLogger("crackerjack.phases")
+        self.logger = logger
 
         # Services injected via ACB DI
         self._memory_optimizer = memory_optimizer
@@ -96,6 +101,34 @@ class PhaseCoordinator:
             lambda: AutofixCoordinator(pkg_path=pkg_path),
             "autofix_coordinator",
         )
+        self.console.print()
+
+    # --- Output/formatting helpers -------------------------------------------------
+    @staticmethod
+    def _strip_ansi(text: str) -> str:
+        """Remove ANSI escape sequences (SGR and cursor controls).
+
+        This is more comprehensive than stripping only color codes ending with 'm'.
+        """
+        ansi_re = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
+        return ansi_re.sub("", text)
+
+    def _is_plain_output(self) -> bool:
+        """Detect if we should avoid rich formatting entirely.
+
+        Leverages ACB Console's plain-mode flag when available and falls back
+        to Rich Console properties when not.
+        """
+        try:
+            if bool(getattr(self.console, "_plain_mode", False)):
+                return True
+            # Fallback on Rich Console capabilities
+            is_tty = bool(getattr(self.console, "is_terminal", True))
+            color_system = getattr(self.console, "color_system", None)
+            return (not is_tty) or (color_system in (None, "null"))
+        except Exception:
+            # Prefer plain in ambiguous environments
+            return True
 
     @handle_errors
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
@@ -129,7 +162,6 @@ class PhaseCoordinator:
 
         return self.run_comprehensive_hooks_only(options)
 
-    @handle_errors
     def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks).")
@@ -153,9 +185,11 @@ class PhaseCoordinator:
         else:
             self.session.fail_task("hooks_fast", "Fast hook failures detected")
 
+        # Ensure fast hooks output is fully rendered before comprehensive hooks start
+        self.console.print()
+
         return success
 
-    @handle_errors
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
@@ -166,7 +200,7 @@ class PhaseCoordinator:
         self.session.track_task("hooks_comprehensive", "Comprehensive quality checks")
         self._display_hook_phase_header(
             "COMPREHENSIVE HOOKS",
-            "Type checking, security scans, and complexity analysis",
+            "Type, security, and complexity checking",
         )
 
         success = self._execute_hooks_with_retry(
@@ -192,11 +226,11 @@ class PhaseCoordinator:
         if not options.test:
             return True
         self.session.track_task("testing", "Test execution")
-        self.console.print("\n" + "-" * 74)
+        self.console.print("\n" + make_separator("-"))
         self.console.print(
-            "[bold bright_blue]🧪 TESTS[/ bold bright_blue] [bold bright_white]Running test suite[/ bold bright_white]",
+            "[bold bright_blue]🧪 TESTS[/bold bright_blue] [bold bright_white]Running test suite[/bold bright_white]",
         )
-        self.console.print("-" * 74 + "\n")
+        self.console.print(make_separator("-") + "\n")
         if not self.test_manager.validate_test_environment():
             self.session.fail_task("testing", "Test environment validation failed")
             return False
@@ -205,7 +239,7 @@ class PhaseCoordinator:
             coverage_info = self.test_manager.get_coverage()
             self.session.complete_task(
                 "testing",
-                f"Tests passed, coverage: {coverage_info.get('total_coverage', 0): .1f}%",
+                f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
             )
         else:
             self.session.fail_task("testing", "Tests failed")
@@ -291,11 +325,16 @@ class PhaseCoordinator:
         return False
 
     def _display_hook_phase_header(self, title: str, description: str) -> None:
-        separator = "-" * 74
-        self.console.print("\n" + separator)
-        self.console.print(f"[bold bright_blue]{title}[/bold bright_blue]")
-        self.console.print(f"[bright_white]{description}[/bright_white]")
-        self.console.print(separator + "\n")
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        # Combine title and description into a single line with leading icon
+        pretty_title = title.title()
+        message = (
+            f"[bold bright_cyan]🔍[/bold bright_cyan] "
+            f"[bold bright_white]{pretty_title} - {description}[/bold bright_white]"
+        )
+        self.console.print(message)
+        self.console.print(sep + "\n")
 
     def _report_hook_results(
         self,
@@ -304,8 +343,6 @@ class PhaseCoordinator:
         summary: dict[str, t.Any],
         attempt: int,
     ) -> None:
-        self._render_hook_results_table(suite_name, results)
-
         total = summary.get("total", 0)
         passed = summary.get("passed", 0)
         failed = summary.get("failed", 0)
@@ -325,10 +362,11 @@ class PhaseCoordinator:
 
         if failed or errors:
             self.console.print(
-                f"[red]❌[/red] {base_message} ({failed} failed, {errors} errors)."
+                f"\n[red]❌[/red] {base_message} ({failed} failed, {errors} errors).\n"
             )
         else:
-            self.console.print(f"[green]✅[/green] {base_message}.")
+            self.console.print(f"\n[green]✅[/green] {base_message}.\n")
+            self._render_hook_results_table(suite_name, results)
 
     def _render_hook_results_table(
         self,
@@ -338,11 +376,22 @@ class PhaseCoordinator:
         if not results:
             return
 
-        table = Table(
-            title=f"{suite_name.title()} Hook Results",
-            box=box.SIMPLE,
-            header_style="bold bright_white",
-        )
+        if self._is_plain_output():
+            # Plain, log-friendly rendering without Rich structures
+            self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
+            for result in results:
+                name = self._strip_ansi(str(result.name))
+                status = result.status.upper()
+                duration = f"{result.duration:.2f}s"
+                files = str(result.files_processed)
+                self.console.print(
+                    f"  - {name} :: {status} | {duration} | files={files}",
+                    highlight=False,
+                )
+            self.console.print()
+            return
+
+        table = Table(box=box.SIMPLE, header_style="bold bright_white")
         table.add_column("Hook", style="cyan", overflow="fold")
         table.add_column("Status", style="bright_white")
         table.add_column("Duration", justify="right", style="magenta")
@@ -351,13 +400,21 @@ class PhaseCoordinator:
         for result in results:
             status_style = self._status_style(result.status)
             table.add_row(
-                result.name,
+                self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
                 f"{result.duration:.2f}s",
                 str(result.files_processed),
             )
 
-        self.console.print(table)
+        panel = Panel(
+            table,
+            title=f"[bold]{suite_name.title()} Hook Results[/bold]",
+            border_style="cyan" if suite_name == "fast" else "magenta",
+            padding=(0, 1),
+            width=get_console_width(),
+        )
+        self.console.print(panel)
+        self.console.print()
 
     def _display_hook_failures(
         self,
@@ -378,12 +435,147 @@ class PhaseCoordinator:
         )
         for result in failing:
             self.console.print(
-                f"  - [red]{result.name}[/red] ({result.status})", highlight=False
+                f"  - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
+                highlight=False,
             )
             for issue in result.issues_found or []:
-                self.console.print(f"      - {issue}", highlight=False)
+                self.console.print(
+                    f"      - {self._strip_ansi(issue)}", highlight=False
+                )
+        self.console.print()
 
-    def _format_hook_summary(self, summary: dict[str, t.Any]) -> str:
+    def _display_cleaning_header(self) -> None:
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print("[bold bright_green]🧹 CLEANING[/bold bright_green]")
+        self.console.print(sep + "\n")
+
+    def _execute_cleaning_process(self) -> bool:
+        py_files = list(self.pkg_path.rglob("*.py"))
+        if not py_files:
+            return self._handle_no_files_to_clean()
+
+        cleaned_files = self._clean_python_files(py_files)
+        self._report_cleaning_results(cleaned_files)
+        return True
+
+    def _handle_no_files_to_clean(self) -> bool:
+        self.console.print("No Python files found to clean.")
+        self.session.complete_task("cleaning", "No files to clean")
+        return True
+
+    def _clean_python_files(self, files: list[Path]) -> list[str]:
+        cleaned_files = []
+        for file in files:
+            if self.code_cleaner.should_process_file(file):
+                result = self.code_cleaner.clean_file(file)
+                if result.success:
+                    cleaned_files.append(str(file))
+        return cleaned_files
+
+    def _report_cleaning_results(self, cleaned_files: list[str]) -> None:
+        if cleaned_files:
+            self.console.print(f"Cleaned {len(cleaned_files)} files.")
+            self.session.complete_task(
+                "cleaning", f"Cleaned {len(cleaned_files)} files"
+            )
+        else:
+            self.console.print("No cleaning needed for any files.")
+            self.session.complete_task("cleaning", "No cleaning needed")
+
+    @staticmethod
+    def _determine_version_type(options: OptionsProtocol) -> str | None:
+        return options.publish or options.all or options.bump
+
+    def _execute_publishing_workflow(
+        self, options: OptionsProtocol, version_type: str
+    ) -> bool:
+        new_version = self.publish_manager.bump_version(version_type)
+        if not new_version:
+            self.session.fail_task("publishing", "Version bumping failed")
+            return False
+
+        self.console.print(f"Version bumped to {new_version}")
+
+        # Stage files before publishing
+        if not self.git_service.add_all_files():
+            self.console.print(
+                "[yellow]⚠️ Failed to stage files, continuing...[/yellow]"
+            )
+
+        if not self.publish_manager.publish_package():
+            self.session.fail_task("publishing", "Package publishing failed")
+            return False
+
+        if not options.no_git_tags:
+            if not self.publish_manager.create_git_tag(new_version):
+                self.console.print(
+                    f"[yellow]⚠️ Failed to create git tag {new_version}[/yellow]"
+                )
+
+        self.session.complete_task("publishing", f"Published version {new_version}")
+        return True
+
+    def _display_commit_push_header(self) -> None:
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print("[bold bright_blue]📦 COMMIT & PUSH[/bold bright_blue]")
+        self.console.print(sep + "\n")
+
+    def _handle_no_changes_to_commit(self) -> bool:
+        self.console.print("No changes to commit.")
+        self.session.complete_task("commit", "No changes to commit")
+        return True
+
+    def _get_commit_message(
+        self, changed_files: list[str], options: OptionsProtocol
+    ) -> str:
+        suggestions = self.git_service.get_commit_message_suggestions(changed_files)
+        if not suggestions:
+            return "Update project files"
+
+        if not options.interactive:
+            return suggestions[0]
+
+        return self._interactive_commit_message_selection(suggestions)
+
+    def _interactive_commit_message_selection(self, suggestions: list[str]) -> str:
+        self._display_commit_suggestions(suggestions)
+        choice = self.console.input(
+            "\nEnter number, custom message, or press Enter for default: "
+        ).strip()
+        return self._process_commit_choice(choice, suggestions)
+
+    def _display_commit_suggestions(self, suggestions: list[str]) -> None:
+        self.console.print("\n[bold]Commit message suggestions:[/bold]")
+        for i, suggestion in enumerate(suggestions, 1):
+            self.console.print(f"  [cyan]{i}[/cyan]: {suggestion}")
+
+    @staticmethod
+    def _process_commit_choice(choice: str, suggestions: list[str]) -> str:
+        if not choice:
+            return suggestions[0]
+        if choice.isdigit() and 1 <= int(choice) <= len(suggestions):
+            return suggestions[int(choice) - 1]
+        return choice
+
+    def _execute_commit_and_push(
+        self, changed_files: list[str], commit_message: str
+    ) -> bool:
+        if not self.git_service.add_files(changed_files):
+            self.session.fail_task("commit", "Failed to add files to git")
+            return False
+        if not self.git_service.commit(commit_message):
+            self.session.fail_task("commit", "Failed to commit files")
+            return False
+        if not self.git_service.push():
+            self.console.print("[yellow]⚠️ Push failed. Please push manually.[/yellow]")
+            # Not failing the whole workflow for a push failure
+        self.session.complete_task("commit", "Committed and pushed changes")
+        return True
+
+    @staticmethod
+    def _format_hook_summary(summary: dict[str, t.Any]) -> str:
         if not summary:
             return "No hooks executed"
 
@@ -393,12 +585,14 @@ class PhaseCoordinator:
         errors = summary.get("errors", 0)
         duration = summary.get("total_duration", 0.0)
 
-        return (
-            f"{passed}/{total} passed"
-            f"{f', {failed} failed' if failed else ''}"
-            f"{f', {errors} errors' if errors else ''}"
-            f" in {duration:.2f}s"
-        )
+        parts = [f"{passed}/{total} passed"]
+        if failed:
+            parts.append(f"{failed} failed")
+        if errors:
+            parts.append(f"{errors} errors")
+
+        summary_str = ", ".join(parts)
+        return f"{summary_str} in {duration:.2f}s"
 
     @staticmethod
     def _status_style(status: str) -> str:
@@ -410,3 +604,5 @@ class PhaseCoordinator:
         if normalized == "timeout":
             return "yellow"
         return "bright_white"
+
+    # (All printing is handled by acb.console.Console which supports robust I/O.)

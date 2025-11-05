@@ -28,7 +28,10 @@ __all__ = [
 
 
 # Lazy imports to avoid circular dependencies
-def __getattr__(name: str):
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
     if name == "HookOrchestratorAdapter":
         from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
 

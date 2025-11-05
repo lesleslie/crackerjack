@@ -19,10 +19,14 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
     @depends.inject
     def __init__(self, pkg_path: Path, console: Inject[Console]) -> None:
-        self.pkg_path = pkg_path
+        # Normalize to pathlib.Path to avoid async path behaviors
+        try:
+            self.pkg_path = Path(str(pkg_path))
+        except Exception:
+            self.pkg_path = Path(pkg_path)
         self.console = console
-        self.ratchet_file = pkg_path / ".coverage-ratchet.json"
-        self.pyproject_file = pkg_path / "pyproject.toml"
+        self.ratchet_file = self.pkg_path / ".coverage-ratchet.json"
+        self.pyproject_file = self.pkg_path / "pyproject.toml"
 
     def initialize(self) -> None:
         pass
@@ -178,7 +182,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
     def _check_milestones(
         self, old_coverage: float, new_coverage: float, data: dict[str, t.Any]
     ) -> list[float]:
-        achieved_milestones = set[t.Any](data.get("milestones_achieved", []))
+        achieved_milestones = set(data.get("milestones_achieved", []))
         return [
             milestone
             for milestone in self.MILESTONES

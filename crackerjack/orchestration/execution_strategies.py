@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
 
-from rich.console import Console
+from acb.console import Console
 
 from crackerjack.config.hooks import HookStrategy
 from crackerjack.models.protocols import OptionsProtocol

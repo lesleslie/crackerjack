@@ -125,7 +125,7 @@ class TestErrorHandlingIntegration:
             recovery="Try running with - - verbose",
         )
         output_io = io.StringIO()
-        console = Console(file=output_io, width=74)
+        console = Console(file=output_io, width=70)
         with patch("sys.exit"):
             handle_error(error, console, verbose=True)
         output = output_io.getvalue()
@@ -144,7 +144,7 @@ class TestErrorHandlingIntegration:
             recovery="Check command syntax",
         )
         output_io = io.StringIO()
-        console = Console(file=output_io, width=74)
+        console = Console(file=output_io, width=70)
         with patch("sys.exit"):
             handle_error(error, console, verbose=True, ai_agent=True)
         output = output_io.getvalue()

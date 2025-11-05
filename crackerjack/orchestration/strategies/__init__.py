@@ -20,7 +20,10 @@ __all__ = [
 
 
 # Lazy imports
-def __getattr__(name: str):
+from typing import Any
+
+
+def __getattr__(name: str) -> Any:
     if name == "ParallelExecutionStrategy":
         from crackerjack.orchestration.strategies.parallel_strategy import (
             ParallelExecutionStrategy,
