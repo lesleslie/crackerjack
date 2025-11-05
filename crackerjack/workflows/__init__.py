@@ -10,6 +10,7 @@ with automatic parallelization and event-driven coordination.
 
 from .actions import ACTION_REGISTRY, register_actions
 from .auto_fix import AutoFixWorkflow, FixIteration
+from .container_builder import WorkflowContainerBuilder
 from .definitions import (
     COMPREHENSIVE_PARALLEL_WORKFLOW,
     FAST_HOOKS_WORKFLOW,
@@ -28,6 +29,7 @@ __all__ = [
     "CrackerjackWorkflowEngine",
     "EventBridgeAdapter",
     "StepEventMapping",
+    "WorkflowContainerBuilder",
     # Workflow definitions
     "FAST_HOOKS_WORKFLOW",
     "STANDARD_WORKFLOW",
