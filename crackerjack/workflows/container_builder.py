@@ -381,23 +381,68 @@ class WorkflowContainerBuilder:
     def _register_level5_executors(self) -> None:
         """Register Level 5 executors: ParallelHookExecutor, AsyncCommandExecutor.
 
-        These depend on Level 1-4 services.
+        These depend on Logger (Level 1) and PerformanceCacheProtocol (Level 2).
         """
-        # TODO: Implement executor registration
-        pass
+        from crackerjack.services.parallel_executor import (
+            AsyncCommandExecutor,
+            ExecutionStrategy,
+            ParallelHookExecutor,
+        )
+
+        # ParallelHookExecutor - uses @depends.inject (Logger, PerformanceCache)
+        parallel_executor = ParallelHookExecutor(
+            max_workers=3,
+            timeout_seconds=300,
+            strategy=ExecutionStrategy.PARALLEL_SAFE,
+        )
+        depends.set(ParallelHookExecutor, parallel_executor)
+        self._registered.add("ParallelHookExecutor")
+
+        # AsyncCommandExecutor - uses @depends.inject (Logger, PerformanceCache)
+        async_executor = AsyncCommandExecutor(max_workers=4, cache_results=True)
+        depends.set(AsyncCommandExecutor, async_executor)
+        self._registered.add("AsyncCommandExecutor")
 
     def _register_level6_coordinators(self) -> None:
         """Register Level 6 coordinators: SessionCoordinator, PhaseCoordinator.
 
         These depend on Level 1-5 services.
         """
-        # TODO: Implement coordinator registration
-        pass
+        from crackerjack.core.phase_coordinator import PhaseCoordinator
+        from crackerjack.core.session_coordinator import SessionCoordinator
+        from crackerjack.models.protocols import ConfigMergeServiceProtocol
+        from crackerjack.services.config_merge import ConfigMergeService
+
+        # ConfigMergeService - needed by PhaseCoordinator
+        # Uses @depends.inject (Console, FileSystemInterface, GitInterface, Logger)
+        config_merge_service = ConfigMergeService()
+        depends.set(ConfigMergeServiceProtocol, config_merge_service)
+        self._registered.add("ConfigMergeServiceProtocol")
+
+        # SessionCoordinator - uses @depends.inject (Console, pkg_path)
+        session_coordinator = SessionCoordinator(
+            pkg_path=self._root_path, web_job_id=None
+        )
+        depends.set(SessionCoordinator, session_coordinator)
+        self._registered.add("SessionCoordinator")
+
+        # PhaseCoordinator - uses @depends.inject (all Level 1-5 services)
+        # Depends on SessionCoordinator (registered above)
+        phase_coordinator = PhaseCoordinator(pkg_path=self._root_path)
+        depends.set(PhaseCoordinator, phase_coordinator)
+        self._registered.add("PhaseCoordinator")
 
     def _register_level7_pipeline(self) -> None:
         """Register Level 7 pipeline: WorkflowPipeline.
 
         This is the top-level service that depends on all previous levels.
         """
-        # TODO: Implement pipeline registration
-        pass
+        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+        # WorkflowPipeline - uses @depends.inject (all Level 1-6 services)
+        # Auto-wires: Console, Config, PerformanceMonitor, MemoryOptimizer,
+        # PerformanceCache, Debugger, Logger, SessionCoordinator, PhaseCoordinator
+        # Optional: QualityIntelligence, PerformanceBenchmarks
+        workflow_pipeline = WorkflowPipeline()
+        depends.set(WorkflowPipeline, workflow_pipeline)
+        self._registered.add("WorkflowPipeline")
