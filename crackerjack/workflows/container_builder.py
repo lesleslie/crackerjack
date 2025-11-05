@@ -92,6 +92,7 @@ class WorkflowContainerBuilder:
         self._register_level1_primitives()
         self._register_level2_core_services()
         self._register_level3_filesystem_git()
+        self._register_level3_5_publishing_services()
         self._register_level4_managers()
         self._register_level5_executors()
         self._register_level6_coordinators()
@@ -259,13 +260,76 @@ class WorkflowContainerBuilder:
         depends.set(FileSystemCache, filesystem_cache)
         self._registered.add("FileSystemCache")
 
+    def _register_level3_5_publishing_services(self) -> None:
+        """Register Level 3.5 publishing services needed by PublishManager.
+
+        These services must be registered before Level 4 managers can be instantiated.
+        """
+        from crackerjack.models.protocols import (
+            ChangelogGeneratorProtocol,
+            GitServiceProtocol,
+            SecurityServiceProtocol,
+            VersionAnalyzerProtocol,
+        )
+        from crackerjack.services.changelog_automation import ChangelogGenerator
+        from crackerjack.services.security import SecurityService
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+
+        # SecurityService - no dependencies
+        security_service = SecurityService()
+        depends.set(SecurityServiceProtocol, security_service)
+        self._registered.add("SecurityServiceProtocol")
+
+        # GitService as GitServiceProtocol - reuse Level 3 instance
+        from crackerjack.models.protocols import GitInterface
+
+        git_service = depends.get_sync(GitInterface)
+        depends.set(GitServiceProtocol, git_service)
+        self._registered.add("GitServiceProtocol")
+
+        # ChangelogGenerator - uses @depends.inject (Console, GitServiceProtocol)
+        changelog_generator = ChangelogGenerator()
+        depends.set(ChangelogGeneratorProtocol, changelog_generator)
+        self._registered.add("ChangelogGeneratorProtocol")
+
+        # VersionAnalyzer - uses @depends.inject (Console, GitService)
+        # Note: git_service parameter doesn't use Inject[] type hint, so we pass it manually
+        # VersionAnalyzer internally creates ChangelogGenerator()
+        version_analyzer = VersionAnalyzer(git_service=git_service)
+        depends.set(VersionAnalyzerProtocol, version_analyzer)
+        self._registered.add("VersionAnalyzerProtocol")
+
+        # RegexPatternsProtocol - this is a module with SAFE_PATTERNS
+        # We'll register the module's SAFE_PATTERNS dict as the service
+        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
+        depends.set("RegexPatterns", SAFE_PATTERNS)
+        self._registered.add("RegexPatterns")
+
     def _register_level4_managers(self) -> None:
         """Register Level 4 managers: HookManager, TestManager, etc.
 
-        These depend on Level 1-3 services.
+        These depend on Level 1-3.5 services.
         """
-        # TODO: Implement manager registration
-        pass
+        from crackerjack.managers.hook_manager import HookManagerImpl
+        from crackerjack.models.protocols import HookManager
+
+        # HookManager - simplest, just needs pkg_path + options
+        # Retrieves Console internally via depends.get_sync
+        hook_manager = HookManagerImpl(
+            pkg_path=self._root_path,
+            verbose=getattr(self.options, "verbose", False),
+            quiet=getattr(self.options, "quiet", False),
+            enable_lsp_optimization=getattr(
+                self.options, "enable_lsp_optimization", False
+            ),
+            enable_tool_proxy=getattr(self.options, "enable_tool_proxy", True),
+        )
+        depends.set(HookManager, hook_manager)
+        self._registered.add("HookManager")
+
+        # TODO: TestManager (needs Level 4.5 dependencies first)
+        # TODO: PublishManager (all Level 3.5 dependencies now available)
 
     def _register_level5_executors(self) -> None:
         """Register Level 5 executors: ParallelHookExecutor, AsyncCommandExecutor.

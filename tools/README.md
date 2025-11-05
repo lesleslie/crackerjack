@@ -6,4 +6,3 @@ Developer utilities and automation helpers shared across tasks and scripts.
 - Project status: `/crackerjack:status`
 
 See `scripts/` for workflow wrappers and CI glue.
-
