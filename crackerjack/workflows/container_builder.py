@@ -299,12 +299,13 @@ class WorkflowContainerBuilder:
         depends.set(VersionAnalyzerProtocol, version_analyzer)
         self._registered.add("VersionAnalyzerProtocol")
 
-        # RegexPatternsProtocol - this is a module with SAFE_PATTERNS
-        # We'll register the module's SAFE_PATTERNS dict as the service
-        from crackerjack.services.regex_patterns import SAFE_PATTERNS
+        # RegexPatternsProtocol - service wrapper for module functions
+        from crackerjack.models.protocols import RegexPatternsProtocol
+        from crackerjack.services.regex_patterns import RegexPatternsService
 
-        depends.set("RegexPatterns", SAFE_PATTERNS)
-        self._registered.add("RegexPatterns")
+        regex_patterns_service = RegexPatternsService()
+        depends.set(RegexPatternsProtocol, regex_patterns_service)
+        self._registered.add("RegexPatternsProtocol")
 
     def _register_level4_managers(self) -> None:
         """Register Level 4 managers: HookManager, TestManager, etc.
@@ -328,8 +329,54 @@ class WorkflowContainerBuilder:
         depends.set(HookManager, hook_manager)
         self._registered.add("HookManager")
 
-        # TODO: TestManager (needs Level 4.5 dependencies first)
-        # TODO: PublishManager (all Level 3.5 dependencies now available)
+        # Level 4.5: Register TestManager dependencies
+        self._register_level4_5_test_manager_dependencies()
+
+        # TestManager - uses @depends.inject (all Level 4.5 dependencies registered)
+        from crackerjack.managers.test_manager import TestManager
+        from crackerjack.models.protocols import TestManagerProtocol
+
+        test_manager = TestManager()
+        depends.set(TestManagerProtocol, test_manager)
+        self._registered.add("TestManagerProtocol")
+
+        # PublishManager - uses @depends.inject (all Level 3.5 dependencies registered)
+        from crackerjack.managers.publish_manager import PublishManagerImpl
+        from crackerjack.models.protocols import PublishManager
+
+        publish_manager = PublishManagerImpl(
+            pkg_path=self._root_path, dry_run=False
+        )
+        depends.set(PublishManager, publish_manager)
+        self._registered.add("PublishManager")
+
+    def _register_level4_5_test_manager_dependencies(self) -> None:
+        """Register Level 4.5: TestManager dependencies.
+
+        These services must be registered before TestManager can be instantiated.
+        """
+        from crackerjack.models.protocols import (
+            CoverageBadgeServiceProtocol,
+            CoverageRatchetProtocol,
+        )
+        from crackerjack.services.coverage_badge_service import CoverageBadgeService
+        from crackerjack.services.coverage_ratchet import CoverageRatchetService
+        from crackerjack.services.lsp_client import LSPClient
+
+        # CoverageRatchetService - uses @depends.inject (pkg_path, Console)
+        coverage_ratchet = CoverageRatchetService(pkg_path=self._root_path)
+        depends.set(CoverageRatchetProtocol, coverage_ratchet)
+        self._registered.add("CoverageRatchetProtocol")
+
+        # CoverageBadgeService - uses @depends.inject (Console, project_root)
+        coverage_badge = CoverageBadgeService(project_root=self._root_path)
+        depends.set(CoverageBadgeServiceProtocol, coverage_badge)
+        self._registered.add("CoverageBadgeServiceProtocol")
+
+        # LSPClient - uses @depends.inject (Console only)
+        lsp_client = LSPClient()
+        depends.set(LSPClient, lsp_client)
+        self._registered.add("LSPClient")
 
     def _register_level5_executors(self) -> None:
         """Register Level 5 executors: ParallelHookExecutor, AsyncCommandExecutor.
