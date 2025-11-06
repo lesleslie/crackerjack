@@ -151,7 +151,7 @@ class WorkflowContainerBuilder:
         }
 
     def _register_level1_primitives(self) -> None:
-        """Register Level 1 primitives: Console, Config, Logger.
+        """Register Level 1 primitives: Console, Config, Logger, Path.
 
         These are the foundation services with no dependencies (except Config
         which uses the current directory by default).
@@ -161,6 +161,10 @@ class WorkflowContainerBuilder:
             self._console = Console()
         depends.set(Console, self._console)
         self._registered.add("Console")
+
+        # Path - project root path for dependency injection
+        depends.set(Path, self._root_path)
+        self._registered.add("Path")
 
         # Config - ACB's Config auto-detects root_path from current directory
         config = Config()
@@ -358,7 +362,9 @@ class WorkflowContainerBuilder:
         from crackerjack.managers.publish_manager import PublishManagerImpl
         from crackerjack.models.protocols import PublishManager
 
-        publish_manager = PublishManagerImpl(pkg_path=self._root_path, dry_run=False)
+        # Instantiate with NO parameters to trigger full DI resolution
+        # The @depends.inject decorator will inject all dependencies including console, pkg_path
+        publish_manager = PublishManagerImpl()
         depends.set(PublishManager, publish_manager)
         self._registered.add("PublishManager")
 

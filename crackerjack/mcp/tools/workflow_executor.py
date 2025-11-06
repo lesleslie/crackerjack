@@ -252,9 +252,11 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
         factory=lambda: TestManagementImpl(console, working_dir),
     )
 
+    # Use factory without parameters to trigger @depends.inject decorator
+    # The decorator will inject all dependencies from the DI container
     container.register_singleton(
         PublishManager,
-        factory=lambda: PublishManagerImpl(console, working_dir),
+        factory=lambda: PublishManagerImpl(),
     )
 
     container.register_singleton(

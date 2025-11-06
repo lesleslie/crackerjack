@@ -463,13 +463,11 @@ class ServiceCollectionBuilder:
 
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
+        # Use factory without parameters to trigger @depends.inject decorator
+        # The decorator will inject all dependencies from the DI container
         self.container.register_transient(
             PublishManager,
-            factory=lambda: PublishManagerImpl(
-                console=console,
-                pkg_path=pkg_path,
-                dry_run=self.dry_run,
-            ),
+            factory=lambda: PublishManagerImpl(),
         )
 
         return self

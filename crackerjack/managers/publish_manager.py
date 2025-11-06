@@ -26,8 +26,8 @@ class PublishManagerImpl:
         filesystem: Inject[FileSystemInterface],
         security: Inject[SecurityServiceProtocol],
         regex_patterns: Inject[RegexPatternsProtocol],
-        console: Console = depends(),
-        pkg_path: Path = depends(),
+        console: Inject[Console],
+        pkg_path: Inject[Path],
         dry_run: bool = False,
     ) -> None:
         # Foundation dependencies
