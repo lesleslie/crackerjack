@@ -216,6 +216,152 @@ COMPREHENSIVE_PARALLEL_WORKFLOW = WorkflowDefinition(
     continue_on_error=False,
 )
 
+# Commit workflow: Standard workflow + commit phase
+# Workflow for --commit mode: Full quality workflow THEN commit
+COMMIT_WORKFLOW = WorkflowDefinition(
+    workflow_id="crackerjack-commit",
+    name="Commit Workflow",
+    description="Full quality workflow with git commit and push",
+    steps=[
+        WorkflowStep(
+            step_id="config",
+            name="Configuration",
+            action="run_configuration",
+            params={},
+            retry_attempts=1,
+            timeout=30.0,
+        ),
+        # Fast hooks and cleaning run in parallel
+        WorkflowStep(
+            step_id="fast_hooks",
+            name="Fast Hooks",
+            action="run_fast_hooks",
+            params={},
+            depends_on=["config"],
+            retry_attempts=2,
+            timeout=300.0,
+            parallel=True,
+        ),
+        WorkflowStep(
+            step_id="cleaning",
+            name="Code Cleaning",
+            action="run_code_cleaning",
+            params={},
+            depends_on=["config"],
+            retry_attempts=1,
+            timeout=180.0,
+            skip_on_failure=True,
+            parallel=True,
+        ),
+        # Comprehensive hooks wait for both
+        WorkflowStep(
+            step_id="comprehensive",
+            name="Comprehensive Hooks",
+            action="run_comprehensive_hooks",
+            params={},
+            depends_on=["fast_hooks", "cleaning"],
+            retry_attempts=2,
+            timeout=900.0,
+        ),
+        # Commit runs after all quality checks pass
+        WorkflowStep(
+            step_id="commit",
+            name="Git Commit & Push",
+            action="run_commit_phase",
+            params={},
+            depends_on=["comprehensive"],
+            retry_attempts=1,
+            timeout=300.0,
+        ),
+    ],
+    timeout=2100.0,  # 35 minutes total
+    retry_failed_steps=True,
+    continue_on_error=False,
+)
+
+# Publish workflow: Test workflow + commit + publish
+# Workflow for --publish/--all mode: Full workflow with tests, commit, and publish
+PUBLISH_WORKFLOW = WorkflowDefinition(
+    workflow_id="crackerjack-publish",
+    name="Publish Workflow",
+    description="Full quality workflow with tests, commit, version bump, and PyPI publish",
+    steps=[
+        WorkflowStep(
+            step_id="config",
+            name="Configuration",
+            action="run_configuration",
+            params={},
+            retry_attempts=1,
+            timeout=30.0,
+        ),
+        # Fast hooks and cleaning run in parallel
+        WorkflowStep(
+            step_id="fast_hooks",
+            name="Fast Hooks",
+            action="run_fast_hooks",
+            params={},
+            depends_on=["config"],
+            retry_attempts=2,
+            timeout=300.0,
+            parallel=True,
+        ),
+        WorkflowStep(
+            step_id="cleaning",
+            name="Code Cleaning",
+            action="run_code_cleaning",
+            params={},
+            depends_on=["config"],
+            retry_attempts=1,
+            timeout=180.0,
+            skip_on_failure=True,
+            parallel=True,
+        ),
+        # Tests run after fast hooks and cleaning
+        WorkflowStep(
+            step_id="test_workflow",
+            name="Test Execution",
+            action="run_test_workflow",
+            params={},
+            depends_on=["fast_hooks", "cleaning"],
+            retry_attempts=1,
+            timeout=1800.0,
+        ),
+        # Comprehensive hooks run after tests
+        WorkflowStep(
+            step_id="comprehensive",
+            name="Comprehensive Hooks",
+            action="run_comprehensive_hooks",
+            params={},
+            depends_on=["test_workflow"],
+            retry_attempts=2,
+            timeout=900.0,
+        ),
+        # Commit runs after all quality checks pass
+        WorkflowStep(
+            step_id="commit",
+            name="Git Commit & Push",
+            action="run_commit_phase",
+            params={},
+            depends_on=["comprehensive"],
+            retry_attempts=1,
+            timeout=300.0,
+        ),
+        # Publish runs after successful commit
+        WorkflowStep(
+            step_id="publish",
+            name="Version Bump & PyPI Publish",
+            action="run_publish_phase",
+            params={},
+            depends_on=["commit"],
+            retry_attempts=1,
+            timeout=600.0,  # 10 minutes for publishing
+        ),
+    ],
+    timeout=4800.0,  # 80 minutes total
+    retry_failed_steps=True,
+    continue_on_error=False,
+)
+
 
 def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
     """Select appropriate workflow based on CLI options.
@@ -226,7 +372,28 @@ def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
     Returns:
         WorkflowDefinition matching the requested execution mode
     """
-    # Test mode
+    # Publishing workflow (--publish, --all, or --bump)
+    # This includes tests + commit + publish
+    if any(
+        [
+            getattr(options, "publish", False),
+            getattr(options, "all", False),
+            getattr(options, "bump", False),
+        ]
+    ):
+        return PUBLISH_WORKFLOW
+
+    # Commit workflow (--commit without publish)
+    # This includes quality checks + commit
+    if getattr(options, "commit", False):
+        # If tests are also requested, use test workflow + commit
+        if getattr(options, "run_tests", False):
+            # Create a modified test workflow with commit step
+            # For now, return COMMIT_WORKFLOW and tests will run as part of it
+            return PUBLISH_WORKFLOW  # Reuse publish workflow (it has tests + commit)
+        return COMMIT_WORKFLOW
+
+    # Test mode (--run-tests without commit/publish)
     if getattr(options, "run_tests", False):
         return TEST_WORKFLOW
 

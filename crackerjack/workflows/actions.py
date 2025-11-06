@@ -511,6 +511,230 @@ async def run_hook(
     raise NotImplementedError(msg)
 
 
+@depends.inject  # type: ignore[misc]
+async def run_commit_phase(
+    context: dict[str, t.Any],
+    step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
+    **params: t.Any,
+) -> dict[str, t.Any]:
+    """Execute git commit phase.
+
+    This action commits all changes to git and optionally pushes to remote.
+    Only runs if options.commit is True.
+
+    Args:
+        context: Workflow execution context with "options" and "pipeline" keys
+        step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
+        **params: Additional step parameters
+
+    Returns:
+        dict with commit execution results
+
+    Raises:
+        RuntimeError: If commit execution fails
+    """
+    options: OptionsProtocol = context.get("options")  # type: ignore[assignment]
+    if not options:
+        msg = "Missing 'options' in workflow context"
+        raise ValueError(msg)
+
+    # Skip commit unless --commit flag is set
+    if not getattr(options, "commit", False):
+        return {
+            "phase": "commit",
+            "success": True,
+            "skipped": True,
+            "reason": "Commit phase only runs with --commit flag",
+        }
+
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
+    if not pipeline:
+        msg = "WorkflowPipeline not available in context"
+        raise RuntimeError(msg)
+
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_STARTED,
+            {"step_id": step_id, "phase": "commit", "timestamp": start_time},
+        )
+
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
+    try:
+        success = await asyncio.to_thread(
+            pipeline.phases.run_commit_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "commit",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
+
+    if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "commit",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        msg = "Git commit execution failed"
+        raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_COMPLETED,
+            {
+                "step_id": step_id,
+                "phase": "commit",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
+
+    return {
+        "phase": "commit",
+        "success": True,
+        "message": "Git commit completed successfully",
+    }
+
+
+@depends.inject  # type: ignore[misc]
+async def run_publish_phase(
+    context: dict[str, t.Any],
+    step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
+    **params: t.Any,
+) -> dict[str, t.Any]:
+    """Execute publishing phase (version bump and PyPI publish).
+
+    This action bumps the version and publishes to PyPI.
+    Only runs if options.publish, options.all, or options.bump is set.
+
+    Args:
+        context: Workflow execution context with "options" and "pipeline" keys
+        step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
+        **params: Additional step parameters
+
+    Returns:
+        dict with publish execution results
+
+    Raises:
+        RuntimeError: If publish execution fails
+    """
+    options: OptionsProtocol = context.get("options")  # type: ignore[assignment]
+    if not options:
+        msg = "Missing 'options' in workflow context"
+        raise ValueError(msg)
+
+    # Skip publish unless --publish, --all, or --bump flags are set
+    if not any(
+        [
+            getattr(options, "publish", False),
+            getattr(options, "all", False),
+            getattr(options, "bump", False),
+        ]
+    ):
+        return {
+            "phase": "publish",
+            "success": True,
+            "skipped": True,
+            "reason": "Publish phase only runs with --publish, --all, or --bump flags",
+        }
+
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
+    if not pipeline:
+        msg = "WorkflowPipeline not available in context"
+        raise RuntimeError(msg)
+
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_STARTED,
+            {"step_id": step_id, "phase": "publish", "timestamp": start_time},
+        )
+
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
+    try:
+        success = await asyncio.to_thread(
+            pipeline.phases.run_publishing_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "publish",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
+
+    if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "publish",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        msg = "Publishing execution failed"
+        raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_COMPLETED,
+            {
+                "step_id": step_id,
+                "phase": "publish",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
+
+    return {
+        "phase": "publish",
+        "success": True,
+        "message": "Publishing completed successfully",
+    }
+
+
 # Action registry for easy registration with engine
 ACTION_REGISTRY: dict[str, t.Callable[..., t.Awaitable[t.Any]]] = {
     "run_configuration": run_configuration,
@@ -518,6 +742,8 @@ ACTION_REGISTRY: dict[str, t.Callable[..., t.Awaitable[t.Any]]] = {
     "run_code_cleaning": run_code_cleaning,
     "run_comprehensive_hooks": run_comprehensive_hooks,
     "run_test_workflow": run_test_workflow,
+    "run_commit_phase": run_commit_phase,
+    "run_publish_phase": run_publish_phase,
     "run_hook": run_hook,
 }
 

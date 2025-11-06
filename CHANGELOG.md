@@ -12,6 +12,60 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-05
 
 ### Added
+- feat(workflows): complete ACB workflow migration with commit and publish support
+  - Added `run_commit_phase` action handler for git commit/push functionality
+  - Added `run_publish_phase` action handler for version bump and PyPI publishing
+  - Created `COMMIT_WORKFLOW` definition (quality checks + commit)
+  - Created `PUBLISH_WORKFLOW` definition (tests + quality checks + commit + publish)
+  - Updated `select_workflow_for_options()` to route `-c`, `-t`, `-p` flags correctly
+  - Registered new actions in `ACTION_REGISTRY` for automatic discovery
+  - ACB workflow engine now feature-complete with legacy orchestrator parity
+
+### Fixed
+- fix(workflows): commit and publish stages now execute with ACB workflow engine
+  - Resolves issue where `-c -t -p patch` flags were ignored in Phase 4.2
+  - Eliminates need for `--use-legacy-orchestrator` flag for commit/publish workflows
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
 - feat: add new feature
 
 ### Fixed

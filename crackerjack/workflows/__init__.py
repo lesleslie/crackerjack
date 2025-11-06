@@ -12,8 +12,10 @@ from .actions import ACTION_REGISTRY, register_actions
 from .auto_fix import AutoFixWorkflow, FixIteration
 from .container_builder import WorkflowContainerBuilder
 from .definitions import (
+    COMMIT_WORKFLOW,
     COMPREHENSIVE_PARALLEL_WORKFLOW,
     FAST_HOOKS_WORKFLOW,
+    PUBLISH_WORKFLOW,
     STANDARD_WORKFLOW,
     TEST_WORKFLOW,
     select_workflow_for_options,
@@ -34,6 +36,8 @@ __all__ = [
     "FAST_HOOKS_WORKFLOW",
     "STANDARD_WORKFLOW",
     "TEST_WORKFLOW",
+    "COMMIT_WORKFLOW",
+    "PUBLISH_WORKFLOW",
     "COMPREHENSIVE_PARALLEL_WORKFLOW",
     "select_workflow_for_options",
     # Action handlers
