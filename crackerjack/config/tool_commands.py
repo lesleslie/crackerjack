@@ -64,7 +64,7 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "-m",
         "crackerjack.tools.check_added_large_files",
         "--maxkb",
-        "700",  # Increased from 500KB to accommodate uv.lock with 244 packages
+        "1000",  # 1MB limit for comprehensive frameworks with large lock files
     ],
     # ========================================================================
     # THIRD-PARTY TOOLS (direct invocation)

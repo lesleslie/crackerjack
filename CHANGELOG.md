@@ -1,5 +1,97 @@
 ______________________________________________________________________
 
+## [0.42.0] - 2025-11-06
+
+### Added
+
+- **BREAKING:** di: Migrate WorkflowOrchestrator to ACB dependency injection
+- Complete ACB cache migration - remove old cache.py
+- Implement centralized error handling decorators
+- workflows: Complete Level 3.5 and HookManager registration
+- workflows: Complete Level 4 + 4.5 manager registration
+- workflows: Phase 2 Week 1 Day 2 - DI container Level 1-3 complete
+
+### Changed
+
+- **BREAKING:** Complete Phase 3 ACB DI migration and remove enhanced_container
+- Apply linter formatting to core_tools and acb_cache_adapter
+- Complete ACB DI migration for core orchestration
+- Crackerjack (quality: 65/100) - 2025-10-11 06:02:33
+- Crackerjack (quality: 65/100) - 2025-10-25 21:39:23
+- Crackerjack (quality: 65/100) - 2025-10-26 02:51:53
+- Crackerjack (quality: 66/100) - 2025-10-26 03:00:45
+- Crackerjack (quality: 66/100) - 2025-10-26 21:26:50
+- Crackerjack (quality: 66/100) - 2025-10-30 05:32:02
+- Crackerjack (quality: 66/100) - 2025-10-30 06:32:33
+- Crackerjack (quality: 66/100) - 2025-10-30 07:50:43
+- Crackerjack (quality: 66/100) - 2025-10-30 08:14:33
+- Crackerjack (quality: 67/100) - 2025-10-10 15:01:16
+- Crackerjack (quality: 67/100) - 2025-10-26 10:23:34
+- Crackerjack (quality: 67/100) - 2025-10-26 11:20:52
+- Crackerjack (quality: 67/100) - 2025-11-05 12:00:24
+- Crackerjack (quality: 67/100) - 2025-11-05 13:22:56
+- Crackerjack (quality: 67/100) - 2025-11-05 17:05:04
+- Crackerjack (quality: 67/100) - 2025-11-05 19:24:17
+- Crackerjack (quality: 67/100) - 2025-11-05 20:17:36
+- Crackerjack (quality: 67/100) - 2025-11-05 23:00:13
+- Crackerjack (quality: 69/100) - 2025-10-09 06:18:13
+- Crackerjack (quality: 69/100) - 2025-10-09 09:08:14
+- Crackerjack (quality: 69/100) - 2025-10-09 09:28:02
+- Crackerjack (quality: 69/100) - 2025-10-09 09:46:06
+- Crackerjack (quality: 69/100) - 2025-10-09 10:13:58
+- Crackerjack (quality: 69/100) - 2025-10-09 11:29:53
+- Crackerjack (quality: 69/100) - 2025-10-09 12:36:05
+- Crackerjack (quality: 69/100) - 2025-10-09 14:20:24
+- Crackerjack (quality: 69/100) - 2025-10-09 14:49:40
+- Crackerjack (quality: 69/100) - 2025-10-09 16:08:54
+- Crackerjack (quality: 69/100) - 2025-10-09 17:32:36
+- Crackerjack (quality: 69/100) - 2025-10-09 17:51:59
+- Crackerjack (quality: 69/100) - 2025-10-09 19:26:25
+- Crackerjack (quality: 69/100) - 2025-10-09 20:02:52
+- Crackerjack (quality: 69/100) - 2025-10-09 21:07:41
+- Crackerjack (quality: 69/100) - 2025-10-09 21:35:52
+- Crackerjack (quality: 69/100) - 2025-10-09 22:35:31
+- Crackerjack (quality: 69/100) - 2025-10-09 23:56:18
+- Crackerjack (quality: 70/100) - 2025-10-26 18:26:51
+- Crackerjack (quality: 71/100) - 2025-10-10 17:44:57
+- Crackerjack (quality: 71/100) - 2025-10-10 21:41:43
+- Crackerjack (quality: 71/100) - 2025-10-15 02:20:41
+- Crackerjack (quality: 71/100) - 2025-10-15 22:32:09
+- Crackerjack (quality: 71/100) - 2025-10-16 15:57:30
+- Crackerjack (quality: 71/100) - 2025-10-17 23:10:50
+- Update core, docs
+- Update documentation
+
+### Fixed
+
+- agents: Implement lazy imports to avoid loading heavy ML dependencies
+- hook-manager: Implement config loading priority system
+- hook-manager: Use instance properties in get_execution_info()
+- phase3: Complete ACB DI test fixes - config priority, orchestrator settings, parallelism
+- Resolve event loop conflicts in ACB cache adapter
+- Resolve hook failures and reduce decorator complexity
+- Resolve test failures found during ACB DI migration
+- tests: Update 4 files
+
+### Documentation
+
+- Add comprehensive improvement roadmap
+- architecture: Create WorkflowOrchestrator decomposition strategy
+- Streamline CLAUDE.md with improved architecture focus
+- Update architecture docs to reflect facade removal
+- Update improvement plan with Phase 3.1 completion
+
+### Testing
+
+- Add cache isolation fixture for regex pattern tests
+- Fix 6 failing Phase 3 service tests
+- Update tests for ACB DI migration
+
+### Internal
+
+- Remove obsolete backup files and unused enhanced versions
+- Remove remaining facade files to complete Phase 3 goals
+
 ## [Unreleased] - 2025-11-06
 
 ### Added
