@@ -244,7 +244,6 @@ def _handle_documentation_commands(
     if validate_docs:
         _validate_documentation_files(doc_service)
 
-
     return any(
         [
             options.run_tests,
@@ -436,7 +435,6 @@ def _handle_version_analysis(
     except Exception as e:
         console.print(f"[red]❌ Version analysis failed: {e}[/red]")
 
-
     return any(
         [
             options.run_tests,
@@ -451,7 +449,6 @@ def _handle_version_analysis(
 def _setup_debug_and_verbose_flags(
     ai_fix: bool, ai_debug: bool, debug: bool, verbose: bool, options: t.Any
 ) -> tuple[bool, bool]:
-
     if ai_debug:
         ai_fix = True
         verbose = True
@@ -484,7 +481,6 @@ def _handle_heatmap_generation(
         generator = HeatMapGenerator()
         project_root = Path.cwd()
 
-
         if heatmap_type == "error_frequency":
             heatmap_data = generator.generate_error_frequency_heatmap()
         elif heatmap_type == "complexity":
@@ -497,18 +493,15 @@ def _handle_heatmap_generation(
             console.print(f"[red]❌[/red] Unknown heat map type: {heatmap_type}")
             return False
 
-
         if heatmap_output:
             output_path = Path(heatmap_output)
             if output_path.suffix.lower() == ".html":
-
                 html_content = generator.generate_html_visualization(heatmap_data)
                 output_path.write_text(html_content, encoding="utf-8")
                 console.print(
                     f"[green]✅[/green] Heat map HTML saved to: {output_path}"
                 )
             elif output_path.suffix.lower() in (".json", ".csv"):
-
                 format_type = output_path.suffix[1:]
                 generator.export_heatmap_data(heatmap_data, output_path, format_type)
                 console.print(
@@ -520,14 +513,12 @@ def _handle_heatmap_generation(
                 )
                 return False
         else:
-
             default_filename = f"heatmap_{heatmap_type}.html"
             html_content = generator.generate_html_visualization(heatmap_data)
             Path(default_filename).write_text(html_content, encoding="utf-8")
             console.print(
                 f"[green]✅[/green] Heat map HTML saved to: {default_filename}"
             )
-
 
         console.print(
             f"[cyan]📊[/cyan] Heat map '{heatmap_data.title}' generated successfully"
@@ -545,7 +536,6 @@ def _handle_heatmap_generation(
 
 @depends.inject
 def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> None:
-
     from datetime import datetime, timedelta
 
     base_time = datetime.now() - timedelta(hours=24)
@@ -560,7 +550,6 @@ def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> 
 
     console.print("[dim] • Collecting quality metrics from recent runs...")
 
-
     for i in range(50):
         timestamp = base_time + timedelta(minutes=i * 30)
 
@@ -571,7 +560,6 @@ def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> 
 
 
 def _get_sample_metric_value(metric_type: str) -> float:
-
     import random
 
     is_anomaly = random.random() <= 0.1
@@ -588,7 +576,6 @@ def _get_sample_metric_value(metric_type: str) -> float:
     elif metric_type == "execution_time":
         return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)
 
-
     return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)
 
 
@@ -596,7 +583,6 @@ def _get_sample_metric_value(metric_type: str) -> float:
 def _display_anomaly_results(
     anomalies: list[t.Any], baselines: dict[str, t.Any], console: Inject[Console]
 ) -> None:
-
     console.print("[cyan]📊[/cyan] Analysis complete:")
 
     console.print(f"[dim] • Baselines established for {len(baselines)} metrics")
@@ -628,7 +614,6 @@ def _save_anomaly_report(
     anomaly_report: str,
     console: Inject[Console],
 ) -> None:
-
     import json
     from datetime import datetime
     from pathlib import Path
@@ -669,7 +654,6 @@ def _handle_anomaly_detection(
     anomaly_report: str | None,
     console: Inject[Console],
 ) -> bool:
-
     if not anomaly_detection:
         return True
 
@@ -680,17 +664,13 @@ def _handle_anomaly_detection(
     try:
         detector = AnomalyDetector(sensitivity=anomaly_sensitivity)
 
-
         _generate_anomaly_sample_data(detector)
-
 
         anomalies = detector.get_anomalies()
 
         baselines = detector.get_baseline_summary()
 
-
         _display_anomaly_results(anomalies, baselines)
-
 
         if anomaly_report:
             _save_anomaly_report(
@@ -706,7 +686,6 @@ def _handle_anomaly_detection(
 
 
 def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
-
     import random
     from datetime import datetime, timedelta
 
@@ -728,13 +707,11 @@ def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
         "complexity_score": 10.0,
     }
 
-
     for metric_type in metric_types:
         base_value = base_values[metric_type]
 
         for i in range(48):
             timestamp = base_time + timedelta(hours=i)
-
 
             trend_factor = 1.0 + (i * 0.001)
 
@@ -750,7 +727,6 @@ def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
 def _generate_predictions_summary(
     engine: t.Any, metric_types: list[str], prediction_periods: int
 ) -> dict[str, t.Any]:
-
     predictions_summary = {}
 
     trend_summary = engine.get_trend_summary()
@@ -782,7 +758,6 @@ def _generate_predictions_summary(
 def _display_trend_analysis(
     predictions_summary: dict[str, t.Any], console: Inject[Console]
 ) -> None:
-
     console.print("\n[green]📈[/green] Trend Analysis Summary:")
 
     for metric_type, data in predictions_summary.items():
@@ -822,7 +797,6 @@ def _save_analytics_dashboard(
     analytics_dashboard: str,
     console: Inject[Console],
 ) -> None:
-
     import json
     from datetime import datetime
     from pathlib import Path
@@ -866,9 +840,7 @@ def _handle_predictive_analytics(
     try:
         engine = PredictiveAnalyticsEngine()
 
-
         metric_types = _generate_predictive_sample_data(engine)
-
 
         console.print(
             f"[blue]🔮[/blue] Generating {prediction_periods} period predictions..."
@@ -879,9 +851,7 @@ def _handle_predictive_analytics(
         )
         trend_summary = engine.get_trend_summary()
 
-
         _display_trend_analysis(predictions_summary)
-
 
         if analytics_dashboard:
             _save_analytics_dashboard(
@@ -1051,7 +1021,6 @@ def _create_sync_filesystem_service() -> t.Any:
 
 
 def _create_config_manager() -> t.Any:
-
     class ConfigManager:
         def __init__(self) -> None:
             self._config: dict[str, t.Any] = {}
@@ -1072,7 +1041,6 @@ def _create_config_manager() -> t.Any:
 
 
 def _create_logger_adapter(logger: t.Any) -> t.Any:
-
     class LoggerAdapter:
         def __init__(self, logger: t.Any) -> None:
             self._logger = logger
@@ -1179,7 +1147,6 @@ def _handle_contextual_ai(
     try:
         from pathlib import Path
 
-
         class FileSystemImpl:
             def read_file(self, path: str | t.Any) -> str:
                 return Path(path).read_text()
@@ -1196,13 +1163,11 @@ def _handle_contextual_ai(
         filesystem = FileSystemImpl()
         assistant = ContextualAIAssistant(filesystem)
 
-
         if ai_help_query:
             help_response = assistant.get_quick_help(ai_help_query)
             console.print(f"\n[blue]🔍[/blue] AI Help for '{ai_help_query}':")
             console.print(help_response)
             return False
-
 
         console.print(
             "[blue]🧠[/blue] Analyzing project context for AI recommendations..."
@@ -1312,7 +1277,6 @@ def main(
     predictive_analytics: bool = CLI_OPTIONS["predictive_analytics"],
     prediction_periods: int = CLI_OPTIONS["prediction_periods"],
     analytics_dashboard: str | None = CLI_OPTIONS["analytics_dashboard"],
-
     advanced_optimizer: bool = CLI_OPTIONS["advanced_optimizer"],
     advanced_profile: str | None = CLI_OPTIONS["advanced_profile"],
     advanced_report: str | None = CLI_OPTIONS["advanced_report"],
@@ -1323,7 +1287,6 @@ def main(
     contextual_ai: bool = CLI_OPTIONS["contextual_ai"],
     ai_recommendations: int = CLI_OPTIONS["ai_recommendations"],
     ai_help_query: str | None = CLI_OPTIONS["ai_help_query"],
-
     check_config_updates: bool = CLI_OPTIONS["check_config_updates"],
     apply_config_updates: bool = CLI_OPTIONS["apply_config_updates"],
     diff_config: str | None = CLI_OPTIONS["diff_config"],
@@ -1331,7 +1294,6 @@ def main(
     refresh_cache: bool = CLI_OPTIONS["refresh_cache"],
     use_acb_workflows: bool = CLI_OPTIONS["use_acb_workflows"],
     use_legacy_orchestrator: bool = CLI_OPTIONS["use_legacy_orchestrator"],
-
     index: str | None = CLI_OPTIONS["index"],
     search: str | None = CLI_OPTIONS["search"],
     semantic_stats: bool = CLI_OPTIONS["semantic_stats"],
@@ -1343,10 +1305,8 @@ def main(
     from crackerjack.config.loader import load_settings
     from crackerjack.config.settings import CrackerjackSettings
 
-
     settings = load_settings(CrackerjackSettings)
     depends.set(CrackerjackSettings, settings)
-
 
     register_services()
 
@@ -1424,7 +1384,6 @@ def main(
         predictive_analytics,
         prediction_periods,
         analytics_dashboard,
-
         advanced_optimizer,
         advanced_profile,
         advanced_report,
@@ -1442,7 +1401,6 @@ def main(
         refresh_cache,
         use_acb_workflows,
         use_legacy_orchestrator,
-
         run_tests=run_tests,
     )
 
@@ -1451,16 +1409,13 @@ def main(
     options.semantic_stats = semantic_stats
     options.remove_from_index = remove_from_index
 
-
     ai_fix, verbose = _setup_debug_and_verbose_flags(
         ai_fix, ai_debug, debug, verbose, options
     )
     setup_ai_agent_env(ai_fix, ai_debug or debug)
 
-
     if not _process_all_commands(locals(), options):
         return
-
 
     if interactive:
         handle_interactive_mode(options)
@@ -1469,10 +1424,8 @@ def main(
 
 
 def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
-
     if _handle_cache_commands(local_vars["clear_cache"], local_vars["cache_stats"]):
         return False
-
 
     if (
         local_vars["check_config_updates"]
@@ -1483,7 +1436,6 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
         handle_config_updates(options)
         return False
 
-
     if not _handle_semantic_commands(
         local_vars["index"],
         local_vars["search"],
@@ -1492,7 +1444,6 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
         options,
     ):
         return False
-
 
     if _handle_server_commands(
         local_vars["monitor"],
@@ -1517,21 +1468,17 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-
     if not _handle_coverage_status(local_vars["coverage_status"], options):
         return False
-
 
     return _handle_analysis_commands(local_vars, options)
 
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
-
     if not _handle_documentation_commands(
         local_vars["generate_docs"], local_vars["validate_docs"], options
     ):
         return False
-
 
     if not _handle_changelog_commands(
         local_vars["generate_changelog"],
@@ -1542,7 +1489,6 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-
     if not _handle_version_analysis(
         local_vars["auto_version"],
         local_vars["version_since"],
@@ -1551,17 +1497,14 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-
     return _handle_specialized_analytics(local_vars)
 
 
 def _handle_specialized_analytics(local_vars: t.Any) -> bool:
-
     if not _handle_heatmap_generation(
         local_vars["heatmap"], local_vars["heatmap_type"], local_vars["heatmap_output"]
     ):
         return False
-
 
     if not _handle_anomaly_detection(
         local_vars["anomaly_detection"],
@@ -1570,14 +1513,12 @@ def _handle_specialized_analytics(local_vars: t.Any) -> bool:
     ):
         return False
 
-
     if not _handle_predictive_analytics(
         local_vars["predictive_analytics"],
         local_vars["prediction_periods"],
         local_vars["analytics_dashboard"],
     ):
         return False
-
 
     return _handle_advanced_features(local_vars)
 
@@ -1595,7 +1536,6 @@ def _display_coverage_info(
         )
     else:
         console.print("[yellow]Current Coverage:[/yellow] No coverage data available")
-
 
     status_message = coverage_info.get("message")
     if status_message:
@@ -1637,22 +1577,17 @@ def _handle_coverage_status(
 
         from crackerjack.managers.test_manager import TestManager
 
-
         pkg_path = Path.cwd()
-
 
         test_manager = TestManager(pkg_path)
 
         console.print("[cyan]📊[/cyan] Coverage Status Report")
         console.print("=" * 50)
 
-
         coverage_info = test_manager.get_coverage()
         _display_coverage_info(coverage_info)
 
-
         _display_coverage_report(test_manager)
-
 
         _display_ratchet_status(test_manager)
 
@@ -1721,14 +1656,12 @@ def _execute_semantic_operations(
 
 
 def _handle_advanced_features(local_vars: t.Any) -> bool:
-
     if not _handle_advanced_optimizer(
         local_vars["advanced_optimizer"],
         local_vars["advanced_profile"],
         local_vars["advanced_report"],
     ):
         return False
-
 
     if not _handle_mkdocs_integration(
         local_vars["mkdocs_integration"],
@@ -1737,7 +1670,6 @@ def _handle_advanced_features(local_vars: t.Any) -> bool:
         local_vars["mkdocs_output"],
     ):
         return False
-
 
     if not _handle_contextual_ai(
         local_vars["contextual_ai"],

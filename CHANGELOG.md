@@ -1,5 +1,52 @@
 ______________________________________________________________________
 
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Changed
+- **BREAKING**: ACB workflows are now the default execution path (Phase 4.2 complete)
+  - Use `--use-legacy-orchestrator` to opt out and use the legacy orchestrator
+  - Removed opt-in `--use-acb-workflows` requirement (ACB is now default)
+  - Real-time console output streaming during workflow execution
+  - Non-blocking async execution with `asyncio.to_thread()` pattern
+
+### Added
+- Added `--use-legacy-orchestrator` flag for opting out of ACB workflows
+- Added `/--no-use-legacy-orchestrator` toggle flag syntax support
+- Real-time progress indicators during hook execution
+- Phase 4.2 completion documentation (docs/PHASE-4.2-COMPLETION.md)
+
+### Fixed
+- Fixed parameter plumbing bug where `use_legacy_orchestrator` was missing from `create_options()` function
+- Fixed event loop blocking issue by restoring `asyncio.to_thread()` for synchronous phase methods
+- Fixed console output buffering - now streams in real-time
+- Performance: Fast hooks now complete in ~48s (previously timed out at 180s)
+
+### Performance
+- Fast hooks: ~48s (vs 180s+ timeout before Phase 4.2)
+- Full workflow: ~90s with real-time output
+- Event loop: Non-blocking with `asyncio.to_thread()` for CPU-bound operations
+- DI context: Preserved across thread boundaries with `Inject[]` pattern
+
+______________________________________________________________________
+
 ## [Unreleased] - 2025-10-31
 
 ### Added

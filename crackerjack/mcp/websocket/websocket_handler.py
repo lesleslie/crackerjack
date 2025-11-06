@@ -74,11 +74,13 @@ class WebSocketHandler:
         job_manager: JobManager,
         progress_dir: Path,
         security_config: WebSocketSecurityConfig | None = None,
+        event_bridge: t.Any | None = None,  # EventBusWebSocketBridge from DI
     ) -> None:
         self.job_manager = job_manager
         self.progress_dir = progress_dir
         self.timeout_manager = get_timeout_manager()
         self.security_config = security_config or WebSocketSecurityConfig()
+        self.event_bridge = event_bridge
         self._connection_count = 0
 
     async def handle_connection(self, websocket: WebSocket, job_id: str) -> None:
@@ -124,6 +126,11 @@ class WebSocketHandler:
         await websocket.accept()
         self._connection_count += 1  # Phase 9.4: Track concurrent connections
         self.job_manager.add_connection(job_id, websocket)
+
+        # Phase 7.3: Register client with event bridge for real-time updates
+        if self.event_bridge:
+            await self.event_bridge.register_client(job_id, websocket)
+
         console.print(
             f"[green]WebSocket connected for job: {job_id} (connections: {self._connection_count})[/green]"
         )
@@ -241,6 +248,11 @@ class WebSocketHandler:
     async def _cleanup_connection(self, job_id: str, websocket: WebSocket) -> None:
         try:
             self.job_manager.remove_connection(job_id, websocket)
+
+            # Phase 7.3: Unregister client from event bridge
+            if self.event_bridge:
+                await self.event_bridge.unregister_client(job_id, websocket)
+
             self._connection_count = max(
                 0, self._connection_count - 1
             )  # Phase 9.4: Decrement count
@@ -255,8 +267,9 @@ def register_websocket_routes(
     app: FastAPI,
     job_manager: JobManager,
     progress_dir: Path,
+    event_bridge: t.Any | None = None,  # EventBusWebSocketBridge from DI
 ) -> None:
-    handler = WebSocketHandler(job_manager, progress_dir)
+    handler = WebSocketHandler(job_manager, progress_dir, event_bridge=event_bridge)
 
     @app.websocket("/ws/progress/{job_id}")
     async def websocket_progress_endpoint(websocket: WebSocket, job_id: str) -> None:

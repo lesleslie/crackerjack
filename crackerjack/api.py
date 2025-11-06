@@ -58,7 +58,6 @@ class CrackerjackAPI:
             verbose=self.verbose,
         )
 
-
         self.container = t.cast(t.Any, getattr(self.orchestrator, "container", None))
 
         self._code_cleaner: CodeCleaner | None = None
@@ -601,7 +600,6 @@ class CrackerjackAPI:
         return None
 
     def _find_fallback_package_directory(self) -> Path | None:
-
         package_dir = self.project_path / self.project_path.name
         if self._is_valid_python_package_directory(package_dir):
             return package_dir

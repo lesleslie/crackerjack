@@ -289,6 +289,8 @@ FAST_STRATEGY = HookStrategy(
     hooks=FAST_HOOKS,
     timeout=60,
     retry_policy=RetryPolicy.FORMATTING_ONLY,
+    parallel=True,  # Phase 6: Enable parallel execution for 2-3x speedup
+    max_workers=4,  # Optimal concurrency for fast hooks
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(
@@ -296,6 +298,8 @@ COMPREHENSIVE_STRATEGY = HookStrategy(
     hooks=COMPREHENSIVE_HOOKS,
     timeout=300,
     retry_policy=RetryPolicy.NONE,
+    parallel=True,  # Phase 6: Enable parallel execution for 2x speedup
+    max_workers=4,  # Optimal concurrency for comprehensive hooks
 )
 
 

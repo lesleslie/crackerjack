@@ -962,13 +962,13 @@ CLI_OPTIONS = {
     "use_acb_workflows": typer.Option(
         True,  # ACB workflows are now the default
         "--use-acb-workflows",
-        help="Use ACB workflow engine for orchestration (now the default).",
-        hidden=False,  # No longer hidden - this is the production default
+        help="[DEFAULT - REDUNDANT] ACB is now always used (kept for compatibility).",
+        hidden=True,  # Hidden since it's redundant (ACB is always the default)
     ),
     "use_legacy_orchestrator": typer.Option(
         False,
         "--use-legacy-orchestrator/--no-use-legacy-orchestrator",
-        help="Opt out of ACB workflows and use the legacy orchestrator.",
+        help="Opt out of ACB workflows and use legacy orchestrator (for compatibility).",
         hidden=False,
     ),
     # Semantic search options

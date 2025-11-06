@@ -15,9 +15,13 @@ Action handlers follow ACB's async callable signature:
 from __future__ import annotations
 
 import asyncio
+import time
 import typing as t
 
+from acb.depends import Inject, depends
+
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+from crackerjack.events.workflow_bus import WorkflowEvent, WorkflowEventBus
 from crackerjack.models.protocols import OptionsProtocol
 
 if t.TYPE_CHECKING:
@@ -56,9 +60,11 @@ async def run_configuration(
     }
 
 
+@depends.inject
 async def run_fast_hooks(
     context: dict[str, t.Any],
     step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute fast hooks phase.
@@ -74,6 +80,7 @@ async def run_fast_hooks(
     Args:
         context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
         **params: Additional step parameters
 
     Returns:
@@ -93,16 +100,63 @@ async def run_fast_hooks(
         msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.HOOK_STRATEGY_STARTED,
+            {"step_id": step_id, "strategy": "fast", "timestamp": start_time},
+        )
+
     # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
     # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
-    success = await asyncio.to_thread(
-        pipeline._run_fast_hooks_phase,
-        options,
-    )
+    try:
+        success = await asyncio.to_thread(
+            pipeline._run_fast_hooks_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.HOOK_STRATEGY_FAILED,
+                {
+                    "step_id": step_id,
+                    "strategy": "fast",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
 
     if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.HOOK_STRATEGY_FAILED,
+                {
+                    "step_id": step_id,
+                    "strategy": "fast",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
         msg = "Fast hooks execution failed"
         raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.HOOK_STRATEGY_COMPLETED,
+            {
+                "step_id": step_id,
+                "strategy": "fast",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
 
     return {
         "phase": "fast_hooks",
@@ -111,9 +165,11 @@ async def run_fast_hooks(
     }
 
 
+@depends.inject
 async def run_code_cleaning(
     context: dict[str, t.Any],
     step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute code cleaning phase.
@@ -129,6 +185,7 @@ async def run_code_cleaning(
     Args:
         context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
         **params: Additional step parameters
 
     Returns:
@@ -148,16 +205,63 @@ async def run_code_cleaning(
         msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_STARTED,
+            {"step_id": step_id, "phase": "cleaning", "timestamp": start_time},
+        )
+
     # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
     # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
-    success = await asyncio.to_thread(
-        pipeline._run_code_cleaning_phase,
-        options,
-    )
+    try:
+        success = await asyncio.to_thread(
+            pipeline._run_code_cleaning_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "cleaning",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
 
     if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "cleaning",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
         msg = "Code cleaning execution failed"
         raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_COMPLETED,
+            {
+                "step_id": step_id,
+                "phase": "cleaning",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
 
     return {
         "phase": "cleaning",
@@ -166,9 +270,11 @@ async def run_code_cleaning(
     }
 
 
+@depends.inject
 async def run_comprehensive_hooks(
     context: dict[str, t.Any],
     step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute comprehensive hooks phase.
@@ -185,6 +291,7 @@ async def run_comprehensive_hooks(
     Args:
         context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
         **params: Additional step parameters
 
     Returns:
@@ -204,16 +311,63 @@ async def run_comprehensive_hooks(
         msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.HOOK_STRATEGY_STARTED,
+            {"step_id": step_id, "strategy": "comprehensive", "timestamp": start_time},
+        )
+
     # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
     # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
-    success = await asyncio.to_thread(
-        pipeline._run_comprehensive_hooks_phase,
-        options,
-    )
+    try:
+        success = await asyncio.to_thread(
+            pipeline._run_comprehensive_hooks_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.HOOK_STRATEGY_FAILED,
+                {
+                    "step_id": step_id,
+                    "strategy": "comprehensive",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
 
     if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.HOOK_STRATEGY_FAILED,
+                {
+                    "step_id": step_id,
+                    "strategy": "comprehensive",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
         msg = "Comprehensive hooks execution failed"
         raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.HOOK_STRATEGY_COMPLETED,
+            {
+                "step_id": step_id,
+                "strategy": "comprehensive",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
 
     return {
         "phase": "comprehensive",
@@ -222,9 +376,11 @@ async def run_comprehensive_hooks(
     }
 
 
+@depends.inject
 async def run_test_workflow(
     context: dict[str, t.Any],
     step_id: str,
+    event_bus: Inject[WorkflowEventBus] = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute test workflow.
@@ -234,6 +390,7 @@ async def run_test_workflow(
     Args:
         context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
+        event_bus: WorkflowEventBus for event emission (injected)
         **params: Additional step parameters
 
     Returns:
@@ -253,16 +410,63 @@ async def run_test_workflow(
         msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
+    # Phase 7.2: Emit start event
+    start_time = time.time()
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_STARTED,
+            {"step_id": step_id, "phase": "testing", "timestamp": start_time},
+        )
+
     # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
     # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
-    success = await asyncio.to_thread(
-        pipeline._run_testing_phase,
-        options,
-    )
+    try:
+        success = await asyncio.to_thread(
+            pipeline._run_testing_phase,
+            options,
+        )
+    except Exception as exc:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "testing",
+                    "error": str(exc),
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
+        raise
 
     if not success:
+        # Phase 7.2: Emit failure event
+        if event_bus:
+            await event_bus.publish(
+                WorkflowEvent.WORKFLOW_FAILED,
+                {
+                    "step_id": step_id,
+                    "phase": "testing",
+                    "timestamp": time.time(),
+                    "duration": time.time() - start_time,
+                },
+            )
         msg = "Test workflow execution failed"
         raise RuntimeError(msg)
+
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_COMPLETED,
+            {
+                "step_id": step_id,
+                "phase": "testing",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
 
     return {
         "phase": "test_workflow",

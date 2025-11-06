@@ -452,12 +452,10 @@ class DynamicConfigGenerator:
     def _detect_package_directory(self) -> str:
         from pathlib import Path
 
-
         current_dir = Path.cwd()
         if (current_dir / "crackerjack").exists() and (
             current_dir / "pyproject.toml"
         ).exists():
-
             with suppress(Exception):
                 import tomllib
 
@@ -465,7 +463,6 @@ class DynamicConfigGenerator:
                     data = tomllib.load(f)
                 if data.get("project", {}).get("name") == "crackerjack":
                     return "crackerjack"
-
 
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
@@ -481,10 +478,8 @@ class DynamicConfigGenerator:
                     if (current_dir / package_name).exists():
                         return package_name
 
-
         if (current_dir / current_dir.name).exists():
             return current_dir.name
-
 
         return current_dir.name
 
@@ -514,20 +509,16 @@ class DynamicConfigGenerator:
         for category_hooks in HOOKS_REGISTRY.values():
             for hook in category_hooks:
                 if self._should_include_hook(hook, config, enabled_experimental):
-
                     updated_hook = self._update_hook_for_package(hook.copy())
                     filtered_hooks.append(updated_hook)
 
         return filtered_hooks
 
     def _update_hook_for_package(self, hook: HookMetadata) -> HookMetadata:
-
         if hook["id"] == "skylos" and hook["args"]:
             hook["args"] = [self.package_directory, "--exclude", "tests"]
 
-
         elif hook["id"] == "zuban" and hook["args"]:
-
             updated_args = []
             for arg in hook["args"]:
                 if arg == "./crackerjack":
@@ -535,7 +526,6 @@ class DynamicConfigGenerator:
                 else:
                     updated_args.append(arg)
             hook["args"] = updated_args
-
 
         elif hook["files"] and "crackerjack" in hook["files"]:
             hook["files"] = hook["files"].replace("crackerjack", self.package_directory)
@@ -545,13 +535,10 @@ class DynamicConfigGenerator:
                 "crackerjack", self.package_directory
             )
 
-
         if hook["exclude"]:
-
             if "src/" not in hook["exclude"]:
                 hook["exclude"] = f"{hook['exclude']}|^src/"
         else:
-
             if hook["id"] in (
                 "skylos",
                 "zuban",

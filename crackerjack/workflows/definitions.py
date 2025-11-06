@@ -90,11 +90,11 @@ STANDARD_WORKFLOW = WorkflowDefinition(
 )
 
 # Phase 2: Test workflow
-# Workflow for --run-tests mode
+# Workflow for --run-tests mode: Full quality workflow WITH tests
 TEST_WORKFLOW = WorkflowDefinition(
     workflow_id="crackerjack-test",
     name="Test Execution Workflow",
-    description="Run test suite with optional quality checks",
+    description="Full quality workflow: fast hooks → code cleaning → tests → comprehensive hooks",
     steps=[
         WorkflowStep(
             step_id="config",
@@ -104,18 +104,51 @@ TEST_WORKFLOW = WorkflowDefinition(
             retry_attempts=1,
             timeout=30.0,
         ),
+        # Fast hooks and cleaning run in parallel (both depend only on config)
+        WorkflowStep(
+            step_id="fast_hooks",
+            name="Fast Hooks",
+            action="run_fast_hooks",
+            params={},
+            depends_on=["config"],
+            retry_attempts=2,
+            timeout=300.0,
+            parallel=True,  # Can run parallel with cleaning
+        ),
+        WorkflowStep(
+            step_id="cleaning",
+            name="Code Cleaning",
+            action="run_code_cleaning",
+            params={},
+            depends_on=["config"],
+            retry_attempts=1,
+            timeout=180.0,
+            skip_on_failure=True,  # Cleaning is optional
+            parallel=True,  # Can run parallel with fast_hooks
+        ),
+        # Tests run after fast hooks and cleaning
         WorkflowStep(
             step_id="test_workflow",
             name="Test Execution",
             action="run_test_workflow",
             params={},
-            depends_on=["config"],
+            depends_on=["fast_hooks", "cleaning"],  # Waits for both
             retry_attempts=1,  # Tests shouldn't retry automatically
             timeout=1800.0,  # 30 minutes for tests
         ),
+        # Comprehensive hooks run after tests complete
+        WorkflowStep(
+            step_id="comprehensive",
+            name="Comprehensive Hooks",
+            action="run_comprehensive_hooks",
+            params={},
+            depends_on=["test_workflow"],  # Waits for tests
+            retry_attempts=2,
+            timeout=900.0,  # 15 minutes for comprehensive
+        ),
     ],
-    timeout=2400.0,  # 40 minutes total workflow timeout
-    retry_failed_steps=False,  # Don't retry failed tests
+    timeout=3600.0,  # 60 minutes total workflow timeout
+    retry_failed_steps=True,
     continue_on_error=False,
 )
 

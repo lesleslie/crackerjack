@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 
+from acb.depends import depends
 from fastapi import FastAPI
 
 from .endpoints import register_endpoints
@@ -35,7 +36,16 @@ def create_websocket_app(job_manager: JobManager, progress_dir: Path) -> FastAPI
 
     register_endpoints(app, job_manager, progress_dir)
 
-    register_websocket_routes(app, job_manager, progress_dir)
+    # Phase 7.3: Get EventBusWebSocketBridge from DI and pass to WebSocket routes
+    try:
+        from crackerjack.mcp.websocket.event_bridge import EventBusWebSocketBridge
+
+        event_bridge = depends.get_sync(EventBusWebSocketBridge)
+    except Exception:
+        # Event bridge not available (DI not initialized)
+        event_bridge = None
+
+    register_websocket_routes(app, job_manager, progress_dir, event_bridge=event_bridge)
 
     # Register monitoring endpoints
     monitoring_ws_manager = MonitoringWebSocketManager()

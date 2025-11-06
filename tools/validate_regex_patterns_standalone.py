@@ -1,10 +1,7 @@
-
-
 import ast
 import re
 import sys
 from pathlib import Path
-
 
 REGEX_IMPORTS = {
     "re",
@@ -28,26 +25,18 @@ REGEX_FUNCTIONS = {
 
 
 ALLOWED_PATTERNS = {
-
     r"re\.escape\(",
     r"re\.compile\(r?['\"]\\\\[wd]",
-
     r"# REGEX OK:",
-
     r"crackerjack/services/regex_patterns\.py$",
-
     r"tools/validate_regex_patterns_standalone\.py$",
     r"crackerjack/tools/validate_regex_patterns\.py$",
-
     r"tests/test_.*\.py$",
-
     r"crackerjack/services/secure_subprocess\.py$",
     r"crackerjack/mcp/tools/core_tools\.py$",
-
     r"crackerjack/intelligence/agent_selector\.py$",
     r"crackerjack/managers/test_.*\.py$",
     r"crackerjack/core/async_workflow_orchestrator\.py$",
-
     r"crackerjack/agents/.*\.py$",
 }
 
@@ -59,7 +48,6 @@ FORBIDDEN_REPLACEMENT_PATTERNS = [
 
 
 class RegexVisitor(ast.NodeVisitor):
-
     def __init__(self, file_path: Path):
         self.file_path = file_path
         self.issues: list[tuple[int, str]] = []
@@ -87,11 +75,9 @@ class RegexVisitor(ast.NodeVisitor):
         func_name = self._get_function_name(node.func)
 
         if func_name in REGEX_FUNCTIONS:
-
             for arg in node.args:
                 if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
                     self._check_replacement_syntax(arg.value, node.lineno)
-
 
             if not self._is_exempted_line(node.lineno):
                 self.issues.append(
@@ -130,7 +116,6 @@ class RegexVisitor(ast.NodeVisitor):
         with suppress(OSError, UnicodeDecodeError):
             lines = self.file_path.read_text(encoding="utf-8").splitlines()
 
-
             for offset in range(6):
                 check_line = line_no - 1 + offset
                 if check_line < len(lines):
@@ -163,10 +148,8 @@ def main(file_paths: list[str]) -> int:
         for file_path_str in file_paths:
             file_path = Path(file_path_str)
 
-
             if file_path.suffix != ".py":
                 continue
-
 
             if not file_path.exists():
                 continue
@@ -180,7 +163,6 @@ def main(file_paths: list[str]) -> int:
                     for line_no, message in issues:
                         print(f" Line {line_no}: {message}")
             except Exception as e:
-
                 print(f"Warning: Could not validate {file_path}: {e}", file=sys.stderr)
                 continue
 

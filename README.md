@@ -7,7 +7,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Quality Hooks](https://img.shields.io/badge/quality%20hooks-17%20tools-brightgreen)](https://github.com/lesleslie/crackerjack)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-22.0%25-red)
+![Coverage](https://img.shields.io/badge/coverage-21.8%25-red)
 
 ## 🎯 Purpose
 
@@ -507,18 +507,22 @@ Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, pro
 
 ### Architecture Overview
 
-**Layered ACB Architecture with Protocol-Based DI**
+**ACB Workflow Engine (Default since Phase 4.2)**
 
 ```
-User Command → WorkflowOrchestrator (DI Container)
+User Command → BasicWorkflowEngine (ACB)
     ↓
-SessionCoordinator (✅ Gold Standard: @depends.inject + protocols)
+Workflow Selection (Standard/Fast/Comprehensive/Test)
     ↓
-PhaseCoordinator (Orchestration Layer: 70% ACB compliant)
+Action Handlers (run_fast_hooks, run_code_cleaning, run_comprehensive_hooks, run_test_workflow)
+    ↓
+asyncio.to_thread() for non-blocking execution
+    ↓
+WorkflowPipeline (DI-injected via context)
+    ↓
+Phase Execution (_run_fast_hooks_phase, _run_comprehensive_hooks_phase, etc.)
     ↓
 HookManager + TestManager (Manager Layer: 80% compliant)
-    ↓
-HookOrchestratorAdapter (Strategy Selection)
     ↓
 Direct adapter.check() calls (No subprocess overhead)
     ↓
@@ -526,17 +530,32 @@ ToolProxyCacheAdapter (Content-based caching, 70% hit rate)
     ↓
 Parallel Execution (Up to 11 concurrent adapters)
     ↓
-Results Aggregation
+Results Aggregation with real-time console output
 ```
 
-**Architecture Compliance (Phase 2-4 Audit Results)**
+**Legacy Orchestrator Path** (opt-out with `--use-legacy-orchestrator`)
+
+```
+User Command → WorkflowOrchestrator (Legacy)
+    ↓
+SessionCoordinator (@depends.inject + protocols)
+    ↓
+PhaseCoordinator (Orchestration Layer)
+    ↓
+HookManager + TestManager
+    ↓
+[Same execution path as ACB from here...]
+```
+
+**Architecture Compliance (Phase 2-4.2 Audit Results)**
 
 | Layer | Compliance | Status | Notes |
 |-------|-----------|--------|-------|
+| **ACB Workflows** | 95% | ✅ Production | **Default since Phase 4.2** - Real-time output, non-blocking |
 | **CLI Handlers** | 90% | ✅ Excellent | Gold standard: `@depends.inject` + `Inject[Protocol]` |
 | **Services** | 95% | ✅ Excellent | Phase 3 refactored, consistent constructors |
 | **Managers** | 80% | ✅ Good | Protocol-based injection, minor improvements needed |
-| **Orchestration** | 70% | ⚠️ Mixed | `SessionCoordinator` ✅, `ServiceWatchdog` ⚠️ |
+| **Legacy Orchestration** | 70% | ⚠️ Opt-out | Available with `--use-legacy-orchestrator` |
 | **Coordinators** | 70% | ⚠️ Mixed | Phase coordinators ✅, async needs standardization |
 | **Agent System** | 40% | 📋 Legacy | Uses `AgentContext` pattern (predates ACB) |
 
@@ -562,13 +581,15 @@ def setup_environment_wrong(console: Console | None = None):
 
 ### Performance Benefits
 
-| Metric | Before ACB | After ACB | Improvement |
-|--------|-----------|-----------|-------------|
-| **Fast Workflow** | ~300s | 149.79s | **50% faster** |
-| **Full Test Suite** | ~320s | 158.47s | **50% faster** |
+| Metric | Legacy | ACB Workflows (Phase 4.2) | Improvement |
+|--------|--------|----------------------------|-------------|
+| **Fast Hooks** | ~45s | ~48s | Comparable |
+| **Full Workflow** | ~60s | ~90s | Real-time output |
+| **Console Output** | Buffered | **Real-time streaming** | UX improvement |
+| **Event Loop** | Sync (blocking) | **Async (non-blocking)** | Responsive |
 | **Cache Hit Rate** | 0% | **70%** | New capability |
-| **Async Speedup** | N/A | **76%** | Parallel execution |
 | **Concurrent Adapters** | 1 | **11** | 11x parallelism |
+| **DI Context** | Manual | **Protocol-based injection** | Type safety |
 
 ### Core Components
 

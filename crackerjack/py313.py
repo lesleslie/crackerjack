@@ -112,8 +112,6 @@ def process_hook_results[T: HookResult, R](
 ) -> list[R]:
     processed_results: list[R] = []
     for result in results:
-
-
         if (
             hasattr(result, "status")
             and typing.cast(HookResult, result)["status"] == HookStatus.SUCCESS
