@@ -344,9 +344,7 @@ class WorkflowContainerBuilder:
         from crackerjack.managers.publish_manager import PublishManagerImpl
         from crackerjack.models.protocols import PublishManager
 
-        publish_manager = PublishManagerImpl(
-            pkg_path=self._root_path, dry_run=False
-        )
+        publish_manager = PublishManagerImpl(pkg_path=self._root_path, dry_run=False)
         depends.set(PublishManager, publish_manager)
         self._registered.add("PublishManager")
 

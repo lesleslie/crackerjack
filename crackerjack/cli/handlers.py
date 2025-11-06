@@ -270,12 +270,20 @@ def handle_standard_mode(
     # Call the synchronous method directly
     hook_lock_manager.configure_from_options(options)
 
-    # Phase 1 POC: Route to ACB workflows if flag is set
-    if getattr(options, "use_acb_workflows", False):
+    # Phase 4.2 COMPLETE: ACB workflows are now the default
+    # Use --use-legacy-orchestrator to opt out and use the old orchestration system
+    if not getattr(options, "use_legacy_orchestrator", False):
+        # Default path: ACB workflow engine (Phase 4.2 complete)
+        # Only skip if user explicitly opted out with --use-legacy-orchestrator
         handle_acb_workflow_mode(options, job_id, console)
-    elif orchestrated:
+        return
+
+    # Legacy orchestrator path (only if use_legacy_orchestrator=True)
+    if orchestrated:
         handle_orchestrated_mode(options, job_id)
-    else:
+
+    # Default path: Legacy orchestrator (Phase 4.0 status)
+    if not orchestrated:
         from crackerjack.core.async_workflow_orchestrator import (
             AsyncWorkflowOrchestrator,
         )
@@ -315,12 +323,12 @@ def handle_acb_workflow_mode(
     job_id: str | None = None,
     console: Inject[Console] = None,
 ) -> None:
-    """Execute workflow using ACB workflow engine (Phase 1 POC).
+    """Execute workflow using ACB workflow engine (Phase 3 Production).
 
-    This handler routes execution to the CrackerjackWorkflowEngine when
-    the --use-acb-workflows flag is set. It selects the appropriate workflow
-    definition based on CLI options and executes it with the event bridge
-    enabled for backward compatibility.
+    This handler routes execution to the CrackerjackWorkflowEngine using
+    the WorkflowContainerBuilder to set up the full DI container with all
+    28 services across 7 levels. Action handlers use WorkflowPipeline from
+    the container for production-quality workflow execution.
 
     Args:
         options: CLI options with use_acb_workflows=True
@@ -335,26 +343,56 @@ def handle_acb_workflow_mode(
     from crackerjack.workflows import (
         CrackerjackWorkflowEngine,
         EventBridgeAdapter,
+        WorkflowContainerBuilder,
         register_actions,
         select_workflow_for_options,
     )
 
-    console.print("[bold cyan]🚀 ACB Workflow Mode (Phase 1 POC)[/bold cyan]")
+    console.print("[bold cyan]🚀 Crackerjack Workflow Engine (ACB-Powered)[/bold cyan]")
 
     try:
+        # Phase 4: ACB workflows are now the default!
+        console.print(
+            "[dim]Building DI container (28 services across 7 levels)...[/dim]"
+        )
+        builder = WorkflowContainerBuilder(options, console=console)
+        builder.build()
+
+        # Validate all services are available
+        health = builder.health_check()
+        if not health["all_available"]:
+            missing = ", ".join(health["missing"])
+            console.print(f"[yellow]⚠️  Missing services: {missing}[/yellow]")
+            console.print(
+                "[yellow]Container health check failed, continuing with available services[/yellow]"
+            )
+
+        console.print("[dim]✓ DI container ready with WorkflowPipeline[/dim]")
+
+        # Register ACB Logger explicitly (needed for BasicWorkflowEngine)
+        from acb.logger import Logger
+
+        try:
+            logger = depends.get_sync(Logger)
+        except Exception:
+            # ACB Logger not available, this shouldn't happen but handle gracefully
+            import logging
+
+            logger = logging.getLogger("crackerjack")
+            depends.set(Logger, logger)
+
         # Register WorkflowEventBus with DI container
         event_bus = WorkflowEventBus()
         depends.set(WorkflowEventBus, event_bus)
 
-        # Register EventBridgeAdapter with DI container
+        # Register EventBridgeAdapter BEFORE creating engine (engine needs it for DI!)
         event_bridge = EventBridgeAdapter()
         depends.set(EventBridgeAdapter, event_bridge)
 
-        # Phase 1 POC: Skip WorkflowOrchestrator registration
-        # Phase 2 will implement proper DI setup for all dependencies
-
-        # Initialize engine and register action handlers
+        # Initialize engine (EventBridgeAdapter will be injected)
         engine = CrackerjackWorkflowEngine()
+
+        # Register action handlers with engine
         register_actions(engine)
 
         # Select workflow based on options (fast/comp/test/standard)
@@ -362,8 +400,25 @@ def handle_acb_workflow_mode(
 
         console.print(f"[dim]Selected workflow: {workflow.name}[/dim]")
 
-        # Execute workflow with options in context
-        result = asyncio.run(engine.execute(workflow, context={"options": options}))
+        # Phase 4.1: Retrieve WorkflowPipeline from DI container (synchronous context)
+        # and pass it explicitly in workflow context to avoid async DI scope issues
+        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+        pipeline = depends.get_sync(WorkflowPipeline)
+
+        # Phase 4.2: All dependencies now use Inject[] instead of deprecated depends()
+        # This ensures they are properly resolved when retrieved from DI container
+
+        # Execute workflow with options and pipeline in context
+        result = asyncio.run(
+            engine.execute(
+                workflow,
+                context={
+                    "options": options,
+                    "pipeline": pipeline,  # Pass pipeline with all dependencies properly resolved
+                },
+            )
+        )
 
         # Check result and exit with appropriate code
         from acb.workflows import WorkflowState
@@ -375,9 +430,13 @@ def handle_acb_workflow_mode(
         console.print("[bold green]✓ Workflow completed successfully[/bold green]")
 
     except Exception as e:
+        import traceback
+
         console.print(f"[red]ACB workflow execution failed: {e}[/red]")
+        console.print(f"[dim]{traceback.format_exc()}[/dim]")
         console.print("[yellow]Falling back to legacy orchestrator[/yellow]")
-        # Disable ACB flag and retry with legacy orchestrator
+        # Enable legacy orchestrator flag and retry
+        options.use_legacy_orchestrator = True
         options.use_acb_workflows = False
         handle_standard_mode(options, False, job_id, False, console)
 

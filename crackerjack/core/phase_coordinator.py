@@ -53,15 +53,14 @@ class PhaseCoordinator:
         async_executor: Inject[AsyncCommandExecutor],
         git_cache: Inject[GitOperationCache],
         filesystem_cache: Inject[FileSystemCache],
-        pkg_path: Path = depends(),
-        session: SessionCoordinator = depends(),
-        # Dependencies provided by WorkflowOrchestrator via depends.get()
-        filesystem: FileSystemInterface = depends(),
-        git_service: GitInterface = depends(),
-        hook_manager: HookManager = depends(),
-        test_manager: TestManagerProtocol = depends(),
-        publish_manager: PublishManager = depends(),
-        config_merge_service: ConfigMergeServiceProtocol = depends(),
+        pkg_path: Inject[Path],
+        session: Inject[SessionCoordinator],
+        filesystem: Inject[FileSystemInterface],
+        git_service: Inject[GitInterface],
+        hook_manager: Inject[HookManager],
+        test_manager: Inject[TestManagerProtocol],
+        publish_manager: Inject[PublishManager],
+        config_merge_service: Inject[ConfigMergeServiceProtocol],
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path

@@ -17,9 +17,6 @@ from __future__ import annotations
 import asyncio
 import typing as t
 
-from acb.depends import Inject, depends
-
-from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 from crackerjack.models.protocols import OptionsProtocol
 
@@ -27,11 +24,9 @@ if t.TYPE_CHECKING:
     pass
 
 
-@depends.inject
 async def run_configuration(
     context: dict[str, t.Any],
     step_id: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute configuration phase.
@@ -42,7 +37,6 @@ async def run_configuration(
     Args:
         context: Workflow execution context with "options" key
         step_id: Step identifier (unused, for ACB compatibility)
-        orchestrator: WorkflowOrchestrator instance (DI)
         **params: Additional step parameters
 
     Returns:
@@ -62,11 +56,9 @@ async def run_configuration(
     }
 
 
-@depends.inject
 async def run_fast_hooks(
     context: dict[str, t.Any],
     step_id: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute fast hooks phase.
@@ -77,12 +69,11 @@ async def run_fast_hooks(
     - Basic static analysis
 
     This action wraps the existing fast hooks execution logic from
-    WorkflowPipeline (registered as WorkflowOrchestrator).
+    WorkflowPipeline passed explicitly in context.
 
     Args:
-        context: Workflow execution context with "options" key
+        context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
-        pipeline: WorkflowPipeline instance (DI - registered as WorkflowOrchestrator)
         **params: Additional step parameters
 
     Returns:
@@ -96,15 +87,17 @@ async def run_fast_hooks(
         msg = "Missing 'options' in workflow context"
         raise ValueError(msg)
 
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
     if not pipeline:
-        msg = "WorkflowPipeline not available via DI"
+        msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
-    # Execute fast hooks using WorkflowPipeline (Phase 2: Full integration!)
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
     success = await asyncio.to_thread(
-        pipeline._execute_monitored_fast_hooks_phase,
+        pipeline._run_fast_hooks_phase,
         options,
-        None,  # monitor (optional)
     )
 
     if not success:
@@ -118,11 +111,9 @@ async def run_fast_hooks(
     }
 
 
-@depends.inject
 async def run_code_cleaning(
     context: dict[str, t.Any],
     step_id: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute code cleaning phase.
@@ -133,12 +124,11 @@ async def run_code_cleaning(
     - Code formatting fixes
 
     This action wraps the existing cleaning execution logic from
-    WorkflowOrchestrator.
+    WorkflowPipeline passed explicitly in context.
 
     Args:
-        context: Workflow execution context with "options" key
+        context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
-        orchestrator: WorkflowOrchestrator instance (DI)
         **params: Additional step parameters
 
     Returns:
@@ -152,13 +142,16 @@ async def run_code_cleaning(
         msg = "Missing 'options' in workflow context"
         raise ValueError(msg)
 
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
     if not pipeline:
-        msg = "WorkflowPipeline not available via DI"
+        msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
-    # Execute cleaning using existing pipeline method
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
     success = await asyncio.to_thread(
-        pipeline._execute_monitored_cleaning_phase,
+        pipeline._run_code_cleaning_phase,
         options,
     )
 
@@ -173,11 +166,9 @@ async def run_code_cleaning(
     }
 
 
-@depends.inject
 async def run_comprehensive_hooks(
     context: dict[str, t.Any],
     step_id: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute comprehensive hooks phase.
@@ -189,12 +180,11 @@ async def run_comprehensive_hooks(
     - Additional static analysis
 
     This action wraps the existing comprehensive hooks execution logic from
-    WorkflowOrchestrator.
+    WorkflowPipeline passed explicitly in context.
 
     Args:
-        context: Workflow execution context with "options" key
+        context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
-        orchestrator: WorkflowOrchestrator instance (DI)
         **params: Additional step parameters
 
     Returns:
@@ -208,15 +198,17 @@ async def run_comprehensive_hooks(
         msg = "Missing 'options' in workflow context"
         raise ValueError(msg)
 
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
     if not pipeline:
-        msg = "WorkflowPipeline not available via DI"
+        msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
-    # Execute comprehensive hooks using existing pipeline method
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
     success = await asyncio.to_thread(
-        pipeline._execute_monitored_comprehensive_phase,
+        pipeline._run_comprehensive_hooks_phase,
         options,
-        None,  # monitor (optional)
     )
 
     if not success:
@@ -230,11 +222,9 @@ async def run_comprehensive_hooks(
     }
 
 
-@depends.inject
 async def run_test_workflow(
     context: dict[str, t.Any],
     step_id: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute test workflow.
@@ -242,9 +232,8 @@ async def run_test_workflow(
     This action runs the test suite using pytest with configured options.
 
     Args:
-        context: Workflow execution context with "options" key
+        context: Workflow execution context with "options" and "pipeline" keys
         step_id: Step identifier (unused, for ACB compatibility)
-        orchestrator: WorkflowOrchestrator instance (DI)
         **params: Additional step parameters
 
     Returns:
@@ -258,13 +247,16 @@ async def run_test_workflow(
         msg = "Missing 'options' in workflow context"
         raise ValueError(msg)
 
+    # Phase 4.1: Get pipeline from context instead of DI injection
+    pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
     if not pipeline:
-        msg = "WorkflowPipeline not available via DI"
+        msg = "WorkflowPipeline not available in context"
         raise RuntimeError(msg)
 
-    # Execute test workflow using existing pipeline method
+    # Phase 4.2: DI context now preserved with Inject[] pattern (not depends())
+    # Use asyncio.to_thread to avoid blocking event loop with synchronous operations
     success = await asyncio.to_thread(
-        pipeline._execute_test_workflow,
+        pipeline._run_testing_phase,
         options,
     )
 
@@ -279,12 +271,10 @@ async def run_test_workflow(
     }
 
 
-@depends.inject
 async def run_hook(
     context: dict[str, t.Any],
     step_id: str,
     hook_name: str,
-    pipeline: Inject[WorkflowPipeline] | None = None,
     **params: t.Any,
 ) -> dict[str, t.Any]:
     """Execute a single hook by name.
@@ -296,14 +286,12 @@ async def run_hook(
         context: Workflow execution context with "options" key
         step_id: Step identifier (unused, for ACB compatibility)
         hook_name: Name of the hook to execute
-        orchestrator: WorkflowOrchestrator instance (DI)
         **params: Additional step parameters
 
     Returns:
         dict with hook execution results
 
     Raises:
-        RuntimeError: If hook execution fails
         NotImplementedError: Phase 3 feature not yet implemented
     """
     msg = "Hook-level parallelization is a Phase 3 feature (not yet implemented)"

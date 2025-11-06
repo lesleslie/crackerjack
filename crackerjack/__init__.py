@@ -1,6 +1,6 @@
 import typing as t
 
-# Register package with ACB to enable adapters, actions, and other components
+
 from acb import register_pkg
 
 register_pkg("crackerjack")

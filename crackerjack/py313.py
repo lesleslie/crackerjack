@@ -112,8 +112,8 @@ def process_hook_results[T: HookResult, R](
 ) -> list[R]:
     processed_results: list[R] = []
     for result in results:
-        # Type checker knows T is HookResult, so no need for isinstance check
-        # But we keep it for runtime safety
+
+
         if (
             hasattr(result, "status")
             and typing.cast(HookResult, result)["status"] == HookStatus.SUCCESS

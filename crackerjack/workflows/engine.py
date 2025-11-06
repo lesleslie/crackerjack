@@ -9,6 +9,7 @@ from __future__ import annotations
 import typing as t
 
 from acb.depends import Inject, depends
+from acb.logger import Logger
 from acb.workflows import (
     BasicWorkflowEngine,
     StepResult,
@@ -49,6 +50,9 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
                 raise SystemExit(1)
         ```
     """
+
+    # Inherit logger from BasicWorkflowEngine (required for __init__)
+    logger: Inject[Logger]
 
     @depends.inject
     def __init__(

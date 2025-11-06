@@ -148,8 +148,10 @@ class Options(BaseModel):
     remove_from_index: str | None = None
     cache_stats: bool = False
 
-    # ACB workflow integration (Phase 1 POC)
-    use_acb_workflows: bool = False  # Feature flag for ACB workflow migration
+    # ACB workflow integration (Phase 4.2 COMPLETE: ACB is now the default)
+    # Use --use-legacy-orchestrator to revert to the old orchestration system
+    use_acb_workflows: bool = True  # ACB workflow engine is now the default
+    use_legacy_orchestrator: bool = False  # Opt-in to legacy orchestrator
     refresh_cache: bool = False
 
     # Semantic field names (new primary interface)
@@ -956,12 +958,18 @@ CLI_OPTIONS = {
         "--refresh-cache",
         help="Refresh cache to ensure fresh environment.",
     ),
-    # ACB workflow integration (Phase 1 POC)
+    # ACB workflow integration (Phase 4.2 COMPLETE - ACB is now the default)
     "use_acb_workflows": typer.Option(
-        False,
+        True,  # ACB workflows are now the default
         "--use-acb-workflows",
-        help="Use ACB workflow engine for orchestration (Phase 1 POC feature flag).",
-        hidden=True,  # Hide during POC phase
+        help="Use ACB workflow engine for orchestration (now the default).",
+        hidden=False,  # No longer hidden - this is the production default
+    ),
+    "use_legacy_orchestrator": typer.Option(
+        False,
+        "--use-legacy-orchestrator/--no-use-legacy-orchestrator",
+        help="Opt out of ACB workflows and use the legacy orchestrator.",
+        hidden=False,
     ),
     # Semantic search options
     "index": typer.Option(
@@ -1078,6 +1086,7 @@ def create_options(
     config_interactive: bool,
     refresh_cache: bool,
     use_acb_workflows: bool,
+    use_legacy_orchestrator: bool,
     # New semantic parameters
     strip_code: bool | None = None,
     run_tests: bool = False,
@@ -1180,6 +1189,7 @@ def create_options(
         config_interactive=config_interactive,
         refresh_cache=refresh_cache,
         use_acb_workflows=use_acb_workflows,
+        use_legacy_orchestrator=use_legacy_orchestrator,
         # New semantic parameters
         strip_code=strip_code,
         run_tests=run_tests,

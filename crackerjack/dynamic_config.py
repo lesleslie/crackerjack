@@ -447,19 +447,17 @@ class DynamicConfigGenerator:
         )
 
     def _sanitize_package_directory(self, package_directory: str) -> str:
-        """Convert hyphens to underscores in package directory names."""
         return package_directory.replace("-", "_")
 
     def _detect_package_directory(self) -> str:
-        """Detect the package directory name for the current project."""
         from pathlib import Path
 
-        # Check if we're in the crackerjack project itself
+
         current_dir = Path.cwd()
         if (current_dir / "crackerjack").exists() and (
             current_dir / "pyproject.toml"
         ).exists():
-            # Check if this is actually the crackerjack project
+
             with suppress(Exception):
                 import tomllib
 
@@ -468,7 +466,7 @@ class DynamicConfigGenerator:
                 if data.get("project", {}).get("name") == "crackerjack":
                     return "crackerjack"
 
-        # Try to read package name from pyproject.toml
+
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -479,15 +477,15 @@ class DynamicConfigGenerator:
 
                 if "project" in data and "name" in data["project"]:
                     package_name = str(data["project"]["name"])
-                    # Check if package directory exists
+
                     if (current_dir / package_name).exists():
                         return package_name
 
-        # Fallback to project directory name
+
         if (current_dir / current_dir.name).exists():
             return current_dir.name
 
-        # Default fallback to current directory name
+
         return current_dir.name
 
     def _should_include_hook(
@@ -516,21 +514,20 @@ class DynamicConfigGenerator:
         for category_hooks in HOOKS_REGISTRY.values():
             for hook in category_hooks:
                 if self._should_include_hook(hook, config, enabled_experimental):
-                    # Create a copy and update package-specific configurations
+
                     updated_hook = self._update_hook_for_package(hook.copy())
                     filtered_hooks.append(updated_hook)
 
         return filtered_hooks
 
     def _update_hook_for_package(self, hook: HookMetadata) -> HookMetadata:
-        """Update hook configuration to use the detected package directory."""
-        # Update skylos hook
+
         if hook["id"] == "skylos" and hook["args"]:
             hook["args"] = [self.package_directory, "--exclude", "tests"]
 
-        # Update zuban hook
+
         elif hook["id"] == "zuban" and hook["args"]:
-            # Replace the hardcoded "./crackerjack" with the dynamic package directory
+
             updated_args = []
             for arg in hook["args"]:
                 if arg == "./crackerjack":
@@ -539,7 +536,7 @@ class DynamicConfigGenerator:
                     updated_args.append(arg)
             hook["args"] = updated_args
 
-        # Update other hooks that use hardcoded "crackerjack" patterns
+
         elif hook["files"] and "crackerjack" in hook["files"]:
             hook["files"] = hook["files"].replace("crackerjack", self.package_directory)
 
@@ -548,13 +545,13 @@ class DynamicConfigGenerator:
                 "crackerjack", self.package_directory
             )
 
-        # Ensure hooks exclude src directories to avoid JavaScript conflicts and tests
+
         if hook["exclude"]:
-            # Add src exclusion if not present
+
             if "src/" not in hook["exclude"]:
                 hook["exclude"] = f"{hook['exclude']}|^src/"
         else:
-            # If no exclusion, add both tests and src
+
             if hook["id"] in (
                 "skylos",
                 "zuban",
