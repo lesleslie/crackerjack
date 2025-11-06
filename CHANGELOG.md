@@ -12,6 +12,15 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-05
 
 ### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-05
+
+### Added
 - feat(workflows): complete ACB workflow migration with commit and publish support
   - Added `run_commit_phase` action handler for git commit/push functionality
   - Added `run_publish_phase` action handler for version bump and PyPI publishing
