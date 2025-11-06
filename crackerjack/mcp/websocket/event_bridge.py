@@ -9,7 +9,6 @@ Phase 7.3: WebSocket Streaming for Real-Time Updates
 
 from __future__ import annotations
 
-import asyncio
 import typing as t
 from collections import defaultdict
 
@@ -106,7 +105,9 @@ class EventBusWebSocketBridge:
             dict with event_type, data, and timestamp
         """
         return {
-            "event_type": event.event_type.value if hasattr(event.event_type, "value") else str(event.event_type),
+            "event_type": event.event_type.value
+            if hasattr(event.event_type, "value")
+            else str(event.event_type),
             "data": event.payload,
             "timestamp": event.payload.get("timestamp"),
         }

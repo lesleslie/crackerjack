@@ -9,7 +9,6 @@ from __future__ import annotations
 import typing as t
 
 from acb.depends import Inject, depends
-from acb.logger import Logger
 from acb.workflows import (
     BasicWorkflowEngine,
     StepResult,
@@ -51,13 +50,10 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
         ```
     """
 
-    # Inherit logger from BasicWorkflowEngine (required for __init__)
-    logger: Inject[Logger]
-
-    @depends.inject
+    @depends.inject  # type: ignore[misc]
     def __init__(
         self,
-        event_bridge: Inject[EventBridgeAdapter],
+        event_bridge: Inject[EventBridgeAdapter] = None,
         max_concurrent_steps: int = 5,
     ) -> None:
         """Initialize workflow engine with event bridge.
@@ -65,6 +61,9 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
         Args:
             event_bridge: EventBridge adapter for event translation
             max_concurrent_steps: Maximum number of steps to run in parallel
+
+        Note:
+            Logger is automatically initialized by BasicWorkflowEngine parent class
         """
         super().__init__(max_concurrent_steps=max_concurrent_steps)
         self.event_bridge = event_bridge

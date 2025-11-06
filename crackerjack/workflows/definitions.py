@@ -6,6 +6,8 @@ using ACB's WorkflowDefinition and WorkflowStep classes.
 
 from acb.workflows import WorkflowDefinition, WorkflowStep
 
+from crackerjack.models.protocols import OptionsProtocol
+
 # Phase 1 POC: Fast hooks workflow
 # This is the simplest workflow for proof of concept validation
 FAST_HOOKS_WORKFLOW = WorkflowDefinition(
@@ -215,7 +217,7 @@ COMPREHENSIVE_PARALLEL_WORKFLOW = WorkflowDefinition(
 )
 
 
-def select_workflow_for_options(options: "OptionsProtocol") -> WorkflowDefinition:  # type: ignore[name-defined]
+def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
     """Select appropriate workflow based on CLI options.
 
     Args:

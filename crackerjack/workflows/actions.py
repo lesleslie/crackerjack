@@ -60,7 +60,7 @@ async def run_configuration(
     }
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 async def run_fast_hooks(
     context: dict[str, t.Any],
     step_id: str,
@@ -165,7 +165,7 @@ async def run_fast_hooks(
     }
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 async def run_code_cleaning(
     context: dict[str, t.Any],
     step_id: str,
@@ -189,7 +189,7 @@ async def run_code_cleaning(
         **params: Additional step parameters
 
     Returns:
-        dict with cleaning execution results
+        dict with cleaning execution results (or skip result if strip_code=False)
 
     Raises:
         RuntimeError: If cleaning execution fails
@@ -198,6 +198,15 @@ async def run_code_cleaning(
     if not options:
         msg = "Missing 'options' in workflow context"
         raise ValueError(msg)
+
+    # Skip code cleaning unless -x/--strip-code flag is set
+    if not getattr(options, "strip_code", False):
+        return {
+            "phase": "cleaning",
+            "success": True,
+            "skipped": True,
+            "reason": "Code cleaning only runs with -x/--strip-code flag",
+        }
 
     # Phase 4.1: Get pipeline from context instead of DI injection
     pipeline: WorkflowPipeline | None = context.get("pipeline")  # type: ignore[assignment]
@@ -270,7 +279,7 @@ async def run_code_cleaning(
     }
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 async def run_comprehensive_hooks(
     context: dict[str, t.Any],
     step_id: str,
@@ -376,7 +385,7 @@ async def run_comprehensive_hooks(
     }
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 async def run_test_workflow(
     context: dict[str, t.Any],
     step_id: str,

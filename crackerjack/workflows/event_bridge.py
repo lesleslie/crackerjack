@@ -80,10 +80,10 @@ class EventBridgeAdapter:
         ),
     }
 
-    @depends.inject
+    @depends.inject  # type: ignore[misc]
     def __init__(
         self,
-        event_bus: Inject[WorkflowEventBus],
+        event_bus: Inject[WorkflowEventBus] = None,
     ) -> None:
         """Initialize event bridge with WorkflowEventBus.
 

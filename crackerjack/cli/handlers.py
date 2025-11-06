@@ -16,7 +16,7 @@ if t.TYPE_CHECKING:
     )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def setup_ai_agent_env(
     ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
 ) -> None:
@@ -54,7 +54,7 @@ def handle_mcp_server(websocket_port: int | None = None) -> None:
         start_mcp_main(project_path)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_monitor_mode(
     dev_mode: bool = False, console: Inject[Console] = None
 ) -> None:
@@ -71,7 +71,7 @@ def handle_monitor_mode(
         console.print("\n[yellow]🛑 Monitor stopped[/ yellow]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_enhanced_monitor_mode(
     dev_mode: bool = False, console: Inject[Console] = None
 ) -> None:
@@ -88,7 +88,7 @@ def handle_enhanced_monitor_mode(
         console.print("\n[yellow]🛑 Enhanced Monitor stopped[/ yellow]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_dashboard_mode(
     dev_mode: bool = False, console: Inject[Console] = None
 ) -> None:
@@ -105,7 +105,7 @@ def handle_dashboard_mode(
         console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_unified_dashboard_mode(
     port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None
 ) -> None:
@@ -125,7 +125,7 @@ def handle_unified_dashboard_mode(
         console.print(f"\n[red]❌ Unified Dashboard failed: {e}[/red]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_watchdog_mode(console: Inject[Console] = None) -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 
@@ -153,7 +153,7 @@ def handle_restart_websocket_server(port: int = 8675) -> None:
     handle_websocket_server_command(restart=True, port=port)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
     from crackerjack.services.server_manager import (
         list_server_status,
@@ -171,7 +171,7 @@ def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
         raise SystemExit(1)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_restart_mcp_server(
     websocket_port: int | None = None, console: Inject[Console] = None
 ) -> None:
@@ -184,7 +184,7 @@ def handle_restart_mcp_server(
         raise SystemExit(1)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_start_zuban_lsp(
     port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
 ) -> None:
@@ -213,7 +213,7 @@ def handle_start_zuban_lsp(
         console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
     """Stop Zuban LSP server."""
     from crackerjack.services.server_manager import stop_zuban_lsp
@@ -229,7 +229,7 @@ def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
         raise SystemExit(1)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_restart_zuban_lsp(
     port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
 ) -> None:
@@ -254,7 +254,7 @@ def handle_interactive_mode(options: Options) -> None:
     launch_interactive_cli(pkg_version, options)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_standard_mode(
     options: Options,
     async_mode: bool,
@@ -317,7 +317,7 @@ def handle_standard_mode(
             raise SystemExit(1)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_acb_workflow_mode(
     options: Options,
     job_id: str | None = None,
@@ -441,7 +441,7 @@ def handle_acb_workflow_mode(
         handle_standard_mode(options, False, job_id, False, console)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_orchestrated_mode(
     options: Options, job_id: str | None = None, console: Inject[Console] = None
 ) -> None:
@@ -525,7 +525,7 @@ def handle_orchestrated_mode(
         sys.exit(1)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def handle_config_updates(options: Options, console: Inject[Console] = None) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService
@@ -545,7 +545,7 @@ def handle_config_updates(options: Options, console: Inject[Console] = None) -> 
         _handle_refresh_cache(config_service, pkg_path, console)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_check_updates(
     config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
 ) -> None:
@@ -566,7 +566,7 @@ def _handle_check_updates(
     console.print("\nUse --apply-config-updates to apply these updates")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_apply_updates(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
@@ -592,7 +592,7 @@ def _handle_apply_updates(
     _report_update_results(success_count, len(configs_to_update), console)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_diff_config(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
@@ -606,7 +606,7 @@ def _handle_diff_config(
     console.print(diff_preview)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_refresh_cache(
     config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
 ) -> None:
@@ -616,7 +616,7 @@ def _handle_refresh_cache(
     console.print("[green]✅ Cache refreshed[/green]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_available_updates(
     updates: dict[str, "ConfigUpdateInfo"], console: Inject[Console]
 ) -> None:
@@ -638,7 +638,7 @@ def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[
     ]
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _apply_config_updates_batch(
     config_service: "ConfigTemplateService",
     configs: list[str],
@@ -654,7 +654,7 @@ def _apply_config_updates_batch(
     return success_count
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _report_update_results(
     success_count: int, total_count: int, console: Inject[Console]
 ) -> None:

@@ -187,7 +187,7 @@ def _handle_server_commands(
     )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _generate_documentation(doc_service: t.Any, console: Inject[Console]) -> bool:
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
     success = doc_service.generate_full_api_documentation()
@@ -201,7 +201,7 @@ def _generate_documentation(doc_service: t.Any, console: Inject[Console]) -> boo
         return False
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _validate_documentation_files(doc_service: t.Any, console: Inject[Console]) -> None:
     from pathlib import Path
 
@@ -269,14 +269,16 @@ def _handle_changelog_commands(
     changelog_path = services["pkg_path"] / "CHANGELOG.md"
 
     if changelog_dry_run:
-        return _handle_changelog_dry_run(
+        result: bool = _handle_changelog_dry_run(
             services["generator"], changelog_since, options
         )
+        return result
 
     if generate_changelog:
-        return _handle_changelog_generation(
+        result = _handle_changelog_generation(
             services, changelog_path, changelog_version, changelog_since, options
         )
+        return result
 
     return _should_continue_after_changelog(options)
 
@@ -298,7 +300,7 @@ def _setup_changelog_services() -> dict[str, t.Any]:
     }
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_changelog_dry_run(
     generator: "ChangelogGenerator",
     changelog_since: str | None,
@@ -316,7 +318,7 @@ def _handle_changelog_dry_run(
     return _should_continue_after_changelog(options)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_changelog_generation(
     services: dict[str, t.Any],
     changelog_path: "Path",
@@ -347,7 +349,7 @@ def _handle_changelog_generation(
         return False
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _determine_changelog_version(
     git_service: GitService,
     changelog_version: str | None,
@@ -391,7 +393,7 @@ def _should_continue_after_changelog(options: t.Any) -> bool:
     )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_version_analysis(
     auto_version: bool,
     version_since: str | None,
@@ -461,7 +463,7 @@ def _setup_debug_and_verbose_flags(
     return ai_fix, verbose
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_heatmap_generation(
     heatmap: bool,
     heatmap_type: str,
@@ -534,7 +536,7 @@ def _handle_heatmap_generation(
         return False
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> None:
     from datetime import datetime, timedelta
 
@@ -560,26 +562,32 @@ def _generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> 
 
 
 def _get_sample_metric_value(metric_type: str) -> float:
+    """Generate sample metric values for demo/visualization purposes.
+
+    Note: Uses standard random (not cryptographic) as this is ONLY for
+    generating fake demo data, not for any security-sensitive purposes.
+    """
     import random
 
-    is_anomaly = random.random() <= 0.1
+    # Demo data generation - cryptographic randomness not required
+    is_anomaly = random.random() <= 0.1  # nosec B311
 
     if metric_type == "test_pass_rate":
-        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)
+        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)  # nosec B311
 
     elif metric_type == "coverage_percentage":
-        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)
+        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)  # nosec B311
 
     elif metric_type == "complexity_score":
-        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)
+        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)  # nosec B311
 
     elif metric_type == "execution_time":
-        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)
+        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
 
-    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)
+    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_anomaly_results(
     anomalies: list[t.Any], baselines: dict[str, t.Any], console: Inject[Console]
 ) -> None:
@@ -606,7 +614,7 @@ def _display_anomaly_results(
             )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _save_anomaly_report(
     anomalies: list[t.Any],
     baselines: dict[str, t.Any],
@@ -647,7 +655,7 @@ def _save_anomaly_report(
     console.print(f"[green]✅[/green] Anomaly detection report saved to: {report_path}")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_anomaly_detection(
     anomaly_detection: bool,
     anomaly_sensitivity: float,
@@ -686,6 +694,11 @@ def _handle_anomaly_detection(
 
 
 def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
+    """Generate sample data for predictive monitoring demo/visualization.
+
+    Note: Uses standard random (not cryptographic) as this is ONLY for
+    generating fake demo data, not for any security-sensitive purposes.
+    """
     import random
     from datetime import datetime, timedelta
 
@@ -715,7 +728,8 @@ def _generate_predictive_sample_data(engine: t.Any) -> list[str]:
 
             trend_factor = 1.0 + (i * 0.001)
 
-            noise = random.uniform(0.9, 1.1)
+            # Demo data generation - cryptographic randomness not required
+            noise = random.uniform(0.9, 1.1)  # nosec B311
 
             value = base_value * trend_factor * noise
 
@@ -754,7 +768,7 @@ def _generate_predictions_summary(
     return predictions_summary
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_trend_analysis(
     predictions_summary: dict[str, t.Any], console: Inject[Console]
 ) -> None:
@@ -788,7 +802,7 @@ def _display_trend_analysis(
             )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _save_analytics_dashboard(
     predictions_summary: dict[str, t.Any],
     trend_summary: dict[str, t.Any],
@@ -821,7 +835,7 @@ def _save_analytics_dashboard(
     console.print(f"[green]✅[/green] Analytics dashboard saved to: {dashboard_path}")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_predictive_analytics(
     predictive_analytics: bool,
     prediction_periods: int,
@@ -869,10 +883,12 @@ def _handle_predictive_analytics(
         return False
 
 
+@depends.inject  # type: ignore[misc]
 def _handle_advanced_optimizer(
     advanced_optimizer: bool,
     advanced_profile: str | None,
     advanced_report: str | None,
+    console: Inject[Console] = None,
 ) -> bool:
     if not advanced_optimizer:
         return True
@@ -905,7 +921,7 @@ def _setup_advanced_optimizer(advanced_profile: str | None) -> t.Any:
     return optimizer
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _run_advanced_optimization(optimizer: t.Any, console: Inject[Console]) -> t.Any:
     import asyncio
 
@@ -913,7 +929,7 @@ def _run_advanced_optimization(optimizer: t.Any, console: Inject[Console]) -> t.
     return asyncio.run(optimizer.run_optimization_cycle())
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_advanced_results(
     result: t.Any, advanced_report: str | None, console: Inject[Console]
 ) -> None:
@@ -928,14 +944,14 @@ def _display_advanced_results(
         )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_advanced_metrics(metrics: t.Any, console: Inject[Console]) -> None:
     console.print(f"[blue]CPU Usage:[/blue] {metrics['cpu_percent']:.1f}%")
     console.print(f"[blue]Memory Usage:[/blue] {metrics['memory_percent']:.1f}%")
     console.print(f"[blue]Storage Usage:[/blue] {metrics['disk_usage_percent']:.1f}%")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_advanced_recommendations(
     recommendations: t.Any, console: Inject[Console]
 ) -> None:
@@ -952,7 +968,7 @@ def _display_advanced_recommendations(
             )
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _save_advanced_report(
     result: t.Any, advanced_report: str | None, console: Inject[Console]
 ) -> None:
@@ -964,7 +980,7 @@ def _save_advanced_report(
         console.print(f"[green]📄[/green] Advanced report saved to: {advanced_report}")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_mkdocs_integration(
     mkdocs_integration: bool,
     mkdocs_serve: bool,
@@ -1112,7 +1128,10 @@ def _build_mkdocs_site(
     )
 
 
-def _handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
+@depends.inject  # type: ignore[misc]
+def _handle_mkdocs_build_result(
+    site: t.Any, mkdocs_serve: bool, console: Inject[Console] = None
+) -> None:
     if site:
         console.print(
             f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}"
@@ -1130,7 +1149,7 @@ def _handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
         console.print("[red]❌[/red] Failed to generate MkDocs site")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_contextual_ai(
     contextual_ai: bool,
     ai_recommendations: int,
@@ -1523,7 +1542,7 @@ def _handle_specialized_analytics(local_vars: t.Any) -> bool:
     return _handle_advanced_features(local_vars)
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_coverage_info(
     coverage_info: dict[str, t.Any], console: Inject[Console]
 ) -> None:
@@ -1542,14 +1561,14 @@ def _display_coverage_info(
         console.print(f"[dim]{status_message}[/dim]")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_coverage_report(test_manager: t.Any, console: Inject[Console]) -> None:
     coverage_report = test_manager.get_coverage_report()
     if coverage_report:
         console.print(f"[cyan]Details:[/cyan] {coverage_report}")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _display_ratchet_status(test_manager: t.Any, console: Inject[Console]) -> None:
     from contextlib import suppress
 
@@ -1565,7 +1584,7 @@ def _display_ratchet_status(test_manager: t.Any, console: Inject[Console]) -> No
                 console.print(f"[green]Milestones Achieved:[/green] {len(milestones)}")
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_coverage_status(
     coverage_status: bool, options: t.Any, console: Inject[Console]
 ) -> bool:
@@ -1602,7 +1621,7 @@ def _handle_coverage_status(
         return False
 
 
-@depends.inject
+@depends.inject  # type: ignore[misc]
 def _handle_semantic_commands(
     index: str | None,
     search: str | None,
