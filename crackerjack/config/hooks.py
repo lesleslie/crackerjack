@@ -209,7 +209,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=10,  # Phase 10.4.1: Profiled P95=0.80s, safety=3x
+        timeout=20,  # Actual runtime: 12.6s with mdformat-ruff plugin (UV init + formatting)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation

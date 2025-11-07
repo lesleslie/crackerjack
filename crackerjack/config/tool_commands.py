@@ -149,7 +149,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "python",
             "-m",
             "crackerjack.tools.mdformat_wrapper",
-            "--check",
         ],
         # Use explicit project path flag; include venv discovery
         "creosote": [
