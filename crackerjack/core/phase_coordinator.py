@@ -95,6 +95,7 @@ class PhaseCoordinator:
         self._filesystem_cache = filesystem_cache
 
         self._last_hook_summary: dict[str, t.Any] | None = None
+        self._last_hook_results: list[HookResult] = []
 
         self._lazy_autofix = create_lazy_service(
             lambda: AutofixCoordinator(pkg_path=pkg_path),
@@ -167,14 +168,39 @@ class PhaseCoordinator:
             return True
 
         self.session.track_task("hooks_fast", "Fast quality checks")
-        self._display_hook_phase_header(
-            "FAST HOOKS",
-            "Formatters, import sorting, and quick static analysis",
-        )
 
-        success = self._execute_hooks_with_retry(
-            "fast", self.hook_manager.run_fast_hooks, options
-        )
+        # Fast hooks get 2 attempts (auto-fix on failure), comprehensive hooks run once
+        max_attempts = 2
+        attempt = 0
+
+        while attempt < max_attempts:
+            attempt += 1
+
+            # Display stage header for each attempt
+            if attempt > 1:
+                self.console.print(
+                    f"\n[yellow]♻️  Retry Attempt {attempt}/{max_attempts}[/yellow]\n"
+                )
+
+            self._display_hook_phase_header(
+                "FAST HOOKS",
+                "Formatters, import sorting, and quick static analysis",
+            )
+
+            success = self._execute_hooks_once(
+                "fast", self.hook_manager.run_fast_hooks, options, attempt
+            )
+
+            if success:
+                break
+
+            # Fast iteration mode intentionally avoids retries
+            if getattr(options, "fast_iteration", False):
+                break
+
+            # If we have more attempts, continue to retry
+            if attempt < max_attempts:
+                self._display_hook_failures("fast", self._last_hook_results, options)
 
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
@@ -202,11 +228,18 @@ class PhaseCoordinator:
             "Type, security, and complexity checking",
         )
 
-        success = self._execute_hooks_with_retry(
+        # Comprehensive hooks run once (no retry)
+        success = self._execute_hooks_once(
             "comprehensive",
             self.hook_manager.run_comprehensive_hooks,
             options,
+            attempt=1,
         )
+
+        if not success:
+            self._display_hook_failures(
+                "comprehensive", self._last_hook_results, options
+            )
 
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
@@ -259,6 +292,16 @@ class PhaseCoordinator:
         if not options.commit:
             return True
 
+        # Skip if publishing phase already handled commits
+        # (Publishing phase handles both pre-publish and version-bump commits when -c is used)
+        version_type = self._determine_version_type(options)
+        if version_type:
+            # Publishing workflow already committed everything
+            self.console.print(
+                "[dim]ℹ️ Commit phase skipped (handled by publish workflow)[/dim]"
+            )
+            return True
+
         # Display commit & push header
         self._display_commit_push_header()
         self.session.track_task("commit", "Git commit and push")
@@ -268,58 +311,44 @@ class PhaseCoordinator:
         commit_message = self._get_commit_message(changed_files, options)
         return self._execute_commit_and_push(changed_files, commit_message)
 
-    def _execute_hooks_with_retry(
+    def _execute_hooks_once(
         self,
         suite_name: str,
         hook_runner: t.Callable[[], list[HookResult]],
         options: OptionsProtocol,
+        attempt: int,
     ) -> bool:
-        """Execute a hook suite with lightweight retry handling."""
-        attempt = 0
-        # Only fast hooks should retry on failure; comprehensive hooks run once
-        max_attempts = 2 if suite_name == "fast" else 1
+        """Execute a hook suite once (no retry logic - retry is handled at stage level)."""
         self._last_hook_summary = None
+        self._last_hook_results = []
 
-        while attempt < max_attempts:
-            attempt += 1
-            try:
-                hook_results = hook_runner() or []
-            except Exception as exc:
-                self.console.print(
-                    f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
-                )
-                self.logger.exception(
-                    "Hook execution raised exception",
-                    extra={"suite": suite_name, "attempt": attempt},
-                )
-                return False
+        try:
+            hook_results = hook_runner() or []
+            self._last_hook_results = hook_results
+        except Exception as exc:
+            self.console.print(
+                f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
+            )
+            self.logger.exception(
+                "Hook execution raised exception",
+                extra={"suite": suite_name, "attempt": attempt},
+            )
+            return False
 
-            summary = self.hook_manager.get_hook_summary(hook_results)
-            self._last_hook_summary = summary
-            self._report_hook_results(suite_name, hook_results, summary, attempt)
+        summary = self.hook_manager.get_hook_summary(hook_results)
+        self._last_hook_summary = summary
+        self._report_hook_results(suite_name, hook_results, summary, attempt)
 
-            if summary.get("failed", 0) == 0 and summary.get("errors", 0) == 0:
-                return True
-
-            self._display_hook_failures(suite_name, hook_results, options)
-
-            # Fast iteration mode intentionally avoids retries
-            if getattr(options, "fast_iteration", False):
-                break
-
-            # If we have more attempts, the loop will continue and retry
+        if summary.get("failed", 0) == 0 and summary.get("errors", 0) == 0:
+            return True
 
         self.logger.warning(
             "Hook suite reported failures",
             extra={
                 "suite": suite_name,
-                "attempts": attempt,
-                "failed": self._last_hook_summary.get("failed", 0)
-                if self._last_hook_summary
-                else None,
-                "errors": self._last_hook_summary.get("errors", 0)
-                if self._last_hook_summary
-                else None,
+                "attempt": attempt,
+                "failed": summary.get("failed", 0),
+                "errors": summary.get("errors", 0),
             },
         )
         return False
@@ -496,6 +525,27 @@ class PhaseCoordinator:
         self, options: OptionsProtocol, version_type: str
     ) -> bool:
         # ========================================
+        # STAGE 0: PRE-PUBLISH COMMIT (if -c flag)
+        # ========================================
+        # If user specified --commit, commit any existing changes BEFORE version bump
+        if options.commit:
+            existing_changes = self.git_service.get_changed_files()
+            if existing_changes:
+                self._display_commit_push_header()
+                self.console.print(
+                    "[cyan]ℹ️[/cyan] Committing existing changes before version bump..."
+                )
+                commit_message = self._get_commit_message(existing_changes, options)
+                if not self._execute_commit_and_push(existing_changes, commit_message):
+                    self.session.fail_task(
+                        "publishing", "Failed to commit pre-publish changes"
+                    )
+                    return False
+                self.console.print(
+                    "[green]✅[/green] Pre-publish changes committed and pushed\n"
+                )
+
+        # ========================================
         # STAGE 1: VERSION BUMP
         # ========================================
         self._display_version_bump_header()
@@ -518,7 +568,7 @@ class PhaseCoordinator:
         # Stage changes
         changed_files = self.git_service.get_changed_files()
         if not changed_files:
-            self.console.print("[yellow]⚠️ No changes to stage[/yellow]")
+            self.console.print("[yellow]⚠️[/yellow] No changes to stage")
             self.session.fail_task("publishing", "No changes to commit")
             return False
 
@@ -538,12 +588,12 @@ class PhaseCoordinator:
         if not options.no_git_tags:
             if not self.publish_manager.create_git_tag_local(new_version):
                 self.console.print(
-                    f"[yellow]⚠️ Failed to create git tag v{new_version}[/yellow]"
+                    f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}"
                 )
 
         # Push commit and tag together in single operation
         if not self.git_service.push_with_tags():
-            self.console.print("[yellow]⚠️ Push failed. Please push manually.[/yellow]")
+            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually.")
             # Not failing the whole workflow for a push failure
         else:
             self.console.print("[green]✅[/green] Pushed to remote (commit + tag)")
@@ -626,7 +676,7 @@ class PhaseCoordinator:
             self.session.fail_task("commit", "Failed to commit files")
             return False
         if not self.git_service.push():
-            self.console.print("[yellow]⚠️ Push failed. Please push manually.[/yellow]")
+            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually.")
             # Not failing the whole workflow for a push failure
         self.session.complete_task("commit", "Committed and pushed changes")
         return True

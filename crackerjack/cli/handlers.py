@@ -400,6 +400,16 @@ def handle_acb_workflow_mode(
 
         console.print(f"[dim]Selected workflow: {workflow.name}[/dim]")
 
+        # Show orchestration status
+        from crackerjack.config import CrackerjackSettings
+
+        settings = depends.get_sync(CrackerjackSettings)
+        if settings.enable_orchestration:
+            mode_info = f" ({settings.orchestration_mode} mode)"
+            console.print(
+                f"[dim]Orchestration: [cyan]⚡ enabled[/cyan]{mode_info} - async hooks with caching[/dim]"
+            )
+
         # Phase 4.1: Retrieve WorkflowPipeline from DI container (synchronous context)
         # and pass it explicitly in workflow context to avoid async DI scope issues
         from crackerjack.core.workflow_orchestrator import WorkflowPipeline

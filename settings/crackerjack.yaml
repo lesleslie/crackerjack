@@ -83,7 +83,7 @@ zuban_timeout: 30
 # === Orchestration Settings ===
 
 # Core orchestration
-enable_orchestration: false
+enable_orchestration: true
 orchestration_mode: "acb"  # 'legacy' or 'acb'
 
 # Cache settings
@@ -99,8 +99,8 @@ stop_on_critical_failure: true
 
 # Advanced orchestration
 enable_dependency_resolution: true
-log_cache_stats: false
-log_execution_timing: false
+log_cache_stats: true
+log_execution_timing: true
 
 # Triple parallelism (Phase 5-7)
 enable_strategy_parallelism: true  # Run fast + comprehensive concurrently
