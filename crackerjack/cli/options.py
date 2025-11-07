@@ -78,6 +78,7 @@ class Options(BaseModel):
     bump: BumpOption | None = None
     verbose: bool = False
     debug: bool = False
+    ai_debug: bool = False  # Enable verbose debugging for AI auto-fixing mode
     benchmark: bool = False
     test_workers: int = 0
     test_timeout: int = 0

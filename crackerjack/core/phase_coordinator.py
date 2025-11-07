@@ -301,7 +301,7 @@ class PhaseCoordinator:
             if summary.get("failed", 0) == 0 and summary.get("errors", 0) == 0:
                 return True
 
-            self._display_hook_failures(suite_name, hook_results)
+            self._display_hook_failures(suite_name, hook_results, options)
 
             # Fast iteration mode intentionally avoids retries
             if getattr(options, "fast_iteration", False):
@@ -420,7 +420,12 @@ class PhaseCoordinator:
         self,
         suite_name: str,
         results: list[HookResult],
+        options: OptionsProtocol,
     ) -> None:
+        # Show detailed failures if --verbose or --ai-debug flag is set
+        if not (options.verbose or getattr(options, "ai_debug", False)):
+            return
+
         failing = [
             result
             for result in results
@@ -490,36 +495,92 @@ class PhaseCoordinator:
     def _execute_publishing_workflow(
         self, options: OptionsProtocol, version_type: str
     ) -> bool:
+        # ========================================
+        # STAGE 1: VERSION BUMP
+        # ========================================
+        self._display_version_bump_header()
+
         new_version = self.publish_manager.bump_version(version_type)
         if not new_version:
             self.session.fail_task("publishing", "Version bumping failed")
             return False
 
-        self.console.print(f"Version bumped to {new_version}")
+        self.console.print(f"[green]✅[/green] Version bumped to {new_version}")
+        self.console.print(
+            f"[green]✅[/green] Changelog updated for version {new_version}"
+        )
 
-        # Stage files before publishing
-        if not self.git_service.add_all_files():
-            self.console.print(
-                "[yellow]⚠️ Failed to stage files, continuing...[/yellow]"
-            )
+        # ========================================
+        # STAGE 2: COMMIT & PUSH
+        # ========================================
+        self._display_commit_push_header()
 
+        # Stage changes
+        changed_files = self.git_service.get_changed_files()
+        if not changed_files:
+            self.console.print("[yellow]⚠️ No changes to stage[/yellow]")
+            self.session.fail_task("publishing", "No changes to commit")
+            return False
+
+        if not self.git_service.add_files(changed_files):
+            self.session.fail_task("publishing", "Failed to stage files")
+            return False
+        self.console.print(f"[green]✅[/green] Staged {len(changed_files)} files")
+
+        # Commit
+        commit_message = f"chore: bump version to {new_version}"
+        if not self.git_service.commit(commit_message):
+            self.session.fail_task("publishing", "Failed to commit changes")
+            return False
+        self.console.print(f"[green]✅[/green] Committed: {commit_message}")
+
+        # Push
+        if not self.git_service.push():
+            self.console.print("[yellow]⚠️ Push failed. Please push manually.[/yellow]")
+            # Not failing the whole workflow for a push failure
+        else:
+            self.console.print("[green]✅[/green] Pushed to remote")
+
+        # ========================================
+        # STAGE 3: PUBLISH TO PYPI
+        # ========================================
+        self._display_publish_header()
+
+        # Create and push git tag (ONLY in publish workflow)
+        if not options.no_git_tags:
+            if not self.publish_manager.create_git_tag(new_version):
+                self.console.print(
+                    f"[yellow]⚠️ Failed to create git tag v{new_version}[/yellow]"
+                )
+            else:
+                self.console.print(
+                    f"[green]✅[/green] Created and pushed tag v{new_version}"
+                )
+
+        # Build and publish package
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")
             return False
 
-        if not options.no_git_tags:
-            if not self.publish_manager.create_git_tag(new_version):
-                self.console.print(
-                    f"[yellow]⚠️ Failed to create git tag {new_version}[/yellow]"
-                )
-
         self.session.complete_task("publishing", f"Published version {new_version}")
         return True
+
+    def _display_version_bump_header(self) -> None:
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print("[bold bright_cyan]📝 VERSION BUMP[/bold bright_cyan]")
+        self.console.print(sep + "\n")
 
     def _display_commit_push_header(self) -> None:
         sep = make_separator("-")
         self.console.print("\n" + sep)
         self.console.print("[bold bright_blue]📦 COMMIT & PUSH[/bold bright_blue]")
+        self.console.print(sep + "\n")
+
+    def _display_publish_header(self) -> None:
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print("[bold bright_green]🚀 PUBLISH TO PYPI[/bold bright_green]")
         self.console.print(sep + "\n")
 
     def _handle_no_changes_to_commit(self) -> bool:

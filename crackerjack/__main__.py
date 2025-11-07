@@ -455,6 +455,7 @@ def _setup_debug_and_verbose_flags(
         ai_fix = True
         verbose = True
         options.verbose = True
+        options.ai_debug = True  # Set ai_debug on options for downstream checks
 
     if debug:
         verbose = True

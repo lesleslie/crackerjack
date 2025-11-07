@@ -164,7 +164,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-added-large-files",
         command=[],
-        timeout=20,  # UV init (~10s) + tool execution (P95=0.27s) + safety margin
+        timeout=30,  # UV init (~10s) + tool execution (P95=0.27s) + increased safety margin
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),

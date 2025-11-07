@@ -72,7 +72,7 @@ class TestManager:
                 return self._handle_test_success(result.stdout, duration)
             else:
                 return self._handle_test_failure(
-                    result.stderr if result else "", duration
+                    result.stderr if result else "", duration, options
                 )
 
         except Exception as e:
@@ -280,10 +280,20 @@ class TestManager:
 
         return True
 
-    def _handle_test_failure(self, output: str, duration: float) -> bool:
+    def _handle_test_failure(
+        self, output: str, duration: float, options: OptionsProtocol
+    ) -> bool:
         self.console.print(f"[red]❌[/ red] Tests failed in {duration: .1f}s")
 
-        self._last_test_failures = self._extract_failure_lines(output)
+        # Extract and display failures if --verbose or --ai-debug is enabled
+        if options.verbose or getattr(options, "ai_debug", False):
+            self._last_test_failures = self._extract_failure_lines(output)
+            if output.strip():
+                self.console.print("\n[red]Test Output:[/red]")
+                self.console.print(output)
+        else:
+            self._last_test_failures = []
+
         return False
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:

@@ -1,5 +1,13 @@
 ______________________________________________________________________
 
+## [0.42.1] - 2025-11-07
+
+### Changed
+
+- Crackerjack (quality: 67/100) - 2025-11-07 06:55:13
+- Raise large file limit to 1MB for comprehensive frameworks
+- Update config, docs
+
 ## [Unreleased] - 2025-11-07
 
 ### Added
