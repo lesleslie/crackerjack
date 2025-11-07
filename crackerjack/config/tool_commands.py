@@ -57,112 +57,112 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         Dictionary mapping hook names to command lists
     """
     return {
-    # ========================================================================
-    # CUSTOM TOOLS (crackerjack native)
-    # ========================================================================
-    "validate-regex-patterns": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "crackerjack.tools.validate_regex_patterns",
-    ],
-    "skylos": [
-        "uv",
-        "run",
-        "skylos",
-        "--exclude-folder",
-        "tests",
-        ".",
-    ],  # Use current CLI: `uv run skylos --exclude-folder tests .`
-    "zuban": [
-        "uv",
-        "run",
-        "zuban",
-        "check",
-        "--config-file",
-        "mypy.ini",
-        f"./{package_name}",
-    ],
-    # ========================================================================
-    # PRE-COMMIT-HOOKS (native implementations in crackerjack.tools)
-    # ========================================================================
-    "trailing-whitespace": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "crackerjack.tools.trailing_whitespace",
-    ],
-    "end-of-file-fixer": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "crackerjack.tools.end_of_file_fixer",
-    ],
-    "check-yaml": ["uv", "run", "python", "-m", "crackerjack.tools.check_yaml"],
-    "check-toml": ["uv", "run", "python", "-m", "crackerjack.tools.check_toml"],
-    "check-added-large-files": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "crackerjack.tools.check_added_large_files",
-        "--maxkb",
-        "1000",  # 1MB limit for comprehensive frameworks with large lock files
-    ],
-    # ========================================================================
-    # THIRD-PARTY TOOLS (direct invocation)
-    # ========================================================================
-    "uv-lock": ["uv", "lock"],
-    "gitleaks": [
-        "uv",
-        "run",
-        "gitleaks",
-        "protect",
-        "-v",
-    ],
-    "bandit": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "bandit",
-        "-c",
-        "pyproject.toml",
-        "-r",
-        package_name,
-    ],
-    "codespell": [
-        "uv",
-        "run",
-        "python",
-        "-m",
-        "crackerjack.tools.codespell_wrapper",
-    ],
-    "ruff-check": ["uv", "run", "python", "-m", "ruff", "check", "."],
-    "ruff-format": ["uv", "run", "python", "-m", "ruff", "format", "."],
-    "mdformat": ["uv", "run", "python", "-m", "mdformat", "--check", "."],
-    # Use explicit project path flag; include venv discovery
-    "creosote": [
-        "uv",
-        "run",
-        "creosote",
-        "-p",
-        package_name,
-        "--venv",
-        ".venv",
-    ],
-    "complexipy": [
-        "uv",
-        "run",
-        "complexipy",
-        "--max-complexity-allowed",
-        "15",
-        package_name,
-    ],
-    "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
+        # ========================================================================
+        # CUSTOM TOOLS (crackerjack native)
+        # ========================================================================
+        "validate-regex-patterns": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.validate_regex_patterns",
+        ],
+        "skylos": [
+            "uv",
+            "run",
+            "skylos",
+            "--exclude-folder",
+            "tests",
+            ".",
+        ],  # Use current CLI: `uv run skylos --exclude-folder tests .`
+        "zuban": [
+            "uv",
+            "run",
+            "zuban",
+            "check",
+            "--config-file",
+            "mypy.ini",
+            f"./{package_name}",
+        ],
+        # ========================================================================
+        # PRE-COMMIT-HOOKS (native implementations in crackerjack.tools)
+        # ========================================================================
+        "trailing-whitespace": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.trailing_whitespace",
+        ],
+        "end-of-file-fixer": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.end_of_file_fixer",
+        ],
+        "check-yaml": ["uv", "run", "python", "-m", "crackerjack.tools.check_yaml"],
+        "check-toml": ["uv", "run", "python", "-m", "crackerjack.tools.check_toml"],
+        "check-added-large-files": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.check_added_large_files",
+            "--maxkb",
+            "1000",  # 1MB limit for comprehensive frameworks with large lock files
+        ],
+        # ========================================================================
+        # THIRD-PARTY TOOLS (direct invocation)
+        # ========================================================================
+        "uv-lock": ["uv", "lock"],
+        "gitleaks": [
+            "uv",
+            "run",
+            "gitleaks",
+            "protect",
+            "-v",
+        ],
+        "bandit": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "bandit",
+            "-c",
+            "pyproject.toml",
+            "-r",
+            package_name,
+        ],
+        "codespell": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.codespell_wrapper",
+        ],
+        "ruff-check": ["uv", "run", "python", "-m", "ruff", "check", "."],
+        "ruff-format": ["uv", "run", "python", "-m", "ruff", "format", "."],
+        "mdformat": ["uv", "run", "python", "-m", "mdformat", "--check", "."],
+        # Use explicit project path flag; include venv discovery
+        "creosote": [
+            "uv",
+            "run",
+            "creosote",
+            "-p",
+            package_name,
+            "--venv",
+            ".venv",
+        ],
+        "complexipy": [
+            "uv",
+            "run",
+            "complexipy",
+            "--max-complexity-allowed",
+            "15",
+            package_name,
+        ],
+        "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
     }
 
 
