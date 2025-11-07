@@ -46,6 +46,7 @@ class SafePatternApplicator:
             "noqa",
             "pragma",
             "regex ok",
+            "todo",
         ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 

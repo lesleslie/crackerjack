@@ -158,7 +158,10 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     from crackerjack.slash_commands import get_slash_command_path
 
-    @mcp_app.prompt("run")
+    @mcp_app.prompt(
+        "run",
+        description="Run Crackerjack quality checks with customizable options (hooks, tests, AI fixing)",
+    )
     async def get_crackerjack_run_prompt() -> str:
         try:
             command_path = get_slash_command_path("run")
@@ -167,7 +170,10 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
             msg = f"Failed to read run command: {e}"
             raise ValueError(msg)
 
-    @mcp_app.prompt("init")
+    @mcp_app.prompt(
+        "init",
+        description="Initialize Crackerjack in a new project (creates pyproject.toml config, pre-commit hooks)",
+    )
     async def get_crackerjack_init_prompt() -> str:
         try:
             command_path = get_slash_command_path("init")
@@ -176,7 +182,10 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
             msg = f"Failed to read init command: {e}"
             raise ValueError(msg)
 
-    @mcp_app.prompt("status")
+    @mcp_app.prompt(
+        "status",
+        description="Get comprehensive Crackerjack status (hooks, coverage, git state, server health)",
+    )
     async def get_crackerjack_status_prompt() -> str:
         try:
             command_path = get_slash_command_path("status")
