@@ -330,8 +330,8 @@ class PhaseCoordinator:
         # Combine title and description into a single line with leading icon
         pretty_title = title.title()
         message = (
-            f"[bold bright_cyan]🔍[/bold bright_cyan] "
-            f"[bold bright_white]{pretty_title} - {description}[/bold bright_white]"
+            f"[bold bright_cyan]🔍 {pretty_title}[/bold bright_cyan][bold bright_white]"
+            f" - {description}[/bold bright_white]"
         )
         self.console.print(message)
         self.console.print(sep + "\n")
@@ -362,7 +362,7 @@ class PhaseCoordinator:
 
         if failed or errors:
             self.console.print(
-                f"\n[red]❌[/red] {base_message} ({failed} failed, {errors} errors).\n"
+                f"\n[red]❌ {base_message}[/red] ({failed} failed, {errors} errors).\n"
             )
         else:
             self.console.print(f"\n[green]✅[/green] {base_message}.\n")
@@ -511,7 +511,7 @@ class PhaseCoordinator:
         )
 
         # ========================================
-        # STAGE 2: COMMIT & PUSH
+        # STAGE 2: COMMIT, TAG & PUSH
         # ========================================
         self._display_commit_push_header()
 
@@ -534,28 +534,24 @@ class PhaseCoordinator:
             return False
         self.console.print(f"[green]✅[/green] Committed: {commit_message}")
 
-        # Push
-        if not self.git_service.push():
+        # Create git tag locally (before push, so both commit and tag go together)
+        if not options.no_git_tags:
+            if not self.publish_manager.create_git_tag_local(new_version):
+                self.console.print(
+                    f"[yellow]⚠️ Failed to create git tag v{new_version}[/yellow]"
+                )
+
+        # Push commit and tag together in single operation
+        if not self.git_service.push_with_tags():
             self.console.print("[yellow]⚠️ Push failed. Please push manually.[/yellow]")
             # Not failing the whole workflow for a push failure
         else:
-            self.console.print("[green]✅[/green] Pushed to remote")
+            self.console.print("[green]✅[/green] Pushed to remote (commit + tag)")
 
         # ========================================
         # STAGE 3: PUBLISH TO PYPI
         # ========================================
         self._display_publish_header()
-
-        # Create and push git tag (ONLY in publish workflow)
-        if not options.no_git_tags:
-            if not self.publish_manager.create_git_tag(new_version):
-                self.console.print(
-                    f"[yellow]⚠️ Failed to create git tag v{new_version}[/yellow]"
-                )
-            else:
-                self.console.print(
-                    f"[green]✅[/green] Created and pushed tag v{new_version}"
-                )
 
         # Build and publish package
         if not self.publish_manager.publish_package():

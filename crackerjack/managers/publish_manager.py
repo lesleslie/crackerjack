@@ -517,7 +517,28 @@ class PublishManagerImpl:
             self.console.print(f"[red]❌[/ red] Cleanup error: {e}")
             return False
 
+    def create_git_tag_local(self, version: str) -> bool:
+        """Create git tag locally without pushing (for use with push_with_tags)."""
+        try:
+            if self.dry_run:
+                self.console.print(
+                    f"[yellow]🔍[/ yellow] Would create git tag: v{version}",
+                )
+                return True
+            result = self._run_command(["git", "tag", f"v{version}"])
+            if result.returncode == 0:
+                self.console.print(f"[green]🏷️[/ green] Created git tag: v{version}")
+                return True
+            self.console.print(
+                f"[red]❌[/ red] Failed to create tag: {result.stderr}",
+            )
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/ red] Tag creation error: {e}")
+            return False
+
     def create_git_tag(self, version: str) -> bool:
+        """Create git tag and push it immediately (legacy method for standalone use)."""
         try:
             if self.dry_run:
                 self.console.print(

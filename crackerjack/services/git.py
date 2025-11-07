@@ -21,6 +21,7 @@ GIT_COMMANDS = {
     "commit": ["commit", "-m"],
     "add_updated": ["add", "-u"],
     "push_porcelain": ["push", "--porcelain"],
+    "push_with_tags": ["push", "--porcelain", "--follow-tags"],
     "current_branch": ["branch", "--show-current"],
     "commits_ahead": ["rev-list", "--count", "@{u}..HEAD"],
 }
@@ -199,6 +200,19 @@ class GitService(GitInterface):
     def push(self) -> bool:
         try:
             result = self._run_git_command(GIT_COMMANDS["push_porcelain"])
+            if result.returncode == 0:
+                self._display_push_success(result.stdout)
+                return True
+            self.console.print(f"[red]❌[/ red] Push failed: {result.stderr}")
+            return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/ red] Error pushing: {e}")
+            return False
+
+    def push_with_tags(self) -> bool:
+        """Push commits and any tags to remote using --follow-tags."""
+        try:
+            result = self._run_git_command(GIT_COMMANDS["push_with_tags"])
             if result.returncode == 0:
                 self._display_push_success(result.stdout)
                 return True
