@@ -45,6 +45,15 @@ ______________________________________________________________________
 - fix: resolve bug in parser
 
 
+## [Unreleased] - 2025-11-07
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [0.42.0] - 2025-11-06
 
 ### Added
