@@ -179,7 +179,7 @@ class PhaseCoordinator:
             # Display stage header for each attempt
             if attempt > 1:
                 self.console.print(
-                    f"\n[yellow]♻️  Retry Attempt {attempt}/{max_attempts}[/yellow]\n"
+                    f"\n[yellow]♻️[/yellow]  Retry Attempt {attempt}/{max_attempts}\n"
                 )
 
             self._display_hook_phase_header(
