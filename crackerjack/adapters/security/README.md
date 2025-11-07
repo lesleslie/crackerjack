@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Security](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Security](<./README.md>)
 
 # Security Adapters
 
@@ -41,7 +41,9 @@ from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSett
 
 
 async def scan_secrets() -> None:
-    adapter = GitleaksAdapter(settings=GitleaksSettings(scan_mode="protect", redact=True))
+    adapter = GitleaksAdapter(
+        settings=GitleaksSettings(scan_mode="protect", redact=True)
+    )
     await adapter.init()
     result = await adapter.check(files=[Path(".")])
 ```
@@ -54,5 +56,5 @@ async def scan_secrets() -> None:
 
 ## Related
 
-- [Type](../type/README.md) — Type safety can prevent classes of security bugs
-- [Lint](../lint/README.md) — Clean text and naming supports code clarity
+- [Type](<../type/README.md>) — Type safety can prevent classes of security bugs
+- [Lint](<../lint/README.md>) — Clean text and naming supports code clarity

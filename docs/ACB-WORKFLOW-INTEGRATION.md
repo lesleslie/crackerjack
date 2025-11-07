@@ -64,6 +64,7 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
 ```
 
 **Key Methods:**
+
 - `execute()`: Workflow execution with event notifications
 - `_execute_step_with_retry()`: Step execution with event emissions
 
@@ -84,7 +85,7 @@ step[fast_hooks].started           →  QUALITY_PHASE_STARTED
 step[fast_hooks].completed         →  QUALITY_PHASE_COMPLETED
 ```
 
-**Design Pattern**: Generic event mapping (QUALITY_PHASE_* for all quality steps) since WorkflowEvent enum doesn't have specific hook events.
+**Design Pattern**: Generic event mapping (QUALITY_PHASE\_\* for all quality steps) since WorkflowEvent enum doesn't have specific hook events.
 
 #### 3. Workflow Definitions (`crackerjack/workflows/definitions.py`)
 
@@ -113,6 +114,7 @@ FAST_HOOKS_WORKFLOW = WorkflowDefinition(
 ```
 
 **Available Workflows:**
+
 - `FAST_HOOKS_WORKFLOW`: Configuration + Fast hooks
 - `COMPREHENSIVE_WORKFLOW`: Full quality pipeline (fast → cleaning → comprehensive)
 - `TEST_WORKFLOW`: Test execution workflow
@@ -149,6 +151,7 @@ python -m crackerjack --fast --skip-hooks
 ```
 
 **Implementation Files:**
+
 - `crackerjack/cli/options.py`: Options model + CLI_OPTIONS dictionary
 - `crackerjack/__main__.py`: main() function parameter
 - `crackerjack/cli/handlers.py`: Routing logic + error handling
@@ -197,9 +200,10 @@ depends.set(WorkflowOrchestrator, orchestrator)
 **Error**: `DependencyResolutionError: No handler found for MemoryOptimizerProtocol`
 
 **Phase 2 Solution**:
+
 1. Register all WorkflowOrchestrator dependencies (MemoryOptimizer, Config, Console, etc.)
-2. Implement proper service initialization order
-3. Use container lifecycle management
+1. Implement proper service initialization order
+1. Use container lifecycle management
 
 ### 2. API Mismatches
 
@@ -214,6 +218,7 @@ result.duration_ms  # ✅ Returns milliseconds
 ```
 
 **Fix**: Convert in event bridge:
+
 ```python
 await self.event_bridge.on_step_completed(
     step.step_id,
@@ -236,6 +241,7 @@ orch = depends.get_sync(WorkflowOrchestrator)  # ✅ Actual instance
 ```
 
 **Available Methods:**
+
 - `depends.get()`: Async (returns coroutine)
 - `depends.get_async()`: Explicitly async
 - `depends.get_sync()`: Synchronous retrieval
@@ -257,6 +263,7 @@ async def run_fast_hooks(
 **Root Cause**: ACB's engine calls handlers directly without going through the DI decorator mechanism.
 
 **Phase 1 Workaround**: Manual fallback
+
 ```python
 if not orchestrator:
     orchestrator = depends.get_sync(WorkflowOrchestrator)
@@ -278,6 +285,7 @@ Selected workflow: Fast Quality Checks
 ```
 
 **Validation Criteria**: ✅ All Met
+
 - [x] Feature flag successfully routes to ACB workflow engine
 - [x] Workflow engine executes declarative workflow
 - [x] Event bridge translates events correctly
@@ -288,22 +296,25 @@ Selected workflow: Fast Quality Checks
 ### Architectural Validation
 
 **Proven Patterns:**
+
 1. ✅ Feature flag pattern enables safe A/B testing
-2. ✅ Event bridge maintains backward compatibility
-3. ✅ Declarative workflows simplify orchestration logic
-4. ✅ ACB's parallel execution can integrate with crackerjack
-5. ✅ Error handling provides production safety
+1. ✅ Event bridge maintains backward compatibility
+1. ✅ Declarative workflows simplify orchestration logic
+1. ✅ ACB's parallel execution can integrate with crackerjack
+1. ✅ Error handling provides production safety
 
 **Identified Gaps:**
+
 1. ⚠️ DI container setup needs comprehensive dependency registration
-2. ⚠️ Service lifecycle management required for proper initialization
-3. ⚠️ Action handlers need full WorkflowOrchestrator integration
+1. ⚠️ Service lifecycle management required for proper initialization
+1. ⚠️ Action handlers need full WorkflowOrchestrator integration
 
 ## Phase 2 Requirements
 
 ### 1. Complete DI Container Setup
 
 **Required Registrations:**
+
 ```python
 # All WorkflowOrchestrator dependencies
 depends.set(MemoryOptimizerProtocol, memory_optimizer)
@@ -315,6 +326,7 @@ depends.set(TestManagerProtocol, test_manager)
 ```
 
 **Implementation Strategy:**
+
 - Create `WorkflowContainerBuilder` to handle registration order
 - Implement dependency graph resolution
 - Add container lifecycle hooks (startup/shutdown)
@@ -322,6 +334,7 @@ depends.set(TestManagerProtocol, test_manager)
 ### 2. Service Lifecycle Management
 
 **Critical Order:**
+
 ```
 1. Console (no dependencies)
 2. FileSystemService (depends on Console)
@@ -331,6 +344,7 @@ depends.set(TestManagerProtocol, test_manager)
 ```
 
 **Implementation:**
+
 - Use ACB's container initialization hooks
 - Implement async initialization for services that need it
 - Add health checks to verify proper initialization
@@ -338,6 +352,7 @@ depends.set(TestManagerProtocol, test_manager)
 ### 3. Full Action Handler Integration
 
 **Current (POC)**:
+
 ```python
 async def run_fast_hooks(...) -> dict:
     print("✓ ACB Workflow: Fast hooks phase completed (POC mode)")
@@ -345,6 +360,7 @@ async def run_fast_hooks(...) -> dict:
 ```
 
 **Target (Phase 2)**:
+
 ```python
 async def run_fast_hooks(
     context: dict,
@@ -361,19 +377,22 @@ async def run_fast_hooks(
 ### 4. Performance Optimization
 
 **Benchmarking Required:**
+
 - [ ] Measure ACB workflow overhead vs legacy orchestrator
 - [ ] Profile DI container initialization time
 - [ ] Test parallel execution performance
 - [ ] Validate memory usage patterns
 
 **Target Criteria:**
-- ACB workflow overhead: <5% vs legacy
-- Container initialization: <100ms
+
+- ACB workflow overhead: \<5% vs legacy
+- Container initialization: \<100ms
 - Parallel execution speedup: >20% for independent steps
 
 ### 5. Production Readiness
 
 **Checklist:**
+
 - [ ] Remove POC mode from action handlers
 - [ ] Add comprehensive error handling
 - [ ] Implement retry strategies
@@ -388,12 +407,14 @@ async def run_fast_hooks(
 ### Phase 1 → Phase 2 Criteria
 
 **GO Decision if:**
+
 - [x] POC successfully demonstrates technical feasibility
 - [x] Event bridge pattern proves viable for backward compatibility
-- [x] Performance baseline shows acceptable overhead (<10%)
+- [x] Performance baseline shows acceptable overhead (\<10%)
 - [x] Team consensus on Phase 2 approach
 
 **NO-GO Decision if:**
+
 - [ ] ACB integration adds >15% performance overhead
 - [ ] DI complexity outweighs benefits
 - [ ] Legacy orchestrator proves more maintainable
@@ -404,6 +425,7 @@ async def run_fast_hooks(
 ### Phase 2 → Production Criteria
 
 **GO Decision if:**
+
 - [ ] All Phase 2 requirements implemented
 - [ ] Performance benchmarks meet targets
 - [ ] Integration tests achieve >90% coverage
@@ -413,11 +435,13 @@ async def run_fast_hooks(
 ## Timeline Estimate
 
 **Phase 2 Implementation**: 2-3 weeks
+
 - Week 1: DI container setup + service lifecycle
 - Week 2: Action handler integration + testing
 - Week 3: Performance optimization + documentation
 
 **Production Rollout**: 1 week
+
 - Gradual feature flag rollout (10% → 50% → 100%)
 - Monitor metrics and error rates
 - Rollback plan ready
@@ -427,21 +451,25 @@ async def run_fast_hooks(
 ### Gradual Rollout Plan
 
 1. **Canary (10% traffic)**:
+
    - Enable for internal development only
    - Monitor error rates and performance
    - Validate event bridge compatibility
 
-2. **Beta (50% traffic)**:
+1. **Beta (50% traffic)**:
+
    - Enable for 50% of CI/CD runs
    - A/B test performance metrics
    - Collect user feedback
 
-3. **Full Release (100% traffic)**:
+1. **Full Release (100% traffic)**:
+
    - Default to ACB workflows
    - Keep legacy orchestrator for 1 release as fallback
    - Remove feature flag after stable
 
-4. **Cleanup**:
+1. **Cleanup**:
+
    - Remove legacy orchestrator code
    - Archive Phase 1 POC documentation
    - Update all documentation
@@ -488,16 +516,19 @@ async def run_fast_hooks(
 ### Code Locations
 
 **Core Implementation:**
+
 - `crackerjack/workflows/` - Workflow package
 - `crackerjack/cli/handlers.py:312-382` - handle_acb_workflow_mode()
 - `crackerjack/cli/options.py:152,960-965` - Feature flag
 - `crackerjack/__main__.py:1423,1534` - CLI integration
 
 **Configuration:**
+
 - `crackerjack/workflows/definitions.py` - Workflow YAML definitions
 - `crackerjack/workflows/actions.py` - Action handler registry
 
 **Events:**
+
 - `crackerjack/workflows/event_bridge.py` - EventBridgeAdapter
 - `crackerjack/events/workflow_bus.py` - WorkflowEventBus
 
@@ -520,12 +551,13 @@ Phase 1 POC successfully validates the ACB workflow integration approach. The fe
 **Recommendation**: ✅ **Proceed to Phase 2** with confidence. The technical approach is sound, risks are manageable, and benefits are clear.
 
 **Next Steps:**
-1. Present Phase 1 results to team
-2. Get approval for Phase 2 work
-3. Start DI container builder prototype
-4. Schedule Phase 2 kickoff
 
----
+1. Present Phase 1 results to team
+1. Get approval for Phase 2 work
+1. Start DI container builder prototype
+1. Schedule Phase 2 kickoff
+
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Last Updated**: 2025-11-05

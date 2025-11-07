@@ -1,52 +1,62 @@
 # Publish Workflow Ordering Fix
 
 ## Issue
+
 When running `--all` or `--publish`, the workflow needs three distinct stages with proper headers and correct ordering.
 
 **Desired Flow:**
 
 ### Stage 1: VERSION BUMP (own header)
+
 1. Bump version in pyproject.toml
-2. Update CHANGELOG.md
+1. Update CHANGELOG.md
 
 ### Stage 2: COMMIT & PUSH (existing header)
+
 3. Stage changes (git add)
-4. Git commit with message
-5. Git push to remote
-6. **NO git tag** (only for publish workflow)
+1. Git commit with message
+1. Git push to remote
+1. **NO git tag** (only for publish workflow)
 
 ### Stage 3: PUBLISH TO PYPI (own header)
+
 7. Create git tag and push (**only in publish workflow**)
-8. Build package
-9. Publish to PyPI
+1. Build package
+1. Publish to PyPI
 
 ## Key Requirements
 
 1. **Three separate stage headers**: VERSION BUMP, COMMIT & PUSH, PUBLISH TO PYPI
-2. **Git tags only in publish workflow**: Never create tags during `--commit` alone
-3. **Proper ordering**: Version bump → Commit → Push → Tag → Publish
+1. **Git tags only in publish workflow**: Never create tags during `--commit` alone
+1. **Proper ordering**: Version bump → Commit → Push → Tag → Publish
 
 ## Current State Analysis
 
 **Current files:**
+
 - `crackerjack/core/phase_coordinator.py:249-270` - `run_publishing_phase()` and `run_commit_phase()`
 - `crackerjack/core/phase_coordinator.py:490-517` - `_execute_publishing_workflow()`
 - `crackerjack/core/phase_coordinator.py:519-523` - `_display_commit_push_header()` exists
 
 **Current workflow in `crackerjack/workflows/definitions.py:314-393`:**
+
 ```python
-WorkflowStep(
-    step_id="commit",
-    name="Git Commit & Push",
-    action="run_commit_phase",
-    depends_on=["comprehensive"],
-),
-WorkflowStep(
-    step_id="publish",
-    name="Version Bump & PyPI Publish",
-    action="run_publish_phase",
-    depends_on=["commit"],
-),
+(
+    WorkflowStep(
+        step_id="commit",
+        name="Git Commit & Push",
+        action="run_commit_phase",
+        depends_on=["comprehensive"],
+    ),
+)
+(
+    WorkflowStep(
+        step_id="publish",
+        name="Version Bump & PyPI Publish",
+        action="run_publish_phase",
+        depends_on=["commit"],
+    ),
+)
 ```
 
 ## Solution
@@ -137,7 +147,9 @@ def _execute_publishing_workflow(
                 f"[yellow]⚠️ Failed to create git tag v{new_version}[/yellow]"
             )
         else:
-            self.console.print(f"[green]✅[/green] Created and pushed tag v{new_version}")
+            self.console.print(
+                f"[green]✅[/green] Created and pushed tag v{new_version}"
+            )
 
     # Build and publish package
     if not self.publish_manager.publish_package():
@@ -223,10 +235,11 @@ def run_commit_phase(self, options: OptionsProtocol) -> bool:
 ## Files to Modify
 
 **`crackerjack/core/phase_coordinator.py`:**
+
 1. Add `_display_version_bump_header()` method (~line 519)
-2. Add `_display_publish_header()` method (~line 524)
-3. Refactor `_execute_publishing_workflow()` with three stages (~line 490-517)
-4. Verify `run_commit_phase()` never creates tags (~line 258-269)
+1. Add `_display_publish_header()` method (~line 524)
+1. Refactor `_execute_publishing_workflow()` with three stages (~line 490-517)
+1. Verify `run_commit_phase()` never creates tags (~line 258-269)
 
 ## Testing
 
@@ -253,6 +266,7 @@ git tag  # Verify no tag created, but still publishes
 | PUBLISH TO PYPI | 🚀 PUBLISH TO PYPI | Create tag, build, publish | **Only in publish workflow** |
 
 This ensures:
+
 - ✅ Three distinct stages with clear headers
 - ✅ Git tags only created during publish workflow
 - ✅ `--commit` alone never creates tags

@@ -12,18 +12,20 @@ Phase 4.0 successfully refined the ACB workflow integration by identifying and d
 ## Phase 4 Original Goals vs Phase 4.0 Reality
 
 ### Original Phase 4 Goals
+
 1. ❌ Remove `--use-acb-workflows` feature flag → **Blocked by async DI scope issue**
-2. ❌ Make ACB workflows the default execution path → **Blocked by async DI scope issue**
-3. ✅ Archive legacy orchestrator code → **Deferred to Phase 4.2**
-4. ⚠️ Performance benchmarking and optimization → **In progress (background)**
-5. ✅ Gradual rollout (10% → 50% → 100%) → **Deferred to Phase 4.2**
+1. ❌ Make ACB workflows the default execution path → **Blocked by async DI scope issue**
+1. ✅ Archive legacy orchestrator code → **Deferred to Phase 4.2**
+1. ⚠️ Performance benchmarking and optimization → **In progress (background)**
+1. ✅ Gradual rollout (10% → 50% → 100%) → **Deferred to Phase 4.2**
 
 ### Phase 4.0 Achieved Goals
+
 1. ✅ **Identified async DI scope issue as blocker**
-2. ✅ **Documented root cause and solution path**
-3. ✅ **Maintained production-ready graceful fallback**
-4. ✅ **Split Phase 4 into 4.0 (preparation), 4.1 (fix DI), 4.2 (make ACB default)**
-5. ✅ **Performance baseline measurements in progress**
+1. ✅ **Documented root cause and solution path**
+1. ✅ **Maintained production-ready graceful fallback**
+1. ✅ **Split Phase 4 into 4.0 (preparation), 4.1 (fix DI), 4.2 (make ACB default)**
+1. ✅ **Performance baseline measurements in progress**
 
 ## Technical Blocker: Async DI Scope Issue
 
@@ -32,6 +34,7 @@ Phase 4.0 successfully refined the ACB workflow integration by identifying and d
 **Problem**: When executing ACB workflows via `asyncio.run()` in the CLI handler, the `WorkflowPipeline` registered in the main thread's DI container is not accessible in the async context.
 
 **Error Chain**:
+
 ```python
 RuntimeError: WorkflowPipeline not available via DI
   → at crackerjack/workflows/actions.py:101 in run_fast_hooks()
@@ -43,30 +46,35 @@ AttributeError: 'coroutine' object has no attribute 'exception'
 ```
 
 **Why It Happens**:
+
 1. `WorkflowContainerBuilder.build()` registers all 28 services in the DI container (including `WorkflowPipeline`)
-2. DI container context is thread-local or event-loop-local
-3. `asyncio.run()` creates a NEW event loop with a NEW DI scope
-4. Action handlers try to inject `WorkflowPipeline` via `@depends.inject`
-5. DI system cannot find `WorkflowPipeline` in the new async scope
-6. Fallback to legacy orchestrator occurs (gracefully)
+1. DI container context is thread-local or event-loop-local
+1. `asyncio.run()` creates a NEW event loop with a NEW DI scope
+1. Action handlers try to inject `WorkflowPipeline` via `@depends.inject`
+1. DI system cannot find `WorkflowPipeline` in the new async scope
+1. Fallback to legacy orchestrator occurs (gracefully)
 
 ### Attempted Fixes (Phase 4.0)
 
 **Attempt 1**: Explicitly register ACB Logger before engine creation
+
 - **Result**: Logger was already registered, not the issue
 - **Learning**: The problem is scope, not missing registrations
 
 **Attempt 2**: Invert default logic to try ACB first
+
 - **Result**: ACB workflows execute but fail with DI scope error
 - **Learning**: The architectural issue cannot be solved with routing logic
 
 **Attempt 3**: Add explicit logger retrieval and registration
+
 - **Result**: Confirmed ACB Logger IS available (loguru Logger)
 - **Learning**: The logger issue is a symptom, not the root cause
 
 ### Solution Path (Phase 4.1)
 
 **Option A**: Use existing event loop instead of `asyncio.run()`
+
 ```python
 # Instead of:
 result = asyncio.run(engine.execute(workflow, context={"options": options}))
@@ -77,6 +85,7 @@ result = loop.run_until_complete(engine.execute(workflow, context={"options": op
 ```
 
 **Option B**: Manually transfer DI context to async scope
+
 ```python
 # Save DI state before asyncio.run()
 di_state = depends.get_state()  # Hypothetical ACB API
@@ -86,6 +95,7 @@ depends.restore_state(di_state)  # Restore DI container
 ```
 
 **Option C**: Refactor actions to NOT use DI injection
+
 ```python
 # Instead of @depends.inject with Inject[WorkflowPipeline]
 # Pass WorkflowPipeline explicitly in context:
@@ -132,6 +142,7 @@ if not orchestrated:
 ```
 
 **Changes from Original Phase 4 Plan**:
+
 - ACB is opt-in (`--use-acb-workflows`) instead of opt-out (`--use-legacy-orchestrator`)
 - Legacy orchestrator remains the default path
 - Clear TODO comments document the path to Phases 4.1 and 4.2
@@ -152,6 +163,7 @@ except Exception as e:
 ```
 
 **Features**:
+
 - Full traceback logged for debugging
 - Automatic fallback to legacy orchestrator
 - User-friendly console output
@@ -172,12 +184,14 @@ console.print("[dim]Building DI container (28 services across 7 levels)...[/dim]
 ## Files Modified (Phase 4.0)
 
 ### 1. `crackerjack/cli/options.py`
+
 - **Line 151-153**: Updated comment to reflect Phase 4.0 status and future TODOs
 - **Line 153**: Kept `use_acb_workflows: bool = False` (reverted from `use_legacy_orchestrator`)
 - **Line 1081**: Function parameter (reverted)
 - **Line 1183**: Constructor argument (reverted)
 
 ### 2. `crackerjack/cli/handlers.py`
+
 - **Lines 273-284**: Updated routing logic with clear Phase 4.0/4.1/4.2 TODOs
 - **Line 351**: Updated console message branding
 - **Line 361**: Clarified DI container status message
@@ -185,11 +199,13 @@ console.print("[dim]Building DI container (28 services across 7 levels)...[/dim]
 - **Lines 407-414**: Improved error handling with full traceback
 
 ### 3. Documentation Created
+
 - **`docs/ACB-WORKFLOW-PHASE4.0-COMPLETE.md`**: This document
 
 ## Validation Results (Phase 4.0)
 
 ### Test 1: Legacy Orchestrator (Default Path) ✅
+
 ```bash
 $ python -m crackerjack --skip-hooks
 
@@ -202,6 +218,7 @@ $ python -m crackerjack --skip-hooks
 **Result**: ✅ Legacy orchestrator works correctly as default
 
 ### Test 2: ACB Workflows (Opt-In) ❌ (Expected)
+
 ```bash
 $ python -m crackerjack --use-acb-workflows --skip-hooks
 
@@ -218,6 +235,7 @@ Falling back to legacy orchestrator
 **Fallback**: ✅ Automatic fallback to legacy orchestrator works correctly
 
 ### Test 3: Container Builder ✅
+
 ```bash
 $ python /tmp/test_phase3_cli_integration.py
 
@@ -238,7 +256,9 @@ PHASE 3 CLI INTEGRATION TEST SUITE
 **Result**: ✅ Container builder and DI registration work correctly in synchronous context
 
 ### Test 4: Performance Baseline (In Progress)
+
 Background benchmark running with 20 iterations per mode:
+
 - **Fast mode**: 100% success rate, ~53s median (P95: 136s)
 - **Default mode**: 0% success (ACB DI issue - falls back to legacy)
 - **Comp mode**: 0% success (ACB DI issue - falls back to legacy)
@@ -271,16 +291,19 @@ Background benchmark running with 20 iterations per mode:
 ### Known Limitations (Phase 4.0)
 
 1. **ACB Workflows Not Default**: Due to async DI scope issue, ACB workflows are opt-in only (`--use-acb-workflows`)
+
    - **Impact**: Low - users get production-ready legacy orchestrator
    - **Mitigation**: Graceful fallback ensures zero failures
    - **Timeline**: Phase 4.1 (1-2 weeks) to fix DI scope issue
 
-2. **Async DI Scope Issue**: `WorkflowPipeline` not available in `asyncio.run()` context
+1. **Async DI Scope Issue**: `WorkflowPipeline` not available in `asyncio.run()` context
+
    - **Impact**: Medium - blocks ACB as default
    - **Root Cause**: DI container context not preserved across event loop boundaries
    - **Solution**: Phase 4.1 - Use Option C (pass pipeline in context)
 
-3. **Performance Baseline Incomplete**: Default/comp modes failing due to ACB issue
+1. **Performance Baseline Incomplete**: Default/comp modes failing due to ACB issue
+
    - **Impact**: Low - fast mode baseline complete (53s median)
    - **Workaround**: Benchmark will complete when modes fall back to legacy
    - **Action**: Monitor background benchmark completion
@@ -317,13 +340,14 @@ Background benchmark running with 20 iterations per mode:
 ### Goals
 
 1. Fix `WorkflowPipeline` availability in async context
-2. Implement Option C: Pass pipeline in context instead of DI injection
-3. Validate ACB workflows work end-to-end
-4. Update action handlers to receive pipeline from context
+1. Implement Option C: Pass pipeline in context instead of DI injection
+1. Validate ACB workflows work end-to-end
+1. Update action handlers to receive pipeline from context
 
 ### Implementation Strategy
 
 **Step 1**: Modify action handlers to accept pipeline from context
+
 ```python
 @depends.inject
 async def run_fast_hooks(
@@ -348,15 +372,18 @@ async def run_fast_hooks(
 ```
 
 **Step 2**: Update `handle_acb_workflow_mode()` to pass pipeline in context
+
 ```python
 # Retrieve pipeline from DI container (synchronous context)
 pipeline = depends.get_sync(WorkflowPipeline)
 
 # Execute workflow with pipeline in context
-result = asyncio.run(engine.execute(
-    workflow,
-    context={"options": options, "pipeline": pipeline}  # Pass pipeline explicitly
-))
+result = asyncio.run(
+    engine.execute(
+        workflow,
+        context={"options": options, "pipeline": pipeline},  # Pass pipeline explicitly
+    )
+)
 ```
 
 **Step 3**: Remove `@depends.inject` from action handlers (no longer needed)
@@ -381,10 +408,10 @@ result = asyncio.run(engine.execute(
 ### Goals
 
 1. Invert default logic: ACB workflows by default
-2. Add `--use-legacy-orchestrator` escape hatch
-3. Gradual rollout (10% → 50% → 100%)
-4. Archive legacy orchestrator code
-5. Performance parity validation
+1. Add `--use-legacy-orchestrator` escape hatch
+1. Gradual rollout (10% → 50% → 100%)
+1. Archive legacy orchestrator code
+1. Performance parity validation
 
 ### Timeline Estimate (Phase 4.2)
 
@@ -398,7 +425,7 @@ result = asyncio.run(engine.execute(
 - ACB workflows handle 100% of use cases
 - Performance within 5% of legacy orchestrator
 - Zero production incidents during rollout
-- >95% test coverage for integration tests
+- > 95% test coverage for integration tests
 - Legacy orchestrator archived but accessible via flag
 
 ## Conclusion
@@ -411,7 +438,7 @@ Phase 4.0 successfully identified the async DI scope blocker and established a p
 
 The async DI scope issue has a clear solution (Option C: pass pipeline in context), and the implementation path is well-defined. Phase 4.1 can begin with confidence that Phase 4.0 has prepared the groundwork.
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0 (Final)
 **Last Updated**: 2025-11-05

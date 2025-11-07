@@ -42,6 +42,7 @@
 ```
 
 **Execution Timeline** (Sequential):
+
 ```
 Config (5s) ────────────────────────────────────────────►
              Fast Hooks (40s) ──────────────────────────►
@@ -52,13 +53,14 @@ Total: 115 seconds
 ```
 
 **Issues**:
+
 - ❌ Sequential execution (no parallelism between phases)
 - ❌ Manual orchestration logic (error-prone)
 - ❌ Hard to extend (add new phases requires code changes)
 - ❌ Complex conditional branching
 - ❌ Duplicate retry logic per phase
 
----
+______________________________________________________________________
 
 ## Proposed Architecture (ACB Workflows)
 
@@ -112,6 +114,7 @@ Total: 115 seconds
 ```
 
 **Execution Timeline** (Parallel):
+
 ```
 Config (5s) ────────►
                      Fast Hooks (40s) ──────────────────►
@@ -122,13 +125,14 @@ Total: ~75 seconds (35% faster!)
 ```
 
 **Benefits**:
+
 - ✅ Automatic parallel execution (fast + cleaning concurrent)
 - ✅ Declarative workflow definitions (easy to understand)
 - ✅ Built-in retry logic (per-step configuration)
 - ✅ Clean separation (workflow structure vs. execution)
 - ✅ Extensible (add steps without changing engine)
 
----
+______________________________________________________________________
 
 ## Hook-Level Parallelization (Advanced)
 
@@ -160,6 +164,7 @@ Total: 20 seconds (66% faster!)
 ```
 
 **Implementation**:
+
 ```python
 COMPREHENSIVE_HOOKS = WorkflowDefinition(
     workflow_id="comp-hooks",
@@ -181,7 +186,7 @@ COMPREHENSIVE_HOOKS = WorkflowDefinition(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Data Flow Comparison
 
@@ -215,6 +220,7 @@ async def _execute_standard_hooks_workflow_monitored(
 ```
 
 **Problems**:
+
 - Manual orchestration (if/else chains)
 - No automatic parallelism
 - Error handling scattered
@@ -261,12 +267,13 @@ result = await engine.execute(STANDARD_WORKFLOW, context={"options": options})
 ```
 
 **Benefits**:
+
 - Declarative (what, not how)
 - Automatic parallelism (engine decides)
 - Centralized error handling
 - Each step easily testable
 
----
+______________________________________________________________________
 
 ## Migration Path
 
@@ -286,6 +293,7 @@ else:
 ```
 
 **Benefits**:
+
 - ✅ Safe migration (can rollback instantly)
 - ✅ A/B testing (compare performance)
 - ✅ Gradual user adoption
@@ -314,7 +322,7 @@ result = await engine.execute(workflow, context)
 return result.state == WorkflowState.COMPLETED
 ```
 
----
+______________________________________________________________________
 
 ## Performance Projections
 
@@ -349,7 +357,7 @@ Comprehensive:    20s  (hooks parallel)
 Total:            45s  (61% faster!) 🚀
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -357,10 +365,11 @@ Total:            45s  (61% faster!) 🚀
 **Proposed State**: ACB workflows with automatic parallelization
 
 **Key Wins**:
+
 1. **35-61% faster** execution (depending on parallelization level)
-2. **20% less code** (remove custom orchestration logic)
-3. **Better maintainability** (declarative definitions)
-4. **Built-in resilience** (retry, timeout, error handling)
-5. **Easier testing** (isolated action handlers)
+1. **20% less code** (remove custom orchestration logic)
+1. **Better maintainability** (declarative definitions)
+1. **Built-in resilience** (retry, timeout, error handling)
+1. **Easier testing** (isolated action handlers)
 
 **Next Step**: Implement Phase 1 POC with fast hooks workflow

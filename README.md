@@ -137,6 +137,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 ### When to Use Each
 
 **Choose Pre-commit when:**
+
 - ✅ Working with multiple languages (Go, Rust, Docker, etc.)
 - ✅ Need language-agnostic hook framework
 - ✅ Want to use hooks from community repositories
@@ -144,6 +145,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 - ✅ Simple YAML-based configuration preferred
 
 **Choose Crackerjack when:**
+
 - ✅ Python-focused development (Python 3.13+)
 - ✅ Want comprehensive development platform (testing, publishing, AI)
 - ✅ Need maximum performance (async architecture, Rust tools, caching, 11x parallelism)
@@ -566,13 +568,12 @@ HookManager + TestManager
 from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console
 
+
 @depends.inject
-def setup_environment(
-    console: Inject[Console] = None,
-    verbose: bool = False
-) -> None:
+def setup_environment(console: Inject[Console] = None, verbose: bool = False) -> None:
     """Protocol-based injection with @depends.inject decorator."""
     console.print("[green]Environment ready[/green]")
+
 
 # ❌ ANTI-PATTERN: Avoid manual fallbacks
 def setup_environment_wrong(console: Console | None = None):
@@ -730,9 +731,7 @@ The ConfigMergeService handles intelligent configuration merging during project 
 ```python
 # Used by InitializationService for new project setup
 merge_result = config_merge_service.smart_merge_pyproject(
-    source_config,
-    target_path,
-    project_name
+    source_config, target_path, project_name
 )
 ```
 

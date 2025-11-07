@@ -21,9 +21,11 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
 **Description**: Intelligently detect optimal worker count based on CPU cores, with safety limits.
 
 **Implementation**:
+
 ```python
 import os
 import multiprocessing
+
 
 def get_optimal_workers(self, options: OptionsProtocol) -> int:
     """Calculate optimal worker count for parallel test execution.
@@ -56,6 +58,7 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
 ```
 
 **Configuration Examples**:
+
 ```yaml
 # Auto-detect (recommended)
 test_workers: 0  # → CPU cores - 1, capped at 2-8
@@ -72,6 +75,7 @@ test_workers: 1  # → Single-threaded
 ```
 
 **Pros**:
+
 - ✅ Zero configuration for most users
 - ✅ Adapts to different hardware (local vs CI)
 - ✅ Safety bounds prevent resource exhaustion
@@ -79,25 +83,29 @@ test_workers: 1  # → Single-threaded
 - ✅ Backwards compatible (explicit values still work)
 
 **Cons**:
+
 - ⚠️ May be overly aggressive on high-core machines (mitigated by max=8)
 - ⚠️ Requires `multiprocessing` import (stdlib, minimal cost)
 
 **Test Impact**:
+
 - 8-core MacBook: 0 → 7 workers (capped at 8)
 - 4-core CI server: 0 → 3 workers
 - 16-core workstation: 0 → 8 workers (capped)
 
----
+______________________________________________________________________
 
 ### Strategy 2: Environment-Aware Detection
 
 **Description**: Detect execution environment (local, CI, Docker) and adjust accordingly.
 
 **Implementation**:
+
 ```python
 import os
 import multiprocessing
 import sys
+
 
 def get_optimal_workers(self, options: OptionsProtocol) -> int:
     """Environment-aware worker detection."""
@@ -126,26 +134,30 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
 ```
 
 **Pros**:
+
 - ✅ Optimized for CI/CD pipelines
 - ✅ Prevents Docker resource contention
 - ✅ Adapts to low-spec machines
 - ✅ Maximizes local dev speed
 
 **Cons**:
+
 - ⚠️ More complex logic (harder to debug)
 - ⚠️ Requires environment detection (may be unreliable)
 - ⚠️ Heuristics may not fit all environments
 
----
+______________________________________________________________________
 
 ### Strategy 3: Adaptive Load-Based Scaling
 
 **Description**: Start with conservative workers, scale up if tests complete quickly.
 
 **Implementation**:
+
 ```python
 import multiprocessing
 import psutil  # Requires psutil dependency (already in pyproject.toml)
+
 
 def get_optimal_workers(self, options: OptionsProtocol) -> int:
     """Adaptive worker count based on system load."""
@@ -177,25 +189,29 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
 ```
 
 **Pros**:
+
 - ✅ Adapts to real-time system load
 - ✅ Prevents resource starvation
 - ✅ Works well on shared machines
 
 **Cons**:
+
 - ⚠️ Relies on psutil (already a dependency, but adds overhead)
 - ⚠️ Non-deterministic (same command different results)
 - ⚠️ May be too conservative during bursts
 
----
+______________________________________________________________________
 
 ### Strategy 4: Test-Suite-Aware Scaling
 
 **Description**: Adjust workers based on test suite characteristics (count, duration).
 
 **Implementation**:
+
 ```python
 import multiprocessing
 from pathlib import Path
+
 
 def get_optimal_workers(self, options: OptionsProtocol) -> int:
     """Scale workers based on test suite size."""
@@ -217,6 +233,7 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
         # Large suite: aggressive parallelization
         return max(4, min(cpu_count - 1, 8))
 
+
 def _estimate_test_count(self) -> int:
     """Quick estimate of test count by counting test_ functions."""
     test_dir = self.pkg_path / "tests"
@@ -235,16 +252,18 @@ def _estimate_test_count(self) -> int:
 ```
 
 **Pros**:
+
 - ✅ Optimized per project (small vs large suites)
 - ✅ Avoids overhead for tiny test suites
 - ✅ Scales naturally as project grows
 
 **Cons**:
+
 - ⚠️ Adds filesystem I/O (test file parsing)
 - ⚠️ Heuristic may be inaccurate (fixtures, parametrize)
 - ⚠️ Overhead on every test run
 
----
+______________________________________________________________________
 
 ## Comparison Matrix
 
@@ -260,22 +279,23 @@ def _estimate_test_count(self) -> int:
 **Implement Strategy 1 (CPU-Based Scaling)** with the following rationale:
 
 1. **Simplicity**: Single `multiprocessing.cpu_count()` call, minimal logic
-2. **Predictability**: Deterministic behavior (same hardware = same workers)
-3. **Safety**: Bounded by `[2, 8]` to prevent resource exhaustion
-4. **Flexibility**: Supports explicit values, auto-detect, and fractional modes
-5. **Zero Configuration**: Works out-of-the-box for 95% of users
+1. **Predictability**: Deterministic behavior (same hardware = same workers)
+1. **Safety**: Bounded by `[2, 8]` to prevent resource exhaustion
+1. **Flexibility**: Supports explicit values, auto-detect, and fractional modes
+1. **Zero Configuration**: Works out-of-the-box for 95% of users
 
 ### Implementation Plan
 
 1. Update `TestCommandBuilder.get_optimal_workers()` with new logic
-2. Add unit tests for all worker calculation modes
-3. Update documentation in `CLAUDE.md` and `settings/crackerjack.yaml`
-4. Test on local (8-core) and CI (4-core) environments
-5. Monitor for any test flakiness or timeouts
+1. Add unit tests for all worker calculation modes
+1. Update documentation in `CLAUDE.md` and `settings/crackerjack.yaml`
+1. Test on local (8-core) and CI (4-core) environments
+1. Monitor for any test flakiness or timeouts
 
 ### Migration Path
 
 **No breaking changes** - existing configurations continue to work:
+
 - `test_workers: 4` → Still uses 4 workers
 - `test_workers: 1` → Still sequential
 - `test_workers: 0` → **NEW**: Auto-detects (current behavior is 1, new is CPU-based)
@@ -283,36 +303,39 @@ def _estimate_test_count(self) -> int:
 ### Risk Mitigation
 
 1. **Flaky tests**: Upper bound of 8 workers prevents excessive parallelism
-2. **Shared fixtures**: pytest-xdist handles this via `--dist loadscope`
-3. **Resource contention**: Lower bound of 2 ensures some parallelism
-4. **CI timeouts**: Explicit `test_workers` in CI config overrides auto-detect
+1. **Shared fixtures**: pytest-xdist handles this via `--dist loadscope`
+1. **Resource contention**: Lower bound of 2 ensures some parallelism
+1. **CI timeouts**: Explicit `test_workers` in CI config overrides auto-detect
 
----
+______________________________________________________________________
 
 ## Open Questions for Review
 
 1. Should we add a `CRACKERJACK_TEST_WORKERS` environment variable override?
-2. Should the upper bound be configurable (e.g., `max_test_workers` setting)?
-3. Should we log the selected worker count for debugging?
-4. Should we add a `--test-workers` CLI flag for one-off overrides?
+1. Should the upper bound be configurable (e.g., `max_test_workers` setting)?
+1. Should we log the selected worker count for debugging?
+1. Should we add a `--test-workers` CLI flag for one-off overrides?
 
----
+______________________________________________________________________
 
 ## Testing Plan
 
 ```python
 # tests/test_test_command_builder.py
 
+
 def test_optimal_workers_explicit():
     """Explicit worker count is respected."""
     options = MockOptions(test_workers=4)
     assert builder.get_optimal_workers(options) == 4
+
 
 def test_optimal_workers_auto_detect():
     """Auto-detect uses CPU-based calculation."""
     options = MockOptions(test_workers=0)
     result = builder.get_optimal_workers(options)
     assert 2 <= result <= 8  # Bounded
+
 
 def test_optimal_workers_fractional():
     """Negative values divide CPU count."""
@@ -321,29 +344,33 @@ def test_optimal_workers_fractional():
     expected = max(1, cpu_count // 2)
     assert builder.get_optimal_workers(options) == expected
 
+
 def test_optimal_workers_no_attribute():
     """Missing test_workers attribute defaults to 2."""
     options = MockOptions()  # No test_workers
     assert builder.get_optimal_workers(options) == 2
 ```
 
----
+______________________________________________________________________
 
 ## Expected Performance Impact
 
 **Before** (1 worker):
+
 - Test suite: ~60 seconds
 - CPU utilization: 12% (1 core active)
 
 **After** (7 workers on 8-core MacBook):
+
 - Test suite: ~15-20 seconds (3-4x faster)
 - CPU utilization: 70-80% (7 cores active)
 
 **CI Impact** (4-core GitHub Actions):
+
 - Before: ~45 seconds
 - After: ~15-20 seconds (2-3x faster with 3 workers)
 
----
+______________________________________________________________________
 
 ## References
 

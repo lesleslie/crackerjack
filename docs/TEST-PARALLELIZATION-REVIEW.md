@@ -8,7 +8,7 @@
 **Current Configuration**: pytest-xdist installed, but only 1 worker used
 **Overall Assessment**: ⚠️ **Strategy needs refinement** - Good foundation but missing critical pytest-xdist considerations
 
----
+______________________________________________________________________
 
 ## Critical Findings
 
@@ -25,12 +25,14 @@ pytest -n logical  # Uses logical CPU count
 ```
 
 **Impact**: Reinventing the wheel. pytest-xdist's `-n auto` already handles:
+
 - CPU detection via `os.cpu_count()`
 - Safe defaults
 - Environment-aware scaling
 - Battle-tested logic
 
 **Recommendation**:
+
 - Use `-n auto` as the default when `test_workers=0`
 - Only implement custom logic if `-n auto` is insufficient
 - Document why custom logic is needed over native pytest-xdist
@@ -40,6 +42,7 @@ pytest -n logical  # Uses logical CPU count
 **Issue**: With 3,084 tests and extensive DI fixtures (conftest.py has 30+ fixtures), parallel execution will face:
 
 **Shared State Problems**:
+
 ```python
 # From conftest.py - these fixtures modify global state
 @pytest.fixture(autouse=True)
@@ -50,6 +53,7 @@ def reset_hook_lock_manager_singleton():
 ```
 
 **Database/Filesystem Concerns**:
+
 ```python
 # Tests write to actual filesystem in temp directories
 @pytest.fixture
@@ -60,17 +64,20 @@ def temp_pkg_path() -> Generator[Path, None, None]:
 ```
 
 **DI Container State**:
+
 ```python
 # ACB depends system is modified during tests
 depends.set(dep_type, dep_value)  # ⚠️ Global DI container
 ```
 
 **Missing from Proposal**:
+
 - No mention of `--dist` strategies (`loadscope`, `loadfile`, `loadgroup`)
 - No discussion of fixture scope impact (session vs function)
 - No guidance on avoiding shared state conflicts
 
 **Recommendation**:
+
 ```python
 # Add to test command builder
 def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
@@ -89,6 +96,7 @@ def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
 **Issue**: The proposal doesn't mention coverage measurement challenges with xdist.
 
 **Current Configuration** (from pyproject.toml):
+
 ```toml
 [tool.coverage.run]
 parallel = false  # ⚠️ WRONG for xdist!
@@ -97,6 +105,7 @@ parallel = false  # ⚠️ WRONG for xdist!
 **Problem**: With `pytest-xdist`, each worker generates its own `.coverage` file. Without `parallel = true`, coverage data will be lost or corrupted.
 
 **Required Changes**:
+
 ```toml
 [tool.coverage.run]
 parallel = true  # ✅ REQUIRED for xdist
@@ -107,6 +116,7 @@ addopts = "--cov=crackerjack --cov-report=term-missing --cov-append"
 ```
 
 **Post-Test Coverage Combination**:
+
 ```bash
 # After parallel test run
 coverage combine  # Merge .coverage.worker* files
@@ -114,6 +124,7 @@ coverage report   # Generate unified report
 ```
 
 **Recommendation**: Update `TestCommandBuilder` to handle coverage combination:
+
 ```python
 async def run_tests_with_coverage(self):
     """Run tests and combine coverage from parallel workers."""
@@ -130,6 +141,7 @@ async def run_tests_with_coverage(self):
 **Issue**: Parallelization can expose timing-dependent tests that pass serially but fail in parallel.
 
 **From conftest.py** - Complex async fixtures:
+
 ```python
 @pytest.fixture(scope="session", autouse=True)
 def event_loop():  # ⚠️ Async tests may race
@@ -140,11 +152,13 @@ def event_loop():  # ⚠️ Async tests may race
 ```
 
 **Detection Strategy Missing**:
+
 - No mention of `pytest-rerunfailures` for flaky test detection
 - No guidance on running tests multiple times to find non-deterministic failures
 - No discussion of async test isolation
 
 **Recommendation**:
+
 ```bash
 # Before enabling parallelization, detect flaky tests
 pytest --count=10 -x  # Run each test 10 times, stop on first failure
@@ -153,7 +167,7 @@ pytest --count=10 -x  # Run each test 10 times, stop on first failure
 pytest -n auto --reruns 2 --reruns-delay 1  # Retry failed tests twice
 ```
 
----
+______________________________________________________________________
 
 ## Strategy-Specific Analysis
 
@@ -162,16 +176,19 @@ pytest -n auto --reruns 2 --reruns-delay 1  # Retry failed tests twice
 **Pytest-Specific Concerns**:
 
 ✅ **Good**:
+
 - Simple implementation
 - Predictable behavior
 - Safety bounds prevent resource exhaustion
 
 ❌ **Bad**:
+
 - Ignores pytest-xdist's native `-n auto` (why reinvent?)
 - No consideration for I/O-bound vs CPU-bound tests
 - Hardcoded max=8 may be too conservative for large suites
 
 **Better Alternative**:
+
 ```python
 def get_optimal_workers(self, options: OptionsProtocol) -> int:
     """Calculate optimal worker count for parallel test execution."""
@@ -191,6 +208,7 @@ def get_optimal_workers(self, options: OptionsProtocol) -> int:
 
     return "auto"  # Default to pytest-xdist auto-detection
 
+
 def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
     workers = self.get_optimal_workers(options)
 
@@ -209,11 +227,13 @@ def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
 **Pytest-Specific Concerns**:
 
 ❌ **Problematic**:
+
 - CI detection (`os.getenv("CI")`) is fragile
 - Docker detection (`os.path.exists("/.dockerenv")`) unreliable
 - Heuristics conflict with pytest-xdist's `-n auto` logic
 
 **Better Approach**: Use pytest-xdist environment variables instead:
+
 ```bash
 # In CI
 export PYTEST_XDIST_WORKER_COUNT=4
@@ -229,6 +249,7 @@ pytest -n $PYTEST_XDIST_WORKER_COUNT
 **Pytest-Specific Concerns**:
 
 ❌ **Rejected**:
+
 - Non-deterministic (violates pytest philosophy)
 - Adds psutil overhead on every test run
 - Makes debugging impossible ("works on my machine" syndrome)
@@ -240,10 +261,12 @@ pytest -n $PYTEST_XDIST_WORKER_COUNT
 **Pytest-Specific Concerns**:
 
 ⚠️ **Mixed**:
+
 - Reasonable idea (small suites don't benefit from parallelization)
 - Implementation is naive (counting `def test_` misses parametrization)
 
 **Better Implementation**:
+
 ```python
 def _should_parallelize(self, pkg_path: Path) -> bool:
     """Determine if test suite is large enough to benefit from parallelization."""
@@ -265,7 +288,7 @@ def _should_parallelize(self, pkg_path: Path) -> bool:
 
 **However**: With 3,084 tests, this project **always** benefits from parallelization. This strategy is **not needed**.
 
----
+______________________________________________________________________
 
 ## Missing Pytest-Specific Considerations
 
@@ -274,6 +297,7 @@ def _should_parallelize(self, pkg_path: Path) -> bool:
 **Problem**: Session-scoped fixtures run once per worker, not once globally.
 
 **From conftest.py**:
+
 ```python
 @contextmanager
 def acb_depends_context(injection_map: dict[type, Any]):
@@ -283,10 +307,12 @@ def acb_depends_context(injection_map: dict[type, Any]):
 ```
 
 **With xdist**: Each worker has its own Python process, so:
+
 - ✅ Good: DI modifications are isolated per worker (no race conditions)
 - ⚠️ Concern: Session fixtures run N times (once per worker)
 
 **Recommendation**: Use `pytest-xdist` session fixtures carefully:
+
 ```python
 # For truly shared resources (databases, etc.)
 @pytest.fixture(scope="session")
@@ -310,12 +336,14 @@ def database_connection(tmp_path_factory, worker_id):
 **Missing**: No discussion of test markers to control parallelization.
 
 **Recommendation**: Add markers for serial-only tests:
+
 ```python
 # In conftest.py
 def pytest_configure(config):
     config.addinivalue_line(
         "markers", "serial: mark test to run serially (not in parallel)"
     )
+
 
 def pytest_collection_modifyitems(config, items):
     """Add xdist_group marker to serial tests."""
@@ -325,6 +353,7 @@ def pytest_collection_modifyitems(config, items):
 ```
 
 **Usage**:
+
 ```python
 @pytest.mark.serial
 def test_modifies_global_state():
@@ -335,6 +364,7 @@ def test_modifies_global_state():
 ### 3. Pytest-Benchmark Integration
 
 **From pyproject.toml**:
+
 ```toml
 [tool.pytest.benchmark]
 disable_gc = true
@@ -344,6 +374,7 @@ warmup = false
 **Issue**: Benchmarks should **never** run in parallel (results will be skewed).
 
 **Recommendation**:
+
 ```python
 def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
     # ✅ Disable parallelization for benchmarks
@@ -361,6 +392,7 @@ def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
 **Missing**: No way to identify slow tests that bottleneck parallelization.
 
 **Recommendation**: Add `--durations` flag:
+
 ```python
 def _add_verbosity_options(self, cmd: list[str], options: OptionsProtocol) -> None:
     cmd.append("-v")
@@ -372,11 +404,12 @@ def _add_verbosity_options(self, cmd: list[str], options: OptionsProtocol) -> No
 
 **Why**: With `--dist=loadscope`, if one test class has a 60-second test, it will block that worker.
 
----
+______________________________________________________________________
 
 ## Proposed Unit Tests - Quality Assessment
 
 **From Proposal**:
+
 ```python
 def test_optimal_workers_auto_detect():
     """Auto-detect uses CPU-based calculation."""
@@ -388,8 +421,8 @@ def test_optimal_workers_auto_detect():
 **Issues**:
 
 1. **Too Vague**: `assert 2 <= result <= 8` doesn't validate the actual logic
-2. **Missing Edge Cases**: What about 1-core systems? 128-core servers?
-3. **No pytest-xdist Integration Tests**: Doesn't test actual parallel execution
+1. **Missing Edge Cases**: What about 1-core systems? 128-core servers?
+1. **No pytest-xdist Integration Tests**: Doesn't test actual parallel execution
 
 **Better Test Suite**:
 
@@ -414,13 +447,13 @@ class TestWorkerCalculation:
 
     def test_fractional_workers_on_8_core(self):
         """Negative values divide CPU count correctly."""
-        with patch('multiprocessing.cpu_count', return_value=8):
+        with patch("multiprocessing.cpu_count", return_value=8):
             options = MockOptions(test_workers=-2)
             assert builder.get_optimal_workers(options) == 4  # 8 / 2
 
     def test_fractional_workers_minimum_1(self):
         """Fractional workers never go below 1."""
-        with patch('multiprocessing.cpu_count', return_value=2):
+        with patch("multiprocessing.cpu_count", return_value=2):
             options = MockOptions(test_workers=-4)
             assert builder.get_optimal_workers(options) == 1  # max(1, 2//4)
 
@@ -507,19 +540,21 @@ def test_slow(i):
         pass
 ```
 
----
+______________________________________________________________________
 
 ## Recommended Implementation Plan
 
 ### Phase 1: Foundation (Week 1)
 
 1. **Update pyproject.toml**:
+
 ```toml
 [tool.coverage.run]
 parallel = true  # ✅ Required for xdist
 ```
 
 2. **Update TestCommandBuilder**:
+
 ```python
 def get_optimal_workers(self, options: OptionsProtocol) -> str | int:
     """Return 'auto' or explicit worker count."""
@@ -537,6 +572,7 @@ def get_optimal_workers(self, options: OptionsProtocol) -> str | int:
 
     return "auto"
 
+
 def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
     # Skip for benchmarks
     if hasattr(options, "benchmark") and options.benchmark:
@@ -551,22 +587,23 @@ def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
 ```
 
 3. **Add test markers**:
+
 ```python
 # In conftest.py
 def pytest_configure(config):
-    config.addinivalue_line(
-        "markers", "serial: mark test to run serially"
-    )
+    config.addinivalue_line("markers", "serial: mark test to run serially")
 ```
 
 ### Phase 2: Validation (Week 2)
 
 1. **Run flaky test detection**:
+
 ```bash
 pytest --count=10 -x -m "not slow"  # Fast tests only
 ```
 
 2. **Compare results**:
+
 ```bash
 # Baseline (serial)
 pytest -n 1 --duration=20  # Show 20 slowest tests
@@ -583,21 +620,25 @@ coverage report --show-missing
 ### Phase 3: Optimization (Week 3)
 
 1. **Identify bottlenecks**:
+
 ```bash
 pytest -n auto --durations=0 > timings.txt
 # Analyze timings.txt for slow tests
 ```
 
 2. **Consider test splitting**:
+
 ```python
 # For very slow test classes
 @pytest.mark.xdist_group(name="slow_integration")
 class TestSlowIntegration:
     """Tests that should run on dedicated worker."""
+
     pass
 ```
 
 3. **Monitor CI performance**:
+
 ```yaml
 # .github/workflows/test.yml
 - name: Run tests
@@ -606,7 +647,7 @@ class TestSlowIntegration:
     PYTEST_XDIST_WORKER_COUNT: 4  # Explicit for CI
 ```
 
----
+______________________________________________________________________
 
 ## Risk Mitigation
 
@@ -616,12 +657,15 @@ class TestSlowIntegration:
 **Impact**: High (CI failures, false positives)
 
 **Mitigation**:
+
 1. Use `pytest-rerunfailures` plugin:
+
 ```bash
 pytest -n auto --reruns 2 --reruns-delay 1
 ```
 
 2. Add flaky test detection to CI:
+
 ```yaml
 - name: Detect flaky tests
   run: pytest --count=5 -x  # Run each test 5 times
@@ -634,12 +678,15 @@ pytest -n auto --reruns 2 --reruns-delay 1
 **Impact**: High (no coverage reports)
 
 **Mitigation**:
+
 1. Enable `parallel = true` in coverage config
-2. Add coverage combine step:
+1. Add coverage combine step:
+
 ```python
 async def _combine_coverage(self):
     """Combine coverage data from parallel workers."""
     import subprocess
+
     subprocess.run(["coverage", "combine"], check=True)
 ```
 
@@ -649,9 +696,11 @@ async def _combine_coverage(self):
 **Impact**: Medium (test failures)
 
 **Mitigation**:
+
 1. Use `--dist=loadfile` to keep tests from same file together
-2. Review singleton patterns (e.g., `HookLockManager`)
-3. Consider worker-specific temp directories:
+1. Review singleton patterns (e.g., `HookLockManager`)
+1. Consider worker-specific temp directories:
+
 ```python
 @pytest.fixture
 def worker_temp_dir(tmp_path_factory, worker_id):
@@ -665,72 +714,82 @@ def worker_temp_dir(tmp_path_factory, worker_id):
     return path
 ```
 
----
+______________________________________________________________________
 
 ## Expected Performance Impact (Revised)
 
 **Before** (1 worker):
+
 - Test suite: ~60 seconds (estimated)
 - CPU utilization: 12% (1 core active)
 
 **After** (pytest -n auto on 8-core MacBook):
+
 - Test suite: ~10-15 seconds (4-6x faster, accounting for overhead)
 - CPU utilization: 70-80% (7-8 cores active)
 - **Caveat**: Assumes no serialization bottlenecks
 
 **CI Impact** (4-core GitHub Actions):
+
 - Before: ~45 seconds (estimated)
 - After: ~12-15 seconds (3x faster with 3-4 workers)
 - **Caveat**: CI may have I/O limits
 
----
+______________________________________________________________________
 
 ## Open Questions for Implementation
 
 1. **Should we use `-n auto` or custom CPU detection?**
+
    - **Recommendation**: Use `-n auto` by default
    - Custom logic only for fractional workers (test_workers < 0)
 
-2. **What distribution strategy should we use?**
+1. **What distribution strategy should we use?**
+
    - **Recommendation**: `--dist=loadfile` (keeps DI fixtures together)
    - Alternative: `--dist=loadscope` (keeps test classes together)
 
-3. **How should we handle coverage merging?**
+1. **How should we handle coverage merging?**
+
    - **Recommendation**: Automatic `coverage combine` in TestManager
    - Add to post-test cleanup phase
 
-4. **Should we add flaky test detection?**
+1. **Should we add flaky test detection?**
+
    - **Recommendation**: Yes, as optional `--detect-flaky` flag
    - Runs tests multiple times to find non-deterministic failures
 
-5. **What about benchmark tests?**
+1. **What about benchmark tests?**
+
    - **Recommendation**: Always disable parallelization for benchmarks
    - Add to `_add_worker_options` logic
 
----
+______________________________________________________________________
 
 ## Summary
 
 **Verdict**: Strategy 1 (CPU-Based) is a reasonable starting point, but **use pytest-xdist's `-n auto` instead of custom CPU detection**.
 
 **Critical Missing Pieces**:
+
 1. ❌ No discussion of `-n auto` (the most important feature!)
-2. ❌ No coverage parallel mode configuration
-3. ❌ No test isolation/fixture scope considerations
-4. ❌ No distribution strategy (`--dist`) discussion
-5. ❌ No flaky test detection plan
+1. ❌ No coverage parallel mode configuration
+1. ❌ No test isolation/fixture scope considerations
+1. ❌ No distribution strategy (`--dist`) discussion
+1. ❌ No flaky test detection plan
 
 **Recommended Changes**:
+
 1. ✅ Use `-n auto` as default for `test_workers=0`
-2. ✅ Enable `parallel = true` in coverage config
-3. ✅ Add `--dist=loadfile` to keep DI fixtures isolated
-4. ✅ Disable parallelization for benchmarks
-5. ✅ Add comprehensive unit and integration tests
-6. ✅ Include flaky test detection in testing plan
+1. ✅ Enable `parallel = true` in coverage config
+1. ✅ Add `--dist=loadfile` to keep DI fixtures isolated
+1. ✅ Disable parallelization for benchmarks
+1. ✅ Add comprehensive unit and integration tests
+1. ✅ Include flaky test detection in testing plan
 
 **Complexity Recommendation**: Start with `-n auto` and `--dist=loadfile`. Only add custom logic if pytest-xdist's auto-detection is insufficient.
 
----
+______________________________________________________________________
 
 ## References
 

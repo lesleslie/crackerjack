@@ -8,7 +8,7 @@ Phase 2 implements full WorkflowPipeline (WorkflowOrchestrator) integration with
 
 **Timeline**: 2-3 weeks (Week 1: DI setup, Week 2: Integration, Week 3: Testing & optimization)
 
-**Success Criteria**: All action handlers call actual WorkflowPipeline methods, tests pass, <5% performance overhead
+**Success Criteria**: All action handlers call actual WorkflowPipeline methods, tests pass, \<5% performance overhead
 
 ## Dependency Analysis
 
@@ -53,38 +53,39 @@ WorkflowPipeline
 ### Initialization Order Requirements
 
 **Level 1 - Primitives (no dependencies):**
+
 1. Console
-2. Config (needs root_path from Options)
-3. LoggerProtocol
+1. Config (needs root_path from Options)
+1. LoggerProtocol
 
 **Level 2 - Core Services (depend on Level 1):**
-4. MemoryOptimizerProtocol (needs Console)
-5. PerformanceCacheProtocol (needs Console)
-6. DebugServiceProtocol (needs Console)
-7. PerformanceMonitorProtocol (needs Console)
+4\. MemoryOptimizerProtocol (needs Console)
+5\. PerformanceCacheProtocol (needs Console)
+6\. DebugServiceProtocol (needs Console)
+7\. PerformanceMonitorProtocol (needs Console)
 
 **Level 3 - Filesystem & Git (depend on Level 1-2):**
-8. FileSystemInterface (needs Console)
-9. GitInterface (needs Console)
-10. FileSystemCache (needs Console)
-11. GitOperationCache (needs Console)
+8\. FileSystemInterface (needs Console)
+9\. GitInterface (needs Console)
+10\. FileSystemCache (needs Console)
+11\. GitOperationCache (needs Console)
 
 **Level 4 - Managers (depend on Level 1-3):**
-12. HookManager (needs Console, filesystem, git)
-13. TestManagerProtocol (needs Console, filesystem)
-14. PublishManager (needs Console, filesystem, git)
-15. ConfigMergeServiceProtocol (needs filesystem)
+12\. HookManager (needs Console, filesystem, git)
+13\. TestManagerProtocol (needs Console, filesystem)
+14\. PublishManager (needs Console, filesystem, git)
+15\. ConfigMergeServiceProtocol (needs filesystem)
 
 **Level 5 - Executors (depend on Level 1-4):**
-16. ParallelHookExecutor (needs Console, HookManager)
-17. AsyncCommandExecutor (needs Console)
+16\. ParallelHookExecutor (needs Console, HookManager)
+17\. AsyncCommandExecutor (needs Console)
 
 **Level 6 - Coordinators (depend on all above):**
-18. SessionCoordinator (needs Console, pkg_path)
-19. PhaseCoordinator (needs everything from Level 1-5)
+18\. SessionCoordinator (needs Console, pkg_path)
+19\. PhaseCoordinator (needs everything from Level 1-5)
 
 **Level 7 - Pipeline (depends on all above):**
-20. WorkflowPipeline (needs everything from Level 1-6)
+20\. WorkflowPipeline (needs everything from Level 1-6)
 
 ## Implementation Strategy
 
@@ -97,7 +98,8 @@ WorkflowPipeline
 **Purpose**: Centralized DI container setup with proper initialization order
 
 **API Design**:
-```python
+
+````python
 from __future__ import annotations
 
 import typing as t
@@ -172,9 +174,10 @@ class WorkflowContainerBuilder:
         pass
 
     # ... more levels
-```
+````
 
 **Key Features**:
+
 - Lazy initialization (only register when build() called)
 - Health check for debugging
 - Test-friendly (inject Console, root_path)
@@ -186,6 +189,7 @@ class WorkflowContainerBuilder:
 For each level, implement actual service creation and registration:
 
 **Level 1 Example**:
+
 ```python
 def _register_level1_primitives(self) -> None:
     """Register Console, Config, Logger."""
@@ -202,12 +206,14 @@ def _register_level1_primitives(self) -> None:
 
     # Logger
     from crackerjack.services.logging import get_logger
+
     logger = get_logger(__name__)
     depends.set(LoggerProtocol, logger)
     self._registered.add("LoggerProtocol")
 ```
 
 **Level 2 Example**:
+
 ```python
 def _register_level2_core_services(self) -> None:
     """Register MemoryOptimizer, PerformanceCache, etc."""
@@ -283,6 +289,7 @@ def health_check(self) -> dict[str, t.Any]:
 #### Task 2.1: Update run_fast_hooks Action
 
 **Current (POC)**:
+
 ```python
 @depends.inject
 async def run_fast_hooks(
@@ -309,6 +316,7 @@ async def run_fast_hooks(
 ```
 
 **Target (Phase 2)**:
+
 ```python
 @depends.inject
 async def run_fast_hooks(
@@ -354,14 +362,16 @@ async def run_fast_hooks(
 ```
 
 **Key Changes**:
+
 1. Remove `orchestrator` and `phase_coordinator` parameters (not injected by ACB engine)
-2. Use `depends.get_sync()` to get WorkflowPipeline
-3. Call actual pipeline method via `asyncio.to_thread()`
-4. Proper error handling and reporting
+1. Use `depends.get_sync()` to get WorkflowPipeline
+1. Call actual pipeline method via `asyncio.to_thread()`
+1. Proper error handling and reporting
 
 #### Task 2.2: Update Other Action Handlers
 
 Apply same pattern to:
+
 - `run_code_cleaning()` → `pipeline.phases._execute_monitored_cleaning_phase()`
 - `run_comprehensive_hooks()` → `pipeline.phases._execute_monitored_comprehensive_phase()`
 - `run_test_workflow()` → `pipeline._execute_test_workflow()`
@@ -370,6 +380,7 @@ Apply same pattern to:
 #### Task 2.3: Update CLI Handler
 
 **Current**:
+
 ```python
 @depends.inject
 def handle_acb_workflow_mode(
@@ -385,6 +396,7 @@ def handle_acb_workflow_mode(
 ```
 
 **Target**:
+
 ```python
 @depends.inject
 def handle_acb_workflow_mode(
@@ -475,6 +487,7 @@ from crackerjack.models.protocols import OptionsProtocol
 def test_options():
     """Create test options."""
     from crackerjack.cli.options import Options
+
     return Options(
         fast=True,
         skip_hooks=True,
@@ -560,12 +573,12 @@ class TestACBWorkflowIntegration:
 
         # Execute workflow
         result = await engine.execute(
-            FAST_HOOKS_WORKFLOW,
-            context={"options": test_options}
+            FAST_HOOKS_WORKFLOW, context={"options": test_options}
         )
 
         # Verify success
         from acb.workflows import WorkflowState
+
         assert result.state == WorkflowState.COMPLETED
 
     def test_cli_handler_with_acb_workflows(self, test_options, clean_container):
@@ -594,9 +607,11 @@ class TestACBPerformance:
     @pytest.mark.benchmark
     def test_fast_hooks_acb_vs_legacy(self, benchmark, test_options):
         """Compare fast hooks execution time."""
+
         # Baseline: Legacy orchestrator
         def run_legacy():
             from crackerjack.cli.handlers import handle_standard_mode
+
             handle_standard_mode(test_options, orchestrated=False, job_id=None)
 
         legacy_time = benchmark(run_legacy)
@@ -606,6 +621,7 @@ class TestACBPerformance:
 
         def run_acb():
             from crackerjack.cli.handlers import handle_acb_workflow_mode
+
             handle_acb_workflow_mode(test_options, job_id=None)
 
         acb_time = benchmark(run_acb)
@@ -618,6 +634,7 @@ class TestACBPerformance:
 #### Task 3.3: Error Handling & Edge Cases
 
 Test error scenarios:
+
 - Missing services in container
 - Service initialization failures
 - Workflow step failures
@@ -632,7 +649,7 @@ Test error scenarios:
 - [ ] Health check validates all services available
 - [ ] All action handlers use real orchestrator methods
 - [ ] Integration tests pass (>90% coverage)
-- [ ] Performance benchmarks meet <5% overhead target
+- [ ] Performance benchmarks meet \<5% overhead target
 - [ ] Error handling covers edge cases
 - [ ] Documentation updated
 
@@ -660,9 +677,9 @@ Test error scenarios:
 ### Rollback Strategy
 
 1. **Instant Rollback**: Disable `use_acb_workflows` flag
-2. **Graceful Degradation**: Automatic fallback to legacy orchestrator on errors
-3. **Monitoring**: Alert on >5% performance degradation or error rate increase
-4. **Feature Flag**: Gradual rollout (10% → 50% → 100% traffic)
+1. **Graceful Degradation**: Automatic fallback to legacy orchestrator on errors
+1. **Monitoring**: Alert on >5% performance degradation or error rate increase
+1. **Feature Flag**: Gradual rollout (10% → 50% → 100% traffic)
 
 ## Success Metrics
 
@@ -685,16 +702,19 @@ Test error scenarios:
 ## Timeline & Milestones
 
 ### Week 1: DI Container Infrastructure
+
 - Day 1-2: WorkflowContainerBuilder skeleton + Level 1-2 registration
 - Day 3-4: Level 3-5 registration + health check
 - Day 5: Level 6-7 registration + testing
 
 ### Week 2: Action Handler Integration
+
 - Day 1-2: Update run_fast_hooks + run_code_cleaning
 - Day 3-4: Update run_comprehensive_hooks + run_test_workflow
 - Day 5: Update CLI handler + integration testing
 
 ### Week 3: Testing & Optimization
+
 - Day 1-2: Integration test suite
 - Day 3: Performance benchmarking
 - Day 4: Error handling & edge cases
@@ -705,15 +725,18 @@ Test error scenarios:
 ### Implementation Files
 
 **Phase 2 New Files**:
+
 - `crackerjack/workflows/container_builder.py` - DI container setup
 - `tests/workflows/test_acb_integration.py` - Integration tests
 - `tests/workflows/test_acb_performance.py` - Performance benchmarks
 
 **Phase 2 Modified Files**:
+
 - `crackerjack/workflows/actions.py` - Update all action handlers
 - `crackerjack/cli/handlers.py` - Add container builder to handle_acb_workflow_mode
 
 **Phase 1 Files (Reference)**:
+
 - `crackerjack/workflows/engine.py` - Workflow engine (no changes)
 - `crackerjack/workflows/event_bridge.py` - Event bridge (no changes)
 - `crackerjack/workflows/definitions.py` - Workflow definitions (no changes)
@@ -724,7 +747,7 @@ Test error scenarios:
 - Crackerjack Architecture: `CLAUDE.md`
 - ACB Framework: `/Users/les/Projects/acb/README.md`
 
----
+______________________________________________________________________
 
 **Document Version**: 1.0
 **Last Updated**: 2025-11-05

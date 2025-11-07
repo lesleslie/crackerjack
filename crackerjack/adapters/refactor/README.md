@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Refactor](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Refactor](<./README.md>)
 
 # Refactor Adapters
 
@@ -41,7 +41,9 @@ from crackerjack.adapters.refactor.creosote import CreosoteAdapter, CreosoteSett
 
 
 async def find_unused_deps() -> None:
-    adapter = CreosoteAdapter(settings=CreosoteSettings(config_file=Path("pyproject.toml")))
+    adapter = CreosoteAdapter(
+        settings=CreosoteSettings(config_file=Path("pyproject.toml"))
+    )
     await adapter.init()
     result = await adapter.check()
 ```
@@ -53,5 +55,5 @@ async def find_unused_deps() -> None:
 
 ## Related
 
-- [Complexity](../complexity/README.md) — Use complexity reports to target refactors
-- [Format](../format/README.md) — Formatting changes often enable simpler refactors
+- [Complexity](<../complexity/README.md>) — Use complexity reports to target refactors
+- [Format](<../format/README.md>) — Formatting changes often enable simpler refactors

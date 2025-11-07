@@ -9,9 +9,9 @@
 ## Objectives Achieved
 
 1. ✅ **Performance Fix**: Restored `asyncio.to_thread()` for non-blocking execution
-2. ✅ **Flag Inversion**: ACB is now the default, legacy orchestrator requires opt-out
-3. ✅ **Parameter Plumbing**: Fixed missing `use_legacy_orchestrator` parameter
-4. ✅ **Comprehensive Testing**: Verified both execution paths work correctly
+1. ✅ **Flag Inversion**: ACB is now the default, legacy orchestrator requires opt-out
+1. ✅ **Parameter Plumbing**: Fixed missing `use_legacy_orchestrator` parameter
+1. ✅ **Comprehensive Testing**: Verified both execution paths work correctly
 
 ## Technical Implementation
 
@@ -26,6 +26,7 @@
 **Files Modified**: `crackerjack/workflows/actions.py`
 
 **Changes**:
+
 ```python
 # Before (blocking):
 success = pipeline._run_fast_hooks_phase(options)
@@ -38,12 +39,14 @@ success = await asyncio.to_thread(
 ```
 
 **Affected Functions**:
+
 - `run_fast_hooks()` (lines 98-101)
 - `run_code_cleaning()` (lines 153-156)
 - `run_comprehensive_hooks()` (lines 209-212)
 - `run_test_workflow()` (lines 258-261)
 
 **Results**:
+
 - Fast hooks: ~48s (vs 180s+ timeout before)
 - Real-time console output: ✅ Working
 - Event loop: ✅ Not blocked
@@ -54,6 +57,7 @@ success = await asyncio.to_thread(
 **Goal**: Make ACB the default execution path with legacy orchestrator as opt-out.
 
 **Files Modified**:
+
 - `crackerjack/cli/options.py` (lines 153, 968-973)
 - `crackerjack/cli/handlers.py` (lines 275-279)
 - `crackerjack/__main__.py` (line 1333, 1424, 1444)
@@ -61,12 +65,14 @@ success = await asyncio.to_thread(
 **Flag Changes**:
 
 **Before**:
+
 ```python
 use_acb_workflows: bool = False  # Opt-in required
 # --use-acb-workflows flag enabled ACB
 ```
 
 **After**:
+
 ```python
 use_acb_workflows: bool = True  # ACB is now the default
 use_legacy_orchestrator: bool = False  # Opt-out flag for legacy
@@ -74,6 +80,7 @@ use_legacy_orchestrator: bool = False  # Opt-out flag for legacy
 ```
 
 **Handler Logic**:
+
 ```python
 # Phase 4.2 COMPLETE: ACB workflows are now the default
 # Use --use-legacy-orchestrator to opt out and use the old orchestration system
@@ -94,6 +101,7 @@ if orchestrated:
 **Root Cause**: The `use_legacy_orchestrator` parameter was added to `__main__.py` but was MISSING from the `create_options()` function signature in `options.py`, so it was never being passed through.
 
 **Discovery**: Debug output revealed:
+
 ```
 DEBUG: sys.argv=['--use-legacy-orchestrator', '--skip-hooks']
 DEBUG: use_legacy_orchestrator=False  # ❌ Wrong!
@@ -102,6 +110,7 @@ DEBUG: use_legacy_orchestrator=False  # ❌ Wrong!
 **Fix**: Added `use_legacy_orchestrator` to `create_options()` function signature (line 1089) and parameter passing (line 1192).
 
 **Typer Configuration**:
+
 ```python
 "use_legacy_orchestrator": typer.Option(
     False,
@@ -112,6 +121,7 @@ DEBUG: use_legacy_orchestrator=False  # ❌ Wrong!
 ```
 
 The `/--no-` syntax creates a toggle flag where:
+
 - `--use-legacy-orchestrator` sets it to `True`
 - `--no-use-legacy-orchestrator` sets it to `False`
 - No flag = `False` (default, uses ACB)
@@ -119,6 +129,7 @@ The `/--no-` syntax creates a toggle flag where:
 ## Testing Results
 
 ### Test 1: Default ACB (No Flags)
+
 ```bash
 $ python -m crackerjack --skip-hooks
 🚀 Crackerjack Workflow Engine (ACB-Powered)  # ✅ ACB banner present
@@ -129,6 +140,7 @@ Selected workflow: Standard Quality Workflow
 ```
 
 ### Test 2: Legacy Orchestrator Opt-Out
+
 ```bash
 $ python -m crackerjack --use-legacy-orchestrator --skip-hooks
 ⏳ Started: Configuration updates  # ✅ NO ACB banner
@@ -138,6 +150,7 @@ $ python -m crackerjack --use-legacy-orchestrator --skip-hooks
 ```
 
 ### Test 3: Full Workflow with Hooks
+
 ```bash
 $ python -m crackerjack --use-acb-workflows
 🚀 Crackerjack Workflow Engine (ACB-Powered)
@@ -162,6 +175,7 @@ Exit code: 0 (success)
 **No Action Required**: ACB workflows are now the default. Your existing commands will work unchanged.
 
 **If You Prefer Legacy Orchestrator**:
+
 ```bash
 # Add this flag to any crackerjack command:
 python -m crackerjack --use-legacy-orchestrator --fast
@@ -171,12 +185,14 @@ python -m crackerjack --use-legacy-orchestrator --comp
 ### For Developers
 
 **Flag Behavior**:
+
 - Default (no flags): Uses ACB workflow engine
 - `--use-acb-workflows`: Explicitly use ACB (redundant but supported)
 - `--use-legacy-orchestrator`: Opt out and use legacy orchestrator
 - `--no-use-legacy-orchestrator`: Explicitly use ACB (same as default)
 
 **Code Pattern**:
+
 ```python
 from crackerjack.cli.options import Options
 
@@ -192,18 +208,21 @@ else:
 ## Performance Improvements
 
 ### Before Phase 4.2
+
 - ACB workflows: 180s timeout (blocked event loop)
 - Legacy orchestrator: ~60s for full workflow
 - Console output: Buffered, appeared all at once at the end
 - Event loop: Blocked by synchronous calls
 
 ### After Phase 4.2
+
 - ACB workflows: ~48s for fast hooks, ~90s for full workflow
 - Legacy orchestrator: Unchanged (~60s)
 - Console output: Real-time streaming during execution
 - Event loop: Not blocked, `asyncio.to_thread()` for CPU-bound ops
 
 ### Benchmark
+
 ```
 Fast Hooks Phase:
   - Legacy orchestrator: ~45s
@@ -249,6 +268,7 @@ The pipeline instance is explicitly passed via the workflow context, so it doesn
 ## Known Issues
 
 ### WorkflowEventBus Warning
+
 ```
 WARNING: WorkflowEventBus not available: DependencyResolutionError: No handler found that can handle dependency: <class 'crackerjack.events.workflow_bus.WorkflowEventBus'>
 ```
@@ -261,20 +281,23 @@ WARNING: WorkflowEventBus not available: DependencyResolutionError: No handler f
 ## Next Steps
 
 ### Phase 5: Documentation & Polish
+
 1. Update README.md with ACB as default
-2. Update CLI help text for flag descriptions
-3. Add migration notes to CHANGELOG.md
-4. Consider deprecating `--use-acb-workflows` flag (redundant)
+1. Update CLI help text for flag descriptions
+1. Add migration notes to CHANGELOG.md
+1. Consider deprecating `--use-acb-workflows` flag (redundant)
 
 ### Phase 6: Performance Optimization
+
 1. Investigate parallel hook execution within phases
-2. Optimize DI container build time (currently ~1s)
-3. Add progress indicators for long-running operations
+1. Optimize DI container build time (currently ~1s)
+1. Add progress indicators for long-running operations
 
 ### Phase 7: Event Bus Integration
+
 1. Resolve WorkflowEventBus DI registration
-2. Enable event-driven workflow coordination
-3. Add real-time progress updates via WebSocket
+1. Enable event-driven workflow coordination
+1. Add real-time progress updates via WebSocket
 
 ## Conclusion
 

@@ -42,6 +42,7 @@ Event-driven phases:
 ### Current Phase Structure
 
 **Quality Phase** (the main workflow):
+
 ```
 _execute_quality_phase()
   ├── options.fast → _run_fast_hooks_phase_monitored()
@@ -76,27 +77,32 @@ _execute_quality_phase()
 ### Key Features
 
 1. **Step-Based Composition**
+
    - Declarative `WorkflowDefinition` with `WorkflowStep[]`
    - Each step has `action`, `params`, `depends_on`
    - Clean separation of workflow structure from execution
 
-2. **Automatic Parallel Execution**
+1. **Automatic Parallel Execution**
+
    - `BasicWorkflowEngine` analyzes `depends_on` relationships
    - Executes independent steps concurrently
    - Respects `max_concurrent_steps` semaphore
    - Example: Fast hooks could run in parallel with configuration
 
-3. **Built-in Retry Logic**
+1. **Built-in Retry Logic**
+
    - Per-step `retry_attempts` and `retry_delay`
    - Exponential backoff support
    - `skip_on_failure` flag for non-critical steps
 
-4. **State Management**
+1. **State Management**
+
    - `WorkflowResult` and `StepResult` tracking
    - Automatic timing and duration calculation
    - State persistence (when enabled)
 
-5. **Event Integration**
+1. **Event Integration**
+
    - Works with existing `acb.events.Event` system
    - Can emit workflow/step events for monitoring
 
@@ -107,12 +113,14 @@ _execute_quality_phase()
 **Goal**: Demonstrate ACB workflows can execute a simplified crackerjack workflow
 
 **Tasks**:
+
 1. Create example workflow definition for fast hooks only
-2. Implement action handlers as async functions
-3. Register handlers with `BasicWorkflowEngine`
-4. Execute and compare output with current implementation
+1. Implement action handlers as async functions
+1. Register handlers with `BasicWorkflowEngine`
+1. Execute and compare output with current implementation
 
 **Example Code**:
+
 ```python
 from acb.workflows import BasicWorkflowEngine, WorkflowDefinition, WorkflowStep
 
@@ -151,14 +159,16 @@ result = await engine.execute(fast_workflow, context={"options": options})
 **Goal**: Migrate standard workflow to ACB workflows
 
 **Tasks**:
+
 1. Create `CrackerjackWorkflowEngine` extending `BasicWorkflowEngine`
-2. Define workflow for default execution path:
+1. Define workflow for default execution path:
    - Configuration → Fast Hooks → Cleaning → Comprehensive Hooks
-3. Implement action handlers wrapping existing phase methods
-4. Add conditional step execution based on options flags
-5. Integrate with existing event bus
+1. Implement action handlers wrapping existing phase methods
+1. Add conditional step execution based on options flags
+1. Integrate with existing event bus
 
 **New File Structure**:
+
 ```
 crackerjack/workflows/
 ├── __init__.py
@@ -169,6 +179,7 @@ crackerjack/workflows/
 ```
 
 **Workflow Definition Example**:
+
 ```python
 STANDARD_WORKFLOW = WorkflowDefinition(
     workflow_id="crackerjack-standard",
@@ -211,14 +222,16 @@ STANDARD_WORKFLOW = WorkflowDefinition(
 **Goal**: Leverage advanced ACB workflow capabilities
 
 **Tasks**:
+
 1. Implement parallel hook execution within phases
    - Individual hooks as workflow steps with dependencies
    - Example: gitleaks, bandit, skylos can run in parallel
-2. Add dynamic workflow composition based on options
-3. Implement workflow caching/persistence
-4. Add workflow metrics and reporting
+1. Add dynamic workflow composition based on options
+1. Implement workflow caching/persistence
+1. Add workflow metrics and reporting
 
 **Parallel Hooks Example**:
+
 ```python
 COMPREHENSIVE_HOOKS_WORKFLOW = WorkflowDefinition(
     workflow_id="comprehensive-hooks",
@@ -255,22 +268,25 @@ COMPREHENSIVE_HOOKS_WORKFLOW = WorkflowDefinition(
 **Goal**: Ensure migration maintains all functionality
 
 **Tasks**:
+
 1. Comprehensive integration testing
-2. Performance benchmarking (expect improvements!)
-3. Backward compatibility verification
-4. Documentation updates
+1. Performance benchmarking (expect improvements!)
+1. Backward compatibility verification
+1. Documentation updates
 
 ## Benefits Analysis
 
 ### Performance Improvements
 
 **Current**: Sequential execution
+
 ```
 Config (5s) → Fast Hooks (40s) → Cleaning (10s) → Comp Hooks (60s)
 Total: 115 seconds
 ```
 
 **With ACB Workflows**: Parallel where possible
+
 ```
 Config (5s) → [Fast Hooks (40s) || Cleaning (10s)] → Comp Hooks (60s)
                                                       ├─ zuban (20s) ┐
@@ -282,21 +298,25 @@ Total: ~75 seconds (35% faster!)
 ### Code Quality Improvements
 
 1. **Declarative > Imperative**
+
    - Workflow structure is data, not code
    - Easier to understand, test, and modify
    - Can be serialized, versioned, visualized
 
-2. **Better Error Handling**
+1. **Better Error Handling**
+
    - Built-in retry logic
    - Per-step timeout management
    - Clearer failure attribution
 
-3. **Reduced Complexity**
+1. **Reduced Complexity**
+
    - Remove custom orchestration logic (~500 lines)
    - Dependency resolution handled by engine
    - State management automatic
 
-4. **Better Testing**
+1. **Better Testing**
+
    - Mock individual action handlers
    - Test workflow definitions without execution
    - Easier to test failure scenarios
@@ -304,6 +324,7 @@ Total: ~75 seconds (35% faster!)
 ## Implementation Checklist
 
 ### Phase 1: POC
+
 - [ ] Create `crackerjack/workflows/` package
 - [ ] Implement basic workflow definition
 - [ ] Create sample action handlers
@@ -311,6 +332,7 @@ Total: ~75 seconds (35% faster!)
 - [ ] Document findings
 
 ### Phase 2: Core Migration
+
 - [ ] Design `CrackerjackWorkflowEngine` class
 - [ ] Create workflow definitions for all execution modes
 - [ ] Implement action handlers wrapping existing phases
@@ -319,12 +341,14 @@ Total: ~75 seconds (35% faster!)
 - [ ] Maintain backward compatibility
 
 ### Phase 3: Advanced Features
+
 - [ ] Implement hook-level parallelization
 - [ ] Add dynamic workflow composition
 - [ ] Implement workflow persistence
 - [ ] Add metrics and monitoring
 
 ### Phase 4: Testing & Docs
+
 - [ ] Write integration tests
 - [ ] Benchmark performance
 - [ ] Update CLAUDE.md
@@ -336,18 +360,22 @@ Total: ~75 seconds (35% faster!)
 ### Risks
 
 1. **Breaking Changes**: Migration could introduce bugs
+
    - Mitigation: Feature flag to toggle ACB workflows vs legacy
    - Mitigation: Comprehensive integration testing
 
-2. **Performance Regression**: Unknown overhead from ACB workflows
+1. **Performance Regression**: Unknown overhead from ACB workflows
+
    - Mitigation: Benchmark early in POC phase
    - Mitigation: Profile with performance monitoring
 
-3. **Complexity Increase**: Learning curve for ACB workflows
+1. **Complexity Increase**: Learning curve for ACB workflows
+
    - Mitigation: Excellent ACB documentation
    - Mitigation: Start with simple POC
 
-4. **Event System Compatibility**: Integration challenges
+1. **Event System Compatibility**: Integration challenges
+
    - Mitigation: ACB workflows already support events
    - Mitigation: Can emit custom events alongside built-in ones
 
@@ -372,18 +400,18 @@ Total: ~75 seconds (35% faster!)
 ## Next Steps
 
 1. **Review and approve this plan**
-2. **Create feature branch**: `feature/acb-workflow-migration`
-3. **Start Phase 1 POC**: Implement fast hooks workflow
-4. **Daily progress updates**: Track progress and blockers
-5. **Decision point after POC**: Continue or adjust approach
+1. **Create feature branch**: `feature/acb-workflow-migration`
+1. **Start Phase 1 POC**: Implement fast hooks workflow
+1. **Daily progress updates**: Track progress and blockers
+1. **Decision point after POC**: Continue or adjust approach
 
 ## Open Questions
 
 1. Should we maintain dual orchestrators during migration (legacy + ACB)?
-2. Do we want workflow definitions in YAML/JSON for external configuration?
-3. Should hook-level parallelization be opt-in or default?
-4. How do we handle AI agent coordination with ACB workflows?
-5. Should we implement workflow caching for repeated executions?
+1. Do we want workflow definitions in YAML/JSON for external configuration?
+1. Should hook-level parallelization be opt-in or default?
+1. How do we handle AI agent coordination with ACB workflows?
+1. Should we implement workflow caching for repeated executions?
 
 ## References
 

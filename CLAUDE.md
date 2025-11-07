@@ -108,14 +108,14 @@ Crackerjack uses **ACB (Architecture Component Base)** for dependency injection 
 from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console, TestManagerProtocol
 
+
 @depends.inject
 def setup_ai_agent_env(
-    ai_agent: bool,
-    debug_mode: bool = False,
-    console: Inject[Console] = None
+    ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
 ) -> None:
     """All functions use @depends.inject decorator with protocol-based dependencies."""
     console.print("[green]AI agent environment configured[/green]")
+
 
 class SessionCoordinator:
     @depends.inject
@@ -156,6 +156,7 @@ self.timeout_manager = get_timeout_manager()
 # ❌ Direct service instantiation
 self.logger = logging.getLogger(__name__)
 
+
 # ✅ Correct - Use DI injection
 @depends.inject
 def __init__(
@@ -174,27 +175,33 @@ def __init__(
 Based on Phase 2-4 refactoring audit:
 
 - **CLI Handlers** (90% compliant): Entry points, option processing
+
   - ✅ All handlers use `@depends.inject` decorator
   - ✅ Perfect `Inject[Protocol]` usage
   - ⚠️ `CrackerjackCLIFacade` needs DI integration
 
 - **Services** (95% compliant): Filesystem, git, config, security, health monitoring
+
   - ✅ All Phase 3 refactored services follow standards
   - ✅ Constructor consistency, lifecycle management
 
 - **Managers** (80% compliant): Hook execution (fast→comprehensive), test management, publishing
+
   - ✅ Most managers use protocol-based injection
   - ⚠️ Some managers have manual service instantiation
 
 - **Coordinators** (70% compliant): Session/phase coordination, async workflows, parallel execution
+
   - ✅ Phase coordinators use proper DI
   - ⚠️ Async coordinators need protocol standardization
 
 - **Orchestration** (70% compliant): `WorkflowOrchestrator`, DI containers, lifecycle management
+
   - ✅ `SessionCoordinator` - Gold standard ACB integration
   - ⚠️ `ServiceWatchdog` - Needs DI integration (factory functions, manual fallbacks)
 
 - **Agent System** (40% compliant): AI agents, coordination
+
   - ⚠️ All 9 agents use `AgentContext` pattern (predates ACB)
   - ⚠️ `AgentCoordinator` has no DI integration
   - 📋 Protocols defined, refactoring planned for future phase
@@ -202,12 +209,14 @@ Based on Phase 2-4 refactoring audit:
 ### Architecture Decision Records
 
 **Why Protocol-Based DI?**
+
 - Loose coupling between layers
 - Easy testing with mock implementations
 - Clear interface contracts
 - Runtime type checking via `@runtime_checkable`
 
 **Why AgentContext Pattern for Agents?**
+
 - Agents predate ACB adoption (legacy pattern)
 - Dataclass-based context provides agent isolation
 - Refactoring to DI planned but not prioritized (agents work well as-is)
@@ -218,9 +227,9 @@ Based on Phase 2-4 refactoring audit:
 **Workflow Order**:
 
 1. **Fast Hooks** (~5s): formatting, basic checks → retry once if fail
-2. **Full Test Suite**: collect ALL failures, don't stop on first
-3. **Comprehensive Hooks** (~30s): type checking, security, complexity → collect ALL issues
-4. **AI Batch Fixing**: process all collected failures together
+1. **Full Test Suite**: collect ALL failures, don't stop on first
+1. **Comprehensive Hooks** (~30s): type checking, security, complexity → collect ALL issues
+1. **AI Batch Fixing**: process all collected failures together
 
 **Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
 **Coverage**: Ratchet system targeting 100%, never decrease
@@ -230,24 +239,28 @@ Based on Phase 2-4 refactoring audit:
 Crackerjack uses **pytest-xdist** for intelligent parallel test execution with memory safety:
 
 **Worker Configuration**:
+
 - `test_workers: 0` (default) → Auto-detect via pytest-xdist (`-n auto`)
 - `test_workers: 1` → Sequential execution (no parallelization)
 - `test_workers: N` (N > 1) → Explicit worker count
 - `test_workers: -N` (N < 0) → Fractional (e.g., -2 = half of CPU cores)
 
 **Safety Features**:
+
 - Memory-based limiting: 2GB per worker minimum (prevents OOM)
 - Benchmark auto-skip: Benchmarks always run sequentially (parallel skews results)
 - Distribution strategy: `--dist=loadfile` (keeps fixtures from same file together)
 - Emergency rollback: `export CRACKERJACK_DISABLE_AUTO_WORKERS=1`
 
 **Configuration Priority** (highest to lowest):
+
 1. CLI flag: `--test-workers N`
-2. `pyproject.toml`: `[tool.crackerjack] test_workers = N`
-3. `settings/crackerjack.yaml`: `test_workers: N`
-4. Default: 0 (auto-detect)
+1. `pyproject.toml`: `[tool.crackerjack] test_workers = N`
+1. `settings/crackerjack.yaml`: `test_workers: N`
+1. Default: 0 (auto-detect)
 
 **Examples**:
+
 ```bash
 # Auto-detect (default, recommended)
 python -m crackerjack --run-tests
@@ -267,6 +280,7 @@ python -m crackerjack --run-tests  # Forces sequential
 ```
 
 **Performance Impact** (8-core MacBook):
+
 - Before (1 worker): ~60s test suite, 12% CPU utilization
 - After (auto-detect): ~15-20s test suite, 70-80% CPU utilization (3-4x faster)
 
@@ -353,8 +367,8 @@ settings = await CrackerjackSettings.load_async()
 **Priority Order** (highest to lowest):
 
 1. `settings/local.yaml` - Local developer overrides
-2. `settings/crackerjack.yaml` - Base project configuration
-3. Default values in `CrackerjackSettings` class
+1. `settings/crackerjack.yaml` - Base project configuration
+1. Default values in `CrackerjackSettings` class
 
 **Usage Examples**:
 

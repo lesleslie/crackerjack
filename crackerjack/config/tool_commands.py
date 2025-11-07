@@ -143,7 +143,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         ],
         "ruff-check": ["uv", "run", "python", "-m", "ruff", "check", "."],
         "ruff-format": ["uv", "run", "python", "-m", "ruff", "format", "."],
-        "mdformat": ["uv", "run", "python", "-m", "mdformat", "--check", "."],
+        "mdformat": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.mdformat_wrapper",
+            "--check",
+        ],
         # Use explicit project path flag; include venv discovery
         "creosote": [
             "uv",

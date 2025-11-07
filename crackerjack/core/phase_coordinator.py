@@ -391,7 +391,7 @@ class PhaseCoordinator:
 
         if failed or errors:
             self.console.print(
-                f"\n[red]❌ {base_message}[/red] ({failed} failed, {errors} errors).\n"
+                f"\n[red]❌[/red] {base_message} ({failed} failed, {errors} errors).\n"
             )
         else:
             self.console.print(f"\n[green]✅[/green] {base_message}.\n")

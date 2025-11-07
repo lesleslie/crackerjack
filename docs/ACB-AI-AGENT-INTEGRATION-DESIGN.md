@@ -21,6 +21,7 @@ class EnhancedAgentCoordinator:
 ```
 
 **Key Components:**
+
 - **12 Specialized Agents**: RefactoringAgent, SecurityAgent, TestCreationAgent, etc.
 - **AgentContext**: Dataclass with project path, console, settings
 - **Issue Model**: Type (error/warning), priority, file location, description
@@ -33,6 +34,7 @@ class EnhancedAgentCoordinator:
 **Concept**: AI agents run AFTER workflow completes, analyzing failures.
 
 **Advantages:**
+
 - ✅ Minimal integration complexity
 - ✅ Preserves existing agent logic
 - ✅ Clear separation of concerns
@@ -42,6 +44,7 @@ class EnhancedAgentCoordinator:
 
 ```python
 # In workflow_orchestrator.py or new ai_workflow_adapter.py
+
 
 async def run_workflow_with_ai_fixing(
     engine: CrackerjackWorkflowEngine,
@@ -129,7 +132,6 @@ STANDARD_WORKFLOW_WITH_AI = WorkflowDefinition(
         WorkflowStep(step_id="config", action="run_config"),
         WorkflowStep(step_id="fast", action="run_fast", depends_on=["config"]),
         WorkflowStep(step_id="comp", action="run_comp", depends_on=["fast"]),
-
         # AI fixing step runs even if previous steps failed
         WorkflowStep(
             step_id="ai_fix",
@@ -303,6 +305,7 @@ def apply_single_fix(fix: Fix) -> None:
 ```python
 # In crackerjack/cli/handlers.py
 
+
 @depends.inject
 async def handle_standard_mode_with_acb(
     options: Options,
@@ -317,9 +320,7 @@ async def handle_standard_mode_with_acb(
     workflow = select_workflow_for_options(options)
 
     # Execute with AI fixing
-    result, fixes = await run_workflow_with_ai_fixing(
-        engine, workflow, options
-    )
+    result, fixes = await run_workflow_with_ai_fixing(engine, workflow, options)
 
     # Report results
     if fixes:
@@ -397,9 +398,7 @@ async def test_workflow_with_ai_fixing():
 
     # Execute with AI fixing
     options = Options(ai_agent=True)
-    result, fixes = await run_workflow_with_ai_fixing(
-        engine, workflow, options
-    )
+    result, fixes = await run_workflow_with_ai_fixing(engine, workflow, options)
 
     # Verify fixes were attempted
     assert len(fixes) > 0
@@ -408,6 +407,7 @@ async def test_workflow_with_ai_fixing():
 ## Success Criteria
 
 **Phase 1-2:**
+
 - ✅ AI agents work with `--ai-fix` flag
 - ✅ Issues extracted correctly from failed steps
 - ✅ Fixes applied and workflow re-runs
@@ -415,6 +415,7 @@ async def test_workflow_with_ai_fixing():
 - ✅ Test coverage ≥ existing
 
 **Phase 3 (Optional):**
+
 - ✅ AI fixing as workflow step
 - ✅ Conditional execution (skip if no failures)
 - ✅ Retry logic with fixes
@@ -437,13 +438,13 @@ async def test_workflow_with_ai_fixing():
 1. **Should AI fixing be automatic or require confirmation?**
    → Start with automatic (existing behavior), add `--ai-confirm` flag later
 
-2. **How many retry iterations?**
+1. **How many retry iterations?**
    → Default to 3 (existing), configurable via `--max-ai-iterations`
 
-3. **What if AI fixes introduce new errors?**
+1. **What if AI fixes introduce new errors?**
    → Track fix success rate, abort after 3 failed fix attempts
 
-4. **Should we persist fix history?**
+1. **Should we persist fix history?**
    → Phase 3 feature, not MVP
 
 ## References

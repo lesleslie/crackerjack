@@ -10,11 +10,12 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.42.3] - 2025-11-07
 
@@ -25,29 +26,32 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.42.2] - 2025-11-07
 
@@ -60,29 +64,32 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.42.1] - 2025-11-07
 
@@ -95,56 +102,62 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-07
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [0.42.0] - 2025-11-06
 
@@ -241,60 +254,67 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-11-06
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat(workflows): complete ACB workflow migration with commit and publish support
   - Added `run_commit_phase` action handler for git commit/push functionality
   - Added `run_publish_phase` action handler for version bump and PyPI publishing
@@ -305,59 +325,65 @@ ______________________________________________________________________
   - ACB workflow engine now feature-complete with legacy orchestrator parity
 
 ### Fixed
+
 - fix(workflows): commit and publish stages now execute with ACB workflow engine
   - Resolves issue where `-c -t -p patch` flags were ignored in Phase 4.2
   - Eliminates need for `--use-legacy-orchestrator` flag for commit/publish workflows
 
+## [Unreleased] - 2025-11-05
+
+### Added
+
+- feat: add new feature
+
+### Fixed
+
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-11-05
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
+
 - fix: resolve bug in parser
-
-
-## [Unreleased] - 2025-11-05
-
-### Added
-- feat: add new feature
-
-### Fixed
-- fix: resolve bug in parser
-
 
 ## [Unreleased] - 2025-11-05
 
 ### Changed
+
 - **BREAKING**: ACB workflows are now the default execution path (Phase 4.2 complete)
   - Use `--use-legacy-orchestrator` to opt out and use the legacy orchestrator
   - Removed opt-in `--use-acb-workflows` requirement (ACB is now default)
@@ -365,18 +391,21 @@ ______________________________________________________________________
   - Non-blocking async execution with `asyncio.to_thread()` pattern
 
 ### Added
+
 - Added `--use-legacy-orchestrator` flag for opting out of ACB workflows
 - Added `/--no-use-legacy-orchestrator` toggle flag syntax support
 - Real-time progress indicators during hook execution
 - Phase 4.2 completion documentation (docs/PHASE-4.2-COMPLETION.md)
 
 ### Fixed
+
 - Fixed parameter plumbing bug where `use_legacy_orchestrator` was missing from `create_options()` function
 - Fixed event loop blocking issue by restoring `asyncio.to_thread()` for synchronous phase methods
 - Fixed console output buffering - now streams in real-time
 - Performance: Fast hooks now complete in ~48s (previously timed out at 180s)
 
 ### Performance
+
 - Fast hooks: ~48s (vs 180s+ timeout before Phase 4.2)
 - Full workflow: ~90s with real-time output
 - Event loop: Non-blocking with `asyncio.to_thread()` for CPU-bound operations
@@ -387,630 +416,700 @@ ______________________________________________________________________
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-31
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-30
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-26
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-15
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-15
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-15
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-15
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-14
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-10
 
 ### Added
+
 - docs: adapter migration guidance and telemetry dashboard design notes
 - docs: workflow session controller ADR
 
 ### Changed
+
 - refactor: externalize monitoring dashboard templates and share renderer utilities
 - feat: add retry/backoff support to workflow event bus with telemetry benchmark (avg ~1.12k events/s)
 - chore: reorganize service modules into quality/monitoring/ai subpackages with
   compatibility shims and SQLite-backed telemetry/state
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-10
 
 ### Added
+
 - feat: add new feature
 
 ### Fixed
-- fix: resolve bug in parser
 
+- fix: resolve bug in parser
 
 ## [Unreleased] - 2025-10-09
 

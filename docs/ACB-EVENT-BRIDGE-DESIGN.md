@@ -41,6 +41,7 @@ class WorkflowEvent(str, Enum):
 ```
 
 **Consumers of these events**:
+
 - Progress monitors and UI panels
 - Performance tracking and metrics
 - Telemetry and logging
@@ -48,6 +49,7 @@ class WorkflowEvent(str, Enum):
 - MCP WebSocket streaming
 
 **Challenge**: ACB `BasicWorkflowEngine` emits different events:
+
 - `workflow.step.started`
 - `workflow.step.completed`
 - `workflow.step.failed`
@@ -420,6 +422,7 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
 ```python
 # CLI handler integration
 
+
 @depends.inject
 async def handle_standard_mode_with_acb(
     options: Options,
@@ -588,7 +591,6 @@ await self.event_bus.publish(
         "phase": "fast_hooks",
         "duration": duration_seconds,
         "success": True,
-
         # ACB format (for future consumers)
         "step_id": step_id,
         "step_result": result,
@@ -605,13 +607,14 @@ Consumers gradually adopt ACB event format:
 @event_bus.subscribe(WorkflowEvent.FAST_HOOKS_COMPLETED)
 async def on_fast_hooks_done(payload: dict):
     duration = payload["duration"]  # Legacy field
-    success = payload["success"]    # Legacy field
+    success = payload["success"]  # Legacy field
+
 
 # New consumer (uses ACB format)
 @event_bus.subscribe(WorkflowEvent.FAST_HOOKS_COMPLETED)
 async def on_fast_hooks_done(payload: dict):
     step_result = payload["step_result"]  # ACB field
-    duration = step_result.duration        # ACB format
+    duration = step_result.duration  # ACB format
 ```
 
 ### Phase 3: Remove EventBridge
@@ -622,6 +625,7 @@ Once all consumers migrated, remove EventBridge:
 # Direct ACB event usage
 engine = BasicWorkflowEngine()  # No event bridge
 result = await engine.execute(workflow)
+
 
 # Consumers listen to ACB events directly
 @acb_event_bus.subscribe("workflow.step.completed")
@@ -639,6 +643,7 @@ async def on_step_done(event: Event):
 **Concurrency**: Event emissions are async and non-blocking
 
 **Benchmarking**:
+
 ```python
 # Include event overhead in Phase 1 benchmarks
 baseline_time = measure_current_workflow()
@@ -652,7 +657,7 @@ assert (acb_time - baseline_time) / baseline_time < 0.01
 
 ✅ All existing event consumers continue working without changes
 ✅ Event payloads maintain backward compatibility
-✅ EventBridge adds <1% overhead
+✅ EventBridge adds \<1% overhead
 ✅ 100% event coverage (all 15+ event types translated)
 ✅ Clean separation (ACB workflow logic isolated from events)
 
@@ -661,13 +666,13 @@ assert (acb_time - baseline_time) / baseline_time < 0.01
 1. **Should we emit both ACB and legacy events during transition?**
    → Yes, dual emission during Phase 1 for safety
 
-2. **How do we handle custom event metadata?**
+1. **How do we handle custom event metadata?**
    → Include in payload under `metadata` key
 
-3. **Should EventBridge be configurable (enable/disable)?**
+1. **Should EventBridge be configurable (enable/disable)?**
    → Yes, add `enable_event_bridge` flag to CrackerjackWorkflowEngine
 
-4. **Do we need event versioning?**
+1. **Do we need event versioning?**
    → No, payload compatibility sufficient for now
 
 ## References

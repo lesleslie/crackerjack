@@ -67,6 +67,10 @@ class TestManager:
             self.console.print("[yellow]⚠️[/ yellow] Coverage ratchet disabled")
 
     def run_tests(self, options: OptionsProtocol) -> bool:
+        # Early return if tests are disabled
+        if hasattr(options, "test") and not options.test:
+            return True
+
         start_time = time.time()
 
         try:
@@ -390,7 +394,8 @@ class TestManager:
                 ])
 
             # Try to extract coverage if present
-            coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)%"
+            # Coverage format: "TOTAL    160     32    80%"
+            coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+(\d+)%"
             coverage_match = re.search(coverage_pattern, output)
             if coverage_match:
                 stats["coverage"] = float(coverage_match.group(1))

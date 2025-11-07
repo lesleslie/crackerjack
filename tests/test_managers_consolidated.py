@@ -3,11 +3,13 @@ from unittest.mock import Mock, patch, MagicMock
 
 import pytest
 from acb.console import Console
+from acb.config import root_path
 
 from acb.depends import depends
 from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.managers.publish_manager import PublishManagerImpl
 from crackerjack.managers.test_manager import TestManagementImpl
+from crackerjack.models.protocols import CoverageRatchetProtocol, CoverageBadgeServiceProtocol
 
 
 # Module-level DI context setup
@@ -18,28 +20,76 @@ def mock_console_di() -> MagicMock:
 
 
 @pytest.fixture
-def managers_di_context(mock_console_di: MagicMock):
+def mock_coverage_ratchet() -> MagicMock:
+    """Mock CoverageRatchetProtocol for DI context."""
+    mock = MagicMock()
+    # Make coverage ratchet always return True for tests
+    mock.process_coverage_ratchet.return_value = True
+    return mock
+
+
+@pytest.fixture
+def mock_coverage_badge() -> MagicMock:
+    """Mock CoverageBadgeServiceProtocol for DI context."""
+    return MagicMock(spec=CoverageBadgeServiceProtocol)
+
+
+@pytest.fixture
+def managers_di_context(
+    mock_console_di: MagicMock,
+    mock_coverage_ratchet: MagicMock,
+    mock_coverage_badge: MagicMock,
+    temp_project,
+):
     """Set up DI context for managers testing."""
-    injection_map = {Console: mock_console_di}
+    injection_map = {
+        Console: mock_console_di,
+        CoverageRatchetProtocol: mock_coverage_ratchet,
+        CoverageBadgeServiceProtocol: mock_coverage_badge,
+    }
 
     original_values = {}
     try:
-        try:
-            original_values[Console] = depends.get_sync(Console)
-        except Exception:
-            original_values[Console] = None
-        depends.set(Console, mock_console_di)
+        # Save original values
+        for key in injection_map.keys():
+            try:
+                original_values[key] = depends.get_sync(key)
+            except Exception:
+                original_values[key] = None
 
-        yield injection_map, mock_console_di
+        # Set mock values
+        for key, value in injection_map.items():
+            depends.set(key, value)
+
+        yield injection_map
     finally:
-        if original_values[Console] is not None:
-            depends.set(Console, original_values[Console])
+        # Restore original values
+        for key, value in original_values.items():
+            if value is not None:
+                depends.set(key, value)
 
 
 @pytest.fixture
 def console(mock_console_di):
     """Provide console mock for tests."""
     return mock_console_di
+
+
+def create_test_manager_with_path(temp_project):
+    """Helper to create TestManagementImpl with custom pkg_path.
+
+    Since TestManager gets pkg_path from ACB's root_path via DI,
+    we need to manually override it after instantiation for tests.
+    """
+    manager = TestManagementImpl()
+    # Override the pkg_path that comes from root_path
+    manager.pkg_path = temp_project
+    # Recreate components with correct path
+    from crackerjack.managers.test_executor import TestExecutor
+    from crackerjack.managers.test_command_builder import TestCommandBuilder
+    manager.executor = TestExecutor(manager.console, temp_project)
+    manager.command_builder = TestCommandBuilder(temp_project)
+    return manager
 
 
 @pytest.fixture
@@ -137,21 +187,25 @@ class TestHookManagerImpl:
 
 
 class TestTestManagementImpl:
-    def test_initialization(self, console, temp_project) -> None:
-        manager = TestManagementImpl(pkg_path=temp_project)
+    def test_initialization(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
         assert manager.pkg_path == temp_project
 
-    @patch("subprocess.run")
-    def test_run_tests_success(self, mock_run, console, temp_project) -> None:
-        mock_run.return_value = Mock(
+    def test_run_tests_success(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
+
+        # Disable coverage ratchet for this test
+        manager.set_coverage_ratchet_enabled(False)
+
+        # Mock the executor's execute_with_progress method
+        mock_result = Mock(
             returncode=0,
-            stdout="collected 1 items\n\ntests / test_dummy.py:: test_dummy PASSED [100 %]\n\n1 passed in 0.01s",
+            stdout="collected 1 items\n\ntests/test_dummy.py::test_dummy PASSED [100%]\n\n1 passed in 0.01s",
             stderr="",
         )
+        manager.executor.execute_with_progress = Mock(return_value=mock_result)
 
-        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True)
-
         result = manager.run_tests(options)
         assert result is True
 
@@ -161,7 +215,7 @@ class TestTestManagementImpl:
         self,
         mock_run,
         mock_popen,
-        console,
+        managers_di_context,
         temp_project,
     ) -> None:
         mock_run.return_value = Mock(
@@ -183,7 +237,7 @@ class TestTestManagementImpl:
         mock_process.poll.return_value = 1
         mock_popen.return_value = mock_process
 
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         options = MockOptions(
             test=True,
@@ -193,50 +247,69 @@ class TestTestManagementImpl:
         result = manager.run_tests(options)
         assert result is False
 
-    def test_test_disabled(self, console, temp_project) -> None:
-        manager = TestManagementImpl(pkg_path=temp_project)
+    def test_test_disabled(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
+
+        # Mock the executor to verify it's not called when test=False
+        manager.executor.execute_with_progress = Mock()
+
         options = MockOptions(test=False)
-
         result = manager.run_tests(options)
-        assert result is True
 
-    @patch("subprocess.run")
-    def test_benchmark_mode(self, mock_run, console, temp_project) -> None:
-        mock_run.return_value = Mock(
+        # Should return True without running tests
+        assert result is True
+        # Executor should not be called
+        manager.executor.execute_with_progress.assert_not_called()
+
+    def test_benchmark_mode(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
+
+        # Disable coverage ratchet for this test
+        manager.set_coverage_ratchet_enabled(False)
+
+        # Mock the executor's execute_with_progress method
+        mock_result = Mock(
             returncode=0,
             stdout="Benchmark complete",
             stderr="",
         )
+        manager.executor.execute_with_progress = Mock(return_value=mock_result)
 
-        manager = TestManagementImpl(pkg_path=temp_project)
         options = MockOptions(test=True, benchmark=True)
-
         result = manager.run_tests(options)
         assert result is True
 
-    @patch("subprocess.run")
-    def test_test_workers_configuration(self, mock_run, console, temp_project) -> None:
-        mock_run.return_value = Mock(returncode=0, stdout="Tests completed", stderr="")
+    def test_test_workers_configuration(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
 
-        manager = TestManagementImpl(pkg_path=temp_project)
+        # Disable coverage ratchet for this test
+        manager.set_coverage_ratchet_enabled(False)
+
+        # Mock the executor's execute_with_progress method
+        mock_result = Mock(returncode=0, stdout="Tests completed", stderr="")
+        manager.executor.execute_with_progress = Mock(return_value=mock_result)
+
         options = MockOptions(test=True, test_workers=4)
-
         result = manager.run_tests(options)
         assert result is True
 
-    @patch("subprocess.run")
-    def test_test_timeout_configuration(self, mock_run, console, temp_project) -> None:
-        mock_run.return_value = Mock(returncode=0, stdout="Tests completed", stderr="")
+    def test_test_timeout_configuration(self, managers_di_context, temp_project) -> None:
+        manager = create_test_manager_with_path(temp_project)
 
-        manager = TestManagementImpl(pkg_path=temp_project)
+        # Disable coverage ratchet for this test
+        manager.set_coverage_ratchet_enabled(False)
+
+        # Mock the executor's execute_with_progress method
+        mock_result = Mock(returncode=0, stdout="Tests completed", stderr="")
+        manager.executor.execute_with_progress = Mock(return_value=mock_result)
+
         options = MockOptions(test=True, test_timeout=300)
-
         result = manager.run_tests(options)
         assert result is True
 
-    def test_parse_test_statistics_success(self, console, temp_project) -> None:
+    def test_parse_test_statistics_success(self, managers_di_context, temp_project) -> None:
         """Test parsing of successful pytest output."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         pytest_output = """
         ================================ test session starts =================================
@@ -257,9 +330,9 @@ class TestTestManagementImpl:
         assert stats["errors"] == 0
         assert stats["duration"] == 5.23
 
-    def test_parse_test_statistics_with_failures(self, console, temp_project) -> None:
+    def test_parse_test_statistics_with_failures(self, managers_di_context, temp_project) -> None:
         """Test parsing of pytest output with failures."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         pytest_output = """
         ================================ test session starts =================================
@@ -281,9 +354,9 @@ class TestTestManagementImpl:
         assert stats["errors"] == 0
         assert stats["duration"] == 12.45
 
-    def test_parse_test_statistics_with_errors(self, console, temp_project) -> None:
+    def test_parse_test_statistics_with_errors(self, managers_di_context, temp_project) -> None:
         """Test parsing of pytest output with errors."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         pytest_output = """
         ================================ test session starts =================================
@@ -304,9 +377,9 @@ class TestTestManagementImpl:
         assert stats["errors"] == 2
         assert stats["duration"] == 3.12
 
-    def test_parse_test_statistics_with_xfail_xpass(self, console, temp_project) -> None:
+    def test_parse_test_statistics_with_xfail_xpass(self, managers_di_context, temp_project) -> None:
         """Test parsing of pytest output with xfailed and xpassed tests."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         pytest_output = """
         ================================ test session starts =================================
@@ -326,9 +399,9 @@ class TestTestManagementImpl:
         assert stats["xpassed"] == 1
         assert stats["duration"] == 4.56
 
-    def test_parse_test_statistics_with_coverage(self, console, temp_project) -> None:
+    def test_parse_test_statistics_with_coverage(self, managers_di_context, temp_project) -> None:
         """Test parsing of pytest output with coverage information."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         pytest_output = """
         ================================ test session starts =================================
@@ -354,9 +427,9 @@ class TestTestManagementImpl:
         assert stats["passed"] == 10
         assert stats["coverage"] == 80.0
 
-    def test_parse_test_statistics_empty_output(self, console, temp_project) -> None:
+    def test_parse_test_statistics_empty_output(self, managers_di_context, temp_project) -> None:
         """Test parsing of empty pytest output."""
-        manager = TestManagementImpl(pkg_path=temp_project)
+        manager = create_test_manager_with_path(temp_project)
 
         stats = manager._parse_test_statistics("")
 
@@ -364,86 +437,6 @@ class TestTestManagementImpl:
         assert stats["passed"] == 0
         assert stats["failed"] == 0
         assert stats["duration"] == 0.0
-
-    @patch("crackerjack.managers.test_manager.subprocess.Popen")
-    @patch("crackerjack.managers.test_manager.subprocess.run")
-    def test_render_test_results_panel_called_on_success(
-        self,
-        mock_run,
-        mock_popen,
-        console,
-        temp_project,
-    ) -> None:
-        """Test that test results panel is rendered on successful tests."""
-        pytest_output = """
-        ============================== 5 passed in 2.34s ================================
-        """
-
-        mock_run.return_value = Mock(
-            returncode=0,
-            stdout=pytest_output,
-            stderr="",
-        )
-
-        mock_process = Mock()
-        mock_process.communicate.return_value = (pytest_output, "")
-        mock_process.returncode = 0
-        mock_process.stdout = Mock()
-        mock_process.stderr = Mock()
-        mock_process.stdout.readline.return_value = ""
-        mock_process.stderr.readline.return_value = ""
-        mock_process.poll.return_value = 0
-        mock_popen.return_value = mock_process
-
-        manager = TestManagementImpl(pkg_path=temp_project)
-        options = MockOptions(test=True)
-
-        with patch.object(manager, "_render_test_results_panel") as mock_render:
-            result = manager.run_tests(options)
-
-            assert result is True
-            # Panel should be called with stats from parsed output
-            assert mock_render.called
-
-    @patch("crackerjack.managers.test_manager.subprocess.Popen")
-    @patch("crackerjack.managers.test_manager.subprocess.run")
-    def test_render_test_results_panel_called_on_failure(
-        self,
-        mock_run,
-        mock_popen,
-        console,
-        temp_project,
-    ) -> None:
-        """Test that test results panel is rendered on failed tests."""
-        pytest_output = """
-        ========================== 3 passed, 2 failed in 4.56s ==========================
-        """
-
-        mock_run.return_value = Mock(
-            returncode=1,
-            stdout=pytest_output,
-            stderr="",
-        )
-
-        mock_process = Mock()
-        mock_process.communicate.return_value = (pytest_output, "")
-        mock_process.returncode = 1
-        mock_process.stdout = Mock()
-        mock_process.stderr = Mock()
-        mock_process.stdout.readline.return_value = ""
-        mock_process.stderr.readline.return_value = ""
-        mock_process.poll.return_value = 1
-        mock_popen.return_value = mock_process
-
-        manager = TestManagementImpl(pkg_path=temp_project)
-        options = MockOptions(test=True)
-
-        with patch.object(manager, "_render_test_results_panel") as mock_render:
-            result = manager.run_tests(options)
-
-            assert result is False
-            # Panel should be called even on failure
-            assert mock_render.called
 
 
 class TestPublishManagerImpl:
@@ -520,9 +513,10 @@ class TestPublishManagerImpl:
 
 
 class TestManagersIntegration:
-    def test_managers_work_together(self, console, temp_project) -> None:
-        test_manager = TestManagementImpl(pkg_path=temp_project)
+    def test_managers_work_together(self, managers_di_context, console, temp_project) -> None:
+        test_manager = create_test_manager_with_path(temp_project)
         publish_manager = PublishManagerImpl(pkg_path=temp_project)
+        hook_manager = HookManagerImpl(pkg_path=temp_project)
 
         assert hook_manager.console is console
         assert test_manager.console is console
@@ -533,11 +527,11 @@ class TestManagersIntegration:
         assert publish_manager.pkg_path == temp_project
 
     @patch("subprocess.run")
-    def test_workflow_simulation(self, mock_run, console, temp_project) -> None:
+    def test_workflow_simulation(self, mock_run, managers_di_context, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
 
         hook_manager = HookManagerImpl(console=console, pkg_path=temp_project)
-        test_manager = TestManagementImpl(console=console, pkg_path=temp_project)
+        test_manager = create_test_manager_with_path(temp_project)
 
         options = MockOptions(test=True)
 

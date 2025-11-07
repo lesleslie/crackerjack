@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Complexity](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Complexity](<./README.md>)
 
 # Complexity Adapter
 
@@ -29,7 +29,10 @@ Settings class: `ComplexipySettings`
 
 ```python
 from pathlib import Path
-from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter, ComplexipySettings
+from crackerjack.adapters.complexity.complexipy import (
+    ComplexipyAdapter,
+    ComplexipySettings,
+)
 
 
 async def analyze_complexity() -> None:
@@ -46,5 +49,5 @@ async def analyze_complexity() -> None:
 
 ## Related
 
-- [Refactor](../refactor/README.md) — Tools to modernize and reduce complexity
-- [Format](../format/README.md) — Formatting often improves readability and maintainability
+- [Refactor](<../refactor/README.md>) — Tools to modernize and reduce complexity
+- [Format](<../format/README.md>) — Formatting often improves readability and maintainability
