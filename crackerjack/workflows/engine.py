@@ -151,7 +151,8 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
                     step.step_id,
                     step.name,
                     result.output,
-                    result.duration_ms / 1000.0,  # Convert milliseconds to seconds
+                    (result.duration_ms or 0)
+                    / 1000.0,  # Convert milliseconds to seconds
                 )
             else:
                 error = Exception(result.error or "Step failed")
@@ -159,7 +160,8 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
                     step.step_id,
                     step.name,
                     error,
-                    result.duration_ms / 1000.0,  # Convert milliseconds to seconds
+                    (result.duration_ms or 0)
+                    / 1000.0,  # Convert milliseconds to seconds
                 )
 
             return result

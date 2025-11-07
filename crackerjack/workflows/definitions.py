@@ -29,13 +29,43 @@ FAST_HOOKS_WORKFLOW = WorkflowDefinition(
             action="run_fast_hooks",
             params={},
             depends_on=["config"],  # Runs after config completes
-            retry_attempts=2,  # Retry on transient failures
+            retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
             timeout=300.0,  # 5 minutes for fast hooks
         ),
     ],
     timeout=600.0,  # 10 minutes total workflow timeout
     retry_failed_steps=True,
     continue_on_error=False,  # Stop on first failure for POC
+)
+
+# Comprehensive hooks only workflow
+# This workflow runs only comprehensive hooks (no fast hooks)
+COMPREHENSIVE_HOOKS_WORKFLOW = WorkflowDefinition(
+    workflow_id="crackerjack-comprehensive-hooks",
+    name="Comprehensive Quality Checks",
+    description="Type checking, security scanning, and complexity analysis",
+    steps=[
+        WorkflowStep(
+            step_id="config",
+            name="Configuration",
+            action="run_configuration",
+            params={},
+            retry_attempts=1,
+            timeout=30.0,
+        ),
+        WorkflowStep(
+            step_id="comprehensive",
+            name="Comprehensive Hooks",
+            action="run_comprehensive_hooks",
+            params={},
+            depends_on=["config"],
+            retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
+            timeout=900.0,  # 15 minutes for comprehensive
+        ),
+    ],
+    timeout=1200.0,  # 20 minutes total workflow timeout
+    retry_failed_steps=True,
+    continue_on_error=False,
 )
 
 # Phase 2: Standard workflow with phase-level parallelization
@@ -60,7 +90,7 @@ STANDARD_WORKFLOW = WorkflowDefinition(
             action="run_fast_hooks",
             params={},
             depends_on=["config"],
-            retry_attempts=2,
+            retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
             timeout=300.0,
             parallel=True,  # Can run parallel with cleaning
         ),
@@ -82,7 +112,7 @@ STANDARD_WORKFLOW = WorkflowDefinition(
             action="run_comprehensive_hooks",
             params={},
             depends_on=["fast_hooks", "cleaning"],  # Waits for both
-            retry_attempts=2,
+            retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
             timeout=900.0,  # 15 minutes for comprehensive
         ),
     ],
@@ -113,7 +143,7 @@ TEST_WORKFLOW = WorkflowDefinition(
             action="run_fast_hooks",
             params={},
             depends_on=["config"],
-            retry_attempts=2,
+            retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
             timeout=300.0,
             parallel=True,  # Can run parallel with cleaning
         ),
@@ -135,7 +165,7 @@ TEST_WORKFLOW = WorkflowDefinition(
             action="run_test_workflow",
             params={},
             depends_on=["fast_hooks", "cleaning"],  # Waits for both
-            retry_attempts=1,  # Tests shouldn't retry automatically
+            retry_attempts=0,  # Tests should only retry after AI autofix, not automatically
             timeout=1800.0,  # 30 minutes for tests
         ),
         # Comprehensive hooks run after tests complete
@@ -145,7 +175,7 @@ TEST_WORKFLOW = WorkflowDefinition(
             action="run_comprehensive_hooks",
             params={},
             depends_on=["test_workflow"],  # Waits for tests
-            retry_attempts=2,
+            retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
             timeout=900.0,  # 15 minutes for comprehensive
         ),
     ],
@@ -238,7 +268,7 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             action="run_fast_hooks",
             params={},
             depends_on=["config"],
-            retry_attempts=2,
+            retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
             timeout=300.0,
             parallel=True,
         ),
@@ -260,7 +290,7 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             action="run_comprehensive_hooks",
             params={},
             depends_on=["fast_hooks", "cleaning"],
-            retry_attempts=2,
+            retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
             timeout=900.0,
         ),
         # Commit runs after all quality checks pass
@@ -301,7 +331,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             action="run_fast_hooks",
             params={},
             depends_on=["config"],
-            retry_attempts=2,
+            retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
             timeout=300.0,
             parallel=True,
         ),
@@ -323,7 +353,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             action="run_test_workflow",
             params={},
             depends_on=["fast_hooks", "cleaning"],
-            retry_attempts=1,
+            retry_attempts=0,  # Tests should only retry after AI autofix, not automatically
             timeout=1800.0,
         ),
         # Comprehensive hooks run after tests
@@ -333,7 +363,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             action="run_comprehensive_hooks",
             params={},
             depends_on=["test_workflow"],
-            retry_attempts=2,
+            retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
             timeout=900.0,
         ),
         # Commit runs after all quality checks pass
@@ -406,8 +436,8 @@ def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
         # Check if parallel execution is enabled (Phase 3 feature)
         if getattr(options, "parallel_hooks", False):
             return COMPREHENSIVE_PARALLEL_WORKFLOW
-        # Phase 1-2: Use standard workflow without parallel hooks
-        return FAST_HOOKS_WORKFLOW  # Placeholder for now
+        # Default: Use comprehensive-only workflow
+        return COMPREHENSIVE_HOOKS_WORKFLOW
 
     # Default: Standard workflow with phase-level parallelization
     return STANDARD_WORKFLOW

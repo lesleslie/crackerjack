@@ -13,12 +13,12 @@ import typing as t
 from collections import defaultdict
 
 from acb.depends import Inject, depends
-from fastapi import WebSocket
 
 from crackerjack.events.workflow_bus import WorkflowEvent, WorkflowEventBus
 
 if t.TYPE_CHECKING:
     from acb.actions.events import Event
+    from fastapi import WebSocket
 
 
 @depends.inject

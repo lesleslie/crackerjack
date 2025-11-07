@@ -276,7 +276,8 @@ class PhaseCoordinator:
     ) -> bool:
         """Execute a hook suite with lightweight retry handling."""
         attempt = 0
-        max_attempts = 1  # Placeholder for future intelligent retries
+        # Only fast hooks should retry on failure; comprehensive hooks run once
+        max_attempts = 2 if suite_name == "fast" else 1
         self._last_hook_summary = None
 
         while attempt < max_attempts:
@@ -306,7 +307,7 @@ class PhaseCoordinator:
             if getattr(options, "fast_iteration", False):
                 break
 
-            break
+            # If we have more attempts, the loop will continue and retry
 
         self.logger.warning(
             "Hook suite reported failures",

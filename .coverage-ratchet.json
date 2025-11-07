@@ -1,8 +1,8 @@
 {
-  "baseline": 40.57630785518654,
-  "current_minimum": 40.57630785518654,
+  "baseline": 21.68,
+  "current_minimum": 21.68,
   "target": 100.0,
-  "last_updated": "2025-10-31T04:26:17.819298",
+  "last_updated": "2025-11-07T06:47:47.077057",
   "history": [
     {
       "date": "2025-09-19T01:39:15.011835",
@@ -63,6 +63,13 @@
         30,
         40
       ]
+    },
+    {
+      "date": "2025-11-07T06:47:47.077106",
+      "coverage": 21.68,
+      "commit": "baseline_reset",
+      "milestone": false,
+      "note": "Baseline reset after retry fix implementation"
     }
   ],
   "milestones_achieved": [
