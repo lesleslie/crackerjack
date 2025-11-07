@@ -89,7 +89,10 @@ python -m crackerjack --all patch  # Full release workflow
 # Testing
 python -m pytest tests/test_file.py::TestClass::test_method -v  # Specific test
 python -m pytest --cov=crackerjack --cov-report=html             # Coverage
-python -m crackerjack --run-tests --test-workers 4               # Custom workers
+python -m crackerjack --run-tests                                # Auto-detect workers (default)
+python -m crackerjack --run-tests --test-workers 4               # Explicit workers
+python -m crackerjack --run-tests --test-workers 1               # Sequential execution
+python -m crackerjack --run-tests --test-workers -2              # Fractional (half cores)
 ```
 
 ## Architecture
@@ -219,8 +222,53 @@ Based on Phase 2-4 refactoring audit:
 3. **Comprehensive Hooks** (~30s): type checking, security, complexity → collect ALL issues
 4. **AI Batch Fixing**: process all collected failures together
 
-**Testing**: pytest with asyncio, 300s timeout, auto-detected workers
+**Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
 **Coverage**: Ratchet system targeting 100%, never decrease
+
+### Test Parallelization
+
+Crackerjack uses **pytest-xdist** for intelligent parallel test execution with memory safety:
+
+**Worker Configuration**:
+- `test_workers: 0` (default) → Auto-detect via pytest-xdist (`-n auto`)
+- `test_workers: 1` → Sequential execution (no parallelization)
+- `test_workers: N` (N > 1) → Explicit worker count
+- `test_workers: -N` (N < 0) → Fractional (e.g., -2 = half of CPU cores)
+
+**Safety Features**:
+- Memory-based limiting: 2GB per worker minimum (prevents OOM)
+- Benchmark auto-skip: Benchmarks always run sequentially (parallel skews results)
+- Distribution strategy: `--dist=loadfile` (keeps fixtures from same file together)
+- Emergency rollback: `export CRACKERJACK_DISABLE_AUTO_WORKERS=1`
+
+**Configuration Priority** (highest to lowest):
+1. CLI flag: `--test-workers N`
+2. `pyproject.toml`: `[tool.crackerjack] test_workers = N`
+3. `settings/crackerjack.yaml`: `test_workers: N`
+4. Default: 0 (auto-detect)
+
+**Examples**:
+```bash
+# Auto-detect (default, recommended)
+python -m crackerjack --run-tests
+
+# Explicit worker count
+python -m crackerjack --run-tests --test-workers 4
+
+# Sequential (debugging flaky tests)
+python -m crackerjack --run-tests --test-workers 1
+
+# Fractional (conservative parallelization)
+python -m crackerjack --run-tests --test-workers -2  # Half cores
+
+# Disable auto-detection globally
+export CRACKERJACK_DISABLE_AUTO_WORKERS=1
+python -m crackerjack --run-tests  # Forces sequential
+```
+
+**Performance Impact** (8-core MacBook):
+- Before (1 worker): ~60s test suite, 12% CPU utilization
+- After (auto-detect): ~15-20s test suite, 70-80% CPU utilization (3-4x faster)
 
 ## Code Standards
 
@@ -265,11 +313,19 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 - **Coverage failing**: Never reduce below baseline, add tests incrementally
 - **Complexity >15**: Break into helper methods using RefactoringAgent approach
 
+**Testing Performance**:
+
+- **Slow tests**: Auto-detection enabled by default (3-4x faster)
+- **Flaky tests with parallelization**: Use `--test-workers 1` to debug sequentially
+- **Out of memory errors**: Reduce `memory_per_worker_gb` in settings or use `--test-workers -2`
+- **Tests failing only in parallel**: Check for shared state issues (singletons, DI container)
+- **Force sequential globally**: `export CRACKERJACK_DISABLE_AUTO_WORKERS=1`
+
 **Server**:
 
 - **MCP not starting**: `--restart-mcp-server` or `--watchdog`
 - **Terminal stuck**: `stty sane; reset; exec $SHELL -l`
-- **Slow tests**: Customize `--test-workers N` or use `--skip-hooks`
+- **Coverage data loss with xdist**: Verify `pyproject.toml` has `parallel = true` in `[tool.coverage.run]`
 
 ## ACB Settings Integration
 

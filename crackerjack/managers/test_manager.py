@@ -1,3 +1,4 @@
+import re
 import subprocess
 import time
 import typing as t
@@ -6,9 +7,13 @@ from pathlib import Path
 from acb.config import root_path
 from acb.console import Console
 from acb.depends import Inject, depends
+from crackerjack.config import get_console_width
 from crackerjack.models.protocols import CoverageBadgeServiceProtocol, CoverageRatchetProtocol, OptionsProtocol, TestManagerProtocol, ServiceProtocol
 from crackerjack.services.coverage_badge_service import CoverageBadgeService
 from crackerjack.services.lsp_client import LSPClient
+from rich import box
+from rich.panel import Panel
+from rich.table import Table
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
@@ -68,11 +73,18 @@ class TestManager:
             result = self._execute_test_workflow(options)
             duration = time.time() - start_time
 
+            # Get worker count for statistics panel
+            workers = self.command_builder.get_optimal_workers(options)
+
             if result:
-                return self._handle_test_success(result.stdout, duration)
+                return self._handle_test_success(result.stdout, duration, options, workers)
             else:
                 return self._handle_test_failure(
-                    result.stderr if result else "", duration, options
+                    result.stderr if result else "",
+                    result.stdout if result else "",
+                    duration,
+                    options,
+                    workers,
                 )
 
         except Exception as e:
@@ -272,8 +284,19 @@ class TestManager:
             f"[cyan]🧪[/ cyan] Running tests (workers: {workers}, timeout: {timeout}s)"
         )
 
-    def _handle_test_success(self, output: str, duration: float) -> bool:
+    def _handle_test_success(
+        self,
+        output: str,
+        duration: float,
+        options: OptionsProtocol,
+        workers: int | str,
+    ) -> bool:
         self.console.print(f"[green]✅[/ green] Tests passed in {duration: .1f}s")
+
+        # Parse and display test statistics panel
+        stats = self._parse_test_statistics(output)
+        if stats["total"] > 0:  # Only show panel if tests were actually run
+            self._render_test_results_panel(stats, workers, success=True)
 
         if self.coverage_ratchet_enabled:
             return self._process_coverage_ratchet()
@@ -281,16 +304,27 @@ class TestManager:
         return True
 
     def _handle_test_failure(
-        self, output: str, duration: float, options: OptionsProtocol
+        self,
+        stderr: str,
+        stdout: str,
+        duration: float,
+        options: OptionsProtocol,
+        workers: int | str,
     ) -> bool:
         self.console.print(f"[red]❌[/ red] Tests failed in {duration: .1f}s")
 
+        # Parse and display test statistics panel (use stdout for stats)
+        combined_output = stdout + "\n" + stderr
+        stats = self._parse_test_statistics(combined_output)
+        if stats["total"] > 0:  # Only show panel if tests were actually run
+            self._render_test_results_panel(stats, workers, success=False)
+
         # Extract and display failures if --verbose or --ai-debug is enabled
         if options.verbose or getattr(options, "ai_debug", False):
-            self._last_test_failures = self._extract_failure_lines(output)
-            if output.strip():
+            self._last_test_failures = self._extract_failure_lines(combined_output)
+            if combined_output.strip():
                 self.console.print("\n[red]Test Output:[/red]")
-                self.console.print(output)
+                self.console.print(combined_output)
         else:
             self._last_test_failures = []
 
@@ -302,6 +336,148 @@ class TestManager:
             f"[red]💥[/ red] Test execution error after {duration: .1f}s: {error}"
         )
         return False
+
+    def _parse_test_statistics(self, output: str) -> dict[str, t.Any]:
+        """Parse test statistics from pytest output.
+
+        Extracts metrics like passed, failed, skipped, errors, and duration
+        from pytest's summary line.
+
+        Args:
+            output: Raw pytest output text
+
+        Returns:
+            Dictionary containing test statistics
+        """
+        stats = {
+            "total": 0,
+            "passed": 0,
+            "failed": 0,
+            "skipped": 0,
+            "errors": 0,
+            "xfailed": 0,
+            "xpassed": 0,
+            "duration": 0.0,
+            "coverage": None,
+        }
+
+        try:
+            # Parse pytest summary line (e.g., "5 passed, 2 failed, 1 skipped in 12.34s")
+            summary_pattern = r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+"
+            match = re.search(summary_pattern, output)
+
+            if match:
+                summary_text = match.group(1)
+                stats["duration"] = float(match.group(2))
+
+                # Extract individual counts
+                for metric in ["passed", "failed", "skipped", "error", "xfailed", "xpassed"]:
+                    metric_pattern = rf"(\d+)\s+{metric}"
+                    metric_match = re.search(metric_pattern, summary_text, re.IGNORECASE)
+                    if metric_match:
+                        count = int(metric_match.group(1))
+                        key = "errors" if metric == "error" else metric
+                        stats[key] = count
+
+                # Calculate total
+                stats["total"] = sum([
+                    stats["passed"],
+                    stats["failed"],
+                    stats["skipped"],
+                    stats["errors"],
+                    stats["xfailed"],
+                    stats["xpassed"],
+                ])
+
+            # Try to extract coverage if present
+            coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+)%"
+            coverage_match = re.search(coverage_pattern, output)
+            if coverage_match:
+                stats["coverage"] = float(coverage_match.group(1))
+
+        except (ValueError, AttributeError) as e:
+            # If parsing fails, return empty stats
+            self.console.print(f"[dim]⚠️ Failed to parse test statistics: {e}[/dim]")
+
+        return stats
+
+    def _render_test_results_panel(
+        self,
+        stats: dict[str, t.Any],
+        workers: int | str,
+        success: bool,
+    ) -> None:
+        """Render test results panel with statistics similar to hook results.
+
+        Args:
+            stats: Dictionary of test statistics from _parse_test_statistics
+            workers: Number of workers used (or "auto")
+            success: Whether tests passed overall
+        """
+        table = Table(box=box.SIMPLE, header_style="bold bright_white")
+        table.add_column("Metric", style="cyan", overflow="fold")
+        table.add_column("Count", justify="right", style="bright_white")
+        table.add_column("Percentage", justify="right", style="magenta")
+
+        total = stats["total"]
+
+        # Add rows for each metric
+        metrics = [
+            ("✅ Passed", stats["passed"], "green"),
+            ("❌ Failed", stats["failed"], "red"),
+            ("⏭ Skipped", stats["skipped"], "yellow"),
+            ("💥 Errors", stats["errors"], "red"),
+        ]
+
+        # Only show xfailed/xpassed if they exist
+        if stats.get("xfailed", 0) > 0:
+            metrics.append(("⚠️ Expected Failures", stats["xfailed"], "yellow"))
+        if stats.get("xpassed", 0) > 0:
+            metrics.append(("✨ Unexpected Passes", stats["xpassed"], "green"))
+
+        for label, count, _ in metrics:
+            percentage = f"{(count / total * 100):.1f}%" if total > 0 else "0.0%"
+            table.add_row(label, str(count), percentage)
+
+        # Add separator and summary rows
+        table.add_row("─" * 20, "─" * 10, "─" * 15, style="dim")
+        table.add_row("📊 Total Tests", str(total), "100.0%", style="bold")
+        table.add_row(
+            "⏱ Duration",
+            f"{stats['duration']:.2f}s",
+            "",
+            style="bold magenta",
+        )
+        table.add_row(
+            "👥 Workers",
+            str(workers),
+            "",
+            style="bold cyan",
+        )
+
+        # Add coverage if available
+        if stats.get("coverage") is not None:
+            table.add_row(
+                "📈 Coverage",
+                f"{stats['coverage']:.1f}%",
+                "",
+                style="bold green",
+            )
+
+        # Create panel with appropriate styling
+        border_style = "green" if success else "red"
+        title_icon = "✅" if success else "❌"
+        title_text = "Test Results" if success else "Test Results (Failed)"
+
+        panel = Panel(
+            table,
+            title=f"[bold]{title_icon} {title_text}[/bold]",
+            border_style=border_style,
+            padding=(0, 1),
+            width=get_console_width(),
+        )
+
+        self.console.print(panel)
 
     def _process_coverage_ratchet(self) -> bool:
         if not self.coverage_ratchet_enabled:

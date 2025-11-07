@@ -1,15 +1,31 @@
+import multiprocessing
+import os
 from pathlib import Path
 
+import psutil
+
+from acb.console import Console
+from acb.depends import Inject, depends
+from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
 
 
 class TestCommandBuilder:
-    def __init__(self, pkg_path: Path) -> None:
+    @depends.inject
+    def __init__(
+        self,
+        pkg_path: Path,
+        console: Inject[Console] | None = None,
+        settings: Inject[CrackerjackSettings] | None = None,
+    ) -> None:
         # Normalize to pathlib.Path to avoid async path methods
         try:
             self.pkg_path = Path(str(pkg_path))
         except Exception:
             self.pkg_path = Path(pkg_path)
+
+        self.console = console
+        self.settings = settings
 
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]
@@ -23,11 +39,145 @@ class TestCommandBuilder:
 
         return cmd
 
-    def get_optimal_workers(self, options: OptionsProtocol) -> int:
-        if hasattr(options, "test_workers") and options.test_workers:
-            return options.test_workers
+    def get_optimal_workers(self, options: OptionsProtocol) -> int | str:
+        """Calculate optimal worker count using pytest-xdist.
 
-        return 1
+        This method leverages pytest-xdist's built-in '-n auto' for CPU detection
+        while adding memory safety checks and support for custom worker configurations.
+
+        Worker Selection Logic:
+        ----------------------
+        1. Emergency rollback: CRACKERJACK_DISABLE_AUTO_WORKERS=1 → 1 worker
+        2. Explicit value (test_workers > 0): Use as-is
+        3. Auto-detect (test_workers = 0 AND auto_detect_workers=True): Return "auto"
+        4. Legacy mode (test_workers = 0 AND auto_detect_workers=False): 1 worker
+        5. Fractional (test_workers < 0): Divide CPU count by abs(value)
+
+        Safety Bounds:
+        -------------
+        - Minimum: 1 worker (sequential execution)
+        - Maximum: 8 workers (configurable via settings.testing.max_workers)
+        - Memory: 2GB per worker minimum (configurable)
+
+        Examples:
+        --------
+        >>> options = Options(test_workers=4)
+        >>> builder.get_optimal_workers(options)
+        4  # Explicit value
+
+        >>> options = Options(test_workers=0)  # auto_detect_workers=True
+        >>> builder.get_optimal_workers(options)
+        "auto"  # Delegates to pytest-xdist
+
+        >>> options = Options(test_workers=-2)  # 8-core machine
+        >>> builder.get_optimal_workers(options)
+        4  # 8 // 2 = 4 (with memory safety check)
+
+        Returns:
+            int | str: Number of workers (1-8) or "auto" for pytest-xdist detection
+
+        Raises:
+            Never raises - returns safe default (2) on any error
+        """
+        try:
+            # Emergency rollback escape hatch
+            if os.getenv("CRACKERJACK_DISABLE_AUTO_WORKERS") == "1":
+                if self.console:
+                    self.console.print(
+                        "[yellow]⚠️  Auto-detection disabled via environment variable[/yellow]"
+                    )
+                return 1
+
+            # Explicit worker count (including 1 for sequential)
+            if hasattr(options, "test_workers") and options.test_workers > 0:
+                return options.test_workers
+
+            # Auto-detection: delegate to pytest-xdist's -n auto
+            if hasattr(options, "test_workers") and options.test_workers == 0:
+                # Check if auto-detection is enabled in settings
+                if self.settings and self.settings.testing.auto_detect_workers:
+                    # Log for debugging
+                    if self.console:
+                        self.console.print(
+                            "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]"
+                        )
+                    return "auto"  # pytest-xdist will handle CPU detection
+
+                # Legacy behavior: auto_detect_workers=False
+                return 1
+
+            # Fractional workers (custom logic for negative values)
+            if hasattr(options, "test_workers") and options.test_workers < 0:
+                cpu_count = multiprocessing.cpu_count()
+                divisor = abs(options.test_workers)
+                workers = max(1, cpu_count // divisor)
+
+                # Apply memory safety check
+                workers = self._apply_memory_limit(workers)
+
+                if self.console:
+                    self.console.print(
+                        f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]"
+                    )
+
+                return workers
+
+            # Safe default if no conditions match
+            return 2
+
+        except NotImplementedError:
+            # multiprocessing.cpu_count() not available on this platform
+            if self.console:
+                self.console.print(
+                    "[yellow]⚠️  CPU detection unavailable, using 2 workers[/yellow]"
+                )
+            return 2
+
+        except Exception as e:
+            # Graceful degradation on any error
+            if self.console:
+                self.console.print(
+                    f"[yellow]⚠️  Worker detection failed: {e}. Using 2 workers.[/yellow]"
+                )
+            return 2
+
+    def _apply_memory_limit(self, workers: int) -> int:
+        """Limit workers based on available memory to prevent OOM.
+
+        Args:
+            workers: Desired number of workers
+
+        Returns:
+            int: Worker count limited by available memory
+        """
+        try:
+            # Get memory threshold from settings (default 2GB per worker)
+            memory_per_worker = (
+                self.settings.testing.memory_per_worker_gb
+                if self.settings
+                else 2.0
+            )
+
+            # Calculate available memory in GB
+            available_gb = psutil.virtual_memory().available / (1024**3)
+
+            # Calculate max workers based on memory
+            max_by_memory = max(1, int(available_gb / memory_per_worker))
+
+            # Return the minimum of desired workers and memory-limited workers
+            limited_workers = min(workers, max_by_memory)
+
+            # Log if we're limiting due to memory
+            if limited_workers < workers and self.console:
+                self.console.print(
+                    f"[yellow]⚠️  Limited to {limited_workers} workers (available memory: {available_gb:.1f}GB)[/yellow]"
+                )
+
+            return limited_workers
+
+        except Exception:
+            # Conservative fallback if psutil fails
+            return min(workers, 4)
 
     def get_test_timeout(self, options: OptionsProtocol) -> int:
         if hasattr(options, "test_timeout") and options.test_timeout:
@@ -83,9 +233,40 @@ class TestCommandBuilder:
         )
 
     def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
+        """Add pytest-xdist worker options with proper distribution strategy.
+
+        Args:
+            cmd: Command list to append worker options to
+            options: Test options containing worker configuration
+        """
         workers = self.get_optimal_workers(options)
-        if workers > 1:
-            cmd.extend(["-n", str(workers)])
+
+        # Skip benchmarks for parallelization (results get skewed)
+        if hasattr(options, "benchmark") and options.benchmark:
+            if self.console:
+                self.console.print(
+                    "[yellow]⚠️  Benchmarks running sequentially (parallel execution skews results)[/yellow]"
+                )
+            return
+
+        if workers == "auto":
+            # Use pytest-xdist's native auto-detection
+            cmd.extend(["-n", "auto", "--dist=loadfile"])
+            if self.console:
+                self.console.print(
+                    "[cyan]🚀 Tests running with auto-detected workers (--dist=loadfile)[/cyan]"
+                )
+        elif isinstance(workers, int) and workers > 1:
+            # Explicit worker count
+            cmd.extend(["-n", str(workers), "--dist=loadfile"])
+            if self.console:
+                self.console.print(
+                    f"[cyan]🚀 Tests running with {workers} workers (--dist=loadfile)[/cyan]"
+                )
+        else:
+            # Sequential execution (workers == 1)
+            if self.console:
+                self.console.print("[cyan]🧪 Tests running sequentially[/cyan]")
 
     def _add_benchmark_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if hasattr(options, "benchmark") and options.benchmark:

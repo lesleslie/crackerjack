@@ -143,6 +143,13 @@ zuban_lsp_timeout = 10.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
 
+# Test parallelization settings
+test_workers = 0  # 0 = auto-detect, 1 = sequential, >1 = explicit, <0 = fractional
+auto_detect_workers = true  # Enable pytest-xdist auto-detection
+max_workers = 8  # Maximum parallel workers (safety limit)
+min_workers = 2  # Minimum parallel workers (when auto-detecting)
+memory_per_worker_gb = 2.0  # Minimum memory per worker (prevents OOM)
+
 [tool.codespell]
 # Note: Native wrapper (crackerjack.tools.codespell_wrapper) uses git ls-files
 # to discover files, automatically respecting .gitignore patterns.
@@ -202,7 +209,8 @@ source = [
     "crackerjack",
 ]
 data_file = ".coverage"
-parallel = false
+parallel = true
+concurrency = ["multiprocessing"]
 omit = [
     "*/tests/*",
     "*/site-packages/*",

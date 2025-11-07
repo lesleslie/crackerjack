@@ -27,8 +27,12 @@ enable_lsp_optimization: false
 # Testing
 run_tests: false
 benchmark: false
-test_workers: 0  # 0 = auto-detect
+test_workers: 0  # 0 = auto-detect via pytest-xdist, 1 = sequential, >1 = explicit, <0 = fractional
 test_timeout: 0  # 0 = use default
+auto_detect_workers: true  # Enable pytest-xdist auto-detection (default: true)
+max_workers: 8  # Maximum parallel workers (safety limit)
+min_workers: 2  # Minimum parallel workers (when auto-detecting)
+memory_per_worker_gb: 2.0  # Minimum memory per worker (prevents OOM)
 
 # Publishing
 publish_version: null

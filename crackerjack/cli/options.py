@@ -381,8 +381,12 @@ CLI_OPTIONS = {
         0,
         "--test-workers",
         help=(
-            "Number of parallel workers for running tests "
-            "(0 = auto-detect, 1 = disable parallelization)."
+            "Number of parallel workers for running tests. "
+            "0 = auto-detect via pytest-xdist (default), "
+            "1 = sequential execution, "
+            ">1 = explicit worker count, "
+            "<0 = fractional (e.g., -2 = half of CPU cores). "
+            "Set CRACKERJACK_DISABLE_AUTO_WORKERS=1 to force sequential."
         ),
     ),
     "test_timeout": typer.Option(

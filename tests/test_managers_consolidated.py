@@ -234,6 +234,217 @@ class TestTestManagementImpl:
         result = manager.run_tests(options)
         assert result is True
 
+    def test_parse_test_statistics_success(self, console, temp_project) -> None:
+        """Test parsing of successful pytest output."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        pytest_output = """
+        ================================ test session starts =================================
+        collected 10 items
+
+        tests/test_foo.py ......                                                      [ 60%]
+        tests/test_bar.py ....                                                        [100%]
+
+        ============================== 10 passed in 5.23s ================================
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 10
+        assert stats["passed"] == 10
+        assert stats["failed"] == 0
+        assert stats["skipped"] == 0
+        assert stats["errors"] == 0
+        assert stats["duration"] == 5.23
+
+    def test_parse_test_statistics_with_failures(self, console, temp_project) -> None:
+        """Test parsing of pytest output with failures."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        pytest_output = """
+        ================================ test session starts =================================
+        collected 15 items
+
+        tests/test_foo.py .F.F.                                                       [ 33%]
+        tests/test_bar.py ..s...                                                      [ 73%]
+        tests/test_baz.py ....                                                        [100%]
+
+        ========================== 11 passed, 2 failed, 2 skipped in 12.45s ==========================
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 15
+        assert stats["passed"] == 11
+        assert stats["failed"] == 2
+        assert stats["skipped"] == 2
+        assert stats["errors"] == 0
+        assert stats["duration"] == 12.45
+
+    def test_parse_test_statistics_with_errors(self, console, temp_project) -> None:
+        """Test parsing of pytest output with errors."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        pytest_output = """
+        ================================ test session starts =================================
+        collected 8 items
+
+        tests/test_foo.py EE                                                          [ 25%]
+        tests/test_bar.py ..F.                                                        [ 75%]
+        tests/test_baz.py ..                                                          [100%]
+
+        ========================== 5 passed, 1 failed, 2 error in 3.12s ==========================
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 8
+        assert stats["passed"] == 5
+        assert stats["failed"] == 1
+        assert stats["errors"] == 2
+        assert stats["duration"] == 3.12
+
+    def test_parse_test_statistics_with_xfail_xpass(self, console, temp_project) -> None:
+        """Test parsing of pytest output with xfailed and xpassed tests."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        pytest_output = """
+        ================================ test session starts =================================
+        collected 12 items
+
+        tests/test_foo.py .x.X                                                        [ 33%]
+        tests/test_bar.py ........                                                    [100%]
+
+        =================== 8 passed, 1 xfailed, 1 xpassed in 4.56s =====================
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 10
+        assert stats["passed"] == 8
+        assert stats["xfailed"] == 1
+        assert stats["xpassed"] == 1
+        assert stats["duration"] == 4.56
+
+    def test_parse_test_statistics_with_coverage(self, console, temp_project) -> None:
+        """Test parsing of pytest output with coverage information."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        pytest_output = """
+        ================================ test session starts =================================
+        collected 10 items
+
+        tests/test_foo.py ......                                                      [ 60%]
+        tests/test_bar.py ....                                                        [100%]
+
+        ---------- coverage: platform darwin, python 3.13.0-final-0 -----------
+        Name                     Stmts   Miss  Cover
+        --------------------------------------------
+        crackerjack/__init__.py     10      2    80%
+        crackerjack/core.py        150     30    80%
+        --------------------------------------------
+        TOTAL                      160     32    80%
+
+        ============================== 10 passed in 5.23s ================================
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 10
+        assert stats["passed"] == 10
+        assert stats["coverage"] == 80.0
+
+    def test_parse_test_statistics_empty_output(self, console, temp_project) -> None:
+        """Test parsing of empty pytest output."""
+        manager = TestManagementImpl(pkg_path=temp_project)
+
+        stats = manager._parse_test_statistics("")
+
+        assert stats["total"] == 0
+        assert stats["passed"] == 0
+        assert stats["failed"] == 0
+        assert stats["duration"] == 0.0
+
+    @patch("crackerjack.managers.test_manager.subprocess.Popen")
+    @patch("crackerjack.managers.test_manager.subprocess.run")
+    def test_render_test_results_panel_called_on_success(
+        self,
+        mock_run,
+        mock_popen,
+        console,
+        temp_project,
+    ) -> None:
+        """Test that test results panel is rendered on successful tests."""
+        pytest_output = """
+        ============================== 5 passed in 2.34s ================================
+        """
+
+        mock_run.return_value = Mock(
+            returncode=0,
+            stdout=pytest_output,
+            stderr="",
+        )
+
+        mock_process = Mock()
+        mock_process.communicate.return_value = (pytest_output, "")
+        mock_process.returncode = 0
+        mock_process.stdout = Mock()
+        mock_process.stderr = Mock()
+        mock_process.stdout.readline.return_value = ""
+        mock_process.stderr.readline.return_value = ""
+        mock_process.poll.return_value = 0
+        mock_popen.return_value = mock_process
+
+        manager = TestManagementImpl(pkg_path=temp_project)
+        options = MockOptions(test=True)
+
+        with patch.object(manager, "_render_test_results_panel") as mock_render:
+            result = manager.run_tests(options)
+
+            assert result is True
+            # Panel should be called with stats from parsed output
+            assert mock_render.called
+
+    @patch("crackerjack.managers.test_manager.subprocess.Popen")
+    @patch("crackerjack.managers.test_manager.subprocess.run")
+    def test_render_test_results_panel_called_on_failure(
+        self,
+        mock_run,
+        mock_popen,
+        console,
+        temp_project,
+    ) -> None:
+        """Test that test results panel is rendered on failed tests."""
+        pytest_output = """
+        ========================== 3 passed, 2 failed in 4.56s ==========================
+        """
+
+        mock_run.return_value = Mock(
+            returncode=1,
+            stdout=pytest_output,
+            stderr="",
+        )
+
+        mock_process = Mock()
+        mock_process.communicate.return_value = (pytest_output, "")
+        mock_process.returncode = 1
+        mock_process.stdout = Mock()
+        mock_process.stderr = Mock()
+        mock_process.stdout.readline.return_value = ""
+        mock_process.stderr.readline.return_value = ""
+        mock_process.poll.return_value = 1
+        mock_popen.return_value = mock_process
+
+        manager = TestManagementImpl(pkg_path=temp_project)
+        options = MockOptions(test=True)
+
+        with patch.object(manager, "_render_test_results_panel") as mock_render:
+            result = manager.run_tests(options)
+
+            assert result is False
+            # Panel should be called even on failure
+            assert mock_render.called
+
 
 class TestPublishManagerImpl:
     def test_initialization(self, console, temp_project) -> None:

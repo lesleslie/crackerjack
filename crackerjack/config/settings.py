@@ -26,6 +26,10 @@ class TestSettings(Settings):
     benchmark: bool = False
     test_workers: int = 0
     test_timeout: int = 0
+    auto_detect_workers: bool = True
+    max_workers: int = 8
+    min_workers: int = 2
+    memory_per_worker_gb: float = 2.0
 
 
 class PublishSettings(Settings):
