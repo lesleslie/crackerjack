@@ -47,10 +47,12 @@ class HookDefinition:
         """
         # Phase 8.2: Direct invocation mode (new behavior)
         if not self.use_precommit_legacy:
+            from pathlib import Path
+
             from crackerjack.config.tool_commands import get_tool_command
 
             try:
-                return get_tool_command(self.name)
+                return get_tool_command(self.name, pkg_path=Path.cwd())
             except KeyError:
                 # Fallback to pre-commit if tool not in registry
                 # This ensures graceful degradation during migration
@@ -257,7 +259,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=300,  # Increase to prevent premature timeout on larger repos
+        timeout=600,  # Increased to 600s to accommodate large codebase analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

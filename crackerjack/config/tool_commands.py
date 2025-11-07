@@ -9,8 +9,54 @@ Commands use 'uv run' for Python-based tools to leverage dependency management.
 
 from __future__ import annotations
 
-# Tool command registry mapping hook names to direct commands
-TOOL_COMMANDS: dict[str, list[str]] = {
+from pathlib import Path
+
+
+def _detect_package_name(pkg_path: Path) -> str:
+    """Detect the main package name from pyproject.toml or directory structure.
+
+    Args:
+        pkg_path: Path to the project root
+
+    Returns:
+        The detected package name (defaults to 'crackerjack' if detection fails)
+    """
+    # Method 1: Try to read from pyproject.toml
+    pyproject_path = pkg_path / "pyproject.toml"
+    if pyproject_path.exists():
+        from contextlib import suppress
+
+        with suppress(Exception):
+            import tomllib
+
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+                project_name = data.get("project", {}).get("name")
+                if project_name:
+                    # Convert project name to package name (hyphens to underscores)
+                    return project_name.replace("-", "_")
+
+    # Method 2: Look for Python packages in the project root
+    for item in pkg_path.iterdir():
+        if item.is_dir() and (item / "__init__.py").exists():
+            # Skip common non-package directories
+            if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
+                return item.name
+
+    # Fallback: use 'crackerjack' for backward compatibility
+    return "crackerjack"
+
+
+def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
+    """Build tool command registry with dynamic package name.
+
+    Args:
+        package_name: The name of the package being analyzed
+
+    Returns:
+        Dictionary mapping hook names to command lists
+    """
+    return {
     # ========================================================================
     # CUSTOM TOOLS (crackerjack native)
     # ========================================================================
@@ -36,7 +82,7 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "check",
         "--config-file",
         "mypy.ini",
-        "./crackerjack",
+        f"./{package_name}",
     ],
     # ========================================================================
     # PRE-COMMIT-HOOKS (native implementations in crackerjack.tools)
@@ -86,7 +132,7 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "-c",
         "pyproject.toml",
         "-r",
-        "crackerjack",
+        package_name,
     ],
     "codespell": [
         "uv",
@@ -104,7 +150,7 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "run",
         "creosote",
         "-p",
-        "crackerjack",
+        package_name,
         "--venv",
         ".venv",
     ],
@@ -114,17 +160,18 @@ TOOL_COMMANDS: dict[str, list[str]] = {
         "complexipy",
         "--max-complexity-allowed",
         "15",
-        "crackerjack",
+        package_name,
     ],
-    "refurb": ["uv", "run", "python", "-m", "refurb", "crackerjack"],
-}
+    "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
+    }
 
 
-def get_tool_command(hook_name: str) -> list[str]:
+def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
     """Get the direct command for a tool by hook name.
 
     Args:
         hook_name: The name of the hook (e.g., "ruff-check", "trailing-whitespace")
+        pkg_path: Optional path to the project root (for package name detection)
 
     Returns:
         List of command arguments for subprocess execution
@@ -132,11 +179,19 @@ def get_tool_command(hook_name: str) -> list[str]:
     Raises:
         KeyError: If the hook name is not found in the registry
     """
-    if hook_name not in TOOL_COMMANDS:
+    # Detect package name from project root
+    if pkg_path is None:
+        pkg_path = Path.cwd()
+    package_name = _detect_package_name(pkg_path)
+
+    # Build tool commands with detected package name
+    tool_commands = _build_tool_commands(package_name)
+
+    if hook_name not in tool_commands:
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-    return TOOL_COMMANDS[hook_name].copy()  # Return copy to prevent mutation
+    return tool_commands[hook_name].copy()  # Return copy to prevent mutation
 
 
 def list_available_tools() -> list[str]:
@@ -145,7 +200,9 @@ def list_available_tools() -> list[str]:
     Returns:
         Sorted list of hook names that can be executed
     """
-    return sorted(TOOL_COMMANDS.keys())
+    # Build with a dummy package name just to get the keys
+    tool_commands = _build_tool_commands("dummy")
+    return sorted(tool_commands.keys())
 
 
 def is_native_tool(hook_name: str) -> bool:

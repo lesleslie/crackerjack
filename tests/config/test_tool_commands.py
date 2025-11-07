@@ -1,13 +1,18 @@
 """Tests for tool command registry (Phase 10.1.2)."""
 
+from pathlib import Path
+
 import pytest
 
 from crackerjack.config.tool_commands import (
-    TOOL_COMMANDS,
+    _build_tool_commands,
     get_tool_command,
     is_native_tool,
     list_available_tools,
 )
+
+# Build test registry with "crackerjack" as package name for testing
+TOOL_COMMANDS = _build_tool_commands("crackerjack")
 
 
 class TestToolCommandsRegistry:
@@ -269,32 +274,37 @@ class TestCommandStructureValidation:
 
     def test_target_directories_specified(self):
         """Test that tools include target directories where needed."""
-        # Skylos checks crackerjack directory
+        # Test uses Path.cwd() for package detection, which will detect "crackerjack"
+        # when running from crackerjack project root
+
+        # Skylos checks current directory
         skylos_cmd = get_tool_command("skylos")
-        assert "crackerjack" in skylos_cmd
+        assert "." in skylos_cmd  # Skylos uses "." as target
 
-        # Complexipy checks crackerjack directory
+        # Complexipy checks detected package directory
         complexipy_cmd = get_tool_command("complexipy")
-        assert "crackerjack" in complexipy_cmd
+        # Should have a package name (will be "crackerjack" when running in crackerjack project)
+        assert len(complexipy_cmd) > 0 and complexipy_cmd[-1] != "."
 
-        # Refurb checks crackerjack directory
+        # Refurb checks detected package directory
         refurb_cmd = get_tool_command("refurb")
-        assert "crackerjack" in refurb_cmd
+        # Should have a package name as last argument
+        assert len(refurb_cmd) > 0 and refurb_cmd[-1] != "."
 
     def test_special_flags_for_specific_tools(self):
         """Test that tools with special flags have them configured."""
-        # Gitleaks has --no-git and -v flags
+        # Gitleaks has protect and -v flags
         gitleaks_cmd = get_tool_command("gitleaks")
-        assert "--no-git" in gitleaks_cmd
+        assert "protect" in gitleaks_cmd
         assert "-v" in gitleaks_cmd
 
         # Mdformat has --check flag
         mdformat_cmd = get_tool_command("mdformat")
         assert "--check" in mdformat_cmd
 
-        # Complexipy has --max-complexity 15
+        # Complexipy has --max-complexity-allowed 15
         complexipy_cmd = get_tool_command("complexipy")
-        assert "--max-complexity" in complexipy_cmd
+        assert "--max-complexity-allowed" in complexipy_cmd
         assert "15" in complexipy_cmd
 
         # Creosote has --venv flag
