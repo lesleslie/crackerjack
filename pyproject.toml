@@ -6,7 +6,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.42.3"
+version = "0.42.4"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [
