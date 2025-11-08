@@ -136,18 +136,21 @@ class MdformatAdapter(BaseToolAdapter):
             # When fix is enabled, run in fix mode to automatically format
             pass
 
-        # Line length
-        if self.settings.line_length:
-            cmd.extend(["--wrap", str(self.settings.line_length)])
-
-        # Wrap mode
-        if self.settings.wrap_mode:
-            if self.settings.wrap_mode == "keep":
-                cmd.append("--wrap=keep")
-            elif self.settings.wrap_mode == "no":
-                cmd.append("--wrap=no")
-            elif self.settings.wrap_mode.isdigit():
-                cmd.extend(["--wrap", self.settings.wrap_mode])
+        # Wrap handling: mdformat supports exactly one --wrap option
+        # Prefer explicit wrap_mode (keep/no/number). If not provided, fall back to line_length.
+        wrap_mode = getattr(self.settings, "wrap_mode", None)
+        if wrap_mode:
+            if wrap_mode in {"keep", "no"}:
+                cmd.extend(["--wrap", wrap_mode])
+            elif isinstance(wrap_mode, str) and wrap_mode.isdigit():
+                cmd.extend(["--wrap", wrap_mode])
+            else:
+                # Unknown wrap_mode; ignore and fall back to line_length if available
+                if self.settings.line_length:
+                    cmd.extend(["--wrap", str(self.settings.line_length)])
+        else:
+            if self.settings.line_length:
+                cmd.extend(["--wrap", str(self.settings.line_length)])
 
         # Add targets
         cmd.extend([str(f) for f in files])

@@ -7,15 +7,18 @@ Crackerjack now leverages the advanced structured logging capabilities provided 
 ## Key Features
 
 ### 1. Dual Output Strategy
+
 - **Human Output**: Standard console output via Rich for readable UI
 - **AI/Machine Output**: Structured JSON logs to stderr for AI agent consumption
 
 ### 2. Structured Logging Benefits
+
 - **Machine-Readable**: JSON format suitable for parsing by AI agents
 - **Context-Rich**: Includes metadata like correlation IDs, performance metrics, and operation context
 - **Searchable**: Structured format enables efficient querying of log data
 
 ### 3. AI-Optimized Logging
+
 - Specialized logging for `--ai-fix` and `--ai-debug` modes
 - Structured events for AI agent fixing phases
 - Detailed metrics for AI decision making
@@ -40,6 +43,7 @@ python -m crackerjack --ai-fix --ai-debug --run-tests
 ### AI Agent Fixing Phase Logging
 
 When using `--ai-fix`, enhanced structured logs include:
+
 - AI agent fixing phase start/end events
 - Fix counts and success metrics
 - Error information with context
@@ -48,6 +52,7 @@ When using `--ai-fix`, enhanced structured logs include:
 ### Debug Mode Logging
 
 When using `--ai-debug`, logs include:
+
 - Detailed workflow progression information
 - AI decision making processes
 - Error details with traceback capability
@@ -56,6 +61,7 @@ When using `--ai-debug`, logs include:
 ## JSON Format for AI Consumption
 
 The structured logs output to stderr follow this format:
+
 ```json
 {
   "timestamp": "2025-01-01T00:00:00.000000Z",
@@ -77,11 +83,13 @@ The structured logs output to stderr follow this format:
 ## Integration Points
 
 ### Agent Coordinator Updates
+
 - The `AgentCoordinator` and `EnhancedAgentCoordinator` now use structured logging
 - AI agent activities are logged with rich context information
 - Performance metrics for individual agents are captured
 
 ### Workflow Orchestrator Updates
+
 - AI fixing phases include detailed structured logging
 - Error handling provides contextual information for AI agents
 - Performance metrics are logged in structured format
@@ -90,9 +98,9 @@ The structured logs output to stderr follow this format:
 
 1. **For AI Agent Integration**: Use `--ai-fix` and `--ai-debug` flags together for maximum visibility into the AI decision-making process.
 
-2. **For Troubleshooting**: Enable `--ai-debug` to get detailed structured logs about the workflow execution.
+1. **For Troubleshooting**: Enable `--ai-debug` to get detailed structured logs about the workflow execution.
 
-3. **For Monitoring**: The JSON output to stderr can be easily consumed by monitoring and analysis tools.
+1. **For Monitoring**: The JSON output to stderr can be easily consumed by monitoring and analysis tools.
 
 ## Advanced Configuration
 

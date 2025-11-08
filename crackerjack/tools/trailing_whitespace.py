@@ -147,6 +147,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"\n{modified_count} file(s) with trailing whitespace")  # noqa: T201
         else:
             print(f"\nFixed {modified_count} file(s)")  # noqa: T201
+            # Align with pre-commit semantics so HookExecutor treats this as pass
+            # when a formatter modifies files but exits with code 1.
+            print("files were modified by this hook")  # noqa: T201
         return 1
 
     print("No trailing whitespace found")  # noqa: T201

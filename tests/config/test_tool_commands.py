@@ -298,9 +298,9 @@ class TestCommandStructureValidation:
         assert "protect" in gitleaks_cmd
         assert "-v" in gitleaks_cmd
 
-        # Mdformat has --check flag
+        # Mdformat auto-fixes in fast hooks (no --check)
         mdformat_cmd = get_tool_command("mdformat")
-        assert "--check" in mdformat_cmd
+        assert "--check" not in mdformat_cmd
 
         # Complexipy has --max-complexity-allowed 15
         complexipy_cmd = get_tool_command("complexipy")
