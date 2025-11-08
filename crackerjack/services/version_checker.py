@@ -6,6 +6,8 @@ import aiohttp
 from acb.console import Console
 from acb.depends import Inject, depends
 
+from crackerjack.utils.retry_utils import retry_api_call
+
 
 @dataclass
 class VersionInfo:
@@ -117,13 +119,15 @@ class VersionChecker:
             pass
         return None
 
+    @retry_api_call(max_attempts=3, delay=1.0, backoff=2.0, max_delay=30.0)
     async def _fetch_latest_version(self, tool_name: str) -> str | None:
         try:
+            # Fix URLs - remove spaces that were added
             pypi_urls = {
-                "ruff": "https: / / pypi.org / pypi / ruff / json",
-                "pyright": "https: / / pypi.org / pypi / pyright / json",
-                "pre-commit": "https: / / pypi.org / pypi / pre-commit / json",
-                "uv": "https: / / pypi.org / pypi / uv / json",
+                "ruff": "https://pypi.org/pypi/ruff/json",
+                "pyright": "https://pypi.org/pypi/pyright/json",
+                "pre-commit": "https://pypi.org/pypi/pre-commit/json",
+                "uv": "https://pypi.org/pypi/uv/json",
             }
 
             url = pypi_urls.get(tool_name)

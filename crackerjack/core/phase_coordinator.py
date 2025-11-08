@@ -184,6 +184,8 @@ class PhaseCoordinator:
             self.logger.debug("Duplicate fast hooks invocation detected; skipping")
             return True
 
+        # Mark fast hooks as started immediately to prevent duplicate calls in case of failures
+        self._fast_hooks_started = True
         self.session.track_task("hooks_fast", "Fast quality checks")
 
         # Fast hooks get 2 attempts (auto-fix on failure), comprehensive hooks run once
@@ -196,7 +198,7 @@ class PhaseCoordinator:
             # Display stage header for each attempt
             if attempt > 1:
                 self.console.print(
-                    f"\n[yellow]♻️[/yellow]  Retry Attempt {attempt}/{max_attempts}\n"
+                    f"\n[yellow]♻️[/yellow]  Verification Retry {attempt}/{max_attempts}\n"
                 )
 
             self._display_hook_phase_header(
@@ -204,6 +206,7 @@ class PhaseCoordinator:
                 "Formatters, import sorting, and quick static analysis",
             )
 
+            # Run hooks (now configured to run in fix mode by default)
             success = self._execute_hooks_once(
                 "fast", self.hook_manager.run_fast_hooks, options, attempt
             )
@@ -215,15 +218,12 @@ class PhaseCoordinator:
             if getattr(options, "fast_iteration", False):
                 break
 
-            # If we have more attempts, continue to retry
+            # If we have more attempts, continue to retry to verify fixes worked
             if attempt < max_attempts:
                 self._display_hook_failures("fast", self._last_hook_results, options)
 
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
-
-        # Mark fast hooks as started to avoid duplicate runs
-        self._fast_hooks_started = True
 
         if success:
             self.session.complete_task("hooks_fast", details=details)

@@ -429,6 +429,13 @@ class RuffAdapter(BaseToolAdapter):
         """
         from crackerjack.models.qa_config import QACheckConfig
 
+        # Determine if this is a format mode adapter from settings or default to check mode
+        is_format_mode = False
+        if self.settings:
+            is_format_mode = self.settings.mode == "format"
+        else:
+            is_format_mode = False  # Default to check mode
+
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
@@ -442,12 +449,12 @@ class RuffAdapter(BaseToolAdapter):
                 "**/dist/**",
             ],
             timeout_seconds=60,
-            is_formatter=self.settings.mode == "format" if self.settings else False,
+            is_formatter=is_format_mode,
             parallel_safe=True,
             stage="fast",
             settings={
                 "mode": "check",
-                "fix_enabled": False,
+                "fix_enabled": True,  # Enable auto-fix by default for fast hooks
                 "select_rules": [],
                 "ignore_rules": [],
                 "preview": False,

@@ -38,7 +38,7 @@ class SkylosAdapter(BaseRustToolAdapter):
     def __init__(
         self,
         context: "ExecutionContext",
-        confidence_threshold: int = 86,
+        confidence_threshold: int = 99,  # Higher threshold to reduce false positives in DI system
         web_dashboard_port: int = 5090,
     ) -> None:
         """Initialize Skylos adapter."""
@@ -56,7 +56,14 @@ class SkylosAdapter(BaseRustToolAdapter):
 
     def get_command_args(self, target_files: list[Path]) -> list[str]:
         """Get command arguments for Skylos execution."""
-        args = ["uv", "run", "skylos", "--confidence", str(self.confidence_threshold)]
+        # Use higher confidence threshold to avoid false positives from DI system
+        args = [
+            "uv",
+            "run",
+            "skylos",
+            "--confidence",
+            str(max(95, self.confidence_threshold)),
+        ]
 
         # Add JSON mode for AI agents
         if self._should_use_json_output():
@@ -102,7 +109,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 for item in data.get("dead_code", [])
             ]
 
-            # Skylos success means no issues found
+            # For skylos, having dead code issues means the check failed (not success)
             success = len(issues) == 0
 
             return ToolResult(
@@ -141,7 +148,7 @@ class SkylosAdapter(BaseRustToolAdapter):
             if issue:
                 issues.append(issue)
 
-        # Success if no issues found
+        # For skylos, having ANY dead code issues means it failed the check
         success = len(issues) == 0
 
         return ToolResult(

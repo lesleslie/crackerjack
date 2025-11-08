@@ -14,6 +14,7 @@ from crackerjack.models.protocols import (
     SecurityServiceProtocol,
     VersionAnalyzerProtocol,
 )
+from crackerjack.utils.retry_utils import retry_api_call
 
 
 class PublishManagerImpl:
@@ -407,7 +408,7 @@ class PublishManagerImpl:
 
         try:
             self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI...")
-            return self._perform_publish_workflow()
+            return self._perform_publish_workflow_with_retry()
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Publish error: {e}")
             return False
@@ -416,6 +417,17 @@ class PublishManagerImpl:
         return self.validate_auth()
 
     def _perform_publish_workflow(self) -> bool:
+        if self.dry_run:
+            return self._handle_dry_run_publish()
+
+        if not self.build_package():
+            return False
+
+        return self._execute_publish()
+
+    @retry_api_call(max_attempts=3, delay=2.0, backoff=2.0, max_delay=60.0)
+    def _perform_publish_workflow_with_retry(self) -> bool:
+        """Perform the publish workflow with retry logic for API connection errors."""
         if self.dry_run:
             return self._handle_dry_run_publish()
 

@@ -132,6 +132,9 @@ class MdformatAdapter(BaseToolAdapter):
         # Check-only mode (don't modify files)
         if not self.settings.fix_enabled:
             cmd.append("--check")
+        else:
+            # When fix is enabled, run in fix mode to automatically format
+            pass
 
         # Line length
         if self.settings.line_length:
@@ -234,9 +237,9 @@ class MdformatAdapter(BaseToolAdapter):
             parallel_safe=True,
             stage="fast",  # Markdown formatting in fast stage
             settings={
-                "fix_enabled": False,
+                "fix_enabled": True,  # Enable auto-fix by default
                 "line_length": 88,
-                "check_only": True,
+                "check_only": False,  # Use fix mode as default
                 "wrap_mode": "keep",
             },
         )
