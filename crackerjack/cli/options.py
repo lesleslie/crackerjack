@@ -92,6 +92,7 @@ class Options(BaseModel):
     fast_iteration: bool = False  # Phase 10.2.4: Skip comprehensive hooks
     tool: str | None = None  # Phase 10.2.4: Run only specific tool
     changed_only: bool = False  # Phase 10.2.4: Run on changed files only
+    all_files: bool = False  # Run hooks on all files (not just changed)
     async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -430,6 +431,11 @@ CLI_OPTIONS = {
         False,
         "--changed-only",
         help="Run quality checks only on files changed in git.",
+    ),
+    "all_files": typer.Option(
+        False,
+        "--all-files",
+        help="Run hooks on all files (not just changed files). Useful for CI/CD or after dependency updates.",
     ),
     "create_pr": typer.Option(
         False,
@@ -1018,6 +1024,7 @@ def create_options(
     fast_iteration: bool,
     tool: str | None,
     changed_only: bool,
+    all_files: bool,
     create_pr: bool,
     async_mode: bool,
     experimental_hooks: bool,
@@ -1121,6 +1128,7 @@ def create_options(
         fast_iteration=fast_iteration,
         tool=tool,
         changed_only=changed_only,
+        all_files=all_files,
         create_pr=create_pr,
         async_mode=async_mode,
         experimental_hooks=experimental_hooks,

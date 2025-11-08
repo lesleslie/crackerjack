@@ -631,7 +631,6 @@ class PhaseCoordinator:
         if not self.git_service.commit(commit_message):
             self.session.fail_task("publishing", "Failed to commit changes")
             return False
-        self.console.print(f"[green]✅[/green] Committed: {commit_message}")
 
         # Create git tag locally (before push, so both commit and tag go together)
         if not options.no_git_tags:
@@ -644,8 +643,6 @@ class PhaseCoordinator:
         if not self.git_service.push_with_tags():
             self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually.")
             # Not failing the whole workflow for a push failure
-        else:
-            self.console.print("[green]✅[/green] Pushed to remote (commit + tag)")
 
         # ========================================
         # STAGE 3: PUBLISH TO PYPI

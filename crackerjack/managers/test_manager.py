@@ -78,8 +78,8 @@ class TestManager:
             result = self._execute_test_workflow(options)
             duration = time.time() - start_time
 
-            # Get worker count for statistics panel
-            workers = self.command_builder.get_optimal_workers(options)
+            # Get worker count for statistics panel (don't print info messages)
+            workers = self.command_builder.get_optimal_workers(options, print_info=False)
 
             if result:
                 return self._handle_test_success(result.stdout, duration, options, workers)
@@ -288,7 +288,7 @@ class TestManager:
         return self.executor.execute_with_progress(cmd, self._get_timeout(options))
 
     def _print_test_start_message(self, options: OptionsProtocol) -> None:
-        workers = self.command_builder.get_optimal_workers(options)
+        workers = self.command_builder.get_optimal_workers(options, print_info=False)
         timeout = self.command_builder.get_test_timeout(options)
 
         self.console.print(

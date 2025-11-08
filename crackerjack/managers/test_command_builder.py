@@ -39,7 +39,7 @@ class TestCommandBuilder:
 
         return cmd
 
-    def get_optimal_workers(self, options: OptionsProtocol) -> int | str:
+    def get_optimal_workers(self, options: OptionsProtocol, print_info: bool = True) -> int | str:
         """Calculate optimal worker count using pytest-xdist.
 
         This method leverages pytest-xdist's built-in '-n auto' for CPU detection
@@ -82,7 +82,7 @@ class TestCommandBuilder:
         try:
             # Emergency rollback escape hatch
             if os.getenv("CRACKERJACK_DISABLE_AUTO_WORKERS") == "1":
-                if self.console:
+                if print_info and self.console:
                     self.console.print(
                         "[yellow]⚠️  Auto-detection disabled via environment variable[/yellow]"
                     )
@@ -96,8 +96,8 @@ class TestCommandBuilder:
             if hasattr(options, "test_workers") and options.test_workers == 0:
                 # Check if auto-detection is enabled in settings
                 if self.settings and self.settings.testing.auto_detect_workers:
-                    # Log for debugging
-                    if self.console:
+                    # Show message only when getting optimal workers with print_info=True
+                    if print_info and self.console:
                         self.console.print(
                             "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]"
                         )
@@ -115,7 +115,7 @@ class TestCommandBuilder:
                 # Apply memory safety check
                 workers = self._apply_memory_limit(workers)
 
-                if self.console:
+                if print_info and self.console:
                     self.console.print(
                         f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]"
                     )
@@ -127,7 +127,7 @@ class TestCommandBuilder:
 
         except NotImplementedError:
             # multiprocessing.cpu_count() not available on this platform
-            if self.console:
+            if print_info and self.console:
                 self.console.print(
                     "[yellow]⚠️  CPU detection unavailable, using 2 workers[/yellow]"
                 )
@@ -135,7 +135,7 @@ class TestCommandBuilder:
 
         except Exception as e:
             # Graceful degradation on any error
-            if self.console:
+            if print_info and self.console:
                 self.console.print(
                     f"[yellow]⚠️  Worker detection failed: {e}. Using 2 workers.[/yellow]"
                 )

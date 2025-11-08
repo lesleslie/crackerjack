@@ -1,5 +1,101 @@
 ______________________________________________________________________
 
+## [0.42.5] - 2025-11-08
+
+### Added
+
+- Add mdformat + mdformat-ruff hook with gitignore support
+
+### Changed
+
+- Crackerjack (quality: 64/100) - 2025-11-07 22:10:47
+- Crackerjack (quality: 64/100) - 2025-11-07 22:33:22
+- Crackerjack (quality: 66/100) - 2025-11-07 15:23:54
+- Crackerjack (quality: 66/100) - 2025-11-08 00:37:58
+- Crackerjack (quality: 67/100) - 2025-11-07 12:34:59
+- Crackerjack (quality: 67/100) - 2025-11-07 17:08:15
+- Crackerjack (quality: 67/100) - 2025-11-07 17:27:37
+- Crackerjack (quality: 67/100) - 2025-11-07 17:42:52
+- Crackerjack (quality: 67/100) - 2025-11-07 18:04:40
+- Crackerjack (quality: 67/100) - 2025-11-07 21:24:32
+- Update core, deps, docs
+
+### Fixed
+
+- Mdformat timeout and enable auto-fix
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-08
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [Unreleased] - 2025-11-07
 
 ### Added
