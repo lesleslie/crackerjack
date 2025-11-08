@@ -433,13 +433,7 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-        if self.hook_lock_manager.requires_lock(hook.name):
-            self.console.print(
-                f"\n[bold cyan]🔍 Running {hook.name} (with lock)[/ bold cyan]"
-            )
-        else:
-            self.console.print(f"\n[bold cyan]🔍 Running {hook.name}[/ bold cyan]")
-
+        # Don't print verbose "Running..." messages - the dotted-line format shows status
         cmd = hook.get_command()
 
         try:
@@ -653,22 +647,23 @@ class IndividualHookExecutor:
         result: HookResult,
         progress: HookProgress,
     ) -> None:
+        """Print hook result in dotted-line format matching pre-commit style.
+
+        Format: hook-name.......................................... ✅
+        """
         status_icon = "✅" if result.status == "passed" else "❌"
-        duration_str = f"{progress.duration: .1f}s" if progress.duration else "0.0s"
 
-        summary_parts: list[str] = []
-        if progress.errors_found > 0:
-            summary_parts.append(f"{progress.errors_found} errors")
-        if progress.warnings_found > 0:
-            summary_parts.append(f"{progress.warnings_found} warnings")
-        if progress.files_processed > 0:
-            summary_parts.append(f"{progress.files_processed} files")
+        # Calculate dotted line (same logic as base HookExecutor)
+        max_width = get_console_width()
+        content_width = max_width - 4  # Adjusted for icon and padding
 
-        summary = ", ".join(summary_parts) if summary_parts else "clean"
+        if len(hook_name) > content_width:
+            line = hook_name[: content_width - 3] + "..."
+        else:
+            dots_needed = max(0, content_width - len(hook_name))
+            line = hook_name + ("." * dots_needed)
 
-        self.console.print(
-            f"[bold]{status_icon} {hook_name}[/ bold] - {duration_str}-{summary}",
-        )
+        self.console.print(f"{line} {status_icon}")
 
     def _print_individual_summary(
         self,

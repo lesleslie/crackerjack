@@ -249,15 +249,15 @@ class ProgressHookExecutor(HookExecutor):
         return results
 
     def _display_hook_result(self, result: HookResult) -> None:
-        """Override to suppress individual hook output when using progress bars.
+        """Display hook result with emoji status.
 
-        Progress bar provides better visualization, so we skip the detailed
-        per-hook output that the base class would print.
+        When progress bars are disabled, always show inline hook status.
+        When progress bars are enabled, suppress inline output (progress bar shows it).
 
         Args:
             result: Hook execution result
         """
-        # When progress bars are enabled, skip individual output
-        # The progress bar provides the feedback
+        # Always show inline status when progress bars are disabled
+        # Skip inline output when progress bars are enabled (they show the status)
         if not self.show_progress:
             super()._display_hook_result(result)

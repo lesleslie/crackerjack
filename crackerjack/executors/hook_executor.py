@@ -323,6 +323,7 @@ class HookExecutor:
             dots_needed = max(0, content_width - len(result.name))
             line = result.name + ("." * dots_needed)
 
+        # Real-time inline hook status (dotted-line format)
         self.console.print(f"{line} {status_icon}")
 
     def _handle_retries(
