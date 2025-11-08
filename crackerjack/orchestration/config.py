@@ -30,7 +30,7 @@ def _int_from_env(value: str, default: int) -> int:
 
 @dataclass
 class OrchestrationConfig:
-    enable_orchestration: bool = False
+    enable_orchestration: bool = True
     orchestration_mode: str = "acb"
     enable_caching: bool = True
     cache_backend: str = "memory"

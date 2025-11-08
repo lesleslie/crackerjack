@@ -62,7 +62,7 @@ class TestOrchestrationConfigDefaults:
         """Test that default values are sensible."""
         config = OrchestrationConfig()
 
-        assert config.enable_orchestration is False
+        assert config.enable_orchestration is True
         assert config.orchestration_mode == "acb"
         assert config.enable_caching is True
         assert config.cache_backend == "memory"
@@ -205,7 +205,7 @@ class TestOrchestrationConfigMerging:
         nonexistent = tmp_path / ".crackerjack.yaml"
         config = OrchestrationConfig.load(nonexistent)
 
-        assert config.enable_orchestration is False  # Default
+        assert config.enable_orchestration is True  # Default
         assert config.orchestration_mode == "acb"  # Default
 
 

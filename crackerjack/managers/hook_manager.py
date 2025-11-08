@@ -106,11 +106,12 @@ class HookManagerImpl:
                     enable_caching=enable_caching,
                     cache_backend=cache_backend,
                 )
-                # Default to disabled unless explicitly enabled or project config exists
+                # Default to enabled unless explicitly disabled
+                # Fallback chain: explicit param -> DI settings -> True
                 self.orchestration_enabled = (
                     bool(enable_orchestration)
                     if enable_orchestration is not None
-                    else False
+                    else getattr(self._settings, "enable_orchestration", True)
                 )
                 self.orchestration_mode = (
                     orchestration_mode
