@@ -7,7 +7,7 @@
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 [![Quality Hooks](https://img.shields.io/badge/quality%20hooks-17%20tools-brightgreen)](https://github.com/lesleslie/crackerjack)
 [![License](https://img.shields.io/badge/License-BSD%203--Clause-blue.svg)](https://opensource.org/licenses/BSD-3-Clause)
-![Coverage](https://img.shields.io/badge/coverage-21.6%25-red)
+![Coverage](https://img.shields.io/badge/coverage-39.2%25-red)
 
 ## 🎯 Purpose
 

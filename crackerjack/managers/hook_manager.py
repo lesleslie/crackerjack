@@ -44,9 +44,9 @@ class HookManagerImpl:
             # Create a console for the executor
             console = depends.get_sync(Console)
             self.console = console  # Store console for later use
-            # Use ProgressHookExecutor for real-time progress feedback
+            # Use ProgressHookExecutor with inline hook status (no progress bar)
             self.executor = ProgressHookExecutor(
-                console, pkg_path, verbose, quiet, show_progress=True
+                console, pkg_path, verbose, quiet, show_progress=False
             )
 
         self.config_loader = HookConfigLoader()
