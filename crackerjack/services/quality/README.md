@@ -21,6 +21,7 @@ Quality baseline management, pattern detection, and anomaly detection services.
 ## Integration
 
 Quality services power:
+
 - Coverage ratchet system
 - AI agent pattern learning
 - Quality trend reporting

@@ -21,6 +21,7 @@ System health, performance metrics, and error pattern analysis services.
 ## Integration
 
 These services are used throughout Crackerjack for:
+
 - MCP server health endpoints
 - Test execution monitoring
 - Quality trend analysis

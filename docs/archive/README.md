@@ -19,5 +19,6 @@ These documents served their purpose during active development but are no longer
 
 See `/docs/README.md` for active, current documentation.
 
----
+______________________________________________________________________
+
 *Last updated: 2025-11-07*

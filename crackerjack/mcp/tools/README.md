@@ -19,9 +19,9 @@ MCP tool definitions and adapters for the Crackerjack MCP server.
 The MCP server provides these primary capabilities:
 
 1. **Workflow Execution** - Run crackerjack quality checks via MCP
-2. **Job Tracking** - Monitor async job progress and status
-3. **Error Analysis** - Intelligent error detection and root cause analysis
-4. **Semantic Search** - Code search with vector embeddings
-5. **Agent Intelligence** - Smart agent selection based on task context
+1. **Job Tracking** - Monitor async job progress and status
+1. **Error Analysis** - Intelligent error detection and root cause analysis
+1. **Semantic Search** - Code search with vector embeddings
+1. **Agent Intelligence** - Smart agent selection based on task context
 
 See parent `mcp/README.md` for server architecture details.

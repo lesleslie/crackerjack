@@ -333,6 +333,11 @@ exclude-deps = [
     "scikit-learn",
     "numpy",
     "nltk",
+    "scipy-stubs",
+    "session-mgmt-mcp",
+    "structlog",
+    "mdformat",
+    "mdformat-ruff",
 ]
 
 [tool.refurb]
