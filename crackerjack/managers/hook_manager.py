@@ -162,7 +162,10 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
 
-        return await self._orchestrator.execute_strategy(strategy)
+        # Check for progress callback from PhaseCoordinator
+        progress_callback = getattr(self, "_progress_callback", None)
+
+        return await self._orchestrator.execute_strategy(strategy, progress_callback=progress_callback)
 
     async def _run_comprehensive_hooks_orchestrated(self) -> list[HookResult]:
         """Run comprehensive hooks using orchestrator (async path)."""
@@ -175,7 +178,10 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
 
-        return await self._orchestrator.execute_strategy(strategy)
+        # Check for progress callback from PhaseCoordinator
+        progress_callback = getattr(self, "_progress_callback", None)
+
+        return await self._orchestrator.execute_strategy(strategy, progress_callback=progress_callback)
 
     def run_fast_hooks(self) -> list[HookResult]:
         # Use orchestrator if enabled (Phase 3+)

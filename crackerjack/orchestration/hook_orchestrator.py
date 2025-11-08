@@ -231,6 +231,7 @@ class HookOrchestratorAdapter:
         self,
         strategy: HookStrategy,
         execution_mode: str | None = None,
+        progress_callback: t.Callable[[int, int], None] | None = None,
     ) -> list[HookResult]:
         """Execute hook strategy with specified mode.
 
@@ -238,6 +239,7 @@ class HookOrchestratorAdapter:
             strategy: Hook strategy (fast or comprehensive)
             execution_mode: "legacy" (pre-commit CLI) or "acb" (direct adapters)
                           Defaults to settings.execution_mode if not specified
+            progress_callback: Optional callback(completed, total) for progress updates
 
         Returns:
             List of HookResult objects
@@ -275,7 +277,7 @@ class HookOrchestratorAdapter:
             if mode == "legacy":
                 results = await self._execute_legacy_mode(strategy)
             elif mode == "acb":
-                results = await self._execute_acb_mode(strategy)
+                results = await self._execute_acb_mode(strategy, progress_callback)
             else:
                 raise ValueError(
                     f"Invalid execution mode: {mode}. Must be 'legacy' or 'acb'"
@@ -348,7 +350,11 @@ class HookOrchestratorAdapter:
 
         return execution_result.results
 
-    async def _execute_acb_mode(self, strategy: HookStrategy) -> list[HookResult]:
+    async def _execute_acb_mode(
+        self,
+        strategy: HookStrategy,
+        progress_callback: t.Callable[[int, int], None] | None = None,
+    ) -> list[HookResult]:
         """Execute hooks via direct adapter calls (ACB-powered).
 
         This is the target architecture for Phase 8+.
@@ -356,6 +362,7 @@ class HookOrchestratorAdapter:
 
         Args:
             strategy: Hook strategy to execute
+            progress_callback: Optional callback(completed, total) for progress updates
 
         Returns:
             List of HookResult objects from direct adapter execution
@@ -394,6 +401,7 @@ class HookOrchestratorAdapter:
             results = await execution_strategy.execute(
                 hooks=strategy.hooks,
                 executor_callable=self._execute_single_hook,
+                progress_callback=progress_callback,
             )
         elif strategy.parallel:
             # Fallback to simple parallel execution without dependency resolution

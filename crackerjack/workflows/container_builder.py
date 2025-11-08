@@ -156,9 +156,13 @@ class WorkflowContainerBuilder:
         These are the foundation services with no dependencies (except Config
         which uses the current directory by default).
         """
-        # Console
+        # Console - Configure width from settings for progress bars
         if not self._console:
             self._console = Console()
+            # Set console width from configuration
+            from crackerjack.config import get_console_width
+
+            self._console.width = get_console_width()
         depends.set(Console, self._console)
         self._registered.add("Console")
 

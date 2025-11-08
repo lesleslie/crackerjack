@@ -93,6 +93,7 @@ class AdaptiveExecutionStrategy:
         timeout: int | None = None,
         executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
         | None = None,
+        progress_callback: t.Callable[[int, int], None] | None = None,
     ) -> list[HookResult]:
         """Execute hooks in dependency-aware waves.
 
@@ -101,6 +102,7 @@ class AdaptiveExecutionStrategy:
             max_parallel: Optional override for max concurrent executions per wave
             timeout: Optional override for default timeout
             executor_callable: Async function that executes a single hook
+            progress_callback: Optional callback(completed, total) for progress updates
 
         Returns:
             List of HookResult objects (combined from all waves)
@@ -141,6 +143,13 @@ class AdaptiveExecutionStrategy:
 
         # Execute each wave in parallel, waves sequentially
         all_results = []
+        total_hooks = len(hooks)
+        completed_hooks = 0
+
+        # Initial progress report
+        if progress_callback:
+            progress_callback(0, total_hooks)
+
         for wave_idx, wave_hooks in enumerate(waves, 1):
             logger.info(
                 f"Executing wave {wave_idx}/{len(waves)}",
@@ -161,6 +170,11 @@ class AdaptiveExecutionStrategy:
             )
 
             all_results.extend(wave_results)
+            completed_hooks += len(wave_results)
+
+            # Report progress after each wave
+            if progress_callback:
+                progress_callback(completed_hooks, total_hooks)
 
             logger.info(
                 f"Wave {wave_idx} complete",

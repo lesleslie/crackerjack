@@ -9,6 +9,14 @@ from acb.depends import Inject, depends
 from acb.logger import Logger
 from rich import box
 from rich.panel import Panel
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+)
 from rich.table import Table
 
 from crackerjack.code_cleaner import CodeCleaner
@@ -318,13 +326,49 @@ class PhaseCoordinator:
         options: OptionsProtocol,
         attempt: int,
     ) -> bool:
-        """Execute a hook suite once (no retry logic - retry is handled at stage level)."""
+        """Execute a hook suite once with progress bar (no retry logic - retry is handled at stage level)."""
         self._last_hook_summary = None
         self._last_hook_results = []
 
+        # Create compact progress bar for 70-char width
+        # Format: ⠋ Running hooks... ━━━━━╸━━━ 7/11 [32s]
+        progress = Progress(
+            SpinnerColumn(spinner_name="dots"),
+            TextColumn("[cyan]{task.description}"),
+            BarColumn(bar_width=None),  # Auto-size to fit console
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            console=self.console,  # Uses console width (70 chars)
+            transient=True,  # Remove after completion
+        )
+
+        # Progress callback for hook manager to call
+        task_id = None
+
+        def update_progress(completed: int, total: int) -> None:
+            nonlocal task_id
+            if task_id is None:
+                return
+            if total > 0:
+                # Update with actual counts
+                progress.update(task_id, completed=completed, total=total)
+
+        # Store callback in hook_manager temporarily
+        original_callback = getattr(self.hook_manager, "_progress_callback", None)
+        self.hook_manager._progress_callback = update_progress
+
         try:
-            hook_results = hook_runner() or []
-            self._last_hook_results = hook_results
+            with progress:
+                # Create task
+                task_id = progress.add_task(
+                    f"Running {suite_name} hooks...",
+                    total=None,
+                )
+
+                # Execute hooks - the hook_manager will call update_progress via callback
+                hook_results = hook_runner() or []
+                self._last_hook_results = hook_results
+
         except Exception as exc:
             self.console.print(
                 f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
@@ -334,6 +378,9 @@ class PhaseCoordinator:
                 extra={"suite": suite_name, "attempt": attempt},
             )
             return False
+        finally:
+            # Restore original callback
+            self.hook_manager._progress_callback = original_callback
 
         summary = self.hook_manager.get_hook_summary(hook_results)
         self._last_hook_summary = summary
