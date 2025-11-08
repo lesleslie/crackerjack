@@ -40,6 +40,7 @@ class ProgressHookExecutor(HookExecutor):
         verbose: bool = False,
         quiet: bool = False,
         show_progress: bool = True,
+        debug: bool = False,
     ) -> None:
         """Initialize progress-enhanced hook executor.
 
@@ -49,9 +50,11 @@ class ProgressHookExecutor(HookExecutor):
             verbose: Show detailed output
             quiet: Suppress output
             show_progress: Enable progress bars (disable for CI/testing)
+            debug: Enable debug output
         """
-        super().__init__(console, pkg_path, verbose, quiet)
+        super().__init__(console, pkg_path, verbose, quiet, debug)
         self.show_progress = show_progress and not quiet
+        self.debug = debug
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         """Execute hook strategy with progress indicators.

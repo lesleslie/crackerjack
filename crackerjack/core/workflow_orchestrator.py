@@ -2672,7 +2672,9 @@ class WorkflowOrchestrator:
         depends.set(GitInterface, git_service)
 
         # Register hook manager
-        hook_manager = HookManagerImpl(self.pkg_path, verbose=self.verbose)
+        hook_manager = HookManagerImpl(
+            self.pkg_path, verbose=self.verbose, debug=self.debug
+        )
         depends.set(HookManager, hook_manager)
 
         from crackerjack.executors.hook_lock_manager import HookLockManager

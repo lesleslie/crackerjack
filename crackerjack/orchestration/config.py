@@ -4,7 +4,12 @@ import dataclasses
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from typing import Self
+else:
+    Self = "OrchestrationConfig"
 
 import yaml
 from acb.depends import depends
@@ -169,10 +174,10 @@ class OrchestrationConfig:
 
         if config_path.exists():
             file_config = cls.from_file(config_path)
-            config = config.merge(file_config)
+            config = config.merge(file_config)  # type: ignore[assignment]
 
         env_overrides = cls._env_overrides()
-        config = config.with_overrides(**env_overrides)
+        config = config.with_overrides(**env_overrides)  # type: ignore[assignment]
 
         return config
 

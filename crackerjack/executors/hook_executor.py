@@ -58,11 +58,13 @@ class HookExecutor:
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
+        debug: bool = False,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
         self.verbose = verbose
         self.quiet = quiet
+        self.debug = debug
         # Optional progress callbacks used when orchestration is disabled
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
@@ -150,75 +152,99 @@ class HookExecutor:
         formatting_hooks = [h for h in strategy.hooks if h.is_formatting]
         other_hooks = [h for h in strategy.hooks if not h.is_formatting]
 
+        # Execute formatting hooks sequentially first
         for hook in formatting_hooks:
+            self._execute_single_hook_with_progress(hook, results)
+
+        # Execute other hooks in parallel
+        if other_hooks:
+            self._execute_parallel_hooks(other_hooks, strategy, results)
+
+        return results
+
+    def _execute_single_hook_with_progress(
+        self, hook: HookDefinition, results: list[HookResult]
+    ) -> None:
+        """Execute a single hook and update progress callbacks."""
+        if self._progress_start_callback:
+            try:
+                self._started_hooks += 1
+                total = self._total_hooks or len(results) + 1  # Approximate total
+                self._progress_start_callback(self._started_hooks, total)
+            except Exception:
+                pass
+
+        result = self.execute_single_hook(hook)
+        results.append(result)
+        self._display_hook_result(result)
+
+        if self._progress_callback:
+            try:
+                self._completed_hooks += 1
+                total = self._total_hooks or len(results)
+                self._progress_callback(self._completed_hooks, total)
+            except Exception:
+                pass
+
+    def _execute_parallel_hooks(
+        self,
+        other_hooks: list[HookDefinition],
+        strategy: HookStrategy,
+        results: list[HookResult],
+    ) -> None:
+        """Execute non-formatting hooks in parallel."""
+
+        # Wrap execution to emit a start tick inside the worker thread
+        def _run_with_start(h: HookDefinition) -> HookResult:
             if self._progress_start_callback:
                 try:
                     self._started_hooks += 1
-                    total = self._total_hooks or len(strategy.hooks)
-                    self._progress_start_callback(self._started_hooks, total)
+                    total_local = self._total_hooks or len(results) + len(other_hooks)
+                    self._progress_start_callback(self._started_hooks, total_local)
                 except Exception:
                     pass
-            result = self.execute_single_hook(hook)
+            return self.execute_single_hook(h)
+
+        with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
+            future_to_hook = {
+                executor.submit(_run_with_start, hook): hook for hook in other_hooks
+            }
+
+            for future in as_completed(future_to_hook):
+                self._handle_future_result(future, future_to_hook, results)
+
+    def _handle_future_result(
+        self, future, future_to_hook: dict, results: list[HookResult]
+    ) -> None:
+        """Handle the result of a completed future from thread pool execution."""
+        try:
+            result = future.result()
             results.append(result)
             self._display_hook_result(result)
-            if self._progress_callback:
-                try:
-                    self._completed_hooks += 1
-                    total = self._total_hooks or len(strategy.hooks)
-                    self._progress_callback(self._completed_hooks, total)
-                except Exception:
-                    pass
+            self._update_progress_on_completion()
+        except Exception as e:
+            hook = future_to_hook[future]
+            error_result = HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="error",
+                duration=0.0,
+                issues_found=[str(e)],
+                stage=hook.stage.value,
+            )
+            results.append(error_result)
+            self._display_hook_result(error_result)
+            self._update_progress_on_completion()
 
-        if other_hooks:
-            # Wrap execution to emit a start tick inside the worker thread
-            def _run_with_start(h: HookDefinition) -> HookResult:
-                if self._progress_start_callback:
-                    try:
-                        self._started_hooks += 1
-                        total_local = self._total_hooks or len(strategy.hooks)
-                        self._progress_start_callback(self._started_hooks, total_local)
-                    except Exception:
-                        pass
-                return self.execute_single_hook(h)
-
-            with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
-                future_to_hook = {
-                    executor.submit(_run_with_start, hook): hook for hook in other_hooks
-                }
-
-                for future in as_completed(future_to_hook):
-                    try:
-                        result = future.result()
-                        results.append(result)
-                        self._display_hook_result(result)
-                        if self._progress_callback:
-                            try:
-                                self._completed_hooks += 1
-                                total = self._total_hooks or len(strategy.hooks)
-                                self._progress_callback(self._completed_hooks, total)
-                            except Exception:
-                                pass
-                    except Exception as e:
-                        hook = future_to_hook[future]
-                        error_result = HookResult(
-                            id=hook.name,
-                            name=hook.name,
-                            status="error",
-                            duration=0.0,
-                            issues_found=[str(e)],
-                            stage=hook.stage.value,
-                        )
-                        results.append(error_result)
-                        self._display_hook_result(error_result)
-                        if self._progress_callback:
-                            try:
-                                self._completed_hooks += 1
-                                total = self._total_hooks or len(strategy.hooks)
-                                self._progress_callback(self._completed_hooks, total)
-                            except Exception:
-                                pass
-
-        return results
+    def _update_progress_on_completion(self) -> None:
+        """Update progress callback when a hook completes."""
+        if self._progress_callback:
+            try:
+                self._completed_hooks += 1
+                total = self._total_hooks or self._completed_hooks  # Approximate total
+                self._progress_callback(self._completed_hooks, total)
+            except Exception:
+                pass
 
     def execute_single_hook(self, hook: HookDefinition) -> HookResult:
         start_time = time.time()
@@ -227,7 +253,7 @@ class HookExecutor:
             result = self._run_hook_subprocess(hook)
             duration = time.time() - start_time
 
-            self._display_hook_output_if_needed(result)
+            self._display_hook_output_if_needed(result, hook.name)
             return self._create_hook_result_from_process(hook, result, duration)
 
         except subprocess.TimeoutExpired:
@@ -266,8 +292,12 @@ class HookExecutor:
             )
 
     def _display_hook_output_if_needed(
-        self, result: subprocess.CompletedProcess[str]
+        self, result: subprocess.CompletedProcess[str], hook_name: str = ""
     ) -> None:
+        # For complexipy, only show output when --debug flag is set
+        if hook_name == "complexipy" and not self.debug:
+            return
+
         if result.returncode == 0 or not self.verbose:
             return
 

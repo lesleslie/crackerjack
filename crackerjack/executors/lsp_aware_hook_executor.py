@@ -27,12 +27,14 @@ class LSPAwareHookExecutor(HookExecutor):
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
+        debug: bool = False,
         use_tool_proxy: bool = True,
     ) -> None:
-        super().__init__(console, pkg_path, verbose, quiet)
+        super().__init__(console, pkg_path, verbose, quiet, debug)
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None
         self.tool_proxy = ToolProxy() if self.use_tool_proxy else None
+        self.debug = debug
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         """Execute hook strategy with LSP optimization where possible."""

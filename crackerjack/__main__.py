@@ -42,6 +42,7 @@ from .cli.semantic_handlers import (
     handle_semantic_stats,
 )
 
+console = Console()
 app = typer.Typer(
     help="Crackerjack: Your Python project setup and style enforcement tool.",
 )

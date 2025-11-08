@@ -209,6 +209,16 @@ FAST_HOOKS = [
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level Python formatter
     ),
+    HookDefinition(
+        name="mdformat",
+        command=[],
+        is_formatting=True,
+        timeout=45,  # UV init (~10s) + tool execution + markdown processing overhead
+        retry_on_failure=True,
+        security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level markdown formatter
+    ),
 ]
 
 COMPREHENSIVE_HOOKS = [

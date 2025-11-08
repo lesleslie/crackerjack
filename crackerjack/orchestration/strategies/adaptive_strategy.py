@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import typing as t
+from contextlib import suppress
 
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
 from crackerjack.models.task import HookResult
@@ -381,10 +382,8 @@ class AdaptiveExecutionStrategy:
             async with semaphore:
                 # Notify start before executing the hook
                 if on_hook_start:
-                    try:
+                    with suppress(Exception):
                         on_hook_start()
-                    except Exception:
-                        pass
                 try:
                     hook_timeout = hook.timeout or timeout
                     logger.debug(
@@ -418,10 +417,8 @@ class AdaptiveExecutionStrategy:
                     )
                     # Notify per-hook completion for progress updates
                     if on_hook_complete:
-                        try:
+                        with suppress(Exception):
                             on_hook_complete()
-                        except Exception:
-                            pass
                     return result
 
                 except TimeoutError:

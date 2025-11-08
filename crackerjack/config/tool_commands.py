@@ -74,12 +74,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uv",
             "run",
             "skylos",
-            "check",
-            package_name,
             "--exclude-folder",
             "tests",
             ".",
-        ],  # Use current CLI: `uv run skylos check <package> --exclude-folder tests .`
+        ],
         "zuban": [
             "uv",
             "run",

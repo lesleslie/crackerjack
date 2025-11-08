@@ -1,4 +1,5 @@
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
@@ -21,6 +22,7 @@ class HookManagerImpl:
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
+        debug: bool = False,
         enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
         # Legacy parameters kept for backward compatibility (deprecated)
@@ -32,13 +34,19 @@ class HookManagerImpl:
     ) -> None:
         self.pkg_path = pkg_path
         self.executor: HookExecutor
+        self.debug = debug
 
         # Use LSP-aware executor if optimization is enabled
         if enable_lsp_optimization:
             console = depends.get_sync(Console)
             self.console = console  # Store console for later use
             self.executor = LSPAwareHookExecutor(
-                console, pkg_path, verbose, quiet, use_tool_proxy=enable_tool_proxy
+                console,
+                pkg_path,
+                verbose,
+                quiet,
+                debug,
+                use_tool_proxy=enable_tool_proxy,
             )
         else:
             # Create a console for the executor
@@ -46,7 +54,7 @@ class HookManagerImpl:
             self.console = console  # Store console for later use
             # Use ProgressHookExecutor with inline hook status (no progress bar)
             self.executor = ProgressHookExecutor(
-                console, pkg_path, verbose, quiet, show_progress=False
+                console, pkg_path, verbose, quiet, show_progress=False, debug=debug
             )
 
         self.config_loader = HookConfigLoader()
@@ -219,15 +227,12 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
         # Wire progress callbacks for legacy executor path so ticks update
-        try:
+        with suppress(Exception):
             self.executor.set_progress_callbacks(
                 started_cb=getattr(self, "_progress_start_callback", None),
                 completed_cb=getattr(self, "_progress_callback", None),
                 total=len(strategy.hooks),
             )
-        except Exception:
-            # Executor may not support callbacks; ignore silently
-            pass
         execution_result = self.executor.execute_strategy(strategy)
         return execution_result.results
 
@@ -259,14 +264,12 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
         # Wire progress callbacks for legacy executor path so ticks update
-        try:
+        with suppress(Exception):
             self.executor.set_progress_callbacks(
                 started_cb=getattr(self, "_progress_start_callback", None),
                 completed_cb=getattr(self, "_progress_callback", None),
                 total=len(strategy.hooks),
             )
-        except Exception:
-            pass
         execution_result = self.executor.execute_strategy(strategy)
         return execution_result.results
 

@@ -32,6 +32,7 @@ if t.TYPE_CHECKING:
     from crackerjack.executors.hook_executor import HookExecutor
     from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter
     from crackerjack.orchestration.cache.tool_proxy_cache import ToolProxyCacheAdapter
+    from crackerjack.orchestration.execution_strategies import ExecutionContext
 
 # ACB Module Registration (REQUIRED)
 MODULE_ID = UUID(
@@ -98,6 +99,7 @@ class HookOrchestratorAdapter:
         hook_executor: HookExecutor | None = None,
         cache_adapter: ToolProxyCacheAdapter | MemoryCacheAdapter | None = None,
         event_bus: WorkflowEventBus | None = None,
+        execution_context: ExecutionContext | None = None,
     ) -> None:
         """Initialize Hook Orchestrator.
 
@@ -105,11 +107,13 @@ class HookOrchestratorAdapter:
             settings: Optional settings override
             hook_executor: Optional HookExecutor for legacy mode delegation
             cache_adapter: Optional cache adapter (auto-selected from settings.cache_backend if not provided)
+            execution_context: Optional execution context for adapters that need it
         """
         self.settings = settings or HookOrchestratorSettings()
         self._hook_executor = hook_executor
         self._cache_adapter = cache_adapter
         self._dependency_graph: dict[str, list[str]] = {}
+        self.execution_context = execution_context
         self._initialized = False
         self._cache_hits = 0
         self._cache_misses = 0
@@ -234,6 +238,7 @@ class HookOrchestratorAdapter:
         execution_mode: str | None = None,
         progress_callback: t.Callable[[int, int], None] | None = None,
         progress_start_callback: t.Callable[[int, int], None] | None = None,
+        execution_context: ExecutionContext | None = None,
     ) -> list[HookResult]:
         """Execute hook strategy with specified mode.
 
@@ -707,7 +712,7 @@ class HookOrchestratorAdapter:
 
     def _build_adapter(self, hook: HookDefinition) -> t.Any | None:
         try:
-            if hook.name in ["ruff-check", "ruff-format"]:
+            if hook.name in ("ruff-check", "ruff-format"):
                 from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
 
                 return RuffAdapter(
@@ -728,10 +733,14 @@ class HookOrchestratorAdapter:
                 from crackerjack.adapters.security.gitleaks import GitleaksAdapter
 
                 return GitleaksAdapter()
-            if hook.name in ["skylos", "zuban"]:
+            if hook.name in ("skylos", "zuban"):
                 from crackerjack.adapters.lsp.skylos import SkylosAdapter
 
-                return SkylosAdapter()
+                if self.execution_context is None:
+                    # This is a critical error if we need the context for these adapters
+                    msg = f"Execution context required for {hook.name} adapter"
+                    raise ValueError(msg)
+                return SkylosAdapter(context=self.execution_context)
             if hook.name == "complexipy":
                 from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
 
@@ -740,7 +749,7 @@ class HookOrchestratorAdapter:
                 from crackerjack.adapters.refactor.creosote import CreosoteAdapter
 
                 return CreosoteAdapter()
-            if hook.name in ["refurb", "pyrefly"]:
+            if hook.name in ("refurb", "pyrefly"):
                 from crackerjack.adapters.refactor.refurb import RefurbAdapter
 
                 return RefurbAdapter()
@@ -761,7 +770,7 @@ class HookOrchestratorAdapter:
         try:
             await adapter.init()
             qa_result = await asyncio.wait_for(
-                adapter.check(files=[Path(".")]), timeout=hook.timeout
+                adapter.check(files=[Path()]), timeout=hook.timeout
             )
             files_processed = (
                 len(qa_result.files_checked)
@@ -770,15 +779,15 @@ class HookOrchestratorAdapter:
             )
             status = (
                 "passed"
-                if qa_result.status in [QAResultStatus.SUCCESS, QAResultStatus.WARNING]
+                if qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
                 else "failed"
             )
             issues = [
                 str(error)
-                for error in [
+                for error in (
                     getattr(qa_result, "message", ""),
                     getattr(qa_result, "details", ""),
-                ]
+                )
                 if isinstance(error, str) and error.strip()
             ]
             return HookResult(
@@ -807,7 +816,7 @@ class HookOrchestratorAdapter:
                 status="error",
                 duration=self._elapsed(start_time),
                 files_processed=0,
-                issues_found=[f"Adapter execution error: {str(e)}"],
+                issues_found=[f"Adapter execution error: {e}"],
                 stage=hook.stage.value,
             )
 

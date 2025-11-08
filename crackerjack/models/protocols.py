@@ -760,12 +760,14 @@ class HookOrchestratorProtocol(t.Protocol):
         self,
         strategy: t.Any,  # HookStrategy
         execution_mode: str | None = None,
+        execution_context: t.Any | None = None,
     ) -> list[t.Any]:  # list[HookResult]
         """Execute hook strategy with specified mode.
 
         Args:
             strategy: HookStrategy (fast or comprehensive)
             execution_mode: "legacy" (pre-commit CLI) or "acb" (direct adapters)
+            execution_context: Context containing options and execution environment
 
         Returns:
             List of HookResult objects
