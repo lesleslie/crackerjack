@@ -53,7 +53,7 @@ class HookOrchestratorSettings(BaseModel):
     cache_backend: str = Field(
         default="tool_proxy", pattern="^(tool_proxy|redis|memory)$"
     )
-    execution_mode: str = Field(default="legacy", pattern="^(legacy|acb)$")
+    execution_mode: str = Field(default="acb", pattern="^(legacy|acb)$")
     # Phase 5-7: Triple parallelism settings
     enable_adaptive_execution: bool = True  # Use adaptive strategy (dependency-aware)
 

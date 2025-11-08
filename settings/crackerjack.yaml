@@ -89,6 +89,7 @@ zuban_timeout: 30
 # Core orchestration
 enable_orchestration: true
 orchestration_mode: "acb"  # 'legacy' or 'acb'
+execution_mode: "acb"  # Hook execution mode: 'legacy' (pre-commit subprocess) or 'acb' (direct adapters)
 
 # Cache settings
 enable_caching: true

@@ -330,12 +330,15 @@ class PhaseCoordinator:
         self._last_hook_summary = None
         self._last_hook_results = []
 
+        # Get hook count before creating progress bar so we can show total upfront
+        hook_count = self.hook_manager.get_hook_count(suite_name)
+
         # Create compact progress bar for 70-char width
-        # Format: ⠋ Running hooks... ━━━━━╸━━━ 7/11 [32s]
+        # Format: ⠋ Running hooks... ━━━━━╸━━━ 7/11 0:00:32
         progress = Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[cyan]{task.description}"),
-            BarColumn(bar_width=None),  # Auto-size to fit console
+            BarColumn(bar_width=20),  # Fixed width to prevent console overflow
             MofNCompleteColumn(),
             TimeElapsedColumn(),
             console=self.console,  # Uses console width (70 chars)
@@ -349,9 +352,8 @@ class PhaseCoordinator:
             nonlocal task_id
             if task_id is None:
                 return
-            if total > 0:
-                # Update with actual counts
-                progress.update(task_id, completed=completed, total=total)
+            # Update only completed count (total is already set during initialization)
+            progress.update(task_id, completed=completed)
 
         # Store callback in hook_manager temporarily
         original_callback = getattr(self.hook_manager, "_progress_callback", None)
@@ -359,10 +361,10 @@ class PhaseCoordinator:
 
         try:
             with progress:
-                # Create task
+                # Create task with known total
                 task_id = progress.add_task(
                     f"Running {suite_name} hooks...",
-                    total=None,
+                    total=hook_count,
                 )
 
                 # Execute hooks - the hook_manager will call update_progress via callback

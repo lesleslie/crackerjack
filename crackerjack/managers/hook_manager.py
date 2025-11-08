@@ -165,7 +165,9 @@ class HookManagerImpl:
         # Check for progress callback from PhaseCoordinator
         progress_callback = getattr(self, "_progress_callback", None)
 
-        return await self._orchestrator.execute_strategy(strategy, progress_callback=progress_callback)
+        return await self._orchestrator.execute_strategy(
+            strategy, progress_callback=progress_callback
+        )
 
     async def _run_comprehensive_hooks_orchestrated(self) -> list[HookResult]:
         """Run comprehensive hooks using orchestrator (async path)."""
@@ -181,7 +183,9 @@ class HookManagerImpl:
         # Check for progress callback from PhaseCoordinator
         progress_callback = getattr(self, "_progress_callback", None)
 
-        return await self._orchestrator.execute_strategy(strategy, progress_callback=progress_callback)
+        return await self._orchestrator.execute_strategy(
+            strategy, progress_callback=progress_callback
+        )
 
     def run_fast_hooks(self) -> list[HookResult]:
         # Use orchestrator if enabled (Phase 3+)
@@ -385,6 +389,18 @@ class HookManagerImpl:
 
         all_hooks = fast_strategy.hooks + comprehensive_strategy.hooks
         return [hook.name for hook in all_hooks]
+
+    def get_hook_count(self, suite_name: str) -> int:
+        """Get the number of hooks in a specific suite.
+
+        Args:
+            suite_name: Name of the suite ('fast' or 'comprehensive')
+
+        Returns:
+            Number of hooks in the suite
+        """
+        strategy = self.config_loader.load_strategy(suite_name)
+        return len(strategy.hooks)
 
     def install_hooks(self) -> bool:
         """Install git hooks.

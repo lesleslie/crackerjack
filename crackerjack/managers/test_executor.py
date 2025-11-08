@@ -191,7 +191,8 @@ class TestExecutor:
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
         if "collected" in line and ("item" in line or "test" in line):
-            match = re.search(r"(\d +) (?: item | test)", line)
+            # Fixed regex: \d+ (one or more digits) and (?:item|test) (alternation without spaces)
+            match = re.search(r"(\d+)\s+(?:item|test)", line)
             if match:
                 progress.update(
                     total_tests=int(match.group(1)),

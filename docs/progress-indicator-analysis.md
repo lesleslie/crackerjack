@@ -3,7 +3,9 @@
 ## Current State
 
 ### What You're Seeing
+
 When running `python -m crackerjack -c -t -p minor`, you see:
+
 ```
 ⏳ Started: Fast quality checks
 
@@ -20,23 +22,26 @@ When running `python -m crackerjack -c -t -p minor`, you see:
 ### Why This Happens
 
 The execution flow is:
+
 1. `WorkflowOrchestrator._run_fast_hooks_phase()` → calls phases
-2. `PhaseCoordinator.run_fast_hooks_only()` → shows header, calls hook_manager
-3. `HookManager.run_fast_hooks()` → detects orchestration enabled, calls orchestrator
-4. `HookOrchestrator.execute_strategy()` → executes in ACB mode (no progress output)
-5. `PhaseCoordinator._report_hook_results()` → shows final summary
+1. `PhaseCoordinator.run_fast_hooks_only()` → shows header, calls hook_manager
+1. `HookManager.run_fast_hooks()` → detects orchestration enabled, calls orchestrator
+1. `HookOrchestrator.execute_strategy()` → executes in ACB mode (no progress output)
+1. `PhaseCoordinator._report_hook_results()` → shows final summary
 
 **The gap**: Steps 4 (ACB orchestrator) doesn't display any progress during execution.
 
 ### Architecture Context
 
 **ACB Mode (Current):**
+
 - `crackerjack/orchestration/hook_orchestrator.py:351` - `_execute_acb_mode()`
 - Uses `AdaptiveExecutionStrategy` for dependency-aware parallel execution
 - Calls hooks directly via adapters (not pre-commit CLI)
 - **No console output during execution** (only logging)
 
 **Legacy Mode (Old, has progress):**
+
 - `crackerjack/executors/progress_hook_executor.py` - `ProgressHookExecutor`
 - Uses Rich progress bars during execution
 - Shows real-time hook status updates
@@ -45,7 +50,9 @@ The execution flow is:
 ## Options Analysis
 
 ### Option 1: Restore Old-Style Hook-by-Hook Output
+
 **What users want**: See each hook as it runs:
+
 ```
 ⏳ Started: Fast quality checks
 ----------------------------------------------------------------------
@@ -60,46 +67,57 @@ Running ruff-check... ✅ 0.18s
 ```
 
 **Difficulty**: HARD - Requires significant refactoring
+
 - ACB orchestrator uses async batch execution with adaptive strategies
 - Hooks can run in parallel (dependency-aware batching)
 - Real-time line-by-line output conflicts with parallel execution model
 - Would need to add callback system to orchestrator to report progress
 
 **Implementation Path**:
+
 1. Add progress callback to `AdaptiveExecutionStrategy.execute()`
-2. Thread-safe console writing from parallel tasks
-3. Handle overlapping output from concurrent hooks
-4. Estimated effort: 4-6 hours
+1. Thread-safe console writing from parallel tasks
+1. Handle overlapping output from concurrent hooks
+1. Estimated effort: 4-6 hours
 
 ### Option 2: Rich Progress Bar (Recommended)
+
 **What it looks like**:
+
 ```
 ⏳ Started: Fast quality checks
 ----------------------------------------------------------------------
 🔍 Fast Hooks - Formatters, import sorting, and quick static analysis
 ----------------------------------------------------------------------
 
-⠋ Running 11 hooks... ━━━━━━━━━━━━━━━━╸━━━━━━━━━━━━━━━━ 7/11 [00:32<00:14]
+⠋ Running 11 hooks... ━━━━━╸━━━ 7/11 0:00:32
 ```
 
+**Fixed Width**: Progress bar now uses `bar_width=20` to prevent overflow beyond 70-char console width.
+
 **Difficulty**: MEDIUM - Cleaner implementation
+
 - Progress bar respects console width automatically (Rich built-in)
 - Already has implementation in `ProgressHookExecutor`
 - Needs integration with ACB orchestrator's async execution
 
 **Implementation Path**:
+
 1. Add progress callback to `HookOrchestrator._execute_acb_mode()`
-2. Use Rich `Progress` with console width from settings
-3. Update progress in callbacks from adaptive strategy
-4. Estimated effort: 2-3 hours
+1. Use Rich `Progress` with console width from settings
+1. Update progress in callbacks from adaptive strategy
+1. Estimated effort: 2-3 hours
 
 **Console Width Handling**: Already solved! ✅
+
 - `crackerjack/config/settings.py:82` - `ConsoleSettings.width = 70`
 - Rich Progress respects console width automatically via `Console` object
 - `PhaseCoordinator` already creates console with proper width
 
 ### Option 3: Simple Spinner (Easiest)
+
 **What it looks like**:
+
 ```
 ⏳ Started: Fast quality checks
 ----------------------------------------------------------------------
@@ -110,6 +128,7 @@ Running ruff-check... ✅ 0.18s
 ```
 
 **Difficulty**: EASY
+
 - Just show a spinner while hooks run
 - No detailed progress, just "something is happening"
 - Estimated effort: 30 minutes
@@ -117,17 +136,21 @@ Running ruff-check... ✅ 0.18s
 ## Console Width Configuration
 
 ### Current Implementation ✅
+
 The console width is **already properly configured** and will be respected by any progress indicator:
 
 **Settings**:
+
 ```python
 # crackerjack/config/settings.py:79-82
 class ConsoleSettings(Settings):
     """Console/UI related settings."""
+
     width: int = 70
 ```
 
 **Usage**:
+
 ```python
 # crackerjack/utils/console_utils.py
 def separator(char: str = "-", width: int | None = None) -> str:
@@ -136,26 +159,31 @@ def separator(char: str = "-", width: int | None = None) -> str:
 ```
 
 **Rich Integration**:
+
 - Rich `Progress` automatically respects the `Console` width setting
 - `PhaseCoordinator` already has the console with proper width
 - No changes needed in ACB - it's purely a Crackerjack configuration
 
 ### Configuration Files
+
 Users can override console width in:
 
 1. **`settings/local.yaml`** (gitignored):
+
    ```yaml
    console:
      width: 80  # Custom width
    ```
 
-2. **`settings/crackerjack.yaml`** (committed):
+1. **`settings/crackerjack.yaml`** (committed):
+
    ```yaml
    console:
      width: 70  # Default
    ```
 
-3. **`pyproject.toml`**:
+1. **`pyproject.toml`**:
+
    ```toml
    [tool.crackerjack.console]
    width = 70
@@ -166,17 +194,20 @@ Users can override console width in:
 **Go with Option 2: Rich Progress Bar**
 
 ### Why?
+
 1. **Clean integration**: Works naturally with ACB's async execution
-2. **Console width**: Already respects configured width (70 chars)
-3. **User experience**: Better than nothing, good enough for most users
-4. **Implementation**: Moderate effort, clean code
-5. **No ACB changes**: Purely Crackerjack-side implementation
+1. **Console width**: Already respects configured width (70 chars)
+1. **User experience**: Better than nothing, good enough for most users
+1. **Implementation**: Moderate effort, clean code
+1. **No ACB changes**: Purely Crackerjack-side implementation
 
 ### What it Won't Do
+
 - Won't show individual hook names as they run (parallel execution makes this messy)
 - Won't show hook-specific timing until completion
 
 ### What it Will Do
+
 - Show real-time progress (7/11 hooks complete)
 - Show elapsed time and ETA
 - Respect 70-character console width
@@ -186,14 +217,16 @@ Users can override console width in:
 ## Implementation Plan (Option 2)
 
 ### Phase 1: Add Progress Callback System
+
 **File**: `crackerjack/orchestration/hook_orchestrator.py`
 
 Add optional progress callback parameter:
+
 ```python
 async def _execute_acb_mode(
     self,
     strategy: HookStrategy,
-    progress_callback: Callable[[int, int], None] | None = None
+    progress_callback: Callable[[int, int], None] | None = None,
 ) -> list[HookResult]:
     # ... existing code ...
 
@@ -206,9 +239,11 @@ async def _execute_acb_mode(
 ```
 
 ### Phase 2: Update Adaptive Strategy
+
 **File**: `crackerjack/orchestration/strategies/adaptive_strategy.py`
 
 Add progress reporting:
+
 ```python
 async def execute(
     self,
@@ -224,9 +259,11 @@ async def execute(
 ```
 
 ### Phase 3: Integrate with PhaseCoordinator
+
 **File**: `crackerjack/core/phase_coordinator.py`
 
 Add progress bar wrapper:
+
 ```python
 from rich.progress import Progress, SpinnerColumn, BarColumn, ...
 
@@ -261,18 +298,17 @@ def _execute_hooks_once(
 ```
 
 ### Phase 4: Thread Through Hook Manager
+
 **File**: `crackerjack/managers/hook_manager.py`
 
 ```python
 def run_fast_hooks(
-    self,
-    progress_callback: Callable[[int, int], None] | None = None
+    self, progress_callback: Callable[[int, int], None] | None = None
 ) -> list[HookResult]:
     if self.orchestration_enabled:
-        return asyncio.run(
-            self._run_fast_hooks_orchestrated(progress_callback)
-        )
+        return asyncio.run(self._run_fast_hooks_orchestrated(progress_callback))
     # ... legacy path ...
+
 
 async def _run_fast_hooks_orchestrated(
     self,
@@ -291,8 +327,53 @@ async def _run_fast_hooks_orchestrated(
 - **Option 2** (Progress bar): 2-3 hours (recommended)
 - **Option 3** (Simple spinner): 30 minutes (minimal value)
 
+## Critical Bug Fix - Test Collection Regex (2025-11-07)
+
+### Problem
+
+Test progress indicators were stuck at "Collecting tests..." and never transitioned to showing test execution progress.
+
+### Root Cause
+
+The regex pattern in `test_executor.py:194` had two fatal errors:
+
+```python
+# ❌ BROKEN (never matches)
+match = re.search(r"(\d +) (?: item | test)", line)
+
+# ✅ FIXED
+match = re.search(r"(\d+)\s+(?:item|test)", line)
+```
+
+**Errors:**
+
+1. `\d +` means "digit followed by spaces" instead of `\d+` (one or more digits)
+1. `(?: item | test)` matches " item " or " test " with literal spaces around `|`
+
+**Impact:**
+
+- Test collection completion never detected
+- `total_tests` remained 0 (shows "0/?" instead of actual progress)
+- Progress bar couldn't calculate percentage or ETA
+- Tests appeared to hang during collection phase
+
+**Fix:**
+
+- Changed `\d +` to `\d+` (one or more digits)
+- Changed `(?: item | test)` to `(?:item|test)` (proper alternation)
+- Added comment explaining the correct pattern
+
+### Validation
+
+Tested against pytest collection output formats:
+
+- ✅ "collected 123 items" → 123
+- ✅ "collected 45 tests" → 45
+- ✅ "collected 1 item" → 1
+- ✅ "collected 999 items in 2.34s" → 999
+
 ## Questions to Clarify
 
 1. **Is the progress bar acceptable** instead of hook-by-hook output?
-2. **Should we show hook names** during execution (requires more complex implementation)?
-3. **Fallback to spinner** if progress bar is too complex?
+1. **Should we show hook names** during execution (requires more complex implementation)?
+1. **Fallback to spinner** if progress bar is too complex?
