@@ -36,7 +36,9 @@ class TestExecutor:
     ) -> subprocess.CompletedProcess[str]:
         progress = self._initialize_progress()
 
-        with Live(progress.format_progress(), console=self.console) as live:
+        with Live(
+            progress.format_progress(), console=self.console, transient=True
+        ) as live:
             env = self._setup_test_environment()
 
             process = subprocess.Popen(

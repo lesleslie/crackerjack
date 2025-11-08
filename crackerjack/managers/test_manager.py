@@ -526,23 +526,29 @@ class TestManager:
     ) -> float | None:
         """Get coverage from fallback sources."""
         # Secondary: Try ratchet result if coverage.json failed
-        if current_coverage is None:
-            current_coverage = self._get_coverage_from_ratchet(ratchet_result)
-            if current_coverage is not None:
-                self.console.print(
-                    f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
-                )
+        if current_coverage is None and ratchet_result:
+            # Try to extract from ratchet result
+            if "current_coverage" in ratchet_result:
+                current_coverage = ratchet_result["current_coverage"]
+                if current_coverage is not None and current_coverage > 0:
+                    self.console.print(
+                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
+                    )
 
         # Tertiary: Try coverage service, but only accept non-zero values
         if current_coverage is None:
-            current_coverage = self._get_coverage_from_service()
-            if current_coverage is not None:
-                self.console.print(
-                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
-                )
+            try:
+                current_coverage = self._get_coverage_from_service()
+                if current_coverage is not None:
+                    self.console.print(
+                        f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
+                    )
+            except AttributeError:
+                # Service method doesn't exist, skip
+                pass
             else:
                 coverage_json_path = self.pkg_path / "coverage.json"
-                if coverage_json_path.exists():
+                if current_coverage is None and coverage_json_path.exists():
                     self.console.print(
                         "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
                     )
@@ -552,6 +558,19 @@ class TestManager:
     def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
         """Update coverage badge in README.md if coverage changed."""
         try:
+            # Check if coverage files exist and inform user
+            coverage_json_path = self.pkg_path / "coverage.json"
+            ratchet_path = self.pkg_path / ".coverage-ratchet.json"
+
+            if not coverage_json_path.exists():
+                self.console.print(
+                    "[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run"
+                )
+            if not ratchet_path.exists():
+                self.console.print(
+                    "[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing..."
+                )
+
             # Get current coverage directly from coverage.json to ensure freshest data
             current_coverage = self._attempt_coverage_extraction()
             current_coverage = self._handle_coverage_extraction_result(current_coverage)
