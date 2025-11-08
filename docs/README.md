@@ -1,8 +1,8 @@
 # Crackerjack Documentation
 
-Concise, current documentation for working with Crackerjack. Legacy plans and deep-dive writeups have been removed to keep this focused and fresh. For full project introduction and narrative, see `README.md` at the repository root.
+Concise, current documentation for working with Crackerjack. Legacy plans and deep-dive writeups have been archived to keep this focused and fresh. For full project introduction and narrative, see `README.md` at the repository root.
 
-— Last updated: 2025-11-01
+— Last updated: 2025-11-07
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ uv run pytest --maxfail=1
 
 - `crackerjack/` — Core runtime and CLI entrypoints (agents, prompts, orchestration).
 - `scripts/` and `tools/` — Automation helpers; fixtures in `tests/conftest.py`.
-- `docs/` — This file. Deep historical docs have been removed.
+- `docs/` — Current documentation. Historical implementation docs archived in `docs/archive/`.
 - `examples/`, `example.mcp.json` — Examples and mock configuration.
 - `test_docs_site/` — Fixtures for docs site snapshots (isolated from this docs/).
 
@@ -77,8 +77,9 @@ uv run pytest --maxfail=1
 - PRs include motivation, implementation notes, validation evidence (commands run, screenshots for docs/UI), linked issues, and follow-ups.
 - Run `uv run pre-commit run --all-files` before opening PRs.
 
-## What Changed In This Cleanup
+## Documentation Organization
 
-- Removed historical plans, audits, and session reports under `docs/` to avoid duplication and drift.
-- Consolidated current, actionable info into this single page.
-- Root docs (`README.md`, `CLAUDE.md`, `SECURITY.md`) remain the source of truth for detailed guidance.
+- **Active Docs**: This file contains current, actionable information for development.
+- **Archived Docs**: Historical implementation plans and phase completions in `docs/archive/`.
+- **Root Docs**: `README.md`, `CLAUDE.md`, `SECURITY.md` remain the source of truth for detailed guidance.
+- **Package READMEs**: Each crackerjack/ subdirectory has a README explaining its purpose and architecture.
