@@ -26,6 +26,7 @@ class TestManager:
         console: Inject[Console],
         coverage_ratchet: Inject[CoverageRatchetProtocol],
         coverage_badge: Inject[CoverageBadgeServiceProtocol],
+        command_builder: Inject[TestCommandBuilder],
         lsp_client: Inject[LSPClient] | None = None,
     ) -> None:
         self.console = console
@@ -39,7 +40,7 @@ class TestManager:
 
         # Ensure downstream components receive a concrete pathlib.Path
         self.executor = TestExecutor(console, self.pkg_path)
-        self.command_builder = TestCommandBuilder(self.pkg_path)
+        self.command_builder = command_builder
 
         # Services injected via ACB DI
         self.coverage_ratchet = coverage_ratchet
@@ -61,10 +62,10 @@ class TestManager:
         self.coverage_ratchet_enabled = enabled
         if enabled:
             self.console.print(
-                "[cyan]📊[/ cyan] Coverage ratchet enabled-targeting 100 % coverage"
+                "[cyan]📊[/cyan] Coverage ratchet enabled-targeting 100 % coverage"
             )
         else:
-            self.console.print("[yellow]⚠️[/ yellow] Coverage ratchet disabled")
+            self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
 
     def run_tests(self, options: OptionsProtocol) -> bool:
         # Early return if tests are disabled
@@ -95,33 +96,39 @@ class TestManager:
             return self._handle_test_error(start_time, e)
 
     def run_specific_tests(self, test_pattern: str) -> bool:
-        self.console.print(f"[cyan]🧪[/ cyan] Running tests matching: {test_pattern}")
+        self.console.print(f"[cyan]🧪[/cyan] Running tests matching: {test_pattern}")
 
         cmd = self.command_builder.build_specific_test_command(test_pattern)
         result = self.executor.execute_with_progress(cmd)
 
         success = result.returncode == 0
         if success:
-            self.console.print("[green]✅[/ green] Specific tests passed")
+            self.console.print("[green]✅[/green] Specific tests passed")
         else:
-            self.console.print("[red]❌[/ red] Some specific tests failed")
+            self.console.print("[red]❌[/red] Some specific tests failed")
 
         return success
 
     def validate_test_environment(self) -> bool:
         if not self.has_tests():
-            self.console.print("[yellow]⚠️[/ yellow] No tests found")
+            self.console.print("[yellow]⚠️[/yellow] No tests found")
             return False
 
+        from rich.spinner import Spinner
+        from rich.live import Live
+
         cmd = self.command_builder.build_validation_command()
-        result = subprocess.run(cmd, cwd=self.pkg_path, capture_output=True, text=True)
+
+        spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
+        with Live(spinner, console=self.console, transient=True):
+            result = subprocess.run(cmd, cwd=self.pkg_path, capture_output=True, text=True)
 
         if result.returncode != 0:
-            self.console.print("[red]❌[/ red] Test environment validation failed")
+            self.console.print("[red]❌[/red] Test environment validation failed")
             self.console.print(result.stderr)
             return False
 
-        self.console.print("[green]✅[/ green] Test environment validated")
+        self.console.print("[green]✅[/green] Test environment validated")
         return True
 
     def get_coverage_ratchet_status(self) -> dict[str, t.Any]:
@@ -285,7 +292,7 @@ class TestManager:
         timeout = self.command_builder.get_test_timeout(options)
 
         self.console.print(
-            f"[cyan]🧪[/ cyan] Running tests (workers: {workers}, timeout: {timeout}s)"
+            f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)"
         )
 
     def _handle_test_success(
@@ -295,7 +302,7 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        self.console.print(f"[green]✅[/ green] Tests passed in {duration: .1f}s")
+        self.console.print(f"[green]✅[/green] Tests passed in {duration: .1f}s")
 
         # Parse and display test statistics panel
         stats = self._parse_test_statistics(output)
@@ -315,7 +322,7 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        self.console.print(f"[red]❌[/ red] Tests failed in {duration: .1f}s")
+        self.console.print(f"[red]❌[/red] Tests failed in {duration: .1f}s")
 
         # Parse and display test statistics panel (use stdout for stats)
         combined_output = stdout + "\n" + stderr
@@ -337,7 +344,7 @@ class TestManager:
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         duration = time.time() - start_time
         self.console.print(
-            f"[red]💥[/ red] Test execution error after {duration: .1f}s: {error}"
+            f"[red]💥[/red] Test execution error after {duration: .1f}s: {error}"
         )
         return False
 
@@ -583,12 +590,12 @@ class TestManager:
             return True
         else:
             if "message" in ratchet_result:
-                self.console.print(f"[red]📉[/ red] {ratchet_result['message']}")
+                self.console.print(f"[red]📉[/red] {ratchet_result['message']}")
             else:
                 current = ratchet_result.get("current_coverage", 0)
                 previous = ratchet_result.get("previous_coverage", 0)
                 self.console.print(
-                    f"[red]📉[/ red] Coverage regression: "
+                    f"[red]📉[/red] Coverage regression: "
                     f"{current: .2f}% < {previous: .2f}%"
                 )
             return False
@@ -598,7 +605,7 @@ class TestManager:
         current = ratchet_result.get("current_coverage", 0)
 
         self.console.print(
-            f"[green]📈[/ green] Coverage improved by {improvement: .2f}% "
+            f"[green]📈[/green] Coverage improved by {improvement: .2f}% "
             f"to {current: .2f}%"
         )
 

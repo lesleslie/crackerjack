@@ -14,9 +14,9 @@ class TestCommandBuilder:
     @depends.inject
     def __init__(
         self,
-        pkg_path: Path,
-        console: Inject[Console] | None = None,
-        settings: Inject[CrackerjackSettings] | None = None,
+        pkg_path: Inject[Path],
+        console: Inject[Console],
+        settings: Inject[CrackerjackSettings],
     ) -> None:
         # Normalize to pathlib.Path to avoid async path methods
         try:

@@ -1,5 +1,4 @@
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
@@ -9,6 +8,7 @@ from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.executors.hook_executor import HookExecutor
 from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
+from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
 from crackerjack.models.task import HookResult
 
 if t.TYPE_CHECKING:
@@ -44,7 +44,10 @@ class HookManagerImpl:
             # Create a console for the executor
             console = depends.get_sync(Console)
             self.console = console  # Store console for later use
-            self.executor = HookExecutor(console, pkg_path, verbose, quiet)
+            # Use ProgressHookExecutor for real-time progress feedback
+            self.executor = ProgressHookExecutor(
+                console, pkg_path, verbose, quiet, show_progress=True
+            )
 
         self.config_loader = HookConfigLoader()
         self._config_path: Path | None = None
@@ -185,19 +188,12 @@ class HookManagerImpl:
                 # We're in an event loop, run in thread
                 import concurrent.futures
 
-                # Suppress executor printing while running in a background thread
-                prev_quiet = getattr(self.executor, "quiet", False)
-                with suppress(Exception):
-                    self.executor.quiet = True  # type: ignore[attr-defined]
-                try:
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            asyncio.run, self._run_fast_hooks_orchestrated()
-                        )
-                        return future.result()
-                finally:
-                    with suppress(Exception):
-                        self.executor.quiet = prev_quiet  # type: ignore[attr-defined]
+                # Let executor show progress - orchestrator doesn't display progress
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self._run_fast_hooks_orchestrated()
+                    )
+                    return future.result()
             except RuntimeError:
                 # No event loop running, safe to use asyncio.run()
                 return asyncio.run(self._run_fast_hooks_orchestrated())
@@ -222,19 +218,12 @@ class HookManagerImpl:
                 # We're in an event loop, run in thread
                 import concurrent.futures
 
-                # Suppress executor printing while running in a background thread
-                prev_quiet = getattr(self.executor, "quiet", False)
-                with suppress(Exception):
-                    self.executor.quiet = True  # type: ignore[attr-defined]
-                try:
-                    with concurrent.futures.ThreadPoolExecutor() as executor:
-                        future = executor.submit(
-                            asyncio.run, self._run_comprehensive_hooks_orchestrated()
-                        )
-                        return future.result()
-                finally:
-                    with suppress(Exception):
-                        self.executor.quiet = prev_quiet  # type: ignore[attr-defined]
+                # Let executor show progress - orchestrator doesn't display progress
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run, self._run_comprehensive_hooks_orchestrated()
+                    )
+                    return future.result()
             except RuntimeError:
                 # No event loop running, safe to use asyncio.run()
                 return asyncio.run(self._run_comprehensive_hooks_orchestrated())

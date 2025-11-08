@@ -44,7 +44,7 @@ class AIIntelligence(str, Enum):
 @dataclass
 class OrchestrationConfig:
     execution_strategy: ExecutionStrategy = ExecutionStrategy.BATCH
-    progress_level: ProgressLevel = ProgressLevel.DETAILED
+    progress_level: ProgressLevel = ProgressLevel.BASIC
     streaming_mode: StreamingMode = StreamingMode.WEBSOCKET
     ai_coordination_mode: AICoordinationMode = AICoordinationMode.SINGLE_AGENT
     ai_intelligence: AIIntelligence = AIIntelligence.BASIC

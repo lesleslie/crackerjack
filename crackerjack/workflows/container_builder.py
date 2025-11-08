@@ -350,6 +350,13 @@ class WorkflowContainerBuilder:
         # Level 4.5: Register TestManager dependencies
         self._register_level4_5_test_manager_dependencies()
 
+        # TestCommandBuilder - needed by TestManager
+        from crackerjack.managers.test_command_builder import TestCommandBuilder
+
+        test_command_builder = TestCommandBuilder()
+        depends.set(TestCommandBuilder, test_command_builder)
+        self._registered.add("TestCommandBuilder")
+
         # TestManager - uses @depends.inject (all Level 4.5 dependencies registered)
         from crackerjack.managers.test_manager import TestManager
         from crackerjack.models.protocols import TestManagerProtocol

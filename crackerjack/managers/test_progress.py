@@ -130,69 +130,51 @@ class TestProgress:
         return self._format_execution_progress()
 
     def _format_collection_progress(self) -> str:
-        status_parts = [self.collection_status]
+        status_parts = [f"⠋ [cyan]{self.collection_status}[/cyan]"]
 
         if self.files_discovered > 0:
-            status_parts.append(f"{self.files_discovered} test files")
+            status_parts.append(f"[dim]{self.files_discovered} test files[/dim]")
 
         elapsed = self.elapsed_time
         if elapsed > 1:
-            status_parts.append(f"{elapsed: .1f}s")
+            status_parts.append(f"[dim]{elapsed:.1f}s[/dim]")
 
         return " | ".join(status_parts)
 
     def _format_execution_progress(self) -> str:
         parts = []
 
-        # Add visual progress bar (if tests have started)
+        # Simple spinner-based display for parallel test execution
         if self.total_tests > 0:
-            progress_bar = self._create_progress_bar(width=25)
-            if progress_bar:
-                parts.append(progress_bar)
+            # Main message with test count (using simple spinner character)
+            parts.append(f"⠋ [cyan]Running {self.total_tests} tests[/cyan]")
 
-            # Add numeric progress with color coding
-            color = self.overall_status_color
-            progress_pct = (self.completed / self.total_tests) * 100
-            parts.append(
-                f"[{color}]{self.completed}/{self.total_tests} ({progress_pct:.1f}%)[/{color}]"
-            )
+            # Add status counters with emojis if any tests have completed
+            status_parts = []
+            if self.completed > 0:
+                progress_pct = (self.completed / self.total_tests) * 100
+                status_parts.append(
+                    f"[dim]{self.completed}/{self.total_tests} ({progress_pct:.0f}%)[/dim]"
+                )
 
-        # Add status counters with emojis
-        status_parts = []
-        if self.passed > 0:
-            status_parts.append(f"[green]✅ {self.passed}[/green]")
-        if self.failed > 0:
-            status_parts.append(f"[red]❌ {self.failed}[/red]")
-        if self.skipped > 0:
-            status_parts.append(f"[yellow]⏭ {self.skipped}[/yellow]")
-        if self.errors > 0:
-            status_parts.append(f"[red]💥 {self.errors}[/red]")
+            if self.passed > 0:
+                status_parts.append(f"[green]✅ {self.passed}[/green]")
+            if self.failed > 0:
+                status_parts.append(f"[red]❌ {self.failed}[/red]")
+            if self.skipped > 0:
+                status_parts.append(f"[yellow]⏭ {self.skipped}[/yellow]")
+            if self.errors > 0:
+                status_parts.append(f"[red]💥 {self.errors}[/red]")
 
-        if status_parts:
-            parts.append(" ".join(status_parts))
+            if status_parts:
+                parts.append(" | ".join(status_parts))
 
-        # Add current test being executed
-        if self.current_test and not self.is_complete:
-            test_name = (
-                self.current_test[:40] + "..."
-                if len(self.current_test) > 40
-                else self.current_test
-            )
-            parts.append(f"[cyan]Running: {test_name}[/cyan]")
+            # Add elapsed time
+            elapsed = self.elapsed_time
+            if elapsed > 1:
+                parts.append(f"[dim]{elapsed:.0f}s[/dim]")
+        else:
+            # Before collection completes
+            parts.append("⠋ [cyan]Preparing tests...[/cyan]")
 
-        # Add test execution rate
-        test_rate = self._format_test_rate()
-        if test_rate:
-            parts.append(f"[magenta]{test_rate}[/magenta]")
-
-        # Add elapsed time
-        elapsed = self.elapsed_time
-        if elapsed > 1:
-            parts.append(f"[dim]{elapsed:.1f}s[/dim]")
-
-        # Add ETA if available
-        eta = self._format_eta()
-        if eta and not self.is_complete:
-            parts.append(f"[blue]{eta}[/blue]")
-
-        return " | ".join(parts)
+        return " | ".join(parts) if len(parts) > 1 else (parts[0] if parts else "")
