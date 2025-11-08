@@ -9,10 +9,12 @@ Commands use 'uv run' for Python-based tools to leverage dependency management.
 
 from __future__ import annotations
 
+from functools import lru_cache
 from pathlib import Path
 
 
-def _detect_package_name(pkg_path: Path) -> str:
+@lru_cache(maxsize=8)
+def _detect_package_name_cached(pkg_path_str: str) -> str:
     """Detect the main package name from pyproject.toml or directory structure.
 
     Args:
@@ -22,6 +24,7 @@ def _detect_package_name(pkg_path: Path) -> str:
         The detected package name (defaults to 'crackerjack' if detection fails)
     """
     # Method 1: Try to read from pyproject.toml
+    pkg_path = Path(pkg_path_str)
     pyproject_path = pkg_path / "pyproject.toml"
     if pyproject_path.exists():
         from contextlib import suppress
@@ -71,10 +74,12 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uv",
             "run",
             "skylos",
+            "check",
+            package_name,
             "--exclude-folder",
             "tests",
             ".",
-        ],  # Use current CLI: `uv run skylos --exclude-folder tests .`
+        ],  # Use current CLI: `uv run skylos check <package> --exclude-folder tests .`
         "zuban": [
             "uv",
             "run",
@@ -149,6 +154,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "python",
             "-m",
             "crackerjack.tools.mdformat_wrapper",
+            "--check",
         ],
         # Use explicit project path flag; include venv discovery
         "creosote": [
@@ -172,6 +178,23 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     }
 
 
+@lru_cache(maxsize=8)
+def _build_tool_commands_cached(package_name: str) -> dict[str, tuple[str, ...]]:
+    """Cached variant of tool command map returning immutable tuples.
+
+    Using tuples ensures cached structures aren’t accidentally mutated, while
+    get_tool_command converts back to lists for callers.
+    """
+    raw = _build_tool_commands(package_name)
+    return {k: tuple(v) for k, v in raw.items()}
+
+
+# Precompute defaults for the active working directory to avoid hot-path lookups
+_DEFAULT_CWD_STR = str(Path.cwd())
+_DEFAULT_PACKAGE_NAME = _detect_package_name_cached(_DEFAULT_CWD_STR)
+_DEFAULT_COMMANDS = _build_tool_commands_cached(_DEFAULT_PACKAGE_NAME)
+
+
 def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
     """Get the direct command for a tool by hook name.
 
@@ -186,18 +209,18 @@ def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
         KeyError: If the hook name is not found in the registry
     """
     # Detect package name from project root
-    if pkg_path is None:
-        pkg_path = Path.cwd()
-    package_name = _detect_package_name(pkg_path)
-
-    # Build tool commands with detected package name
-    tool_commands = _build_tool_commands(package_name)
+    if pkg_path is None or str(pkg_path) == _DEFAULT_CWD_STR:
+        tool_commands = _DEFAULT_COMMANDS
+    else:
+        package_name = _detect_package_name_cached(str(pkg_path))
+        tool_commands = _build_tool_commands_cached(package_name)
 
     if hook_name not in tool_commands:
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-    return tool_commands[hook_name].copy()  # Return copy to prevent mutation
+    # Return a fresh list to prevent caller mutation
+    return list(tool_commands[hook_name])
 
 
 def list_available_tools() -> list[str]:
@@ -207,7 +230,7 @@ def list_available_tools() -> list[str]:
         Sorted list of hook names that can be executed
     """
     # Build with a dummy package name just to get the keys
-    tool_commands = _build_tool_commands("dummy")
+    tool_commands = _build_tool_commands_cached("dummy")
     return sorted(tool_commands.keys())
 
 

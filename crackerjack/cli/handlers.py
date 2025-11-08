@@ -41,6 +41,25 @@ def setup_ai_agent_env(
                 f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
             )
             console.print(" • Enhanced logging will be available during execution")
+    elif debug_mode:  # Handle debug mode without AI agent
+        os.environ["AI_AGENT_DEBUG"] = "1"
+        os.environ["AI_AGENT_VERBOSE"] = "1"
+        console.print(
+            "[bold cyan]🐛 AI Debug Mode Configuration: [/ bold cyan]",
+        )
+        console.print(
+            f" • Debug Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_DEBUG') == '1' else '❌ Disabled'}",
+        )
+        console.print(
+            f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
+        )
+        console.print(" • Structured logging enabled for debugging")
+
+    # Set up structured logging if debug or ai_agent is enabled
+    if ai_agent or debug_mode:
+        from crackerjack.services.logging import setup_structured_logging
+
+        setup_structured_logging(level="DEBUG", json_output=True)
 
 
 def handle_mcp_server(websocket_port: int | None = None) -> None:

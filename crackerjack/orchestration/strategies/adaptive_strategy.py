@@ -94,6 +94,7 @@ class AdaptiveExecutionStrategy:
         executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]]
         | None = None,
         progress_callback: t.Callable[[int, int], None] | None = None,
+        progress_start_callback: t.Callable[[int, int], None] | None = None,
     ) -> list[HookResult]:
         """Execute hooks in dependency-aware waves.
 
@@ -162,19 +163,30 @@ class AdaptiveExecutionStrategy:
             )
 
             # Execute this wave in parallel
+            # Define per-hook completion notifier to update progress incrementally
+            def on_hook_start() -> None:
+                nonlocal completed_hooks
+                # Use started count as the metric to tick the progress bar
+                started = completed_hooks + 1
+                if progress_start_callback:
+                    progress_start_callback(started, total_hooks)
+
+            def on_hook_complete() -> None:
+                nonlocal completed_hooks
+                completed_hooks += 1
+                if progress_callback:
+                    progress_callback(completed_hooks, total_hooks)
+
             wave_results = await self._execute_wave(
                 wave_hooks,
                 max_parallel=max_par,
                 timeout=timeout_sec,
                 executor_callable=executor_callable,
+                on_hook_complete=on_hook_complete,
+                on_hook_start=on_hook_start,
             )
 
             all_results.extend(wave_results)
-            completed_hooks += len(wave_results)
-
-            # Report progress after each wave
-            if progress_callback:
-                progress_callback(completed_hooks, total_hooks)
 
             logger.info(
                 f"Wave {wave_idx} complete",
@@ -345,6 +357,8 @@ class AdaptiveExecutionStrategy:
         max_parallel: int,
         timeout: int,
         executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None,
+        on_hook_complete: t.Callable[[], None] | None = None,
+        on_hook_start: t.Callable[[], None] | None = None,
     ) -> list[HookResult]:
         """Execute a single wave of hooks in parallel.
 
@@ -365,6 +379,12 @@ class AdaptiveExecutionStrategy:
         async def execute_with_limit(hook: HookDefinition) -> HookResult:
             """Execute hook with semaphore and timeout."""
             async with semaphore:
+                # Notify start before executing the hook
+                if on_hook_start:
+                    try:
+                        on_hook_start()
+                    except Exception:
+                        pass
                 try:
                     hook_timeout = hook.timeout or timeout
                     logger.debug(
@@ -396,6 +416,12 @@ class AdaptiveExecutionStrategy:
                             "duration": result.duration,
                         },
                     )
+                    # Notify per-hook completion for progress updates
+                    if on_hook_complete:
+                        try:
+                            on_hook_complete()
+                        except Exception:
+                            pass
                     return result
 
                 except TimeoutError:

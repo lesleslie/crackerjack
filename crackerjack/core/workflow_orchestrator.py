@@ -1371,7 +1371,12 @@ class WorkflowPipeline:
         self.console.print(
             "\n[bold cyan]🔍 Running Post-Cleaning Fast Hooks Sanity Check...[/bold cyan]"
         )
-
+        # Allow a single re-run after cleaning by resetting the session guard
+        try:
+            # Access PhaseCoordinator instance to reset its duplicate guard
+            setattr(self.phases, "_fast_hooks_started", False)
+        except Exception:
+            pass
         success = self._run_fast_hooks_phase(options)
         if success:
             self.console.print("[green]✅ Post-cleaning sanity check passed[/green]")
@@ -1492,6 +1497,12 @@ class WorkflowPipeline:
     def _initialize_ai_fixing_phase(self, options: OptionsProtocol) -> None:
         self._update_mcp_status("ai_fixing", "running")
         self.logger.info("Starting AI agent fixing phase")
+        # Always log this important phase start for AI consumption
+        self.logger.info(
+            "AI agent fixing phase started",
+            ai_agent_fixing=True,
+            event_type="ai_fix_init",
+        )
         self._log_debug_phase_start()
 
     def _prepare_ai_fixing_environment(self, options: OptionsProtocol) -> None:
@@ -1533,6 +1544,12 @@ class WorkflowPipeline:
                 "ai_agent_fixing",
                 "started",
                 details={"ai_agent": True},
+            )
+            # Log structured data to stderr for AI consumption
+            self.logger.info(
+                "AI agent fixing phase started",
+                ai_agent_fixing=True,
+                event_type="ai_fix_start",
             )
 
     def _setup_agent_coordinator(self) -> EnhancedAgentCoordinator:
@@ -1601,6 +1618,16 @@ class WorkflowPipeline:
         self.debugger.log_test_fixes(test_fixes)
         self.debugger.log_hook_fixes(hook_fixes)
 
+        # Log structured data to stderr for AI consumption
+        self.logger.info(
+            "AI fixes applied",
+            ai_agent_fixing=True,
+            event_type="ai_fix_counts",
+            total_fixes=total_fixes,
+            test_fixes=test_fixes,
+            hook_fixes=hook_fixes,
+        )
+
     def _log_debug_phase_completion(self, success: bool, fix_result: t.Any) -> None:
         if self._should_debug():
             self.debugger.log_workflow_phase(
@@ -1611,6 +1638,16 @@ class WorkflowPipeline:
                     "fixes_applied": len(fix_result.fixes_applied),
                     "remaining_issues": len(fix_result.remaining_issues),
                 },
+            )
+            # Log structured data to stderr for AI consumption
+            self.logger.info(
+                f"AI agent fixing phase {'completed' if success else 'failed'}",
+                ai_agent_fixing=True,
+                event_type="ai_fix_completion",
+                success=success,
+                confidence=fix_result.confidence,
+                fixes_applied=len(fix_result.fixes_applied),
+                remaining_issues=len(fix_result.remaining_issues),
             )
 
     def _handle_fixing_phase_error(self, error: Exception) -> bool:
@@ -1623,6 +1660,14 @@ class WorkflowPipeline:
                 "ai_agent_fixing",
                 "failed",
                 details={"error": str(error)},
+            )
+            # Log structured data to stderr for AI consumption
+            self.logger.error(
+                "AI agent fixing phase failed",
+                ai_agent_fixing=True,
+                event_type="ai_fix_error",
+                error=str(error),
+                error_type=type(error).__name__,
             )
 
         return False

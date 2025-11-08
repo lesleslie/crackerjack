@@ -379,7 +379,22 @@ class ServiceWatchdog:
         def signal_handler(signum: int, frame: object) -> None:
             _ = frame
             logger.info(f"Received signal {signum}, stopping watchdog...")
-            asyncio.create_task(self.stop_watchdog())
+            try:
+                loop = asyncio.get_running_loop()
+                loop.create_task(self.stop_watchdog())
+            except RuntimeError:
+                # No running loop; stop synchronously to avoid 'never awaited' warnings
+                try:
+                    asyncio.run(self.stop_watchdog())
+                except RuntimeError:
+                    # In case we're already within a running loop context where run() is invalid
+                    with contextlib.suppress(Exception):
+                        loop = asyncio.new_event_loop()
+                        try:
+                            asyncio.set_event_loop(loop)
+                            loop.run_until_complete(self.stop_watchdog())
+                        finally:
+                            loop.close()
 
         signal.signal(signal.SIGINT, signal_handler)
         signal.signal(signal.SIGTERM, signal_handler)

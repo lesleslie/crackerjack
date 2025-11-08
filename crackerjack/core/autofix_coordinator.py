@@ -2,22 +2,28 @@ import subprocess
 from pathlib import Path
 
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 from acb.logger import Logger
 
 
 class AutofixCoordinator:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        pkg_path: Path,
-        logger: Inject[Logger],
+        console: object | None = None,
+        pkg_path: Path | None = None,
+        logger: object | None = None,
     ) -> None:
-        self.console = console
-        self.pkg_path = pkg_path
+        # Allow explicit injection from tests; fall back to DI when not provided
+        self.console = console or depends.get_sync(Console)
+        self.pkg_path = pkg_path or Path.cwd()
         # Bind logger context with name for tracing
-        self.logger = logger.bind(logger="crackerjack.autofix")
+        _logger = logger or depends.get_sync(Logger)
+        self.logger = _logger.bind(logger="crackerjack.autofix")
+        if not hasattr(self.logger, "name"):
+            try:
+                setattr(self.logger, "name", "crackerjack.autofix")
+            except Exception:
+                pass
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:

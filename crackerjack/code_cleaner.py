@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Protocol
 
-from acb.console import Console
 from pydantic import BaseModel, ConfigDict
 
 from .errors import ErrorCode, ExecutionError
@@ -23,10 +22,10 @@ from .services.security_logger import (
 
 class SafePatternApplicator:
     def apply_docstring_patterns(self, code: str) -> str:
-        result = code
-        result = SAFE_PATTERNS["docstring_triple_double"].apply(result)
-        result = SAFE_PATTERNS["docstring_triple_single"].apply(result)
-        return result
+        # Intentionally a no-op for docstrings here. Actual docstring removal is
+        # handled by the structured AST cleaning step (_create_docstring_step).
+        # This keeps SafePatternApplicator focused on formatting-only changes.
+        return code
 
     def apply_formatting_patterns(self, content: str) -> str:
         content = SAFE_PATTERNS["spacing_after_comma"].apply(content)
@@ -87,7 +86,7 @@ class CleaningStepProtocol(Protocol):
 class FileProcessor(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
-    console: Console
+    console: t.Any
     logger: t.Any = None
     base_directory: Path | None = None
     security_logger: t.Any = None
@@ -199,7 +198,7 @@ class FileProcessor(BaseModel):
 class CleaningErrorHandler(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    console: Console
+    console: t.Any
     logger: t.Any = None
 
     def model_post_init(self, _: t.Any) -> None:
@@ -257,7 +256,7 @@ class CleaningPipeline(BaseModel):
 
     file_processor: t.Any
     error_handler: t.Any
-    console: Console
+    console: t.Any
     logger: t.Any = None
 
     def model_post_init(self, _: t.Any) -> None:
@@ -375,7 +374,7 @@ class CleaningPipeline(BaseModel):
 class CodeCleaner(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True, extra="allow")
 
-    console: Console
+    console: t.Any
     file_processor: t.Any = None
     error_handler: t.Any = None
     pipeline: t.Any = None
@@ -443,7 +442,8 @@ class CodeCleaner(BaseModel):
         )
 
         if pkg_dir is None:
-            pkg_dir = Path.cwd()
+            # Use configured base directory when no explicit path is provided
+            pkg_dir = self.base_directory or Path.cwd()
 
         python_files = self._discover_package_files(pkg_dir)
 
@@ -501,9 +501,20 @@ class CodeCleaner(BaseModel):
 
     def _prepare_package_directory(self, pkg_dir: Path | None) -> Path:
         if pkg_dir is None:
-            pkg_dir = Path.cwd()
-
-        return SecurePathValidator.validate_file_path(pkg_dir, self.base_directory)
+            pkg_dir = self.base_directory or Path.cwd()
+        # Avoid normalizing symlinks to preserve exact input path semantics
+        # while still enforcing base-directory containment.
+        if self.base_directory and not SecurePathValidator.is_within_directory(
+            pkg_dir, self.base_directory
+        ):
+            raise ExecutionError(
+                message=(
+                    f"Path outside allowed directory: {pkg_dir} not within "
+                    f"{self.base_directory}"
+                ),
+                error_code=ErrorCode.VALIDATION_ERROR,
+            )
+        return pkg_dir
 
     def _create_backup(self, validated_pkg_dir: Path) -> BackupMetadata:
         self.console.print(

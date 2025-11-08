@@ -6,7 +6,7 @@ import uuid
 from pathlib import Path
 
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 
 from crackerjack.models.task import SessionTracker
 
@@ -18,15 +18,14 @@ if t.TYPE_CHECKING:
 class SessionCoordinator:
     """Lightweight session tracking and cleanup coordinator."""
 
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        pkg_path: Path,
+        console: object | None = None,
+        pkg_path: Path | None = None,
         web_job_id: str | None = None,
     ) -> None:
-        self.console = console
-        self.pkg_path = pkg_path
+        self.console = console or depends.get_sync(Console)
+        self.pkg_path = pkg_path or Path.cwd()
         self.web_job_id = web_job_id
         self.session_id = web_job_id or uuid.uuid4().hex[:8]
         self.start_time = time.time()
@@ -35,14 +34,15 @@ class SessionCoordinator:
         self.lock_files: set[Path] = set()
         self.current_task: str | None = None
 
-        self.session_tracker = SessionTracker(
-            session_id=self.session_id,
-            start_time=self.start_time,
-        )
-        self.tasks = self.session_tracker.tasks
+        self.session_tracker: SessionTracker | None = None
+        self.tasks: dict[str, t.Any] = {}
 
     def initialize_session_tracking(self, options: OptionsProtocol) -> None:
         """Initialize session metadata and baseline tracking."""
+        self.session_tracker = SessionTracker(
+            session_id=self.session_id, start_time=self.start_time
+        )
+
         self.session_tracker.metadata.update(
             {
                 "options": getattr(options, "__dict__", {}),
@@ -50,17 +50,28 @@ class SessionCoordinator:
                 "initialized_at": time.time(),
             },
         )
+        self.tasks = self.session_tracker.tasks
         self.start_session("workflow")
 
     def start_session(self, task_name: str) -> None:
         """Record the start of a high-level session task."""
         self.current_task = task_name
+        # Lazily initialize session tracker if not already set
+        if self.session_tracker is None:
+            self.session_tracker = SessionTracker(
+                session_id=self.session_id, start_time=self.start_time
+            )
+            self.tasks = self.session_tracker.tasks
+            self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
         self.session_tracker.metadata["current_session"] = task_name
 
     def end_session(self, success: bool) -> None:
         """Mark session completion."""
-        self.session_tracker.metadata["completed_at"] = time.time()
-        self.session_tracker.metadata["success"] = success
+        # Record wall-clock end time for tests and summaries
+        self.end_time = time.time()
+        if self.session_tracker:
+            self.session_tracker.metadata["completed_at"] = self.end_time
+            self.session_tracker.metadata["success"] = success
         self.current_task = None
 
     def track_task(
@@ -70,6 +81,12 @@ class SessionCoordinator:
         details: str | None = None,
     ) -> str:
         """Track a task within the session."""
+        if self.session_tracker is None:
+            self.session_tracker = SessionTracker(
+                session_id=self.session_id, start_time=self.start_time
+            )
+            self.tasks = self.session_tracker.tasks
+            self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
         self.session_tracker.start_task(task_id, task_name, details)
         return task_id
 
@@ -80,7 +97,57 @@ class SessionCoordinator:
         files_changed: list[str] | None = None,
     ) -> None:
         """Mark task as completed."""
-        self.session_tracker.complete_task(task_id, details, files_changed)
+        if self.session_tracker:
+            self.session_tracker.complete_task(task_id, details, files_changed)
+
+    def update_task(
+        self,
+        task_id: str,
+        status: str,
+        *,
+        details: str | None = None,
+        files_changed: list[str] | None = None,
+        error_message: str | None = None,
+    ) -> None:
+        """Update a task's status in the current session.
+
+        Supports 'completed', 'failed', and 'in_progress' states. Unknown statuses
+        are set directly on the TaskStatusData if present.
+        """
+        if self.session_tracker is None:
+            # Initialize tracker lazily to ensure tasks dict exists
+            self.session_tracker = SessionTracker(
+                session_id=self.session_id, start_time=self.start_time
+            )
+            self.tasks = self.session_tracker.tasks
+            self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
+
+        normalized = (status or "").lower()
+        if normalized == "completed":
+            self.session_tracker.complete_task(task_id, details, files_changed)
+            return
+        if normalized == "failed":
+            self.session_tracker.fail_task(
+                task_id, error_message or "Task failed", details
+            )
+            return
+        if normalized == "in_progress":
+            # Ensure task exists; if not, create it as in-progress
+            if task_id not in self.session_tracker.tasks:
+                self.session_tracker.start_task(task_id, task_id, details)
+            else:
+                task = self.session_tracker.tasks[task_id]
+                task.status = "in_progress"
+                if details:
+                    task.details = details
+            return
+
+        # Fallback: set arbitrary status value if task exists
+        if task_id in self.session_tracker.tasks:
+            task = self.session_tracker.tasks[task_id]
+            task.status = normalized or task.status
+            if details:
+                task.details = details
 
     def fail_task(
         self,
@@ -89,17 +156,19 @@ class SessionCoordinator:
         details: str | None = None,
     ) -> None:
         """Mark task as failed."""
-        self.session_tracker.fail_task(task_id, error_message, details)
+        if self.session_tracker:
+            self.session_tracker.fail_task(task_id, error_message, details)
 
     def finalize_session(self, start_time: float, success: bool) -> None:
         """Finalize session bookkeeping."""
         duration = time.time() - start_time
-        self.session_tracker.metadata["duration"] = duration
-        self.session_tracker.metadata["success"] = success
-        if success and self.current_task:
-            self.session_tracker.complete_task(self.current_task)
-        elif not success and self.current_task:
-            self.session_tracker.fail_task(self.current_task, "Session failed")
+        if self.session_tracker:
+            self.session_tracker.metadata["duration"] = duration
+            self.session_tracker.metadata["success"] = success
+            if success and self.current_task:
+                self.session_tracker.complete_task(self.current_task)
+            elif not success and self.current_task:
+                self.session_tracker.fail_task(self.current_task, "Session failed")
         self.current_task = None
 
     def cleanup_resources(self) -> None:
@@ -135,7 +204,18 @@ class SessionCoordinator:
 
     def get_session_summary(self) -> dict[str, t.Any]:
         """Return high-level session summary."""
-        return self.session_tracker.get_summary()
+        if self.session_tracker:
+            summary = self.session_tracker.get_summary()
+            # Backward compatible alias
+            if "tasks_count" not in summary:
+                summary["tasks_count"] = summary.get("total_tasks", 0)
+            return summary
+        return {
+            "session_id": self.session_id,
+            "metadata": {"pkg_path": str(self.pkg_path)},
+            "tasks": {},
+            "tasks_count": 0,
+        }
 
     def get_summary(self) -> dict[str, t.Any]:
         """Alias for get_session_summary."""

@@ -98,11 +98,11 @@ class HookManagerImpl:
                     enable_caching=enable_caching,
                     cache_backend=cache_backend,
                 )
-                # Use constructor params or fall back to DI settings, then to hardcoded defaults
+                # Default to disabled unless explicitly enabled or project config exists
                 self.orchestration_enabled = (
-                    enable_orchestration
+                    bool(enable_orchestration)
                     if enable_orchestration is not None
-                    else self._settings.enable_orchestration
+                    else False
                 )
                 self.orchestration_mode = (
                     orchestration_mode
@@ -163,10 +163,12 @@ class HookManagerImpl:
                 hook.config_path = self._config_path
 
         # Check for progress callback from PhaseCoordinator
-        progress_callback = getattr(self, "_progress_callback", None)
+        getattr(self, "_progress_callback", None)
 
         return await self._orchestrator.execute_strategy(
-            strategy, progress_callback=progress_callback
+            strategy,
+            progress_callback=getattr(self, "_progress_callback", None),
+            progress_start_callback=getattr(self, "_progress_start_callback", None),
         )
 
     async def _run_comprehensive_hooks_orchestrated(self) -> list[HookResult]:
@@ -181,10 +183,12 @@ class HookManagerImpl:
                 hook.config_path = self._config_path
 
         # Check for progress callback from PhaseCoordinator
-        progress_callback = getattr(self, "_progress_callback", None)
+        getattr(self, "_progress_callback", None)
 
         return await self._orchestrator.execute_strategy(
-            strategy, progress_callback=progress_callback
+            strategy,
+            progress_callback=getattr(self, "_progress_callback", None),
+            progress_start_callback=getattr(self, "_progress_start_callback", None),
         )
 
     def run_fast_hooks(self) -> list[HookResult]:
@@ -214,6 +218,16 @@ class HookManagerImpl:
         if self._config_path:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
+        # Wire progress callbacks for legacy executor path so ticks update
+        try:
+            self.executor.set_progress_callbacks(
+                started_cb=getattr(self, "_progress_start_callback", None),
+                completed_cb=getattr(self, "_progress_callback", None),
+                total=len(strategy.hooks),
+            )
+        except Exception:
+            # Executor may not support callbacks; ignore silently
+            pass
         execution_result = self.executor.execute_strategy(strategy)
         return execution_result.results
 
@@ -244,6 +258,15 @@ class HookManagerImpl:
         if self._config_path:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
+        # Wire progress callbacks for legacy executor path so ticks update
+        try:
+            self.executor.set_progress_callbacks(
+                started_cb=getattr(self, "_progress_start_callback", None),
+                completed_cb=getattr(self, "_progress_callback", None),
+                total=len(strategy.hooks),
+            )
+        except Exception:
+            pass
         execution_result = self.executor.execute_strategy(strategy)
         return execution_result.results
 

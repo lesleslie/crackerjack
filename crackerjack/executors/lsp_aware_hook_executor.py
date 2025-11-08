@@ -51,6 +51,15 @@ class LSPAwareHookExecutor(HookExecutor):
 
         # Execute hooks with LSP optimization and tool proxy resilience
         for hook in strategy.hooks:
+            # Start tick for progress if configured
+            if getattr(self, "_progress_start_callback", None):
+                try:
+                    # _total_hooks/_started_hooks are initialized by set_progress_callbacks on base class
+                    self._started_hooks += 1  # type: ignore[attr-defined]
+                    total = self._total_hooks or len(strategy.hooks)  # type: ignore[attr-defined]
+                    self._progress_start_callback(self._started_hooks, total)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
             if self._should_use_lsp_for_hook(hook, lsp_available):
                 result = self._execute_lsp_hook(hook)
             elif self._should_use_tool_proxy(hook):
@@ -58,6 +67,14 @@ class LSPAwareHookExecutor(HookExecutor):
             else:
                 result = self.execute_single_hook(hook)
             results.append(result)
+            # Completion tick for progress if configured
+            if getattr(self, "_progress_callback", None):
+                try:
+                    self._completed_hooks += 1  # type: ignore[attr-defined]
+                    total = self._total_hooks or len(strategy.hooks)  # type: ignore[attr-defined]
+                    self._progress_callback(self._completed_hooks, total)  # type: ignore[attr-defined]
+                except Exception:
+                    pass
 
         duration = time.time() - start_time
         success = all(result.status in ("passed", "skipped") for result in results)

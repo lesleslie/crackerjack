@@ -21,7 +21,17 @@ class TestExecutor:
         cmd: list[str],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        return self._execute_with_live_progress(cmd, timeout)
+        # Pre-collect tests to set the total count upfront if possible
+        total_tests = self._pre_collect_tests(cmd)
+        progress = self._initialize_progress()
+        if total_tests > 0:
+            # Set the total tests but keep is_collecting as True initially to ensure
+            # the collection header appears in pytest output
+            progress.update(total_tests=total_tests)
+            # Set the collection status to indicate we pre-collected
+            progress.collection_status = f"Pre-collected {total_tests} tests, starting execution..."
+
+        return self._execute_with_live_progress(cmd, timeout, progress=progress)
 
     def execute_with_ai_progress(
         self,
@@ -29,12 +39,68 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 600,
     ) -> subprocess.CompletedProcess[str]:
-        return self._run_test_command_with_ai_progress(cmd, progress_callback, timeout)
+        # Pre-collect tests to set the total count upfront if possible
+        total_tests = self._pre_collect_tests(cmd)
+        progress = self._initialize_progress()
+        if total_tests > 0:
+            # Set the total tests but keep is_collecting as True initially to ensure
+            # the collection header appears in pytest output
+            progress.update(total_tests=total_tests)
+            # Set the collection status to indicate we pre-collected
+            progress.collection_status = f"Pre-collected {total_tests} tests, starting execution..."
+
+        return self._run_test_command_with_ai_progress(cmd, progress_callback, timeout, progress=progress)
+
+    def _pre_collect_tests(self, original_cmd: list[str]) -> int:
+        """
+        Run a preliminary collection-only pass to determine the total number of tests.
+        This allows us to show the real test count from the start.
+        """
+        # Create collection command by replacing the original command with the collect-only version
+        # Preserve the test paths and other options, but replace the main pytest command
+        collect_cmd = ["uv", "run", "python", "-m", "pytest", "--collect-only", "-qq"]  # Use -qq to minimize output but still get collection info
+
+        # Extract test paths and relevant options from original command
+        test_path_found = False
+        for i, arg in enumerate(original_cmd):
+            if not arg.startswith('-') and (arg.startswith("tests") or arg == "." or arg.endswith(".py")):
+                # Add test paths to collection command
+                collect_cmd.extend(original_cmd[i:])
+                test_path_found = True
+                break
+
+        # If no test path found, use the default
+        if not test_path_found:
+            collect_cmd.append("tests" if (self.pkg_path / "tests").exists() else ".")
+
+        try:
+            result = subprocess.run(
+                collect_cmd,
+                cwd=self.pkg_path,
+                capture_output=True,
+                text=True,
+                timeout=30,  # Collection should be fast
+                env=self._setup_test_environment()
+            )
+
+            # Parse output to extract number of collected tests
+            if result.stdout:
+                # Look for the "collected X items" pattern (with more flexible matching)
+                # Match both "collected X items" and "collected X tests"
+                match = re.search(r"collected\s+(\d+)\s+(?:item|test)s?", result.stdout)
+                if match:
+                    return int(match.group(1))
+        except Exception as e:
+            # If collection fails, continue with normal execution
+            pass
+
+        return 0  # Return 0 if collection fails
 
     def _execute_with_live_progress(
-        self, cmd: list[str], timeout: int
+        self, cmd: list[str], timeout: int, progress: TestProgress | None = None
     ) -> subprocess.CompletedProcess[str]:
-        progress = self._initialize_progress()
+        if progress is None:
+            progress = self._initialize_progress()
 
         with Live(
             progress.format_progress(), console=self.console, transient=True
@@ -76,8 +142,10 @@ class TestExecutor:
         cmd: list[str],
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 600,
+        progress: TestProgress | None = None,
     ) -> subprocess.CompletedProcess[str]:
-        progress = self._initialize_progress()
+        if progress is None:
+            progress = self._initialize_progress()
         env = self._setup_coverage_env()
 
         result = self._execute_test_process_with_progress(

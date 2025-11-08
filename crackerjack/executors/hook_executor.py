@@ -63,6 +63,32 @@ class HookExecutor:
         self.pkg_path = pkg_path
         self.verbose = verbose
         self.quiet = quiet
+        # Optional progress callbacks used when orchestration is disabled
+        self._progress_callback: t.Callable[[int, int], None] | None = None
+        self._progress_start_callback: t.Callable[[int, int], None] | None = None
+        self._total_hooks: int = 0
+        self._started_hooks: int = 0
+        self._completed_hooks: int = 0
+
+    def set_progress_callbacks(
+        self,
+        *,
+        started_cb: t.Callable[[int, int], None] | None = None,
+        completed_cb: t.Callable[[int, int], None] | None = None,
+        total: int | None = None,
+    ) -> None:
+        """Set optional progress callbacks for legacy execution.
+
+        Args:
+            started_cb: Called when a hook starts with (started, total)
+            completed_cb: Called when a hook completes with (completed, total)
+            total: Total number of hooks (defaults to len(strategy.hooks))
+        """
+        self._progress_start_callback = started_cb
+        self._progress_callback = completed_cb
+        self._total_hooks = int(total or 0)
+        self._started_hooks = 0
+        self._completed_hooks = 0
 
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         start_time = time.time()
@@ -97,9 +123,25 @@ class HookExecutor:
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
         results: list[HookResult] = []
         for hook in strategy.hooks:
+            # Start tick
+            if self._progress_start_callback:
+                try:
+                    self._started_hooks += 1
+                    total = self._total_hooks or len(strategy.hooks)
+                    self._progress_start_callback(self._started_hooks, total)
+                except Exception:
+                    pass
             result = self.execute_single_hook(hook)
             results.append(result)
             self._display_hook_result(result)
+            # Completion tick
+            if self._progress_callback:
+                try:
+                    self._completed_hooks += 1
+                    total = self._total_hooks or len(strategy.hooks)
+                    self._progress_callback(self._completed_hooks, total)
+                except Exception:
+                    pass
         return results
 
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
@@ -109,15 +151,39 @@ class HookExecutor:
         other_hooks = [h for h in strategy.hooks if not h.is_formatting]
 
         for hook in formatting_hooks:
+            if self._progress_start_callback:
+                try:
+                    self._started_hooks += 1
+                    total = self._total_hooks or len(strategy.hooks)
+                    self._progress_start_callback(self._started_hooks, total)
+                except Exception:
+                    pass
             result = self.execute_single_hook(hook)
             results.append(result)
             self._display_hook_result(result)
+            if self._progress_callback:
+                try:
+                    self._completed_hooks += 1
+                    total = self._total_hooks or len(strategy.hooks)
+                    self._progress_callback(self._completed_hooks, total)
+                except Exception:
+                    pass
 
         if other_hooks:
+            # Wrap execution to emit a start tick inside the worker thread
+            def _run_with_start(h: HookDefinition) -> HookResult:
+                if self._progress_start_callback:
+                    try:
+                        self._started_hooks += 1
+                        total_local = self._total_hooks or len(strategy.hooks)
+                        self._progress_start_callback(self._started_hooks, total_local)
+                    except Exception:
+                        pass
+                return self.execute_single_hook(h)
+
             with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
                 future_to_hook = {
-                    executor.submit(self.execute_single_hook, hook): hook
-                    for hook in other_hooks
+                    executor.submit(_run_with_start, hook): hook for hook in other_hooks
                 }
 
                 for future in as_completed(future_to_hook):
@@ -125,6 +191,13 @@ class HookExecutor:
                         result = future.result()
                         results.append(result)
                         self._display_hook_result(result)
+                        if self._progress_callback:
+                            try:
+                                self._completed_hooks += 1
+                                total = self._total_hooks or len(strategy.hooks)
+                                self._progress_callback(self._completed_hooks, total)
+                            except Exception:
+                                pass
                     except Exception as e:
                         hook = future_to_hook[future]
                         error_result = HookResult(
@@ -137,6 +210,13 @@ class HookExecutor:
                         )
                         results.append(error_result)
                         self._display_hook_result(error_result)
+                        if self._progress_callback:
+                            try:
+                                self._completed_hooks += 1
+                                total = self._total_hooks or len(strategy.hooks)
+                                self._progress_callback(self._completed_hooks, total)
+                            except Exception:
+                                pass
 
         return results
 

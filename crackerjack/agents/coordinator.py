@@ -1,6 +1,5 @@
 import asyncio
 import hashlib
-import logging
 import typing as t
 from collections import defaultdict
 from itertools import starmap
@@ -17,6 +16,7 @@ from crackerjack.agents.error_middleware import agent_error_boundary
 from crackerjack.agents.tracker import get_agent_tracker
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.services.debug import get_ai_agent_debugger
+from crackerjack.services.logging import get_logger
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent"],
@@ -43,7 +43,7 @@ class AgentCoordinator:
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
         self._issue_cache: dict[str, FixResult] = {}
         self._collaboration_threshold = 0.7
         self.tracker = get_agent_tracker()

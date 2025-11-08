@@ -104,7 +104,14 @@ class GlobalLockConfig:
         return uuid.uuid4().hex[:8]
 
     def _ensure_lock_directory(self) -> None:
-        self._settings.lock_directory.mkdir(parents=True, exist_ok=True)
+        lock_dir = self._settings.lock_directory
+        lock_dir.mkdir(parents=True, exist_ok=True)
+        # Enforce secure permissions (owner rwx only)
+        try:
+            lock_dir.chmod(0o700)
+        except Exception:
+            # Best-effort; ignore on platforms/filesystems that don't support chmod
+            pass
 
     def __getattr__(self, item: str):
         return getattr(self._settings, item)

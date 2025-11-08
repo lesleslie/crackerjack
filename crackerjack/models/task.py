@@ -153,6 +153,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
             "session_id": self.session_id,
             "duration": time.time() - self.start_time,
             "total_tasks": len(self.tasks),
+            "tasks_count": len(self.tasks),
             "completed": completed,
             "failed": failed,
             "in_progress": in_progress,

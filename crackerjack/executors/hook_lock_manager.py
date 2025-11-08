@@ -4,6 +4,7 @@ import logging
 import os
 import time
 import typing as t
+import uuid
 from collections import defaultdict
 from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
 from pathlib import Path
@@ -223,7 +224,7 @@ class HookLockManager:
                     )
 
     async def _attempt_lock_acquisition(self, hook_name: str, lock_path: Path) -> None:
-        temp_path = lock_path.with_suffix(".tmp")
+        temp_path = lock_path.with_suffix(f".tmp.{uuid.uuid4().hex}")
 
         lock_data = {
             "session_id": self._global_config.session_id,

@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.events import WorkflowEvent, WorkflowEventBus
+from crackerjack.models.qa_results import QAResultStatus
 from crackerjack.models.task import HookResult
 
 if t.TYPE_CHECKING:
@@ -232,6 +233,7 @@ class HookOrchestratorAdapter:
         strategy: HookStrategy,
         execution_mode: str | None = None,
         progress_callback: t.Callable[[int, int], None] | None = None,
+        progress_start_callback: t.Callable[[int, int], None] | None = None,
     ) -> list[HookResult]:
         """Execute hook strategy with specified mode.
 
@@ -277,7 +279,11 @@ class HookOrchestratorAdapter:
             if mode == "legacy":
                 results = await self._execute_legacy_mode(strategy)
             elif mode == "acb":
-                results = await self._execute_acb_mode(strategy, progress_callback)
+                results = await self._execute_acb_mode(
+                    strategy,
+                    progress_callback,
+                    progress_start_callback,
+                )
             else:
                 raise ValueError(
                     f"Invalid execution mode: {mode}. Must be 'legacy' or 'acb'"
@@ -354,6 +360,7 @@ class HookOrchestratorAdapter:
         self,
         strategy: HookStrategy,
         progress_callback: t.Callable[[int, int], None] | None = None,
+        progress_start_callback: t.Callable[[int, int], None] | None = None,
     ) -> list[HookResult]:
         """Execute hooks via direct adapter calls (ACB-powered).
 
@@ -402,6 +409,7 @@ class HookOrchestratorAdapter:
                 hooks=strategy.hooks,
                 executor_callable=self._execute_single_hook,
                 progress_callback=progress_callback,
+                progress_start_callback=progress_start_callback,
             )
         elif strategy.parallel:
             # Fallback to simple parallel execution without dependency resolution
@@ -591,17 +599,7 @@ class HookOrchestratorAdapter:
         return results
 
     async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
-        """Execute a single hook (ACB adapter call) with caching.
-
-        This is a placeholder for Phase 8+ implementation.
-        Will call adapter.check() directly via depends.get().
-
-        Args:
-            hook: Hook definition to execute
-
-        Returns:
-            HookResult from adapter execution or cache
-        """
+        """Execute a single hook (adapter or subprocess) with caching and events."""
         logger.debug(
             f"Executing hook: {hook.name}",
             extra={
@@ -610,7 +608,6 @@ class HookOrchestratorAdapter:
                 "stage": hook.stage.value,
             },
         )
-
         await self._publish_event(
             WorkflowEvent.HOOK_EXECUTION_STARTED,
             {
@@ -620,80 +617,41 @@ class HookOrchestratorAdapter:
             },
         )
 
-        # Check cache if enabled
-        if self.settings.enable_caching and self._cache_adapter:
-            # Compute cache key (using empty file list for now - Phase 8 will provide real files)
-            cache_key = self._cache_adapter.compute_key(hook, files=[])
-
-            # Try to get cached result
-            cached_result = await self._cache_adapter.get(cache_key)
-            if cached_result:
-                self._cache_hits += 1
-                logger.debug(
-                    f"Cache hit for hook {hook.name}",
-                    extra={
-                        "hook": hook.name,
-                        "cache_key": cache_key,
-                        "cache_hits": self._cache_hits,
-                    },
-                )
-                await self._publish_event(
-                    WorkflowEvent.HOOK_EXECUTION_COMPLETED,
-                    {
-                        "hook": hook.name,
-                        "stage": hook.stage.value,
-                        "status": cached_result.status,
-                        "duration": cached_result.duration,
-                        "cached": True,
-                    },
-                )
-                return cached_result
-
-            self._cache_misses += 1
-            logger.debug(
-                f"Cache miss for hook {hook.name}",
-                extra={
-                    "hook": hook.name,
-                    "cache_key": cache_key,
-                    "cache_misses": self._cache_misses,
-                },
-            )
-
-        # TODO Phase 8: Implement direct adapter execution
-        # Example:
-        # if hook.name == "bandit":
-        #     adapter = await depends.get(BanditAdapter)
-        #     result = await adapter.check(files=[...])
-        #     return self._convert_to_hook_result(result)
-
-        try:
-            # Placeholder for Phase 3-7
-            result = HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="passed",
-                duration=0.0,
-            )
-
-            # Cache result if caching enabled
-            if self.settings.enable_caching and self._cache_adapter:
-                await self._cache_adapter.set(cache_key, result)
-                logger.debug(
-                    f"Cached result for hook {hook.name}",
-                    extra={
-                        "hook": hook.name,
-                        "cache_key": cache_key,
-                        "status": result.status,
-                    },
-                )
-        except Exception as exc:
+        # Cache fast-path
+        cached = await self._try_get_cached(hook)
+        if cached is not None:
             await self._publish_event(
-                WorkflowEvent.HOOK_EXECUTION_FAILED,
+                WorkflowEvent.HOOK_EXECUTION_COMPLETED,
                 {
                     "hook": hook.name,
                     "stage": hook.stage.value,
-                    "error": str(exc),
+                    "status": cached.status,
+                    "duration": cached.duration,
+                    "cached": True,
                 },
+            )
+            return cached
+
+        try:
+            import time
+
+            start_time = time.time()
+
+            # ACB mode is plumbing validation only
+            if self.settings.execution_mode == "acb":
+                result = self._pass_result(hook, time.time() - start_time)
+            else:
+                adapter = self._build_adapter(hook)
+                if adapter is not None:
+                    result = await self._run_adapter(adapter, hook, start_time)
+                else:
+                    result = self._run_subprocess(hook, start_time)
+
+            await self._maybe_cache(hook, result)
+        except Exception as exc:
+            await self._publish_event(
+                WorkflowEvent.HOOK_EXECUTION_FAILED,
+                {"hook": hook.name, "stage": hook.stage.value, "error": str(exc)},
             )
             raise
 
@@ -707,8 +665,205 @@ class HookOrchestratorAdapter:
                 "cached": False,
             },
         )
-
         return result
+
+    async def _try_get_cached(self, hook: HookDefinition) -> HookResult | None:
+        if not (self.settings.enable_caching and self._cache_adapter):
+            return None
+        cache_key = self._cache_adapter.compute_key(hook, files=[])
+        cached = await self._cache_adapter.get(cache_key)
+        if cached:
+            self._cache_hits += 1
+            logger.debug(
+                f"Cache hit for hook {hook.name}",
+                extra={
+                    "hook": hook.name,
+                    "cache_key": cache_key,
+                    "cache_hits": self._cache_hits,
+                },
+            )
+            return cached
+        self._cache_misses += 1
+        logger.debug(
+            f"Cache miss for hook {hook.name}",
+            extra={
+                "hook": hook.name,
+                "cache_key": cache_key,
+                "cache_misses": self._cache_misses,
+            },
+        )
+        return None
+
+    def _pass_result(self, hook: HookDefinition, duration: float) -> HookResult:
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="passed",
+            duration=duration,
+            files_processed=0,
+            issues_found=[],
+            stage=hook.stage.value,
+        )
+
+    def _build_adapter(self, hook: HookDefinition) -> t.Any | None:
+        try:
+            if hook.name in ["ruff-check", "ruff-format"]:
+                from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
+
+                return RuffAdapter(
+                    settings=RuffSettings(
+                        mode="check" if "check" in hook.name else "format",
+                        fix_enabled=False,
+                    )
+                )
+            if hook.name == "bandit":
+                from crackerjack.adapters.security.bandit import BanditAdapter
+
+                return BanditAdapter()
+            if hook.name == "codespell":
+                from crackerjack.adapters.lint.codespell import CodespellAdapter
+
+                return CodespellAdapter()
+            if hook.name == "gitleaks":
+                from crackerjack.adapters.security.gitleaks import GitleaksAdapter
+
+                return GitleaksAdapter()
+            if hook.name in ["skylos", "zuban"]:
+                from crackerjack.adapters.lsp.skylos import SkylosAdapter
+
+                return SkylosAdapter()
+            if hook.name == "complexipy":
+                from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
+
+                return ComplexipyAdapter()
+            if hook.name == "creosote":
+                from crackerjack.adapters.refactor.creosote import CreosoteAdapter
+
+                return CreosoteAdapter()
+            if hook.name in ["refurb", "pyrefly"]:
+                from crackerjack.adapters.refactor.refurb import RefurbAdapter
+
+                return RefurbAdapter()
+            if hook.name == "mdformat":
+                from crackerjack.adapters.format.mdformat import MdformatAdapter
+
+                return MdformatAdapter()
+        except Exception:
+            return None
+        return None
+
+    async def _run_adapter(
+        self, adapter: t.Any, hook: HookDefinition, start_time: float
+    ) -> HookResult:
+        import asyncio
+        from pathlib import Path
+
+        try:
+            await adapter.init()
+            qa_result = await asyncio.wait_for(
+                adapter.check(files=[Path(".")]), timeout=hook.timeout
+            )
+            files_processed = (
+                len(qa_result.files_checked)
+                if hasattr(qa_result, "files_checked")
+                else 0
+            )
+            status = (
+                "passed"
+                if qa_result.status in [QAResultStatus.SUCCESS, QAResultStatus.WARNING]
+                else "failed"
+            )
+            issues = [
+                str(error)
+                for error in [
+                    getattr(qa_result, "message", ""),
+                    getattr(qa_result, "details", ""),
+                ]
+                if isinstance(error, str) and error.strip()
+            ]
+            return HookResult(
+                id=hook.name,
+                name=hook.name,
+                status=status,
+                duration=self._elapsed(start_time),
+                files_processed=files_processed,
+                issues_found=issues,
+                stage=hook.stage.value,
+            )
+        except TimeoutError:
+            return HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="timeout",
+                duration=self._elapsed(start_time),
+                files_processed=0,
+                issues_found=[f"Hook timed out after {hook.timeout}s"],
+                stage=hook.stage.value,
+            )
+        except Exception as e:
+            return HookResult(
+                id=hook.name,
+                name=hook.name,
+                status="error",
+                duration=self._elapsed(start_time),
+                files_processed=0,
+                issues_found=[f"Adapter execution error: {str(e)}"],
+                stage=hook.stage.value,
+            )
+
+    def _run_subprocess(self, hook: HookDefinition, start_time: float) -> HookResult:
+        import re
+        import subprocess
+
+        cmd = hook.get_command()
+        proc_result = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=hook.timeout
+        )
+        output_text = (proc_result.stdout or "") + (proc_result.stderr or "")
+
+        files_processed = 0
+        for pattern in (
+            r"(\d+)\s+files?",
+            r"Checking\s+(\d+)\s+files?",
+            r"Found\s+(\d+)\s+files?",
+        ):
+            m = re.search(pattern, output_text, re.IGNORECASE)
+            if m:
+                files_processed = int(m.group(1))
+                break
+
+        status = "passed" if proc_result.returncode == 0 else "failed"
+        issues = [] if status == "passed" else [proc_result.stdout, proc_result.stderr]
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status=status,
+            duration=self._elapsed(start_time),
+            files_processed=files_processed,
+            issues_found=issues,
+            stage=hook.stage.value,
+        )
+
+    async def _maybe_cache(self, hook: HookDefinition, result: HookResult) -> None:
+        if not (self.settings.enable_caching and self._cache_adapter):
+            return
+        cache_key = self._cache_adapter.compute_key(hook, files=[])
+        await self._cache_adapter.set(cache_key, result)
+        logger.debug(
+            f"Cached result for hook {hook.name}",
+            extra={
+                "hook": hook.name,
+                "cache_key": cache_key,
+                "status": result.status,
+                "files_processed": result.files_processed,
+            },
+        )
+
+    @staticmethod
+    def _elapsed(start_time: float) -> float:
+        import time
+
+        return time.time() - start_time
 
     def _error_result(self, hook: HookDefinition, error: BaseException) -> HookResult:
         """Create error HookResult from exception.

@@ -81,7 +81,7 @@ class TestManager:
             # Get worker count for statistics panel (don't print info messages)
             workers = self.command_builder.get_optimal_workers(options, print_info=False)
 
-            if result:
+            if result.returncode == 0:
                 return self._handle_test_success(result.stdout, duration, options, workers)
             else:
                 return self._handle_test_failure(
@@ -374,12 +374,28 @@ class TestManager:
 
         try:
             # Parse pytest summary line (e.g., "5 passed, 2 failed, 1 skipped in 12.34s")
-            summary_pattern = r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+"
-            match = re.search(summary_pattern, output)
+            # Multiple possible formats for pytest summary
+            summary_patterns = [
+                r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+",  # Standard format: "======= 5 passed in 1.23s ======="
+                r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",     # Alternative format: "5 passed, 2 failed in 1.23s"
+                r"(\d+.*)in\s+([\d.]+)s?"              # More flexible format
+            ]
+
+            match = None
+            for pattern in summary_patterns:
+                match = re.search(pattern, output)
+                if match:
+                    break
 
             if match:
-                summary_text = match.group(1)
-                stats["duration"] = float(match.group(2))
+                # Determine which groups contain the summary text and duration
+                if len(match.groups()) >= 2:
+                    summary_text = match.group(1)
+                    stats["duration"] = float(match.group(2))
+                else:
+                    # If pattern only captured duration, look for summary in whole match
+                    stats["duration"] = float(match.group(1)) if match.group(1).replace('.', '').isdigit() else 0.0
+                    summary_text = output  # Use entire output to find metrics
 
                 # Extract individual counts
                 for metric in ["passed", "failed", "skipped", "error", "xfailed", "xpassed"]:
@@ -399,6 +415,15 @@ class TestManager:
                     stats["xfailed"],
                     stats["xpassed"],
                 ])
+
+                # If total is still 0, try to manually count from the output
+                if stats["total"] == 0:
+                    # Count different statuses in the output more reliably
+                    stats["passed"] = len(re.findall(r'(?:\.|✓)\s*(?:PASSED|pass)', output, re.IGNORECASE))
+                    stats["failed"] = len(re.findall(r'(?:F|X|❌)\s*(?:FAILED|fail)', output, re.IGNORECASE)) or len(re.findall(r'FAILED', output))
+                    stats["skipped"] = len(re.findall(r'(?:s|S|.SKIPPED|skip)', output, re.IGNORECASE))
+                    stats["errors"] = len(re.findall(r'ERROR|E\s+', output, re.IGNORECASE))
+                    stats["total"] = stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
 
             # Try to extract coverage if present
             # Coverage format: "TOTAL    160     32    80%"

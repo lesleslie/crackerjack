@@ -14,6 +14,7 @@ from crackerjack.models.protocols import (
     EnhancedFileSystemServiceProtocol,
     ServiceProtocol,
 )
+from crackerjack.services.logging import LoggingContext
 
 
 class FileCache:
@@ -186,7 +187,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         batch_size: int = 10,
         enable_async: bool = True,
     ) -> None:
-        self.cache = FileCache(cache_size, cache_ttl)
+        # Use keyword args to avoid DI/positional ambiguity
+        self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
         self.batch_ops = BatchFileOperations(batch_size) if enable_async else None
         self.enable_async = enable_async
         self.logger = logger
@@ -212,6 +214,9 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
     def write_file(self, path: str | Path, content: str) -> None:
         path_obj = Path(path) if isinstance(path, str) else path
+        # Validate content type before logging/length computation
+        if not isinstance(content, str):
+            raise TypeError("Content must be a string")
 
         with LoggingContext("write_file", path=str(path_obj), size=len(content)):
             self._write_file_direct(path_obj, content)

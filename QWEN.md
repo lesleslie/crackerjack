@@ -120,6 +120,15 @@ python -m crackerjack -i
 # Enable AI agent auto-fixing
 python -m crackerjack --ai-agent -t -v
 
+# Enable AI agent fixing with structured logging to stderr
+python -m crackerjack --ai-fix --verbose
+
+# Enable AI debugging with detailed structured logs
+python -m crackerjack --ai-debug --run-tests
+
+# Enable both AI fixing and debugging with maximum logging
+python -m crackerjack --ai-fix --ai-debug --run-tests
+
 # Start MCP server for AI integration
 python -m crackerjack --start-mcp-server
 

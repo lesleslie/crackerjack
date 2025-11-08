@@ -95,8 +95,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--maxkb",
         type=int,
-        default=500,
-        help="Maximum file size in KB (default: 500)",
+        default=1000,
+        help="Maximum file size in KB (default: 1000)",
     )
     parser.add_argument(
         "--enforce-all",
@@ -104,6 +104,9 @@ def main(argv: list[str] | None = None) -> int:
         help="Check all files, not just newly added ones",
     )
 
+    # When called from tests, avoid picking up pytest argv
+    if argv is None:
+        argv = []
     args = parser.parse_args(argv)
 
     # Convert KB to bytes

@@ -111,6 +111,9 @@ class PhaseCoordinator:
         )
         self.console.print()
 
+        # Track if fast hooks have already started in this session to prevent duplicates
+        self._fast_hooks_started: bool = False
+
     # --- Output/formatting helpers -------------------------------------------------
     @staticmethod
     def _strip_ansi(text: str) -> str:
@@ -175,6 +178,12 @@ class PhaseCoordinator:
             self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks).")
             return True
 
+        # Prevent multiple fast-hook runs in a single workflow session unless
+        # explicitly reset by post-cleaning sanity check.
+        if getattr(self, "_fast_hooks_started", False):
+            self.logger.debug("Duplicate fast hooks invocation detected; skipping")
+            return True
+
         self.session.track_task("hooks_fast", "Fast quality checks")
 
         # Fast hooks get 2 attempts (auto-fix on failure), comprehensive hooks run once
@@ -212,6 +221,9 @@ class PhaseCoordinator:
 
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
+
+        # Mark fast hooks as started to avoid duplicate runs
+        self._fast_hooks_started = True
 
         if success:
             self.session.complete_task("hooks_fast", details=details)
@@ -348,6 +360,7 @@ class PhaseCoordinator:
         # Progress callback for hook manager to call
         task_id = None
 
+        # Maintain separate counters for started/completed if needed in the future
         def update_progress(completed: int, total: int) -> None:
             nonlocal task_id
             if task_id is None:
@@ -355,9 +368,20 @@ class PhaseCoordinator:
             # Update only completed count (total is already set during initialization)
             progress.update(task_id, completed=completed)
 
+        def update_progress_started(started: int, total: int) -> None:
+            nonlocal task_id
+            if task_id is None:
+                return
+            # Tick progress bar when a hook starts
+            progress.update(task_id, completed=started)
+
         # Store callback in hook_manager temporarily
         original_callback = getattr(self.hook_manager, "_progress_callback", None)
+        original_start_callback = getattr(
+            self.hook_manager, "_progress_start_callback", None
+        )
         self.hook_manager._progress_callback = update_progress
+        self.hook_manager._progress_start_callback = update_progress_started
 
         try:
             with progress:
@@ -383,6 +407,7 @@ class PhaseCoordinator:
         finally:
             # Restore original callback
             self.hook_manager._progress_callback = original_callback
+            self.hook_manager._progress_start_callback = original_start_callback
 
         summary = self.hook_manager.get_hook_summary(hook_results)
         self._last_hook_summary = summary
@@ -442,6 +467,8 @@ class PhaseCoordinator:
             self.console.print(
                 f"\n[red]❌[/red] {base_message} ({failed} failed, {errors} errors).\n"
             )
+            # Always show a results table to aid debugging when there are failures
+            self._render_hook_results_table(suite_name, results)
         else:
             self.console.print(f"\n[green]✅[/green] {base_message}.\n")
             self._render_hook_results_table(suite_name, results)

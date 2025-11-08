@@ -1,6 +1,8 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+
+from crackerjack.config.tool_commands import get_tool_command
 
 
 class HookStage(Enum):
@@ -27,6 +29,7 @@ class HookDefinition:
     command: list[str]
     timeout: int = 60
     stage: HookStage = HookStage.FAST
+    description: str | None = None
     retry_on_failure: bool = False
     is_formatting: bool = False
     manual_stage: bool = False
@@ -34,6 +37,7 @@ class HookDefinition:
     security_level: SecurityLevel = SecurityLevel.MEDIUM
     use_precommit_legacy: bool = True  # Phase 8.2: Backward compatibility flag
     accepts_file_paths: bool = False  # Phase 10.4.4: Can tool process individual files?
+    _direct_cmd_cache: list[str] | None = field(default=None, init=False, repr=False)
 
     def get_command(self) -> list[str]:
         """Get the command to execute this hook.
@@ -47,20 +51,20 @@ class HookDefinition:
         """
         # Phase 8.2: Direct invocation mode (new behavior)
         if not self.use_precommit_legacy:
-            from pathlib import Path
-
-            from crackerjack.config.tool_commands import get_tool_command
-
-            try:
-                return get_tool_command(self.name, pkg_path=Path.cwd())
-            except KeyError:
-                # Fallback to pre-commit if tool not in registry
-                # This ensures graceful degradation during migration
-                pass
+            if self._direct_cmd_cache is None:
+                try:
+                    self._direct_cmd_cache = get_tool_command(
+                        self.name, pkg_path=Path.cwd()
+                    )
+                except KeyError:
+                    # Fallback to pre-commit if tool not in registry
+                    # This ensures graceful degradation during migration
+                    self._direct_cmd_cache = None
+            if self._direct_cmd_cache is not None:
+                return self._direct_cmd_cache
 
         # Legacy mode: Use pre-commit wrapper (Phase 1-7 behavior)
         import shutil
-        from pathlib import Path
 
         pre_commit_path = None
         current_dir = Path.cwd()
@@ -122,7 +126,7 @@ FAST_HOOKS = [
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,
-        timeout=20,  # UV init (~10s) + tool execution (P95=0.66s) + safety margin
+        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
         retry_on_failure=True,
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -131,7 +135,7 @@ FAST_HOOKS = [
         name="trailing-whitespace",
         command=[],
         is_formatting=True,
-        timeout=20,  # UV init (~10s) + tool execution (P95=0.38s) + safety margin
+        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -141,7 +145,7 @@ FAST_HOOKS = [
         name="end-of-file-fixer",
         command=[],
         is_formatting=True,
-        timeout=20,  # UV init (~10s) + tool execution (P95=0.38s) + safety margin
+        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -189,7 +193,7 @@ FAST_HOOKS = [
         name="ruff-check",
         command=[],
         is_formatting=True,
-        timeout=20,  # UV init (~10s) + tool execution (P95=3.16s) + safety margin
+        timeout=120,  # Increased from 20 to handle larger codebases (was causing timeouts at 20s)
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -199,21 +203,11 @@ FAST_HOOKS = [
         name="ruff-format",
         command=[],
         is_formatting=True,
-        timeout=20,  # UV init (~10s) + tool execution (P95=1.53s) + safety margin
+        timeout=120,  # Increased from 20 to handle larger codebases (was causing timeouts at 20s)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level Python formatter
-    ),
-    HookDefinition(
-        name="mdformat",
-        command=[],
-        is_formatting=True,
-        timeout=30,  # Actual runtime: ~17.5s with mdformat-ruff plugin + docs archive (UV init + formatting)
-        retry_on_failure=True,
-        security_level=SecurityLevel.LOW,
-        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
-        accepts_file_paths=True,  # Phase 10.4.4: File-level Markdown formatter
     ),
 ]
 

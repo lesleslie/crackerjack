@@ -4,6 +4,14 @@ from pathlib import Path
 from acb import console as acb_console
 from acb.console import Console
 
+from crackerjack.models.protocols import (
+    FileSystemInterface,
+    GitInterface,
+    HookManager,
+    PublishManager,
+    TestManagerProtocol,
+)
+
 
 class DependencyContainer:
     def __init__(self) -> None:

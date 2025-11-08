@@ -12,6 +12,7 @@ from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
+from crackerjack.services.logging import LoggingContext
 
 
 @dataclass

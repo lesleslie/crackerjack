@@ -15,8 +15,10 @@ from rich.progress import (
     MofNCompleteColumn,
     Progress,
     SpinnerColumn,
+    TaskProgressColumn,
     TextColumn,
     TimeElapsedColumn,
+    TimeRemainingColumn,
 )
 
 from crackerjack.config.hooks import HookStrategy, RetryPolicy
@@ -117,8 +119,10 @@ class ProgressHookExecutor(HookExecutor):
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[progress.description]{task.description}", justify="left"),
             BarColumn(bar_width=20),  # Fixed narrow bar to prevent overflow
+            TaskProgressColumn(),
             MofNCompleteColumn(),
             TimeElapsedColumn(),
+            TimeRemainingColumn(),
             console=self.console,
             transient=False,  # Keep progress bar visible after completion
         )

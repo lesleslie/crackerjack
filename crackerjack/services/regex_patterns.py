@@ -1224,7 +1224,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_comma": ValidatedPattern(
         name="spacing_after_comma",
-        pattern=r", ([^ \n])",
+        pattern=r",(\S)",
         replacement=r", \1",
         global_replace=True,
         description="Add space after comma if missing",

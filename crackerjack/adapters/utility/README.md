@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Utility](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Utility](<./README.md>)
 
 # Utility Adapter
 
@@ -47,5 +47,5 @@ async def enforce_whitespace() -> None:
 
 ## Related
 
-- [Format](../format/README.md) — For comprehensive Python/Markdown formatting
-- [Lint](../lint/README.md) — Codespell for typos and naming issues
+- [Format](<../format/README.md>) — For comprehensive Python/Markdown formatting
+- [Lint](<../lint/README.md>) — Codespell for typos and naming issues

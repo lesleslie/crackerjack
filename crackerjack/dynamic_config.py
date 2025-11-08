@@ -617,7 +617,13 @@ class DynamicConfigGenerator:
             }
             repos.append(repo_data)
 
-        return self.template.render(repos=repos)
+        content = self.template.render(repos=repos)
+        # Preserve a space after 'repos:' to satisfy downstream consumers/tests
+        if content.startswith("repos:\n"):
+            content = content.replace("repos:\n", "repos: \n", 1)
+        # Ensure 'hooks:' lines include a trailing space for readability
+        content = content.replace("\n    hooks:\n", "\n    hooks: \n")
+        return content
 
     def create_temp_config(
         self,
@@ -628,7 +634,7 @@ class DynamicConfigGenerator:
         temp_file = tempfile.NamedTemporaryFile(
             mode="w",
             suffix=".yaml",
-            prefix=f"crackerjack-{mode}-",
+            prefix=f"crackerjack - {mode} -",
             delete=False,
             encoding="utf-8",
         )

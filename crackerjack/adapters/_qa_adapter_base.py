@@ -22,7 +22,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from acb.config import Settings
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 # Import protocol from models.protocols per crackerjack pattern
 from crackerjack.models.protocols import QAAdapterProtocol
@@ -51,14 +51,16 @@ class QABaseSettings(Settings):
     cache_ttl: int = 3600
     max_workers: int = Field(4, ge=1, le=16)
 
-    @validator("timeout_seconds")
+    @field_validator("timeout_seconds")
+    @classmethod
     def validate_timeout(cls, v: int) -> int:
         """Validate timeout is within reasonable bounds."""
         if v < 1 or v > 3600:
             raise ValueError("Timeout must be between 1 and 3600 seconds")
         return v
 
-    @validator("max_workers")
+    @field_validator("max_workers")
+    @classmethod
     def validate_workers(cls, v: int) -> int:
         """Validate worker count is reasonable."""
         if v < 1 or v > 16:

@@ -283,6 +283,7 @@ class TestCommandBuilder:
         cmd.extend(["--timeout", str(timeout)])
 
     def _add_verbosity_options(self, cmd: list[str], options: OptionsProtocol) -> None:
+        # Always use verbose mode to ensure collection headers are visible
         cmd.append("-v")
 
         cmd.extend(
@@ -305,7 +306,7 @@ class TestCommandBuilder:
         cmd.append(str(self.pkg_path))
 
     def build_specific_test_command(self, test_pattern: str) -> list[str]:
-        cmd = ["uv", "run", "python", "-m", "pytest", "-v"]
+        cmd = ["uv", "run", "python", "-m", "pytest", "-v"]  # Always use verbose mode
 
         cmd.extend(
             [
@@ -328,6 +329,6 @@ class TestCommandBuilder:
             "-m",
             "pytest",
             "--collect-only",
-            "--quiet",
+            # Removed --quiet to ensure collection headers are visible
             "tests" if (self.pkg_path / "tests").exists() else ".",
         ]

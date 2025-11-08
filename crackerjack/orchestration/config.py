@@ -164,7 +164,8 @@ class OrchestrationConfig:
 
     @classmethod
     def load(cls, config_path: Path) -> OrchestrationConfig:
-        config = cls.from_settings()
+        # Start from hard defaults; only override from file/env.
+        config = cls()
 
         if config_path.exists():
             file_config = cls.from_file(config_path)
