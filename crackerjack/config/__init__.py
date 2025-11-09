@@ -151,15 +151,28 @@ def register_services() -> None:
     depends.set(PerformanceCacheProtocol, performance_cache)
 
     # 5. Register Performance Benchmark Service
-    # Requires console and pkg_path from DI container
+    # The service should be registered automatically via @depends.inject
+    # in the service implementation, but if not let's create and register it manually
     try:
-        console = depends.get_sync(Console)
-        pkg_path = depends.get_sync(Path)
-        performance_benchmarks = PerformanceBenchmarkService(console, pkg_path)
-        depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
-    except Exception:
-        # Graceful fallback if console/path not available yet
-        # Will be registered later when dependencies are available
+        # First, try to get the already registered instance
+        try:
+            performance_benchmarks = depends.get_sync(PerformanceBenchmarkProtocol)
+        except Exception:
+            # If not registered, create it using proper DI
+            console = depends.get_sync(Console)
+            logger = depends.get_sync(Logger)  # Get the logger instead of LoggerProtocol
+            pkg_path = Path.cwd()  # Use current directory as fallback
+            performance_benchmarks = PerformanceBenchmarkService(
+                console=console,
+                logger=logger,
+                pkg_path=pkg_path
+            )
+            # Register the newly created instance
+            depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
+    except Exception as e:
+        # Log the error to help with debugging
+        print(f"WARNING: Failed to register PerformanceBenchmarkService: {e}")
+        # Performance benchmarking will be disabled
         pass
 
     # 6. Register Parallel Executor Services

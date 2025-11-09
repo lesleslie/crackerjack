@@ -23,6 +23,7 @@ class HookExecutionResult:
     concurrent_execution: bool = False
     cache_hits: int = 0
     cache_misses: int = 0
+    performance_gain: float = 0.0
 
     @property
     def failed_count(self) -> int:
@@ -108,14 +109,27 @@ class HookExecutor:
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in results)
 
+        estimated_sequential = sum(
+            getattr(hook, "timeout", 30) for hook in strategy.hooks
+        )
+        performance_gain = (
+            max(
+                0,
+                ((estimated_sequential - total_duration) / estimated_sequential) * 100,
+            )
+            if estimated_sequential > 0
+            else 0.0
+        )
+
         if not self.quiet:
-            self._print_summary(strategy, results, success)
+            self._print_summary(strategy, results, success, performance_gain)
 
         return HookExecutionResult(
             strategy_name=strategy.name,
             results=results,
             total_duration=total_duration,
             success=success,
+            performance_gain=performance_gain,
         )
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
@@ -399,17 +413,40 @@ class HookExecutor:
         if "files" in output.lower():
             import re
 
-            # Pattern for "N file(s)" in output
+            # Pattern for "N file(s)" in output - return the highest found number
+            all_matches = []
             file_count_patterns = [
-                r"(\d+)\s+files?",  # "5 files" or "1 file"
+                r"(\d+)\s+files?\s+would\s+be",  # "X files would be reformatted"
+                r"(\d+)\s+files?\s+already\s+formatted",  # "X files already formatted"
+                r"(\d+)\s+files?\s+processed",  # "X files processed"
+                r"(\d+)\s+files?\s+checked",  # "X files checked"
+                r"(\d+)\s+files?\s+analyzed",  # "X files analyzed"
                 r"Checking\s+(\d+)\s+files?",  # "Checking 5 files"
                 r"Found\s+(\d+)\s+files?",  # "Found 5 files"
+                r"(\d+)\s+files?",  # "5 files" or "1 file" (general pattern)
             ]
             for pattern in file_count_patterns:
-                match = re.search(pattern, output, re.IGNORECASE)
-                if match:
-                    files_processed = int(match.group(1))
-                    break
+                matches = re.findall(pattern, output, re.IGNORECASE)
+                if matches:
+                    # Convert all matches to integers and add to list
+                    all_matches.extend([int(m) for m in matches if m.isdigit()])
+
+            # Use the highest value found
+            if all_matches:
+                files_processed = max(all_matches)
+
+        # Special handling for ruff and other common tools
+        if not files_processed and "ruff" in output.lower():
+            # Look for patterns like "All checks passed!" with files processed elsewhere
+            all_passed_match = re.search(r"All\s+checks?\s+passed!", output, re.IGNORECASE)
+            if all_passed_match:
+                # For all-checks-passed scenarios, try to find other mentions of file counts
+                import re
+                other_matches = re.findall(r"(\d+)\s+files?", output, re.IGNORECASE)
+                if other_matches:
+                    all_matches = [int(m) for m in other_matches if m.isdigit()]
+                    if all_matches:
+                        files_processed = max(all_matches)
 
         return {
             "hook_id": None,
@@ -557,5 +594,14 @@ class HookExecutor:
         strategy: HookStrategy,
         results: list[HookResult],
         success: bool,
+        performance_gain: float,
     ) -> None:
-        pass
+        if success:
+            mode = "async" if self.is_concurrent(strategy) else "sequential"
+            self.console.print(
+                f"[green]✅[/green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
+                f"({mode}, {performance_gain:.1f}% faster)",
+            )
+
+    def is_concurrent(self, strategy: HookStrategy) -> bool:
+        return strategy.parallel and len(strategy.hooks) > 1

@@ -208,7 +208,7 @@ def stop_mcp_server(console: Inject[Console]) -> bool:
         return True
 
     ServerPanels.info(
-        title="MCP Server", message=f"Stopping {len(processes)} process(es)..."
+        title="MCP Server", message=f"Stopping {len(processes)} process(es)"
     )
 
     success = True
@@ -339,10 +339,10 @@ def restart_zuban_lsp(console: Inject[Console]) -> bool:
 
     stop_zuban_lsp()
 
-    console.print("⏳ Waiting for cleanup...")
+    console.print("⏳ Waiting for cleanup")
     time.sleep(2)
 
-    console.print("🚀 Starting new Zuban LSP server...")
+    console.print("🚀 Starting new Zuban LSP server")
     try:
         cmd = [sys.executable, "-m", "crackerjack", "--start-zuban-lsp"]
 

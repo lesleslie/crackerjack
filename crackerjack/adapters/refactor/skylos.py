@@ -1,231 +1,348 @@
-"""Skylos adapter for dead code detection."""
+"""Skylos adapter for ACB QA framework - dead code detection.
 
+Skylos identifies unused imports, functions, classes, and variables in Python codebases.
+It helps maintain clean code by detecting elements that are no longer used.
+
+ACB Patterns:
+- MODULE_ID and MODULE_STATUS at module level
+- depends.set() registration after class definition
+- Extends BaseToolAdapter for tool execution
+- Async execution with output parsing
+"""
+
+from __future__ import annotations
+
+import json
+import logging
 import typing as t
-from dataclasses import dataclass
+from contextlib import suppress
 from pathlib import Path
+from uuid import UUID
 
-from crackerjack.lsp import BaseRustToolAdapter, Issue, ToolResult
+from acb.depends import depends
+
+from crackerjack.adapters._tool_adapter_base import (
+    BaseToolAdapter,
+    ToolAdapterSettings,
+    ToolExecutionResult,
+    ToolIssue,
+)
+from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
-    from crackerjack.orchestration.execution_strategies import ExecutionContext
+    from crackerjack.models.qa_config import QACheckConfig
+
+# ACB Module Registration (REQUIRED)
+MODULE_ID = UUID(
+    "01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f8"
+)  # Static UUID7 for reproducible module identity
+MODULE_STATUS = "stable"
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
-@dataclass
-class DeadCodeIssue(Issue):
-    """Skylos dead code detection issue."""
+class SkylosSettings(ToolAdapterSettings):
+    """Settings for Skylos adapter."""
 
-    severity: str = "warning"  # Override default, dead code is typically warning
-    issue_type: str = "unknown"  # "import", "function", "class", "variable", etc.
-    name: str = "unknown"
-    confidence: float = 0.0
+    tool_name: str = "skylos"
+    use_json_output: bool = True  # Skylos supports JSON output
+    confidence_threshold: int = 86
+    web_dashboard_port: int = 5090
 
-    def to_dict(self) -> dict[str, t.Any]:
-        """Convert issue to dictionary with Skylos-specific fields."""
-        base_dict = super().to_dict()
-        base_dict.update(
-            {
-                "issue_type": self.issue_type,
-                "name": self.name,
-                "confidence": self.confidence,
-            }
+
+class SkylosAdapter(BaseToolAdapter):
+    """Adapter for Skylos - dead code detector.
+
+    Identifies unused imports, functions, classes, variables, and other code elements.
+    Helps maintain clean codebases by detecting dead code that can be safely removed.
+
+    Features:
+    - Confidence-based detection
+    - JSON output for structured analysis
+    - Integration with web dashboard
+    - Configurable confidence thresholds
+
+    Example:
+        ```python
+        settings = SkylosSettings(
+            confidence_threshold=90,
+            web_dashboard_port=5091,
         )
-        return base_dict
+        adapter = SkylosAdapter(settings=settings)
+        await adapter.init()
+        result = await adapter.check(files=[Path("src/")])
+        ```
+    """
 
+    settings: SkylosSettings | None = None
 
-class SkylosAdapter(BaseRustToolAdapter):
-    """Skylos dead code detection adapter."""
+    def __init__(self, settings: SkylosSettings | None = None) -> None:
+        """Initialize Skylos adapter.
 
-    def __init__(
-        self,
-        context: "ExecutionContext",
-        confidence_threshold: int = 86,
-        web_dashboard_port: int = 5090,
-    ) -> None:
-        """Initialize Skylos adapter."""
-        super().__init__(context)
-        self.confidence_threshold = confidence_threshold
-        self.web_dashboard_port = web_dashboard_port
+        Args:
+            settings: Optional settings override
+        """
+        super().__init__(settings=settings)
+        logger.debug(
+            "SkylosAdapter initialized", extra={"has_settings": settings is not None}
+        )
 
-    def get_tool_name(self) -> str:
-        """Get the name of the tool."""
+    async def init(self) -> None:
+        """Initialize adapter with default settings."""
+        if not self.settings:
+            self.settings = SkylosSettings()
+            logger.info("Using default SkylosSettings")
+        await super().init()
+        logger.debug(
+            "SkylosAdapter initialization complete",
+            extra={"confidence_threshold": self.settings.confidence_threshold},
+        )
+
+    @property
+    def adapter_name(self) -> str:
+        """Human-readable adapter name."""
+        return "Skylos (Dead Code)"
+
+    @property
+    def module_id(self) -> UUID:
+        """Reference to module-level MODULE_ID."""
+        return MODULE_ID
+
+    @property
+    def tool_name(self) -> str:
+        """CLI tool name."""
         return "skylos"
 
-    def supports_json_output(self) -> bool:
-        """Skylos supports JSON output mode."""
-        return True
+    def build_command(
+        self,
+        files: list[Path],
+        config: QACheckConfig | None = None,
+    ) -> list[str]:
+        """Build Skylos command.
 
-    def get_command_args(self, target_files: list[Path]) -> list[str]:
-        """Get command arguments for Skylos execution."""
-        args = ["uv", "run", "skylos", "--confidence", str(self.confidence_threshold)]
+        Args:
+            files: Files/directories to scan for dead code
+            config: Optional configuration override
 
-        # Add JSON mode for AI agents
-        if self._should_use_json_output():
-            args.append("--json")
+        Returns:
+            Command as list of strings
+        """
+        if not self.settings:
+            raise RuntimeError("Settings not initialized")
 
-        # Add web dashboard for interactive mode
-        if self.context.interactive:
-            args.extend(["--web", "--port", str(self.web_dashboard_port)])
+        cmd = ["uv", "run", "skylos"]
 
-        # Add target files or default to current directory
-        if target_files:
-            args.extend(str(f) for f in target_files)
+        # Add confidence threshold
+        cmd.extend(["--confidence", str(self.settings.confidence_threshold)])
+
+        # JSON output for structured parsing
+        if self.settings.use_json_output:
+            cmd.append("--json")
+
+        # Add targets - use package directory instead of current directory
+        # to avoid scanning .venv and other unnecessary locations
+        if files:
+            cmd.extend([str(f) for f in files])
         else:
-            args.append(".")
+            # Determine package name similar to tool_commands.py to target only package
+            import tomllib
+            from contextlib import suppress
 
-        return args
+            cwd = Path.cwd()
+            package_name = None
 
-    def parse_output(self, output: str) -> ToolResult:
-        """Parse Skylos output into standardized result."""
-        if self._should_use_json_output():
-            return self._parse_json_output(output)
-        return self._parse_text_output(output)
+            # First try to read from pyproject.toml
+            pyproject_path = cwd / "pyproject.toml"
+            if pyproject_path.exists():
+                with suppress(Exception):
+                    with pyproject_path.open("rb") as f:
+                        data = tomllib.load(f)
+                        project_name = data.get("project", {}).get("name")
+                        if project_name:
+                            package_name = project_name.replace("-", "_")
 
-    def _parse_json_output(self, output: str) -> ToolResult:
-        """Parse JSON output for AI agents."""
-        data = self._parse_json_output_safe(output)
-        if data is None:
-            return self._create_error_result(
-                "Invalid JSON output from Skylos", raw_output=output
-            )
+            # Fallback: find first directory with __init__.py in project root
+            if not package_name:
+                for item in cwd.iterdir():
+                    if item.is_dir() and (item / "__init__.py").exists():
+                        if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
+                            package_name = item.name
+                            break
 
+            # Default to 'crackerjack' if nothing found
+            if not package_name:
+                package_name = "crackerjack"
+
+            cmd.append(f"./{package_name}")
+
+        logger.info(
+            "Built Skylos command",
+            extra={
+                "file_count": len(files) if files else 1,
+                "confidence_threshold": self.settings.confidence_threshold,
+                "target_directory": cmd[-1],  # Last element should be the target
+            },
+        )
+        return cmd
+
+    async def parse_output(
+        self,
+        result: ToolExecutionResult,
+    ) -> list[ToolIssue]:
+        """Parse Skylos output into standardized issues.
+
+        Args:
+            result: Raw execution result from Skylos
+
+        Returns:
+            List of parsed issues
+        """
+        if not result.raw_output:
+            logger.debug("No output to parse")
+            return []
+
+        issues = []
+
+        # Try to parse as JSON first (Skylos JSON output format)
         try:
-            issues: list[Issue] = [
-                DeadCodeIssue(
-                    file_path=Path(item["file"]),
-                    line_number=item.get("line", 1),
-                    message=f"Dead {item['type']}: {item['name']}",
-                    severity="warning",  # Dead code is typically a warning, not error
-                    issue_type=item["type"],
-                    name=item["name"],
-                    confidence=item.get("confidence", 0.0),
+            data = json.loads(result.raw_output)
+            logger.debug(
+                "Parsed Skylos JSON output",
+                extra={"results_count": len(data.get("dead_code", []))},
+            )
+
+            for item in data.get("dead_code", []):
+                file_path = Path(item.get("file", ""))
+
+                issue = ToolIssue(
+                    file_path=file_path,
+                    line_number=item.get("line"),
+                    message=f"Dead {item.get('type', 'code')}: {item.get('name', '')}",
+                    code=item.get("type"),
+                    severity="warning",  # Dead code is typically a warning
+                    suggestion=f"Confidence: {item.get('confidence', 'unknown')}%",
                 )
-                for item in data.get("dead_code", [])
-            ]
-
-            # Skylos success means no issues found
-            success = len(issues) == 0
-
-            return ToolResult(
-                success=success,
-                issues=issues,
-                raw_output=output,
-                tool_version=self.get_tool_version(),
-            )
-
-        except (KeyError, TypeError, ValueError) as e:
-            return self._create_error_result(
-                f"Failed to parse Skylos JSON output: {e}", raw_output=output
-            )
-
-    def _parse_text_output(self, output: str) -> ToolResult:
-        """Parse text output for human-readable display."""
-        issues: list[Issue] = []
-
-        if not output.strip():
-            # No output typically means no dead code found
-            return ToolResult(
-                success=True,
-                issues=[],
-                raw_output=output,
-                tool_version=self.get_tool_version(),
-            )
-
-        # Parse Skylos text output
-        # Expected format: "file.py:line: unused import 'name' (confidence: 86%)"
-        for line in output.strip().split("\\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            issue = self._parse_text_line(line)
-            if issue:
                 issues.append(issue)
 
-        # Success if no issues found
-        success = len(issues) == 0
+        except json.JSONDecodeError:
+            # Fallback to text parsing if JSON fails
+            logger.warning(
+                "JSON parse failed, falling back to text parsing",
+                extra={"output_preview": result.raw_output[:200]},
+            )
+            issues = self._parse_text_output(result.raw_output)
 
-        return ToolResult(
-            success=success,
-            issues=issues,
-            raw_output=output,
-            tool_version=self.get_tool_version(),
+        logger.info(
+            "Parsed Skylos output",
+            extra={
+                "total_issues": len(issues),
+                "files_affected": len(set(str(i.file_path) for i in issues)),
+            },
+        )
+        return issues
+
+    def _parse_text_output(self, output: str) -> list[ToolIssue]:
+        """Parse Skylos text output (fallback).
+
+        Args:
+            output: Text output from Skylos
+
+        Returns:
+            List of ToolIssue objects
+        """
+        issues = []
+        lines = output.strip().split("\n")
+
+        for line in lines:
+            line = line.strip()
+            if not line or ":" not in line:
+                continue
+
+            try:
+                # Parse format: "file.py:line: message (confidence: XX%)"
+                parts = line.split(":", 2)
+                if len(parts) < 3:
+                    continue
+
+                file_path = Path(parts[0].strip())
+
+                try:
+                    line_number = int(parts[1].strip())
+                except ValueError:
+                    line_number = None
+
+                message_part = parts[2].strip()
+
+                # Extract confidence if present
+                confidence = "unknown"
+                if "(confidence:" in message_part:
+                    conf_start = message_part.find("(confidence:") + len("(confidence:")
+                    conf_end = message_part.find(")", conf_start)
+                    if conf_end != -1:
+                        confidence = message_part[conf_start:conf_end].strip()
+
+                issue = ToolIssue(
+                    file_path=file_path,
+                    line_number=line_number,
+                    message=message_part,
+                    severity="warning",
+                    suggestion=f"Confidence: {confidence}",
+                )
+                issues.append(issue)
+
+            except (ValueError, IndexError):
+                continue
+
+        logger.info(
+            "Parsed Skylos text output (fallback)",
+            extra={"total_issues": len(issues)},
+        )
+        return issues
+
+    def _get_check_type(self) -> QACheckType:
+        """Return refactor check type."""
+        return QACheckType.REFACTOR
+
+    def get_default_config(self) -> QACheckConfig:
+        """Get default configuration for Skylos adapter.
+
+        Returns:
+            QACheckConfig with sensible defaults
+        """
+        from crackerjack.models.qa_config import QACheckConfig
+
+        return QACheckConfig(
+            check_id=MODULE_ID,
+            check_name=self.adapter_name,
+            check_type=QACheckType.REFACTOR,  # Dead code detection is refactoring
+            enabled=True,
+            file_patterns=["crackerjack/**/*.py"],  # Target package directory
+            exclude_patterns=[
+                "**/test_*.py",
+                "**/tests/**",
+                "**/.venv/**",
+                "**/venv/**",
+                "**/build/**",
+                "**/dist/**",
+                "**/__pycache__/**",
+                "**/.git/**",
+                "**/node_modules/**",
+                "**/.tox/**",
+                "**/.pytest_cache/**",
+                "**/htmlcov/**",
+                "**/.coverage*",
+            ],
+            timeout_seconds=300,
+            parallel_safe=True,
+            stage="comprehensive",  # Dead code detection in comprehensive stage
+            settings={
+                "confidence_threshold": 86,
+                "web_dashboard_port": 5090,
+            },
         )
 
-    def _parse_text_line(self, line: str) -> DeadCodeIssue | None:
-        """Parse a single line of Skylos text output."""
-        try:
-            basic_info = self._extract_basic_line_info(line)
-            if not basic_info:
-                return None
 
-            file_path, line_number, message_part = basic_info
-            issue_details = self._extract_issue_details(message_part)
-            confidence = self._extract_confidence(message_part)
-
-            return DeadCodeIssue(
-                file_path=file_path,
-                line_number=line_number,
-                message=f"Dead {issue_details['type']}: {issue_details['name']}",
-                severity="warning",
-                issue_type=issue_details["type"],
-                name=issue_details["name"],
-                confidence=confidence,
-            )
-
-        except (IndexError, ValueError):
-            return None
-
-    def _extract_basic_line_info(self, line: str) -> tuple[Path, int, str] | None:
-        """Extract file path, line number, and message from line."""
-        if ":" not in line:
-            return None
-
-        parts = line.split(":", 2)
-        if len(parts) < 3:
-            return None
-
-        file_path = Path(parts[0].strip())
-        try:
-            line_number = int(parts[1].strip())
-        except ValueError:
-            line_number = 1
-
-        message_part = parts[2].strip()
-        return file_path, line_number, message_part
-
-    def _extract_issue_details(self, message_part: str) -> dict[str, str]:
-        """Extract issue type and name from message."""
-        issue_type = "unknown"
-        name = "unknown"
-
-        lower_message = message_part.lower()
-
-        if "unused import" in lower_message:
-            issue_type = "import"
-            name = self._extract_name_from_quotes(message_part)
-        elif "unused function" in lower_message:
-            issue_type = "function"
-            name = self._extract_name_from_quotes(message_part)
-        elif "unused class" in lower_message:
-            issue_type = "class"
-            name = self._extract_name_from_quotes(message_part)
-
-        return {"type": issue_type, "name": name}
-
-    def _extract_name_from_quotes(self, message_part: str) -> str:
-        """Extract name from single quotes in message."""
-        quoted_parts = message_part.split("'")
-        if len(quoted_parts) >= 2:
-            return quoted_parts[1]
-        return "unknown"
-
-    def _extract_confidence(self, message_part: str) -> float:
-        """Extract confidence percentage from message."""
-        if "(confidence:" not in message_part:
-            return float(self.confidence_threshold)
-
-        try:
-            conf_part = message_part.split("(confidence:")[1].split(")")[0]
-            return float(conf_part.strip().replace("%", ""))
-        except (ValueError, IndexError):
-            return float(self.confidence_threshold)
+# ACB Registration (REQUIRED at module level)
+with suppress(Exception):
+    depends.set(SkylosAdapter)

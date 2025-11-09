@@ -400,7 +400,7 @@ if __name__ == "__main__":
         try:
             await server.start_monitoring()
         except KeyboardInterrupt:
-            logger.info("Shutting down monitoring server...")
+            logger.info("Shutting down monitoring server")
             await server.stop_monitoring()
 
     asyncio.run(main())

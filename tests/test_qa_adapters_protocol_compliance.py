@@ -14,7 +14,7 @@ from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QAAdapterProtoc
 from crackerjack.adapters.format.ruff import RuffAdapter
 from crackerjack.adapters.format.mdformat import MdformatAdapter
 from crackerjack.adapters.lint.codespell import CodespellAdapter
-from crackerjack.adapters.security.bandit import BanditAdapter
+from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter
 from crackerjack.adapters.type.zuban import ZubanAdapter
 from crackerjack.adapters.refactor.refurb import RefurbAdapter
@@ -168,7 +168,7 @@ class TestQAAdapterInstantiation:
 
     def test_bandit_adapter_instantiation(self):
         """Test BanditAdapter can be instantiated."""
-        from crackerjack.adapters.security.bandit import BanditSettings
+        from crackerjack.adapters.sast.bandit import BanditSettings
 
         settings = BanditSettings()
         adapter = BanditAdapter(settings=settings)
@@ -320,7 +320,7 @@ class TestQABaseSettings:
 
     def test_settings_with_defaults(self):
         """Test settings have sensible defaults."""
-        from crackerjack.adapters.security.bandit import BanditSettings
+        from crackerjack.adapters.sast.bandit import BanditSettings
 
         settings = BanditSettings()
 

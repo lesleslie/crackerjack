@@ -175,7 +175,7 @@ class PhaseCoordinator:
 
     def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
-            self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks).")
+            self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks)")
             return True
 
         # Prevent multiple fast-hook runs in a single workflow session unless
@@ -238,7 +238,7 @@ class PhaseCoordinator:
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
-                "[yellow]⚠️[/yellow] Skipping comprehensive hooks (--skip-hooks)."
+                "[yellow]⚠️[/yellow] Skipping comprehensive hooks (--skip-hooks)"
             )
             return True
 
@@ -346,10 +346,10 @@ class PhaseCoordinator:
         hook_count = self.hook_manager.get_hook_count(suite_name)
 
         # Create compact progress bar for 70-char width
-        # Format: ⠋ Running hooks... ━━━━━╸━━━ 7/11 0:00:32
+        # Format: ⠋ Running hooks: ━━━━━╸━━━ 7/11 0:00:32
         progress = Progress(
             SpinnerColumn(spinner_name="dots"),
-            TextColumn("[cyan]{task.description}"),
+            TextColumn("[cyan]{task.description}[/cyan]"),
             BarColumn(bar_width=20),  # Fixed width to prevent console overflow
             MofNCompleteColumn(),
             TimeElapsedColumn(),
@@ -387,13 +387,21 @@ class PhaseCoordinator:
             with progress:
                 # Create task with known total
                 task_id = progress.add_task(
-                    f"Running {suite_name} hooks...",
+                    f"Running {suite_name} hooks:",
                     total=hook_count,
                 )
+
+                # Track wall-clock time for parallel execution
+                import time
+
+                start_time = time.time()
 
                 # Execute hooks - the hook_manager will call update_progress via callback
                 hook_results = hook_runner() or []
                 self._last_hook_results = hook_results
+
+                # Calculate actual elapsed time (critical for parallel execution)
+                elapsed_time = time.time() - start_time
 
         except Exception as exc:
             self.console.print(
@@ -403,13 +411,17 @@ class PhaseCoordinator:
                 "Hook execution raised exception",
                 extra={"suite": suite_name, "attempt": attempt},
             )
+            # Set elapsed_time to 0 for exception case
+            elapsed_time = 0.0
             return False
         finally:
             # Restore original callback
             self.hook_manager._progress_callback = original_callback
             self.hook_manager._progress_start_callback = original_start_callback
 
-        summary = self.hook_manager.get_hook_summary(hook_results)
+        summary = self.hook_manager.get_hook_summary(
+            hook_results, elapsed_time=elapsed_time
+        )
         self._last_hook_summary = summary
         self._report_hook_results(suite_name, hook_results, summary, attempt)
 
@@ -464,13 +476,11 @@ class PhaseCoordinator:
         )
 
         if failed or errors:
-            self.console.print(
-                f"\n[red]❌[/red] {base_message} ({failed} failed, {errors} errors).\n"
-            )
+            self.console.print(f"\n[red]❌[/red] {base_message}\n")
             # Always show a results table to aid debugging when there are failures
             self._render_hook_results_table(suite_name, results)
         else:
-            self.console.print(f"\n[green]✅[/green] {base_message}.\n")
+            self.console.print(f"\n[green]✅[/green] {base_message}\n")
             self._render_hook_results_table(suite_name, results)
 
     def _render_hook_results_table(
@@ -484,7 +494,29 @@ class PhaseCoordinator:
         if self._is_plain_output():
             # Plain, log-friendly rendering without Rich structures
             self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
-            for result in results:
+            # Calculate statistics
+            total_hooks = len(results)
+            passed_hooks = [
+                r for r in results if r.status.lower() in {"passed", "success"}
+            ]
+            failed_hooks = [
+                r for r in results if r.status.lower() in {"failed", "error", "timeout"}
+            ]
+            other_hooks = [
+                r
+                for r in results
+                if r.status.lower()
+                not in {"passed", "success", "failed", "error", "timeout"}
+            ]
+
+            total_passed = len(passed_hooks)
+            total_failed = len(failed_hooks)
+            total_other = len(other_hooks)
+            total_files_processed = sum(r.files_processed for r in results)
+
+            # Show only failed hooks in plain output if any failures exist, otherwise show all
+            hooks_to_show = failed_hooks if failed_hooks else results
+            for result in hooks_to_show:
                 name = self._strip_ansi(str(result.name))
                 status = result.status.upper()
                 duration = f"{result.duration:.2f}s"
@@ -493,16 +525,57 @@ class PhaseCoordinator:
                     f"  - {name} :: {status} | {duration} | files={files}",
                     highlight=False,
                 )
+            # Add summary if showing all results
+            if not failed_hooks and results:
+                self.console.print(
+                    f"  Summary: {total_passed}/{total_hooks} hooks passed, "
+                    f"{total_files_processed} files processed",
+                    highlight=False,
+                )
             self.console.print()
             return
 
-        table = Table(box=box.SIMPLE, header_style="bold bright_white")
-        table.add_column("Hook", style="cyan", overflow="fold")
-        table.add_column("Status", style="bright_white")
-        table.add_column("Duration", justify="right", style="magenta")
-        table.add_column("Files", justify="right", style="bright_white")
+        # Calculate statistics for rich display
+        total_hooks = len(results)
+        passed_hooks = [r for r in results if r.status.lower() in {"passed", "success"}]
+        failed_hooks = [
+            r for r in results if r.status.lower() in {"failed", "error", "timeout"}
+        ]
+        other_hooks = [
+            r
+            for r in results
+            if r.status.lower()
+            not in {"passed", "success", "failed", "error", "timeout"}
+        ]
 
-        for result in results:
+        total_passed = len(passed_hooks)
+        total_failed = len(failed_hooks)
+        total_other = len(other_hooks)
+        total_files_processed = sum(r.files_processed for r in results)
+
+        # Show summary statistics at the top of the panel
+        summary_text = (
+            f"Total: [white]{total_hooks}[/white] | Passed:"
+            f" [green]{total_passed}[/green] | Failed: [red]{total_failed}[/red]"
+        )
+        if total_other > 0:
+            summary_text += f" | Other: [yellow]{total_other}[/yellow]"
+        summary_text += f" | Files processed: [white]{total_files_processed}[/white]"
+
+        # Show all results by default instead of only failures
+        hooks_to_display = results
+
+        table = Table(
+            box=box.SIMPLE,
+            header_style="bold bright_white",
+            expand=True,  # Make table expand to fill available width
+        )
+        table.add_column("Hook", style="cyan", overflow="fold", min_width=20)
+        table.add_column("Status", style="bright_white", min_width=8)
+        table.add_column("Duration", justify="right", style="magenta", min_width=10)
+        table.add_column("Files", justify="right", style="bright_white", min_width=8)
+
+        for result in hooks_to_display:
             status_style = self._status_style(result.status)
             table.add_row(
                 self._strip_ansi(result.name),
@@ -514,9 +587,11 @@ class PhaseCoordinator:
         panel = Panel(
             table,
             title=f"[bold]{suite_name.title()} Hook Results[/bold]",
+            subtitle=summary_text,
             border_style="cyan" if suite_name == "fast" else "magenta",
             padding=(0, 1),
             width=get_console_width(),
+            expand=True,  # Make panel expand to use full available width
         )
         self.console.print(panel)
         self.console.print()
@@ -570,7 +645,7 @@ class PhaseCoordinator:
         return True
 
     def _handle_no_files_to_clean(self) -> bool:
-        self.console.print("No Python files found to clean.")
+        self.console.print("No Python files found to clean")
         self.session.complete_task("cleaning", "No files to clean")
         return True
 
@@ -585,12 +660,12 @@ class PhaseCoordinator:
 
     def _report_cleaning_results(self, cleaned_files: list[str]) -> None:
         if cleaned_files:
-            self.console.print(f"Cleaned {len(cleaned_files)} files.")
+            self.console.print(f"Cleaned {len(cleaned_files)} files")
             self.session.complete_task(
                 "cleaning", f"Cleaned {len(cleaned_files)} files"
             )
         else:
-            self.console.print("No cleaning needed for any files.")
+            self.console.print("No cleaning needed for any files")
             self.session.complete_task("cleaning", "No cleaning needed")
 
     @staticmethod
@@ -600,6 +675,13 @@ class PhaseCoordinator:
     def _execute_publishing_workflow(
         self, options: OptionsProtocol, version_type: str
     ) -> bool:
+        # Store reference to current HEAD to allow rollback if needed
+        original_head = (
+            self.git_service.get_current_commit_hash()
+            if hasattr(self.git_service, "get_current_commit_hash")
+            else None
+        )
+
         # ========================================
         # STAGE 0: PRE-PUBLISH COMMIT (if -c flag)
         # ========================================
@@ -658,18 +740,11 @@ class PhaseCoordinator:
         if not self.git_service.commit(commit_message):
             self.session.fail_task("publishing", "Failed to commit changes")
             return False
-
-        # Create git tag locally (before push, so both commit and tag go together)
-        if not options.no_git_tags:
-            if not self.publish_manager.create_git_tag_local(new_version):
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}"
-                )
-
-        # Push commit and tag together in single operation
-        if not self.git_service.push_with_tags():
-            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually.")
-            # Not failing the whole workflow for a push failure
+        current_commit_hash = (
+            self.git_service.get_current_commit_hash()
+            if hasattr(self.git_service, "get_current_commit_hash")
+            else None
+        )
 
         # ========================================
         # STAGE 3: PUBLISH TO PYPI
@@ -679,10 +754,49 @@ class PhaseCoordinator:
         # Build and publish package
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")
+            # Attempt to rollback the version bump commit if publishing fails
+            if current_commit_hash and original_head:
+                self._attempt_rollback_version_bump(original_head, current_commit_hash)
             return False
+
+        # Create git tag and push only after successful PyPI publishing
+        if not options.no_git_tags:
+            if not self.publish_manager.create_git_tag_local(new_version):
+                self.console.print(
+                    f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}"
+                )
+
+        # Push commit and tag together in single operation only after successful PyPI publishing
+        if not self.git_service.push_with_tags():
+            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
+            # Not failing the whole workflow for a push failure
 
         self.session.complete_task("publishing", f"Published version {new_version}")
         return True
+
+    def _attempt_rollback_version_bump(
+        self, original_head: str, current_commit_hash: str
+    ) -> bool:
+        """Attempt to undo the version bump commit if publishing fails."""
+        try:
+            self.console.print(
+                "[yellow]🔄 Attempting to rollback version bump commit...[/yellow]"
+            )
+
+            # Reset to the original HEAD (before version bump commit)
+            result = self.git_service.reset_hard(original_head)
+
+            if result:
+                self.console.print(
+                    f"[green]✅ Version bump commit ({current_commit_hash[:8]}...) reverted[/green]"
+                )
+                return True
+            else:
+                self.console.print("[red]❌ Failed to revert version bump commit[/red]")
+                return False
+        except Exception as e:
+            self.console.print(f"[red]❌ Error during version rollback: {e}[/red]")
+            return False
 
     def _display_version_bump_header(self) -> None:
         sep = make_separator("-")
@@ -703,7 +817,7 @@ class PhaseCoordinator:
         self.console.print(sep + "\n")
 
     def _handle_no_changes_to_commit(self) -> bool:
-        self.console.print("No changes to commit.")
+        self.console.print("No changes to commit")
         self.session.complete_task("commit", "No changes to commit")
         return True
 
@@ -749,7 +863,7 @@ class PhaseCoordinator:
             self.session.fail_task("commit", "Failed to commit files")
             return False
         if not self.git_service.push():
-            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually.")
+            self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
             # Not failing the whole workflow for a push failure
         self.session.complete_task("commit", "Committed and pushed changes")
         return True

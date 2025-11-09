@@ -1,0 +1,21 @@
+🚀 Crackerjack Workflow Engine (ACB-Powered)
+Building DI container (28 services across 7 levels)...
+
+✓ DI container ready with WorkflowPipeline
+Selected workflow: Comprehensive Quality Checks
+Orchestration: ⚡ enabled (acb mode) - async hooks with caching
+⏳ Started: Comprehensive quality checks
+
+----------------------------------------------------------------------
+🔍 Comprehensive Hooks - Type, security, and complexity checking
+----------------------------------------------------------------------
+
+JSON parse failed, falling back to text parsing
+
+
+❌ Comprehensive hooks attempt 1: 7/8 passed in 748.76s
+
+Comprehensive Hook Results:
+  - complexipy :: FAILED | 1.19s | files=1
+
+Workflow failed: Comprehensive hooks execution failed

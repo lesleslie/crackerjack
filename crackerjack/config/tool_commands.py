@@ -76,7 +76,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "skylos",
             "--exclude-folder",
             "tests",
-            ".",
+            f"./{package_name}",
         ],
         "zuban": [
             "uv",
@@ -106,6 +106,16 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
         ],
         "check-yaml": ["uv", "run", "python", "-m", "crackerjack.tools.check_yaml"],
         "check-toml": ["uv", "run", "python", "-m", "crackerjack.tools.check_toml"],
+        "check-json": ["uv", "run", "python", "-m", "crackerjack.tools.check_json"],
+        "format-json": ["uv", "run", "python", "-m", "crackerjack.tools.format_json"],
+        "check-jsonschema": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.check_jsonschema",
+        ],
+        "check-ast": ["uv", "run", "python", "-m", "crackerjack.tools.check_ast"],
         "check-added-large-files": [
             "uv",
             "run",
@@ -126,16 +136,23 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "protect",
             "-v",
         ],
-        "bandit": [
+        "semgrep": [
             "uv",
             "run",
-            "python",
-            "-m",
-            "bandit",
-            "-c",
-            "pyproject.toml",
-            "-r",
-            package_name,
+            "semgrep",
+            "scan",
+            "--json",  # JSON output for structured parsing
+            "--config",
+            "p/security-audit",  # Security-focused ruleset (comprehensive)
+            "--exclude",
+            ".pytest_cache",
+            "--exclude",
+            ".ruff_cache",
+            "--exclude",
+            "__pycache__",
+            "--exclude",
+            "tests",
+            f"./{package_name}",  # Target only the package directory
         ],
         "codespell": [
             "uv",

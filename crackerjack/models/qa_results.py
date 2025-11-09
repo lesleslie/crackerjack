@@ -27,7 +27,8 @@ class QACheckType(str, Enum):
     LINT = "lint"
     FORMAT = "format"
     TYPE = "type"  # Type checking (pyright, mypy, zuban)
-    SECURITY = "security"
+    SECURITY = "security"  # Secret leak prevention (gitleaks)
+    SAST = "sast"  # Static Application Security Testing (bandit, semgrep, pyscn)
     COMPLEXITY = "complexity"  # Code complexity analysis
     REFACTOR = "refactor"
     TEST = "test"

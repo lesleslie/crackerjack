@@ -222,7 +222,7 @@ def _validate_documentation_files(doc_service: t.Any, console: Inject[Console]) 
                 "✅ [bold green]Documentation validation passed![/bold green]"
             )
     else:
-        console.print("⚠️ No documentation files found to validate.")
+        console.print("⚠️ No documentation files found to validate")
 
 
 def _handle_documentation_commands(
@@ -314,7 +314,7 @@ def _handle_changelog_dry_run(
         generator._display_changelog_preview(entries)
         console.print("✅ [bold green]Changelog preview completed![/bold green]")
     else:
-        console.print("⚠️ No new changelog entries to generate.")
+        console.print("⚠️ No new changelog entries to generate")
 
     return _should_continue_after_changelog(options)
 
@@ -1204,7 +1204,7 @@ def _handle_contextual_ai(
         if recommendations:
             assistant.display_recommendations(recommendations)
         else:
-            console.print("[green]✨[/green] Great job! No immediate recommendations.")
+            console.print("[green]✨[/green] Great job! No immediate recommendations")
 
         return False
 

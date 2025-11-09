@@ -484,6 +484,15 @@ webapp-plus = [
 ]
 
 [[package]]
+name = "aiocache"
+version = "0.12.3"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/7a/64/b945b8025a9d1e6e2138845f4022165d3b337f55f50984fbc6a4c0a1e355/aiocache-0.12.3.tar.gz", hash = "sha256:f528b27bf4d436b497a1d0d1a8f59a542c153ab1e37c3621713cb376d44c4713", size = 132196, upload-time = "2024-09-25T13:20:23.823Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/d7/15d67e05b235d1ed8c3ce61688fe4d84130e72af1657acadfaac3479f4cf/aiocache-0.12.3-py2.py3-none-any.whl", hash = "sha256:889086fc24710f431937b87ad3720a289f7fc31c4fd8b68e9f918b9bacd8270d", size = 28199, upload-time = "2024-09-25T13:20:22.688Z" },
+]
+
+[[package]]
 name = "aioconsole"
 version = "0.8.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1065,13 +1074,12 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.44.5"
+version = "0.44.6"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
     { name = "aiofiles" },
     { name = "aiohttp" },
-    { name = "bandit" },
     { name = "codespell" },
     { name = "complexipy" },
     { name = "creosote" },
@@ -1110,7 +1118,6 @@ dependencies = [
     { name = "skylos" },
     { name = "structlog" },
     { name = "textual" },
-    { name = "tomli" },
     { name = "tomli-w" },
     { name = "transformers" },
     { name = "typer" },
@@ -1125,6 +1132,11 @@ dependencies = [
     { name = "zuban" },
 ]
 
+[package.optional-dependencies]
+sast = [
+    { name = "bandit" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "excalidraw-mcp" },
@@ -1136,7 +1148,7 @@ requires-dist = [
     { name = "acb", editable = "../acb" },
     { name = "aiofiles", specifier = ">=24.1" },
     { name = "aiohttp", specifier = ">=3.12.14" },
-    { name = "bandit", specifier = ">=1.8.6" },
+    { name = "bandit", marker = "extra == 'sast'", specifier = ">=1.8.6" },
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "complexipy", specifier = ">=3.3" },
     { name = "creosote", specifier = ">=4.0.3" },
@@ -1175,7 +1187,6 @@ requires-dist = [
     { name = "skylos", specifier = ">=2.1.2" },
     { name = "structlog", specifier = ">=24.4" },
     { name = "textual", specifier = ">=0.89" },
-    { name = "tomli", specifier = ">=2.2.1" },
     { name = "tomli-w", specifier = ">=1.2" },
     { name = "transformers", specifier = ">=4.21.0" },
     { name = "typer", specifier = ">=0.16" },
@@ -1189,6 +1200,7 @@ requires-dist = [
     { name = "websockets", specifier = ">=15.0.1" },
     { name = "zuban", specifier = ">=0.0.22" },
 ]
+provides-extras = ["sast"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -2037,6 +2049,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/df/bf/f7da0350254c0ed7c72f3e33cef02e048281fec7ecec5f032d4aac52226b/jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d", size = 245115, upload-time = "2025-03-05T20:05:02.478Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67", size = 134899, upload-time = "2025-03-05T20:05:00.369Z" },
+]
+
+[[package]]
+name = "jinja2-async-environment"
+version = "0.18.5"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "jinja2" },
+    { name = "redis" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/12/d5/fa26dd07751e37cde65552be49648ff64e98e67e0815b97557372e73aa5f/jinja2_async_environment-0.18.5.tar.gz", hash = "sha256:52a2d3e9e933aa94437b7974a31e7d34fd5f55fb6175d1e4948621bd599f0e29", size = 323776, upload-time = "2025-10-26T22:42:10.772Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/4f/ad/829cd7fd0a0d4c2676c00910e2b430247b816310567e0b0a1836c17052e5/jinja2_async_environment-0.18.5-py3-none-any.whl", hash = "sha256:ca882febf833a48d5f662e9cb9a9664137d9fb09fb63287cd9ff8ad0e45b945a", size = 68341, upload-time = "2025-10-26T22:42:09.275Z" },
 ]
 
 [[package]]
@@ -3446,6 +3472,15 @@ wheels = [
 ]
 
 [[package]]
+name = "redis"
+version = "7.0.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/57/8f/f125feec0b958e8d22c8f0b492b30b1991d9499a4315dfde466cf4289edc/redis-7.0.1.tar.gz", hash = "sha256:c949df947dca995dc68fdf5a7863950bf6df24f8d6022394585acc98e81624f1", size = 4755322, upload-time = "2025-10-27T14:34:00.33Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/e9/97/9f22a33c475cda519f20aba6babb340fb2f2254a02fb947816960d1e669a/redis-7.0.1-py3-none-any.whl", hash = "sha256:4977af3c7d67f8f0eb8b6fec0dafc9605db9343142f634041fb0235f67c0588a", size = 339938, upload-time = "2025-10-27T14:33:58.553Z" },
+]
+
+[[package]]
 name = "referencing"
 version = "0.36.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3820,12 +3855,18 @@ wheels = [
 
 [[package]]
 name = "session-mgmt-mcp"
-version = "0.7.4"
+version = "0.9.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
+    { name = "acb" },
+    { name = "aiocache" },
     { name = "crackerjack" },
     { name = "duckdb" },
+    { name = "fastapi" },
     { name = "fastmcp" },
+    { name = "jinja2" },
+    { name = "jinja2-async-environment" },
+    { name = "mcp-common" },
     { name = "numpy" },
     { name = "onnxruntime" },
     { name = "psutil" },
@@ -3838,9 +3879,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/88/d0/0eb04b6f16b3659408d99b7a0a8969411813c3a71b0cd99359fe2a0a395f/session_mgmt_mcp-0.7.4.tar.gz", hash = "sha256:0d5863e9b055fb7d5387d898fe75dfbad2ceddbb6690d25e8d232106a7cf3136", size = 695352, upload-time = "2025-10-09T04:16:20.941Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5e/ab/2be81876457c6f3a411ee0476a779126bca991163702e9704a353493a836/session_mgmt_mcp-0.9.1.tar.gz", hash = "sha256:ccfe56d500e2cb146b04186378e41e039c769739da6e8282697bf6e9470df7c0", size = 1229176, upload-time = "2025-11-09T00:17:51.956Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b4/ab/98526bfa35e921442f35b21f9f206971f5ddc25eeed341da2ecca7a5e376/session_mgmt_mcp-0.7.4-py3-none-any.whl", hash = "sha256:7aab68c6c74c9db9b2f66e6b0d1743ed72fe5b4dba2803252b55dd37b9e02319", size = 273411, upload-time = "2025-10-09T04:16:19.289Z" },
+    { url = "https://files.pythonhosted.org/packages/34/70/2a974f6c144918b731d2faec175be07642f116d56397a77d1bfd5aabbb04/session_mgmt_mcp-0.9.1-py3-none-any.whl", hash = "sha256:b6eab2477ce2452adab7877a66d5fda4a2c88fbbead02c0ba9dd906ea25c99ce", size = 324442, upload-time = "2025-11-09T00:17:49.69Z" },
 ]
 
 [[package]]

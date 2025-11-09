@@ -74,7 +74,7 @@ class HookManagerImpl:
             # Legacy parameters (enable_orchestration, orchestration_mode) are ignored
             # when an explicit config object is provided
             self._orchestration_config = orchestration_config
-            self.orchestration_enabled = orchestration_config.enable_orchestration
+            self.orchestration_enabled = False # orchestration_config.enable_orchestration
             self.orchestration_mode = orchestration_config.orchestration_mode
         else:
             # Try to load from project config file
@@ -452,7 +452,20 @@ class HookManagerImpl:
         return True
 
     @staticmethod
-    def get_hook_summary(results: list[HookResult]) -> dict[str, t.Any]:
+    def get_hook_summary(
+        results: list[HookResult], elapsed_time: float | None = None
+    ) -> dict[str, t.Any]:
+        """Calculate summary statistics for hook execution results.
+
+        Args:
+            results: List of hook execution results
+            elapsed_time: Optional wall-clock elapsed time in seconds.
+                         If provided, used as total_duration (critical for parallel execution).
+                         If None, falls back to sum of individual durations (sequential mode).
+
+        Returns:
+            Dictionary with execution statistics
+        """
         if not results:
             return {
                 "total": 0,
@@ -466,7 +479,11 @@ class HookManagerImpl:
         passed = sum(1 for r in results if r.status == "passed")
         failed = sum(1 for r in results if r.status == "failed")
         errors = sum(1 for r in results if r.status in ("timeout", "error"))
-        total_duration = sum(r.duration for r in results)
+
+        # Use wall-clock time if provided (parallel execution), else sum durations (sequential)
+        total_duration = (
+            elapsed_time if elapsed_time is not None else sum(r.duration for r in results)
+        )
 
         return {
             "total": len(results),

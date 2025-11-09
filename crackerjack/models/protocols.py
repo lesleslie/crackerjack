@@ -157,6 +157,10 @@ class GitInterface(t.Protocol):
 
     def get_unpushed_commit_count(self) -> int: ...
 
+    def get_current_commit_hash(self) -> str | None: ...
+
+    def reset_hard(self, commit_hash: str) -> bool: ...
+
 
 @t.runtime_checkable
 class HookManager(t.Protocol):

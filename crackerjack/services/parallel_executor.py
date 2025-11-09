@@ -64,6 +64,29 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
     def cleanup(self) -> None:
         pass
 
+    async def async_cleanup(self) -> None:
+        """Async cleanup for any remaining tasks."""
+        try:
+            loop = asyncio.get_running_loop()
+            pending_tasks = [task for task in asyncio.all_tasks(loop)
+                           if not task.done() and ('hook' in str(task).lower() or 'parallel' in str(task).lower())]
+
+            for task in pending_tasks:
+                if not task.done():
+                    try:
+                        task.cancel()
+                        await asyncio.wait_for(task, timeout=0.1)
+                    except (TimeoutError, asyncio.CancelledError):
+                        pass
+                    except RuntimeError as e:
+                        if "Event loop is closed" in str(e):
+                            return
+                        else:
+                            raise
+        except RuntimeError:
+            # No running event loop
+            pass
+
     def health_check(self) -> bool:
         return True
 
@@ -318,6 +341,29 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
 
     def set_custom_metric(self, name: str, value: t.Any) -> None:
         pass
+
+    async def async_cleanup(self) -> None:
+        """Async cleanup for any remaining command executor tasks."""
+        try:
+            loop = asyncio.get_running_loop()
+            pending_tasks = [task for task in asyncio.all_tasks(loop)
+                           if not task.done() and ('command' in str(task).lower() or 'async' in str(task).lower())]
+
+            for task in pending_tasks:
+                if not task.done():
+                    try:
+                        task.cancel()
+                        await asyncio.wait_for(task, timeout=0.1)
+                    except (TimeoutError, asyncio.CancelledError):
+                        pass
+                    except RuntimeError as e:
+                        if "Event loop is closed" in str(e):
+                            return
+                        else:
+                            raise
+        except RuntimeError:
+            # No running event loop
+            pass
 
     async def execute_command(
         self,

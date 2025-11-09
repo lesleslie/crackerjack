@@ -378,7 +378,7 @@ class ServiceWatchdog:
     def _setup_signal_handlers(self) -> None:
         def signal_handler(signum: int, frame: object) -> None:
             _ = frame
-            logger.info(f"Received signal {signum}, stopping watchdog...")
+            logger.info(f"Received signal {signum}, stopping watchdog")
             try:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self.stop_watchdog())

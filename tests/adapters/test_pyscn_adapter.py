@@ -1,4 +1,4 @@
-"""Tests for Pyscn security adapter."""
+"""Tests for Pyscn SAST adapter."""
 
 import json
 from pathlib import Path
@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from crackerjack.adapters.security.pyscn import PyscnAdapter, PyscnSettings
+from crackerjack.adapters.sast.pyscn import PyscnAdapter, PyscnSettings
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult, ToolIssue
 
 

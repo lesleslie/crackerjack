@@ -340,7 +340,7 @@ class PublishManagerImpl:
 
     def build_package(self) -> bool:
         try:
-            self.console.print("[yellow]🔨[/ yellow] Building package...")
+            self.console.print("[yellow]🔨[/ yellow] Building package")
 
             if self.dry_run:
                 return self._handle_dry_run_build()
@@ -407,7 +407,7 @@ class PublishManagerImpl:
             return False
 
         try:
-            self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI...")
+            self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI")
             return self._perform_publish_workflow_with_retry()
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Publish error: {e}")

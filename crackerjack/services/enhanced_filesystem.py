@@ -468,16 +468,16 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         """
         Lifecycle method called when the service is started.
         """
-        self.logger.debug("EnhancedFileSystemService started.")
+        self.logger.debug("EnhancedFileSystemService started")
 
     async def _on_stop(self) -> None:
         """
         Lifecycle method called when the service is stopped.
         """
-        self.logger.debug("EnhancedFileSystemService stopped.")
+        self.logger.debug("EnhancedFileSystemService stopped")
 
     async def _on_reload(self) -> None:
         """
         Lifecycle method called when the service is reloaded.
         """
-        self.logger.debug("EnhancedFileSystemService reloaded.")
+        self.logger.debug("EnhancedFileSystemService reloaded")

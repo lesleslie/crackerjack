@@ -344,3 +344,28 @@ class GitService(GitInterface):
             if result.returncode == 0 and result.stdout.strip().isdigit():
                 return int(result.stdout.strip())
         return 0
+
+    def get_current_commit_hash(self) -> str | None:
+        """Get the hash of the current commit (HEAD)."""
+        try:
+            result = self._run_git_command(["rev-parse", "HEAD"])
+            if result.returncode == 0 and result.stdout.strip():
+                return result.stdout.strip()
+            return None
+        except Exception:
+            self.console.print("[red]❌[/red] Error getting current commit hash")
+            return None
+
+    def reset_hard(self, commit_hash: str) -> bool:
+        """Reset the repository to a specific commit hash (hard reset)."""
+        try:
+            result = self._run_git_command(["reset", "--hard", commit_hash])
+            if result.returncode == 0:
+                self.console.print(f"[green]✅[/green] Repository reset to {commit_hash[:8]}")
+                return True
+            else:
+                self.console.print(f"[red]❌[/red] Reset failed: {result.stderr}")
+                return False
+        except Exception as e:
+            self.console.print(f"[red]❌[/red] Error during reset: {e}")
+            return False

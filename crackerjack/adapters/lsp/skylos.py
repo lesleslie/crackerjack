@@ -73,11 +73,43 @@ class SkylosAdapter(BaseRustToolAdapter):
         if self.context.interactive:
             args.extend(["--web", "--port", str(self.web_dashboard_port)])
 
-        # Add target files or default to current directory
+        # Add target files or default to package directory to avoid scanning .venv
         if target_files:
             args.extend(str(f) for f in target_files)
         else:
-            args.append(".")
+            # Determine package name similar to tool_commands.py
+            from pathlib import Path
+
+            # Look for package directory in common locations
+            cwd = Path.cwd()
+            package_name = None
+
+            # First try to read from pyproject.toml
+            pyproject_path = cwd / "pyproject.toml"
+            if pyproject_path.exists():
+                import tomllib
+                from contextlib import suppress
+
+                with suppress(Exception):
+                    with pyproject_path.open("rb") as f:
+                        data = tomllib.load(f)
+                        project_name = data.get("project", {}).get("name")
+                        if project_name:
+                            package_name = project_name.replace("-", "_")
+
+            # Fallback: find first directory with __init__.py in project root
+            if not package_name:
+                for item in cwd.iterdir():
+                    if item.is_dir() and (item / "__init__.py").exists():
+                        if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
+                            package_name = item.name
+                            break
+
+            # Default to 'crackerjack' if nothing found
+            if not package_name:
+                package_name = "crackerjack"
+
+            args.append(f"./{package_name}")
 
         return args
 

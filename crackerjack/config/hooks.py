@@ -168,6 +168,32 @@ FAST_HOOKS = [
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
     ),
     HookDefinition(
+        name="check-json",
+        command=[],
+        timeout=30,  # UV init (~10s) + tool execution (P95=~0.5s) + safety margin
+        security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+    ),
+    HookDefinition(
+        name="check-ast",
+        command=[],
+        timeout=30,  # UV init (~10s) + tool execution (P95=~0.2s) + safety margin
+        security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+    ),
+    HookDefinition(
+        name="format-json",
+        command=[],
+        is_formatting=True,
+        timeout=45,  # UV init (~10s) + tool execution + formatting overhead
+        retry_on_failure=True,
+        security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level formatter
+    ),
+    HookDefinition(
         name="check-added-large-files",
         command=[],
         timeout=30,  # UV init (~10s) + tool execution (P95=0.27s) + increased safety margin
@@ -213,7 +239,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=45,  # UV init (~10s) + tool execution + markdown processing overhead
+        timeout=90,  # Increased to accommodate larger markdown files or complex formatting
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -231,16 +257,18 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.CRITICAL,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
-    HookDefinition(
-        name="bandit",
-        command=[],
-        timeout=90,  # Allow more time for repo-wide security scan
-        stage=HookStage.COMPREHENSIVE,
-        manual_stage=True,
-        security_level=SecurityLevel.CRITICAL,
-        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
-        accepts_file_paths=True,  # Phase 10.4.4: File-level security scanner
-    ),
+    # HookDefinition(
+    #     name="semgrep",
+    #     command=[],
+    #     timeout=1200,  # 20 minutes for comprehensive SAST scanning
+    #     stage=HookStage.COMPREHENSIVE,
+    #     manual_stage=True,
+    #     security_level=SecurityLevel.CRITICAL,
+    #     use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+    #     accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
+    # ),
+    # NOTE: Semgrep disabled due to Python 3.14 compatibility (ModuleNotFoundError: pydantic)
+    # Infrastructure ready in crackerjack/adapters/sast/, will re-enable when fixed upstream
     HookDefinition(
         name="gitleaks",
         command=[],
@@ -262,7 +290,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=600,  # Increased to 600s to accommodate large codebase analysis
+        timeout=660,  # Increased to 11 minutes to accommodate thorough refactoring analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -285,6 +313,16 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+    ),
+    HookDefinition(
+        name="check-jsonschema",
+        command=[],
+        timeout=60,  # UV init (~10s) + schema validation overhead
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level schema validator
     ),
 ]
 

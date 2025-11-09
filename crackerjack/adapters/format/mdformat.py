@@ -235,7 +235,7 @@ class MdformatAdapter(BaseToolAdapter):
                 "**/.venv/**",
                 "**/node_modules/**",
             ],
-            timeout_seconds=60,
+            timeout_seconds=300,  # Increased from 60 to 300 seconds (5 minutes) to handle larger markdown files
             is_formatter=True,  # Can modify files
             parallel_safe=True,
             stage="fast",  # Markdown formatting in fast stage

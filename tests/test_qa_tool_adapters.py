@@ -14,7 +14,7 @@ import pytest
 from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
 from crackerjack.adapters.format.mdformat import MdformatAdapter, MdformatSettings
 from crackerjack.adapters.lint.codespell import CodespellAdapter, CodespellSettings
-from crackerjack.adapters.security.bandit import BanditAdapter, BanditSettings
+from crackerjack.adapters.sast.bandit import BanditAdapter, BanditSettings
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSettings
 from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
 from crackerjack.adapters.refactor.refurb import RefurbAdapter, RefurbSettings
@@ -433,7 +433,8 @@ class TestToolAdapterModuleRegistration:
         """Test all adapter modules have MODULE_ID and MODULE_STATUS."""
         from crackerjack.adapters.format import ruff, mdformat
         from crackerjack.adapters.lint import codespell
-        from crackerjack.adapters.security import bandit, gitleaks
+        from crackerjack.adapters.sast import bandit
+        from crackerjack.adapters.security import gitleaks
         from crackerjack.adapters.type import zuban
         from crackerjack.adapters.refactor import refurb, creosote
         from crackerjack.adapters.complexity import complexipy

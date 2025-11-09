@@ -181,7 +181,7 @@ async def get_smart_agent_recommendation(
                     {"error": str(e)}, indent=2
                 )
 
-        logger.debug(f"Generated recommendation for task: {task_description[:50]}...")
+        logger.debug(f"Generated recommendation for task: {task_description[:50]}")
         return response
 
     except Exception as e:

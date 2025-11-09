@@ -1,12 +1,17 @@
-"""Security adapters for vulnerability and secret detection.
+"""Security adapters for secret leak prevention.
 
-Adapters:
-- bandit: Python security vulnerability scanner
-- gitleaks: Secret and credential detection in git history
-- pyscn: Python static code security analyzer (experimental)
+This package contains adapters for detecting hardcoded secrets and credentials
+in code repositories to prevent security breaches.
+
+Tools:
+- Gitleaks: Git-aware secrets/credentials detection with redaction
+
+Note: SAST tools (Bandit, Semgrep, Pyscn) have been moved to crackerjack.adapters.sast
 """
 
-# ACB will auto-discover these adapters via depends.set() in module files
-# No explicit imports needed here
+from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSettings
 
-__all__ = []
+__all__ = [
+    "GitleaksAdapter",
+    "GitleaksSettings",
+]

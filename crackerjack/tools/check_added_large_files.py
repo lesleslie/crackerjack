@@ -153,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
         )  # noqa: T201
         return 1
 
-    print(f"All {len(files)} file(s) are under size limit")  # noqa: T201
+    print("All files are under size limit")  # noqa: T201
     return 0
 
 

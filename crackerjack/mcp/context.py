@@ -426,7 +426,7 @@ class MCPServerContext:
         """Print websocket server startup message."""
         if self.console:
             self.console.print(
-                f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}...",
+                f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}",
             )
 
     async def _attempt_websocket_startup(self) -> bool:
@@ -575,7 +575,7 @@ class MCPServerContext:
 
     async def _terminate_live_websocket_process(self) -> None:
         if self.console:
-            self.console.print("🛑 Stopping WebSocket server...")
+            self.console.print("🛑 Stopping WebSocket server")
 
         if self.websocket_server_process is not None:
             self.websocket_server_process.terminate()
@@ -597,7 +597,7 @@ class MCPServerContext:
 
     async def _force_kill_websocket_process(self) -> None:
         if self.console:
-            self.console.print("⚡ Force killing unresponsive WebSocket server...")
+            self.console.print("⚡ Force killing unresponsive WebSocket server")
 
         if self.websocket_server_process is not None:
             self.websocket_server_process.kill()

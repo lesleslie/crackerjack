@@ -328,8 +328,8 @@ class PyscnAdapter(BaseToolAdapter):
         return issues
 
     def _get_check_type(self) -> QACheckType:
-        """Return security check type."""
-        return QACheckType.SECURITY
+        """Return SAST check type."""
+        return QACheckType.SAST
 
     def get_default_config(self) -> QACheckConfig:
         """Get default configuration for Pyscn adapter.
@@ -342,7 +342,7 @@ class PyscnAdapter(BaseToolAdapter):
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
-            check_type=QACheckType.SECURITY,
+            check_type=QACheckType.SAST,
             enabled=False,  # Disabled by default as experimental
             file_patterns=["**/*.py"],
             exclude_patterns=[

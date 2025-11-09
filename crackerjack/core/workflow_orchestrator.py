@@ -2767,6 +2767,17 @@ class WorkflowOrchestrator:
         cache = CrackerjackCache()
         depends.set(CrackerjackCache, cache)
 
+        # Register Performance Benchmark Service
+        from crackerjack.services.monitoring.performance_benchmarks import (
+            PerformanceBenchmarkService,
+        )
+        performance_benchmarks = PerformanceBenchmarkService(
+            console=self.console,
+            logger=depends.get_sync(Logger),
+            pkg_path=self.pkg_path
+        )
+        depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
+
         # Setup event system
         self._setup_event_system()
 
@@ -2851,7 +2862,57 @@ class WorkflowOrchestrator:
 
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         result: bool = await self.pipeline.run_complete_workflow(options)
+        # Ensure we properly clean up any pending tasks before finishing
+        await self._cleanup_pending_tasks()
         return result
+
+    async def _cleanup_pending_tasks(self) -> None:
+        """Clean up any remaining asyncio tasks before event loop closes."""
+        # First call the pipeline cleanup methods if they exist
+        try:
+            # Try to call specific async cleanup methods on executors/pipeline if they exist
+            if hasattr(self, 'pipeline') and hasattr(self.pipeline, 'phases'):
+                if hasattr(self.pipeline.phases, '_parallel_executor'):
+                    # If the parallel executor has an async_cleanup method, call it
+                    parallel_executor = self.pipeline.phases._parallel_executor
+                    if hasattr(parallel_executor, 'async_cleanup'):
+                        await parallel_executor.async_cleanup()
+
+                if hasattr(self.pipeline.phases, '_async_executor'):
+                    # If the async executor has an async_cleanup method, call it
+                    async_executor = self.pipeline.phases._async_executor
+                    if hasattr(async_executor, 'async_cleanup'):
+                        await async_executor.async_cleanup()
+        except Exception:
+            # If executor cleanup fails, continue with general cleanup
+            pass
+
+        try:
+            loop = asyncio.get_running_loop()
+            # Get all pending tasks
+            pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+
+            # Cancel pending tasks if they are related to subprocess operations
+            for task in pending_tasks:
+                if not task.done():
+                    try:
+                        task.cancel()
+                        # Wait a short time for cancellation to complete
+                        await asyncio.wait_for(task, timeout=0.1)
+                    except (TimeoutError, asyncio.CancelledError):
+                        # Task was cancelled or couldn't finish in time, continue
+                        pass
+                    except RuntimeError as e:
+                        # Catch the specific error when event loop is closed during task cancellation
+                        if "Event loop is closed" in str(e):
+                            # Event loop was closed while trying to cancel tasks, just return
+                            return
+                        else:
+                            # Re-raise other RuntimeErrors
+                            raise
+        except RuntimeError:
+            # No running event loop (already closed)
+            pass
 
     def run_complete_workflow_sync(self, options: OptionsProtocol) -> bool:
         """Sync wrapper for run_complete_workflow."""

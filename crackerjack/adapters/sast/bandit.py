@@ -59,6 +59,7 @@ class BanditSettings(ToolAdapterSettings):
     skip_rules: list[str] = Field(default_factory=list)
     tests_to_run: list[str] = Field(default_factory=list)
     recursive: bool = True
+    timeout_seconds: int = 1200  # 20 minutes to allow for comprehensive security scanning
 
 
 class BanditAdapter(BaseToolAdapter):
@@ -334,8 +335,8 @@ class BanditAdapter(BaseToolAdapter):
         return issues
 
     def _get_check_type(self) -> QACheckType:
-        """Return security check type."""
-        return QACheckType.SECURITY
+        """Return SAST check type."""
+        return QACheckType.SAST
 
     def get_default_config(self) -> QACheckConfig:
         """Get default configuration for Bandit adapter.
@@ -348,7 +349,7 @@ class BanditAdapter(BaseToolAdapter):
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
-            check_type=QACheckType.SECURITY,
+            check_type=QACheckType.SAST,
             enabled=True,
             file_patterns=["crackerjack/**/*.py"],  # Only target package directory
             exclude_patterns=[
@@ -366,7 +367,7 @@ class BanditAdapter(BaseToolAdapter):
                 "**/htmlcov/**",
                 "**/.coverage*",
             ],
-            timeout_seconds=120,
+            timeout_seconds=1200,  # Match the timeout in BanditSettings
             parallel_safe=True,
             stage="comprehensive",  # Security checks in comprehensive stage
             settings={

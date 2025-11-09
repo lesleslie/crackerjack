@@ -50,7 +50,7 @@ class ProactiveWorkflowPipeline:
             return await self._execute_standard_workflow(options)
 
     async def _assess_codebase_architecture(self) -> "ArchitecturalAssessment":
-        self.logger.info("Assessing codebase architecture...")
+        self.logger.info("Assessing codebase architecture")
 
         if not self._architect_agent_coordinator:
             agent_context = AgentContext(project_path=self.project_path)
@@ -107,7 +107,7 @@ class ProactiveWorkflowPipeline:
     async def _create_comprehensive_plan(
         self, assessment: "ArchitecturalAssessment"
     ) -> dict[str, t.Any]:
-        self.logger.info("Creating comprehensive architectural plan...")
+        self.logger.info("Creating comprehensive architectural plan")
 
         if self._architect_agent_coordinator is None:
             raise RuntimeError("ArchitectAgentCoordinator is not initialized")
