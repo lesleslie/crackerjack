@@ -35,7 +35,7 @@ def validate_ast_file(file_path: Path) -> tuple[bool, str | None]:
     try:
         with file_path.open(encoding="utf-8") as f:
             content = f.read()
-        
+
         # Parse the content into an AST
         ast.parse(content)
         return True, None

@@ -29,16 +29,16 @@ if t.TYPE_CHECKING:
 
 def find_schema_for_json(json_file: Path) -> Path | None:
     """Find the corresponding schema file for a JSON file.
-    
+
     Looks for schema files in common patterns:
     - {name}.schema.json
     - {name}.json (if it contains $schema reference)
     - schema.json in the same directory
     - schema.json in parent directories
-    
+
     Args:
         json_file: Path to the JSON file to validate
-        
+
     Returns:
         Path to schema file, or None if not found
     """
@@ -46,12 +46,12 @@ def find_schema_for_json(json_file: Path) -> Path | None:
     schema_path = json_file.with_name(f"{json_file.stem}.schema.json")
     if schema_path.is_file():
         return schema_path
-    
+
     # Try to find a schema reference inside the JSON file
     try:
         with json_file.open(encoding="utf-8") as f:
             data = json.load(f)
-        
+
         if isinstance(data, dict):
             schema_ref = data.get("$schema")
             if schema_ref and isinstance(schema_ref, str):
@@ -62,12 +62,12 @@ def find_schema_for_json(json_file: Path) -> Path | None:
                         return schema_path
     except (OSError, json.JSONDecodeError):
         pass
-    
+
     # Try schema.json in the same directory
     schema_path = json_file.with_name("schema.json")
     if schema_path.is_file():
         return schema_path
-    
+
     # Try finding schema.json in parent directories (up to 3 levels)
     current_dir = json_file.parent
     for _ in range(3):
@@ -77,27 +77,27 @@ def find_schema_for_json(json_file: Path) -> Path | None:
         if current_dir.parent == current_dir:  # reached root
             break
         current_dir = current_dir.parent
-    
+
     return None
 
 
 def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
     """Load a JSON schema from file.
-    
+
     Args:
         schema_path: Path to the schema file
-        
+
     Returns:
         Schema as dictionary, or None if loading fails
     """
     try:
         with schema_path.open(encoding="utf-8") as f:
             schema = json.load(f)
-        
+
         # Basic validation that this looks like a schema
         if not isinstance(schema, dict):
             return None
-            
+
         return schema
     except (OSError, json.JSONDecodeError) as e:
         print(f"Could not load schema {schema_path}: {e}", file=sys.stderr)  # noqa: T201
@@ -106,11 +106,11 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
 
 def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bool, str | None]:
     """Validate a JSON file against a schema.
-    
+
     Args:
         json_file: Path to the JSON file to validate
         schema_path: Path to the schema file
-        
+
     Returns:
         Tuple of (is_valid, error_message)
         - is_valid: True if file validates against schema
@@ -121,31 +121,31 @@ def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bo
         schema = load_schema(schema_path)
         if not schema:
             return False, f"Could not load schema: {schema_path}"
-        
+
         # Load JSON data
         with json_file.open(encoding="utf-8") as f:
             data = json.load(f)
-        
+
         # Import jsonschema only when needed to avoid dependency issues
         import jsonschema
-        
+
         # Validate the data against the schema
         validator_class = jsonschema.Draft7Validator
         if hasattr(validator_class, 'check_schema'):
             # Validate the schema itself first
             validator_class.check_schema(schema)
-        
+
         validator = validator_class(schema)
         errors = list(validator.iter_errors(data))
-        
+
         if errors:
             error_messages = [f"  {error.message}" for error in errors[:5]]  # Limit to first 5 errors
             if len(errors) > 5:
                 error_messages.append(f"  ... and {len(errors) - 5} more errors")
             return False, "Schema validation failed:\n" + "\n".join(error_messages)
-        
+
         return True, None
-        
+
     except ImportError:
         return False, "jsonschema library not available. Install with: pip install jsonschema"
     except jsonschema.SchemaError as e:
@@ -201,7 +201,7 @@ def main(argv: list[str] | None = None) -> int:
     error_count = 0
     for file_path in files:
         schema_path = find_schema_for_json(file_path)
-        
+
         if not schema_path:
             if args.strict:
                 print(f"✗ {file_path}: No schema found", file=sys.stderr)  # noqa: T201
@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> int:
             else:
                 print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
             continue
-        
+
         is_valid, error_msg = validate_json_against_schema(file_path, schema_path)
 
         if not is_valid:

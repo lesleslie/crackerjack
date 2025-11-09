@@ -50,7 +50,7 @@ def test_format_json_file_valid():
         # Read initial content to compare
         with open(file_path, "r") as fr:
             initial_content = fr.read()
-        
+
         # Format the file
         success, error_msg = format_json_file(file_path)
         assert success is True
@@ -59,7 +59,7 @@ def test_format_json_file_valid():
         # Check that it was formatted (has whitespace/indentation)
         with open(file_path, "r") as fr:
             formatted_content = fr.read()
-        
+
         # The formatted content should be different (more whitespace) but still valid
         assert formatted_content != initial_content
     finally:

@@ -257,18 +257,27 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.CRITICAL,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
+    HookDefinition(
+        name="semgrep",
+        command=[],
+        timeout=1200,  # 20 minutes for comprehensive SAST scanning
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
+    ),
+    # NOTE: Bandit replaced with Semgrep (using uvx for Python 3.13 isolation)
     # HookDefinition(
-    #     name="semgrep",
+    #     name="bandit",
     #     command=[],
-    #     timeout=1200,  # 20 minutes for comprehensive SAST scanning
+    #     timeout=180,  # 3 minutes for SAST scanning
     #     stage=HookStage.COMPREHENSIVE,
     #     manual_stage=True,
     #     security_level=SecurityLevel.CRITICAL,
     #     use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     #     accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
     # ),
-    # NOTE: Semgrep disabled due to Python 3.14 compatibility (ModuleNotFoundError: pydantic)
-    # Infrastructure ready in crackerjack/adapters/sast/, will re-enable when fixed upstream
     HookDefinition(
         name="gitleaks",
         command=[],
