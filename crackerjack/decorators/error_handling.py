@@ -386,9 +386,7 @@ def retry(
             return _create_async_retry_wrapper(
                 func, max_attempts, retry_exceptions, backoff
             )
-        return _create_sync_retry_wrapper(
-            func, max_attempts, retry_exceptions, backoff
-        )
+        return _create_sync_retry_wrapper(func, max_attempts, retry_exceptions, backoff)
 
     return decorator
 
@@ -515,7 +513,7 @@ def _normalize_validators(
 def _create_validator_runner(
     validator_map: dict[
         str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
-    ]
+    ],
 ) -> t.Callable[[str, t.Any], None]:
     """Create function to run validators for a parameter."""
 

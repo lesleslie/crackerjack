@@ -40,7 +40,9 @@ async def clean_temp_files(
     total_size = 0
 
     for directory in directories:
-        batch_files, batch_size = _process_directory(directory, patterns, cutoff, dry_run)
+        batch_files, batch_size = _process_directory(
+            directory, patterns, cutoff, dry_run
+        )
         cleaned_files.extend(batch_files)
         total_size += batch_size
 
@@ -50,7 +52,9 @@ async def clean_temp_files(
     }
 
 
-def _process_directory(directory: Path, patterns: list[str], cutoff: t.Any, dry_run: bool) -> tuple[list[str], int]:
+def _process_directory(
+    directory: Path, patterns: list[str], cutoff: t.Any, dry_run: bool
+) -> tuple[list[str], int]:
     """Process a single directory for cleaning."""
     if not directory.exists():
         return [], 0
@@ -66,7 +70,9 @@ def _process_directory(directory: Path, patterns: list[str], cutoff: t.Any, dry_
     return cleaned_files, total_size
 
 
-def _process_pattern(directory: Path, pattern: str, cutoff: t.Any, dry_run: bool) -> tuple[list[str], int]:
+def _process_pattern(
+    directory: Path, pattern: str, cutoff: t.Any, dry_run: bool
+) -> tuple[list[str], int]:
     """Process a single pattern within a directory."""
     cleaned_files = []
     total_size = 0

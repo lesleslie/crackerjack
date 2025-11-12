@@ -143,7 +143,7 @@ class SemgrepAdapter(BaseToolAdapter):
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
-            return [] # No text parsing for semgrep for now
+            return []  # No text parsing for semgrep for now
 
         issues = []
         for item in data.get("results", []):

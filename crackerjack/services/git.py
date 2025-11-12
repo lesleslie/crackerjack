@@ -346,7 +346,10 @@ class GitService(GitInterface):
         return 0
 
     def get_changed_files_by_extension(
-        self, extensions: list[str], include_staged: bool = True, include_unstaged: bool = True
+        self,
+        extensions: list[str],
+        include_staged: bool = True,
+        include_unstaged: bool = True,
     ) -> list[Path]:
         """Get changed files filtered by file extensions.
 
@@ -407,7 +410,9 @@ class GitService(GitInterface):
         try:
             result = self._run_git_command(["reset", "--hard", commit_hash])
             if result.returncode == 0:
-                self.console.print(f"[green]✅[/green] Repository reset to {commit_hash[:8]}")
+                self.console.print(
+                    f"[green]✅[/green] Repository reset to {commit_hash[:8]}"
+                )
                 return True
             else:
                 self.console.print(f"[red]❌[/red] Reset failed: {result.stderr}")

@@ -141,10 +141,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "run",
             "bandit",
             "-r",  # Recursive scanning
-            "--format", "json",  # JSON output for structured parsing
-            "--severity-level", "low",  # Detect all severity levels
-            "--confidence-level", "low",  # Detect all confidence levels
-            "-x", "tests",  # Exclude tests directory
+            "--format",
+            "json",  # JSON output for structured parsing
+            "--severity-level",
+            "low",  # Detect all severity levels
+            "--confidence-level",
+            "low",  # Detect all confidence levels
+            "-x",
+            "tests",  # Exclude tests directory
             f"./{package_name}",  # Target only the package directory
         ],
         "semgrep": [

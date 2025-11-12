@@ -545,13 +545,9 @@ class PhaseCoordinator:
 
         self.console.print()
 
-    def _calculate_hook_statistics(
-        self, results: list[HookResult]
-    ) -> dict[str, t.Any]:
+    def _calculate_hook_statistics(self, results: list[HookResult]) -> dict[str, t.Any]:
         """Calculate statistics from hook results."""
-        passed_hooks = [
-            r for r in results if r.status.lower() in {"passed", "success"}
-        ]
+        passed_hooks = [r for r in results if r.status.lower() in {"passed", "success"}]
         failed_hooks = [
             r for r in results if r.status.lower() in {"failed", "error", "timeout"}
         ]
@@ -792,7 +788,9 @@ class PhaseCoordinator:
             return False
 
         # STAGE 3: Publish to PyPI
-        if not self._publish_to_pypi(options, new_version, original_head, current_commit_hash):
+        if not self._publish_to_pypi(
+            options, new_version, original_head, current_commit_hash
+        ):
             return False
 
         # Finalize publishing
@@ -816,9 +814,7 @@ class PhaseCoordinator:
         )
         commit_message = self._get_commit_message(existing_changes, options)
         if not self._execute_commit_and_push(existing_changes, commit_message):
-            self.session.fail_task(
-                "publishing", "Failed to commit pre-publish changes"
-            )
+            self.session.fail_task("publishing", "Failed to commit pre-publish changes")
             return False
         self.console.print(
             "[green]✅[/green] Pre-publish changes committed and pushed\n"
@@ -873,7 +869,7 @@ class PhaseCoordinator:
         options: OptionsProtocol,
         new_version: str,
         original_head: str | None,
-        current_commit_hash: str | None
+        current_commit_hash: str | None,
     ) -> bool:
         """Publish the package to PyPI."""
         self._display_publish_header()

@@ -55,6 +55,7 @@ class RuffSettings(ToolAdapterSettings):
     tool_name: str = "ruff"
     mode: str = "check"  # "check" or "format"
     fix_enabled: bool = False
+    unsafe_fixes: bool = False  # Enable unsafe auto-fixes for ruff check
     select_rules: list[str] = Field(default_factory=list)
     ignore_rules: list[str] = Field(default_factory=list)
     line_length: int | None = None
@@ -177,6 +178,10 @@ class RuffAdapter(BaseToolAdapter):
 
         if self.settings.fix_enabled:
             cmd.append("--fix")
+
+            # Add unsafe-fixes flag when enabled (requires --fix)
+            if self.settings.unsafe_fixes:
+                cmd.append("--unsafe-fixes")
 
         if self.settings.use_json_output:
             cmd.extend(["--output-format", "json"])
@@ -353,7 +358,9 @@ class RuffAdapter(BaseToolAdapter):
         except (ValueError, IndexError):
             return None
 
-    def _extract_check_code_and_message(self, message_part: str) -> tuple[str | None, str]:
+    def _extract_check_code_and_message(
+        self, message_part: str
+    ) -> tuple[str | None, str]:
         """Extract code and message from Ruff check output.
 
         Args:

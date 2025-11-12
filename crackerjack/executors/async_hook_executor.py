@@ -225,9 +225,7 @@ class AsyncHookExecutor:
         for proc in list(self._running_processes):
             await self._terminate_single_process(proc)
 
-    async def _terminate_single_process(
-        self, proc: asyncio.subprocess.Process
-    ) -> None:
+    async def _terminate_single_process(self, proc: asyncio.subprocess.Process) -> None:
         """Terminate a single subprocess safely."""
         try:
             if proc.returncode is None:
@@ -259,8 +257,9 @@ class AsyncHookExecutor:
     def _get_pending_hook_tasks(self, loop: asyncio.AbstractEventLoop) -> list:
         """Get list of pending hook-related tasks."""
         return [
-            task for task in asyncio.all_tasks(loop)
-            if not task.done() and 'hook' in str(task).lower()
+            task
+            for task in asyncio.all_tasks(loop)
+            if not task.done() and "hook" in str(task).lower()
         ]
 
     async def _cancel_tasks(self, tasks: list) -> None:
@@ -375,7 +374,9 @@ class AsyncHookExecutor:
             self._last_stderr = stderr
             return None
         except TimeoutError:
-            return await self._handle_process_timeout(process, hook, timeout_val, start_time)
+            return await self._handle_process_timeout(
+                process, hook, timeout_val, start_time
+            )
 
     async def _handle_process_timeout(
         self,
@@ -443,9 +444,7 @@ class AsyncHookExecutor:
         duration: float,
     ) -> HookResult:
         """Build HookResult from successful process execution."""
-        output_text = self._decode_process_output(
-            self._last_stdout, self._last_stderr
-        )
+        output_text = self._decode_process_output(self._last_stdout, self._last_stderr)
         return_code = process.returncode if process.returncode is not None else -1
         parsed_output = self._parse_hook_output(return_code, output_text, hook.name)
 
@@ -471,9 +470,7 @@ class AsyncHookExecutor:
             stage=hook.stage.value,
         )
 
-    def _decode_process_output(
-        self, stdout: bytes | None, stderr: bytes | None
-    ) -> str:
+    def _decode_process_output(self, stdout: bytes | None, stderr: bytes | None) -> str:
         """Decode process stdout and stderr into a single string."""
         stdout_text = stdout.decode() if stdout else ""
         stderr_text = stderr.decode() if stderr else ""
@@ -546,7 +543,7 @@ class AsyncHookExecutor:
             stripped_output = output.strip()
 
             # Try parsing entire output as JSON
-            if stripped_output.startswith('{'):
+            if stripped_output.startswith("{"):
                 count = self._extract_file_count_from_json(stripped_output)
                 if count is not None:
                     return count
@@ -562,10 +559,9 @@ class AsyncHookExecutor:
 
         try:
             json_data = json.loads(json_str)
-            if 'results' in json_data:
+            if "results" in json_data:
                 file_paths = {
-                    result.get('path')
-                    for result in json_data.get('results', [])
+                    result.get("path") for result in json_data.get("results", [])
                 }
                 return len([p for p in file_paths if p])
         except json.JSONDecodeError:
@@ -578,7 +574,7 @@ class AsyncHookExecutor:
         lines = output.splitlines()
         for line in lines:
             line = line.strip()
-            if line.startswith('{') and line.endswith('}'):
+            if line.startswith("{") and line.endswith("}"):
                 count = self._extract_file_count_from_json(line)
                 if count is not None:
                     return count
@@ -603,9 +599,7 @@ class AsyncHookExecutor:
 
         return 0
 
-    def _process_semgrep_matches(
-        self, matches: list, output: str
-    ) -> int | None:
+    def _process_semgrep_matches(self, matches: list, output: str) -> int | None:
         """Process regex matches from Semgrep output."""
         for match in matches:
             if isinstance(match, tuple):
@@ -618,7 +612,9 @@ class AsyncHookExecutor:
                 return 0
         return None
 
-    def _parse_hook_output(self, returncode: int, output: str, hook_name: str = "") -> dict[str, t.Any]:
+    def _parse_hook_output(
+        self, returncode: int, output: str, hook_name: str = ""
+    ) -> dict[str, t.Any]:
         """Parse hook output to extract file counts and other metrics.
 
         Args:
@@ -662,7 +658,7 @@ class AsyncHookExecutor:
     def _parse_large_files_output(self, output: str, returncode: int) -> int:
         """Parse check-added-large-files output to count files exceeding size limit."""
 
-        clean_output = output.replace('\\n', '\n').replace('\\t', '\t')
+        clean_output = output.replace("\\n", "\n").replace("\\t", "\t")
 
         # Try to find explicit failure patterns
         failure_count = self._find_large_file_failures(clean_output)
@@ -710,7 +706,7 @@ class AsyncHookExecutor:
         """Extract file count from general hook output."""
         import re
 
-        clean_output = output.replace('\\n', '\n').replace('\\t', '\t')
+        clean_output = output.replace("\\n", "\n").replace("\\t", "\t")
         patterns = self._get_file_count_patterns()
 
         all_matches = []

@@ -92,7 +92,9 @@ class HookManagerImpl:
             # Legacy parameters (enable_orchestration, orchestration_mode) are ignored
             # when an explicit config object is provided
             self._orchestration_config = orchestration_config
-            self.orchestration_enabled = False # orchestration_config.enable_orchestration
+            self.orchestration_enabled = (
+                False  # orchestration_config.enable_orchestration
+            )
             self.orchestration_mode = orchestration_config.orchestration_mode
         else:
             # Try to load from project config file
@@ -500,7 +502,9 @@ class HookManagerImpl:
 
         # Use wall-clock time if provided (parallel execution), else sum durations (sequential)
         total_duration = (
-            elapsed_time if elapsed_time is not None else sum(r.duration for r in results)
+            elapsed_time
+            if elapsed_time is not None
+            else sum(r.duration for r in results)
         )
 
         return {

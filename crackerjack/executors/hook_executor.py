@@ -475,13 +475,17 @@ class HookExecutor:
     def _parse_complexipy_issues(self, output: str) -> list[str]:
         """Parse complexipy table output to count actual violations (complexity > 15)."""
         # TEMP: Always print to diagnose issue
-        print(f"\n🔍 DEBUG _parse_complexipy_issues called, output length: {len(output)}")
+        print(
+            f"\n🔍 DEBUG _parse_complexipy_issues called, output length: {len(output)}"
+        )
         issues = []
         for line in output.split("\n"):
             # Match table rows: │ path │ file │ function │ complexity │
             if "│" in line and "crackerjack" in line:
                 # Skip header/separator rows
-                if not any(x in line for x in ["Path", "─────", "┌", "└", "├", "┼", "┤", "┃"]):
+                if not any(
+                    x in line for x in ["Path", "─────", "┌", "└", "├", "┼", "┤", "┃"]
+                ):
                     # Extract complexity value (last column)
                     parts = [p.strip() for p in line.split("│") if p.strip()]
                     if len(parts) >= 4:
@@ -586,7 +590,9 @@ class HookExecutor:
         """Check if the output is from semgrep."""
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()
 
-    def _create_parse_result(self, files_processed: int, exit_code: int, output: str) -> dict[str, t.Any]:
+    def _create_parse_result(
+        self, files_processed: int, exit_code: int, output: str
+    ) -> dict[str, t.Any]:
         """Create the parse result dictionary."""
         return {
             "hook_id": None,
@@ -662,7 +668,7 @@ class HookExecutor:
 
     def _is_pure_json(self, line: str) -> bool:
         """Check if a line is a pure JSON object."""
-        return line.startswith('{') and line.endswith('}')
+        return line.startswith("{") and line.endswith("}")
 
     def _contains_json_results(self, line: str) -> bool:
         """Check if a line contains JSON results."""
@@ -677,9 +683,11 @@ class HookExecutor:
         """
         try:
             json_data = json.loads(line)
-            if 'results' in json_data:
+            if "results" in json_data:
                 # Count unique file paths in results
-                file_paths = {result.get('path') for result in json_data.get('results', [])}
+                file_paths = {
+                    result.get("path") for result in json_data.get("results", [])
+                }
                 return len([p for p in file_paths if p])  # Filter out None values
         except json.JSONDecodeError:
             pass

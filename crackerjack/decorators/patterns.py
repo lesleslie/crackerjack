@@ -66,13 +66,17 @@ def _create_async_wrapper(
     async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:
             result = await func(*args, **kwargs)
-            await _handle_result_analysis(result, error_cache, func, error_type, auto_analyze)
+            await _handle_result_analysis(
+                result, error_cache, func, error_type, auto_analyze
+            )
             return result
         except CrackerjackError as e:
             await _cache_crackerjack_error(error_cache, e, func, error_type)
             raise
         except Exception as e:
-            await _handle_generic_exception(e, error_cache, func, error_type, auto_analyze)
+            await _handle_generic_exception(
+                e, error_cache, func, error_type, auto_analyze
+            )
             raise
 
     return async_wrapper
@@ -90,13 +94,17 @@ def _create_sync_wrapper(
     def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:
             result = func(*args, **kwargs)
-            _handle_result_analysis_sync(result, error_cache, func, error_type, auto_analyze)
+            _handle_result_analysis_sync(
+                result, error_cache, func, error_type, auto_analyze
+            )
             return result
         except CrackerjackError as e:
             _cache_crackerjack_error_sync(error_cache, e, func, error_type)
             raise
         except Exception as e:
-            _handle_generic_exception_sync(e, error_cache, func, error_type, auto_analyze)
+            _handle_generic_exception_sync(
+                e, error_cache, func, error_type, auto_analyze
+            )
             raise
 
     return sync_wrapper

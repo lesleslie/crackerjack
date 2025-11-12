@@ -56,7 +56,9 @@ class ProgressHookExecutor(HookExecutor):
             use_incremental: Run hooks only on changed files
             git_service: GitService instance for incremental execution
         """
-        super().__init__(console, pkg_path, verbose, quiet, debug, use_incremental, git_service)
+        super().__init__(
+            console, pkg_path, verbose, quiet, debug, use_incremental, git_service
+        )
         self.show_progress = show_progress and not quiet
         self.debug = debug
 

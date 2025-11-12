@@ -44,7 +44,9 @@ def format_json_file(file_path: Path) -> tuple[bool, str | None]:
         data = json.loads(content)
 
         # Format with consistent indentation
-        formatted_content = json.dumps(data, indent=2, ensure_ascii=False, sort_keys=True)
+        formatted_content = json.dumps(
+            data, indent=2, ensure_ascii=False, sort_keys=True
+        )
 
         # Add a newline at the end to match common formatting practices
         formatted_content += "\n"
@@ -70,7 +72,9 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code: 0 if all JSON files formatted successfully, 1 if any errors
     """
-    parser = argparse.ArgumentParser(description="Format JSON files to ensure consistent style")
+    parser = argparse.ArgumentParser(
+        description="Format JSON files to ensure consistent style"
+    )
     parser.add_argument(
         "files",
         nargs="*",

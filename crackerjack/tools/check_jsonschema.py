@@ -104,7 +104,9 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
         return None
 
 
-def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bool, str | None]:
+def validate_json_against_schema(
+    json_file: Path, schema_path: Path
+) -> tuple[bool, str | None]:
     """Validate a JSON file against a schema.
 
     Args:
@@ -131,7 +133,7 @@ def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bo
 
         # Validate the data against the schema
         validator_class = jsonschema.Draft7Validator
-        if hasattr(validator_class, 'check_schema'):
+        if hasattr(validator_class, "check_schema"):
             # Validate the schema itself first
             validator_class.check_schema(schema)
 
@@ -139,7 +141,9 @@ def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bo
         errors = list(validator.iter_errors(data))
 
         if errors:
-            error_messages = [f"  {error.message}" for error in errors[:5]]  # Limit to first 5 errors
+            error_messages = [
+                f"  {error.message}" for error in errors[:5]
+            ]  # Limit to first 5 errors
             if len(errors) > 5:
                 error_messages.append(f"  ... and {len(errors) - 5} more errors")
             return False, "Schema validation failed:\n" + "\n".join(error_messages)
@@ -147,7 +151,10 @@ def validate_json_against_schema(json_file: Path, schema_path: Path) -> tuple[bo
         return True, None
 
     except ImportError:
-        return False, "jsonschema library not available. Install with: pip install jsonschema"
+        return (
+            False,
+            "jsonschema library not available. Install with: pip install jsonschema",
+        )
     except jsonschema.SchemaError as e:
         return False, f"Invalid schema: {e}"
     except json.JSONDecodeError as e:
@@ -165,7 +172,9 @@ def main(argv: list[str] | None = None) -> int:
     Returns:
         Exit code: 0 if all JSON files validate against schemas, 1 if any errors found
     """
-    parser = argparse.ArgumentParser(description="Validate JSON files against JSON Schema definitions")
+    parser = argparse.ArgumentParser(
+        description="Validate JSON files against JSON Schema definitions"
+    )
     parser.add_argument(
         "files",
         nargs="*",
@@ -223,7 +232,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr)  # noqa: T201
         return 1
 
-    print(f"\nAll {len([f for f in files if find_schema_for_json(f)])} JSON file(s) passed schema validation")  # noqa: T201
+    print(
+        f"\nAll {len([f for f in files if find_schema_for_json(f)])} JSON file(s) passed schema validation"
+    )  # noqa: T201
     return 0
 
 

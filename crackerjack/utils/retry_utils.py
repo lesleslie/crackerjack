@@ -85,13 +85,31 @@ def retry(
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> T:
             return await _retry_async(
-                func, args, kwargs, max_attempts, delay, backoff, max_delay, jitter, exceptions, logger_func
+                func,
+                args,
+                kwargs,
+                max_attempts,
+                delay,
+                backoff,
+                max_delay,
+                jitter,
+                exceptions,
+                logger_func,
             )
 
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> T:
             return _retry_sync(
-                func, args, kwargs, max_attempts, delay, backoff, max_delay, jitter, exceptions, logger_func
+                func,
+                args,
+                kwargs,
+                max_attempts,
+                delay,
+                backoff,
+                max_delay,
+                jitter,
+                exceptions,
+                logger_func,
             )
 
         if asyncio.iscoroutinefunction(func):

@@ -101,7 +101,9 @@ class SequentialExecutionStrategy:
         self._log_execution_complete(results, hooks)
         return results
 
-    def _log_execution_start(self, hooks: list[HookDefinition], timeout_sec: int) -> None:
+    def _log_execution_start(
+        self, hooks: list[HookDefinition], timeout_sec: int
+    ) -> None:
         """Log sequential execution start information."""
         logger.info(
             "Starting sequential execution",
@@ -157,9 +159,7 @@ class SequentialExecutionStrategy:
     ) -> HookResult:
         """Run hook with executor or return placeholder."""
         if executor_callable:
-            return await asyncio.wait_for(
-                executor_callable(hook), timeout=hook_timeout
-            )
+            return await asyncio.wait_for(executor_callable(hook), timeout=hook_timeout)
         return self._placeholder_result(hook)
 
     def _log_hook_completion(self, hook: HookDefinition, result: HookResult) -> None:
@@ -190,7 +190,9 @@ class SequentialExecutionStrategy:
             issues_found=[f"Hook timed out after {hook_timeout}s"],
         )
 
-    def _handle_exception(self, hook: HookDefinition, exception: Exception) -> HookResult:
+    def _handle_exception(
+        self, hook: HookDefinition, exception: Exception
+    ) -> HookResult:
         """Handle hook execution exception."""
         logger.error(
             f"Hook {hook.name} raised exception",
@@ -209,7 +211,10 @@ class SequentialExecutionStrategy:
         )
 
     def _log_early_exit(
-        self, hook: HookDefinition, results: list[HookResult], hooks: list[HookDefinition]
+        self,
+        hook: HookDefinition,
+        results: list[HookResult],
+        hooks: list[HookDefinition],
     ) -> None:
         """Log early exit due to critical failure."""
         remaining_hooks = len(hooks) - len(results)

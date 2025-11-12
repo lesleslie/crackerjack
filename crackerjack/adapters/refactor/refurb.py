@@ -56,7 +56,9 @@ class RefurbSettings(ToolAdapterSettings):
     enable_checks: list[str] = Field(default_factory=list)
     python_version: str | None = None  # e.g., "3.13"
     explain: bool = False  # Show detailed explanations
-    timeout_seconds: int = 660  # 11 minutes to allow for comprehensive refactoring analysis
+    timeout_seconds: int = (
+        660  # 11 minutes to allow for comprehensive refactoring analysis
+    )
 
 
 class RefurbAdapter(BaseToolAdapter):
@@ -296,9 +298,7 @@ class RefurbAdapter(BaseToolAdapter):
             return remaining[len(first_part) :].strip()
         return remaining
 
-    def _extract_code_and_message(
-        self, message_part: str
-    ) -> tuple[str | None, str]:
+    def _extract_code_and_message(self, message_part: str) -> tuple[str | None, str]:
         """Extract code and message from message part.
 
         Args:

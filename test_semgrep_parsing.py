@@ -15,7 +15,7 @@ def test_semgrep_parsing():
     console = Console()
     pkg_path = Path.cwd()
     executor = HookExecutor(console, pkg_path)
-    
+
     # Test case 1: Semgrep passes with no issues found (should report 0 files)
     result1 = CompletedProcess(
         args=["semgrep", "scan"],
@@ -23,7 +23,7 @@ def test_semgrep_parsing():
         stdout='{"results": [], "errors": []}',
         stderr="Scanning 377 files"
     )
-    
+
     parsed1 = executor._parse_hook_output(result1, "semgrep")
     print(f"Test 1 - No issues found:")
     print(f"  Files processed: {parsed1['files_processed']}")

@@ -160,12 +160,12 @@ def register_services() -> None:
         except Exception:
             # If not registered, create it using proper DI
             console = depends.get_sync(Console)
-            logger = depends.get_sync(Logger)  # Get the logger instead of LoggerProtocol
+            logger = depends.get_sync(
+                Logger
+            )  # Get the logger instead of LoggerProtocol
             pkg_path = Path.cwd()  # Use current directory as fallback
             performance_benchmarks = PerformanceBenchmarkService(
-                console=console,
-                logger=logger,
-                pkg_path=pkg_path
+                console=console, logger=logger, pkg_path=pkg_path
             )
             # Register the newly created instance
             depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)

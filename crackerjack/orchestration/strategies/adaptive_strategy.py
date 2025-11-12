@@ -300,7 +300,9 @@ class AdaptiveExecutionStrategy:
 
         while remaining_hooks:
             iteration += 1
-            if self._check_max_iterations_exceeded(iteration, max_iterations, remaining_hooks, hook_map, waves):
+            if self._check_max_iterations_exceeded(
+                iteration, max_iterations, remaining_hooks, hook_map, waves
+            ):
                 break
 
             ready_hooks = self._find_ready_hooks(remaining_hooks, in_degree, hook_map)
@@ -309,7 +311,9 @@ class AdaptiveExecutionStrategy:
             waves.append(ready_hooks)
             self._log_wave_ready(waves, ready_hooks, remaining_hooks)
 
-            self._update_dependencies_after_wave(ready_hooks, remaining_hooks, in_degree)
+            self._update_dependencies_after_wave(
+                ready_hooks, remaining_hooks, in_degree
+            )
 
         return waves
 
@@ -341,9 +345,7 @@ class AdaptiveExecutionStrategy:
         hook_map: dict[str, HookDefinition],
     ) -> list[HookDefinition]:
         """Find all hooks with zero dependencies in current wave."""
-        return [
-            hook_map[name] for name in remaining_hooks if in_degree[name] == 0
-        ]
+        return [hook_map[name] for name in remaining_hooks if in_degree[name] == 0]
 
     def _validate_wave_progress(
         self,
@@ -357,9 +359,7 @@ class AdaptiveExecutionStrategy:
                 "Circular dependency detected",
                 extra={
                     "remaining_hooks": list(remaining_hooks),
-                    "in_degrees": {
-                        name: in_degree[name] for name in remaining_hooks
-                    },
+                    "in_degrees": {name: in_degree[name] for name in remaining_hooks},
                 },
             )
             raise ValueError(
@@ -450,7 +450,9 @@ class AdaptiveExecutionStrategy:
             with suppress(Exception):
                 on_hook_start()
 
-    def _notify_hook_complete(self, on_hook_complete: t.Callable[[], None] | None) -> None:
+    def _notify_hook_complete(
+        self, on_hook_complete: t.Callable[[], None] | None
+    ) -> None:
         """Notify that hook execution has completed."""
         if on_hook_complete:
             with suppress(Exception):
@@ -473,7 +475,9 @@ class AdaptiveExecutionStrategy:
                 },
             )
 
-            result = await self._run_hook_with_executor(hook, hook_timeout, executor_callable)
+            result = await self._run_hook_with_executor(
+                hook, hook_timeout, executor_callable
+            )
 
             logger.debug(
                 f"Hook {hook.name} completed",
@@ -498,9 +502,7 @@ class AdaptiveExecutionStrategy:
     ) -> HookResult:
         """Run hook with executor or return placeholder."""
         if executor_callable:
-            return await asyncio.wait_for(
-                executor_callable(hook), timeout=hook_timeout
-            )
+            return await asyncio.wait_for(executor_callable(hook), timeout=hook_timeout)
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -508,7 +510,9 @@ class AdaptiveExecutionStrategy:
             duration=0.0,
         )
 
-    def _create_timeout_result(self, hook: HookDefinition, hook_timeout: int) -> HookResult:
+    def _create_timeout_result(
+        self, hook: HookDefinition, hook_timeout: int
+    ) -> HookResult:
         """Create HookResult for timeout condition."""
         logger.warning(
             f"Hook {hook.name} timed out",
@@ -524,7 +528,9 @@ class AdaptiveExecutionStrategy:
             duration=hook_timeout,
         )
 
-    def _create_error_result(self, hook: HookDefinition, exception: Exception) -> HookResult:
+    def _create_error_result(
+        self, hook: HookDefinition, exception: Exception
+    ) -> HookResult:
         """Create HookResult for exception condition."""
         logger.error(
             f"Hook {hook.name} raised exception",

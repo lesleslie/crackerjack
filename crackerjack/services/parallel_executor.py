@@ -68,8 +68,12 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         """Async cleanup for any remaining tasks."""
         try:
             loop = asyncio.get_running_loop()
-            pending_tasks = [task for task in asyncio.all_tasks(loop)
-                           if not task.done() and ('hook' in str(task).lower() or 'parallel' in str(task).lower())]
+            pending_tasks = [
+                task
+                for task in asyncio.all_tasks(loop)
+                if not task.done()
+                and ("hook" in str(task).lower() or "parallel" in str(task).lower())
+            ]
 
             for task in pending_tasks:
                 if not task.done():
@@ -346,8 +350,12 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         """Async cleanup for any remaining command executor tasks."""
         try:
             loop = asyncio.get_running_loop()
-            pending_tasks = [task for task in asyncio.all_tasks(loop)
-                           if not task.done() and ('command' in str(task).lower() or 'async' in str(task).lower())]
+            pending_tasks = [
+                task
+                for task in asyncio.all_tasks(loop)
+                if not task.done()
+                and ("command" in str(task).lower() or "async" in str(task).lower())
+            ]
 
             for task in pending_tasks:
                 if not task.done():

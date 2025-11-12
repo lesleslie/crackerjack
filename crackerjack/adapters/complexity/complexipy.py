@@ -53,7 +53,9 @@ class ComplexipySettings(ToolAdapterSettings):
     max_complexity: int = 15  # crackerjack standard
     include_cognitive: bool = True
     include_maintainability: bool = True
-    sort_by: str = "desc"  # Valid options: asc, desc, name (sorts by complexity descending)
+    sort_by: str = (
+        "desc"  # Valid options: asc, desc, name (sorts by complexity descending)
+    )
 
 
 class ComplexipyAdapter(BaseToolAdapter):
@@ -200,7 +202,10 @@ class ComplexipyAdapter(BaseToolAdapter):
                     data = json.load(f)
                 logger.debug(
                     "Read Complexipy JSON file",
-                    extra={"file": str(json_file), "entries": len(data) if isinstance(data, list) else "N/A"},
+                    extra={
+                        "file": str(json_file),
+                        "entries": len(data) if isinstance(data, list) else "N/A",
+                    },
                 )
             except (json.JSONDecodeError, OSError) as e:
                 logger.warning(
@@ -259,7 +264,11 @@ class ComplexipyAdapter(BaseToolAdapter):
 
                 file_path = Path(func.get("path", ""))
                 function_name = func.get("function_name", "unknown")
-                severity = "error" if complexity > self.settings.max_complexity * 2 else "warning"
+                severity = (
+                    "error"
+                    if complexity > self.settings.max_complexity * 2
+                    else "warning"
+                )
 
                 issue = ToolIssue(
                     file_path=file_path,
@@ -275,10 +284,14 @@ class ComplexipyAdapter(BaseToolAdapter):
         # Handle legacy nested structure (backwards compatibility)
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
-            issues.extend(self._process_file_data(file_path, file_data.get("functions", [])))
+            issues.extend(
+                self._process_file_data(file_path, file_data.get("functions", []))
+            )
         return issues
 
-    def _process_file_data(self, file_path: Path, functions: list[dict]) -> list[ToolIssue]:
+    def _process_file_data(
+        self, file_path: Path, functions: list[dict]
+    ) -> list[ToolIssue]:
         """Process function data for a specific file.
 
         Args:
@@ -417,7 +430,11 @@ class ComplexipyAdapter(BaseToolAdapter):
             if func_data:
                 func_name, line_number, complexity = func_data
                 if complexity > self.settings.max_complexity:
-                    severity = "error" if complexity > self.settings.max_complexity * 2 else "warning"
+                    severity = (
+                        "error"
+                        if complexity > self.settings.max_complexity * 2
+                        else "warning"
+                    )
                     return ToolIssue(
                         file_path=current_file,
                         line_number=line_number,

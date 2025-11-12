@@ -144,7 +144,10 @@ class GitInterface(t.Protocol):
     def get_staged_files(self) -> list[str]: ...
 
     def get_changed_files_by_extension(
-        self, extensions: list[str], include_staged: bool = True, include_unstaged: bool = True
+        self,
+        extensions: list[str],
+        include_staged: bool = True,
+        include_unstaged: bool = True,
     ) -> list[Path]: ...
 
     def commit(self, message: str) -> bool: ...

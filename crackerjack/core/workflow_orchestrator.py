@@ -114,7 +114,9 @@ class WorkflowPipeline:
                 testing=getattr(options, "test", False),
                 skip_hooks=getattr(options, "skip_hooks", False),
             ):
-                success = await self._execute_workflow(options, workflow_id, event_context, start_time)
+                success = await self._execute_workflow(
+                    options, workflow_id, event_context, start_time
+                )
             return success
         except KeyboardInterrupt:
             return await self._handle_keyboard_interrupt(workflow_id, event_context)
@@ -123,16 +125,30 @@ class WorkflowPipeline:
         finally:
             await self._cleanup_workflow_resources()
 
-    async def _execute_workflow(self, options: OptionsProtocol, workflow_id: str, event_context: dict[str, t.Any], start_time: float) -> bool:
+    async def _execute_workflow(
+        self,
+        options: OptionsProtocol,
+        workflow_id: str,
+        event_context: dict[str, t.Any],
+        start_time: float,
+    ) -> bool:
         """Execute the workflow either event-driven or sequentially."""
         if self._event_bus:
             return await self._run_event_driven_workflow(
                 options, workflow_id, event_context, start_time
             )
         else:
-            return await self._run_sequential_workflow(options, workflow_id, event_context, start_time)
+            return await self._run_sequential_workflow(
+                options, workflow_id, event_context, start_time
+            )
 
-    async def _run_sequential_workflow(self, options: OptionsProtocol, workflow_id: str, event_context: dict[str, t.Any], start_time: float) -> bool:
+    async def _run_sequential_workflow(
+        self,
+        options: OptionsProtocol,
+        workflow_id: str,
+        event_context: dict[str, t.Any],
+        start_time: float,
+    ) -> bool:
         """Execute the workflow sequentially."""
         await self._publish_event(
             WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
@@ -158,7 +174,9 @@ class WorkflowPipeline:
         self._performance_monitor.end_workflow(workflow_id, success)
         return success
 
-    async def _handle_keyboard_interrupt(self, workflow_id: str, event_context: dict[str, t.Any]) -> bool:
+    async def _handle_keyboard_interrupt(
+        self, workflow_id: str, event_context: dict[str, t.Any]
+    ) -> bool:
         """Handle keyboard interrupt during workflow execution."""
         self._performance_monitor.end_workflow(workflow_id, False)
         await self._publish_event(
@@ -167,7 +185,9 @@ class WorkflowPipeline:
         )
         return self._handle_user_interruption()
 
-    async def _handle_general_exception(self, e: Exception, workflow_id: str, event_context: dict[str, t.Any]) -> bool:
+    async def _handle_general_exception(
+        self, e: Exception, workflow_id: str, event_context: dict[str, t.Any]
+    ) -> bool:
         """Handle general exceptions during workflow execution."""
         self._performance_monitor.end_workflow(workflow_id, False)
         await self._publish_event(
@@ -2797,7 +2817,9 @@ class WorkflowOrchestrator:
         )
 
         performance_benchmarks = PerformanceBenchmarkService(
-            console=self.console, logger=depends.get_sync(Logger), pkg_path=self.pkg_path
+            console=self.console,
+            logger=depends.get_sync(Logger),
+            pkg_path=self.pkg_path,
         )
         depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
 
@@ -2898,18 +2920,24 @@ class WorkflowOrchestrator:
         """Clean up specific pipeline executors."""
         try:
             # Try to call specific async cleanup methods on executors/pipeline if they exist
-            if hasattr(self, 'pipeline') and hasattr(self.pipeline, 'phases'):
-                await self._cleanup_executor_if_exists(self.pipeline.phases, '_parallel_executor')
-                await self._cleanup_executor_if_exists(self.pipeline.phases, '_async_executor')
+            if hasattr(self, "pipeline") and hasattr(self.pipeline, "phases"):
+                await self._cleanup_executor_if_exists(
+                    self.pipeline.phases, "_parallel_executor"
+                )
+                await self._cleanup_executor_if_exists(
+                    self.pipeline.phases, "_async_executor"
+                )
         except Exception:
             # If executor cleanup fails, continue with general cleanup
             pass
 
-    async def _cleanup_executor_if_exists(self, phases_obj: t.Any, executor_attr: str) -> None:
+    async def _cleanup_executor_if_exists(
+        self, phases_obj: t.Any, executor_attr: str
+    ) -> None:
         """Clean up an executor if it exists and has the required cleanup method."""
         if hasattr(phases_obj, executor_attr):
             executor = getattr(phases_obj, executor_attr)
-            if hasattr(executor, 'async_cleanup'):
+            if hasattr(executor, "async_cleanup"):
                 await executor.async_cleanup()
 
     async def _cleanup_remaining_tasks(self) -> None:
@@ -2917,7 +2945,9 @@ class WorkflowOrchestrator:
         try:
             loop = asyncio.get_running_loop()
             # Get all pending tasks
-            pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
+            pending_tasks = [
+                task for task in asyncio.all_tasks(loop) if not task.done()
+            ]
             await self._cancel_pending_tasks(pending_tasks)
         except RuntimeError:
             # No running event loop (already closed)

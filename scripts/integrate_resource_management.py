@@ -48,6 +48,7 @@ def update_import_statements(file_path: Path) -> bool:
 
     return False
 
+
 def _determine_import_patterns(content: str) -> list[str]:
     """Determine which import patterns to add based on the content."""
     patterns_to_add = []
@@ -78,6 +79,7 @@ def _determine_import_patterns(content: str) -> list[str]:
 
     return patterns_to_add
 
+
 def _add_imports_to_content(content: str, patterns_to_add: list[str]) -> str:
     """Add new imports to the content."""
     # Find the last import statement
@@ -91,6 +93,7 @@ def _add_imports_to_content(content: str, patterns_to_add: list[str]) -> str:
     # Reconstruct content
     return "\n".join(import_lines + [""] + other_lines)
 
+
 def _separate_import_and_other_lines(content: str) -> tuple[list[str], list[str]]:
     """Separate import lines from other lines in the content."""
     import_lines = []
@@ -99,9 +102,7 @@ def _separate_import_and_other_lines(content: str) -> tuple[list[str], list[str]
 
     for line in content.split("\n"):
         if in_imports and (
-            line.startswith("import ")
-            or line.startswith("from ")
-            or line.strip() == ""
+            line.startswith("import ") or line.startswith("from ") or line.strip() == ""
         ):
             import_lines.append(line)
         elif line.strip() and not line.startswith("#"):
@@ -128,7 +129,9 @@ def add_resource_context_to_async_functions(file_path: Path) -> bool:
             return False
 
         # Update functions to use resource context
-        new_content = _update_functions_with_resource_context(content, functions_to_update)
+        new_content = _update_functions_with_resource_context(
+            content, functions_to_update
+        )
 
         if new_content != original_content:
             file_path.write_text(new_content, encoding="utf-8")
@@ -139,6 +142,7 @@ def add_resource_context_to_async_functions(file_path: Path) -> bool:
         logger.error(f"Error adding resource contexts to {file_path}: {e}")
 
     return False
+
 
 def _find_functions_that_create_resources(content: str) -> list[tuple[str, int, int]]:
     """Find functions that create subprocess or temporary files."""
@@ -152,9 +156,9 @@ def _find_functions_that_create_resources(content: str) -> list[tuple[str, int, 
         # Check if this is an async function definition
         if SAFE_PATTERNS["match_async_function_definition"].test(line.strip()):
             # Extract the function definition for tracking
-            current_function = SAFE_PATTERNS[
-                "match_async_function_definition"
-            ].apply(line.strip())
+            current_function = SAFE_PATTERNS["match_async_function_definition"].apply(
+                line.strip()
+            )
             function_start = i
         elif current_function and (
             "subprocess.Popen" in line
@@ -167,7 +171,10 @@ def _find_functions_that_create_resources(content: str) -> list[tuple[str, int, 
 
     return functions_to_update
 
-def _update_functions_with_resource_context(content: str, functions_to_update: list[tuple[str, int, int]]) -> str:
+
+def _update_functions_with_resource_context(
+    content: str, functions_to_update: list[tuple[str, int, int]]
+) -> str:
     """Update functions to use resource context."""
     lines = content.split("\n")
     new_lines = lines[:]
@@ -179,8 +186,7 @@ def _update_functions_with_resource_context(content: str, functions_to_update: l
 
         # Skip if already has resource context
         if any(
-            "ResourceContext" in line
-            for line in new_lines[body_start : body_start + 5]
+            "ResourceContext" in line for line in new_lines[body_start : body_start + 5]
         ):
             continue
 
@@ -191,11 +197,9 @@ def _update_functions_with_resource_context(content: str, functions_to_update: l
 
     return "\n".join(new_lines)
 
+
 def _insert_resource_context(
-    new_lines: list[str],
-    offset: int,
-    start_idx: int,
-    body_start: int
+    new_lines: list[str], offset: int, start_idx: int, body_start: int
 ) -> tuple[list[str], int]:
     """Insert resource context into the function."""
     # Find indentation level
@@ -324,13 +328,14 @@ def add_cleanup_handlers(file_path: Path) -> bool:
 
     return False
 
+
 def _process_class_for_cleanup(
     lines: list[str],
     new_lines: list[str],
     offset: int,
     i: int,
     class_name: str,
-    file_path: Path
+    file_path: Path,
 ) -> tuple[list[str], int]:
     """Process a class to see if it needs cleanup methods added."""
     # Skip if already has cleanup methods
@@ -354,6 +359,7 @@ def _process_class_for_cleanup(
 
     return new_lines, offset
 
+
 def _find_class_end(lines: list[str], start_idx: int) -> int:
     """Find the end of a class definition."""
     class_body_end = len(lines)
@@ -366,12 +372,13 @@ def _find_class_end(lines: list[str], start_idx: int) -> int:
 
     return class_body_end
 
+
 def _add_cleanup_methods_to_class(
     new_lines: list[str],
     offset: int,
     class_body_end: int,
     class_name: str,
-    file_path: Path
+    file_path: Path,
 ) -> tuple[list[str], int]:
     """Add cleanup methods to a class."""
     indentation = "    "
@@ -379,17 +386,14 @@ def _add_cleanup_methods_to_class(
     cleanup_methods = [
         "",
         indentation + "async def cleanup(self) -> None:",
-        indentation
-        + '    """Clean up resources used by this class."""',
-        indentation
-        + "    # TODO: Implement cleanup for class resources",
+        indentation + '    """Clean up resources used by this class."""',
+        indentation + "    # TODO: Implement cleanup for class resources",
         indentation + "    pass",
         "",
         indentation + "async def __aenter__(self):",
         indentation + "    return self",
         "",
-        indentation
-        + "async def __aexit__(self, exc_type, exc_val, exc_tb):",
+        indentation + "async def __aexit__(self, exc_type, exc_val, exc_tb):",
         indentation + "    await self.cleanup()",
     ]
 
@@ -398,9 +402,7 @@ def _add_cleanup_methods_to_class(
     new_lines[insert_pos:insert_pos] = cleanup_methods
     offset += len(cleanup_methods)
 
-    logger.info(
-        f"Added cleanup methods to class {class_name} in {file_path}"
-    )
+    logger.info(f"Added cleanup methods to class {class_name} in {file_path}")
 
     return new_lines, offset
 

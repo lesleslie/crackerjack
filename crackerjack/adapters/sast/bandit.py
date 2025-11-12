@@ -59,7 +59,9 @@ class BanditSettings(ToolAdapterSettings):
     skip_rules: list[str] = Field(default_factory=list)
     tests_to_run: list[str] = Field(default_factory=list)
     recursive: bool = True
-    timeout_seconds: int = 1200  # 20 minutes to allow for comprehensive security scanning
+    timeout_seconds: int = (
+        1200  # 20 minutes to allow for comprehensive security scanning
+    )
 
 
 class BanditAdapter(BaseToolAdapter):

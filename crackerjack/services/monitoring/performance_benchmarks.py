@@ -305,7 +305,9 @@ class PerformanceBenchmarker:
         self._logger.info(f"Exported benchmark results to {output_path}")
 
 
-class PerformanceBenchmarkService(PerformanceBenchmarkProtocol, PerformanceBenchmarkServiceProtocol, ServiceProtocol):
+class PerformanceBenchmarkService(
+    PerformanceBenchmarkProtocol, PerformanceBenchmarkServiceProtocol, ServiceProtocol
+):
     """Service wrapper for performance benchmarking in workflow orchestration."""
 
     @depends.inject
@@ -364,7 +366,7 @@ class PerformanceBenchmarkService(PerformanceBenchmarkProtocol, PerformanceBench
             "start_time": start_time,
             "end_time": time.time(),
             "duration": time.time() - start_time,
-            "status": "completed"
+            "status": "completed",
         }
 
     def get_report(self) -> dict[str, t.Any]:
@@ -374,7 +376,7 @@ class PerformanceBenchmarkService(PerformanceBenchmarkProtocol, PerformanceBench
             "timestamp": datetime.now().isoformat(),
             "report_type": "performance_summary",
             "total_benchmarks": 0,  # This would be updated with actual values from the benchmarker
-            "summary": "Performance benchmark service operational"
+            "summary": "Performance benchmark service operational",
         }
 
     def compare_benchmarks(
@@ -387,7 +389,7 @@ class PerformanceBenchmarkService(PerformanceBenchmarkProtocol, PerformanceBench
             "comparison_type": "basic_comparison",
             "baseline": baseline,
             "current": current,
-            "differences": {}
+            "differences": {},
         }
 
     # Methods for PerformanceBenchmarkServiceProtocol

@@ -741,10 +741,14 @@ class HookOrchestratorAdapter:
         """Build Ruff adapter for format or check mode."""
         from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
 
+        is_format_mode = "format" in hook.name
+        is_check_mode = "check" in hook.name
+
         return RuffAdapter(
             settings=RuffSettings(
-                mode="check" if "check" in hook.name else "format",
-                fix_enabled=False,
+                mode="format" if is_format_mode else "check",
+                fix_enabled=True,  # Enable fixing for both check and format modes
+                unsafe_fixes=is_check_mode,  # Enable unsafe fixes for check mode only
             )
         )
 
@@ -815,19 +819,54 @@ class HookOrchestratorAdapter:
                 if hasattr(qa_result, "files_checked")
                 else 0
             )
-            status = (
-                "passed"
-                if qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
-                else "failed"
-            )
-            issues = [
-                str(error)
-                for error in (
-                    getattr(qa_result, "message", ""),
-                    getattr(qa_result, "details", ""),
+            # Reporting tools need to fail if they find issues
+            # (even though they return SUCCESS status with issues_found > 0)
+            reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
+
+            # Formatters also need to fail when they find issues (return WARNING status)
+            # ruff-format returns WARNING status when files need formatting
+            formatters = {"ruff-format"}
+
+            # Override status for tools that found issues but returned SUCCESS/WARNING
+            if (
+                (hook.name in reporting_tools or hook.name in formatters)
+                and qa_result.issues_found > 0
+                and qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
+            ):
+                status = "failed"  # Trigger auto-fix stage
+            else:
+                status = (
+                    "passed"
+                    if qa_result.status
+                    in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
+                    else "failed"
                 )
-                if isinstance(error, str) and error.strip()
-            ]
+
+            # Create issues list to match qa_result.issues_found count
+            # This ensures accurate issue counting for display
+            issues = []
+            if qa_result.issues_found > 0:
+                if qa_result.details:
+                    # Use first 10 detailed issues from details
+                    detail_lines = [
+                        line.strip()
+                        for line in qa_result.details.split("\n")
+                        if line.strip() and not line.strip().startswith("...")
+                    ]
+                    issues = detail_lines[:10]  # First 10 detailed issues
+
+                    # Pad with placeholders to match actual count
+                    # (so len(issues_found) = qa_result.issues_found for accurate display)
+                    remaining = qa_result.issues_found - len(issues)
+                    if remaining > 0:
+                        # Add placeholder for each remaining issue
+                        issues.extend(
+                            [f"(issue {len(issues) + i + 1})"] for i in range(remaining)
+                        )
+                else:
+                    # No details, use placeholders
+                    issues = [f"Issue {i + 1}" for i in range(qa_result.issues_found)]
+
             return HookResult(
                 id=hook.name,
                 name=hook.name,
@@ -933,7 +972,9 @@ class HookOrchestratorAdapter:
             return False
         return "files were modified by this hook" in output_text.lower()
 
-    def _is_analysis_tool_success(self, hook: HookDefinition, proc_result: t.Any) -> bool:
+    def _is_analysis_tool_success(
+        self, hook: HookDefinition, proc_result: t.Any
+    ) -> bool:
         """Check if analysis tool return code 1 indicates findings (not failure)."""
         if proc_result.returncode != 1:
             return False

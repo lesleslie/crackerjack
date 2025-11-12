@@ -120,7 +120,9 @@ class AsyncHookManager:
 
         # Use wall-clock time if provided (parallel execution), else sum durations (sequential)
         total_duration = (
-            elapsed_time if elapsed_time is not None else sum(r.duration for r in results)
+            elapsed_time
+            if elapsed_time is not None
+            else sum(r.duration for r in results)
         )
 
         return {

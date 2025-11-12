@@ -32,7 +32,9 @@ class LSPAwareHookExecutor(HookExecutor):
         use_incremental: bool = False,
         git_service: t.Any | None = None,
     ) -> None:
-        super().__init__(console, pkg_path, verbose, quiet, debug, use_incremental, git_service)
+        super().__init__(
+            console, pkg_path, verbose, quiet, debug, use_incremental, git_service
+        )
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None
         self.tool_proxy = ToolProxy() if self.use_tool_proxy else None
