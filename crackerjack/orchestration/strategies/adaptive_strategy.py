@@ -251,17 +251,8 @@ class AdaptiveExecutionStrategy:
         Raises:
             ValueError: If circular dependency detected
         """
-        # Build hook name → hook mapping
         hook_map = {hook.name: hook for hook in hooks}
-
-        # Build in-degree map (count of dependencies per hook)
-        in_degree = {hook.name: 0 for hook in hooks}
-        for hook_name in hook_map:
-            if hook_name in self.dependency_graph:
-                # Count how many dependencies this hook has
-                deps = self.dependency_graph[hook_name]
-                # Only count dependencies that are actually in our hook list
-                in_degree[hook_name] = sum(1 for dep in deps if dep in hook_map)
+        in_degree = self._build_in_degree_map(hooks, hook_map)
 
         logger.debug(
             "Computed in-degree map",
@@ -270,77 +261,7 @@ class AdaptiveExecutionStrategy:
             },
         )
 
-        # Compute waves
-        waves = []
-        remaining_hooks = set(hook_map.keys())
-        iteration = 0
-        max_iterations = len(hooks) + 1  # Prevent infinite loops
-
-        while remaining_hooks:
-            iteration += 1
-            if iteration > max_iterations:
-                # Safety check: prevent infinite loop
-                logger.error(
-                    "Max iterations exceeded, circular dependency suspected",
-                    extra={
-                        "remaining_hooks": list(remaining_hooks),
-                        "iteration": iteration,
-                    },
-                )
-                # Add all remaining hooks to final wave as fallback
-                waves.append([hook_map[name] for name in remaining_hooks])
-                break
-
-            # Find all hooks with zero dependencies in this wave
-            ready_hooks = [
-                hook_map[name] for name in remaining_hooks if in_degree[name] == 0
-            ]
-
-            if not ready_hooks:
-                # No hooks ready but hooks remain → circular dependency
-                logger.error(
-                    "Circular dependency detected",
-                    extra={
-                        "remaining_hooks": list(remaining_hooks),
-                        "in_degrees": {
-                            name: in_degree[name] for name in remaining_hooks
-                        },
-                    },
-                )
-                raise ValueError(
-                    f"Circular dependency detected in hooks: {list(remaining_hooks)}"
-                )
-
-            # Add this wave
-            waves.append(ready_hooks)
-
-            logger.debug(
-                f"Wave {len(waves)} ready",
-                extra={
-                    "wave_idx": len(waves),
-                    "hooks": [h.name for h in ready_hooks],
-                    "remaining_count": len(remaining_hooks) - len(ready_hooks),
-                },
-            )
-
-            # Remove these hooks from remaining
-            for hook in ready_hooks:
-                remaining_hooks.remove(hook.name)
-
-            # Update in-degrees for dependent hooks
-            for hook in ready_hooks:
-                # Find hooks that depend on this hook
-                for dependent_name, deps in self.dependency_graph.items():
-                    if hook.name in deps and dependent_name in remaining_hooks:
-                        in_degree[dependent_name] -= 1
-                        logger.debug(
-                            f"Decremented in-degree for {dependent_name}",
-                            extra={
-                                "dependent": dependent_name,
-                                "completed_dependency": hook.name,
-                                "new_in_degree": in_degree[dependent_name],
-                            },
-                        )
+        waves = self._compute_waves_from_dependencies(hooks, hook_map, in_degree)
 
         logger.debug(
             f"Computed {len(waves)} execution waves",
@@ -351,6 +272,138 @@ class AdaptiveExecutionStrategy:
         )
 
         return waves
+
+    def _build_in_degree_map(
+        self,
+        hooks: list[HookDefinition],
+        hook_map: dict[str, HookDefinition],
+    ) -> dict[str, int]:
+        """Build in-degree map counting dependencies per hook."""
+        in_degree = {hook.name: 0 for hook in hooks}
+        for hook_name in hook_map:
+            if hook_name in self.dependency_graph:
+                deps = self.dependency_graph[hook_name]
+                in_degree[hook_name] = sum(1 for dep in deps if dep in hook_map)
+        return in_degree
+
+    def _compute_waves_from_dependencies(
+        self,
+        hooks: list[HookDefinition],
+        hook_map: dict[str, HookDefinition],
+        in_degree: dict[str, int],
+    ) -> list[list[HookDefinition]]:
+        """Compute waves by iteratively processing hooks with satisfied dependencies."""
+        waves: list[list[HookDefinition]] = []
+        remaining_hooks = set(hook_map.keys())
+        iteration = 0
+        max_iterations = len(hooks) + 1
+
+        while remaining_hooks:
+            iteration += 1
+            if self._check_max_iterations_exceeded(iteration, max_iterations, remaining_hooks, hook_map, waves):
+                break
+
+            ready_hooks = self._find_ready_hooks(remaining_hooks, in_degree, hook_map)
+            self._validate_wave_progress(ready_hooks, remaining_hooks, in_degree)
+
+            waves.append(ready_hooks)
+            self._log_wave_ready(waves, ready_hooks, remaining_hooks)
+
+            self._update_dependencies_after_wave(ready_hooks, remaining_hooks, in_degree)
+
+        return waves
+
+    def _check_max_iterations_exceeded(
+        self,
+        iteration: int,
+        max_iterations: int,
+        remaining_hooks: set[str],
+        hook_map: dict[str, HookDefinition],
+        waves: list[list[HookDefinition]],
+    ) -> bool:
+        """Check if max iterations exceeded and handle fallback."""
+        if iteration > max_iterations:
+            logger.error(
+                "Max iterations exceeded, circular dependency suspected",
+                extra={
+                    "remaining_hooks": list(remaining_hooks),
+                    "iteration": iteration,
+                },
+            )
+            waves.append([hook_map[name] for name in remaining_hooks])
+            return True
+        return False
+
+    def _find_ready_hooks(
+        self,
+        remaining_hooks: set[str],
+        in_degree: dict[str, int],
+        hook_map: dict[str, HookDefinition],
+    ) -> list[HookDefinition]:
+        """Find all hooks with zero dependencies in current wave."""
+        return [
+            hook_map[name] for name in remaining_hooks if in_degree[name] == 0
+        ]
+
+    def _validate_wave_progress(
+        self,
+        ready_hooks: list[HookDefinition],
+        remaining_hooks: set[str],
+        in_degree: dict[str, int],
+    ) -> None:
+        """Validate that wave has ready hooks or raise circular dependency error."""
+        if not ready_hooks:
+            logger.error(
+                "Circular dependency detected",
+                extra={
+                    "remaining_hooks": list(remaining_hooks),
+                    "in_degrees": {
+                        name: in_degree[name] for name in remaining_hooks
+                    },
+                },
+            )
+            raise ValueError(
+                f"Circular dependency detected in hooks: {list(remaining_hooks)}"
+            )
+
+    def _log_wave_ready(
+        self,
+        waves: list[list[HookDefinition]],
+        ready_hooks: list[HookDefinition],
+        remaining_hooks: set[str],
+    ) -> None:
+        """Log wave readiness information."""
+        logger.debug(
+            f"Wave {len(waves)} ready",
+            extra={
+                "wave_idx": len(waves),
+                "hooks": [h.name for h in ready_hooks],
+                "remaining_count": len(remaining_hooks) - len(ready_hooks),
+            },
+        )
+
+    def _update_dependencies_after_wave(
+        self,
+        ready_hooks: list[HookDefinition],
+        remaining_hooks: set[str],
+        in_degree: dict[str, int],
+    ) -> None:
+        """Update in-degrees after wave completion."""
+        for hook in ready_hooks:
+            remaining_hooks.remove(hook.name)
+
+        for hook in ready_hooks:
+            for dependent_name, deps in self.dependency_graph.items():
+                if hook.name in deps and dependent_name in remaining_hooks:
+                    in_degree[dependent_name] -= 1
+                    logger.debug(
+                        f"Decremented in-degree for {dependent_name}",
+                        extra={
+                            "dependent": dependent_name,
+                            "completed_dependency": hook.name,
+                            "new_in_degree": in_degree[dependent_name],
+                        },
+                    )
 
     async def _execute_wave(
         self,
@@ -380,84 +433,120 @@ class AdaptiveExecutionStrategy:
         async def execute_with_limit(hook: HookDefinition) -> HookResult:
             """Execute hook with semaphore and timeout."""
             async with semaphore:
-                # Notify start before executing the hook
-                if on_hook_start:
-                    with suppress(Exception):
-                        on_hook_start()
-                try:
-                    hook_timeout = hook.timeout or timeout
-                    logger.debug(
-                        f"Executing hook {hook.name}",
-                        extra={
-                            "hook": hook.name,
-                            "timeout": hook_timeout,
-                        },
-                    )
+                self._notify_hook_start(on_hook_start)
+                result = await self._execute_single_hook_in_wave(
+                    hook, timeout, executor_callable
+                )
+                self._notify_hook_complete(on_hook_complete)
+                return result
 
-                    if executor_callable:
-                        result = await asyncio.wait_for(
-                            executor_callable(hook), timeout=hook_timeout
-                        )
-                    else:
-                        # Placeholder if no executor provided
-                        result = HookResult(
-                            id=hook.name,
-                            name=hook.name,
-                            status="passed",
-                            duration=0.0,
-                        )
-
-                    logger.debug(
-                        f"Hook {hook.name} completed",
-                        extra={
-                            "hook": hook.name,
-                            "status": result.status,
-                            "duration": result.duration,
-                        },
-                    )
-                    # Notify per-hook completion for progress updates
-                    if on_hook_complete:
-                        with suppress(Exception):
-                            on_hook_complete()
-                    return result
-
-                except TimeoutError:
-                    logger.warning(
-                        f"Hook {hook.name} timed out",
-                        extra={
-                            "hook": hook.name,
-                            "timeout": hook_timeout,
-                        },
-                    )
-                    return HookResult(
-                        id=hook.name,
-                        name=hook.name,
-                        status="timeout",
-                        duration=hook_timeout,
-                    )
-                except Exception as e:
-                    logger.error(
-                        f"Hook {hook.name} raised exception",
-                        extra={
-                            "hook": hook.name,
-                            "exception": str(e),
-                            "exception_type": type(e).__name__,
-                        },
-                    )
-                    return HookResult(
-                        id=hook.name,
-                        name=hook.name,
-                        status="error",
-                        duration=0.0,
-                    )
-
-        # Create tasks for all hooks in this wave
         tasks = [execute_with_limit(hook) for hook in hooks]
-
-        # Execute all tasks concurrently
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        return self._process_wave_results(hooks, results)
 
-        # Handle any unexpected exceptions (shouldn't happen due to try/except above)
+    def _notify_hook_start(self, on_hook_start: t.Callable[[], None] | None) -> None:
+        """Notify that hook execution has started."""
+        if on_hook_start:
+            with suppress(Exception):
+                on_hook_start()
+
+    def _notify_hook_complete(self, on_hook_complete: t.Callable[[], None] | None) -> None:
+        """Notify that hook execution has completed."""
+        if on_hook_complete:
+            with suppress(Exception):
+                on_hook_complete()
+
+    async def _execute_single_hook_in_wave(
+        self,
+        hook: HookDefinition,
+        timeout: int,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None,
+    ) -> HookResult:
+        """Execute a single hook with timeout and error handling."""
+        try:
+            hook_timeout = hook.timeout or timeout
+            logger.debug(
+                f"Executing hook {hook.name}",
+                extra={
+                    "hook": hook.name,
+                    "timeout": hook_timeout,
+                },
+            )
+
+            result = await self._run_hook_with_executor(hook, hook_timeout, executor_callable)
+
+            logger.debug(
+                f"Hook {hook.name} completed",
+                extra={
+                    "hook": hook.name,
+                    "status": result.status,
+                    "duration": result.duration,
+                },
+            )
+            return result
+
+        except TimeoutError:
+            return self._create_timeout_result(hook, hook.timeout or timeout)
+        except Exception as e:
+            return self._create_error_result(hook, e)
+
+    async def _run_hook_with_executor(
+        self,
+        hook: HookDefinition,
+        hook_timeout: int,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None,
+    ) -> HookResult:
+        """Run hook with executor or return placeholder."""
+        if executor_callable:
+            return await asyncio.wait_for(
+                executor_callable(hook), timeout=hook_timeout
+            )
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="passed",
+            duration=0.0,
+        )
+
+    def _create_timeout_result(self, hook: HookDefinition, hook_timeout: int) -> HookResult:
+        """Create HookResult for timeout condition."""
+        logger.warning(
+            f"Hook {hook.name} timed out",
+            extra={
+                "hook": hook.name,
+                "timeout": hook_timeout,
+            },
+        )
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="timeout",
+            duration=hook_timeout,
+        )
+
+    def _create_error_result(self, hook: HookDefinition, exception: Exception) -> HookResult:
+        """Create HookResult for exception condition."""
+        logger.error(
+            f"Hook {hook.name} raised exception",
+            extra={
+                "hook": hook.name,
+                "exception": str(exception),
+                "exception_type": type(exception).__name__,
+            },
+        )
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="error",
+            duration=0.0,
+        )
+
+    def _process_wave_results(
+        self,
+        hooks: list[HookDefinition],
+        results: list[HookResult | BaseException],
+    ) -> list[HookResult]:
+        """Process results from asyncio.gather, converting exceptions to HookResults."""
         final_results = []
         for hook, result in zip(hooks, results):
             if isinstance(result, HookResult):
@@ -479,7 +568,6 @@ class AdaptiveExecutionStrategy:
                         duration=0.0,
                     )
                 )
-
         return final_results
 
     def _has_critical_failure(

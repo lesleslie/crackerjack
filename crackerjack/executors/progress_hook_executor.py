@@ -41,6 +41,8 @@ class ProgressHookExecutor(HookExecutor):
         quiet: bool = False,
         show_progress: bool = True,
         debug: bool = False,
+        use_incremental: bool = False,
+        git_service: t.Any | None = None,
     ) -> None:
         """Initialize progress-enhanced hook executor.
 
@@ -51,8 +53,10 @@ class ProgressHookExecutor(HookExecutor):
             quiet: Suppress output
             show_progress: Enable progress bars (disable for CI/testing)
             debug: Enable debug output
+            use_incremental: Run hooks only on changed files
+            git_service: GitService instance for incremental execution
         """
-        super().__init__(console, pkg_path, verbose, quiet, debug)
+        super().__init__(console, pkg_path, verbose, quiet, debug, use_incremental, git_service)
         self.show_progress = show_progress and not quiet
         self.debug = debug
 

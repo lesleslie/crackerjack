@@ -708,55 +708,96 @@ class HookOrchestratorAdapter:
         )
 
     def _build_adapter(self, hook: HookDefinition) -> t.Any | None:
+        """Build adapter for hook, dispatching to specific adapter factories."""
         try:
-            if hook.name in ("ruff-check", "ruff-format"):
-                from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
-
-                return RuffAdapter(
-                    settings=RuffSettings(
-                        mode="check" if "check" in hook.name else "format",
-                        fix_enabled=False,
-                    )
-                )
-            if hook.name == "bandit":
-                from crackerjack.adapters.security.bandit import BanditAdapter
-
-                return BanditAdapter()
-            if hook.name == "codespell":
-                from crackerjack.adapters.lint.codespell import CodespellAdapter
-
-                return CodespellAdapter()
-            if hook.name == "gitleaks":
-                from crackerjack.adapters.security.gitleaks import GitleaksAdapter
-
-                return GitleaksAdapter()
-            if hook.name in ("skylos", "zuban"):
-                from crackerjack.adapters.lsp.skylos import SkylosAdapter
-
-                if self.execution_context is None:
-                    # This is a critical error if we need the context for these adapters
-                    msg = f"Execution context required for {hook.name} adapter"
-                    raise ValueError(msg)
-                return SkylosAdapter(context=self.execution_context)
-            if hook.name == "complexipy":
-                from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
-
-                return ComplexipyAdapter()
-            if hook.name == "creosote":
-                from crackerjack.adapters.refactor.creosote import CreosoteAdapter
-
-                return CreosoteAdapter()
-            if hook.name in ("refurb", "pyrefly"):
-                from crackerjack.adapters.refactor.refurb import RefurbAdapter
-
-                return RefurbAdapter()
-            if hook.name == "mdformat":
-                from crackerjack.adapters.format.mdformat import MdformatAdapter
-
-                return MdformatAdapter()
+            adapter_factory = self._get_adapter_factory(hook.name)
+            if adapter_factory:
+                return adapter_factory(hook)
         except Exception:
             return None
         return None
+
+    def _get_adapter_factory(
+        self, hook_name: str
+    ) -> t.Callable[[HookDefinition], t.Any] | None:
+        """Get adapter factory function for hook name."""
+        factories = {
+            "ruff-check": self._build_ruff_adapter,
+            "ruff-format": self._build_ruff_adapter,
+            "bandit": self._build_bandit_adapter,
+            "codespell": self._build_codespell_adapter,
+            "gitleaks": self._build_gitleaks_adapter,
+            "skylos": self._build_skylos_adapter,
+            "zuban": self._build_skylos_adapter,
+            "complexipy": self._build_complexipy_adapter,
+            "creosote": self._build_creosote_adapter,
+            "refurb": self._build_refurb_adapter,
+            "pyrefly": self._build_refurb_adapter,
+            "mdformat": self._build_mdformat_adapter,
+        }
+        return factories.get(hook_name)
+
+    def _build_ruff_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Ruff adapter for format or check mode."""
+        from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
+
+        return RuffAdapter(
+            settings=RuffSettings(
+                mode="check" if "check" in hook.name else "format",
+                fix_enabled=False,
+            )
+        )
+
+    def _build_bandit_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Bandit security adapter."""
+        from crackerjack.adapters.security.bandit import BanditAdapter
+
+        return BanditAdapter()
+
+    def _build_codespell_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Codespell lint adapter."""
+        from crackerjack.adapters.lint.codespell import CodespellAdapter
+
+        return CodespellAdapter()
+
+    def _build_gitleaks_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Gitleaks security adapter."""
+        from crackerjack.adapters.security.gitleaks import GitleaksAdapter
+
+        return GitleaksAdapter()
+
+    def _build_skylos_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Skylos LSP adapter."""
+        from crackerjack.adapters.lsp.skylos import SkylosAdapter
+
+        if self.execution_context is None:
+            msg = f"Execution context required for {hook.name} adapter"
+            raise ValueError(msg)
+        return SkylosAdapter(context=self.execution_context)
+
+    def _build_complexipy_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Complexipy complexity adapter."""
+        from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
+
+        return ComplexipyAdapter()
+
+    def _build_creosote_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Creosote refactor adapter."""
+        from crackerjack.adapters.refactor.creosote import CreosoteAdapter
+
+        return CreosoteAdapter()
+
+    def _build_refurb_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Refurb refactor adapter."""
+        from crackerjack.adapters.refactor.refurb import RefurbAdapter
+
+        return RefurbAdapter()
+
+    def _build_mdformat_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Mdformat markdown adapter."""
+        from crackerjack.adapters.format.mdformat import MdformatAdapter
+
+        return MdformatAdapter()
 
     async def _run_adapter(
         self, adapter: t.Any, hook: HookDefinition, start_time: float
@@ -818,7 +859,6 @@ class HookOrchestratorAdapter:
             )
 
     def _run_subprocess(self, hook: HookDefinition, start_time: float) -> HookResult:
-        import re
         import subprocess
 
         cmd = hook.get_command()
@@ -827,62 +867,96 @@ class HookOrchestratorAdapter:
         )
         output_text = (proc_result.stdout or "") + (proc_result.stderr or "")
 
-        # Attempt to extract file count from output using comprehensive patterns
-        files_processed = 0
+        files_processed = self._extract_file_count(output_text)
+        status = self._determine_hook_status(hook, proc_result, output_text)
+        issues = self._collect_issues(status, proc_result)
 
-        # Check for common patterns in hook output - return the highest found number
-        all_matches = []
-        file_count_patterns = [
-            r"(\d+)\s+files?\s+would\s+be",  # "X files would be reformatted"
-            r"(\d+)\s+files?\s+already\s+formatted",  # "X files already formatted"
-            r"(\d+)\s+files?\s+processed",  # "X files processed"
-            r"(\d+)\s+files?\s+checked",  # "X files checked"
-            r"(\d+)\s+files?\s+analyzed",  # "X files analyzed"
-            r"Checking\s+(\d+)\s+files?",  # "Checking 5 files"
-            r"Found\s+(\d+)\s+files?",  # "Found 5 files"
-            r"(\d+)\s+files?",  # "5 files" or "1 file" (general pattern)
-        ]
-        for pattern in file_count_patterns:
-            matches = re.findall(pattern, output_text, re.IGNORECASE)
-            if matches:
-                # Convert all matches to integers and add to list
-                all_matches.extend([int(m) for m in matches if m.isdigit()])
-
-        # Use the highest value found
-        if all_matches:
-            files_processed = max(all_matches)
-
-        # Handle special cases for tools where return code 1 indicates findings rather than execution failure
-        # For most tools, return code 0 means success and others mean failure
-        status = "passed" if proc_result.returncode == 0 else "failed"
-
-        # Handle special cases for formatting tools where return code 1 can mean files were modified
-        if hook.is_formatting and proc_result.returncode == 1:
-            output_text_lower = output_text.lower()
-            if "files were modified by this hook" in output_text_lower:
-                status = "passed"  # Files were successfully formatted
-        # For analysis tools, treat return code 1 as success if it indicates findings (not execution failure)
-        elif hook.name in {"creosote", "complexipy", "refurb"} and proc_result.returncode == 1:
-            output_text_lower = output_text.lower()
-            # refurb returns 1 when issues are found that can be fixed
-            status = "passed"  # These tools return 1 to indicate findings, not execution failure
-        # bandit returns 1 when it finds potential security issues (not execution failure)
-        elif hook.name == "bandit" and proc_result.returncode == 1:
-            output_text_lower = output_text.lower()
-            if "potential issues" in output_text_lower or "no issues identified" not in output_text_lower:
-                # bandit returns 1 when findings exist, 0 when no issues - both are valid results
-                status = "passed"
-
-        issues = [] if status == "passed" else [proc_result.stdout, proc_result.stderr]
         return HookResult(
             id=hook.name,
             name=hook.name,
             status=status,
             duration=self._elapsed(start_time),
             files_processed=files_processed,
-            issues_found=issues if any(issues) else [],
+            issues_found=issues,
             stage=hook.stage.value,
         )
+
+    def _extract_file_count(self, output_text: str) -> int:
+        """Extract file count from subprocess output using regex patterns."""
+        import re
+
+        file_count_patterns = [
+            r"(\d+)\s+files?\s+would\s+be",
+            r"(\d+)\s+files?\s+already\s+formatted",
+            r"(\d+)\s+files?\s+processed",
+            r"(\d+)\s+files?\s+checked",
+            r"(\d+)\s+files?\s+analyzed",
+            r"Checking\s+(\d+)\s+files?",
+            r"Found\s+(\d+)\s+files?",
+            r"(\d+)\s+files?",
+        ]
+
+        all_matches = []
+        for pattern in file_count_patterns:
+            matches = re.findall(pattern, output_text, re.IGNORECASE)
+            if matches:
+                all_matches.extend([int(m) for m in matches if m.isdigit()])
+
+        return max(all_matches) if all_matches else 0
+
+    def _determine_hook_status(
+        self, hook: HookDefinition, proc_result: t.Any, output_text: str
+    ) -> str:
+        """Determine hook status from subprocess return code and output."""
+        base_status = "passed" if proc_result.returncode == 0 else "failed"
+
+        if base_status == "passed":
+            return "passed"
+
+        # Check special cases where return code 1 indicates success
+        if self._is_formatting_success(hook, proc_result, output_text):
+            return "passed"
+
+        if self._is_analysis_tool_success(hook, proc_result):
+            return "passed"
+
+        if self._is_bandit_success(hook, proc_result, output_text):
+            return "passed"
+
+        return "failed"
+
+    def _is_formatting_success(
+        self, hook: HookDefinition, proc_result: t.Any, output_text: str
+    ) -> bool:
+        """Check if formatting tool return code 1 indicates successful modification."""
+        if not hook.is_formatting or proc_result.returncode != 1:
+            return False
+        return "files were modified by this hook" in output_text.lower()
+
+    def _is_analysis_tool_success(self, hook: HookDefinition, proc_result: t.Any) -> bool:
+        """Check if analysis tool return code 1 indicates findings (not failure)."""
+        if proc_result.returncode != 1:
+            return False
+        return hook.name in {"creosote", "complexipy", "refurb"}
+
+    def _is_bandit_success(
+        self, hook: HookDefinition, proc_result: t.Any, output_text: str
+    ) -> bool:
+        """Check if bandit return code 1 indicates findings (not failure)."""
+        if hook.name != "bandit" or proc_result.returncode != 1:
+            return False
+        output_text_lower = output_text.lower()
+        return (
+            "potential issues" in output_text_lower
+            or "no issues identified" not in output_text_lower
+        )
+
+    def _collect_issues(self, status: str, proc_result: t.Any) -> list[str]:
+        """Collect issues from subprocess output if hook failed."""
+        if status == "passed":
+            return []
+        issues = [proc_result.stdout, proc_result.stderr]
+        return [issue for issue in issues if issue]
 
     async def _maybe_cache(self, hook: HookDefinition, result: HookResult) -> None:
         if not (self.settings.enable_caching and self._cache_adapter):

@@ -85,7 +85,24 @@ class SequentialExecutionStrategy:
             return []
 
         timeout_sec = timeout or self.default_timeout
+        self._log_execution_start(hooks, timeout_sec)
 
+        results = []
+        for idx, hook in enumerate(hooks, 1):
+            result = await self._execute_single_hook(
+                hook, idx, len(hooks), timeout_sec, executor_callable
+            )
+            results.append(result)
+
+            if self._should_stop_execution(hook, result):
+                self._log_early_exit(hook, results, hooks)
+                break
+
+        self._log_execution_complete(results, hooks)
+        return results
+
+    def _log_execution_start(self, hooks: list[HookDefinition], timeout_sec: int) -> None:
+        """Log sequential execution start information."""
         logger.info(
             "Starting sequential execution",
             extra={
@@ -95,97 +112,121 @@ class SequentialExecutionStrategy:
             },
         )
 
-        results = []
-        for idx, hook in enumerate(hooks, 1):
-            try:
-                hook_timeout = hook.timeout or timeout_sec
-                logger.debug(
-                    f"Executing hook {idx}/{len(hooks)}: {hook.name}",
-                    extra={
-                        "hook": hook.name,
-                        "hook_index": idx,
-                        "total_hooks": len(hooks),
-                        "timeout": hook_timeout,
-                        "security_level": hook.security_level.value,
-                    },
-                )
+    async def _execute_single_hook(
+        self,
+        hook: HookDefinition,
+        idx: int,
+        total_hooks: int,
+        timeout_sec: int,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None,
+    ) -> HookResult:
+        """Execute a single hook with error handling."""
+        try:
+            hook_timeout = hook.timeout or timeout_sec
+            self._log_hook_execution(hook, idx, total_hooks, hook_timeout)
 
-                if executor_callable:
-                    result = await asyncio.wait_for(
-                        executor_callable(hook), timeout=hook_timeout
-                    )
-                else:
-                    # Placeholder if no executor provided
-                    result = self._placeholder_result(hook)
+            result = await self._run_hook(hook, hook_timeout, executor_callable)
+            self._log_hook_completion(hook, result)
+            return result
 
-                results.append(result)
+        except TimeoutError:
+            return self._handle_timeout(hook, hook.timeout or timeout_sec)
+        except Exception as e:
+            return self._handle_exception(hook, e)
 
-                logger.debug(
-                    f"Hook {hook.name} completed",
-                    extra={
-                        "hook": hook.name,
-                        "status": result.status,
-                        "duration": result.duration,
-                    },
-                )
+    def _log_hook_execution(
+        self, hook: HookDefinition, idx: int, total_hooks: int, hook_timeout: int
+    ) -> None:
+        """Log hook execution start."""
+        logger.debug(
+            f"Executing hook {idx}/{total_hooks}: {hook.name}",
+            extra={
+                "hook": hook.name,
+                "hook_index": idx,
+                "total_hooks": total_hooks,
+                "timeout": hook_timeout,
+                "security_level": hook.security_level.value,
+            },
+        )
 
-                # Check for critical failure early exit
-                if self._should_stop_execution(hook, result):
-                    remaining_hooks = len(hooks) - len(results)
-                    logger.warning(
-                        f"Critical hook {hook.name} failed, stopping execution",
-                        extra={
-                            "hook": hook.name,
-                            "security_level": hook.security_level.value,
-                            "executed_hooks": len(results),
-                            "remaining_hooks": remaining_hooks,
-                        },
-                    )
-                    break
+    async def _run_hook(
+        self,
+        hook: HookDefinition,
+        hook_timeout: int,
+        executor_callable: t.Callable[[HookDefinition], t.Awaitable[HookResult]] | None,
+    ) -> HookResult:
+        """Run hook with executor or return placeholder."""
+        if executor_callable:
+            return await asyncio.wait_for(
+                executor_callable(hook), timeout=hook_timeout
+            )
+        return self._placeholder_result(hook)
 
-            except TimeoutError:
-                logger.warning(
-                    f"Hook {hook.name} timed out",
-                    extra={
-                        "hook": hook.name,
-                        "timeout": hook_timeout,
-                    },
-                )
-                result = HookResult(
-                    id=hook.name,
-                    name=hook.name,
-                    status="timeout",
-                    duration=hook_timeout,
-                    issues_found=[f"Hook timed out after {hook_timeout}s"],
-                )
-                results.append(result)
+    def _log_hook_completion(self, hook: HookDefinition, result: HookResult) -> None:
+        """Log hook execution completion."""
+        logger.debug(
+            f"Hook {hook.name} completed",
+            extra={
+                "hook": hook.name,
+                "status": result.status,
+                "duration": result.duration,
+            },
+        )
 
-                # Timeout might warrant early exit for critical hooks
-                if self._should_stop_execution(hook, result):
-                    break
+    def _handle_timeout(self, hook: HookDefinition, hook_timeout: int) -> HookResult:
+        """Handle hook timeout error."""
+        logger.warning(
+            f"Hook {hook.name} timed out",
+            extra={
+                "hook": hook.name,
+                "timeout": hook_timeout,
+            },
+        )
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="timeout",
+            duration=hook_timeout,
+            issues_found=[f"Hook timed out after {hook_timeout}s"],
+        )
 
-            except Exception as e:
-                logger.error(
-                    f"Hook {hook.name} raised exception",
-                    extra={
-                        "hook": hook.name,
-                        "exception": str(e),
-                        "exception_type": type(e).__name__,
-                    },
-                )
-                result = HookResult(
-                    id=hook.name,
-                    name=hook.name,
-                    status="error",
-                    duration=0.0,
-                    issues_found=[f"Exception: {type(e).__name__}: {e}"],
-                )
-                results.append(result)
+    def _handle_exception(self, hook: HookDefinition, exception: Exception) -> HookResult:
+        """Handle hook execution exception."""
+        logger.error(
+            f"Hook {hook.name} raised exception",
+            extra={
+                "hook": hook.name,
+                "exception": str(exception),
+                "exception_type": type(exception).__name__,
+            },
+        )
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="error",
+            duration=0.0,
+            issues_found=[f"Exception: {type(exception).__name__}: {exception}"],
+        )
 
-                # Exception might warrant early exit for critical hooks
-                if self._should_stop_execution(hook, result):
-                    break
+    def _log_early_exit(
+        self, hook: HookDefinition, results: list[HookResult], hooks: list[HookDefinition]
+    ) -> None:
+        """Log early exit due to critical failure."""
+        remaining_hooks = len(hooks) - len(results)
+        logger.warning(
+            f"Critical hook {hook.name} failed, stopping execution",
+            extra={
+                "hook": hook.name,
+                "security_level": hook.security_level.value,
+                "executed_hooks": len(results),
+                "remaining_hooks": remaining_hooks,
+            },
+        )
 
+    def _log_execution_complete(
+        self, results: list[HookResult], hooks: list[HookDefinition]
+    ) -> None:
+        """Log sequential execution completion."""
         logger.info(
             "Sequential execution complete",
             extra={
@@ -197,8 +238,6 @@ class SequentialExecutionStrategy:
                 "errors": sum(1 for r in results if r.status in ("timeout", "error")),
             },
         )
-
-        return results
 
     def get_execution_order(
         self,

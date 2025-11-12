@@ -140,51 +140,100 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
-        # Add targets - use package directory instead of current directory
-        # to avoid scanning .venv and other unnecessary locations
-        if files:
-            cmd.extend([str(f) for f in files])
-        else:
-            # Determine package name similar to tool_commands.py to target only package
-            import tomllib
-            from contextlib import suppress
-
-            cwd = Path.cwd()
-            package_name = None
-
-            # First try to read from pyproject.toml
-            pyproject_path = cwd / "pyproject.toml"
-            if pyproject_path.exists():
-                with suppress(Exception):
-                    with pyproject_path.open("rb") as f:
-                        data = tomllib.load(f)
-                        project_name = data.get("project", {}).get("name")
-                        if project_name:
-                            package_name = project_name.replace("-", "_")
-
-            # Fallback: find first directory with __init__.py in project root
-            if not package_name:
-                for item in cwd.iterdir():
-                    if item.is_dir() and (item / "__init__.py").exists():
-                        if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
-                            package_name = item.name
-                            break
-
-            # Default to 'crackerjack' if nothing found
-            if not package_name:
-                package_name = "crackerjack"
-
-            cmd.append(f"./{package_name}")
+        # Add targets - use package directory to avoid scanning .venv
+        target = self._determine_scan_target(files)
+        cmd.append(target)
 
         logger.info(
             "Built Skylos command",
             extra={
                 "file_count": len(files) if files else 1,
                 "confidence_threshold": self.settings.confidence_threshold,
-                "target_directory": cmd[-1],  # Last element should be the target
+                "target_directory": target,
             },
         )
         return cmd
+
+    def _determine_scan_target(self, files: list[Path]) -> str:
+        """Determine the target directory or files for scanning.
+
+        Args:
+            files: Files specified by user
+
+        Returns:
+            Target string for Skylos command
+        """
+        if files:
+            # Join multiple files into a single string
+            return " ".join(str(f) for f in files)
+
+        # Auto-detect package directory
+        package_name = self._detect_package_name()
+        return f"./{package_name}"
+
+    def _detect_package_name(self) -> str:
+        """Detect package name from pyproject.toml or directory structure.
+
+        Returns:
+            Package name to scan
+        """
+        cwd = Path.cwd()
+
+        # Try reading from pyproject.toml
+        package_name = self._read_package_from_toml(cwd)
+        if package_name:
+            return package_name
+
+        # Fallback: find first directory with __init__.py
+        package_name = self._find_package_directory(cwd)
+        if package_name:
+            return package_name
+
+        # Default fallback
+        return "crackerjack"
+
+    def _read_package_from_toml(self, cwd: Path) -> str | None:
+        """Read package name from pyproject.toml.
+
+        Args:
+            cwd: Current working directory
+
+        Returns:
+            Package name if found, None otherwise
+        """
+        import tomllib
+        from contextlib import suppress
+
+        pyproject_path = cwd / "pyproject.toml"
+        if not pyproject_path.exists():
+            return None
+
+        with suppress(Exception):
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+                project_name = data.get("project", {}).get("name")
+                if project_name:
+                    return project_name.replace("-", "_")
+
+        return None
+
+    def _find_package_directory(self, cwd: Path) -> str | None:
+        """Find package directory with __init__.py.
+
+        Args:
+            cwd: Current working directory
+
+        Returns:
+            Package directory name if found, None otherwise
+        """
+        excluded = {"tests", "docs", ".venv", "venv", "build", "dist"}
+
+        for item in cwd.iterdir():
+            if item.is_dir() and (item / "__init__.py").exists():
+                if item.name not in excluded:
+                    return item.name
+
+        return None
 
     async def parse_output(
         self,
@@ -202,31 +251,10 @@ class SkylosAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
-        issues = []
-
-        # Try to parse as JSON first (Skylos JSON output format)
+        # Try JSON parsing first, fallback to text parsing
         try:
-            data = json.loads(result.raw_output)
-            logger.debug(
-                "Parsed Skylos JSON output",
-                extra={"results_count": len(data.get("dead_code", []))},
-            )
-
-            for item in data.get("dead_code", []):
-                file_path = Path(item.get("file", ""))
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=item.get("line"),
-                    message=f"Dead {item.get('type', 'code')}: {item.get('name', '')}",
-                    code=item.get("type"),
-                    severity="warning",  # Dead code is typically a warning
-                    suggestion=f"Confidence: {item.get('confidence', 'unknown')}%",
-                )
-                issues.append(issue)
-
+            issues = self._parse_json_output(result.raw_output)
         except json.JSONDecodeError:
-            # Fallback to text parsing if JSON fails
             logger.warning(
                 "JSON parse failed, falling back to text parsing",
                 extra={"output_preview": result.raw_output[:200]},
@@ -241,6 +269,51 @@ class SkylosAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _parse_json_output(self, output: str) -> list[ToolIssue]:
+        """Parse Skylos JSON output.
+
+        Args:
+            output: JSON output from Skylos
+
+        Returns:
+            List of parsed issues
+        """
+        data = json.loads(output)
+        logger.debug(
+            "Parsed Skylos JSON output",
+            extra={"results_count": len(data.get("dead_code", []))},
+        )
+
+        issues = []
+        for item in data.get("dead_code", []):
+            issue = self._create_issue_from_json(item)
+            issues.append(issue)
+
+        return issues
+
+    def _create_issue_from_json(self, item: dict) -> ToolIssue:
+        """Create ToolIssue from JSON item.
+
+        Args:
+            item: JSON item representing dead code
+
+        Returns:
+            ToolIssue object
+        """
+        file_path = Path(item.get("file", ""))
+        code_type = item.get("type", "code")
+        code_name = item.get("name", "")
+        confidence = item.get("confidence", "unknown")
+
+        return ToolIssue(
+            file_path=file_path,
+            line_number=item.get("line"),
+            message=f"Dead {code_type}: {code_name}",
+            code=code_type,
+            severity="warning",  # Dead code is typically a warning
+            suggestion=f"Confidence: {confidence}%",
+        )
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
         """Parse Skylos text output (fallback).
@@ -259,46 +332,80 @@ class SkylosAdapter(BaseToolAdapter):
             if not line or ":" not in line:
                 continue
 
-            try:
-                # Parse format: "file.py:line: message (confidence: XX%)"
-                parts = line.split(":", 2)
-                if len(parts) < 3:
-                    continue
-
-                file_path = Path(parts[0].strip())
-
-                try:
-                    line_number = int(parts[1].strip())
-                except ValueError:
-                    line_number = None
-
-                message_part = parts[2].strip()
-
-                # Extract confidence if present
-                confidence = "unknown"
-                if "(confidence:" in message_part:
-                    conf_start = message_part.find("(confidence:") + len("(confidence:")
-                    conf_end = message_part.find(")", conf_start)
-                    if conf_end != -1:
-                        confidence = message_part[conf_start:conf_end].strip()
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=line_number,
-                    message=message_part,
-                    severity="warning",
-                    suggestion=f"Confidence: {confidence}",
-                )
+            issue = self._parse_text_line(line)
+            if issue:
                 issues.append(issue)
-
-            except (ValueError, IndexError):
-                continue
 
         logger.info(
             "Parsed Skylos text output (fallback)",
             extra={"total_issues": len(issues)},
         )
         return issues
+
+    def _parse_text_line(self, line: str) -> ToolIssue | None:
+        """Parse a single Skylos text output line.
+
+        Args:
+            line: Line of text output
+
+        Returns:
+            ToolIssue if parsing successful, None otherwise
+        """
+        try:
+            # Parse format: "file.py:line: message (confidence: XX%)"
+            parts = line.split(":", 2)
+            if len(parts) < 3:
+                return None
+
+            file_path = Path(parts[0].strip())
+            line_number = self._parse_line_number(parts[1])
+            message_part = parts[2].strip()
+
+            confidence = self._extract_confidence_from_message(message_part)
+
+            return ToolIssue(
+                file_path=file_path,
+                line_number=line_number,
+                message=message_part,
+                severity="warning",
+                suggestion=f"Confidence: {confidence}",
+            )
+
+        except (ValueError, IndexError):
+            return None
+
+    def _parse_line_number(self, line_part: str) -> int | None:
+        """Parse line number from text part.
+
+        Args:
+            line_part: Part containing line number
+
+        Returns:
+            Line number if valid, None otherwise
+        """
+        try:
+            return int(line_part.strip())
+        except ValueError:
+            return None
+
+    def _extract_confidence_from_message(self, message_part: str) -> str:
+        """Extract confidence percentage from message.
+
+        Args:
+            message_part: Message containing confidence info
+
+        Returns:
+            Confidence value or "unknown"
+        """
+        if "(confidence:" not in message_part:
+            return "unknown"
+
+        conf_start = message_part.find("(confidence:") + len("(confidence:")
+        conf_end = message_part.find(")", conf_start)
+        if conf_end != -1:
+            return message_part[conf_start:conf_end].strip()
+
+        return "unknown"
 
     def _get_check_type(self) -> QACheckType:
         """Return refactor check type."""

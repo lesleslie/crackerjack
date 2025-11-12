@@ -373,70 +373,106 @@ class TestManager:
         }
 
         try:
-            # Parse pytest summary line (e.g., "5 passed, 2 failed, 1 skipped in 12.34s")
-            # Multiple possible formats for pytest summary
-            summary_patterns = [
-                r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+",  # Standard format: "======= 5 passed in 1.23s ======="
-                r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",     # Alternative format: "5 passed, 2 failed in 1.23s"
-                r"(\d+.*)in\s+([\d.]+)s?"              # More flexible format
-            ]
+            # Extract summary and duration
+            summary_match = self._extract_pytest_summary(output)
+            if summary_match:
+                summary_text, duration = self._parse_summary_match(summary_match, output)
+                stats["duration"] = duration
 
-            match = None
-            for pattern in summary_patterns:
-                match = re.search(pattern, output)
-                if match:
-                    break
+                # Extract metrics from summary
+                self._extract_test_metrics(summary_text, stats)
 
-            if match:
-                # Determine which groups contain the summary text and duration
-                if len(match.groups()) >= 2:
-                    summary_text = match.group(1)
-                    stats["duration"] = float(match.group(2))
-                else:
-                    # If pattern only captured duration, look for summary in whole match
-                    stats["duration"] = float(match.group(1)) if match.group(1).replace('.', '').isdigit() else 0.0
-                    summary_text = output  # Use entire output to find metrics
+                # Calculate total and fallback if needed
+                self._calculate_total_tests(stats, output)
 
-                # Extract individual counts
-                for metric in ["passed", "failed", "skipped", "error", "xfailed", "xpassed"]:
-                    metric_pattern = rf"(\d+)\s+{metric}"
-                    metric_match = re.search(metric_pattern, summary_text, re.IGNORECASE)
-                    if metric_match:
-                        count = int(metric_match.group(1))
-                        key = "errors" if metric == "error" else metric
-                        stats[key] = count
-
-                # Calculate total
-                stats["total"] = sum([
-                    stats["passed"],
-                    stats["failed"],
-                    stats["skipped"],
-                    stats["errors"],
-                    stats["xfailed"],
-                    stats["xpassed"],
-                ])
-
-                # If total is still 0, try to manually count from the output
-                if stats["total"] == 0:
-                    # Count different statuses in the output more reliably
-                    stats["passed"] = len(re.findall(r'(?:\.|✓)\s*(?:PASSED|pass)', output, re.IGNORECASE))
-                    stats["failed"] = len(re.findall(r'(?:F|X|❌)\s*(?:FAILED|fail)', output, re.IGNORECASE)) or len(re.findall(r'FAILED', output))
-                    stats["skipped"] = len(re.findall(r'(?:s|S|.SKIPPED|skip)', output, re.IGNORECASE))
-                    stats["errors"] = len(re.findall(r'ERROR|E\s+', output, re.IGNORECASE))
-                    stats["total"] = stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
-
-            # Try to extract coverage if present
-            # Coverage format: "TOTAL    160     32    80%"
-            coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+(\d+)%"
-            coverage_match = re.search(coverage_pattern, output)
-            if coverage_match:
-                stats["coverage"] = float(coverage_match.group(1))
+            # Extract coverage if present
+            stats["coverage"] = self._extract_coverage_from_output(output)
 
         except (ValueError, AttributeError) as e:
-            # If parsing fails, return empty stats
             self.console.print(f"[dim]⚠️ Failed to parse test statistics: {e}[/dim]")
 
         return stats
+
+    def _extract_pytest_summary(self, output: str) -> re.Match[str] | None:
+        """Extract pytest summary line match from output."""
+        summary_patterns = [
+            r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+",  # "======= 5 passed in 1.23s ======="
+            r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",     # "5 passed, 2 failed in 1.23s"
+            r"(\d+.*)in\s+([\d.]+)s?"              # More flexible format
+        ]
+
+        for pattern in summary_patterns:
+            match = re.search(pattern, output)
+            if match:
+                return match
+        return None
+
+    def _parse_summary_match(
+        self, match: re.Match[str], output: str
+    ) -> tuple[str, float]:
+        """Parse summary text and duration from regex match."""
+        if len(match.groups()) >= 2:
+            summary_text = match.group(1)
+            duration = float(match.group(2))
+        else:
+            # Pattern only captured duration
+            duration = (
+                float(match.group(1))
+                if match.group(1).replace(".", "").isdigit()
+                else 0.0
+            )
+            summary_text = output
+
+        return summary_text, duration
+
+    def _extract_test_metrics(self, summary_text: str, stats: dict[str, t.Any]) -> None:
+        """Extract individual test metrics from summary text."""
+        for metric in ["passed", "failed", "skipped", "error", "xfailed", "xpassed"]:
+            metric_pattern = rf"(\d+)\s+{metric}"
+            metric_match = re.search(metric_pattern, summary_text, re.IGNORECASE)
+            if metric_match:
+                count = int(metric_match.group(1))
+                key = "errors" if metric == "error" else metric
+                stats[key] = count
+
+    def _calculate_total_tests(self, stats: dict[str, t.Any], output: str) -> None:
+        """Calculate total tests and apply fallback counting if needed."""
+        stats["total"] = sum([
+            stats["passed"],
+            stats["failed"],
+            stats["skipped"],
+            stats["errors"],
+            stats["xfailed"],
+            stats["xpassed"],
+        ])
+
+        # Fallback: manually count from output if total is still 0
+        if stats["total"] == 0:
+            self._fallback_count_tests(output, stats)
+
+    def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
+        """Manually count test results from output when parsing fails."""
+        stats["passed"] = len(
+            re.findall(r"(?:\.|✓)\s*(?:PASSED|pass)", output, re.IGNORECASE)
+        )
+        stats["failed"] = len(
+            re.findall(r"(?:F|X|❌)\s*(?:FAILED|fail)", output, re.IGNORECASE)
+        ) or len(re.findall(r"FAILED", output))
+        stats["skipped"] = len(
+            re.findall(r"(?:s|S|.SKIPPED|skip)", output, re.IGNORECASE)
+        )
+        stats["errors"] = len(re.findall(r"ERROR|E\s+", output, re.IGNORECASE))
+        stats["total"] = (
+            stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
+        )
+
+    def _extract_coverage_from_output(self, output: str) -> float | None:
+        """Extract coverage percentage from pytest output."""
+        coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+(\d+)%"
+        coverage_match = re.search(coverage_pattern, output)
+        if coverage_match:
+            return float(coverage_match.group(1))
+        return None
 
     def _render_test_results_panel(
         self,

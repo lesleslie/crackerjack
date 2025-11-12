@@ -73,45 +73,58 @@ class SkylosAdapter(BaseRustToolAdapter):
         if self.context.interactive:
             args.extend(["--web", "--port", str(self.web_dashboard_port)])
 
-        # Add target files or default to package directory to avoid scanning .venv
+        # Add target files or determine the appropriate target directory
         if target_files:
             args.extend(str(f) for f in target_files)
         else:
-            # Determine package name similar to tool_commands.py
-            from pathlib import Path
-
-            # Look for package directory in common locations
-            cwd = Path.cwd()
-            package_name = None
-
-            # First try to read from pyproject.toml
-            pyproject_path = cwd / "pyproject.toml"
-            if pyproject_path.exists():
-                import tomllib
-                from contextlib import suppress
-
-                with suppress(Exception):
-                    with pyproject_path.open("rb") as f:
-                        data = tomllib.load(f)
-                        project_name = data.get("project", {}).get("name")
-                        if project_name:
-                            package_name = project_name.replace("-", "_")
-
-            # Fallback: find first directory with __init__.py in project root
-            if not package_name:
-                for item in cwd.iterdir():
-                    if item.is_dir() and (item / "__init__.py").exists():
-                        if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
-                            package_name = item.name
-                            break
-
-            # Default to 'crackerjack' if nothing found
-            if not package_name:
-                package_name = "crackerjack"
-
-            args.append(f"./{package_name}")
+            package_target = self._determine_package_target()
+            args.append(package_target)
 
         return args
+
+    def _determine_package_target(self) -> str:
+        """Determine the package target directory to scan."""
+        from pathlib import Path
+
+        # Look for package directory in common locations
+        cwd = Path.cwd()
+        package_name = self._get_package_name_from_pyproject(cwd)
+
+        if not package_name:
+            package_name = self._find_package_directory_with_init(cwd)
+
+        # Default to 'crackerjack' if nothing found
+        if not package_name:
+            package_name = "crackerjack"
+
+        return f"./{package_name}"
+
+    def _get_package_name_from_pyproject(self, cwd: Path) -> str | None:
+        """Get package name from pyproject.toml."""
+        pyproject_path = cwd / "pyproject.toml"
+        if not pyproject_path.exists():
+            return None
+
+        import tomllib
+        from contextlib import suppress
+
+        with suppress(Exception):
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+                project_name = data.get("project", {}).get("name")
+                if project_name:
+                    return project_name.replace("-", "_")
+        return None
+
+    def _find_package_directory_with_init(self, cwd: Path) -> str | None:
+        """Find first directory with __init__.py in project root."""
+        excluded = {"tests", "docs", ".venv", "venv", "build", "dist"}
+
+        for item in cwd.iterdir():
+            if item.is_dir() and (item / "__init__.py").exists():
+                if item.name not in excluded:
+                    return item.name
+        return None
 
     def parse_output(self, output: str) -> ToolResult:
         """Parse Skylos output into standardized result."""

@@ -239,7 +239,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=90,  # Increased to accommodate larger markdown files or complex formatting
+        timeout=120,  # 266 markdown files + mdformat-ruff plugin overhead (~0.45s per file average)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -260,7 +260,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="semgrep",
         command=[],
-        timeout=1200,  # 20 minutes for comprehensive SAST scanning
+        timeout=240,  # 4 minutes - most scans complete in <1 min (observed: 9-10s)
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -295,15 +295,17 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files
     ),
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=660,  # Increased to 11 minutes to accommodate thorough refactoring analysis
+        timeout=240,  # 4 minutes - matches adapter default, reduced from excessive 11 min
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files (240s -> ~10s)
     ),
     HookDefinition(
         name="creosote",
@@ -322,6 +324,7 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files
     ),
     HookDefinition(
         name="check-jsonschema",

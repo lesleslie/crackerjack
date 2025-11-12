@@ -44,93 +44,114 @@ def cache_errors(
         - Enables intelligent auto-fix suggestions
         - Works with AI agents for pattern recognition
     """
-    # Initialize error cache
     error_cache = ErrorCache(cache_dir=cache_dir)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
-
-            @wraps(func)
-            async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    result = await func(*args, **kwargs)
-
-                    # If result contains error information, analyze it
-                    if auto_analyze and isinstance(result, dict):
-                        if "error" in result or "errors" in result:
-                            await _analyze_result_errors(
-                                error_cache,
-                                result,
-                                func,
-                                error_type,
-                            )
-
-                    return result
-
-                except CrackerjackError as e:
-                    # Cache Crackerjack errors
-                    await _cache_crackerjack_error(
-                        error_cache,
-                        e,
-                        func,
-                        error_type,
-                    )
-                    raise
-
-                except Exception as e:
-                    # Cache other exceptions
-                    if auto_analyze:
-                        await _cache_exception(
-                            error_cache,
-                            e,
-                            func,
-                            error_type,
-                        )
-                    raise
-
-            return async_wrapper
-
-        else:
-
-            @wraps(func)
-            def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    result = func(*args, **kwargs)
-
-                    if auto_analyze and isinstance(result, dict):
-                        if "error" in result or "errors" in result:
-                            # Note: Sync version - can't use await
-                            _analyze_result_errors_sync(
-                                error_cache,
-                                result,
-                                func,
-                                error_type,
-                            )
-
-                    return result
-
-                except CrackerjackError as e:
-                    _cache_crackerjack_error_sync(
-                        error_cache,
-                        e,
-                        func,
-                        error_type,
-                    )
-                    raise
-
-                except Exception as e:
-                    if auto_analyze:
-                        _cache_exception_sync(
-                            error_cache,
-                            e,
-                            func,
-                            error_type,
-                        )
-                    raise
-
-            return sync_wrapper
+            return _create_async_wrapper(func, error_cache, error_type, auto_analyze)
+        return _create_sync_wrapper(func, error_cache, error_type, auto_analyze)
 
     return decorator
+
+
+def _create_async_wrapper(
+    func: t.Callable[..., t.Any],
+    error_cache: ErrorCache,
+    error_type: str | None,
+    auto_analyze: bool,
+) -> t.Callable[..., t.Any]:
+    """Create async wrapper with error caching."""
+
+    @wraps(func)
+    async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        try:
+            result = await func(*args, **kwargs)
+            await _handle_result_analysis(result, error_cache, func, error_type, auto_analyze)
+            return result
+        except CrackerjackError as e:
+            await _cache_crackerjack_error(error_cache, e, func, error_type)
+            raise
+        except Exception as e:
+            await _handle_generic_exception(e, error_cache, func, error_type, auto_analyze)
+            raise
+
+    return async_wrapper
+
+
+def _create_sync_wrapper(
+    func: t.Callable[..., t.Any],
+    error_cache: ErrorCache,
+    error_type: str | None,
+    auto_analyze: bool,
+) -> t.Callable[..., t.Any]:
+    """Create sync wrapper with error caching."""
+
+    @wraps(func)
+    def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        try:
+            result = func(*args, **kwargs)
+            _handle_result_analysis_sync(result, error_cache, func, error_type, auto_analyze)
+            return result
+        except CrackerjackError as e:
+            _cache_crackerjack_error_sync(error_cache, e, func, error_type)
+            raise
+        except Exception as e:
+            _handle_generic_exception_sync(e, error_cache, func, error_type, auto_analyze)
+            raise
+
+    return sync_wrapper
+
+
+async def _handle_result_analysis(
+    result: t.Any,
+    cache: ErrorCache,
+    func: t.Callable[..., t.Any],
+    error_type: str | None,
+    auto_analyze: bool,
+) -> None:
+    """Handle result error analysis for async functions."""
+    if not auto_analyze or not isinstance(result, dict):
+        return
+    if "error" in result or "errors" in result:
+        await _analyze_result_errors(cache, result, func, error_type)
+
+
+def _handle_result_analysis_sync(
+    result: t.Any,
+    cache: ErrorCache,
+    func: t.Callable[..., t.Any],
+    error_type: str | None,
+    auto_analyze: bool,
+) -> None:
+    """Handle result error analysis for sync functions."""
+    if not auto_analyze or not isinstance(result, dict):
+        return
+    if "error" in result or "errors" in result:
+        _analyze_result_errors_sync(cache, result, func, error_type)
+
+
+async def _handle_generic_exception(
+    error: Exception,
+    cache: ErrorCache,
+    func: t.Callable[..., t.Any],
+    error_type: str | None,
+    auto_analyze: bool,
+) -> None:
+    """Handle generic exception caching for async functions."""
+    if auto_analyze:
+        await _cache_exception(cache, error, func, error_type)
+
+
+def _handle_generic_exception_sync(
+    error: Exception,
+    cache: ErrorCache,
+    func: t.Callable[..., t.Any],
+    error_type: str | None,
+    auto_analyze: bool,
+) -> None:
+    """Handle generic exception caching for sync functions."""
+    if auto_analyze:
+        _cache_exception_sync(cache, error, func, error_type)
 
 
 async def _analyze_result_errors(

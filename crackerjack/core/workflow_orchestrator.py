@@ -104,9 +104,7 @@ class WorkflowPipeline:
         start_time = time.time()
 
         self._performance_monitor.start_workflow(workflow_id)
-
         await self._cache.start()
-
         await self._publish_event(WorkflowEvent.WORKFLOW_STARTED, event_context)
 
         success = False
@@ -116,59 +114,77 @@ class WorkflowPipeline:
                 testing=getattr(options, "test", False),
                 skip_hooks=getattr(options, "skip_hooks", False),
             ):
-                if self._event_bus:
-                    success = await self._run_event_driven_workflow(
-                        options, workflow_id, event_context, start_time
-                    )
-                else:
-                    await self._publish_event(
-                        WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
-                        event_context,
-                    )
-                    self._session_controller.initialize(options)
-                    await self._publish_event(
-                        WorkflowEvent.WORKFLOW_SESSION_READY,
-                        event_context,
-                    )
-                    success = await self._execute_workflow_with_timing(
-                        options, start_time, workflow_id
-                    )
-                    final_event = (
-                        WorkflowEvent.WORKFLOW_COMPLETED
-                        if success
-                        else WorkflowEvent.WORKFLOW_FAILED
-                    )
-                    await self._publish_event(
-                        final_event,
-                        {**event_context, "success": success},
-                    )
-                    self._performance_monitor.end_workflow(workflow_id, success)
+                success = await self._execute_workflow(options, workflow_id, event_context, start_time)
             return success
         except KeyboardInterrupt:
-            self._performance_monitor.end_workflow(workflow_id, False)
-            await self._publish_event(
-                WorkflowEvent.WORKFLOW_INTERRUPTED,
-                event_context,
-            )
-            return self._handle_user_interruption()
-
+            return await self._handle_keyboard_interrupt(workflow_id, event_context)
         except Exception as e:
-            self._performance_monitor.end_workflow(workflow_id, False)
-            await self._publish_event(
-                WorkflowEvent.WORKFLOW_FAILED,
-                {
-                    **event_context,
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                },
-            )
-            return self._handle_workflow_exception(e)
-
+            return await self._handle_general_exception(e, workflow_id, event_context)
         finally:
-            self.session.cleanup_resources()
+            await self._cleanup_workflow_resources()
 
-            self._memory_optimizer.optimize_memory()
-            await self._cache.stop()
+    async def _execute_workflow(self, options: OptionsProtocol, workflow_id: str, event_context: dict[str, t.Any], start_time: float) -> bool:
+        """Execute the workflow either event-driven or sequentially."""
+        if self._event_bus:
+            return await self._run_event_driven_workflow(
+                options, workflow_id, event_context, start_time
+            )
+        else:
+            return await self._run_sequential_workflow(options, workflow_id, event_context, start_time)
+
+    async def _run_sequential_workflow(self, options: OptionsProtocol, workflow_id: str, event_context: dict[str, t.Any], start_time: float) -> bool:
+        """Execute the workflow sequentially."""
+        await self._publish_event(
+            WorkflowEvent.WORKFLOW_SESSION_INITIALIZING,
+            event_context,
+        )
+        self._session_controller.initialize(options)
+        await self._publish_event(
+            WorkflowEvent.WORKFLOW_SESSION_READY,
+            event_context,
+        )
+        success = await self._execute_workflow_with_timing(
+            options, start_time, workflow_id
+        )
+        final_event = (
+            WorkflowEvent.WORKFLOW_COMPLETED
+            if success
+            else WorkflowEvent.WORKFLOW_FAILED
+        )
+        await self._publish_event(
+            final_event,
+            {**event_context, "success": success},
+        )
+        self._performance_monitor.end_workflow(workflow_id, success)
+        return success
+
+    async def _handle_keyboard_interrupt(self, workflow_id: str, event_context: dict[str, t.Any]) -> bool:
+        """Handle keyboard interrupt during workflow execution."""
+        self._performance_monitor.end_workflow(workflow_id, False)
+        await self._publish_event(
+            WorkflowEvent.WORKFLOW_INTERRUPTED,
+            event_context,
+        )
+        return self._handle_user_interruption()
+
+    async def _handle_general_exception(self, e: Exception, workflow_id: str, event_context: dict[str, t.Any]) -> bool:
+        """Handle general exceptions during workflow execution."""
+        self._performance_monitor.end_workflow(workflow_id, False)
+        await self._publish_event(
+            WorkflowEvent.WORKFLOW_FAILED,
+            {
+                **event_context,
+                "error": str(e),
+                "error_type": type(e).__name__,
+            },
+        )
+        return self._handle_workflow_exception(e)
+
+    async def _cleanup_workflow_resources(self) -> None:
+        """Clean up workflow resources in the finally block."""
+        self.session.cleanup_resources()
+        self._memory_optimizer.optimize_memory()
+        await self._cache.stop()
 
     def _unsubscribe_all_subscriptions(self, subscriptions: list[str]) -> None:
         """Unsubscribe from all event subscriptions."""
@@ -2587,6 +2603,7 @@ class WorkflowOrchestrator:
         web_job_id: str | None = None,
         verbose: bool = False,
         debug: bool = False,
+        changed_only: bool = False,
     ) -> None:
         # Initialize console and pkg_path first
         from acb.console import Console
@@ -2597,6 +2614,7 @@ class WorkflowOrchestrator:
         self.web_job_id = web_job_id
         self.verbose = verbose
         self.debug = debug
+        self.changed_only = changed_only
 
         # Import protocols for retrieving dependencies via ACB
         from crackerjack.models.protocols import (
@@ -2641,61 +2659,81 @@ class WorkflowOrchestrator:
 
     def _setup_acb_services(self) -> None:
         """Setup all services using ACB dependency injection."""
+        self._register_filesystem_and_git_services()
+        self._register_manager_services()
+        self._register_core_services()
+        self._register_quality_services()
+        self._register_monitoring_services()
+        self._setup_event_system()
+
+    def _register_filesystem_and_git_services(self) -> None:
+        """Register filesystem and git services."""
+        from acb.depends import depends
+
+        from crackerjack.models.protocols import (
+            FileSystemInterface,
+            GitInterface,
+            GitServiceProtocol,
+        )
+        from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
+        from crackerjack.services.git import GitService
+
+        filesystem = EnhancedFileSystemService()
+        depends.set(FileSystemInterface, filesystem)
+
+        git_service = GitService(self.pkg_path)
+        depends.set(GitInterface, git_service)
+        depends.set(GitServiceProtocol, git_service)
+
+    def _register_manager_services(self) -> None:
+        """Register hook, test, and publish managers."""
         from acb.depends import depends
 
         from crackerjack.managers.hook_manager import HookManagerImpl
         from crackerjack.managers.publish_manager import PublishManagerImpl
         from crackerjack.managers.test_manager import TestManager
         from crackerjack.models.protocols import (
-            ConfigMergeServiceProtocol,
-            CoverageRatchetProtocol,
-            FileSystemInterface,
-            GitInterface,
             HookManager,
             PublishManager,
-            SecurityServiceProtocol,
             TestManagerProtocol,
         )
-        from crackerjack.services.cache import CrackerjackCache
-        from crackerjack.services.config_merge import ConfigMergeService
-        from crackerjack.services.coverage_ratchet import CoverageRatchetService
-        from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
-        from crackerjack.services.git import GitService
-        from crackerjack.services.security import SecurityService
 
-        # Register filesystem service (foundation service)
-        filesystem = EnhancedFileSystemService()
-        depends.set(FileSystemInterface, filesystem)
-
-        # Register git service
-        git_service = GitService(self.pkg_path)
-        depends.set(GitInterface, git_service)
-
-        # Register hook manager
         hook_manager = HookManagerImpl(
-            self.pkg_path, verbose=self.verbose, debug=self.debug
+            self.pkg_path,
+            verbose=self.verbose,
+            debug=self.debug,
+            use_incremental=self.changed_only,
         )
         depends.set(HookManager, hook_manager)
+
+        test_manager = TestManager()
+        depends.set(TestManagerProtocol, test_manager)
+
+        publish_manager = PublishManagerImpl()
+        depends.set(PublishManager, publish_manager)
+
+    def _register_core_services(self) -> None:
+        """Register core configuration and security services."""
+        from acb.depends import depends
 
         from crackerjack.executors.hook_lock_manager import HookLockManager
         from crackerjack.models.protocols import (
             ConfigIntegrityServiceProtocol,
-            CoverageBadgeServiceProtocol,
+            ConfigMergeServiceProtocol,
             EnhancedFileSystemServiceProtocol,
-            GitServiceProtocol,
             HookLockManagerProtocol,
-            HookManager,
+            SecurityServiceProtocol,
             SmartSchedulingServiceProtocol,
             UnifiedConfigurationServiceProtocol,
         )
+        from crackerjack.services.cache import CrackerjackCache
         from crackerjack.services.config_integrity import ConfigIntegrityService
-        from crackerjack.services.coverage_badge_service import CoverageBadgeService
+        from crackerjack.services.config_merge import ConfigMergeService
         from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
-        from crackerjack.services.git import GitService
+        from crackerjack.services.security import SecurityService
         from crackerjack.services.smart_scheduling import SmartSchedulingService
         from crackerjack.services.unified_config import UnifiedConfigurationService
 
-        # Register core services
         depends.set(
             UnifiedConfigurationServiceProtocol,
             UnifiedConfigurationService(pkg_path=self.pkg_path),
@@ -2704,9 +2742,7 @@ class WorkflowOrchestrator:
             ConfigIntegrityServiceProtocol,
             ConfigIntegrityService(project_path=self.pkg_path),
         )
-        depends.set(
-            ConfigMergeServiceProtocol, ConfigMergeService()
-        )  # ACB DI injects dependencies
+        depends.set(ConfigMergeServiceProtocol, ConfigMergeService())
         depends.set(
             SmartSchedulingServiceProtocol,
             SmartSchedulingService(project_path=self.pkg_path),
@@ -2714,72 +2750,56 @@ class WorkflowOrchestrator:
         depends.set(EnhancedFileSystemServiceProtocol, EnhancedFileSystemService())
         depends.set(SecurityServiceProtocol, SecurityService())
         depends.set(HookLockManagerProtocol, HookLockManager())
+        depends.set(CrackerjackCache, CrackerjackCache())
 
-        # Register Git service protocol mapping (needed by many managers)
-        depends.set(GitServiceProtocol, git_service)
+    def _register_quality_services(self) -> None:
+        """Register coverage, version analysis, and code quality services."""
+        from acb.depends import depends
 
-        # Register Coverage Ratchet Service
+        from crackerjack.models.protocols import (
+            ChangelogGeneratorProtocol,
+            CoverageBadgeServiceProtocol,
+            CoverageRatchetProtocol,
+            GitInterface,
+            RegexPatternsProtocol,
+            VersionAnalyzerProtocol,
+        )
+        from crackerjack.services.changelog_automation import ChangelogGenerator
+        from crackerjack.services.coverage_badge_service import CoverageBadgeService
+        from crackerjack.services.coverage_ratchet import CoverageRatchetService
+        from crackerjack.services.regex_patterns import RegexPatternsService
+        from crackerjack.services.version_analyzer import VersionAnalyzer
+
         coverage_ratchet = CoverageRatchetService(self.pkg_path)
         depends.set(CoverageRatchetProtocol, coverage_ratchet)
 
-        # Register Coverage Badge Service
         coverage_badge = CoverageBadgeService(project_root=self.pkg_path)
         depends.set(CoverageBadgeServiceProtocol, coverage_badge)
 
-        # Register test manager (ACB DI injects all dependencies)
-        test_manager = TestManager()
-        depends.set(TestManagerProtocol, test_manager)
-
-        # Register version analyzer (needed by publish manager)
-        from crackerjack.models.protocols import VersionAnalyzerProtocol
-        from crackerjack.services.version_analyzer import VersionAnalyzer
-
+        git_service = depends.get_sync(GitInterface)
         version_analyzer = VersionAnalyzer(git_service=git_service)
         depends.set(VersionAnalyzerProtocol, version_analyzer)
-
-        # Register changelog generator (ACB DI injects dependencies)
-        from crackerjack.models.protocols import ChangelogGeneratorProtocol
-        from crackerjack.services.changelog_automation import ChangelogGenerator
 
         changelog_generator = ChangelogGenerator()
         depends.set(ChangelogGeneratorProtocol, changelog_generator)
 
-        # Register regex patterns service
-        from crackerjack.models.protocols import RegexPatternsProtocol
-        from crackerjack.services.regex_patterns import RegexPatternsService
-
         regex_patterns = RegexPatternsService()
         depends.set(RegexPatternsProtocol, regex_patterns)
 
-        # Register publish manager (ACB DI injects all dependencies)
-        publish_manager = PublishManagerImpl()
-        depends.set(PublishManager, publish_manager)
+    def _register_monitoring_services(self) -> None:
+        """Register performance monitoring and benchmarking services."""
+        from acb.depends import depends
+        from acb.logger import Logger
 
-        # Register config merge service (ACB DI injects dependencies)
-        config_merge = ConfigMergeService()
-        depends.set(ConfigMergeServiceProtocol, config_merge)
-
-        # Register security service
-        security = SecurityService()
-        depends.set(SecurityServiceProtocol, security)
-
-        # Register cache adapter
-        cache = CrackerjackCache()
-        depends.set(CrackerjackCache, cache)
-
-        # Register Performance Benchmark Service
+        from crackerjack.models.protocols import PerformanceBenchmarkProtocol
         from crackerjack.services.monitoring.performance_benchmarks import (
             PerformanceBenchmarkService,
         )
+
         performance_benchmarks = PerformanceBenchmarkService(
-            console=self.console,
-            logger=depends.get_sync(Logger),
-            pkg_path=self.pkg_path
+            console=self.console, logger=depends.get_sync(Logger), pkg_path=self.pkg_path
         )
         depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
-
-        # Setup event system
-        self._setup_event_system()
 
     def _setup_event_system(self) -> None:
         """Setup event bus and telemetry."""
@@ -2869,50 +2889,59 @@ class WorkflowOrchestrator:
     async def _cleanup_pending_tasks(self) -> None:
         """Clean up any remaining asyncio tasks before event loop closes."""
         # First call the pipeline cleanup methods if they exist
+        await self._cleanup_pipeline_executors()
+
+        # Then handle general asyncio task cleanup
+        await self._cleanup_remaining_tasks()
+
+    async def _cleanup_pipeline_executors(self) -> None:
+        """Clean up specific pipeline executors."""
         try:
             # Try to call specific async cleanup methods on executors/pipeline if they exist
             if hasattr(self, 'pipeline') and hasattr(self.pipeline, 'phases'):
-                if hasattr(self.pipeline.phases, '_parallel_executor'):
-                    # If the parallel executor has an async_cleanup method, call it
-                    parallel_executor = self.pipeline.phases._parallel_executor
-                    if hasattr(parallel_executor, 'async_cleanup'):
-                        await parallel_executor.async_cleanup()
-
-                if hasattr(self.pipeline.phases, '_async_executor'):
-                    # If the async executor has an async_cleanup method, call it
-                    async_executor = self.pipeline.phases._async_executor
-                    if hasattr(async_executor, 'async_cleanup'):
-                        await async_executor.async_cleanup()
+                await self._cleanup_executor_if_exists(self.pipeline.phases, '_parallel_executor')
+                await self._cleanup_executor_if_exists(self.pipeline.phases, '_async_executor')
         except Exception:
             # If executor cleanup fails, continue with general cleanup
             pass
 
+    async def _cleanup_executor_if_exists(self, phases_obj: t.Any, executor_attr: str) -> None:
+        """Clean up an executor if it exists and has the required cleanup method."""
+        if hasattr(phases_obj, executor_attr):
+            executor = getattr(phases_obj, executor_attr)
+            if hasattr(executor, 'async_cleanup'):
+                await executor.async_cleanup()
+
+    async def _cleanup_remaining_tasks(self) -> None:
+        """Clean up any remaining asyncio tasks."""
         try:
             loop = asyncio.get_running_loop()
             # Get all pending tasks
             pending_tasks = [task for task in asyncio.all_tasks(loop) if not task.done()]
-
-            # Cancel pending tasks if they are related to subprocess operations
-            for task in pending_tasks:
-                if not task.done():
-                    try:
-                        task.cancel()
-                        # Wait a short time for cancellation to complete
-                        await asyncio.wait_for(task, timeout=0.1)
-                    except (TimeoutError, asyncio.CancelledError):
-                        # Task was cancelled or couldn't finish in time, continue
-                        pass
-                    except RuntimeError as e:
-                        # Catch the specific error when event loop is closed during task cancellation
-                        if "Event loop is closed" in str(e):
-                            # Event loop was closed while trying to cancel tasks, just return
-                            return
-                        else:
-                            # Re-raise other RuntimeErrors
-                            raise
+            await self._cancel_pending_tasks(pending_tasks)
         except RuntimeError:
             # No running event loop (already closed)
             pass
+
+    async def _cancel_pending_tasks(self, pending_tasks: list) -> None:
+        """Cancel pending tasks with proper error handling."""
+        for task in pending_tasks:
+            if not task.done():
+                try:
+                    task.cancel()
+                    # Wait a short time for cancellation to complete
+                    await asyncio.wait_for(task, timeout=0.1)
+                except (TimeoutError, asyncio.CancelledError):
+                    # Task was cancelled or couldn't finish in time, continue
+                    pass
+                except RuntimeError as e:
+                    # Catch the specific error when event loop is closed during task cancellation
+                    if "Event loop is closed" in str(e):
+                        # Event loop was closed while trying to cancel tasks, just return
+                        return
+                    else:
+                        # Re-raise other RuntimeErrors
+                        raise
 
     def run_complete_workflow_sync(self, options: OptionsProtocol) -> bool:
         """Sync wrapper for run_complete_workflow."""
@@ -2938,8 +2967,16 @@ class WorkflowOrchestrator:
 
         try:
             result = await self.run_complete_workflow(options)
-            self.session.end_session(success=result)
-            return result
+            return self._finalize_session_with_result(result)
         except Exception:
-            self.session.end_session(success=False)
-            return False
+            return self._finalize_session_on_exception()
+
+    def _finalize_session_with_result(self, result: bool) -> bool:
+        """Finalize session with the workflow result."""
+        self.session.end_session(success=result)
+        return result
+
+    def _finalize_session_on_exception(self) -> bool:
+        """Finalize session when an exception occurs."""
+        self.session.end_session(success=False)
+        return False

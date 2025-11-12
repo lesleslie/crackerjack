@@ -616,6 +616,7 @@ class AsyncWorkflowOrchestrator:
         web_job_id: str | None = None,
         verbose: bool = False,
         debug: bool = False,
+        changed_only: bool = False,
     ) -> None:
         # Initialize console and pkg_path first
         self.console = console
@@ -624,6 +625,7 @@ class AsyncWorkflowOrchestrator:
         self.web_job_id = web_job_id
         self.verbose = verbose
         self.debug = debug
+        self.changed_only = changed_only
 
         # Configure ACB dependency injection using native patterns
         from acb.depends import depends

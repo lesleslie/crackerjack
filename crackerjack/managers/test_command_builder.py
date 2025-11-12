@@ -80,47 +80,24 @@ class TestCommandBuilder:
             Never raises - returns safe default (2) on any error
         """
         try:
-            # Emergency rollback escape hatch
-            if os.getenv("CRACKERJACK_DISABLE_AUTO_WORKERS") == "1":
-                if print_info and self.console:
-                    self.console.print(
-                        "[yellow]⚠️  Auto-detection disabled via environment variable[/yellow]"
-                    )
+            # Check for emergency rollback
+            if self._check_emergency_rollback(print_info):
                 return 1
 
-            # Explicit worker count (including 1 for sequential)
-            if hasattr(options, "test_workers") and options.test_workers > 0:
-                return options.test_workers
+            # Check explicit worker count
+            explicit_result = self._check_explicit_workers(options, print_info)
+            if explicit_result is not None:
+                return explicit_result
 
-            # Auto-detection: delegate to pytest-xdist's -n auto
-            if hasattr(options, "test_workers") and options.test_workers == 0:
-                # Check if auto-detection is enabled in settings
-                if self.settings and self.settings.testing.auto_detect_workers:
-                    # Show message only when getting optimal workers with print_info=True
-                    if print_info and self.console:
-                        self.console.print(
-                            "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]"
-                        )
-                    return "auto"  # pytest-xdist will handle CPU detection
+            # Check auto-detection
+            auto_result = self._check_auto_detection(options, print_info)
+            if auto_result is not None:
+                return auto_result
 
-                # Legacy behavior: auto_detect_workers=False
-                return 1
-
-            # Fractional workers (custom logic for negative values)
-            if hasattr(options, "test_workers") and options.test_workers < 0:
-                cpu_count = multiprocessing.cpu_count()
-                divisor = abs(options.test_workers)
-                workers = max(1, cpu_count // divisor)
-
-                # Apply memory safety check
-                workers = self._apply_memory_limit(workers)
-
-                if print_info and self.console:
-                    self.console.print(
-                        f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]"
-                    )
-
-                return workers
+            # Check fractional workers
+            fractional_result = self._check_fractional_workers(options, print_info)
+            if fractional_result is not None:
+                return fractional_result
 
             # Safe default if no conditions match
             return 2
@@ -140,6 +117,57 @@ class TestCommandBuilder:
                     f"[yellow]⚠️  Worker detection failed: {e}. Using 2 workers.[/yellow]"
                 )
             return 2
+
+    def _check_emergency_rollback(self, print_info: bool) -> bool:
+        """Check for emergency rollback via environment variable."""
+        if os.getenv("CRACKERJACK_DISABLE_AUTO_WORKERS") == "1":
+            if print_info and self.console:
+                self.console.print(
+                    "[yellow]⚠️  Auto-detection disabled via environment variable[/yellow]"
+                )
+            return True
+        return False
+
+    def _check_explicit_workers(self, options: OptionsProtocol, print_info: bool) -> int | None:
+        """Check for explicit worker count."""
+        if hasattr(options, "test_workers") and options.test_workers > 0:
+            return options.test_workers
+        return None
+
+    def _check_auto_detection(self, options: OptionsProtocol, print_info: bool) -> str | int | None:
+        """Check for auto-detection setting."""
+        if hasattr(options, "test_workers") and options.test_workers == 0:
+            # Check if auto-detection is enabled in settings
+            if self.settings and self.settings.testing.auto_detect_workers:
+                # Show message only when getting optimal workers with print_info=True
+                if print_info and self.console:
+                    self.console.print(
+                        "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]"
+                    )
+                return "auto"  # pytest-xdist will handle CPU detection
+
+            # Legacy behavior: auto_detect_workers=False
+            return 1
+        return None
+
+    def _check_fractional_workers(self, options: OptionsProtocol, print_info: bool) -> int | None:
+        """Check for fractional worker setting."""
+        if hasattr(options, "test_workers") and options.test_workers < 0:
+            import multiprocessing
+            cpu_count = multiprocessing.cpu_count()
+            divisor = abs(options.test_workers)
+            workers = max(1, cpu_count // divisor)
+
+            # Apply memory safety check
+            workers = self._apply_memory_limit(workers)
+
+            if print_info and self.console:
+                self.console.print(
+                    f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]"
+                )
+
+            return workers
+        return None
 
     def _apply_memory_limit(self, workers: int) -> int:
         """Limit workers based on available memory to prevent OOM.

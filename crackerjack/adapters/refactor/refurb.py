@@ -212,54 +212,9 @@ class RefurbAdapter(BaseToolAdapter):
             if "[FURB" not in line:
                 continue
 
-            try:
-                # Split on first colon to get file path
-                if ":" not in line:
-                    continue
-
-                parts = line.split(":", maxsplit=3)
-                if len(parts) < 3:
-                    continue
-
-                file_path = Path(parts[0].strip())
-                line_number = int(parts[1].strip())
-
-                # Parse column and message
-                remaining = parts[2].strip()
-                column_number = None
-                message_part = remaining
-
-                # Try to extract column number
-                if " " in remaining:
-                    first_part = remaining.split()[0]
-                    if first_part.isdigit():
-                        column_number = int(first_part)
-                        message_part = remaining[len(first_part) :].strip()
-
-                # Extract code and message
-                if "[" in message_part and "]" in message_part:
-                    code_start = message_part.index("[")
-                    code_end = message_part.index("]")
-                    code = message_part[code_start + 1 : code_end]
-                    message = message_part[code_end + 1 :].strip()
-                    if message.startswith(":"):
-                        message = message[1:].strip()
-                else:
-                    code = None
-                    message = message_part
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=line_number,
-                    column_number=column_number,
-                    message=message,
-                    code=code,
-                    severity="warning",  # Refurb suggestions are warnings
-                )
+            issue = self._parse_refurb_line(line)
+            if issue:
                 issues.append(issue)
-
-            except (ValueError, IndexError):
-                continue
 
         logger.info(
             "Parsed Refurb output",
@@ -270,6 +225,97 @@ class RefurbAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _parse_refurb_line(self, line: str) -> ToolIssue | None:
+        """Parse a single Refurb output line.
+
+        Args:
+            line: Line of Refurb output
+
+        Returns:
+            ToolIssue if parsing successful, None otherwise
+        """
+        try:
+            if ":" not in line:
+                return None
+
+            parts = line.split(":", maxsplit=3)
+            if len(parts) < 3:
+                return None
+
+            file_path = Path(parts[0].strip())
+            line_number = int(parts[1].strip())
+
+            # Parse column and message
+            remaining = parts[2].strip()
+            column_number = self._extract_column_number(remaining)
+            message_part = self._extract_message_part(remaining, column_number)
+
+            # Extract code and message
+            code, message = self._extract_code_and_message(message_part)
+
+            return ToolIssue(
+                file_path=file_path,
+                line_number=line_number,
+                column_number=column_number,
+                message=message,
+                code=code,
+                severity="warning",  # Refurb suggestions are warnings
+            )
+
+        except (ValueError, IndexError):
+            return None
+
+    def _extract_column_number(self, remaining: str) -> int | None:
+        """Extract column number from remaining string.
+
+        Args:
+            remaining: Remaining part after file and line
+
+        Returns:
+            Column number if found, None otherwise
+        """
+        if " " in remaining:
+            first_part = remaining.split()[0]
+            if first_part.isdigit():
+                return int(first_part)
+        return None
+
+    def _extract_message_part(self, remaining: str, column_number: int | None) -> str:
+        """Extract message part from remaining string.
+
+        Args:
+            remaining: Remaining part after file and line
+            column_number: Extracted column number if any
+
+        Returns:
+            Message part of the line
+        """
+        if column_number is not None and " " in remaining:
+            first_part = remaining.split()[0]
+            return remaining[len(first_part) :].strip()
+        return remaining
+
+    def _extract_code_and_message(
+        self, message_part: str
+    ) -> tuple[str | None, str]:
+        """Extract code and message from message part.
+
+        Args:
+            message_part: Part containing code and message
+
+        Returns:
+            Tuple of (code, message)
+        """
+        if "[" in message_part and "]" in message_part:
+            code_start = message_part.index("[")
+            code_end = message_part.index("]")
+            code = message_part[code_start + 1 : code_end]
+            message = message_part[code_end + 1 :].strip()
+            if message.startswith(":"):
+                message = message[1:].strip()
+            return code, message
+        return None, message_part
 
     def _get_check_type(self) -> QACheckType:
         """Return refactor check type."""

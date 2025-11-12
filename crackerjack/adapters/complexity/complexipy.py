@@ -53,7 +53,7 @@ class ComplexipySettings(ToolAdapterSettings):
     max_complexity: int = 15  # crackerjack standard
     include_cognitive: bool = True
     include_maintainability: bool = True
-    sort_by: str = "complexity"  # complexity, cognitive, name
+    sort_by: str = "desc"  # Valid options: asc, desc, name (sorts by complexity descending)
 
 
 class ComplexipyAdapter(BaseToolAdapter):
@@ -148,20 +148,16 @@ class ComplexipyAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-        # JSON output
+        # JSON output (correct flag: --output-json, not --json)
         if self.settings.use_json_output:
-            cmd.append("--json")
+            cmd.append("--output-json")
 
-        # Max complexity threshold
-        cmd.extend(["--max-complexity", str(self.settings.max_complexity)])
+        # Max complexity threshold (correct flag: --max-complexity-allowed, not --max-complexity)
+        cmd.extend(["--max-complexity-allowed", str(self.settings.max_complexity)])
 
-        # Include cognitive complexity
-        if self.settings.include_cognitive:
-            cmd.append("--cognitive")
-
-        # Include maintainability index
-        if self.settings.include_maintainability:
-            cmd.append("--maintainability")
+        # NOTE: --cognitive and --maintainability flags don't exist in complexipy
+        # Complexity tool only reports cyclomatic complexity, not cognitive/maintainability
+        # These settings are kept in ComplexipySettings for backwards compatibility but ignored
 
         # Sort results
         cmd.extend(["--sort", self.settings.sort_by])
@@ -186,87 +182,52 @@ class ComplexipyAdapter(BaseToolAdapter):
     ) -> list[ToolIssue]:
         """Parse Complexipy JSON output into standardized issues.
 
+        Complexipy with --output-json saves JSON to a file and outputs a pretty table
+        to stdout. We need to read the JSON file, not parse stdout.
+
         Args:
             result: Raw execution result from Complexipy
 
         Returns:
             List of parsed issues
         """
-        if not result.raw_output:
-            logger.debug("No output to parse")
-            return []
+        # Complexipy saves JSON to complexipy.json in the working directory
+        json_file = Path.cwd() / "complexipy.json"
 
-        try:
-            data = json.loads(result.raw_output)
-            logger.debug(
-                "Parsed Complexipy JSON output",
-                extra={"files_count": len(data.get("files", []))},
-            )
-        except json.JSONDecodeError as e:
-            logger.warning(
-                "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]},
-            )
-            return self._parse_text_output(result.raw_output)
-
-        issues = []
-
-        # Complexipy JSON format:
-        # {
-        #   "files": [
-        #     {
-        #       "path": "file.py",
-        #       "functions": [
-        #         {
-        #           "name": "function_name",
-        #           "line": 42,
-        #           "complexity": 16,
-        #           "cognitive_complexity": 12,
-        #           "maintainability": 65.2
-        #         }
-        #       ]
-        #     }
-        #   ]
-        # }
-
-        for file_data in data.get("files", []):
-            file_path = Path(file_data.get("path", ""))
-
-            for func in file_data.get("functions", []):
-                complexity = func.get("complexity", 0)
-                cognitive = func.get("cognitive_complexity", 0)
-                maintainability = func.get("maintainability", 100)
-
-                # Only report if exceeds threshold
-                if complexity <= self.settings.max_complexity:
-                    continue
-
-                # Build message with all metrics
-                message_parts = [f"Complexity: {complexity}"]
-                if self.settings.include_cognitive:
-                    message_parts.append(f"Cognitive: {cognitive}")
-                if self.settings.include_maintainability:
-                    message_parts.append(f"Maintainability: {maintainability:.1f}")
-
-                message = f"Function '{func.get('name', 'unknown')}' - " + ", ".join(
-                    message_parts
+        if self.settings.use_json_output and json_file.exists():
+            try:
+                with open(json_file) as f:
+                    data = json.load(f)
+                logger.debug(
+                    "Read Complexipy JSON file",
+                    extra={"file": str(json_file), "entries": len(data) if isinstance(data, list) else "N/A"},
                 )
-
-                # Severity based on complexity level
-                if complexity > self.settings.max_complexity * 2:
-                    severity = "error"
-                else:
-                    severity = "warning"
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=func.get("line"),
-                    message=message,
-                    code="COMPLEXITY",
-                    severity=severity,
-                    suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",
+            except (json.JSONDecodeError, OSError) as e:
+                logger.warning(
+                    "Failed to read JSON file, falling back to stdout parsing",
+                    extra={"error": str(e), "file": str(json_file)},
                 )
-                issues.append(issue)
+                return self._parse_text_output(result.raw_output)
+        else:
+            # Fall back to parsing stdout (legacy mode or if JSON file not found)
+            if not result.raw_output:
+                logger.debug("No output to parse")
+                return []
+
+            try:
+                data = json.loads(result.raw_output)
+                logger.debug(
+                    "Parsed Complexipy JSON from stdout",
+                    extra={"entries": len(data) if isinstance(data, list) else "N/A"},
+                )
+            except json.JSONDecodeError as e:
+                logger.warning(
+                    "JSON parse failed, falling back to text parsing",
+                    extra={"error": str(e), "output_preview": result.raw_output[:200]},
+                )
+                return self._parse_text_output(result.raw_output)
+
+        issues = self._process_complexipy_data(data)
 
         logger.info(
             "Parsed Complexipy output",
@@ -277,6 +238,125 @@ class ComplexipyAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _process_complexipy_data(self, data: list | dict) -> list[ToolIssue]:
+        """Process the complexipy JSON data to extract issues.
+
+        Args:
+            data: Parsed JSON data from complexipy (flat list or legacy nested dict)
+
+        Returns:
+            List of ToolIssue objects
+        """
+        issues = []
+
+        # Handle flat list structure (current complexipy format)
+        if isinstance(data, list):
+            for func in data:
+                complexity = func.get("complexity", 0)
+                if complexity <= self.settings.max_complexity:
+                    continue
+
+                file_path = Path(func.get("path", ""))
+                function_name = func.get("function_name", "unknown")
+                severity = "error" if complexity > self.settings.max_complexity * 2 else "warning"
+
+                issue = ToolIssue(
+                    file_path=file_path,
+                    line_number=None,  # complexipy JSON doesn't include line numbers
+                    message=f"Function '{function_name}' - Complexity: {complexity}",
+                    code="COMPLEXITY",
+                    severity=severity,
+                    suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",
+                )
+                issues.append(issue)
+            return issues
+
+        # Handle legacy nested structure (backwards compatibility)
+        for file_data in data.get("files", []):
+            file_path = Path(file_data.get("path", ""))
+            issues.extend(self._process_file_data(file_path, file_data.get("functions", [])))
+        return issues
+
+    def _process_file_data(self, file_path: Path, functions: list[dict]) -> list[ToolIssue]:
+        """Process function data for a specific file.
+
+        Args:
+            file_path: Path of the file being analyzed
+            functions: List of function data from complexipy
+
+        Returns:
+            List of ToolIssue objects for this file
+        """
+        issues = []
+        for func in functions:
+            issue = self._create_issue_if_needed(file_path, func)
+            if issue:
+                issues.append(issue)
+        return issues
+
+    def _create_issue_if_needed(self, file_path: Path, func: dict) -> ToolIssue | None:
+        """Create an issue if complexity exceeds threshold.
+
+        Args:
+            file_path: Path of the file containing the function
+            func: Function data from complexipy
+
+        Returns:
+            ToolIssue if needed, otherwise None
+        """
+        complexity = func.get("complexity", 0)
+
+        # Only report if exceeds threshold
+        if complexity <= self.settings.max_complexity:
+            return None
+
+        message = self._build_issue_message(func, complexity)
+        severity = self._determine_issue_severity(complexity)
+
+        return ToolIssue(
+            file_path=file_path,
+            line_number=func.get("line"),
+            message=message,
+            code="COMPLEXITY",
+            severity=severity,
+            suggestion=f"Consider refactoring to reduce complexity below {self.settings.max_complexity}",
+        )
+
+    def _build_issue_message(self, func: dict, complexity: int) -> str:
+        """Build the message for a complexity issue.
+
+        Args:
+            func: Function data from complexipy
+            complexity: Complexity value
+
+        Returns:
+            Formatted message string
+        """
+        message_parts = [f"Complexity: {complexity}"]
+
+        if self.settings.include_cognitive:
+            cognitive = func.get("cognitive_complexity", 0)
+            message_parts.append(f"Cognitive: {cognitive}")
+
+        if self.settings.include_maintainability:
+            maintainability = func.get("maintainability", 100)
+            message_parts.append(f"Maintainability: {maintainability:.1f}")
+
+        return f"Function '{func.get('name', 'unknown')}' - " + ", ".join(message_parts)
+
+    def _determine_issue_severity(self, complexity: int) -> str:
+        """Determine the severity of the issue based on complexity.
+
+        Args:
+            complexity: Complexity value
+
+        Returns:
+            "error" or "warning" based on threshold
+        """
+        if complexity > self.settings.max_complexity * 2:
+            return "error"
+        return "warning"
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
         """Parse Complexipy text output (fallback).
@@ -289,46 +369,14 @@ class ComplexipyAdapter(BaseToolAdapter):
         """
         issues = []
         lines = output.strip().split("\n")
-
         current_file: Path | None = None
 
         for line in lines:
-            line = line.strip()
-
-            # Parse file headers
-            if line.startswith("File:"):
-                file_str = line.replace("File:", "").strip()
-                current_file = Path(file_str)
-                continue
-
-            # Parse complexity lines
-            # Format: "  function_name (line 42): complexity 16"
+            current_file = self._update_current_file(line, current_file)
             if "complexity" in line.lower() and current_file:
-                try:
-                    # Extract function name
-                    if "(" in line and ")" in line:
-                        func_name = line.split("(")[0].strip()
-                        line_part = line.split("(")[1].split(")")[0]
-                        line_number = int(line_part.replace("line", "").strip())
-
-                        # Extract complexity
-                        complexity_part = line.split("complexity")[1].strip()
-                        complexity = int(complexity_part.split()[0])
-
-                        if complexity > self.settings.max_complexity:
-                            issue = ToolIssue(
-                                file_path=current_file,
-                                line_number=line_number,
-                                message=f"Function '{func_name}' has complexity {complexity}",
-                                code="COMPLEXITY",
-                                severity="warning"
-                                if complexity <= self.settings.max_complexity * 2
-                                else "error",
-                            )
-                            issues.append(issue)
-
-                except (ValueError, IndexError):
-                    continue
+                issue = self._parse_complexity_line(line, current_file)
+                if issue:
+                    issues.append(issue)
 
         logger.info(
             "Parsed Complexipy text output (fallback)",
@@ -338,6 +386,69 @@ class ComplexipyAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _update_current_file(self, line: str, current_file: Path | None) -> Path | None:
+        """Update current file based on line content.
+
+        Args:
+            line: Current line from output
+            current_file: Current file path
+
+        Returns:
+            Updated file path
+        """
+        if line.strip().startswith("File:"):
+            file_str = line.strip().replace("File:", "").strip()
+            return Path(file_str)
+        return current_file
+
+    def _parse_complexity_line(self, line: str, current_file: Path) -> ToolIssue | None:
+        """Parse a line containing complexity information.
+
+        Args:
+            line: Line from text output
+            current_file: Current file path
+
+        Returns:
+            ToolIssue if valid complexity data found, otherwise None
+        """
+        try:
+            func_data = self._extract_function_data(line)
+            if func_data:
+                func_name, line_number, complexity = func_data
+                if complexity > self.settings.max_complexity:
+                    severity = "error" if complexity > self.settings.max_complexity * 2 else "warning"
+                    return ToolIssue(
+                        file_path=current_file,
+                        line_number=line_number,
+                        message=f"Function '{func_name}' has complexity {complexity}",
+                        code="COMPLEXITY",
+                        severity=severity,
+                    )
+        except (ValueError, IndexError):
+            pass  # Skip invalid lines
+
+        return None
+
+    def _extract_function_data(self, line: str) -> tuple[str, int, int] | None:
+        """Extract function name, line number, and complexity from a line.
+
+        Args:
+            line: Line from text output
+
+        Returns:
+            Tuple of (function name, line number, complexity) or None
+        """
+        line = line.strip()
+        if "(" in line and ")" in line and "complexity" in line.lower():
+            func_name = line.split("(")[0].strip()
+            line_part = line.split("(")[1].split(")")[0]
+            line_number = int(line_part.replace("line", "").strip())
+            complexity_part = line.split("complexity")[1].strip()
+            complexity = int(complexity_part.split()[0])
+            return func_name, line_number, complexity
+
+        return None
 
     def _get_check_type(self) -> QACheckType:
         """Return complexity check type."""

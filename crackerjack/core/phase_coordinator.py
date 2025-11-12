@@ -342,88 +342,120 @@ class PhaseCoordinator:
         self._last_hook_summary = None
         self._last_hook_results = []
 
-        # Get hook count before creating progress bar so we can show total upfront
         hook_count = self.hook_manager.get_hook_count(suite_name)
+        progress = self._create_progress_bar()
 
-        # Create compact progress bar for 70-char width
-        # Format: ⠋ Running hooks: ━━━━━╸━━━ 7/11 0:00:32
-        progress = Progress(
-            SpinnerColumn(spinner_name="dots"),
-            TextColumn("[cyan]{task.description}[/cyan]"),
-            BarColumn(bar_width=20),  # Fixed width to prevent console overflow
-            MofNCompleteColumn(),
-            TimeElapsedColumn(),
-            console=self.console,  # Uses console width (70 chars)
-            transient=True,  # Remove after completion
+        callbacks = self._setup_progress_callbacks(progress)
+        elapsed_time = self._run_hooks_with_progress(
+            suite_name, hook_runner, progress, hook_count, attempt, callbacks
         )
 
-        # Progress callback for hook manager to call
-        task_id = None
+        if elapsed_time is None:
+            return False
 
-        # Maintain separate counters for started/completed if needed in the future
+        return self._process_hook_results(suite_name, elapsed_time, attempt)
+
+    def _create_progress_bar(self) -> Progress:
+        """Create compact progress bar for hook execution."""
+        return Progress(
+            SpinnerColumn(spinner_name="dots"),
+            TextColumn("[cyan]{task.description}[/cyan]"),
+            BarColumn(bar_width=20),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            console=self.console,
+            transient=True,
+        )
+
+    def _setup_progress_callbacks(
+        self, progress: Progress
+    ) -> dict[str, t.Callable[[int, int], None]]:
+        """Setup progress callbacks and store originals for restoration."""
+        task_id_holder = {"task_id": None}
+
         def update_progress(completed: int, total: int) -> None:
-            nonlocal task_id
-            if task_id is None:
-                return
-            # Update only completed count (total is already set during initialization)
-            progress.update(task_id, completed=completed)
+            if task_id_holder["task_id"] is not None:
+                progress.update(task_id_holder["task_id"], completed=completed)
 
         def update_progress_started(started: int, total: int) -> None:
-            nonlocal task_id
-            if task_id is None:
-                return
-            # Tick progress bar when a hook starts
-            progress.update(task_id, completed=started)
+            if task_id_holder["task_id"] is not None:
+                progress.update(task_id_holder["task_id"], completed=started)
 
-        # Store callback in hook_manager temporarily
         original_callback = getattr(self.hook_manager, "_progress_callback", None)
         original_start_callback = getattr(
             self.hook_manager, "_progress_start_callback", None
         )
+
         self.hook_manager._progress_callback = update_progress
         self.hook_manager._progress_start_callback = update_progress_started
 
+        return {
+            "update": update_progress,
+            "update_started": update_progress_started,
+            "original": original_callback,
+            "original_started": original_start_callback,
+            "task_id_holder": task_id_holder,
+        }
+
+    def _run_hooks_with_progress(
+        self,
+        suite_name: str,
+        hook_runner: t.Callable[[], list[HookResult]],
+        progress: Progress,
+        hook_count: int,
+        attempt: int,
+        callbacks: dict[str, t.Any],
+    ) -> float | None:
+        """Run hooks with progress tracking, return elapsed time or None on error."""
         try:
             with progress:
-                # Create task with known total
                 task_id = progress.add_task(
                     f"Running {suite_name} hooks:",
                     total=hook_count,
                 )
+                callbacks["task_id_holder"]["task_id"] = task_id
 
-                # Track wall-clock time for parallel execution
                 import time
 
                 start_time = time.time()
-
-                # Execute hooks - the hook_manager will call update_progress via callback
                 hook_results = hook_runner() or []
                 self._last_hook_results = hook_results
-
-                # Calculate actual elapsed time (critical for parallel execution)
                 elapsed_time = time.time() - start_time
 
-        except Exception as exc:
-            self.console.print(
-                f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
-            )
-            self.logger.exception(
-                "Hook execution raised exception",
-                extra={"suite": suite_name, "attempt": attempt},
-            )
-            # Set elapsed_time to 0 for exception case
-            elapsed_time = 0.0
-            return False
-        finally:
-            # Restore original callback
-            self.hook_manager._progress_callback = original_callback
-            self.hook_manager._progress_start_callback = original_start_callback
+                return elapsed_time
 
+        except Exception as exc:
+            self._handle_hook_execution_error(suite_name, exc, attempt)
+            return None
+        finally:
+            self._restore_progress_callbacks(callbacks)
+
+    def _handle_hook_execution_error(
+        self, suite_name: str, exc: Exception, attempt: int
+    ) -> None:
+        """Handle errors during hook execution."""
+        self.console.print(
+            f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
+        )
+        self.logger.exception(
+            "Hook execution raised exception",
+            extra={"suite": suite_name, "attempt": attempt},
+        )
+
+    def _restore_progress_callbacks(self, callbacks: dict[str, t.Any]) -> None:
+        """Restore original progress callbacks."""
+        self.hook_manager._progress_callback = callbacks["original"]
+        self.hook_manager._progress_start_callback = callbacks["original_started"]
+
+    def _process_hook_results(
+        self, suite_name: str, elapsed_time: float, attempt: int
+    ) -> bool:
+        """Process hook results and determine success."""
         summary = self.hook_manager.get_hook_summary(
-            hook_results, elapsed_time=elapsed_time
+            self._last_hook_results, elapsed_time=elapsed_time
         )
         self._last_hook_summary = summary
-        self._report_hook_results(suite_name, hook_results, summary, attempt)
+        self._report_hook_results(suite_name, self._last_hook_results, summary, attempt)
 
         if summary.get("failed", 0) == 0 and summary.get("errors", 0) == 0:
             return True
@@ -492,52 +524,34 @@ class PhaseCoordinator:
             return
 
         if self._is_plain_output():
-            # Plain, log-friendly rendering without Rich structures
-            self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
-            # Calculate statistics
-            total_hooks = len(results)
-            passed_hooks = [
-                r for r in results if r.status.lower() in {"passed", "success"}
-            ]
-            failed_hooks = [
-                r for r in results if r.status.lower() in {"failed", "error", "timeout"}
-            ]
-            other_hooks = [
-                r
-                for r in results
-                if r.status.lower()
-                not in {"passed", "success", "failed", "error", "timeout"}
-            ]
+            self._render_plain_hook_results(suite_name, results)
+        else:
+            self._render_rich_hook_results(suite_name, results)
 
-            total_passed = len(passed_hooks)
-            total_failed = len(failed_hooks)
-            total_other = len(other_hooks)
-            total_files_processed = sum(r.files_processed for r in results)
+    def _render_plain_hook_results(
+        self, suite_name: str, results: list[HookResult]
+    ) -> None:
+        """Render hook results in plain text format."""
+        self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
 
-            # Show only failed hooks in plain output if any failures exist, otherwise show all
-            hooks_to_show = failed_hooks if failed_hooks else results
-            for result in hooks_to_show:
-                name = self._strip_ansi(str(result.name))
-                status = result.status.upper()
-                duration = f"{result.duration:.2f}s"
-                files = str(result.files_processed)
-                self.console.print(
-                    f"  - {name} :: {status} | {duration} | files={files}",
-                    highlight=False,
-                )
-            # Add summary if showing all results
-            if not failed_hooks and results:
-                self.console.print(
-                    f"  Summary: {total_passed}/{total_hooks} hooks passed, "
-                    f"{total_files_processed} files processed",
-                    highlight=False,
-                )
-            self.console.print()
-            return
+        stats = self._calculate_hook_statistics(results)
+        hooks_to_show = stats["failed_hooks"] if stats["failed_hooks"] else results
 
-        # Calculate statistics for rich display
-        total_hooks = len(results)
-        passed_hooks = [r for r in results if r.status.lower() in {"passed", "success"}]
+        for result in hooks_to_show:
+            self._print_plain_hook_result(result)
+
+        if not stats["failed_hooks"] and results:
+            self._print_plain_summary(stats)
+
+        self.console.print()
+
+    def _calculate_hook_statistics(
+        self, results: list[HookResult]
+    ) -> dict[str, t.Any]:
+        """Calculate statistics from hook results."""
+        passed_hooks = [
+            r for r in results if r.status.lower() in {"passed", "success"}
+        ]
         failed_hooks = [
             r for r in results if r.status.lower() in {"failed", "error", "timeout"}
         ]
@@ -548,53 +562,134 @@ class PhaseCoordinator:
             not in {"passed", "success", "failed", "error", "timeout"}
         ]
 
-        total_passed = len(passed_hooks)
-        total_failed = len(failed_hooks)
-        total_other = len(other_hooks)
-        total_files_processed = sum(r.files_processed for r in results)
+        return {
+            "total_hooks": len(results),
+            "passed_hooks": passed_hooks,
+            "failed_hooks": failed_hooks,
+            "other_hooks": other_hooks,
+            "total_passed": len(passed_hooks),
+            "total_failed": len(failed_hooks),
+            "total_other": len(other_hooks),
+            "total_issues_found": sum(len(r.issues_found) for r in results),
+        }
 
-        # Show summary statistics at the top of the panel
-        summary_text = (
-            f"Total: [white]{total_hooks}[/white] | Passed:"
-            f" [green]{total_passed}[/green] | Failed: [red]{total_failed}[/red]"
+    def _print_plain_hook_result(self, result: HookResult) -> None:
+        """Print a single hook result in plain format."""
+        name = self._strip_ansi(str(result.name))
+        status = result.status.upper()
+        duration = f"{result.duration:.2f}s"
+        issues = str(len(result.issues_found))
+        self.console.print(
+            f"  - {name} :: {status} | {duration} | issues={issues}",
+            highlight=False,
         )
-        if total_other > 0:
-            summary_text += f" | Other: [yellow]{total_other}[/yellow]"
-        summary_text += f" | Files processed: [white]{total_files_processed}[/white]"
 
-        # Show all results by default instead of only failures
-        hooks_to_display = results
+    def _print_plain_summary(self, stats: dict[str, t.Any]) -> None:
+        """Print summary statistics in plain format."""
+        self.console.print(
+            f"  Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, "
+            f"{stats['total_issues_found']} issues found",
+            highlight=False,
+        )
 
+    def _render_rich_hook_results(
+        self, suite_name: str, results: list[HookResult]
+    ) -> None:
+        """Render hook results in Rich format."""
+        stats = self._calculate_hook_statistics(results)
+        summary_text = self._build_summary_text(stats)
+        table = self._build_results_table(results)
+        panel = self._build_results_panel(suite_name, table, summary_text)
+
+        self.console.print(panel)
+        self.console.print()
+
+    def _build_summary_text(self, stats: dict[str, t.Any]) -> str:
+        """Build summary text for Rich display."""
+        summary_text = (
+            f"Total: [white]{stats['total_hooks']}[/white] | Passed:"
+            f" [green]{stats['total_passed']}[/green] | Failed: [red]{stats['total_failed']}[/red]"
+        )
+        if stats["total_other"] > 0:
+            summary_text += f" | Other: [yellow]{stats['total_other']}[/yellow]"
+        summary_text += f" | Issues found: [white]{stats['total_issues_found']}[/white]"
+        return summary_text
+
+    def _build_results_table(self, results: list[HookResult]) -> Table:
+        """Build Rich table from hook results."""
         table = Table(
             box=box.SIMPLE,
             header_style="bold bright_white",
-            expand=True,  # Make table expand to fill available width
+            expand=True,
         )
         table.add_column("Hook", style="cyan", overflow="fold", min_width=20)
         table.add_column("Status", style="bright_white", min_width=8)
         table.add_column("Duration", justify="right", style="magenta", min_width=10)
-        table.add_column("Files", justify="right", style="bright_white", min_width=8)
+        table.add_column("Issues", justify="right", style="bright_white", min_width=8)
 
-        for result in hooks_to_display:
+        for result in results:
             status_style = self._status_style(result.status)
             table.add_row(
                 self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
                 f"{result.duration:.2f}s",
-                str(result.files_processed),
+                str(len(result.issues_found)),
             )
 
-        panel = Panel(
+        return table
+
+    def to_json(self, results: list[HookResult], suite_name: str = "") -> dict:
+        """Export hook results as structured JSON for automation.
+
+        Args:
+            results: List of HookResult objects to export
+            suite_name: Optional suite name (fast/comprehensive)
+
+        Returns:
+            Dictionary with structured results data
+
+        Example:
+            >>> json_data = coordinator.to_json(results, "comprehensive")
+            >>> print(json.dumps(json_data, indent=2))
+        """
+        return {
+            "suite": suite_name,
+            "summary": self._calculate_statistics(results),
+            "hooks": [
+                {
+                    "name": result.name,
+                    "status": result.status,
+                    "duration": round(result.duration, 2),
+                    "issues_count": len(result.issues_found),
+                    "issues": [
+                        {
+                            "file": str(issue.file_path),
+                            "line": issue.line_number,
+                            "message": issue.message,
+                            "code": getattr(issue, "code", None),
+                            "severity": getattr(issue, "severity", "warning"),
+                            "suggestion": getattr(issue, "suggestion", None),
+                        }
+                        for issue in result.issues_found
+                    ],
+                }
+                for result in results
+            ],
+        }
+
+    def _build_results_panel(
+        self, suite_name: str, table: Table, summary_text: str
+    ) -> Panel:
+        """Build Rich panel containing results table."""
+        return Panel(
             table,
             title=f"[bold]{suite_name.title()} Hook Results[/bold]",
             subtitle=summary_text,
             border_style="cyan" if suite_name == "fast" else "magenta",
             padding=(0, 1),
             width=get_console_width(),
-            expand=True,  # Make panel expand to use full available width
+            expand=True,
         )
-        self.console.print(panel)
-        self.console.print()
 
     def _display_hook_failures(
         self,
@@ -682,45 +777,71 @@ class PhaseCoordinator:
             else None
         )
 
-        # ========================================
-        # STAGE 0: PRE-PUBLISH COMMIT (if -c flag)
-        # ========================================
-        # If user specified --commit, commit any existing changes BEFORE version bump
-        if options.commit:
-            existing_changes = self.git_service.get_changed_files()
-            if existing_changes:
-                self._display_commit_push_header()
-                self.console.print(
-                    "[cyan]ℹ️[/cyan] Committing existing changes before version bump..."
-                )
-                commit_message = self._get_commit_message(existing_changes, options)
-                if not self._execute_commit_and_push(existing_changes, commit_message):
-                    self.session.fail_task(
-                        "publishing", "Failed to commit pre-publish changes"
-                    )
-                    return False
-                self.console.print(
-                    "[green]✅[/green] Pre-publish changes committed and pushed\n"
-                )
+        # STAGE 0: Pre-publish commit if needed
+        if not self._handle_pre_publish_commit(options):
+            return False
 
-        # ========================================
-        # STAGE 1: VERSION BUMP
-        # ========================================
+        # STAGE 1: Version bump
+        new_version = self._perform_version_bump(version_type)
+        if not new_version:
+            return False
+
+        # STAGE 2: Commit, tag, and push changes
+        current_commit_hash = self._commit_version_changes(new_version)
+        if not current_commit_hash:
+            return False
+
+        # STAGE 3: Publish to PyPI
+        if not self._publish_to_pypi(options, new_version, original_head, current_commit_hash):
+            return False
+
+        # Finalize publishing
+        self._finalize_publishing(options, new_version)
+
+        self.session.complete_task("publishing", f"Published version {new_version}")
+        return True
+
+    def _handle_pre_publish_commit(self, options: OptionsProtocol) -> bool:
+        """Handle committing existing changes before version bump if needed."""
+        if not options.commit:
+            return True
+
+        existing_changes = self.git_service.get_changed_files()
+        if not existing_changes:
+            return True
+
+        self._display_commit_push_header()
+        self.console.print(
+            "[cyan]ℹ️[/cyan] Committing existing changes before version bump..."
+        )
+        commit_message = self._get_commit_message(existing_changes, options)
+        if not self._execute_commit_and_push(existing_changes, commit_message):
+            self.session.fail_task(
+                "publishing", "Failed to commit pre-publish changes"
+            )
+            return False
+        self.console.print(
+            "[green]✅[/green] Pre-publish changes committed and pushed\n"
+        )
+        return True
+
+    def _perform_version_bump(self, version_type: str) -> str | None:
+        """Perform the version bump operation."""
         self._display_version_bump_header()
 
         new_version = self.publish_manager.bump_version(version_type)
         if not new_version:
             self.session.fail_task("publishing", "Version bumping failed")
-            return False
+            return None
 
         self.console.print(f"[green]✅[/green] Version bumped to {new_version}")
         self.console.print(
             f"[green]✅[/green] Changelog updated for version {new_version}"
         )
+        return new_version
 
-        # ========================================
-        # STAGE 2: COMMIT, TAG & PUSH
-        # ========================================
+    def _commit_version_changes(self, new_version: str) -> str | None:
+        """Commit the version changes to git."""
         self._display_commit_push_header()
 
         # Stage changes
@@ -728,27 +849,33 @@ class PhaseCoordinator:
         if not changed_files:
             self.console.print("[yellow]⚠️[/yellow] No changes to stage")
             self.session.fail_task("publishing", "No changes to commit")
-            return False
+            return None
 
         if not self.git_service.add_files(changed_files):
             self.session.fail_task("publishing", "Failed to stage files")
-            return False
+            return None
         self.console.print(f"[green]✅[/green] Staged {len(changed_files)} files")
 
         # Commit
         commit_message = f"chore: bump version to {new_version}"
         if not self.git_service.commit(commit_message):
             self.session.fail_task("publishing", "Failed to commit changes")
-            return False
+            return None
         current_commit_hash = (
             self.git_service.get_current_commit_hash()
             if hasattr(self.git_service, "get_current_commit_hash")
             else None
         )
+        return current_commit_hash
 
-        # ========================================
-        # STAGE 3: PUBLISH TO PYPI
-        # ========================================
+    def _publish_to_pypi(
+        self,
+        options: OptionsProtocol,
+        new_version: str,
+        original_head: str | None,
+        current_commit_hash: str | None
+    ) -> bool:
+        """Publish the package to PyPI."""
         self._display_publish_header()
 
         # Build and publish package
@@ -758,7 +885,10 @@ class PhaseCoordinator:
             if current_commit_hash and original_head:
                 self._attempt_rollback_version_bump(original_head, current_commit_hash)
             return False
+        return True
 
+    def _finalize_publishing(self, options: OptionsProtocol, new_version: str) -> None:
+        """Finalize the publishing process after successful PyPI publishing."""
         # Create git tag and push only after successful PyPI publishing
         if not options.no_git_tags:
             if not self.publish_manager.create_git_tag_local(new_version):
@@ -770,9 +900,6 @@ class PhaseCoordinator:
         if not self.git_service.push_with_tags():
             self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
             # Not failing the whole workflow for a push failure
-
-        self.session.complete_task("publishing", f"Published version {new_version}")
-        return True
 
     def _attempt_rollback_version_bump(
         self, original_head: str, current_commit_hash: str

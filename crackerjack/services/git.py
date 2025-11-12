@@ -345,6 +345,52 @@ class GitService(GitInterface):
                 return int(result.stdout.strip())
         return 0
 
+    def get_changed_files_by_extension(
+        self, extensions: list[str], include_staged: bool = True, include_unstaged: bool = True
+    ) -> list[Path]:
+        """Get changed files filtered by file extensions.
+
+        Args:
+            extensions: List of extensions to filter by (e.g., [".py", ".md"])
+            include_staged: Include staged files in results
+            include_unstaged: Include unstaged files in results
+
+        Returns:
+            List of Path objects for changed files matching the extensions
+
+        Example:
+            >>> git_service.get_changed_files_by_extension([".py"])
+            [Path("crackerjack/services/git.py"), Path("tests/test_git.py")]
+        """
+        try:
+            all_changed: set[str] = set()
+
+            if include_staged:
+                staged_result = self._run_git_command(GIT_COMMANDS["staged_files"])
+                if staged_result.stdout.strip():
+                    all_changed.update(staged_result.stdout.strip().split("\n"))
+
+            if include_unstaged:
+                unstaged_result = self._run_git_command(GIT_COMMANDS["unstaged_files"])
+                if unstaged_result.stdout.strip():
+                    all_changed.update(unstaged_result.stdout.strip().split("\n"))
+
+            # Filter by extensions
+            filtered = [
+                self.pkg_path / f
+                for f in all_changed
+                if f and any(f.endswith(ext) for ext in extensions)
+            ]
+
+            # Only return files that actually exist
+            return [f for f in filtered if f.exists()]
+
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Error getting changed files by extension: {e}"
+            )
+            return []
+
     def get_current_commit_hash(self) -> str | None:
         """Get the hash of the current commit (HEAD)."""
         try:

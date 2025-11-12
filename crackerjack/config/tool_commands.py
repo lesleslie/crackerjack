@@ -151,6 +151,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uvx",  # Use uvx for isolated semgrep environment (Python 3.13)
             "semgrep",
             "scan",
+            "--error",  # Exit with non-zero code when findings detected (CRITICAL security level)
             "--json",  # JSON output for structured parsing
             "--config",
             "p/security-audit",  # Security-focused ruleset (comprehensive)

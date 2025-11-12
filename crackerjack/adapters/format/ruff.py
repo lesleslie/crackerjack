@@ -149,41 +149,13 @@ class RuffAdapter(BaseToolAdapter):
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
-        cmd = [self.tool_name]
+        cmd = [self.tool_name, self.settings.mode]
 
-        # Add mode (check or format)
-        cmd.append(self.settings.mode)
-
-        # Mode-specific options
+        # Add mode-specific options
         if self.settings.mode == "check":
-            # Lint mode options
-            if self.settings.fix_enabled:
-                cmd.append("--fix")
-
-            if self.settings.use_json_output:
-                cmd.extend(["--output-format", "json"])
-
-            if self.settings.select_rules:
-                cmd.extend(["--select", ",".join(self.settings.select_rules)])
-
-            if self.settings.ignore_rules:
-                cmd.extend(["--ignore", ",".join(self.settings.ignore_rules)])
-
-            if self.settings.preview:
-                cmd.append("--preview")
-
+            self._add_check_mode_options(cmd)
         elif self.settings.mode == "format":
-            # Format mode options
-            if self.settings.line_length:
-                cmd.extend(["--line-length", str(self.settings.line_length)])
-
-            if self.settings.preview:
-                cmd.append("--preview")
-
-            # Format mode doesn't support JSON output
-            # But we can use --check to see what would be formatted
-            if not self.settings.fix_enabled:
-                cmd.append("--check")  # Only check, don't modify
+            self._add_format_mode_options(cmd)
 
         # Add files
         cmd.extend([str(f) for f in files])
@@ -193,6 +165,50 @@ class RuffAdapter(BaseToolAdapter):
             cmd.append("--respect-gitignore")
 
         return cmd
+
+    def _add_check_mode_options(self, cmd: list[str]) -> None:
+        """Add lint mode specific options to command.
+
+        Args:
+            cmd: Command list to append options to
+        """
+        if not self.settings:
+            return
+
+        if self.settings.fix_enabled:
+            cmd.append("--fix")
+
+        if self.settings.use_json_output:
+            cmd.extend(["--output-format", "json"])
+
+        if self.settings.select_rules:
+            cmd.extend(["--select", ",".join(self.settings.select_rules)])
+
+        if self.settings.ignore_rules:
+            cmd.extend(["--ignore", ",".join(self.settings.ignore_rules)])
+
+        if self.settings.preview:
+            cmd.append("--preview")
+
+    def _add_format_mode_options(self, cmd: list[str]) -> None:
+        """Add format mode specific options to command.
+
+        Args:
+            cmd: Command list to append options to
+        """
+        if not self.settings:
+            return
+
+        if self.settings.line_length:
+            cmd.extend(["--line-length", str(self.settings.line_length)])
+
+        if self.settings.preview:
+            cmd.append("--preview")
+
+        # Format mode doesn't support JSON output
+        # But we can use --check to see what would be formatted
+        if not self.settings.fix_enabled:
+            cmd.append("--check")  # Only check, don't modify
 
     async def parse_output(
         self,
@@ -295,42 +311,67 @@ class RuffAdapter(BaseToolAdapter):
             if ":" not in line:
                 continue
 
-            parts = line.split(":", maxsplit=3)
-            if len(parts) < 4:
-                continue
-
-            try:
-                file_path = Path(parts[0].strip())
-                line_number = int(parts[1].strip())
-                column_number = (
-                    int(parts[2].strip()) if parts[2].strip().isdigit() else None
-                )
-
-                # Parse code and message
-                message_part = parts[3].strip()
-                code = None
-                message = message_part
-
-                if " " in message_part:
-                    code_candidate = message_part.split()[0]
-                    if code_candidate.strip():
-                        code = code_candidate
-                        message = message_part[len(code) :].strip()
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=line_number,
-                    column_number=column_number,
-                    message=message,
-                    code=code,
-                    severity="error" if code and code.startswith("E") else "warning",
-                )
+            issue = self._parse_check_text_line(line)
+            if issue:
                 issues.append(issue)
 
-            except (ValueError, IndexError):
-                continue
-
         return issues
+
+    def _parse_check_text_line(self, line: str) -> ToolIssue | None:
+        """Parse a single Ruff check text line.
+
+        Args:
+            line: Line of text output
+
+        Returns:
+            ToolIssue if parsing successful, None otherwise
+        """
+        parts = line.split(":", maxsplit=3)
+        if len(parts) < 4:
+            return None
+
+        try:
+            file_path = Path(parts[0].strip())
+            line_number = int(parts[1].strip())
+            column_number = (
+                int(parts[2].strip()) if parts[2].strip().isdigit() else None
+            )
+
+            # Parse code and message
+            message_part = parts[3].strip()
+            code, message = self._extract_check_code_and_message(message_part)
+
+            return ToolIssue(
+                file_path=file_path,
+                line_number=line_number,
+                column_number=column_number,
+                message=message,
+                code=code,
+                severity="error" if code and code.startswith("E") else "warning",
+            )
+
+        except (ValueError, IndexError):
+            return None
+
+    def _extract_check_code_and_message(self, message_part: str) -> tuple[str | None, str]:
+        """Extract code and message from Ruff check output.
+
+        Args:
+            message_part: Part containing code and message
+
+        Returns:
+            Tuple of (code, message)
+        """
+        if " " not in message_part:
+            return None, message_part
+
+        code_candidate = message_part.split()[0]
+        if code_candidate.strip():
+            code = code_candidate
+            message = message_part[len(code) :].strip()
+            return code, message
+
+        return None, message_part
 
     def _parse_format_output(
         self,

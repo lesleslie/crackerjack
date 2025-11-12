@@ -25,6 +25,7 @@ class HookManagerImpl:
         debug: bool = False,
         enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
+        use_incremental: bool = False,
         # Legacy parameters kept for backward compatibility (deprecated)
         orchestration_config: t.Any = None,
         enable_orchestration: bool | None = None,
@@ -35,6 +36,14 @@ class HookManagerImpl:
         self.pkg_path = pkg_path
         self.executor: HookExecutor
         self.debug = debug
+
+        # Get GitService for incremental execution
+        from crackerjack.services.git import GitService
+
+        git_service = None
+        if use_incremental:
+            console_for_git = depends.get_sync(Console)
+            git_service = GitService(console_for_git, pkg_path)
 
         # Use LSP-aware executor if optimization is enabled
         if enable_lsp_optimization:
@@ -47,6 +56,8 @@ class HookManagerImpl:
                 quiet,
                 debug,
                 use_tool_proxy=enable_tool_proxy,
+                use_incremental=use_incremental,
+                git_service=git_service,
             )
         else:
             # Create a console for the executor
@@ -54,7 +65,14 @@ class HookManagerImpl:
             self.console = console  # Store console for later use
             # Use ProgressHookExecutor with inline hook status (no progress bar)
             self.executor = ProgressHookExecutor(
-                console, pkg_path, verbose, quiet, show_progress=False, debug=debug
+                console,
+                pkg_path,
+                verbose,
+                quiet,
+                show_progress=False,
+                debug=debug,
+                use_incremental=use_incremental,
+                git_service=git_service,
             )
 
         self.config_loader = HookConfigLoader()

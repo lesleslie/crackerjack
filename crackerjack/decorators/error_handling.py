@@ -26,6 +26,25 @@ from ..errors import (
 from .utils import format_exception_chain, get_function_context, is_async_function
 
 
+def _is_would_block_error(e: Exception) -> bool:
+    """Check if exception is a would-block error (EAGAIN/EWOULDBLOCK)."""
+    err_no = getattr(e, "errno", None)
+    if err_no is not None:
+        return err_no in {errno.EAGAIN, errno.EWOULDBLOCK}
+    return isinstance(e, BlockingIOError)
+
+
+def _fallback_stderr_write(message: str, include_traceback: bool) -> None:
+    """Write to stderr as final fallback, suppressing all errors."""
+    with suppress(Exception):
+        err = sys.__stderr__
+        if err is not None:
+            err.write(message + "\n")
+            if include_traceback:
+                err.write("(traceback suppressed due to I/O constraints)\n")
+            err.flush()
+
+
 def _safe_console_print(
     console: Console,
     message: str,
@@ -47,25 +66,10 @@ def _safe_console_print(
                 console.print_exception()
             return
         except (BlockingIOError, BrokenPipeError, OSError) as e:  # pragma: no cover
-            # Only retry on would-block conditions; otherwise degrade silently
-            err_no = getattr(e, "errno", None)
-            would_block = (
-                err_no in {errno.EAGAIN, errno.EWOULDBLOCK}
-                if err_no is not None
-                else isinstance(e, BlockingIOError)
-            )
-            if would_block and attempt < retries:
+            if _is_would_block_error(e) and attempt < retries:
                 time.sleep(retry_delay)
                 continue
-            # Final fallback: try bare stderr write; ignore all errors
-            with suppress(Exception):
-                err = sys.__stderr__
-                if err is not None:
-                    err.write(message + "\n")
-                    if include_traceback:
-                        # Avoid rich rendering here to prevent further issues
-                        err.write("(traceback suppressed due to I/O constraints)\n")
-                    err.flush()
+            _fallback_stderr_write(message, include_traceback)
             return
 
 
@@ -302,6 +306,61 @@ def log_errors(
     return decorator
 
 
+def _calculate_retry_delay(attempt: int, backoff: float) -> float:
+    """Calculate delay for retry attempt with linear backoff."""
+    return backoff * attempt if backoff > 0 else 0.0
+
+
+def _create_async_retry_wrapper(
+    func: t.Callable[..., t.Any],
+    max_attempts: int,
+    retry_exceptions: tuple[type[Exception], ...],
+    backoff: float,
+) -> t.Callable[..., t.Any]:
+    """Create async wrapper with retry logic."""
+
+    @wraps(func)
+    async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        attempt = 0
+        while True:
+            try:
+                return await func(*args, **kwargs)
+            except retry_exceptions:
+                attempt += 1
+                if attempt >= max_attempts:
+                    raise
+                delay = _calculate_retry_delay(attempt, backoff)
+                if delay > 0:
+                    await asyncio.sleep(delay)
+
+    return async_wrapper
+
+
+def _create_sync_retry_wrapper(
+    func: t.Callable[..., t.Any],
+    max_attempts: int,
+    retry_exceptions: tuple[type[Exception], ...],
+    backoff: float,
+) -> t.Callable[..., t.Any]:
+    """Create sync wrapper with retry logic."""
+
+    @wraps(func)
+    def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        attempt = 0
+        while True:
+            try:
+                return func(*args, **kwargs)
+            except retry_exceptions:
+                attempt += 1
+                if attempt >= max_attempts:
+                    raise
+                delay = _calculate_retry_delay(attempt, backoff)
+                if delay > 0:
+                    time.sleep(delay)
+
+    return sync_wrapper
+
+
 def retry(
     *,
     max_attempts: int = 3,
@@ -324,40 +383,12 @@ def retry(
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
-
-            @wraps(func)
-            async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                attempt = 0
-                while True:
-                    try:
-                        return await func(*args, **kwargs)
-                    except retry_exceptions:
-                        attempt += 1
-                        if attempt >= max_attempts:
-                            raise
-                        delay = backoff * attempt if backoff > 0 else 0.0
-                        if delay > 0:
-                            await asyncio.sleep(delay)
-                        continue
-
-            return async_wrapper
-
-        @wraps(func)
-        def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-            attempt = 0
-            while True:
-                try:
-                    return func(*args, **kwargs)
-                except retry_exceptions:
-                    attempt += 1
-                    if attempt >= max_attempts:
-                        raise
-                    delay = backoff * attempt if backoff > 0 else 0.0
-                    if delay > 0:
-                        time.sleep(delay)
-                    continue
-
-        return sync_wrapper
+            return _create_async_retry_wrapper(
+                func, max_attempts, retry_exceptions, backoff
+            )
+        return _create_sync_retry_wrapper(
+            func, max_attempts, retry_exceptions, backoff
+        )
 
     return decorator
 
@@ -471,6 +502,34 @@ def _create_sync_validation_wrapper(
     return sync_wrapper
 
 
+def _normalize_validators(
+    param: str,
+    funcs: t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
+) -> list[t.Callable[[t.Any], bool]]:
+    """Convert single validator or iterable to list of validators."""
+    if isinstance(funcs, (list, tuple, set)):
+        return list(funcs)  # type: ignore[arg-type]
+    return [funcs]  # type: ignore[list-item]
+
+
+def _create_validator_runner(
+    validator_map: dict[
+        str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
+    ]
+) -> t.Callable[[str, t.Any], None]:
+    """Create function to run validators for a parameter."""
+
+    def _run_validators(param: str, value: t.Any) -> None:
+        funcs = validator_map.get(param)
+        if not funcs:
+            return
+        normalized = _normalize_validators(param, funcs)
+        for validate in normalized:
+            _execute_single_validator(validate, param, value)
+
+    return _run_validators
+
+
 def validate_args(
     *,
     validators: dict[
@@ -486,17 +545,8 @@ def validate_args(
         validators: Mapping of argument names to validator callable(s).
         type_check: If True, enforce annotations via isinstance checks.
     """
-
     validator_map = validators or {}
-
-    def _run_validators(param: str, value: t.Any) -> None:
-        funcs = validator_map.get(param)
-        if not funcs:
-            return
-        if not isinstance(funcs, (list, tuple, set)):
-            funcs = [funcs]  # type: ignore[list-item]
-        for validate in funcs:
-            _execute_single_validator(validate, param, value)
+    _run_validators = _create_validator_runner(validator_map)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         signature = inspect.signature(func)
@@ -515,6 +565,63 @@ def validate_args(
         return _create_sync_validation_wrapper(func, signature, _validate)
 
     return decorator
+
+
+def _handle_degradation_error(
+    func: t.Callable[..., t.Any],
+    e: Exception,
+    fallback_value: t.Any,
+    warn: bool,
+    console: Console,
+) -> t.Any:
+    """Handle error with warning and fallback resolution."""
+    if warn:
+        context = get_function_context(func)
+        _safe_console_print(
+            console,
+            f"[yellow]⚠️  {context['function_name']} failed, using fallback: "
+            f"{type(e).__name__}[/yellow]",
+        )
+
+    if callable(fallback_value):
+        return fallback_value()
+    return fallback_value
+
+
+def _create_async_degradation_wrapper(
+    func: t.Callable[..., t.Any],
+    fallback_value: t.Any,
+    warn: bool,
+    console: Console,
+) -> t.Callable[..., t.Any]:
+    """Create async wrapper with graceful degradation."""
+
+    @wraps(func)
+    async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        try:
+            return await func(*args, **kwargs)
+        except Exception as e:
+            return _handle_degradation_error(func, e, fallback_value, warn, console)
+
+    return async_wrapper
+
+
+def _create_sync_degradation_wrapper(
+    func: t.Callable[..., t.Any],
+    fallback_value: t.Any,
+    warn: bool,
+    console: Console,
+) -> t.Callable[..., t.Any]:
+    """Create sync wrapper with graceful degradation."""
+
+    @wraps(func)
+    def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            return _handle_degradation_error(func, e, fallback_value, warn, console)
+
+    return sync_wrapper
 
 
 def graceful_degradation(
@@ -553,45 +660,9 @@ def graceful_degradation(
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
-
-            @wraps(func)
-            async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    return await func(*args, **kwargs)
-                except Exception as e:
-                    if warn:
-                        context = get_function_context(func)
-                        _safe_console_print(
-                            _console,
-                            f"[yellow]⚠️  {context['function_name']} failed, using fallback: "
-                            f"{type(e).__name__}[/yellow]",
-                        )
-
-                    if callable(fallback_value):
-                        return fallback_value()
-                    return fallback_value
-
-            return async_wrapper
-
-        else:
-
-            @wraps(func)
-            def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    if warn:
-                        context = get_function_context(func)
-                        _safe_console_print(
-                            _console,
-                            f"[yellow]⚠️  {context['function_name']} failed, using fallback: "
-                            f"{type(e).__name__}[/yellow]",
-                        )
-
-                    if callable(fallback_value):
-                        return fallback_value()
-                    return fallback_value
-
-            return sync_wrapper
+            return _create_async_degradation_wrapper(
+                func, fallback_value, warn, _console
+            )
+        return _create_sync_degradation_wrapper(func, fallback_value, warn, _console)
 
     return decorator

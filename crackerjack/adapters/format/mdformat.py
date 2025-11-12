@@ -169,46 +169,86 @@ class MdformatAdapter(BaseToolAdapter):
         Returns:
             List of parsed issues
         """
+        if result.exit_code == 0:
+            return []
+
+        # Parse files that would be reformatted
+        issues = self._parse_output_lines(result.raw_output)
+
+        # Fallback: if no files parsed but exit code != 0, use processed files
+        if not issues and result.files_processed:
+            issues = self._create_issues_from_processed_files(result.files_processed)
+
+        return issues
+
+    def _parse_output_lines(self, output: str) -> list[ToolIssue]:
+        """Parse output lines to extract files needing formatting.
+
+        Args:
+            output: Raw output from Mdformat
+
+        Returns:
+            List of issues for files needing formatting
+        """
         issues = []
+        lines = output.strip().split("\n")
 
-        # Mdformat in check mode returns non-zero if files would be reformatted
-        # and lists files that need formatting in stdout
-        if result.exit_code != 0:
-            # Parse files that would be reformatted
-            lines = result.raw_output.strip().split("\n")
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
 
-            for line in lines:
-                line = line.strip()
-                if not line:
-                    continue
+            issue = self._create_issue_from_line(line)
+            if issue:
+                issues.append(issue)
 
-                # Mdformat outputs file paths that would be reformatted
-                try:
-                    file_path = Path(line)
-                    if file_path.exists() and file_path.suffix in (".md", ".markdown"):
-                        issue = ToolIssue(
-                            file_path=file_path,
-                            message="File needs Markdown formatting",
-                            code="MDFORMAT",
-                            severity="warning",
-                            suggestion="Run mdformat to format this file",
-                        )
-                        issues.append(issue)
-                except Exception:
-                    continue
+        return issues
 
-            # If no files parsed from output but exit code != 0,
-            # report all checked files
-            if not issues and result.files_processed:
-                for file_path in result.files_processed:
-                    if file_path.suffix in (".md", ".markdown"):
-                        issue = ToolIssue(
-                            file_path=file_path,
-                            message="File needs Markdown formatting",
-                            code="MDFORMAT",
-                            severity="warning",
-                        )
-                        issues.append(issue)
+    def _create_issue_from_line(self, line: str) -> ToolIssue | None:
+        """Create issue from output line if it's a valid markdown file.
+
+        Args:
+            line: Output line potentially containing file path
+
+        Returns:
+            ToolIssue if valid markdown file, None otherwise
+        """
+        try:
+            file_path = Path(line)
+            if file_path.exists() and file_path.suffix in (".md", ".markdown"):
+                return ToolIssue(
+                    file_path=file_path,
+                    message="File needs Markdown formatting",
+                    code="MDFORMAT",
+                    severity="warning",
+                    suggestion="Run mdformat to format this file",
+                )
+        except Exception:
+            pass
+
+        return None
+
+    def _create_issues_from_processed_files(
+        self, processed_files: list[Path]
+    ) -> list[ToolIssue]:
+        """Create issues from processed markdown files.
+
+        Args:
+            processed_files: Files that were processed by Mdformat
+
+        Returns:
+            List of issues for markdown files
+        """
+        issues = []
+        for file_path in processed_files:
+            if file_path.suffix in (".md", ".markdown"):
+                issue = ToolIssue(
+                    file_path=file_path,
+                    message="File needs Markdown formatting",
+                    code="MDFORMAT",
+                    severity="warning",
+                )
+                issues.append(issue)
 
         return issues
 

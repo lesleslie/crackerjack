@@ -318,6 +318,7 @@ def handle_standard_mode(
                 web_job_id=job_id,
                 verbose=options.verbose,
                 debug=getattr(options, "debug", False),
+                changed_only=getattr(options, "changed_only", False),
             )
             success = asyncio.run(
                 async_orchestrator.run_complete_workflow_async(options)
@@ -329,6 +330,7 @@ def handle_standard_mode(
                 web_job_id=job_id,
                 verbose=options.verbose,
                 debug=getattr(options, "debug", False),
+                changed_only=getattr(options, "changed_only", False),
             )
             success = sync_orchestrator.run_complete_workflow_sync(options)
 

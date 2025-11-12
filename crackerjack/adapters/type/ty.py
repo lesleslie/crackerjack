@@ -276,44 +276,9 @@ class TyAdapter(BaseToolAdapter):
             if ":" not in line:
                 continue
 
-            parts = line.split(":", maxsplit=4)
-            if len(parts) < 4:
-                continue
-
-            try:
-                file_path = Path(parts[0].strip())
-                line_number = int(parts[1].strip())
-                column_number = (
-                    int(parts[2].strip()) if parts[2].strip().isdigit() else None
-                )
-
-                # Parse severity and message
-                severity_and_message = parts[3].strip() if len(parts) > 3 else ""
-                message = parts[4].strip() if len(parts) > 4 else ""
-
-                # Default to error severity
-                severity = "error"
-                if severity_and_message.lower().startswith("warning"):
-                    severity = "warning"
-                    # If there's a message in parts[4], use it; otherwise extract from severity_and_message
-                    if not message:
-                        message = severity_and_message[len("warning") :].strip()
-                elif severity_and_message.lower().startswith("error"):
-                    # If there's a message in parts[4], use it; otherwise extract from severity_and_message
-                    if not message:
-                        message = severity_and_message[len("error") :].strip()
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=line_number,
-                    column_number=column_number,
-                    message=message,
-                    severity=severity,
-                )
+            issue = self._parse_text_line(line)
+            if issue:
                 issues.append(issue)
-
-            except (ValueError, IndexError):
-                continue
 
         logger.info(
             "Parsed Ty text output (fallback)",
@@ -323,6 +288,78 @@ class TyAdapter(BaseToolAdapter):
             },
         )
         return issues
+
+    def _parse_text_line(self, line: str) -> ToolIssue | None:
+        """Parse a single text output line.
+
+        Args:
+            line: Line of text output
+
+        Returns:
+            ToolIssue if parsing successful, None otherwise
+        """
+        parts = line.split(":", maxsplit=4)
+        if len(parts) < 4:
+            return None
+
+        try:
+            file_path = Path(parts[0].strip())
+            line_number = int(parts[1].strip())
+            column_number = (
+                int(parts[2].strip()) if parts[2].strip().isdigit() else None
+            )
+
+            severity_and_message = parts[3].strip() if len(parts) > 3 else ""
+            message = parts[4].strip() if len(parts) > 4 else ""
+
+            severity = self._parse_severity(severity_and_message)
+            message = self._extract_message(severity_and_message, message, severity)
+
+            return ToolIssue(
+                file_path=file_path,
+                line_number=line_number,
+                column_number=column_number,
+                message=message,
+                severity=severity,
+            )
+
+        except (ValueError, IndexError):
+            return None
+
+    def _parse_severity(self, severity_and_message: str) -> str:
+        """Parse severity from text line.
+
+        Args:
+            severity_and_message: Part containing severity
+
+        Returns:
+            Severity level (error or warning)
+        """
+        if severity_and_message.lower().startswith("warning"):
+            return "warning"
+        return "error"
+
+    def _extract_message(
+        self, severity_and_message: str, message: str, severity: str
+    ) -> str:
+        """Extract message from text line.
+
+        Args:
+            severity_and_message: Part containing severity and possibly message
+            message: Explicit message if present
+            severity: Parsed severity level
+
+        Returns:
+            Extracted message
+        """
+        if message:
+            return message
+
+        # Extract from severity_and_message
+        if severity_and_message.lower().startswith(severity):
+            return severity_and_message[len(severity) :].strip()
+
+        return severity_and_message
 
     def _get_check_type(self) -> QACheckType:
         """Return type check type."""

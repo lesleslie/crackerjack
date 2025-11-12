@@ -40,26 +40,61 @@ async def clean_temp_files(
     total_size = 0
 
     for directory in directories:
-        if not directory.exists():
-            continue
-        for pattern in patterns:
-            for file in directory.glob(pattern):
-                if file.is_file():
-                    try:
-                        file_time = datetime.fromtimestamp(file.stat().st_mtime)
-                        if file_time < cutoff:
-                            file_size = file.stat().st_size
-                            total_size += file_size
-                            cleaned_files.append(str(file))
-                            if not dry_run:
-                                file.unlink()
-                    except OSError:
-                        continue
+        batch_files, batch_size = _process_directory(directory, patterns, cutoff, dry_run)
+        cleaned_files.extend(batch_files)
+        total_size += batch_size
 
     return {
         "all_cleaned_files": cleaned_files,
         "total_size": total_size,
     }
+
+
+def _process_directory(directory: Path, patterns: list[str], cutoff: t.Any, dry_run: bool) -> tuple[list[str], int]:
+    """Process a single directory for cleaning."""
+    if not directory.exists():
+        return [], 0
+
+    cleaned_files = []
+    total_size = 0
+
+    for pattern in patterns:
+        batch_files, batch_size = _process_pattern(directory, pattern, cutoff, dry_run)
+        cleaned_files.extend(batch_files)
+        total_size += batch_size
+
+    return cleaned_files, total_size
+
+
+def _process_pattern(directory: Path, pattern: str, cutoff: t.Any, dry_run: bool) -> tuple[list[str], int]:
+    """Process a single pattern within a directory."""
+    cleaned_files = []
+    total_size = 0
+
+    for file in directory.glob(pattern):
+        if file.is_file():
+            file_info = _check_file_eligibility(file, cutoff)
+            if file_info:
+                file_size, should_clean = file_info
+                if should_clean:
+                    total_size += file_size
+                    cleaned_files.append(str(file))
+                    if not dry_run:
+                        file.unlink()
+
+    return cleaned_files, total_size
+
+
+def _check_file_eligibility(file: Path, cutoff: t.Any) -> tuple[int, bool] | None:
+    """Check if a file is eligible for cleaning based on cutoff time."""
+    try:
+        file_time = datetime.fromtimestamp(file.stat().st_mtime)
+        if file_time < cutoff:
+            file_size = file.stat().st_size
+            return file_size, True
+        return None
+    except OSError:
+        return None
 
 
 def _register_clean_tool(mcp_app: t.Any) -> None:

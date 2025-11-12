@@ -18,6 +18,24 @@ ______________________________________________________________________
 - fix: resolve bug in parser
 
 
+## [Unreleased] - 2025-11-09
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
+## [Unreleased] - 2025-11-09
+
+### Added
+- feat: add new feature
+
+### Fixed
+- fix: resolve bug in parser
+
+
 ## [0.44.6] - 2025-11-08
 
 ### Changed

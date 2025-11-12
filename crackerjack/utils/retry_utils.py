@@ -84,84 +84,111 @@ def retry(
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> T:
-            last_exception: BaseException | None = None
-            current_delay = delay
-
-            for attempt in range(max_attempts):
-                try:
-                    # At this point, we know func is a coroutine function because
-                    # this async_wrapper is only used when asyncio.iscoroutinefunction(func) is True
-                    result = await func(*args, **kwargs)  # type: ignore[misc]
-                    return result  # type: ignore[no-any-return]
-
-                except exceptions as e:
-                    last_exception = e
-
-                    if not _should_retry(attempt, max_attempts):
-                        break
-
-                    current_delay = _prepare_next_attempt(
-                        current_delay,
-                        max_delay,
-                        backoff,
-                        jitter,
-                        attempt,
-                        max_attempts,
-                        e,
-                        logger_func,
-                    )
-
-                    await asyncio.sleep(current_delay)
-
-            # If we get here, all attempts failed
-            if last_exception is not None:
-                raise last_exception
-            else:
-                # This should never happen, but added for type safety
-                raise RuntimeError("Retry failed but no exception was captured")
+            return await _retry_async(
+                func, args, kwargs, max_attempts, delay, backoff, max_delay, jitter, exceptions, logger_func
+            )
 
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> T:
-            last_exception: BaseException | None = None
-            current_delay = delay
+            return _retry_sync(
+                func, args, kwargs, max_attempts, delay, backoff, max_delay, jitter, exceptions, logger_func
+            )
 
-            for attempt in range(max_attempts):
-                try:
-                    result = func(*args, **kwargs)
-                    return result  # type: ignore[no-any-return]
-
-                except exceptions as e:
-                    last_exception = e
-
-                    if not _should_retry(attempt, max_attempts):
-                        break
-
-                    current_delay = _prepare_next_attempt(
-                        current_delay,
-                        max_delay,
-                        backoff,
-                        jitter,
-                        attempt,
-                        max_attempts,
-                        e,
-                        logger_func,
-                    )
-
-                    time.sleep(current_delay)
-
-            # If we get here, all attempts failed
-            if last_exception is not None:
-                raise last_exception
-            else:
-                # This should never happen, but added for type safety
-                raise RuntimeError("Retry failed but no exception was captured")
-
-        # Return appropriate wrapper based on whether the original function is async
         if asyncio.iscoroutinefunction(func):
             return cast(Callable[..., T], async_wrapper)
         return cast(Callable[..., T], sync_wrapper)
 
     return decorator
+
+
+async def _retry_async[T](
+    func: Callable[..., T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    max_attempts: int,
+    delay: float,
+    backoff: float,
+    max_delay: float | None,
+    jitter: bool,
+    exceptions: tuple[type[BaseException], ...],
+    logger_func: Callable[[str], None] | None,
+) -> T:
+    """Execute async function with retry logic."""
+    last_exception: BaseException | None = None
+    current_delay = delay
+
+    for attempt in range(max_attempts):
+        try:
+            result = await func(*args, **kwargs)  # type: ignore[misc]
+            return result  # type: ignore[no-any-return]
+
+        except exceptions as e:
+            last_exception = e
+
+            if not _should_retry(attempt, max_attempts):
+                break
+
+            current_delay = _prepare_next_attempt(
+                current_delay,
+                max_delay,
+                backoff,
+                jitter,
+                attempt,
+                max_attempts,
+                e,
+                logger_func,
+            )
+
+            await asyncio.sleep(current_delay)
+
+    if last_exception is not None:
+        raise last_exception
+    raise RuntimeError("Retry failed but no exception was captured")
+
+
+def _retry_sync[T](
+    func: Callable[..., T],
+    args: tuple[Any, ...],
+    kwargs: dict[str, Any],
+    max_attempts: int,
+    delay: float,
+    backoff: float,
+    max_delay: float | None,
+    jitter: bool,
+    exceptions: tuple[type[BaseException], ...],
+    logger_func: Callable[[str], None] | None,
+) -> T:
+    """Execute sync function with retry logic."""
+    last_exception: BaseException | None = None
+    current_delay = delay
+
+    for attempt in range(max_attempts):
+        try:
+            result = func(*args, **kwargs)
+            return result  # type: ignore[no-any-return]
+
+        except exceptions as e:
+            last_exception = e
+
+            if not _should_retry(attempt, max_attempts):
+                break
+
+            current_delay = _prepare_next_attempt(
+                current_delay,
+                max_delay,
+                backoff,
+                jitter,
+                attempt,
+                max_attempts,
+                e,
+                logger_func,
+            )
+
+            time.sleep(current_delay)
+
+    if last_exception is not None:
+        raise last_exception
+    raise RuntimeError("Retry failed but no exception was captured")
 
 
 # Common exception types for API connection retries

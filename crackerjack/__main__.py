@@ -1,9 +1,19 @@
 import typing as t
+import warnings
 from pathlib import Path
 
 import typer
 from acb.console import Console
 from acb.depends import Inject, depends
+
+# Suppress asyncio subprocess cleanup warnings when event loop closes
+# This is a known Python issue - the subprocesses are properly cleaned up,
+# but the warning appears when the event loop closes with pending subprocess handlers
+warnings.filterwarnings(
+    "ignore",
+    message=".*loop.*closed.*",
+    category=RuntimeWarning,
+)
 
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
