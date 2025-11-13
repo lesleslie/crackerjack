@@ -40,6 +40,9 @@ class HookResult:
     files_processed: int = 0
     issues_found: list[str] | None = None
     stage: str = "pre-commit"
+    exit_code: int | None = None  # Non-zero exit codes for failed hooks
+    error_message: str | None = None  # Error details from stderr or exceptions
+    is_timeout: bool = False  # Whether hook failed due to timeout
 
     def __post_init__(self) -> None:
         if self.issues_found is None:

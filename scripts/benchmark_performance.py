@@ -85,9 +85,11 @@ def calculate_stats(runs: list[BenchmarkRun]) -> BenchmarkStats:
 
 def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
     """Generate markdown performance report."""
-    report = ["# Crackerjack Performance Baseline Report\n"]
-    report.append(f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-    report.append("## Summary\n")
+    report = [
+        "# Crackerjack Performance Baseline Report\n",
+        f"**Generated**: {time.strftime('%Y-%m-%d %H:%M:%S')}\n",
+        "## Summary\n",
+    ]
 
     # Calculate stats for each mode
     stats_by_mode: dict[str, BenchmarkStats] = {}
@@ -95,10 +97,14 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
         stats_by_mode[mode] = calculate_stats(runs)
 
     # Summary table
-    report.append("| Mode | Runs | Mean | Median (P50) | P95 | P99 | Success Rate |")
-    report.append("|------|------|------|--------------|-----|-----|--------------|")
+    report.extend(
+        (
+            "| Mode | Runs | Mean | Median (P50) | P95 | P99 | Success Rate |",
+            "|------|------|------|--------------|-----|-----|--------------|",
+        )
+    )
 
-    for mode in ["default", "fast", "comp"]:
+    for mode in ("default", "fast", "comp"):
         if mode not in stats_by_mode:
             continue
         stats = stats_by_mode[mode]
@@ -111,20 +117,25 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
     report.append("\n## Detailed Statistics\n")
 
     for mode, stats in stats_by_mode.items():
-        report.append(f"### Mode: `{mode}`\n")
-        report.append(f"- **Runs**: {stats.runs}")
-        report.append(f"- **Mean**: {stats.mean:.2f}s")
-        report.append(f"- **Median (P50)**: {stats.median:.2f}s")
-        report.append(f"- **P95**: {stats.p95:.2f}s")
-        report.append(f"- **P99**: {stats.p99:.2f}s")
-        report.append(f"- **Min**: {stats.min:.2f}s")
-        report.append(f"- **Max**: {stats.max:.2f}s")
-        report.append(f"- **Std Dev**: {stats.std_dev:.2f}s")
-        report.append(f"- **Success Rate**: {stats.success_rate:.0f}%\n")
+        report.extend(
+            (
+                f"### Mode: `{mode}`\n",
+                f"- **Runs**: {stats.runs}",
+                f"- **Mean**: {stats.mean:.2f}s",
+                f"- **Median (P50)**: {stats.median:.2f}s",
+                f"- **P95**: {stats.p95:.2f}s",
+                f"- **P99**: {stats.p99:.2f}s",
+                f"- **Min**: {stats.min:.2f}s",
+                f"- **Max**: {stats.max:.2f}s",
+                f"- **Std Dev**: {stats.std_dev:.2f}s",
+                f"- **Success Rate**: {stats.success_rate:.0f}%\n",
+            )
+        )
 
     # Abort criteria
-    report.append("## ACB Migration Abort Criteria\n")
-    report.append("Based on these baseline measurements:\n")
+    report.extend(
+        ("## ACB Migration Abort Criteria\n", "Based on these baseline measurements:\n")
+    )
 
     for mode, stats in stats_by_mode.items():
         threshold = stats.median * 1.1  # 10% slower

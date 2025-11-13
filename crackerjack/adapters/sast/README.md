@@ -31,6 +31,7 @@ result = await adapter.check(files=[Path("src/")])
 ## Recommended: Semgrep
 
 Semgrep is the recommended SAST tool for Crackerjack due to:
+
 - **Multi-language support** (Python, JS, Go, etc.)
 - **Extensive rulesets** (`p/security-audit`, `p/python`, custom rules)
 - **Active development** (r2c/semgrep community)
@@ -41,6 +42,7 @@ Semgrep is the recommended SAST tool for Crackerjack due to:
 ```python
 from pathlib import Path
 from crackerjack.adapters.sast.semgrep import SemgrepAdapter, SemgrepSettings
+
 
 async def run_semgrep() -> None:
     adapter = SemgrepAdapter(
@@ -64,6 +66,7 @@ Bandit remains available but is superseded by Semgrep:
 ```python
 from pathlib import Path
 from crackerjack.adapters.sast.bandit import BanditAdapter, BanditSettings
+
 
 async def run_bandit() -> None:
     adapter = BanditAdapter(

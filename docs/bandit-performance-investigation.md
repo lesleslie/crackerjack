@@ -5,14 +5,15 @@
 Investigation into three issues reported during comprehensive hook execution:
 
 1. **Bandit taking 765s** to execute (abnormally slow)
-2. **"JSON parse failed, falling back to text parsing"** message appearing
-3. **Total elapsed time calculation** summing individual hook durations instead of wall-clock time
+1. **"JSON parse failed, falling back to text parsing"** message appearing
+1. **Total elapsed time calculation** summing individual hook durations instead of wall-clock time
 
 ## Issue 1: Bandit 765s Execution Time
 
 ### Current Configuration
 
 **Tool Command** (`crackerjack/config/tool_commands.py:139-147`):
+
 ```python
 "bandit": [
     "uv",
@@ -26,17 +27,20 @@ Investigation into three issues reported during comprehensive hook execution:
 ```
 
 **Hook Definition** (`crackerjack/config/hooks.py:261-269`):
+
 ```python
-HookDefinition(
-    name="bandit",
-    command=[],
-    timeout=1200,  # 20 minutes
-    stage=HookStage.COMPREHENSIVE,
-    manual_stage=True,
-    security_level=SecurityLevel.CRITICAL,
-    use_precommit_legacy=False,  # Direct invocation
-    accepts_file_paths=True,
-),
+(
+    HookDefinition(
+        name="bandit",
+        command=[],
+        timeout=1200,  # 20 minutes
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.CRITICAL,
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=True,
+    ),
+)
 ```
 
 ### Root Cause Analysis
@@ -44,6 +48,7 @@ HookDefinition(
 The bandit adapter has **contradictory configuration**:
 
 **Adapter Settings** (`crackerjack/adapters/security/bandit.py:163-176`):
+
 ```python
 def build_command(self, files, config=None):
     cmd = [self.tool_name]
@@ -74,6 +79,7 @@ uv run python -m bandit -r ./crackerjack
 ```
 
 This means bandit is scanning with **default settings**:
+
 - ✅ Recursive scan (`-r`)
 - ❌ No severity filtering (scans ALL severity levels instead of just HIGH)
 - ❌ No confidence filtering (reports ALL confidence levels instead of just HIGH)
@@ -83,12 +89,14 @@ This means bandit is scanning with **default settings**:
 ### Performance Impact
 
 **Expected behavior** (with adapter flags):
+
 - High severity only: ~10-20 potential issues
 - High confidence only: ~5-10 potential issues
 - 7 rules skipped: Eliminates common false positives
 - Execution time: ~10-30s
 
 **Actual behavior** (without adapter flags):
+
 - All severity levels: ~100+ potential issues
 - All confidence levels: ~200+ potential issues
 - All ~100+ security checks running
@@ -99,6 +107,7 @@ This means bandit is scanning with **default settings**:
 The tool was migrated from pre-commit hooks to direct invocation (Phase 8.4), but the **adapter's filtering logic was not integrated** into the tool command registry.
 
 The adapter has all the performance optimizations:
+
 - High severity/confidence filters
 - Rule exclusions
 - JSON output parsing
@@ -148,6 +157,7 @@ When the adapter tries to parse JSON output that doesn't exist, it falls back to
 ### Current Implementation
 
 **Hook Manager** (`crackerjack/managers/hook_manager.py:469`):
+
 ```python
 def _calculate_summary(self, results: list[HookResult]) -> dict[str, t.Any]:
     passed = sum(1 for r in results if r.status == "passed")
@@ -166,6 +176,7 @@ def _calculate_summary(self, results: list[HookResult]) -> dict[str, t.Any]:
 ```
 
 **Async Hook Manager** (`crackerjack/managers/async_hook_manager.py:107`):
+
 ```python
 total_duration = sum(r.duration for r in results)  # ⚠️ SAME ISSUE
 ```
@@ -175,6 +186,7 @@ total_duration = sum(r.duration for r in results)  # ⚠️ SAME ISSUE
 For **parallel execution**, summing individual hook durations gives **cumulative CPU time**, not **wall-clock elapsed time**.
 
 Example from your output:
+
 ```
 ❌ Comprehensive hooks attempt 1: 7/8 passed in 928.75s (1 failed, 0 errors).
 
@@ -198,6 +210,7 @@ But these ran in **parallel**, so the actual elapsed time was closer to **765.78
 The parallel executor already calculates this correctly:
 
 **Parallel Executor** (`crackerjack/services/parallel_executor.py:204, 229`):
+
 ```python
 async def _execute_with_groups(...):
     start_time = time.time()
@@ -234,6 +247,7 @@ def get_tool_command(hook_name: str, pkg_path: Path) -> list[str]:
     # Special handling for adapter-based tools
     if hook_name == "bandit":
         from crackerjack.adapters.security.bandit import BanditAdapter, BanditSettings
+
         adapter = BanditAdapter(settings=BanditSettings())
         # Build command with proper flags
         return adapter.build_command(files=[pkg_path / "crackerjack"])
@@ -276,11 +290,14 @@ def run_comprehensive_hooks(self) -> tuple[list[HookResult], float]:
     elapsed_time = time.time() - start_time
     return results, elapsed_time
 
+
 def _calculate_summary(self, results, elapsed_time: float | None = None):
     # ... existing logic ...
 
     # Use provided elapsed time if available (parallel), otherwise sum (sequential)
-    total_duration = elapsed_time if elapsed_time is not None else sum(r.duration for r in results)
+    total_duration = (
+        elapsed_time if elapsed_time is not None else sum(r.duration for r in results)
+    )
 
     return {
         # ... existing fields ...
@@ -305,16 +322,19 @@ except json.JSONDecodeError as e:
 ## Testing Plan
 
 1. **Test bandit with optimized flags**:
+
    ```bash
    time uv run python -m bandit -r -lll -iii -s B101,B110,B112,B311,B404,B603,B607 -f json ./crackerjack
    ```
 
-2. **Verify parallel timing**:
+1. **Verify parallel timing**:
+
    ```bash
    python -m crackerjack  # Should show wall-clock time, not sum
    ```
 
-3. **Check JSON parsing**:
+1. **Check JSON parsing**:
+
    ```bash
    # Should see no "JSON parse failed" messages in logs
    python -m crackerjack --verbose
@@ -323,9 +343,9 @@ except json.JSONDecodeError as e:
 ## Files to Modify
 
 1. `crackerjack/config/tool_commands.py` - Fix bandit command
-2. `crackerjack/managers/hook_manager.py` - Fix duration calculation
-3. `crackerjack/managers/async_hook_manager.py` - Fix duration calculation
-4. `crackerjack/adapters/security/bandit.py` - (Optional) Reduce log level
+1. `crackerjack/managers/hook_manager.py` - Fix duration calculation
+1. `crackerjack/managers/async_hook_manager.py` - Fix duration calculation
+1. `crackerjack/adapters/security/bandit.py` - (Optional) Reduce log level
 
 ## References
 

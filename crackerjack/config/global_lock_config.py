@@ -17,6 +17,87 @@ class GlobalLockConfig:
     - Old API: GlobalLockConfig(lock_directory=path, timeout_seconds=600, ...)
     """
 
+    def _should_build_from_compatibility_params(
+        self,
+        enabled: bool | None,
+        timeout_seconds: float | None,
+        stale_lock_hours: float | None,
+        lock_directory: Path | None,
+        session_heartbeat_interval: float | None,
+        max_retry_attempts: int | None,
+        retry_delay_seconds: float | None,
+        enable_lock_monitoring: bool | None,
+    ) -> bool:
+        """Check if any backwards compatibility parameters are provided."""
+        return any(
+            param is not None
+            for param in [
+                enabled,
+                timeout_seconds,
+                stale_lock_hours,
+                lock_directory,
+                session_heartbeat_interval,
+                max_retry_attempts,
+                retry_delay_seconds,
+                enable_lock_monitoring,
+            ]
+        )
+
+    def _build_settings_from_compatibility_params(
+        self,
+        enabled: bool | None,
+        timeout_seconds: float | None,
+        stale_lock_hours: float | None,
+        lock_directory: Path | None,
+        session_heartbeat_interval: float | None,
+        max_retry_attempts: int | None,
+        retry_delay_seconds: float | None,
+        enable_lock_monitoring: bool | None,
+    ) -> GlobalLockSettings:
+        """Build settings from backwards compatibility parameters."""
+        # Get defaults from CrackerjackSettings
+        default_settings = depends.get_sync(CrackerjackSettings).global_lock
+        # Create a copy with overrides
+        settings_dict = {
+            "enabled": enabled if enabled is not None else default_settings.enabled,
+            "timeout_seconds": (
+                timeout_seconds
+                if timeout_seconds is not None
+                else default_settings.timeout_seconds
+            ),
+            "stale_lock_hours": (
+                stale_lock_hours
+                if stale_lock_hours is not None
+                else default_settings.stale_lock_hours
+            ),
+            "lock_directory": (
+                lock_directory
+                if lock_directory is not None
+                else default_settings.lock_directory
+            ),
+            "session_heartbeat_interval": (
+                session_heartbeat_interval
+                if session_heartbeat_interval is not None
+                else default_settings.session_heartbeat_interval
+            ),
+            "max_retry_attempts": (
+                max_retry_attempts
+                if max_retry_attempts is not None
+                else default_settings.max_retry_attempts
+            ),
+            "retry_delay_seconds": (
+                retry_delay_seconds
+                if retry_delay_seconds is not None
+                else default_settings.retry_delay_seconds
+            ),
+            "enable_lock_monitoring": (
+                enable_lock_monitoring
+                if enable_lock_monitoring is not None
+                else default_settings.enable_lock_monitoring
+            ),
+        }
+        return GlobalLockSettings(**settings_dict)
+
     def __init__(
         self,
         settings: GlobalLockSettings | None = None,
@@ -31,9 +112,17 @@ class GlobalLockConfig:
         enable_lock_monitoring: bool | None = None,
     ) -> None:
         # If any backwards compatibility parameters are provided, build settings from them
-        if any(
-            param is not None
-            for param in [
+        if self._should_build_from_compatibility_params(
+            enabled,
+            timeout_seconds,
+            stale_lock_hours,
+            lock_directory,
+            session_heartbeat_interval,
+            max_retry_attempts,
+            retry_delay_seconds,
+            enable_lock_monitoring,
+        ):
+            settings = self._build_settings_from_compatibility_params(
                 enabled,
                 timeout_seconds,
                 stale_lock_hours,
@@ -42,50 +131,7 @@ class GlobalLockConfig:
                 max_retry_attempts,
                 retry_delay_seconds,
                 enable_lock_monitoring,
-            ]
-        ):
-            # Get defaults from CrackerjackSettings
-            default_settings = depends.get_sync(CrackerjackSettings).global_lock
-            # Create a copy with overrides
-            settings_dict = {
-                "enabled": enabled if enabled is not None else default_settings.enabled,
-                "timeout_seconds": (
-                    timeout_seconds
-                    if timeout_seconds is not None
-                    else default_settings.timeout_seconds
-                ),
-                "stale_lock_hours": (
-                    stale_lock_hours
-                    if stale_lock_hours is not None
-                    else default_settings.stale_lock_hours
-                ),
-                "lock_directory": (
-                    lock_directory
-                    if lock_directory is not None
-                    else default_settings.lock_directory
-                ),
-                "session_heartbeat_interval": (
-                    session_heartbeat_interval
-                    if session_heartbeat_interval is not None
-                    else default_settings.session_heartbeat_interval
-                ),
-                "max_retry_attempts": (
-                    max_retry_attempts
-                    if max_retry_attempts is not None
-                    else default_settings.max_retry_attempts
-                ),
-                "retry_delay_seconds": (
-                    retry_delay_seconds
-                    if retry_delay_seconds is not None
-                    else default_settings.retry_delay_seconds
-                ),
-                "enable_lock_monitoring": (
-                    enable_lock_monitoring
-                    if enable_lock_monitoring is not None
-                    else default_settings.enable_lock_monitoring
-                ),
-            }
-            settings = GlobalLockSettings(**settings_dict)
+            )
 
         base_settings = settings or depends.get_sync(CrackerjackSettings).global_lock
         self._settings = base_settings.model_copy()

@@ -323,6 +323,32 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
         # Should never reach here
         return {"success": False, "error": "Max retries exceeded", "confidence": 0.0}
 
+    async def _initialize_client(self) -> t.Any:
+        """Initialize and return the Anthropic client."""
+        # Ensure initialized
+        if not self._initialized:
+            await self.init()
+
+        if not self._settings:
+            raise RuntimeError("Settings not initialized - call init() first")
+
+        # Security: API key from validated settings
+        import anthropic
+
+        # Get validated API key (SecretStr)
+        api_key = self._settings.anthropic_api_key.get_secret_value()
+
+        client = anthropic.AsyncAnthropic(
+            api_key=api_key,
+            max_retries=0,  # We handle retries ourselves
+        )
+
+        # Register for cleanup
+        self.register_resource(client)
+
+        logger.debug("Claude API client initialized")
+        return client
+
     async def _ensure_client(self) -> t.Any:
         """Lazy client initialization with thread safety (ACB pattern).
 
@@ -341,30 +367,7 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
 
             async with self._client_lock:
                 if self._client is None:
-                    # Ensure initialized
-                    if not self._initialized:
-                        await self.init()
-
-                    if not self._settings:
-                        raise RuntimeError(
-                            "Settings not initialized - call init() first"
-                        )
-
-                    # Security: API key from validated settings
-                    import anthropic
-
-                    # Get validated API key (SecretStr)
-                    api_key = self._settings.anthropic_api_key.get_secret_value()
-
-                    self._client = anthropic.AsyncAnthropic(
-                        api_key=api_key,
-                        max_retries=0,  # We handle retries ourselves
-                    )
-
-                    # Register for cleanup
-                    self.register_resource(self._client)
-
-                    logger.debug("Claude API client initialized")
+                    self._client = await self._initialize_client()
 
         return self._client
 
@@ -448,16 +451,19 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
 
         return True, ""
 
+    def _is_dangerous_import(self, node: ast.Import) -> bool:
+        """Check if the import node contains dangerous modules."""
+        for alias in node.names:
+            if alias.name in ("os", "subprocess", "sys"):
+                return not self._is_safe_usage(node)
+        return False
+
     def _scan_ast_for_dangerous_imports(self, tree: ast.AST) -> None:
         """Scan AST nodes for potentially dangerous imports."""
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name in ("os", "subprocess", "sys"):
-                        if not self._is_safe_usage(node):
-                            # Note: os/subprocess can be used safely
-                            # This is a heuristic check
-                            pass  # Allow for now, but log
+            if isinstance(node, ast.Import) and self._is_dangerous_import(node):
+                # For now we just log - in production we might want more action
+                pass  # Allow for now, but log
 
     def _check_code_size_limit(self, code: str) -> tuple[bool, str]:
         """Check if generated code exceeds size limit."""

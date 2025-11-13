@@ -366,6 +366,97 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
                 "backup_path": str(backup_path) if backup_path else None,
             }
 
+    def _check_file_exists(self, path: Path) -> dict[str, bool | str]:
+        """Check if the file exists."""
+        if not path.exists():
+            return {
+                "valid": False,
+                "error": f"File does not exist: {path}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_is_symlink(self, path: Path) -> dict[str, bool | str]:
+        """Check if the file is a symlink."""
+        if path.is_symlink():
+            return {
+                "valid": False,
+                "error": f"Symlinks are not allowed for security reasons: {path}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_is_file(self, path: Path) -> dict[str, bool | str]:
+        """Check if the path is a file."""
+        if not path.is_file():
+            return {
+                "valid": False,
+                "error": f"Path is not a file: {path}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_forbidden_patterns(self, path: Path) -> dict[str, bool | str]:
+        """Check if the file matches forbidden patterns."""
+        file_str = str(path)
+        for pattern in self.FORBIDDEN_PATTERNS:
+            if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
+                return {
+                    "valid": False,
+                    "error": f"File matches forbidden pattern '{pattern}': {path}",
+                }
+        return {"valid": True, "error": ""}
+
+    def _check_file_size(self, path: Path) -> dict[str, bool | str]:
+        """Check the file size against the limit."""
+        try:
+            file_size = path.stat().st_size
+            if file_size > self._max_file_size:
+                return {
+                    "valid": False,
+                    "error": f"File size {file_size} exceeds limit {self._max_file_size}",
+                }
+        except Exception as e:
+            return {
+                "valid": False,
+                "error": f"Failed to check file size: {e}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_file_writable(self, path: Path) -> dict[str, bool | str]:
+        """Check if the file is writable."""
+        if not os.access(path, os.W_OK):
+            return {
+                "valid": False,
+                "error": f"File is not writable: {path}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_path_traversal(self, path: Path) -> dict[str, bool | str]:
+        """Check for path traversal attacks."""
+        try:
+            resolved_path = path.resolve()
+            project_root = Path.cwd().resolve()
+
+            # Ensure the resolved path is within the project directory
+            resolved_path.relative_to(project_root)
+
+        except ValueError:
+            return {
+                "valid": False,
+                "error": f"File path outside project directory: {path}",
+            }
+        return {"valid": True, "error": ""}
+
+    def _check_symlinks_in_path_chain(self, path: Path) -> dict[str, bool | str]:
+        """Check for symlinks in the path chain."""
+        current = path
+        while current != current.parent:
+            if current.is_symlink():
+                return {
+                    "valid": False,
+                    "error": f"Symlink in path chain not allowed: {current}",
+                }
+            current = current.parent
+        return {"valid": True, "error": ""}
+
     def _validate_file_path(self, path: Path) -> dict[str, bool | str]:
         """Validate file path before modification with comprehensive security checks.
 
@@ -392,81 +483,42 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             ...     print(result["error"])
         """
         # Must exist
-        if not path.exists():
-            return {
-                "valid": False,
-                "error": f"File does not exist: {path}",
-            }
+        result = self._check_file_exists(path)
+        if not result["valid"]:
+            return result
 
         # SECURITY: Block symlinks to prevent following malicious links
-        if path.is_symlink():
-            return {
-                "valid": False,
-                "error": f"Symlinks are not allowed for security reasons: {path}",
-            }
+        result = self._check_is_symlink(path)
+        if not result["valid"]:
+            return result
 
         # Must be a file (not directory)
-        if not path.is_file():
-            return {
-                "valid": False,
-                "error": f"Path is not a file: {path}",
-            }
+        result = self._check_is_file(path)
+        if not result["valid"]:
+            return result
 
         # SECURITY: Check forbidden file patterns
-        file_str = str(path)
-        for pattern in self.FORBIDDEN_PATTERNS:
-            if fnmatch(file_str, pattern) or fnmatch(path.name, pattern):
-                return {
-                    "valid": False,
-                    "error": f"File matches forbidden pattern '{pattern}': {path}",
-                }
+        result = self._check_forbidden_patterns(path)
+        if not result["valid"]:
+            return result
 
         # SECURITY: Check file size before processing
-        try:
-            file_size = path.stat().st_size
-            if file_size > self._max_file_size:
-                return {
-                    "valid": False,
-                    "error": f"File size {file_size} exceeds limit {self._max_file_size}",
-                }
-        except Exception as e:
-            return {
-                "valid": False,
-                "error": f"Failed to check file size: {e}",
-            }
+        result = self._check_file_size(path)
+        if not result["valid"]:
+            return result
 
         # Must be writable
-        if not os.access(path, os.W_OK):
-            return {
-                "valid": False,
-                "error": f"File is not writable: {path}",
-            }
+        result = self._check_file_writable(path)
+        if not result["valid"]:
+            return result
 
         # SECURITY: Prevent path traversal attacks
-        try:
-            resolved_path = path.resolve()
-            project_root = Path.cwd().resolve()
-
-            # Ensure the resolved path is within the project directory
-            resolved_path.relative_to(project_root)
-
-        except ValueError:
-            return {
-                "valid": False,
-                "error": f"File path outside project directory: {path}",
-            }
+        result = self._check_path_traversal(path)
+        if not result["valid"]:
+            return result
 
         # SECURITY: Additional check - ensure no symlinks in the path chain
-        current = path
-        while current != current.parent:
-            if current.is_symlink():
-                return {
-                    "valid": False,
-                    "error": f"Symlink in path chain not allowed: {current}",
-                }
-            current = current.parent
-
-        return {"valid": True, "error": ""}
+        return self._check_symlinks_in_path_chain(path)
 
     def _create_backup(
         self,

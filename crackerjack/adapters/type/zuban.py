@@ -16,7 +16,6 @@ ACB Patterns:
 
 from __future__ import annotations
 
-import json
 import logging
 import typing as t
 from contextlib import suppress
@@ -50,13 +49,13 @@ class ZubanSettings(ToolAdapterSettings):
     """Settings for Zuban adapter."""
 
     tool_name: str = "zuban"
-    use_json_output: bool = True
+    use_json_output: bool = False  # Zuban doesn't support JSON output
     strict_mode: bool = False
     ignore_missing_imports: bool = False
     follow_imports: str = "normal"  # normal, skip, silent
     cache_dir: Path | None = None
     incremental: bool = True
-    warn_unused_ignores: bool = True
+    warn_unused_ignores: bool = False  # Not supported by zuban directly
 
 
 class ZubanAdapter(BaseToolAdapter):
@@ -149,11 +148,8 @@ class ZubanAdapter(BaseToolAdapter):
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
-        cmd = [self.tool_name]
-
-        # JSON output
-        if self.settings.use_json_output:
-            cmd.extend(["--format", "json"])
+        # Use mypy-compatible command as it's more likely to have expected behavior
+        cmd = [self.tool_name, "mypy", "--config-file", "mypy.ini"]
 
         # Strict mode
         if self.settings.strict_mode:
@@ -164,20 +160,22 @@ class ZubanAdapter(BaseToolAdapter):
             cmd.append("--ignore-missing-imports")
 
         # Follow imports
-        cmd.extend(["--follow-imports", self.settings.follow_imports])
+        if self.settings.follow_imports == "normal":
+            pass  # default
+        elif self.settings.follow_imports == "skip":
+            cmd.append("--follow-untyped-imports")
+        elif self.settings.follow_imports == "silent":
+            # Doesn't have a direct equivalent, skipping for now
+            pass
 
         # Cache directory
         if self.settings.cache_dir:
             cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
 
-        # Incremental checking
-        if self.settings.incremental:
-            cmd.append("--incremental")
-
-        # Warn about unused type: ignore comments
-        # IMPORTANT: Skip this option if it causes config parsing errors
-        # if self.settings.warn_unused_ignores:
-        #     cmd.append("--warn-unused-ignores")
+        # NOTE: Zuban doesn't support incremental checking with mypy subcommand
+        # Skipping --incremental flag to prevent execution errors
+        # if self.settings.incremental:
+        #     cmd.append("--incremental")
 
         # Add targets
         cmd.extend([str(f) for f in files])
@@ -198,7 +196,7 @@ class ZubanAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-        """Parse Zuban JSON output into standardized issues.
+        """Parse Zuban text output into standardized issues.
 
         Args:
             result: Raw execution result from Zuban
@@ -210,66 +208,162 @@ class ZubanAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
-        try:
-            data = json.loads(result.raw_output)
-            logger.debug(
-                "Parsed Zuban JSON output",
-                extra={"files_count": len(data.get("files", []))},
-            )
-        except json.JSONDecodeError as e:
-            logger.warning(
-                "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]},
-            )
-            return self._parse_text_output(result.raw_output)
-
-        issues = []
-
-        # Zuban JSON format (similar to mypy):
-        # {
-        #   "files": [
-        #     {
-        #       "path": "path/to/file.py",
-        #       "errors": [
-        #         {
-        #           "line": 42,
-        #           "column": 10,
-        #           "message": "Incompatible types...",
-        #           "severity": "error",
-        #           "code": "assignment"
-        #         }
-        #       ]
-        #     }
-        #   ]
-        # }
-
-        for file_data in data.get("files", []):
-            file_path = Path(file_data.get("path", ""))
-
-            for error in file_data.get("errors", []):
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=error.get("line"),
-                    column_number=error.get("column"),
-                    message=error.get("message", ""),
-                    code=error.get("code"),
-                    severity=error.get("severity", "error"),
-                )
-                issues.append(issue)
-
-        logger.info(
-            "Parsed Zuban output",
-            extra={
-                "total_issues": len(issues),
-                "errors": sum(1 for i in issues if i.severity == "error"),
-                "warnings": sum(1 for i in issues if i.severity == "warning"),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
-            },
+        logger.debug(
+            "Parsing Zuban text output",
+            extra={"output_length": len(result.raw_output)},
         )
-        return issues
+
+        # Parse text output as zuban doesn't support JSON format
+        return self._parse_text_output(result.raw_output)
+
+    def _check_has_column(self, parts: list[str]) -> tuple[bool, int | None]:
+        """Check if parts[2] is a column number and return it if so."""
+        has_column = parts[2].strip().isdigit()
+        column_number = int(parts[2].strip()) if has_column else None
+        return has_column, column_number
+
+    def _extract_parts_from_line(
+        self, line: str
+    ) -> tuple[Path, int, int | None, str, str] | None:
+        """Extract path, line, column, severity and message from a line."""
+        # Handle zuban output: "file:line: error: message  [code]"
+        if ":" not in line:
+            return None
+
+        # Split at colons, but be careful with colon positions
+        # Format: file:line: error: message [code]
+        parts = line.split(":", maxsplit=3)
+        if len(parts) < 3:
+            return None
+
+        try:
+            file_path_str = parts[0].strip()
+            line_str = parts[1].strip()
+
+            if (
+                not line_str
+            ):  # If second part after colon is empty, it might have column info
+                # Maybe format is: file:line:col: error: message [code]
+                if len(parts) >= 4:
+                    line_str = parts[1].strip()
+                    line_number = int(line_str)
+
+                    # Check if second part is a column number
+                    if line_str.isdigit():
+                        # It's likely: file:line:col: error: message [code]
+                        column_number = int(line_str)
+                        # Third part would be the error type
+                        severity_and_message = (
+                            parts[2].strip() if len(parts) > 2 else ""
+                        )
+                        message_with_code = (
+                            parts[3].strip() if len(parts) > 3 else severity_and_message
+                        )
+
+                        # Extract code from message (like [operator])
+                        message, code = self._extract_message_and_code(
+                            message_with_code
+                        )
+
+                        return (
+                            Path(file_path_str),
+                            line_number,
+                            column_number,
+                            message,
+                            code,
+                        )
+                    else:
+                        # It might be: file:line: error: message [code]
+                        file_path = Path(file_path_str)
+                        message_with_code = (
+                            parts[2].strip() + ":" + parts[3].strip()
+                            if len(parts) > 3
+                            else parts[2].strip()
+                        )
+                        message, code = self._extract_message_and_code(
+                            message_with_code
+                        )
+                        # No column number in this format
+                        return file_path, int(line_str), None, message, code
+                else:
+                    return None
+            else:
+                # Format: file:line: error: message [code]
+                file_path = Path(file_path_str)
+                line_number = int(line_str)
+
+                # Second part after colon is severity/error type
+                severity_and_message = parts[2].strip()
+                message_with_code = (
+                    parts[3].strip() if len(parts) > 3 else severity_and_message
+                )
+
+                # Extract message and code
+                message, code = self._extract_message_and_code(message_with_code)
+
+                return file_path, line_number, None, message, code
+        except (ValueError, IndexError):
+            return None
+
+    def _extract_message_and_code(self, message_and_code_str: str) -> tuple[str, str]:
+        """Extract message and code from format like 'error: message [code]'."""
+        # Split on first space after "error:" to separate severity from message
+        if " error: " in message_and_code_str:
+            _, message_part = message_and_code_str.split(" error: ", 1)
+        elif " warning: " in message_and_code_str:
+            _, message_part = message_and_code_str.split(" warning: ", 1)
+        else:
+            message_part = message_and_code_str
+
+        # Extract code from [code] brackets
+        code = ""
+        if " [" in message_part and "]" in message_part:
+            start_bracket = message_part.rfind(" [")
+            end_bracket = message_part.rfind("]")
+            if (
+                start_bracket != -1
+                and end_bracket != -1
+                and end_bracket > start_bracket
+            ):
+                code = message_part[
+                    start_bracket + 2 : end_bracket
+                ]  # Extract content between [ and ]
+                message_part = message_part[
+                    :start_bracket
+                ].strip()  # Everything before the bracket
+
+        return message_part.strip(), code
+
+    def _determine_severity_and_message(
+        self,
+        severity_and_message: str,
+        has_column: bool,
+        parts: list[str],
+        original_message: str,
+    ) -> tuple[str, str]:
+        """Determine severity and clean up message from the severity_and_message part."""
+        # Default to error severity
+        severity = "error"
+        message = original_message
+
+        if severity_and_message.lower().startswith("warning"):
+            severity = "warning"
+            message = (
+                severity_and_message[len("warning") :].strip()
+                if not has_column or len(parts) <= 4
+                else original_message
+            )
+        elif severity_and_message.lower().startswith("error"):
+            message = (
+                severity_and_message[len("error") :].strip()
+                if not has_column or len(parts) <= 4
+                else original_message
+            )
+
+        return severity, message
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        """Parse Zuban text output (fallback).
+        """Parse Zuban text output.
 
         Args:
             output: Text output from Zuban
@@ -281,47 +375,46 @@ class ZubanAdapter(BaseToolAdapter):
         lines = output.strip().split("\n")
 
         for line in lines:
-            # Zuban text format: "file.py:10:5: error: Incompatible types..."
-            if ":" not in line:
+            # Skip lines that don't contain error information
+            if ":" not in line or ("error:" not in line and "warning:" not in line):
                 continue
 
-            parts = line.split(":", maxsplit=4)
-            if len(parts) < 4:
+            # Skip summary lines like "Found X error(s) in Y file(s)"
+            if (
+                "Found" in line
+                and ("error" in line or "warning" in line)
+                and "file" in line
+            ):
                 continue
 
-            try:
-                file_path = Path(parts[0].strip())
-                line_number = int(parts[1].strip())
-                column_number = (
-                    int(parts[2].strip()) if parts[2].strip().isdigit() else None
-                )
-
-                # Parse severity and message
-                severity_and_message = parts[3].strip() if len(parts) > 3 else ""
-                message = parts[4].strip() if len(parts) > 4 else severity_and_message
-
-                # Default to error severity
-                severity = "error"
-                if severity_and_message.lower().startswith("warning"):
-                    severity = "warning"
-                    message = severity_and_message[len("warning") :].strip()
-                elif severity_and_message.lower().startswith("error"):
-                    message = severity_and_message[len("error") :].strip()
-
-                issue = ToolIssue(
-                    file_path=file_path,
-                    line_number=line_number,
-                    column_number=column_number,
-                    message=message,
-                    severity=severity,
-                )
-                issues.append(issue)
-
-            except (ValueError, IndexError):
+            # Parse error line in format: "file:line: error: message [code]"
+            parts_result = self._extract_parts_from_line(line)
+            if parts_result is None:
                 continue
+
+            (
+                file_path,
+                line_number,
+                column_number,
+                message,
+                code,
+            ) = parts_result
+
+            # Determine severity from message content
+            severity = "error" if "error:" in line else "warning"
+
+            issue = ToolIssue(
+                file_path=file_path,
+                line_number=line_number,
+                column_number=column_number,
+                message=message,
+                code=code,
+                severity=severity,
+            )
+            issues.append(issue)
 
         logger.info(
-            "Parsed Zuban text output (fallback)",
+            "Parsed Zuban text output",
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len(set(str(i.file_path) for i in issues)),

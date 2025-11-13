@@ -76,7 +76,7 @@ def load_settings[T: Settings](
         if config_file.exists():
             try:
                 with open(config_file) as f:
-                    file_data = yaml.safe_load(f) or {}
+                    file_data: dict[str, t.Any] = yaml.safe_load(f) or {}
                     if not isinstance(file_data, dict):
                         logger.warning(
                             f"Invalid YAML format in {config_file}: expected dict, got {type(file_data).__name__}"
@@ -156,7 +156,7 @@ async def load_settings_async[T: Settings](
         if config_file.exists():
             try:
                 with open(config_file) as f:
-                    file_data = yaml.safe_load(f) or {}
+                    file_data: dict[str, t.Any] = yaml.safe_load(f) or {}
                     if not isinstance(file_data, dict):
                         logger.warning(
                             f"Invalid YAML format in {config_file}: expected dict, got {type(file_data).__name__}"

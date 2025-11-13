@@ -343,6 +343,73 @@ def _run_mcp_server(
         raise
 
 
+def _initialize_project_and_config(
+    project_path_arg: str,
+    http_port: int | None,
+    http_mode: bool,
+) -> tuple[Path, dict[str, t.Any]]:
+    """Initialize project path and config."""
+    project_path = Path(project_path_arg).resolve()
+    mcp_config = _load_mcp_config(project_path)
+    mcp_config = _merge_config_with_args(mcp_config, http_port, http_mode)
+    return project_path, mcp_config
+
+
+def _create_and_validate_server(mcp_config: dict[str, t.Any]) -> t.Any | None:
+    """Create and validate the MCP server."""
+    mcp_app = create_mcp_server(mcp_config)
+    if not mcp_app:
+        console.print("[red]Failed to create MCP server[/ red]")
+    return mcp_app
+
+
+def _start_websocket_if_needed(websocket_port: int | None) -> None:
+    """Start WebSocket server if needed."""
+    if websocket_port:
+        import asyncio
+
+        try:
+            asyncio.run(_start_websocket_server())
+            console.print(
+                f"[green]✅ WebSocket server auto-started on port {websocket_port}[/green]"
+            )
+        except Exception as e:
+            console.print(f"[yellow]⚠️ WebSocket server auto-start failed: {e}[/yellow]")
+
+
+def _show_server_startup_info(
+    project_path: Path,
+    mcp_config: dict[str, t.Any],
+    websocket_port: int | None,
+    http_mode: bool,
+) -> None:
+    """Show server startup information."""
+    _print_server_info(project_path, mcp_config, websocket_port, http_mode)
+
+    # Show final success panel before starting the server
+    if mcp_config.get("http_enabled", False) or http_mode:
+        http_endpoint = (
+            f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
+        )
+    else:
+        http_endpoint = None
+
+    websocket_monitor = f"ws://127.0.0.1:{websocket_port}" if websocket_port else None
+
+    # Final startup success panel via mcp-common
+    if websocket_monitor:
+        ServerPanels.startup_success(
+            server_name="Crackerjack MCP",
+            endpoint=http_endpoint,
+            websocket_monitor=websocket_monitor,  # type: ignore[arg-type]
+        )
+    else:
+        ServerPanels.startup_success(
+            server_name="Crackerjack MCP",
+            endpoint=http_endpoint,
+        )
+
+
 def main(
     project_path_arg: str = ".",
     websocket_port: int | None = None,
@@ -353,57 +420,19 @@ def main(
         return
 
     try:
-        project_path = Path(project_path_arg).resolve()
-
-        mcp_config = _load_mcp_config(project_path)
-        mcp_config = _merge_config_with_args(mcp_config, http_port, http_mode)
+        project_path, mcp_config = _initialize_project_and_config(
+            project_path_arg, http_port, http_mode
+        )
 
         _setup_server_context(project_path, websocket_port)
 
-        mcp_app = create_mcp_server(mcp_config)
+        mcp_app = _create_and_validate_server(mcp_config)
         if not mcp_app:
-            console.print("[red]Failed to create MCP server[/ red]")
             return
 
-        _print_server_info(project_path, mcp_config, websocket_port, http_mode)
+        _show_server_startup_info(project_path, mcp_config, websocket_port, http_mode)
 
-        # Auto-start WebSocket server if websocket_port is specified
-        if websocket_port:
-            import asyncio
-
-            try:
-                asyncio.run(_start_websocket_server())
-                console.print(
-                    f"[green]✅ WebSocket server auto-started on port {websocket_port}[/green]"
-                )
-            except Exception as e:
-                console.print(
-                    f"[yellow]⚠️ WebSocket server auto-start failed: {e}[/yellow]"
-                )
-
-        # Show final success panel before starting the server
-        if mcp_config.get("http_enabled", False) or http_mode:
-            http_endpoint = (
-                f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
-            )
-        else:
-            http_endpoint = None
-
-        websocket_monitor = (
-            f"ws://127.0.0.1:{websocket_port}" if websocket_port else None
-        )
-        # Final startup success panel via mcp-common
-        if websocket_monitor:
-            ServerPanels.startup_success(
-                server_name="Crackerjack MCP",
-                endpoint=http_endpoint,
-                websocket_monitor=websocket_monitor,  # type: ignore[arg-type]
-            )
-        else:
-            ServerPanels.startup_success(
-                server_name="Crackerjack MCP",
-                endpoint=http_endpoint,
-            )
+        _start_websocket_if_needed(websocket_port)
 
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 

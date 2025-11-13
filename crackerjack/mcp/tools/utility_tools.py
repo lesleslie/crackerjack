@@ -1,6 +1,7 @@
 import json
 import time
 import typing as t
+from datetime import datetime
 from pathlib import Path
 
 from acb.config import Config
@@ -70,6 +71,29 @@ def _process_directory(
     return cleaned_files, total_size
 
 
+def _process_file_for_cleanup(
+    file: Path, cutoff: t.Any, dry_run: bool
+) -> tuple[list[str], int]:
+    """Process a single file to determine if it should be cleaned."""
+    file_info = _check_file_eligibility(file, cutoff)
+    if not file_info:
+        return [], 0
+
+    file_size, should_clean = file_info
+    if not should_clean:
+        return [], 0
+
+    # Add to cleaned files
+    cleaned_files = [str(file)]
+    total_size = file_size
+
+    # Actually delete the file if not in dry_run mode
+    if not dry_run:
+        file.unlink()
+
+    return cleaned_files, total_size
+
+
 def _process_pattern(
     directory: Path, pattern: str, cutoff: t.Any, dry_run: bool
 ) -> tuple[list[str], int]:
@@ -79,14 +103,9 @@ def _process_pattern(
 
     for file in directory.glob(pattern):
         if file.is_file():
-            file_info = _check_file_eligibility(file, cutoff)
-            if file_info:
-                file_size, should_clean = file_info
-                if should_clean:
-                    total_size += file_size
-                    cleaned_files.append(str(file))
-                    if not dry_run:
-                        file.unlink()
+            file_cleaned, size = _process_file_for_cleanup(file, cutoff, dry_run)
+            cleaned_files.extend(file_cleaned)
+            total_size += size
 
     return cleaned_files, total_size
 

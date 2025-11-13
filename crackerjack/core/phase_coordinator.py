@@ -714,10 +714,46 @@ class PhaseCoordinator:
                 f"  - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
                 highlight=False,
             )
-            for issue in result.issues_found or []:
-                self.console.print(
-                    f"      - {self._strip_ansi(issue)}", highlight=False
-                )
+
+            # Show specific issues if found
+            if result.issues_found:
+                for issue in result.issues_found:
+                    issue_str = str(issue) if not isinstance(issue, str) else issue
+                    self.console.print(
+                        f"      - {self._strip_ansi(issue_str)}", highlight=False
+                    )
+            else:
+                # If no issues but hook failed, show why (exit code, error message, timeout)
+                if result.is_timeout:
+                    self.console.print(
+                        "      - Hook timed out during execution", highlight=False
+                    )
+                if result.exit_code is not None and result.exit_code != 0:
+                    exit_msg = f"Exit code: {result.exit_code}"
+                    # Add helpful context for common exit codes
+                    if result.exit_code == 137:
+                        exit_msg += " (killed - possibly timeout or out of memory)"
+                    elif result.exit_code == 139:
+                        exit_msg += " (segmentation fault)"
+                    elif result.exit_code in {126, 127}:
+                        exit_msg += " (command not found or not executable)"
+                    self.console.print(f"      - {exit_msg}", highlight=False)
+                if result.error_message:
+                    # Show first line or first 200 chars of error
+                    error_preview = result.error_message.split("\n")[0][:200]
+                    self.console.print(
+                        f"      - Error: {error_preview}", highlight=False
+                    )
+                # If still no details shown, provide generic message
+                if (
+                    not result.is_timeout
+                    and not result.exit_code
+                    and not result.error_message
+                ):
+                    self.console.print(
+                        "      - Hook failed with no detailed error information",
+                        highlight=False,
+                    )
         self.console.print()
 
     def _display_cleaning_header(self) -> None:

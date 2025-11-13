@@ -146,7 +146,7 @@ class DependencyResolver:
 
     def _build_constructor_kwargs(self, implementation: type) -> dict[str, Any]:
         init_sig = inspect.signature(implementation.__init__)
-        kwargs = {}
+        kwargs: dict[str, Any] = {}
 
         for param_name, param in init_sig.parameters.items():
             if param_name == "self":

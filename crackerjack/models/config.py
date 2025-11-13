@@ -292,6 +292,60 @@ class WorkflowOptions:
         init=False,
     )
 
+    def _initialize_config_attributes(
+        self,
+        cleaning: CleaningConfig | None,
+        hooks: HookConfig | None,
+        testing: TestConfig | None,
+        publishing: PublishConfig | None,
+        git: GitConfig | None,
+        ai: AIConfig | None,
+        execution: ExecutionConfig | None,
+        progress: ProgressConfig | None,
+        cleanup: CleanupConfig | None,
+        advanced: AdvancedConfig | None,
+        mcp_server: MCPServerConfig | None,
+        zuban_lsp: ZubanLSPConfig | None,
+    ) -> None:
+        """Initialize all configuration attributes."""
+        self.cleaning = cleaning or CleaningConfig()
+        self.hooks = hooks or HookConfig()
+        self.testing = testing or TestConfig()
+        self.publishing = publishing or PublishConfig()
+        self.git = git or GitConfig()
+        self.ai = ai or AIConfig()
+        self.execution = execution or ExecutionConfig()
+        self.progress = progress or ProgressConfig()
+        self.cleanup = cleanup or CleanupConfig()
+        self.advanced = advanced or AdvancedConfig()
+        self.mcp_server = mcp_server or MCPServerConfig()
+        self.zuban_lsp = zuban_lsp or ZubanLSPConfig()
+
+    def _set_default_overrides(self, kwargs: dict[str, Any]) -> None:
+        """Set default overrides for specific attributes."""
+        self._DEFAULT_OVERRIDES = {
+            "clean": False,
+            "test": False,
+            "publish": None,
+            "bump": None,
+            "commit": False,
+            "create_pr": False,
+            "interactive": True,
+            "dry_run": False,
+        }
+
+        for attr, value in self._DEFAULT_OVERRIDES.items():
+            if attr not in kwargs:
+                setattr(self, attr, value)
+
+    def _set_kwargs_attributes(self, kwargs: dict[str, Any]) -> None:
+        """Set attributes based on provided kwargs."""
+        for attr, value in kwargs.items():
+            if hasattr(self.__class__, attr):
+                setattr(self, attr, value)
+            elif hasattr(self, attr):
+                setattr(self, attr, value)
+
     def __init__(
         self,
         *,
@@ -309,39 +363,22 @@ class WorkflowOptions:
         zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
-        self.cleaning = cleaning or CleaningConfig()
-        self.hooks = hooks or HookConfig()
-        self.testing = testing or TestConfig()
-        self.publishing = publishing or PublishConfig()
-        self.git = git or GitConfig()
-        self.ai = ai or AIConfig()
-        self.execution = execution or ExecutionConfig()
-        self.progress = progress or ProgressConfig()
-        self.cleanup = cleanup or CleanupConfig()
-        self.advanced = advanced or AdvancedConfig()
-        self.mcp_server = mcp_server or MCPServerConfig()
-        self.zuban_lsp = zuban_lsp or ZubanLSPConfig()
-
-        self._DEFAULT_OVERRIDES = {
-            "clean": False,
-            "test": False,
-            "publish": None,
-            "bump": None,
-            "commit": False,
-            "create_pr": False,
-            "interactive": True,
-            "dry_run": False,
-        }
-
-        for attr, value in self._DEFAULT_OVERRIDES.items():
-            if attr not in kwargs:
-                setattr(self, attr, value)
-
-        for attr, value in kwargs.items():
-            if hasattr(self.__class__, attr):
-                setattr(self, attr, value)
-            elif hasattr(self, attr):
-                setattr(self, attr, value)
+        self._initialize_config_attributes(
+            cleaning,
+            hooks,
+            testing,
+            publishing,
+            git,
+            ai,
+            execution,
+            progress,
+            cleanup,
+            advanced,
+            mcp_server,
+            zuban_lsp,
+        )
+        self._set_default_overrides(kwargs)
+        self._set_kwargs_attributes(kwargs)
 
     # Convenience property mappings
     @property

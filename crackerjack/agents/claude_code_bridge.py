@@ -331,6 +331,110 @@ class ClaudeCodeBridge:
 
         return self.ai_fixer
 
+    def _extract_ai_response_fields(
+        self, ai_result: dict[str, t.Any]
+    ) -> tuple[str, str, float, list[str], list[str]]:
+        """Extract fields from AI result."""
+        fixed_code = str(ai_result.get("fixed_code", ""))
+        explanation = str(ai_result.get("explanation", "No explanation"))
+        confidence = float(ai_result.get("confidence", 0.0))
+        changes_made = ai_result.get("changes_made", [])
+        potential_side_effects = ai_result.get("potential_side_effects", [])
+
+        return fixed_code, explanation, confidence, changes_made, potential_side_effects
+
+    async def _apply_fix_to_file(
+        self, file_path: str, fixed_code: str, dry_run: bool
+    ) -> dict[str, t.Any]:
+        """Apply the fix to the file using SafeFileModifier."""
+        modify_result = await self.file_modifier.apply_fix(
+            file_path=file_path,
+            fixed_content=fixed_code,
+            dry_run=dry_run,
+            create_backup=True,
+        )
+        return modify_result
+
+    def _handle_successful_ai_fix(
+        self,
+        issue: Issue,
+        file_path: str,
+        confidence: float,
+        changes_made: list[str],
+        potential_side_effects: list[str],
+        fix_type: str,
+    ) -> FixResult:
+        """Handle the case when the AI successfully fixes the issue."""
+        self.logger.info(
+            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})"
+        )
+
+        return FixResult(
+            success=True,
+            confidence=confidence,
+            fixes_applied=[f"Fixed {fix_type} in {file_path}"],
+            remaining_issues=[],
+            recommendations=[
+                issue.message,
+                *[f"Change: {change}" for change in changes_made],
+                *[
+                    f"Potential side effect: {effect}"
+                    for effect in potential_side_effects
+                ],
+            ],
+            files_modified=[file_path],
+        )
+
+    def _handle_dry_run_response(
+        self, confidence: float, changes_made: list[str], issue: Issue
+    ) -> FixResult:
+        """Handle the case for dry-run mode."""
+        return FixResult(
+            success=True,
+            confidence=confidence,
+            fixes_applied=[],
+            remaining_issues=[issue.id],
+            recommendations=[
+                f"AI suggests (dry-run): {issue.message}",
+                *[f"Change: {change}" for change in changes_made],
+            ],
+            files_modified=[],
+        )
+
+    def _handle_error_response(self, error_msg: str, issue: Issue) -> FixResult:
+        """Handle the case when there's an error in AI fix."""
+        self.logger.error(f"AI fix failed: {error_msg}")
+
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            fixes_applied=[],
+            remaining_issues=[issue.id],
+            recommendations=[f"AI fix failed: {error_msg}"],
+            files_modified=[],
+        )
+
+    def _handle_low_confidence_response(
+        self, confidence: float, explanation: str, issue: Issue
+    ) -> FixResult:
+        """Handle the case when confidence is too low."""
+        min_confidence = 0.7  # Match AI fixer's default
+        self.logger.warning(
+            f"AI confidence {confidence:.2f} below threshold {min_confidence}"
+        )
+
+        return FixResult(
+            success=False,
+            confidence=confidence,
+            fixes_applied=[],
+            remaining_issues=[issue.id],
+            recommendations=[
+                f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",
+                explanation,
+            ],
+            files_modified=[],
+        )
+
     async def consult_on_issue(
         self,
         issue: Issue,
@@ -378,50 +482,28 @@ class ClaudeCodeBridge:
             # Check if AI fix was successful
             if not ai_result.get("success"):
                 error_msg = ai_result.get("error", "Unknown AI error")
-                self.logger.error(f"AI fix failed: {error_msg}")
-
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    fixes_applied=[],
-                    remaining_issues=[issue.id],
-                    recommendations=[f"AI fix failed: {error_msg}"],
-                    files_modified=[],
-                )
+                return self._handle_error_response(error_msg, issue)
 
             # Extract AI response fields
-            fixed_code = str(ai_result.get("fixed_code", ""))
-            explanation = str(ai_result.get("explanation", "No explanation"))
-            confidence = float(ai_result.get("confidence", 0.0))
-            changes_made = ai_result.get("changes_made", [])
-            potential_side_effects = ai_result.get("potential_side_effects", [])
+            (
+                fixed_code,
+                explanation,
+                confidence,
+                changes_made,
+                potential_side_effects,
+            ) = self._extract_ai_response_fields(ai_result)
 
             # Validate confidence threshold
             min_confidence = 0.7  # Match AI fixer's default
             if confidence < min_confidence:
-                self.logger.warning(
-                    f"AI confidence {confidence:.2f} below threshold {min_confidence}"
-                )
-
-                return FixResult(
-                    success=False,
-                    confidence=confidence,
-                    fixes_applied=[],
-                    remaining_issues=[issue.id],
-                    recommendations=[
-                        f"AI fix confidence {confidence:.2f} too low (threshold: {min_confidence})",
-                        explanation,
-                    ],
-                    files_modified=[],
+                return self._handle_low_confidence_response(
+                    confidence, explanation, issue
                 )
 
             # Apply fix using SafeFileModifier
             if not dry_run and fixed_code:
-                modify_result = await self.file_modifier.apply_fix(
-                    file_path=file_path,
-                    fixed_content=fixed_code,
-                    dry_run=dry_run,
-                    create_backup=True,
+                modify_result = await self._apply_fix_to_file(
+                    file_path, fixed_code, dry_run
                 )
 
                 if not modify_result.get("success"):
@@ -441,38 +523,17 @@ class ClaudeCodeBridge:
                     )
 
                 # Success - fix applied
-                self.logger.info(
-                    f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})"
-                )
-
-                return FixResult(
-                    success=True,
-                    confidence=confidence,
-                    fixes_applied=[f"Fixed {fix_type} in {file_path}"],
-                    remaining_issues=[],
-                    recommendations=[
-                        explanation,
-                        *[f"Change: {change}" for change in changes_made],
-                        *[
-                            f"Potential side effect: {effect}"
-                            for effect in potential_side_effects
-                        ],
-                    ],
-                    files_modified=[file_path],
+                return self._handle_successful_ai_fix(
+                    issue,
+                    file_path,
+                    confidence,
+                    changes_made,
+                    potential_side_effects,
+                    fix_type,
                 )
             else:
                 # Dry-run mode or no code - just report recommendation
-                return FixResult(
-                    success=True,
-                    confidence=confidence,
-                    fixes_applied=[],
-                    remaining_issues=[issue.id],
-                    recommendations=[
-                        f"AI suggests (dry-run): {explanation}",
-                        *[f"Change: {change}" for change in changes_made],
-                    ],
-                    files_modified=[],
-                )
+                return self._handle_dry_run_response(confidence, changes_made, issue)
 
         except Exception as e:
             self.logger.exception(f"Unexpected error in consult_on_issue: {e}")

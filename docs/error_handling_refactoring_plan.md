@@ -3,18 +3,22 @@
 ## Current Complexity Violations
 
 1. **`retry` decorator** - Complexity: 42
+
    - Lines 305-362
    - Issues: Nested decorator pattern, async/sync branching, retry logic with backoff
 
-2. **`graceful_degradation`** - Complexity: 21
+1. **`graceful_degradation`** - Complexity: 21
+
    - Lines 520-597
    - Issues: Nested decorator pattern, async/sync branching, warning logic, callable fallback handling
 
-3. **`validate_args`** - Complexity: 21
+1. **`validate_args`** - Complexity: 21
+
    - Lines 474-517
    - Issues: Nested decorator pattern, async/sync branching, type checking, validator iteration
 
-4. **`_safe_console_print`** - Complexity: 21
+1. **`_safe_console_print`** - Complexity: 21
+
    - Lines 29-69
    - Issues: Retry loop, exception handling, errno checking, fallback logic
 
@@ -23,6 +27,7 @@
 ### 1. `_safe_console_print` (21 → ≤15)
 
 **Extract helpers:**
+
 - `_is_would_block_error(e: Exception) -> bool` - Check if error is EAGAIN/EWOULDBLOCK
 - `_fallback_stderr_write(message: str, include_traceback: bool)` - Final fallback write
 
@@ -31,6 +36,7 @@
 ### 2. `retry` (42 → ≤15)
 
 **Extract helpers:**
+
 - `_create_async_retry_wrapper()` - Async retry wrapper creation
 - `_create_sync_retry_wrapper()` - Sync retry wrapper creation
 - `_execute_with_retry()` - Core retry logic (can be shared pattern)
@@ -40,6 +46,7 @@
 ### 3. `graceful_degradation` (21 → ≤15)
 
 **Extract helpers:**
+
 - `_handle_degradation_error()` - Warning + fallback resolution logic
 - `_create_async_degradation_wrapper()` - Async wrapper creation
 - `_create_sync_degradation_wrapper()` - Sync wrapper creation
@@ -49,6 +56,7 @@
 ### 4. `validate_args` (21 → ≤15)
 
 **Extract helpers:**
+
 - `_normalize_validators()` - Convert single validators to lists
 - `_create_validator_function()` - Build the validation closure
 - Already has: `_create_async_validation_wrapper()`, `_create_sync_validation_wrapper()`
@@ -58,9 +66,9 @@
 ## Implementation Order
 
 1. Start with `_safe_console_print` (simplest, foundational)
-2. Refactor `retry` (most complex, biggest impact)
-3. Refactor `graceful_degradation` (similar pattern to retry)
-4. Refactor `validate_args` (already partially extracted)
+1. Refactor `retry` (most complex, biggest impact)
+1. Refactor `graceful_degradation` (similar pattern to retry)
+1. Refactor `validate_args` (already partially extracted)
 
 ## Testing Strategy
 

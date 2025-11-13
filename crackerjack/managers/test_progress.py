@@ -2,8 +2,6 @@ import threading
 import time
 import typing as t
 
-from rich.progress import BarColumn, Progress, TextColumn, TimeElapsedColumn
-
 
 class TestProgress:
     def __init__(self) -> None:

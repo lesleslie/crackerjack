@@ -254,7 +254,7 @@ COMPREHENSIVE_HOOKS = [
         timeout=40,  # UV init (~10s) + tool execution (P95=10.97s) + safety margin
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
-        security_level=SecurityLevel.CRITICAL,
+        security_level=SecurityLevel.HIGH,  # Changed from CRITICAL to HIGH to allow other hooks to run
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(

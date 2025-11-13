@@ -18,6 +18,7 @@ Successfully refactored `/Users/les/Projects/crackerjack/crackerjack/decorators/
 ### 1. `_safe_console_print` (21 → ≤15)
 
 **Extracted helpers:**
+
 - `_is_would_block_error(e: Exception) -> bool` - Centralized errno checking logic
 - `_fallback_stderr_write(message: str, include_traceback: bool)` - Isolated fallback write logic
 
@@ -26,6 +27,7 @@ Successfully refactored `/Users/les/Projects/crackerjack/crackerjack/decorators/
 ### 2. `retry` (42 → ≤15)
 
 **Extracted helpers:**
+
 - `_calculate_retry_delay(attempt: int, backoff: float) -> float` - Delay calculation
 - `_create_async_retry_wrapper()` - Async wrapper creation
 - `_create_sync_retry_wrapper()` - Sync wrapper creation
@@ -35,6 +37,7 @@ Successfully refactored `/Users/les/Projects/crackerjack/crackerjack/decorators/
 ### 3. `graceful_degradation` (21 → ≤15)
 
 **Extracted helpers:**
+
 - `_handle_degradation_error()` - Warning + fallback resolution logic
 - `_create_async_degradation_wrapper()` - Async wrapper creation
 - `_create_sync_degradation_wrapper()` - Sync wrapper creation
@@ -44,6 +47,7 @@ Successfully refactored `/Users/les/Projects/crackerjack/crackerjack/decorators/
 ### 4. `validate_args` (21 → ≤15)
 
 **Extracted helpers:**
+
 - `_normalize_validators()` - Convert single validators to lists
 - `_create_validator_runner()` - Build the validation closure
 
@@ -54,26 +58,31 @@ Successfully refactored `/Users/les/Projects/crackerjack/crackerjack/decorators/
 ### New Helper Functions (11 total)
 
 1. **Error Detection & Handling:**
+
    - `_is_would_block_error()` - EAGAIN/EWOULDBLOCK detection
    - `_fallback_stderr_write()` - Safe stderr fallback
    - `_handle_degradation_error()` - Degradation error handling
 
-2. **Retry Logic:**
+1. **Retry Logic:**
+
    - `_calculate_retry_delay()` - Delay calculation
    - `_create_async_retry_wrapper()` - Async retry wrapper
    - `_create_sync_retry_wrapper()` - Sync retry wrapper
 
-3. **Validation Logic:**
+1. **Validation Logic:**
+
    - `_normalize_validators()` - Validator normalization
    - `_create_validator_runner()` - Validator runner factory
 
-4. **Degradation Logic:**
+1. **Degradation Logic:**
+
    - `_create_async_degradation_wrapper()` - Async degradation wrapper
    - `_create_sync_degradation_wrapper()` - Sync degradation wrapper
 
 ### Refactored Functions (4 total)
 
 All complexity violations eliminated while maintaining:
+
 - ✅ All error handling behavior
 - ✅ All logging and console output
 - ✅ All async/sync support
@@ -84,6 +93,7 @@ All complexity violations eliminated while maintaining:
 ### All Tests Pass ✅
 
 **tests/test_decorators.py:** 26/26 passed
+
 - Retry decorator tests (5)
 - Timeout decorator tests (3)
 - Handle errors tests (5)
@@ -93,6 +103,7 @@ All complexity violations eliminated while maintaining:
 - Decorator composition tests (3)
 
 **tests/test_error_handling.py:** 6/6 passed
+
 - Subprocess error handling
 - File operation error handling
 - Timeout error handling
@@ -110,14 +121,15 @@ All complexity violations eliminated while maintaining:
 ## Key Benefits
 
 1. **Maintainability:** Each function has a single, clear responsibility
-2. **Readability:** Reduced cognitive load with descriptive helper names
-3. **Testability:** Smaller functions are easier to test in isolation
-4. **Compliance:** Meets crackerjack complexity threshold (≤15)
-5. **Zero Regressions:** All 32 tests pass without modification
+1. **Readability:** Reduced cognitive load with descriptive helper names
+1. **Testability:** Smaller functions are easier to test in isolation
+1. **Compliance:** Meets crackerjack complexity threshold (≤15)
+1. **Zero Regressions:** All 32 tests pass without modification
 
 ## Architecture Compliance
 
 ✅ Follows crackerjack clean code principles:
+
 - DRY: No duplication in async/sync patterns
 - KISS: Simple, focused functions
 - Cognitive Complexity ≤15: All functions compliant

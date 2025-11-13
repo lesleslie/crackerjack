@@ -85,6 +85,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "check",
             "--config-file",
             "mypy.ini",
+            "--no-error-summary",  # Don't show error summary which may be causing issues
             f"./{package_name}",
         ],
         # ========================================================================
@@ -152,7 +153,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             f"./{package_name}",  # Target only the package directory
         ],
         "semgrep": [
-            "uvx",  # Use uvx for isolated semgrep environment (Python 3.13)
+            "uvx",  # Use uvx for isolated semgrep environment
+            "--python=3.13",  # Explicitly use Python 3.13 for match/case syntax support
             "semgrep",
             "scan",
             "--error",  # Exit with non-zero code when findings detected (CRITICAL security level)

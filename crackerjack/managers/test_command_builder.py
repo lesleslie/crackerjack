@@ -1,11 +1,10 @@
-import multiprocessing
 import os
 from pathlib import Path
 
 import psutil
-
 from acb.console import Console
 from acb.depends import Inject, depends
+
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
 
@@ -39,7 +38,25 @@ class TestCommandBuilder:
 
         return cmd
 
-    def get_optimal_workers(self, options: OptionsProtocol, print_info: bool = True) -> int | str:
+    def _handle_not_implemented_error(self, print_info: bool) -> int:
+        """Handle NotImplementedError specifically."""
+        if print_info and self.console:
+            self.console.print(
+                "[yellow]⚠️  CPU detection unavailable, using 2 workers[/yellow]"
+            )
+        return 2
+
+    def _handle_general_error(self, print_info: bool, e: Exception) -> int:
+        """Handle general exceptions gracefully."""
+        if print_info and self.console:
+            self.console.print(
+                f"[yellow]⚠️  Worker detection failed: {e}. Using 2 workers.[/yellow]"
+            )
+        return 2
+
+    def get_optimal_workers(
+        self, options: OptionsProtocol, print_info: bool = True
+    ) -> int | str:
         """Calculate optimal worker count using pytest-xdist.
 
         This method leverages pytest-xdist's built-in '-n auto' for CPU detection
@@ -103,20 +120,9 @@ class TestCommandBuilder:
             return 2
 
         except NotImplementedError:
-            # multiprocessing.cpu_count() not available on this platform
-            if print_info and self.console:
-                self.console.print(
-                    "[yellow]⚠️  CPU detection unavailable, using 2 workers[/yellow]"
-                )
-            return 2
-
+            return self._handle_not_implemented_error(print_info)
         except Exception as e:
-            # Graceful degradation on any error
-            if print_info and self.console:
-                self.console.print(
-                    f"[yellow]⚠️  Worker detection failed: {e}. Using 2 workers.[/yellow]"
-                )
-            return 2
+            return self._handle_general_error(print_info, e)
 
     def _check_emergency_rollback(self, print_info: bool) -> bool:
         """Check for emergency rollback via environment variable."""
@@ -128,13 +134,17 @@ class TestCommandBuilder:
             return True
         return False
 
-    def _check_explicit_workers(self, options: OptionsProtocol, print_info: bool) -> int | None:
+    def _check_explicit_workers(
+        self, options: OptionsProtocol, print_info: bool
+    ) -> int | None:
         """Check for explicit worker count."""
         if hasattr(options, "test_workers") and options.test_workers > 0:
             return options.test_workers
         return None
 
-    def _check_auto_detection(self, options: OptionsProtocol, print_info: bool) -> str | int | None:
+    def _check_auto_detection(
+        self, options: OptionsProtocol, print_info: bool
+    ) -> str | int | None:
         """Check for auto-detection setting."""
         if hasattr(options, "test_workers") and options.test_workers == 0:
             # Check if auto-detection is enabled in settings
@@ -150,10 +160,13 @@ class TestCommandBuilder:
             return 1
         return None
 
-    def _check_fractional_workers(self, options: OptionsProtocol, print_info: bool) -> int | None:
+    def _check_fractional_workers(
+        self, options: OptionsProtocol, print_info: bool
+    ) -> int | None:
         """Check for fractional worker setting."""
         if hasattr(options, "test_workers") and options.test_workers < 0:
             import multiprocessing
+
             cpu_count = multiprocessing.cpu_count()
             divisor = abs(options.test_workers)
             workers = max(1, cpu_count // divisor)
@@ -181,9 +194,7 @@ class TestCommandBuilder:
         try:
             # Get memory threshold from settings (default 2GB per worker)
             memory_per_worker = (
-                self.settings.testing.memory_per_worker_gb
-                if self.settings
-                else 2.0
+                self.settings.testing.memory_per_worker_gb if self.settings else 2.0
             )
 
             # Calculate available memory in GB

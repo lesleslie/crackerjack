@@ -127,6 +127,28 @@ class CreosoteAdapter(BaseToolAdapter):
         """CLI tool name."""
         return "creosote"
 
+    async def _get_target_files(
+        self, files: list[Path] | None, config: QACheckConfig | None
+    ) -> list[Path]:
+        """Get target files for dependency analysis.
+
+        Creosote scans the entire project based on pyproject.toml,
+        so we just return a marker file to trigger execution.
+
+        Args:
+            files: Optional explicit file list
+            config: Optional configuration
+
+        Returns:
+            List containing pyproject.toml to indicate project scan
+        """
+        if files:
+            return files
+
+        # Return pyproject.toml as marker - creosote scans whole project
+        pyproject = Path.cwd() / "pyproject.toml"
+        return [pyproject] if pyproject.exists() else []
+
     def build_command(
         self,
         files: list[Path],
@@ -170,6 +192,31 @@ class CreosoteAdapter(BaseToolAdapter):
         )
         return cmd
 
+    def _is_unused_deps_section_start(self, line: str) -> bool:
+        """Check if the line indicates the start of unused dependencies section."""
+        return "unused" in line.lower() and "dependenc" in line.lower()
+
+    def _process_dependency_line(self, line: str) -> str | None:
+        """Process a dependency line and return the dependency name if valid."""
+        # Remove leading dashes or bullets
+        dep_name = line.lstrip("- ").strip()
+
+        if dep_name:
+            return dep_name
+        return None
+
+    def _create_issue_for_dependency(
+        self, dep_name: str, config_file: Path
+    ) -> ToolIssue:
+        """Create a ToolIssue for an unused dependency."""
+        return ToolIssue(
+            file_path=config_file,
+            message=f"Unused dependency: {dep_name}",
+            code="UNUSED_DEP",
+            severity="warning",
+            suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",
+        )
+
     async def parse_output(
         self,
         result: ToolExecutionResult,
@@ -204,7 +251,7 @@ class CreosoteAdapter(BaseToolAdapter):
             line = line.strip()
 
             # Start of unused dependencies section
-            if "unused" in line.lower() and "dependenc" in line.lower():
+            if self._is_unused_deps_section_start(line):
                 parsing_unused = True
                 continue
 
@@ -215,17 +262,9 @@ class CreosoteAdapter(BaseToolAdapter):
 
             # Parse dependency names
             if parsing_unused and line:
-                # Remove leading dashes or bullets
-                dep_name = line.lstrip("- ").strip()
-
+                dep_name = self._process_dependency_line(line)
                 if dep_name:
-                    issue = ToolIssue(
-                        file_path=config_file,
-                        message=f"Unused dependency: {dep_name}",
-                        code="UNUSED_DEP",
-                        severity="warning",
-                        suggestion=f"Consider removing '{dep_name}' from dependencies if not needed",
-                    )
+                    issue = self._create_issue_for_dependency(dep_name, config_file)
                     issues.append(issue)
 
         logger.info(

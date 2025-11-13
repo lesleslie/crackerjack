@@ -7,13 +7,17 @@ from pathlib import Path
 from acb.config import root_path
 from acb.console import Console
 from acb.depends import Inject, depends
-from crackerjack.config import get_console_width
-from crackerjack.models.protocols import CoverageBadgeServiceProtocol, CoverageRatchetProtocol, OptionsProtocol, TestManagerProtocol, ServiceProtocol
-from crackerjack.services.coverage_badge_service import CoverageBadgeService
-from crackerjack.services.lsp_client import LSPClient
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
+
+from crackerjack.config import get_console_width
+from crackerjack.models.protocols import (
+    CoverageBadgeServiceProtocol,
+    CoverageRatchetProtocol,
+    OptionsProtocol,
+)
+from crackerjack.services.lsp_client import LSPClient
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
@@ -79,10 +83,14 @@ class TestManager:
             duration = time.time() - start_time
 
             # Get worker count for statistics panel (don't print info messages)
-            workers = self.command_builder.get_optimal_workers(options, print_info=False)
+            workers = self.command_builder.get_optimal_workers(
+                options, print_info=False
+            )
 
             if result.returncode == 0:
-                return self._handle_test_success(result.stdout, duration, options, workers)
+                return self._handle_test_success(
+                    result.stdout, duration, options, workers
+                )
             else:
                 return self._handle_test_failure(
                     result.stderr if result else "",
@@ -114,14 +122,16 @@ class TestManager:
             self.console.print("[yellow]⚠️[/yellow] No tests found")
             return False
 
-        from rich.spinner import Spinner
         from rich.live import Live
+        from rich.spinner import Spinner
 
         cmd = self.command_builder.build_validation_command()
 
         spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
         with Live(spinner, console=self.console, transient=True):
-            result = subprocess.run(cmd, cwd=self.pkg_path, capture_output=True, text=True)
+            result = subprocess.run(
+                cmd, cwd=self.pkg_path, capture_output=True, text=True
+            )
 
         if result.returncode != 0:
             self.console.print("[red]❌[/red] Test environment validation failed")
@@ -376,7 +386,9 @@ class TestManager:
             # Extract summary and duration
             summary_match = self._extract_pytest_summary(output)
             if summary_match:
-                summary_text, duration = self._parse_summary_match(summary_match, output)
+                summary_text, duration = self._parse_summary_match(
+                    summary_match, output
+                )
                 stats["duration"] = duration
 
                 # Extract metrics from summary
@@ -397,8 +409,8 @@ class TestManager:
         """Extract pytest summary line match from output."""
         summary_patterns = [
             r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+",  # "======= 5 passed in 1.23s ======="
-            r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",     # "5 passed, 2 failed in 1.23s"
-            r"(\d+.*)in\s+([\d.]+)s?"              # More flexible format
+            r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",  # "5 passed, 2 failed in 1.23s"
+            r"(\d+.*)in\s+([\d.]+)s?",  # More flexible format
         ]
 
         for pattern in summary_patterns:
@@ -437,14 +449,16 @@ class TestManager:
 
     def _calculate_total_tests(self, stats: dict[str, t.Any], output: str) -> None:
         """Calculate total tests and apply fallback counting if needed."""
-        stats["total"] = sum([
-            stats["passed"],
-            stats["failed"],
-            stats["skipped"],
-            stats["errors"],
-            stats["xfailed"],
-            stats["xpassed"],
-        ])
+        stats["total"] = sum(
+            [
+                stats["passed"],
+                stats["failed"],
+                stats["skipped"],
+                stats["errors"],
+                stats["xfailed"],
+                stats["xpassed"],
+            ]
+        )
 
         # Fallback: manually count from output if total is still 0
         if stats["total"] == 0:

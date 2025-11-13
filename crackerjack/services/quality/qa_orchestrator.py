@@ -169,6 +169,56 @@ class QAOrchestrator:
             "summary": self._create_summary(all_results),
         }
 
+    def _create_check_tasks(
+        self,
+        checks: list[QACheckConfig],
+        files: list[Path] | None,
+    ) -> list[asyncio.Task]:
+        """Create asyncio tasks for check execution."""
+        tasks = []
+
+        for check_config in checks:
+            adapter = self.get_adapter(check_config.check_name)
+            if not adapter:
+                continue
+
+            # Create task for this check
+            task = self._execute_single_check(adapter, check_config, files)
+            tasks.append(task)
+
+        return tasks
+
+    async def _handle_fail_fast(
+        self, tasks: list[asyncio.Task]
+    ) -> list[QAResult] | None:
+        """Handle fail-fast logic if configured."""
+        if not self.config.fail_fast or not tasks:
+            return None
+
+        # Wait for first task to complete
+        done, pending = await asyncio.wait(
+            tasks[-1:], return_when=asyncio.FIRST_COMPLETED
+        )
+        result = done.pop().result()
+        if not result.is_success:
+            # Cancel remaining tasks
+            for pending_task in pending:
+                pending_task.cancel()
+            return [result]
+
+        return None
+
+    def _filter_valid_results(self, results: list[t.Any]) -> list[QAResult]:
+        """Filter out exceptions and convert to valid QAResult objects."""
+        valid_results = []
+        for result in results:
+            if isinstance(result, QAResult):
+                valid_results.append(result)
+            elif isinstance(result, Exception):
+                # Log error but continue
+                continue
+        return valid_results
+
     async def _execute_checks(
         self,
         checks: list[QACheckConfig],
@@ -183,43 +233,18 @@ class QAOrchestrator:
         Returns:
             List of QAResult objects
         """
-        tasks = []
+        tasks = self._create_check_tasks(checks, files)
 
-        for check_config in checks:
-            adapter = self.get_adapter(check_config.check_name)
-            if not adapter:
-                continue
-
-            # Create task for this check
-            task = self._execute_single_check(adapter, check_config, files)
-            tasks.append(task)
-
-            # Fail fast if configured
-            if self.config.fail_fast and tasks:
-                # Wait for first task to complete
-                done, pending = await asyncio.wait(
-                    tasks[-1:], return_when=asyncio.FIRST_COMPLETED
-                )
-                result = done.pop().result()
-                if not result.is_success:
-                    # Cancel remaining tasks
-                    for pending_task in pending:
-                        pending_task.cancel()
-                    return [result]
+        # Handle fail fast logic if needed
+        fail_result = await self._handle_fail_fast(tasks)
+        if fail_result is not None:
+            return fail_result
 
         # Execute all tasks
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
         # Filter out exceptions and convert to QAResult
-        valid_results = []
-        for result in results:
-            if isinstance(result, QAResult):
-                valid_results.append(result)
-            elif isinstance(result, Exception):
-                # Log error but continue
-                continue
-
-        return valid_results
+        return self._filter_valid_results(results)
 
     async def _execute_single_check(
         self,

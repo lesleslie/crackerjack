@@ -1,0 +1,5 @@
+Usage: python -m crackerjack [OPTIONS]
+Try 'python -m crackerjack --help' for help.
+╭─ Error ──────────────────────────────────────────────────────────────────────╮
+│ No such option: --skip-fast (Possible options: --fast, --skip-hooks)         │
+╰──────────────────────────────────────────────────────────────────────────────╯

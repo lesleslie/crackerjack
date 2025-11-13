@@ -317,6 +317,9 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         self.cache_results = cache_results
         self._logger = logger
         self._cache = cache
+        from concurrent.futures import ThreadPoolExecutor
+
+        self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)
 
     def shutdown(self) -> None:
         if hasattr(self, "_thread_pool"):
@@ -491,12 +494,6 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         cwd: Path | None = None,
     ) -> None:
         self._cache.set(self._get_cache_key(command, cwd), result, ttl_seconds)
-
-    def _get_cache_key(self, command: list[str], cwd: Path | None) -> str:
-        key_parts = [" ".join(command)]
-        if cwd:
-            key_parts.append(str(cwd))
-        return ":".join(key_parts)
 
     def _get_cache_key(self, command: list[str], cwd: Path | None) -> str:
         key_parts = [" ".join(command)]

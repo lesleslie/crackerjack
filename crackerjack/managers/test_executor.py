@@ -29,7 +29,9 @@ class TestExecutor:
             # the collection header appears in pytest output
             progress.update(total_tests=total_tests)
             # Set the collection status to indicate we pre-collected
-            progress.collection_status = f"Pre-collected {total_tests} tests, starting execution..."
+            progress.collection_status = (
+                f"Pre-collected {total_tests} tests, starting execution..."
+            )
 
         return self._execute_with_live_progress(cmd, timeout, progress=progress)
 
@@ -47,9 +49,13 @@ class TestExecutor:
             # the collection header appears in pytest output
             progress.update(total_tests=total_tests)
             # Set the collection status to indicate we pre-collected
-            progress.collection_status = f"Pre-collected {total_tests} tests, starting execution..."
+            progress.collection_status = (
+                f"Pre-collected {total_tests} tests, starting execution..."
+            )
 
-        return self._run_test_command_with_ai_progress(cmd, progress_callback, timeout, progress=progress)
+        return self._run_test_command_with_ai_progress(
+            cmd, progress_callback, timeout, progress=progress
+        )
 
     def _pre_collect_tests(self, original_cmd: list[str]) -> int:
         """
@@ -58,12 +64,22 @@ class TestExecutor:
         """
         # Create collection command by replacing the original command with the collect-only version
         # Preserve the test paths and other options, but replace the main pytest command
-        collect_cmd = ["uv", "run", "python", "-m", "pytest", "--collect-only", "-qq"]  # Use -qq to minimize output but still get collection info
+        collect_cmd = [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "pytest",
+            "--collect-only",
+            "-qq",
+        ]  # Use -qq to minimize output but still get collection info
 
         # Extract test paths and relevant options from original command
         test_path_found = False
         for i, arg in enumerate(original_cmd):
-            if not arg.startswith('-') and (arg.startswith("tests") or arg == "." or arg.endswith(".py")):
+            if not arg.startswith("-") and (
+                arg.startswith("tests") or arg == "." or arg.endswith(".py")
+            ):
                 # Add test paths to collection command
                 collect_cmd.extend(original_cmd[i:])
                 test_path_found = True
@@ -80,7 +96,7 @@ class TestExecutor:
                 capture_output=True,
                 text=True,
                 timeout=30,  # Collection should be fast
-                env=self._setup_test_environment()
+                env=self._setup_test_environment(),
             )
 
             # Parse output to extract number of collected tests
@@ -90,7 +106,7 @@ class TestExecutor:
                 match = re.search(r"collected\s+(\d+)\s+(?:item|test)s?", result.stdout)
                 if match:
                     return int(match.group(1))
-        except Exception as e:
+        except Exception:
             # If collection fails, continue with normal execution
             pass
 

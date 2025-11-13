@@ -29,7 +29,7 @@ async def scan_secrets() -> None:
     adapter = GitleaksAdapter(
         settings=GitleaksSettings(
             scan_mode="protect",  # Scan working tree (pre-commit)
-            redact=True,          # Redact secrets in output
+            redact=True,  # Redact secrets in output
         )
     )
     await adapter.init()

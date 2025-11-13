@@ -44,9 +44,9 @@ class MdformatSettings(ToolAdapterSettings):
 
     tool_name: str = "mdformat"
     use_json_output: bool = False  # Mdformat doesn't support JSON
-    fix_enabled: bool = False  # Auto-format files
+    fix_enabled: bool = True  # Auto-format files (changed to match fast hooks behavior)
     line_length: int = 88  # Match Python formatting
-    check_only: bool = True  # Check without modifying
+    check_only: bool = False  # Auto-fix mode, not check-only
     wrap_mode: str = "keep"  # keep, no, or number
 
 
@@ -92,7 +92,7 @@ class MdformatAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = MdformatSettings()
+            self.settings = await MdformatSettings.create_async()
         await super().init()
 
     @property
@@ -109,6 +109,28 @@ class MdformatAdapter(BaseToolAdapter):
     def tool_name(self) -> str:
         """CLI tool name."""
         return "mdformat"
+
+    async def _get_target_files(
+        self, files: list[Path] | None, config: QACheckConfig | None
+    ) -> list[Path]:
+        """Get target markdown files using git-aware discovery.
+
+        Args:
+            files: Optional explicit file list
+            config: Optional configuration
+
+        Returns:
+            List of markdown files to check
+        """
+        if files:
+            return files
+
+        # Use git-aware discovery for markdown files
+        from crackerjack.tools._git_utils import get_git_tracked_files
+
+        md_files = get_git_tracked_files("*.md")
+        markdown_files = get_git_tracked_files("*.markdown")
+        return md_files + markdown_files
 
     def build_command(
         self,

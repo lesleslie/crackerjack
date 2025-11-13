@@ -20,6 +20,7 @@ Modified `crackerjack/executors/hook_executor.py` to handle reporting tools diff
 ### 1. Parse Issues Regardless of Exit Code
 
 **Before** (lines 425-426):
+
 ```python
 def _extract_issues_from_process_output(...) -> list[str]:
     if status == "passed":
@@ -28,6 +29,7 @@ def _extract_issues_from_process_output(...) -> list[str]:
 ```
 
 **After** (lines 427-440):
+
 ```python
 def _extract_issues_from_process_output(...) -> list[str]:
     error_output = (result.stdout + result.stderr).strip()
@@ -49,6 +51,7 @@ def _extract_issues_from_process_output(...) -> list[str]:
 ### 2. Override Status Based on Issues Found
 
 **Before** (lines 396-404):
+
 ```python
 # Status determined ONLY by exit code
 status = "passed" if result.returncode == 0 else "failed"
@@ -58,6 +61,7 @@ issues_found = self._extract_issues_from_process_output(hook, result, status)
 ```
 
 **After** (lines 387-413):
+
 ```python
 # Reporting tools need special handling
 reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
@@ -76,6 +80,7 @@ if hook.name in reporting_tools and issues_found:
 ## Expected Results
 
 ### Before Fix
+
 ```
 COMPREHENSIVE HOOKS:
   - complexipy :: PASSED | 2.3s | issues=2
@@ -85,6 +90,7 @@ COMPREHENSIVE HOOKS:
 ```
 
 ### After Fix
+
 ```
 COMPREHENSIVE HOOKS:
   - complexipy :: FAILED | 2.3s | issues=22
@@ -94,29 +100,34 @@ COMPREHENSIVE HOOKS:
 ```
 
 **Key Changes:**
+
 1. **Accurate issue counts**: Complexipy now shows 22 issues (functions exceeding complexity 15) instead of 2
-2. **Correct status**: Hooks fail when they find issues, triggering auto-fix
-3. **Zero false positives**: Tools showing 0 issues truly have no violations (not warnings)
+1. **Correct status**: Hooks fail when they find issues, triggering auto-fix
+1. **Zero false positives**: Tools showing 0 issues truly have no violations (not warnings)
 
 ## Tool-Specific Parsing
 
 Each reporting tool has specialized parsing logic to count only real violations:
 
 ### complexipy
+
 - Parses table output (lines with `│` separators)
 - Only counts functions with complexity > 15
 - Ignores header rows, summary lines, and functions below threshold
 
 ### refurb
+
 - Counts lines matching pattern: `file.py:10:5 [FURB101]: message`
 - Only counts actual FURB violation codes
 
 ### gitleaks
+
 - Ignores warnings (e.g., "Invalid .gitleaksignore format")
 - Only counts actual leak findings
 - Returns empty list for "no leaks found" messages
 
 ### creosote
+
 - Parses "unused dependencies" section
 - Counts only dependency names (not ANSI color codes)
 - Returns empty list for "No unused dependencies found"

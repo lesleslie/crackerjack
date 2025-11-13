@@ -45,8 +45,12 @@ def get_git_tracked_files(pattern: str | None = None) -> list[Path]:
             cwd=Path.cwd(),
         )
 
+        # Filter to only include files that actually exist on disk
+        # (git ls-files can include deleted files still in the index)
         return [
-            Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
+            Path(line.strip())
+            for line in result.stdout.splitlines()
+            if line.strip() and Path(line.strip()).exists()
         ]
 
     except subprocess.CalledProcessError:

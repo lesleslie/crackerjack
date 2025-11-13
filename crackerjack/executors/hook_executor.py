@@ -250,6 +250,9 @@ class HookExecutor:
                 duration=0.0,
                 issues_found=[str(e)],
                 stage=hook.stage.value,
+                exit_code=1,
+                error_message=str(e),
+                is_timeout=False,
             )
             results.append(error_result)
             self._display_hook_result(error_result)
@@ -421,6 +424,13 @@ class HookExecutor:
         # Parse hook output to extract file count
         parsed_output = self._parse_hook_output(result, hook.name)
 
+        # Extract error details for failed hooks
+        exit_code = result.returncode if status == "failed" else None
+        error_message = None
+        if status == "failed" and result.stderr.strip():
+            # Capture stderr for failed hooks (truncate if very long)
+            error_message = result.stderr.strip()[:500]
+
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -429,6 +439,9 @@ class HookExecutor:
             files_processed=parsed_output["files_processed"],
             issues_found=issues_found,
             stage=hook.stage.value,
+            exit_code=exit_code,
+            error_message=error_message,
+            is_timeout=False,  # Set by timeout handler if applicable
         )
 
     def _extract_issues_from_process_output(
@@ -472,6 +485,23 @@ class HookExecutor:
 
         return [f"Hook failed with code {result.returncode}"]
 
+    def _is_header_or_separator_line(self, line: str) -> bool:
+        """Check if the line is a header or separator line."""
+        return any(x in line for x in ["Path", "─────", "┌", "└", "├", "┼", "┤", "┃"])
+
+    def _extract_complexity_from_parts(self, parts: list[str]) -> int | None:
+        """Extract complexity value from line parts."""
+        if len(parts) >= 4:
+            try:
+                return int(parts[-1])
+            except (ValueError, IndexError):
+                pass
+        return None
+
+    def _should_include_line(self, line: str) -> bool:
+        """Check if the line should be included in the output."""
+        return "│" in line and "crackerjack" in line
+
     def _parse_complexipy_issues(self, output: str) -> list[str]:
         """Parse complexipy table output to count actual violations (complexity > 15)."""
         # TEMP: Always print to diagnose issue
@@ -481,21 +511,15 @@ class HookExecutor:
         issues = []
         for line in output.split("\n"):
             # Match table rows: │ path │ file │ function │ complexity │
-            if "│" in line and "crackerjack" in line:
+            if self._should_include_line(line):
                 # Skip header/separator rows
-                if not any(
-                    x in line for x in ["Path", "─────", "┌", "└", "├", "┼", "┤", "┃"]
-                ):
+                if not self._is_header_or_separator_line(line):
                     # Extract complexity value (last column)
                     parts = [p.strip() for p in line.split("│") if p.strip()]
-                    if len(parts) >= 4:
-                        try:
-                            complexity = int(parts[-1])
-                            # Only count functions exceeding limit (15)
-                            if complexity > 15:
-                                issues.append(line.strip())
-                        except (ValueError, IndexError):
-                            pass
+                    complexity = self._extract_complexity_from_parts(parts)
+                    # Only count functions exceeding limit (15)
+                    if complexity is not None and complexity > 15:
+                        issues.append(line.strip())
         # TEMP: Always print result
         print(f"🔍 DEBUG _parse_complexipy_issues returning {len(issues)} issues")
         return issues
@@ -556,6 +580,9 @@ class HookExecutor:
             duration=duration,
             issues_found=[f"Hook timed out after {duration: .1f}s"],
             stage=hook.stage.value,
+            exit_code=124,  # Standard timeout exit code
+            error_message=f"Execution exceeded timeout of {duration:.1f}s",
+            is_timeout=True,
         )
 
     def _create_error_result(
@@ -569,6 +596,9 @@ class HookExecutor:
             duration=duration,
             issues_found=[str(error)],
             stage=hook.stage.value,
+            exit_code=1,
+            error_message=str(error),
+            is_timeout=False,
         )
 
     def _parse_hook_output(

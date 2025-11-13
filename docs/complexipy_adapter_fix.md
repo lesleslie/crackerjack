@@ -3,7 +3,7 @@
 **Date**: 2025-11-10
 **Issue**: Complexipy showing only 1 issue when 24 functions exceed complexity threshold
 
----
+______________________________________________________________________
 
 ## Root Cause Analysis
 
@@ -26,35 +26,32 @@ The adapter was using outdated/incorrect flag names that don't match the actual 
 ### 2. JSON Parsing Structure Mismatch
 
 The adapter expected **nested structure**:
+
 ```python
 {
-  "files": [
-    {
-      "path": "...",
-      "functions": [
-        {"name": "...", "line": 123, "complexity": 16}
-      ]
-    }
-  ]
+    "files": [
+        {"path": "...", "functions": [{"name": "...", "line": 123, "complexity": 16}]}
+    ]
 }
 ```
 
 But complexipy outputs **flat list**:
+
 ```python
 [
-  {
-    "complexity": 16,
-    "file_name": "claude.py",
-    "function_name": "ClaudeCodeFixer::_ensure_client",
-    "path": "crackerjack/adapters/ai/claude.py"
-  },
-  ...
+    {
+        "complexity": 16,
+        "file_name": "claude.py",
+        "function_name": "ClaudeCodeFixer::_ensure_client",
+        "path": "crackerjack/adapters/ai/claude.py",
+    },
+    ...,
 ]
 ```
 
 **Impact**: Parser expected `data.get("files", [])` which returned empty list, resulting in 0 issues parsed.
 
----
+______________________________________________________________________
 
 ## Fix Implementation
 
@@ -63,6 +60,7 @@ But complexipy outputs **flat list**:
 **File**: `crackerjack/adapters/complexity/complexipy.py`
 
 #### Lines 51-56 (ComplexipySettings):
+
 ```python
 # Before:
 sort_by: str = "complexity"  # ❌ Invalid value
@@ -72,6 +70,7 @@ sort_by: str = "desc"  # ✅ Valid option (sorts by complexity descending)
 ```
 
 #### Lines 149-167 (build_command):
+
 ```python
 # Before:
 if self.settings.use_json_output:
@@ -85,7 +84,9 @@ if self.settings.include_maintainability:
 # After:
 if self.settings.use_json_output:
     cmd.append("--output-json")  # ✅ Correct flag
-cmd.extend(["--max-complexity-allowed", str(self.settings.max_complexity)])  # ✅ Correct flag
+cmd.extend(
+    ["--max-complexity-allowed", str(self.settings.max_complexity)]
+)  # ✅ Correct flag
 # NOTE: --cognitive and --maintainability flags don't exist in complexipy
 # Complexity tool only reports cyclomatic complexity, not cognitive/maintainability
 # These settings are kept in ComplexipySettings for backwards compatibility but ignored
@@ -116,7 +117,9 @@ def _process_complexipy_data(self, data: list | dict) -> list[ToolIssue]:
 
             file_path = Path(func.get("path", ""))
             function_name = func.get("function_name", "unknown")
-            severity = "error" if complexity > self.settings.max_complexity * 2 else "warning"
+            severity = (
+                "error" if complexity > self.settings.max_complexity * 2 else "warning"
+            )
 
             issue = ToolIssue(
                 file_path=file_path,
@@ -132,121 +135,141 @@ def _process_complexipy_data(self, data: list | dict) -> list[ToolIssue]:
     # Handle legacy nested structure (backwards compatibility)
     for file_data in data.get("files", []):
         file_path = Path(file_data.get("path", ""))
-        issues.extend(self._process_file_data(file_path, file_data.get("functions", [])))
+        issues.extend(
+            self._process_file_data(file_path, file_data.get("functions", []))
+        )
     return issues
 ```
 
 **Key Changes**:
-1. Type annotation changed from `dict` to `list | dict` for flexibility
-2. Added `isinstance(data, list)` check to handle flat list structure
-3. Direct iteration over flat list entries
-4. Proper threshold filtering (`complexity > max_complexity`)
-5. Severity determination based on 2x threshold
-6. Maintained backwards compatibility with legacy nested structure
 
----
+1. Type annotation changed from `dict` to `list | dict` for flexibility
+1. Added `isinstance(data, list)` check to handle flat list structure
+1. Direct iteration over flat list entries
+1. Proper threshold filtering (`complexity > max_complexity`)
+1. Severity determination based on 2x threshold
+1. Maintained backwards compatibility with legacy nested structure
+
+______________________________________________________________________
 
 ## Verification Results
 
 ### Direct Tool Execution:
+
 ```bash
 $ uv run complexipy --output-json --max-complexity-allowed 15 --sort desc crackerjack
 ```
+
 **Result**: 24 functions found with complexity > 15 (highest: 32, lowest: 16)
 
 ### Adapter Parsing Test:
+
 ```python
 # Load complexipy.json (6,826 total functions)
 issues = adapter._process_complexipy_data(data)
-print(f'Issues parsed: {len(issues)}')
+print(f"Issues parsed: {len(issues)}")
 # Output: Issues parsed: 24
 ```
+
 **Result**: ✅ All 24 issues correctly parsed
 
 ### Sample Issues Detected:
-1. `workflow_orchestrator.py` - `WorkflowOrchestrator::_orchestrate_phases` - Complexity: 32
-2. `utility_tools.py` - `clean_temp_files` - Complexity: 30
-3. `phase_coordinator.py` - `PhaseCoordinator::_execute_phase` - Complexity: 29
-4. `skylos.py` - `SkylosAdapter::get_command_args` - Complexity: 29
-5. `end_of_file_fixer.py` - `main` - Complexity: 24
 
----
+1. `workflow_orchestrator.py` - `WorkflowOrchestrator::_orchestrate_phases` - Complexity: 32
+1. `utility_tools.py` - `clean_temp_files` - Complexity: 30
+1. `phase_coordinator.py` - `PhaseCoordinator::_execute_phase` - Complexity: 29
+1. `skylos.py` - `SkylosAdapter::get_command_args` - Complexity: 29
+1. `end_of_file_fixer.py` - `main` - Complexity: 24
+
+______________________________________________________________________
 
 ## Impact Assessment
 
 ### Before Fix:
+
 - ❌ Exit code 2 (command-line errors)
 - ❌ 0 issues parsed from JSON
 - ❌ `issues=1` displayed (false positive from some other source)
 - ❌ No visibility into codebase complexity problems
 
 ### After Fix:
+
 - ✅ Exit code 0 (successful execution)
 - ✅ 24 issues correctly parsed
 - ✅ `issues=24` displayed in comprehensive hooks output
 - ✅ Complete visibility into all complexity violations
 
----
+______________________________________________________________________
 
 ## Configuration Details
 
 **Hook Configuration** (`crackerjack/config/hooks.py:319-328`):
+
 ```python
-HookDefinition(
-    name="complexipy",
-    command=[],
-    timeout=120,
-    stage=HookStage.COMPREHENSIVE,
-    manual_stage=True,
-    security_level=SecurityLevel.MEDIUM,
-    use_precommit_legacy=False,  # Direct invocation
-    accepts_file_paths=True,     # Incremental execution support
-),
+(
+    HookDefinition(
+        name="complexipy",
+        command=[],
+        timeout=120,
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.MEDIUM,
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=True,  # Incremental execution support
+    ),
+)
 ```
 
 **Adapter Settings** (`ComplexipySettings`):
+
 - `max_complexity`: 15 (crackerjack standard)
 - `include_cognitive`: True (kept for backwards compat, not used)
 - `include_maintainability`: True (kept for backwards compat, not used)
 - `sort_by`: "desc" (sorts by complexity descending)
 - `use_json_output`: True (structured parsing)
 
----
+______________________________________________________________________
 
 ## Testing Recommendations
 
 1. **Run comprehensive hooks**:
+
    ```bash
    python -m crackerjack --comp
    ```
+
    Expected: complexipy shows `issues=24` (not `issues=1`)
 
-2. **Verify incremental mode**:
+1. **Verify incremental mode**:
+
    ```bash
    # Make changes to high-complexity file
    python -m crackerjack --comp --changed-only
    ```
+
    Expected: Only modified files' issues reported
 
-3. **Test threshold adjustment**:
+1. **Test threshold adjustment**:
+
    ```bash
    # In settings/local.yaml:
    # complexity:
    #   max_complexity: 20
    python -m crackerjack --comp
    ```
+
    Expected: Fewer issues (only functions > 20 complexity)
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 1. **Line Number Support**: If complexipy adds line numbers to JSON output, update `line_number=None` to use them
-2. **Cognitive Complexity**: If tool adds cognitive complexity metrics, enable parsing
-3. **Maintainability Index**: If tool adds maintainability scores, include in issue messages
-4. **Incremental Optimization**: Consider caching previous results for faster incremental runs
+1. **Cognitive Complexity**: If tool adds cognitive complexity metrics, enable parsing
+1. **Maintainability Index**: If tool adds maintainability scores, include in issue messages
+1. **Incremental Optimization**: Consider caching previous results for faster incremental runs
 
----
+______________________________________________________________________
 
 ## References
 

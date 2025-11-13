@@ -43,6 +43,7 @@ class VectorStore:
         self.embedding_service = embedding_service or EmbeddingService(config)
 
         # Database setup
+        self._temp_db: tempfile._TemporaryFileWrapper[bytes] | None = None
         if db_path is None:
             # Create temporary database file
             self._temp_db = tempfile.NamedTemporaryFile(
@@ -51,7 +52,6 @@ class VectorStore:
             self.db_path = Path(self._temp_db.name)
         else:
             self.db_path = db_path
-            self._temp_db = None
 
         self._initialize_database()
 

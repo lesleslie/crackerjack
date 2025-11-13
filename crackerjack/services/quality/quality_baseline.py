@@ -354,3 +354,42 @@ class QualityBaselineService(QualityBaselineProtocol):
             "running. Use the corresponding async method instead."
         )
         raise RuntimeError(msg)
+
+    # Protocol methods
+    def get_baseline(self) -> dict[str, t.Any]:
+        """Protocol method for getting baseline metrics."""
+        baseline = super().get_baseline()
+        if baseline:
+            return baseline.to_dict()
+        return {}
+
+    def update_baseline(self, metrics: dict[str, t.Any]) -> bool:
+        """Protocol method for updating baseline metrics."""
+        try:
+            # Extract required values from metrics dict
+            coverage_percent = metrics.get("coverage_percent", 0.0)
+            test_count = metrics.get("test_count", 0)
+            test_pass_rate = metrics.get("test_pass_rate", 0.0)
+            hook_failures = metrics.get("hook_failures", 0)
+            complexity_violations = metrics.get("complexity_violations", 0)
+            security_issues = metrics.get("security_issues", 0)
+            type_errors = metrics.get("type_errors", 0)
+            linting_issues = metrics.get("linting_issues", 0)
+
+            result = self.record_baseline(
+                coverage_percent=coverage_percent,
+                test_count=test_count,
+                test_pass_rate=test_pass_rate,
+                hook_failures=hook_failures,
+                complexity_violations=complexity_violations,
+                security_issues=security_issues,
+                type_errors=type_errors,
+                linting_issues=linting_issues,
+            )
+            return result is not None
+        except Exception:
+            return False
+
+    def compare(self, current: dict[str, t.Any]) -> dict[str, t.Any]:
+        """Protocol method for comparing current metrics against baseline."""
+        return self.compare_with_baseline(current)

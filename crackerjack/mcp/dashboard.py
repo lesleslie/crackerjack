@@ -308,10 +308,19 @@ class CrackerjackDashboard(App):
     }
     """
 
-    def __init__(self, **kwargs: t.Any) -> None:
+    def __init__(
+        self,
+        progress_dir: Path | None = None,
+        websocket_url: str | None = None,
+        **kwargs: t.Any,
+    ) -> None:
         super().__init__(**kwargs)
 
-        self.job_collector = JobDataCollector()
+        # Use defaults if not provided
+        self.progress_dir = progress_dir or Path.cwd() / ".crackerjack" / "progress"
+        self.websocket_url = websocket_url or "ws://localhost:8675"
+
+        self.job_collector = JobDataCollector(self.progress_dir, self.websocket_url)
         self.terminal_restorer = TerminalRestorer()
 
         self.is_paused = False

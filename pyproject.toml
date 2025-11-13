@@ -90,6 +90,12 @@ sast = [
     # "semgrep>=1.95",  # Disabled: incompatible with rich>=14.1 (requires rich<13.6)
 ]
 
+# SCA (Software Composition Analysis) - Dependency vulnerability scanning
+# Install with: uv sync --extra dependency
+dependency = [
+    "pip-audit>=2.7.0",  # Dependency vulnerability scanner (CVE detection)
+]
+
 [project.license]
 text = "BSD-3-CLAUSE"
 
@@ -404,9 +410,14 @@ exclude_patterns = [
 ]
 max_complexity = 15
 
+[tool.mypy]
+python_version = "3.13"
+
 [tool.zuban]
 strict = true
 show_error_codes = true
+
+
 
 [tool.zuban.lsp]
 host = "127.0.0.1"
@@ -419,4 +430,5 @@ real_time_feedback = true
 dev = [
     "excalidraw-mcp>=0.34.0",
     "session-mgmt-mcp>=0.4.0",
+    "ty>=0.0.0a6",  # Experimental type checker (Astral) - monitoring only, not for production use
 ]

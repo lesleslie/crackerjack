@@ -1,0 +1,75 @@
+Error: File "/Users/les/Projects/crackerjack/README.md" is not formatted.
+Error: File "/Users/les/Projects/crackerjack/crackerjack/adapters/README.md" is
+not formatted.
+Error: File "/Users/les/Projects/crackerjack/crackerjack/adapters/ai/README.md"
+is not formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/complexity/README.md" is
+not formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/format/README.md" is not
+formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/lint/README.md" is not
+formatted.
+Error: File "/Users/les/Projects/crackerjack/crackerjack/adapters/lsp/README.md"
+is not formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/refactor/README.md" is not
+formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/sast/README.md" is not
+formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/security/README.md" is not
+formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/type/README.md" is not
+formatted.
+Error: File
+"/Users/les/Projects/crackerjack/crackerjack/adapters/utility/README.md" is not
+formatted.
+error: Failed to parse at 1:5: Simple statements must be separated by newlines or semicolons
+Warning: Failed formatting content of a python code block (line 77 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/implementation-plans/ACB-WORKFLOW-INTEGRATION.md
+error: Failed to parse at 7:6: Expected an indented block after `else` clause
+Warning: Failed formatting content of a python code block (line 161 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/implementation-plans/ACB-WORKFLOW-INTEGRATION.md
+error: Failed to parse at 1:26: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 356 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/implementation-plans/ACB-WORKFLOW-INTEGRATION.md
+error: Failed to parse at 5:26: Expected `,`, found name
+Warning: Failed formatting content of a python code block (line 211 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE2-COMPLETE.md
+error: Failed to parse at 7:1: Expected an indented block after function definition
+Warning: Failed formatting content of a python code block (line 84 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE2-PROGRESS.md
+error: Failed to parse at 5:26: Expected `,`, found name
+Warning: Failed formatting content of a python code block (line 199 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE3-COMPLETE.md
+error: Failed to parse at 1:1: Expected a statement
+Warning: Failed formatting content of a python code block (line 367 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE3-COMPLETE.md
+error: Failed to parse at 1:32: Simple statements must be separated by newlines or semicolons
+Warning: Failed formatting content of a python code block (line 38 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE4.0-COMPLETE.md
+error: Failed to parse at 12:21: Expected an indented block after `if` statement
+Warning: Failed formatting content of a python code block (line 128 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE4.0-COMPLETE.md
+error: Failed to parse at 1:1: Expected a statement
+Warning: Failed formatting content of a python code block (line 154 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE4.0-COMPLETE.md
+error: Failed to parse at 2:58: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 355 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/ACB-WORKFLOW-PHASE4.1-COMPLETE.md
+error: Failed to parse at 1:1: Invalid annotated assignment target
+Warning: Failed formatting content of a python code block (line 114 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/PHASE-4.2-COMPLETION.md
+error: Failed to parse at 2:15: Expected `(`, found `<`
+Warning: Failed formatting content of a python code block (line 77 before formatting). Filename: /Users/les/Projects/crackerjack/docs/archive/phase-completions/PHASE-7.2-COMPLETION-SUMMARY.md
+error: Failed to parse at 1:1: Invalid annotated assignment target
+Warning: Failed formatting content of a python code block (line 17 before formatting). Filename: /Users/les/Projects/crackerjack/docs/bandit-performance-investigation.md
+error: Failed to parse at 1:32: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 214 before formatting). Filename: /Users/les/Projects/crackerjack/docs/bandit-performance-investigation.md
+error: Failed to parse at 1:1: Invalid annotated assignment target
+Warning: Failed formatting content of a python code block (line 260 before formatting). Filename: /Users/les/Projects/crackerjack/docs/bandit-performance-investigation.md
+error: Failed to parse at 1:1: Expected a statement
+Warning: Failed formatting content of a python code block (line 314 before formatting). Filename: /Users/les/Projects/crackerjack/docs/bandit-performance-investigation.md
+error: Failed to parse at 1:61: Trailing comma not allowed
+Warning: Failed formatting content of a python code block (line 267 before formatting). Filename: /Users/les/Projects/crackerjack/docs/progress-indicator-analysis.md
+error: Failed to parse at 1:41: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 24 before formatting). Filename: /Users/les/Projects/crackerjack/docs/reporting_tools_fix.md
+error: Failed to parse at 1:41: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 33 before formatting). Filename: /Users/les/Projects/crackerjack/docs/reporting_tools_fix.md
+error: Failed to parse at 1:41: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 69 before formatting). Filename: /Users/les/Projects/crackerjack/docs/reporting_tools_investigation.md
+error: Failed to parse at 1:38: Expected `)`, found `...`
+Warning: Failed formatting content of a python code block (line 89 before formatting). Filename: /Users/les/Projects/crackerjack/docs/reporting_tools_investigation.md

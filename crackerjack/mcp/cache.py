@@ -237,7 +237,7 @@ class ErrorCache:
             auto_fixable=error_type == "ruff",
         )
 
-    def analyze_output_for_patterns(
+    async def analyze_output_for_patterns(
         self,
         output: str,
         error_type: str,
@@ -248,7 +248,7 @@ class ErrorCache:
             if section.strip():
                 pattern = self.create_pattern_from_error(section, error_type)
                 if pattern:
-                    self.add_pattern(pattern)
+                    await self.add_pattern(pattern)
                     patterns.append(pattern)
 
         return patterns

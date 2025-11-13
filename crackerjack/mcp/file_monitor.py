@@ -97,7 +97,9 @@ if WATCHDOG_AVAILABLE:
 else:
 
     class ProgressFileHandler:
-        def __init__(self, callback: Callable[[str, dict[str, t.Any]], None]) -> None:
+        def __init__(
+            self, callback: Callable[[str, dict[str, t.Any]], None], progress_dir: Path
+        ) -> None:
             pass
 
 

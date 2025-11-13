@@ -410,6 +410,7 @@ class LSPClient:
         total_files: int,
     ) -> dict[str, list[dict[str, t.Any]]]:
         """Process files with progress display."""
+        diagnostics = {}
         feedback = RealTimeTypingFeedback()
 
         with feedback.create_progress_display() as progress:

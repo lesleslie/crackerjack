@@ -101,9 +101,7 @@ def _separate_import_and_other_lines(content: str) -> tuple[list[str], list[str]
     in_imports = True
 
     for line in content.split("\n"):
-        if in_imports and (
-            line.startswith("import ") or line.startswith("from ") or line.strip() == ""
-        ):
+        if in_imports and (line.startswith(("import ", "from ")) or line.strip() == ""):
             import_lines.append(line)
         elif line.strip() and not line.startswith("#"):
             in_imports = False
@@ -177,7 +175,7 @@ def _update_functions_with_resource_context(
 ) -> str:
     """Update functions to use resource context."""
     lines = content.split("\n")
-    new_lines = lines[:]
+    new_lines = lines.copy()
     offset = 0
 
     for func_def, start_idx, resource_line_idx in functions_to_update:
@@ -304,7 +302,7 @@ def add_cleanup_handlers(file_path: Path) -> bool:
 
         # Look for classes that might need cleanup
         lines = content.split("\n")
-        new_lines = lines[:]
+        new_lines = lines.copy()
         offset = 0
 
         for i, line in enumerate(lines):
@@ -416,7 +414,7 @@ def process_file(file_path: Path) -> int:
     # Skip files that are already resource management modules
     if any(
         name in str(file_path)
-        for name in ["resource_manager", "websocket_lifecycle", "file_lifecycle"]
+        for name in ("resource_manager", "websocket_lifecycle", "file_lifecycle")
     ):
         logger.info(f"Skipping resource management module {file_path}")
         return 0

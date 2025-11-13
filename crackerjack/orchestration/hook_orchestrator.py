@@ -705,6 +705,9 @@ class HookOrchestratorAdapter:
             files_processed=0,
             issues_found=[],
             stage=hook.stage.value,
+            exit_code=None,  # No error for passed hooks
+            error_message=None,
+            is_timeout=False,
         )
 
     def _build_adapter(self, hook: HookDefinition) -> t.Any | None:
@@ -728,7 +731,7 @@ class HookOrchestratorAdapter:
             "codespell": self._build_codespell_adapter,
             "gitleaks": self._build_gitleaks_adapter,
             "skylos": self._build_skylos_adapter,
-            "zuban": self._build_skylos_adapter,
+            "zuban": self._build_zuban_adapter,
             "complexipy": self._build_complexipy_adapter,
             "creosote": self._build_creosote_adapter,
             "refurb": self._build_refurb_adapter,
@@ -779,6 +782,12 @@ class HookOrchestratorAdapter:
             raise ValueError(msg)
         return SkylosAdapter(context=self.execution_context)
 
+    def _build_zuban_adapter(self, hook: HookDefinition) -> t.Any:
+        """Build Zuban type checking adapter."""
+        from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
+
+        return ZubanAdapter(settings=ZubanSettings())
+
     def _build_complexipy_adapter(self, hook: HookDefinition) -> t.Any:
         """Build Complexipy complexity adapter."""
         from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
@@ -803,99 +812,154 @@ class HookOrchestratorAdapter:
 
         return MdformatAdapter()
 
+    def _get_reporting_tools(self) -> set[str]:
+        """Get the set of tools that report issues."""
+        return {"complexipy", "refurb", "gitleaks", "creosote"}
+
+    def _get_formatters(self) -> set[str]:
+        """Get the set of formatting tools."""
+        return {"ruff-format"}
+
+    def _determine_status(self, hook: HookDefinition, qa_result: t.Any) -> str:
+        """Determine the status based on hook name and QA result."""
+        reporting_tools = self._get_reporting_tools()
+        formatters = self._get_formatters()
+
+        # Override status for tools that found issues but returned SUCCESS/WARNING
+        if (
+            (hook.name in reporting_tools or hook.name in formatters)
+            and qa_result.issues_found > 0
+            and qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
+        ):
+            return "failed"  # Trigger auto-fix stage
+        return (
+            "passed"
+            if qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
+            else "failed"
+        )
+
+    def _build_issues_list(self, qa_result: t.Any) -> list[str]:
+        """Build the issues list from the QA result."""
+        if qa_result.issues_found == 0:
+            return []
+
+        if qa_result.details:
+            # Parse all detailed issues from details
+            detail_lines = [
+                line.strip()
+                for line in qa_result.details.split("\n")
+                if line.strip() and not line.strip().startswith("...")
+            ]
+
+            # Show first 20 issues, then add summary for remainder
+            max_displayed = 20
+            if len(detail_lines) > max_displayed:
+                issues = detail_lines[:max_displayed]
+                remaining = len(detail_lines) - max_displayed
+                issues.append(
+                    f"... and {remaining} more issue{'s' if remaining != 1 else ''} "
+                    f"(run with --ai-debug for full details)"
+                )
+            else:
+                issues = detail_lines
+
+            # If qa_result reports more issues than we have details for, note it
+            if qa_result.issues_found > len(detail_lines):
+                extra = qa_result.issues_found - len(detail_lines)
+                issues.append(
+                    f"... and {extra} additional issue{'s' if extra != 1 else ''} without details"
+                )
+        else:
+            # No details available - show summary
+            count = qa_result.issues_found
+            issues = [
+                f"{count} issue{'s' if count != 1 else ''} found (no detailed output available)"
+            ]
+
+        return issues
+
+    def _create_success_result(
+        self, hook: HookDefinition, qa_result: t.Any, start_time: float
+    ) -> HookResult:
+        """Create a HookResult for successful execution."""
+        files_processed = (
+            len(qa_result.files_checked) if hasattr(qa_result, "files_checked") else 0
+        )
+        status = self._determine_status(hook, qa_result)
+        issues = self._build_issues_list(qa_result)
+
+        # Extract error details for failed hooks from adapter results
+        exit_code = None
+        error_message = None
+        if status == "failed" and hasattr(qa_result, "details") and qa_result.details:
+            # For adapter-based hooks, use details as error message
+            error_message = qa_result.details[:500]  # Truncate if very long
+
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status=status,
+            duration=self._elapsed(start_time),
+            files_processed=files_processed,
+            issues_found=issues,
+            stage=hook.stage.value,
+            exit_code=exit_code,  # Adapters don't provide exit codes directly
+            error_message=error_message,
+            is_timeout=False,
+        )
+
+    def _create_timeout_result(
+        self, hook: HookDefinition, start_time: float
+    ) -> HookResult:
+        """Create a HookResult for timeout."""
+        duration = self._elapsed(start_time)
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="timeout",
+            duration=duration,
+            files_processed=0,
+            issues_found=[f"Hook timed out after {hook.timeout}s"],
+            stage=hook.stage.value,
+            exit_code=124,  # Standard timeout exit code
+            error_message=f"Execution exceeded timeout of {hook.timeout}s",
+            is_timeout=True,
+        )
+
+    def _create_error_result(
+        self, hook: HookDefinition, start_time: float, error: Exception
+    ) -> HookResult:
+        """Create a HookResult for error."""
+        return HookResult(
+            id=hook.name,
+            name=hook.name,
+            status="error",
+            duration=self._elapsed(start_time),
+            files_processed=0,
+            issues_found=[f"Adapter execution error: {error}"],
+            stage=hook.stage.value,
+            exit_code=1,
+            error_message=str(error),
+            is_timeout=False,
+        )
+
     async def _run_adapter(
         self, adapter: t.Any, hook: HookDefinition, start_time: float
     ) -> HookResult:
         import asyncio
-        from pathlib import Path
 
         try:
             await adapter.init()
+            # Let the adapter determine the appropriate files to check
+            # Pass None to allow the adapter to scan for appropriate files
             qa_result = await asyncio.wait_for(
-                adapter.check(files=[Path()]), timeout=hook.timeout
+                adapter.check(files=None), timeout=hook.timeout
             )
-            files_processed = (
-                len(qa_result.files_checked)
-                if hasattr(qa_result, "files_checked")
-                else 0
-            )
-            # Reporting tools need to fail if they find issues
-            # (even though they return SUCCESS status with issues_found > 0)
-            reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
-
-            # Formatters also need to fail when they find issues (return WARNING status)
-            # ruff-format returns WARNING status when files need formatting
-            formatters = {"ruff-format"}
-
-            # Override status for tools that found issues but returned SUCCESS/WARNING
-            if (
-                (hook.name in reporting_tools or hook.name in formatters)
-                and qa_result.issues_found > 0
-                and qa_result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
-            ):
-                status = "failed"  # Trigger auto-fix stage
-            else:
-                status = (
-                    "passed"
-                    if qa_result.status
-                    in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
-                    else "failed"
-                )
-
-            # Create issues list to match qa_result.issues_found count
-            # This ensures accurate issue counting for display
-            issues = []
-            if qa_result.issues_found > 0:
-                if qa_result.details:
-                    # Use first 10 detailed issues from details
-                    detail_lines = [
-                        line.strip()
-                        for line in qa_result.details.split("\n")
-                        if line.strip() and not line.strip().startswith("...")
-                    ]
-                    issues = detail_lines[:10]  # First 10 detailed issues
-
-                    # Pad with placeholders to match actual count
-                    # (so len(issues_found) = qa_result.issues_found for accurate display)
-                    remaining = qa_result.issues_found - len(issues)
-                    if remaining > 0:
-                        # Add placeholder for each remaining issue
-                        issues.extend(
-                            [f"(issue {len(issues) + i + 1})"] for i in range(remaining)
-                        )
-                else:
-                    # No details, use placeholders
-                    issues = [f"Issue {i + 1}" for i in range(qa_result.issues_found)]
-
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status=status,
-                duration=self._elapsed(start_time),
-                files_processed=files_processed,
-                issues_found=issues,
-                stage=hook.stage.value,
-            )
+            return self._create_success_result(hook, qa_result, start_time)
         except TimeoutError:
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="timeout",
-                duration=self._elapsed(start_time),
-                files_processed=0,
-                issues_found=[f"Hook timed out after {hook.timeout}s"],
-                stage=hook.stage.value,
-            )
+            return self._create_timeout_result(hook, start_time)
         except Exception as e:
-            return HookResult(
-                id=hook.name,
-                name=hook.name,
-                status="error",
-                duration=self._elapsed(start_time),
-                files_processed=0,
-                issues_found=[f"Adapter execution error: {e}"],
-                stage=hook.stage.value,
-            )
+            return self._create_error_result(hook, start_time, e)
 
     def _run_subprocess(self, hook: HookDefinition, start_time: float) -> HookResult:
         import subprocess
@@ -910,6 +974,13 @@ class HookOrchestratorAdapter:
         status = self._determine_hook_status(hook, proc_result, output_text)
         issues = self._collect_issues(status, proc_result)
 
+        # Extract error details for failed hooks
+        exit_code = proc_result.returncode if status == "failed" else None
+        error_message = None
+        if status == "failed" and proc_result.stderr.strip():
+            # Capture stderr for failed hooks (truncate if very long)
+            error_message = proc_result.stderr.strip()[:500]
+
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -918,6 +989,9 @@ class HookOrchestratorAdapter:
             files_processed=files_processed,
             issues_found=issues,
             stage=hook.stage.value,
+            exit_code=exit_code,
+            error_message=error_message,
+            is_timeout=False,
         )
 
     def _extract_file_count(self, output_text: str) -> int:
@@ -993,11 +1067,15 @@ class HookOrchestratorAdapter:
         )
 
     def _collect_issues(self, status: str, proc_result: t.Any) -> list[str]:
-        """Collect issues from subprocess output if hook failed."""
-        if status == "passed":
-            return []
-        issues = [proc_result.stdout, proc_result.stderr]
-        return [issue for issue in issues if issue]
+        """Collect issues from subprocess output if hook failed.
+
+        NOTE: This returns an empty list for legacy subprocess hooks because
+        the display code expects ToolIssue objects with .file_path, .line_number, etc.
+        Raw stdout/stderr strings will cause AttributeError when accessed as objects.
+        Use QA adapters for proper issue parsing instead of subprocess hooks.
+        """
+        # Don't return raw stdout/stderr - the display code expects objects, not strings
+        return []
 
     async def _maybe_cache(self, hook: HookDefinition, result: HookResult) -> None:
         if not (self.settings.enable_caching and self._cache_adapter):
@@ -1035,6 +1113,12 @@ class HookOrchestratorAdapter:
             name=hook.name,
             status="error",
             duration=0.0,
+            files_processed=0,
+            issues_found=[str(error)],
+            stage=hook.stage.value,
+            exit_code=1,
+            error_message=str(error),
+            is_timeout=False,
         )
 
     async def get_cache_stats(self) -> dict[str, t.Any]:

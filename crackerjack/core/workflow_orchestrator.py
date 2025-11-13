@@ -904,11 +904,10 @@ class WorkflowPipeline:
         )
         return False
 
-    async def _execute_workflow_phases(
+    async def _execute_config_phase(
         self, options: OptionsProtocol, workflow_id: str
-    ) -> bool:
-        success = True
-
+    ) -> tuple[bool, bool]:
+        """Execute the configuration phase and return success status and overall status."""
         await self._publish_event(
             WorkflowEvent.CONFIG_PHASE_STARTED,
             {"workflow_id": workflow_id},
@@ -916,43 +915,50 @@ class WorkflowPipeline:
 
         with phase_monitor(workflow_id, "configuration"):
             config_success = self.phases.run_configuration_phase(options)
-            success = success and config_success
+            success = config_success
 
         await self._publish_event(
             WorkflowEvent.CONFIG_PHASE_COMPLETED,
             {"workflow_id": workflow_id, "success": config_success},
         )
 
+        return config_success, success
+
+    async def _execute_quality_phase_with_events(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> tuple[bool, bool]:
+        """Execute the quality phase with events and return success and combined status."""
         await self._publish_event(
             WorkflowEvent.QUALITY_PHASE_STARTED,
             {"workflow_id": workflow_id},
         )
         quality_success = await self._execute_quality_phase(options, workflow_id)
-        success = success and quality_success
+        success = quality_success
 
         await self._publish_event(
             WorkflowEvent.QUALITY_PHASE_COMPLETED,
             {"workflow_id": workflow_id, "success": quality_success},
         )
 
-        # If quality phase failed and we're in publishing mode, stop here
-        if not quality_success and self._is_publishing_workflow(options):
-            return False
+        return quality_success, success
 
-        # Execute publishing workflow if requested
+    async def _execute_publishing_if_requested(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> tuple[bool, bool]:
+        """Execute publishing phase if requested."""
         publish_requested = bool(
             getattr(options, "publish", False) or getattr(options, "all", False)
         )
+
         if publish_requested:
             await self._publish_event(
                 WorkflowEvent.PUBLISH_PHASE_STARTED,
                 {"workflow_id": workflow_id},
             )
+
         publishing_success = await self._execute_publishing_workflow(
             options, workflow_id
         )
-        if not publishing_success:
-            success = False
 
         if publish_requested:
             await self._publish_event(
@@ -963,18 +969,21 @@ class WorkflowPipeline:
                 },
             )
 
-        # Execute commit workflow independently if requested
-        # Note: Commit workflow runs regardless of publish success to ensure
-        # version bump changes are always committed when requested
+        return publish_requested, publishing_success
+
+    async def _execute_commit_if_requested(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> tuple[bool, bool]:
+        """Execute commit phase if requested."""
         commit_requested = bool(getattr(options, "commit", False))
+
         if commit_requested:
             await self._publish_event(
                 WorkflowEvent.COMMIT_PHASE_STARTED,
                 {"workflow_id": workflow_id},
             )
+
         commit_success = await self._execute_commit_workflow(options, workflow_id)
-        if not commit_success:
-            success = False
 
         if commit_requested:
             await self._publish_event(
@@ -985,10 +994,50 @@ class WorkflowPipeline:
                 },
             )
 
-        # Only fail the overall workflow if publishing was explicitly requested and failed
-        if not publishing_success and (
+        return commit_requested, commit_success
+
+    def _should_fail_on_publish_failure(
+        self, publishing_success: bool, options: OptionsProtocol
+    ) -> bool:
+        """Check if the overall workflow should fail due to publishing failure."""
+        return not publishing_success and (
             getattr(options, "publish", False) or getattr(options, "all", False)
-        ):
+        )
+
+    async def _execute_workflow_phases(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
+        # Execute configuration phase
+        config_success, success = await self._execute_config_phase(options, workflow_id)
+
+        # Execute quality phase
+        (
+            quality_success,
+            quality_phase_status,
+        ) = await self._execute_quality_phase_with_events(options, workflow_id)
+        success = success and quality_phase_status
+
+        # If quality phase failed and we're in publishing mode, stop here
+        if not quality_success and self._is_publishing_workflow(options):
+            return False
+
+        # Execute publishing workflow if requested
+        (
+            publish_requested,
+            publishing_success,
+        ) = await self._execute_publishing_if_requested(options, workflow_id)
+        if not publishing_success:
+            success = False
+
+        # Execute commit workflow independently if requested
+        commit_requested, commit_success = await self._execute_commit_if_requested(
+            options, workflow_id
+        )
+        if not commit_success:
+            success = False
+
+        # Only fail the overall workflow if publishing was explicitly requested and failed
+        if self._should_fail_on_publish_failure(publishing_success, options):
             self.console.print(
                 "[red]❌ Publishing failed - overall workflow marked as failed[/red]"
             )
@@ -1338,7 +1387,7 @@ class WorkflowPipeline:
         ):
             self._show_security_audit_warning()
         elif publishing_requested and not success:
-            console.print(
+            self.console.print(
                 "[red]❌ Quality checks failed - cannot proceed to publishing[/red]"
             )
 
@@ -2165,7 +2214,7 @@ class WorkflowPipeline:
             return publishing_requested, security_blocks_publishing
         except Exception as e:
             self.logger.warning(f"Security check failed: {e} - blocking publishing")
-            console.print(
+            self.console.print(
                 "[red]🔒 SECURITY CHECK FAILED: Unable to verify security status - publishing BLOCKED[/red]"
             )
 
@@ -2182,7 +2231,9 @@ class WorkflowPipeline:
 
     def _display_security_gate_failure_message(self) -> None:
         """Display initial security gate failure message."""
-        console.print("[red]🔒 SECURITY GATE: Critical security checks failed[/red]")
+        self.console.print(
+            "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
+        )
 
     async def _attempt_ai_assisted_security_fix(self, options: OptionsProtocol) -> bool:
         """Attempt to fix security issues using AI assistance.
@@ -2203,10 +2254,10 @@ class WorkflowPipeline:
 
     def _display_ai_fixing_messages(self) -> None:
         """Display messages about AI-assisted security fixing."""
-        console.print(
+        self.console.print(
             "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
         )
-        console.print(
+        self.console.print(
             "[yellow]🤖 Attempting AI-assisted security issue resolution...[/yellow]"
         )
 
@@ -2219,12 +2270,12 @@ class WorkflowPipeline:
         try:
             security_still_blocks = self._check_security_critical_failures()
             if not security_still_blocks:
-                console.print(
+                self.console.print(
                     "[green]✅ AI agents resolved security issues - publishing allowed[/green]"
                 )
                 return True
             else:
-                console.print(
+                self.console.print(
                     "[red]🔒 Security issues persist after AI fixing - publishing still BLOCKED[/red]"
                 )
                 return False
@@ -2238,7 +2289,7 @@ class WorkflowPipeline:
         Returns:
             Always False since manual intervention is required
         """
-        console.print(
+        self.console.print(
             "[red]Security-critical hooks (bandit, pyright, gitleaks) must pass before publishing[/red]"
         )
         return False
@@ -2268,13 +2319,15 @@ class WorkflowPipeline:
     def _show_verbose_failure_details(
         self, testing_passed: bool, comprehensive_passed: bool
     ) -> None:
-        console.print(
+        self.console.print(
             f"[yellow]⚠️ Quality phase results - testing_passed: {testing_passed}, comprehensive_passed: {comprehensive_passed}[/yellow]"
         )
         if not testing_passed:
-            console.print("[yellow] → Tests reported failure[/yellow]")
+            self.console.print("[yellow] → Tests reported failure[/yellow]")
         if not comprehensive_passed:
-            console.print("[yellow] → Comprehensive hooks reported failure[/yellow]")
+            self.console.print(
+                "[yellow] → Comprehensive hooks reported failure[/yellow]"
+            )
 
     def _check_security_critical_failures(self) -> bool:
         try:
@@ -2375,30 +2428,30 @@ class WorkflowPipeline:
         audit_report = getattr(self, "_last_security_audit", None)
 
         if audit_report:
-            console.print(
+            self.console.print(
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
 
             for warning in audit_report.security_warnings:
                 if "CRITICAL" in warning:
-                    console.print(f"[red]{warning}[/red]")
+                    self.console.print(f"[red]{warning}[/red]")
                 elif "HIGH" in warning:
-                    console.print(f"[yellow]{warning}[/yellow]")
+                    self.console.print(f"[yellow]{warning}[/yellow]")
                 else:
-                    console.print(f"[blue]{warning}[/blue]")
+                    self.console.print(f"[blue]{warning}[/blue]")
 
             if audit_report.recommendations:
-                console.print("[bold]Security Recommendations: [/bold]")
+                self.console.print("[bold]Security Recommendations: [/bold]")
                 for rec in audit_report.recommendations[:3]:
-                    console.print(f"[dim]{rec}[/dim]")
+                    self.console.print(f"[dim]{rec}[/dim]")
         else:
-            console.print(
+            self.console.print(
                 "[yellow]⚠️ SECURITY AUDIT: Proceeding with partial quality success[/yellow]"
             )
-            console.print(
+            self.console.print(
                 "[yellow]✅ Security-critical checks (bandit, pyright, gitleaks) have passed[/yellow]"
             )
-            console.print(
+            self.console.print(
                 "[yellow]⚠️ Some non-critical quality checks failed - consider reviewing before production deployment[/yellow]"
             )
 
@@ -2479,7 +2532,9 @@ class WorkflowPipeline:
 
             should_improve = await coverage_orchestrator.should_improve_coverage()
             if not should_improve:
-                console.print("[dim]📈 Coverage at 100% - no improvement needed[/dim]")
+                self.console.print(
+                    "[dim]📈 Coverage at 100% - no improvement needed[/dim]"
+                )
                 return
 
             # Create agent context for coverage improvement
@@ -2497,7 +2552,7 @@ class WorkflowPipeline:
                 # Coverage orchestrator already printed success message
                 pass
             elif result["status"] == "skipped":
-                console.print(
+                self.console.print(
                     f"[dim]📈 Coverage improvement skipped: {result.get('reason', 'Unknown')}[/dim]"
                 )
             else:

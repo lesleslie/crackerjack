@@ -57,7 +57,14 @@ def main(argv: list[str] | None = None) -> int:
             cmd,
             cwd=Path.cwd(),
             check=False,  # Don't raise on non-zero exit (mdformat returns 1 for issues found)
+            capture_output=True,  # Capture stdout/stderr for error reporting
+            text=True,  # Return strings instead of bytes
         )
+        # Forward output to stdout/stderr so it's visible in logs
+        if result.stdout:
+            print(result.stdout, end="")
+        if result.stderr:
+            print(result.stderr, end="", file=sys.stderr)
         return result.returncode
     except FileNotFoundError:
         print(

@@ -64,8 +64,7 @@ class ExampleHookPlugin(HookPluginBase):
     ) -> HookResult:
         if hook_name == "validate - json":
             return self._validate_json_files(files)
-        else:
-            return super().execute_hook(hook_name, files, options)
+        return super().execute_hook(hook_name, files, options)
 
     def _validate_json_files(self, files: list[Path]) -> HookResult:
         import json
@@ -78,7 +77,7 @@ class ExampleHookPlugin(HookPluginBase):
 
         for json_file in json_files:
             try:
-                with open(json_file) as f:
+                with json_file.open() as f:
                     json.load(f)
             except json.JSONDecodeError as e:
                 errors.append(f"{json_file}: {e.lineno}: {e.msg}")
@@ -95,14 +94,13 @@ class ExampleHookPlugin(HookPluginBase):
                 output="\n".join(errors),
                 error_message=f"Found {len(errors)} JSON validation errors",
             )
-        else:
-            return HookResult(
-                name="validate - json",
-                status="passed",
-                duration=duration,
-                output=f"Validated {len(json_files)} JSON files",
-                error_message="",
-            )
+        return HookResult(
+            name="validate - json",
+            status="passed",
+            duration=duration,
+            output=f"Validated {len(json_files)} JSON files",
+            error_message="",
+        )
 
     def activate(self) -> bool:
         if self.console:

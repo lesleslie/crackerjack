@@ -304,7 +304,6 @@ class MCPServerContext:
     async def _initialize_components(self) -> None:
         """Initialize all service components."""
         self.cli_runner = WorkflowOrchestrator(
-            console=self.console,
             pkg_path=self.config.project_path,
         )
 

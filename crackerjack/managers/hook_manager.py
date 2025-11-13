@@ -17,35 +17,28 @@ if t.TYPE_CHECKING:
 
 
 class HookManagerImpl:
-    def __init__(
-        self,
-        pkg_path: Path,
-        verbose: bool = False,
-        quiet: bool = False,
-        debug: bool = False,
-        enable_lsp_optimization: bool = False,
-        enable_tool_proxy: bool = True,
-        use_incremental: bool = False,
-        # Legacy parameters kept for backward compatibility (deprecated)
-        orchestration_config: t.Any = None,
-        enable_orchestration: bool | None = None,
-        orchestration_mode: str | None = None,
-        enable_caching: bool = True,
-        cache_backend: str = "memory",
-    ) -> None:
-        self.pkg_path = pkg_path
-        self.executor: HookExecutor
-        self.debug = debug
-
-        # Get GitService for incremental execution
+    def _setup_git_service(self, use_incremental: bool, pkg_path: Path):
+        """Setup GitService for incremental execution."""
         from crackerjack.services.git import GitService
 
         git_service = None
         if use_incremental:
             console_for_git = depends.get_sync(Console)
             git_service = GitService(console_for_git, pkg_path)
+        return git_service
 
-        # Use LSP-aware executor if optimization is enabled
+    def _setup_executor(
+        self,
+        pkg_path: Path,
+        verbose: bool,
+        quiet: bool,
+        debug: bool,
+        enable_lsp_optimization: bool,
+        enable_tool_proxy: bool,
+        use_incremental: bool,
+        git_service: t.Any,
+    ):
+        """Setup the appropriate executor based on configuration."""
         if enable_lsp_optimization:
             console = depends.get_sync(Console)
             self.console = console  # Store console for later use
@@ -75,11 +68,16 @@ class HookManagerImpl:
                 git_service=git_service,
             )
 
-        self.config_loader = HookConfigLoader()
-        self._config_path: Path | None = None
-        self.lsp_optimization_enabled = enable_lsp_optimization
-        self.tool_proxy_enabled = enable_tool_proxy
-
+    def _load_orchestration_config(
+        self,
+        pkg_path: Path,
+        orchestration_config: t.Any,
+        enable_orchestration: bool | None,
+        orchestration_mode: str | None,
+        enable_caching: bool,
+        cache_backend: str,
+    ):
+        """Load orchestration configuration with priority."""
         # Get settings from ACB dependency injection
         self._settings = depends.get_sync(CrackerjackSettings)
 
@@ -138,6 +136,55 @@ class HookManagerImpl:
                     if orchestration_mode is not None
                     else (self._settings.orchestration_mode or "acb")
                 )
+
+    def __init__(
+        self,
+        pkg_path: Path,
+        verbose: bool = False,
+        quiet: bool = False,
+        debug: bool = False,
+        enable_lsp_optimization: bool = False,
+        enable_tool_proxy: bool = True,
+        use_incremental: bool = False,
+        # Legacy parameters kept for backward compatibility (deprecated)
+        orchestration_config: t.Any = None,
+        enable_orchestration: bool | None = None,
+        orchestration_mode: str | None = None,
+        enable_caching: bool = True,
+        cache_backend: str = "memory",
+    ) -> None:
+        self.pkg_path = pkg_path
+        self.executor: HookExecutor
+        self.debug = debug
+
+        # Get GitService for incremental execution
+        git_service = self._setup_git_service(use_incremental, pkg_path)
+
+        # Use LSP-aware executor if optimization is enabled
+        self._setup_executor(
+            pkg_path,
+            verbose,
+            quiet,
+            debug,
+            enable_lsp_optimization,
+            enable_tool_proxy,
+            use_incremental,
+            git_service,
+        )
+
+        self.config_loader = HookConfigLoader()
+        self._config_path: Path | None = None
+        self.lsp_optimization_enabled = enable_lsp_optimization
+        self.tool_proxy_enabled = enable_tool_proxy
+
+        self._load_orchestration_config(
+            pkg_path,
+            orchestration_config,
+            enable_orchestration,
+            orchestration_mode,
+            enable_caching,
+            cache_backend,
+        )
 
         self._orchestrator: HookOrchestratorAdapter | None = None
 

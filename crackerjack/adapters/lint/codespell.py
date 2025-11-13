@@ -94,7 +94,7 @@ class CodespellAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = CodespellSettings()
+            self.settings = await CodespellSettings.create_async()
         await super().init()
 
     @property
@@ -159,6 +159,43 @@ class CodespellAdapter(BaseToolAdapter):
 
         return cmd
 
+    def _parse_codespell_line(
+        self, line: str
+    ) -> tuple[Path | None, int | None, str, str | None] | None:
+        """Parse a single line from codespell output.
+
+        Args:
+            line: A line from codespell output
+
+        Returns:
+            Tuple of (file_path, line_number, message, suggestion) or None if parsing fails
+        """
+        # Codespell format: "file.py:10: tyop ==> typo"
+        if ":" not in line or "==>" not in line:
+            return None
+
+        parts = line.split(":", maxsplit=2)
+        if len(parts) < 2:
+            return None
+
+        file_path = Path(parts[0].strip())
+        line_number = int(parts[1].strip()) if parts[1].strip().isdigit() else None
+
+        # Parse error and suggestion
+        error_part = parts[2].strip() if len(parts) > 2 else line
+        if "==>" in error_part:
+            wrong, correct = error_part.split("==>", maxsplit=1)
+            wrong = wrong.strip()
+            correct = correct.strip()
+
+            message = f"Spelling: '{wrong}' should be '{correct}'"
+            suggestion = f"Replace '{wrong}' with '{correct}'"
+        else:
+            message = error_part
+            suggestion = None
+
+        return file_path, line_number, message, suggestion
+
     async def parse_output(
         self,
         result: ToolExecutionResult,
@@ -178,33 +215,9 @@ class CodespellAdapter(BaseToolAdapter):
         lines = result.raw_output.strip().split("\n")
 
         for line in lines:
-            # Codespell format: "file.py:10: tyop ==> typo"
-            if ":" not in line or "==>" not in line:
-                continue
-
-            try:
-                # Split file and line number
-                parts = line.split(":", maxsplit=2)
-                if len(parts) < 2:
-                    continue
-
-                file_path = Path(parts[0].strip())
-                line_number = (
-                    int(parts[1].strip()) if parts[1].strip().isdigit() else None
-                )
-
-                # Parse error and suggestion
-                error_part = parts[2].strip() if len(parts) > 2 else line
-                if "==>" in error_part:
-                    wrong, correct = error_part.split("==>", maxsplit=1)
-                    wrong = wrong.strip()
-                    correct = correct.strip()
-
-                    message = f"Spelling: '{wrong}' should be '{correct}'"
-                    suggestion = f"Replace '{wrong}' with '{correct}'"
-                else:
-                    message = error_part
-                    suggestion = None
+            parsed_result = self._parse_codespell_line(line)
+            if parsed_result is not None:
+                file_path, line_number, message, suggestion = parsed_result
 
                 issue = ToolIssue(
                     file_path=file_path,
@@ -215,9 +228,6 @@ class CodespellAdapter(BaseToolAdapter):
                     suggestion=suggestion,
                 )
                 issues.append(issue)
-
-            except (ValueError, IndexError):
-                continue
 
         return issues
 

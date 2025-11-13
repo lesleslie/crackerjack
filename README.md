@@ -425,12 +425,12 @@ python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
 
 **Optimal Execution Order**:
 
-- **Fast hooks first** → **retry once if any fail** (formatting fixes cascade to other issues)
-- **Code cleaning** → Remove TODO detection, apply standardized patterns
-- **Post-cleaning fast hooks sanity check** → Ensure cleaning didn't introduce issues
-- **Full test suite** → Collect ALL test failures (don't stop on first)
-- **Comprehensive hooks** → Collect ALL quality issues on clean codebase
-- **AI batch fixing** → Process all collected issues intelligently
+- **Fast hooks first** # → **retry once if any fail** (formatting fixes cascade to other issues)
+- **Code cleaning** # → Remove TODO detection, apply standardized patterns
+- **Post-cleaning fast hooks sanity check** # → Ensure cleaning didn't introduce issues
+- **Full test suite** # → Collect ALL test failures (don't stop on first)
+- **Comprehensive hooks** # → Collect ALL quality issues on clean codebase
+- **AI batch fixing** # → Process all collected issues intelligently
 
 **With AI integration:**
 
@@ -459,7 +459,7 @@ python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
 
 - **Built-in Testing:** Automatically runs tests using `pytest` with intelligent parallelization
 - **Coverage Ratchet:** Revolutionary coverage system that targets 100% - coverage can only increase, never decrease
-- **Milestone Celebrations:** Progress tracking with milestone achievements (15%, 20%, 25%... → 100%)
+- **Milestone Celebrations:** Progress tracking with milestone achievements (15%, 20%, 25%... # → 100%)
 - **No Arbitrary Limits:** Replaced traditional hard limits with continuous improvement toward perfection
 - **Visual Progress:** Rich terminal displays showing journey to 100% coverage
 - **Benchmark Testing:** Performance regression detection and monitoring
@@ -483,7 +483,7 @@ python -m crackerjack --run-tests
 # Example output:
 # 🎉 Coverage improved from 10.11% to 15.50%!
 # 🏆 Milestone achieved: 15% coverage!
-# 📈 Progress: [███░░░░░░░░░░░░░░░░░] 15.50% → 100%
+# 📈 Progress: [███░░░░░░░░░░░░░░░░░] 15.50% # → 100%
 # 🎯 Next milestone: 20% (+4.50% needed)
 ```
 
@@ -512,7 +512,7 @@ Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, pro
 **ACB Workflow Engine (Default since Phase 4.2)**
 
 ```
-User Command → BasicWorkflowEngine (ACB)
+User Command # → BasicWorkflowEngine (ACB)
     ↓
 Workflow Selection (Standard/Fast/Comprehensive/Test)
     ↓
@@ -538,7 +538,7 @@ Results Aggregation with real-time console output
 **Legacy Orchestrator Path** (opt-out with `--use-legacy-orchestrator`)
 
 ```
-User Command → WorkflowOrchestrator (Legacy)
+User Command # → WorkflowOrchestrator (Legacy)
     ↓
 SessionCoordinator (@depends.inject + protocols)
     ↓
@@ -844,7 +844,7 @@ MAX_ITERATIONS = 10  # Iterative application limit
 
 # Iterative fixes for complex cases
 pattern.apply_iteratively("pytest - hypothesis - specialist")
-# → "pytest-hypothesis-specialist"
+# # → "pytest-hypothesis-specialist"
 
 # Performance monitoring capabilities
 pattern.get_performance_stats(text, iterations=100)
@@ -856,35 +856,35 @@ pattern.get_performance_stats(text, iterations=100)
 
 ```python
 # PyPI tokens (word boundaries prevent false matches)
-"pypi-AgEIcHlwaS5vcmcCJGE4M2Y3ZjI" → "pypi-****"
+"pypi-AgEIcHlwaS5vcmcCJGE4M2Y3ZjI"  # → "pypi-****"
 
 # GitHub personal access tokens (exactly 40 chars)
-"ghp_1234567890abcdef1234567890abcdef1234" → "ghp_****"
+"ghp_1234567890abcdef1234567890abcdef1234"  # → "ghp_****"
 
 # Generic long tokens (32+ chars with word boundaries)
-"secret_key=abcdef1234567890abcdef1234567890abcdef" → "secret_key=****"
+"secret_key=abcdef1234567890abcdef1234567890abcdef"  # → "secret_key=****"
 ```
 
 **Subprocess Security Fixes**:
 
 ```python
 # Automatic shell injection prevention
-subprocess.run(cmd, shell=True) → subprocess.run(cmd.split())
-subprocess.call(cmd, shell=True) → subprocess.call(cmd.split())
+subprocess.run(cmd, shell=True)  # → subprocess.run(cmd.split())
+subprocess.call(cmd, shell=True)  # → subprocess.call(cmd.split())
 ```
 
 **Unsafe Library Replacements**:
 
 ```python
-# Weak crypto → Strong crypto
-hashlib.md5(data) → hashlib.sha256(data)
-hashlib.sha1(data) → hashlib.sha256(data)
+# Weak crypto # → Strong crypto
+hashlib.md5(data)  # → hashlib.sha256(data)
+hashlib.sha1(data)  # → hashlib.sha256(data)
 
-# Insecure random → Cryptographic random
-random.choice(options) → secrets.choice(options)
+# Insecure random # → Cryptographic random
+random.choice(options)  # → secrets.choice(options)
 
-# Unsafe YAML → Safe YAML
-yaml.load(file) → yaml.safe_load(file)
+# Unsafe YAML # → Safe YAML
+yaml.load(file)  # → yaml.safe_load(file)
 ```
 
 #### Pattern Validation Requirements

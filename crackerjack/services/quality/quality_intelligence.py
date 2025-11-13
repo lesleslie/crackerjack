@@ -821,3 +821,99 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         """Export quality insights to JSON file."""
         with output_path.open("w") as f:
             json.dump(insights.to_dict(), f, indent=2, default=str)
+
+    # Protocol methods required by QualityIntelligenceProtocol
+    def analyze_quality_trends(self) -> dict[str, t.Any]:
+        """Analyze quality trends."""
+        # Use existing identify_patterns method to analyze trends
+        patterns = self.identify_patterns()
+        trend_analysis = {
+            "total_patterns": len(patterns),
+            "patterns_by_type": {
+                "cyclic": len(
+                    [p for p in patterns if p.pattern_type == PatternType.CYCLIC]
+                ),
+                "seasonal": len(
+                    [p for p in patterns if p.pattern_type == PatternType.SEASONAL]
+                ),
+                "correlation": len(
+                    [p for p in patterns if p.pattern_type == PatternType.CORRELATION]
+                ),
+                "regression": len(
+                    [p for p in patterns if p.pattern_type == PatternType.REGRESSION]
+                ),
+                "improvement": len(
+                    [p for p in patterns if p.pattern_type == PatternType.IMPROVEMENT]
+                ),
+            },
+            "trend_directions": {
+                "improving": len(
+                    [
+                        p
+                        for p in patterns
+                        if p.trend_direction == TrendDirection.IMPROVING
+                    ]
+                ),
+                "declining": len(
+                    [
+                        p
+                        for p in patterns
+                        if p.trend_direction == TrendDirection.DECLINING
+                    ]
+                ),
+                "stable": len(
+                    [p for p in patterns if p.trend_direction == TrendDirection.STABLE]
+                ),
+                "volatile": len(
+                    [
+                        p
+                        for p in patterns
+                        if p.trend_direction == TrendDirection.VOLATILE
+                    ]
+                ),
+            },
+            "generated_at": datetime.now().isoformat(),
+        }
+        return trend_analysis
+
+    def predict_quality_issues(self) -> list[dict[str, t.Any]]:
+        """Predict potential quality issues."""
+        predictions = self.generate_advanced_predictions()
+        issue_predictions = []
+
+        for pred in predictions:
+            if pred.risk_assessment in ("high", "critical"):
+                issue_predictions.append(
+                    {
+                        "metric": pred.metric_name,
+                        "predicted_value": pred.predicted_value,
+                        "risk_level": pred.risk_assessment,
+                        "confidence_interval": {
+                            "lower": pred.confidence_lower,
+                            "upper": pred.confidence_upper,
+                        },
+                        "prediction_horizon": pred.prediction_horizon_days,
+                        "factors": pred.factors,
+                    }
+                )
+
+        return issue_predictions
+
+    def recommend_improvements(self) -> list[dict[str, t.Any]]:
+        """Recommend quality improvements."""
+        # Generate basic analysis to get data for recommendations
+        anomalies = self.detect_anomalies()
+        patterns = self.identify_patterns()
+        predictions = self.generate_advanced_predictions()
+
+        recommendations = self.generate_ml_recommendations(
+            anomalies, patterns, predictions
+        )
+
+        # Convert to required format
+        return [{"message": rec} for rec in recommendations]
+
+    def get_intelligence_report(self) -> dict[str, t.Any]:
+        """Get quality intelligence report."""
+        insights = self.generate_comprehensive_insights()
+        return insights.to_dict()
