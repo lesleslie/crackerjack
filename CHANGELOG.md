@@ -1,5 +1,48 @@
 ______________________________________________________________________
 
+## [0.44.10] - 2025-11-14
+
+### Changed
+
+- refactoring
+- Simplify conditional expression in issue count calculation
+- Update core, docs, tests
+
+### Fixed
+
+- Capture error output for failed hooks with no parsed issues
+- Make mdformat wrapper fail when it formats files
+- Show accurate issue counts in hook results table
+- Use project directory name instead of hardcoded 'crackerjack' fallback
+
+### Documentation
+
+- Add comprehensive test improvement plan
+
+### Testing
+
+- Add comprehensive ArchitectAgent and TestCreationAgent tests
+- Add comprehensive AsyncTimeoutManager tests
+- Add comprehensive AutofixCoordinator tests
+- Add comprehensive CLI layer tests (Phase 5 - Part 2)
+- Add comprehensive DRYAgent and FormattingAgent tests
+- Add comprehensive EnhancedProactiveAgent and SemanticAgent tests
+- Add comprehensive file_lifecycle tests
+- Add comprehensive HookManager and PublishManager tests
+- Add comprehensive MCP rate_limiter tests
+- Add comprehensive MCP state tests
+- Add comprehensive orchestration tests (Phase 5 - Part 1)
+- Add comprehensive parallel_executor tests
+- Add comprehensive PerformanceAgent and DocumentationAgent tests
+- Add comprehensive RefactoringAgent and SecurityAgent tests
+- Add comprehensive resource_manager tests
+- Add comprehensive SessionCoordinator tests
+- Add Phase 2 core service tests (filesystem and cache)
+- Complete Phase 4 with TestSpecialistAgent and ImportOptimizationAgent tests
+- Implement Phase 1 test improvements
+- Implement Phase 3 agent system tests (base and coordinator)
+- Implement Phase 4 manager tests and remove broken smoke tests
+
 ## [0.44.9] - 2025-11-14
 
 ### Changed
