@@ -558,6 +558,18 @@ class PhaseCoordinator:
             not in {"passed", "success", "failed", "error", "timeout"}
         ]
 
+        # Calculate total issues using issues_count (which may be larger than len(issues_found))
+        # Passed hooks always contribute 0 issues
+        total_issues = 0
+        for r in results:
+            if r.status == "passed":
+                continue
+            # Use issues_count if available (may be truncated list), otherwise len(issues_found)
+            if hasattr(r, "issues_count") and r.issues_count > 0:
+                total_issues += r.issues_count
+            elif r.issues_found:
+                total_issues += len(r.issues_found)
+
         return {
             "total_hooks": len(results),
             "passed_hooks": passed_hooks,
@@ -566,9 +578,7 @@ class PhaseCoordinator:
             "total_passed": len(passed_hooks),
             "total_failed": len(failed_hooks),
             "total_other": len(other_hooks),
-            "total_issues_found": sum(
-                len(r.issues_found) if r.issues_found else 0 for r in results
-            ),
+            "total_issues_found": total_issues,
         }
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
