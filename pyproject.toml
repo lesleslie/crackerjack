@@ -294,9 +294,9 @@ keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
 
-[tool.uv.sources.acb]
-path = "../acb"
-editable = true
+# [tool.uv.sources.acb]
+# path = "../acb"
+# editable = true
 
 [tool.creosote]
 paths = [

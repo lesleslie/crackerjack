@@ -452,19 +452,24 @@ class AsyncHookExecutor:
         status = "passed" if return_code == 0 else "failed"
 
         # Debug logging for hooks that show FAILED with 0 issues
-        if return_code != 0 and hook.name in {
+        if hook.name in {
             "ruff-format",
             "ruff-check",
             "codespell",
+            "semgrep",
+            "complexipy",
         }:
-            self.console.print(
-                f"[red]DEBUG {hook.name}: EXIT CODE={return_code}[/red]"
-            )
+            import sys
+
+            stderr_text = self._last_stderr.decode() if self._last_stderr else ""
+            print(f"\n{'=' * 70}", file=sys.stderr)
+            print(f"DEBUG {hook.name}: EXIT CODE={return_code}", file=sys.stderr)
+            print(f"STDOUT (first 500 chars):\n{output_text[:500]}", file=sys.stderr)
+            print(f"STDERR (first 500 chars):\n{stderr_text[:500]}", file=sys.stderr)
+            print(f"{'=' * 70}\n", file=sys.stderr)
+            self.console.print(f"[red]DEBUG {hook.name}: EXIT CODE={return_code}[/red]")
             self.console.print(
                 f"[yellow]STDOUT (first 500 chars): {output_text[:500]}[/yellow]"
-            )
-            stderr_text = (
-                self._last_stderr.decode() if self._last_stderr else ""
             )
             self.console.print(
                 f"[yellow]STDERR (first 500 chars): {stderr_text[:500]}[/yellow]"
