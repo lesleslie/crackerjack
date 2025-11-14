@@ -470,7 +470,7 @@ class AsyncHookExecutor:
             )
 
         # Ensure failed hooks always have at least 1 issue count
-        issues_count = max(len(issues), 1) if status == "failed" else len(issues)
+        issues_count = max(len(issues), 1 if status == "failed" else 0)
 
         return HookResult(
             id=parsed_output.get("hook_id", hook.name),
