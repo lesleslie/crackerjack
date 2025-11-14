@@ -245,7 +245,8 @@ def _handle_documentation_commands(
 
     from crackerjack.services.documentation_service import DocumentationServiceImpl
 
-    pkg_path = Path("crackerjack")
+    # Use current working directory instead of hardcoded "crackerjack"
+    pkg_path = Path.cwd()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
     if generate_docs:
