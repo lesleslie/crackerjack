@@ -465,9 +465,7 @@ class AsyncHookExecutor:
             error_lines = [
                 line.strip() for line in output_text.split("\n") if line.strip()
             ][:10]
-            issues = (
-                error_lines if error_lines else ["Hook failed with non-zero exit code"]
-            )
+            issues = error_lines or ["Hook failed with non-zero exit code"]
 
         # Ensure failed hooks always have at least 1 issue count
         issues_count = max(len(issues), 1 if status == "failed" else 0)

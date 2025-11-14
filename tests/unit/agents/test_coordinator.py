@@ -308,7 +308,7 @@ class TestAgentCoordinatorIssueHandling:
             ),
         ]
 
-        result = await coordinator.handle_issues(issues])
+        result = await coordinator.handle_issues(issues)
 
         assert result.success is True
         # Should have fixes from both agent types
