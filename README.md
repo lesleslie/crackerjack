@@ -19,7 +19,7 @@
 
 Just as the name suggests, Crackerjack makes your Python projects first-rate through:
 
-- **🧠 Proactive AI Architecture**: 10+ specialized AI agents prevent issues before they occur
+- **🧠 Proactive AI Architecture**: 12 specialized AI agents prevent issues before they occur
 - **⚡ Autonomous Quality**: Intelligent auto-fixing with architectural planning
 - **🛡️ Zero-Compromise Standards**: 100% test coverage, complexity ≤15, security-first patterns
 - **🔄 Learning System**: Gets smarter with every project, caching successful patterns
