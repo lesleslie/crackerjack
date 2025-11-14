@@ -401,6 +401,9 @@ class AsyncHookExecutor:
             issues_found=[f"Hook timed out after {duration: .1f}s"],
             issues_count=1,  # Timeout counts as 1 issue
             stage=hook.stage.value,
+            exit_code=124,  # Standard timeout exit code
+            error_message=f"Hook execution exceeded timeout of {timeout_val}s",
+            is_timeout=True,
         )
 
     async def _terminate_process_safely(
@@ -483,6 +486,7 @@ class AsyncHookExecutor:
             error_message=output_text[:500]
             if status == "failed" and output_text
             else None,  # First 500 chars of error
+            is_timeout=False,
         )
 
     def _decode_process_output(self, stdout: bytes | None, stderr: bytes | None) -> str:
@@ -513,6 +517,9 @@ class AsyncHookExecutor:
                 issues_found=["Event loop closed during execution"],
                 issues_count=1,  # Error counts as 1 issue
                 stage=hook.stage.value,
+                exit_code=1,
+                error_message="Event loop closed during hook execution",
+                is_timeout=False,
             )
         else:
             raise
@@ -540,6 +547,9 @@ class AsyncHookExecutor:
             issues_found=[str(error)],
             issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
+            exit_code=1,
+            error_message=f"{type(error).__name__}: {str(error)}",
+            is_timeout=False,
         )
 
     def _parse_semgrep_output_async(self, output: str) -> int:
