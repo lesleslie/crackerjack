@@ -1,5 +1,16 @@
 ______________________________________________________________________
 
+## [0.44.12] - 2025-11-14
+
+### Changed
+
+- Update dependencies
+
+### Fixed
+
+- Normalize package names and capture hook errors correctly
+- orchestration: Capture stdout+stderr for failed hook error messages
+
 ## [0.44.11] - 2025-11-14
 
 ### Changed
