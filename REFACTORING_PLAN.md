@@ -1,0 +1,441 @@
+# Crackerjack Package Simplification Plan
+
+**Goal**: Reduce codebase complexity and line count while maintaining 100% functionality
+
+**Current State**: 334 Python files, 135,790 lines of code
+**Target Impact**: Reduce largest files by ~10,000+ lines through strategic splitting and consolidation
+
+---
+
+## Executive Summary
+
+The analysis identified **5 critical areas** for simplification:
+
+1. **3 massive files** (3,057 + 3,002 + 2,158 lines) that violate single responsibility
+2. **4+ duplicate files** requiring consolidation
+3. **3 backup files** to delete
+4. **Multiple orchestrator/coordinator overlap** requiring clarity
+5. **Endpoint and CLI bloat** requiring modularization
+
+**Estimated Line Reduction**: 10,000-15,000 lines through better organization (not functionality removal)
+
+---
+
+## Phase 1: Quick Wins (Immediate - Low Risk)
+
+### 1.1 Delete Backup Files ✂️
+**Impact**: -2,076 lines, zero risk
+
+```bash
+# Remove confirmed backup files
+rm crackerjack/managers/test_manager_backup.py          # -1,075 lines
+rm crackerjack/mcp/tools/execution_tools_backup.py      # -1,001 lines
+```
+
+**Verification**: Ensure no imports reference these files
+
+### 1.2 Consolidate Duplicate Files 🔄
+**Impact**: -1,709 lines (remove one version each)
+
+**Duplicates Identified**:
+1. `services/quality_intelligence.py` (790 lines) vs `services/quality/quality_intelligence.py` (919 lines)
+   - **Action**: Keep services/quality/ version, delete services/ version
+   - Update imports across codebase
+
+2. `services/contextual_ai_assistant.py` vs `services/ai/contextual_ai_assistant.py`
+   - **Action**: Keep services/ai/ version, delete services/ version
+   - Update imports across codebase
+
+**Steps**:
+```bash
+# 1. Find all imports of the old paths
+grep -r "from crackerjack.services.quality_intelligence" crackerjack/
+grep -r "from crackerjack.services.contextual_ai_assistant" crackerjack/
+
+# 2. Update imports to new paths
+# 3. Delete old files
+# 4. Run tests to verify
+```
+
+---
+
+## Phase 2: High-Impact Refactoring (Priority Files)
+
+### 2.1 Split workflow_orchestrator.py (3,057 → ~1,200 lines)
+**Impact**: -1,857 lines, massive maintainability improvement
+
+**Current Issues**:
+- `WorkflowPipeline` class: 122 methods, 2,613 lines
+- `WorkflowOrchestrator` class: 28 methods, 397 lines
+- Violates single responsibility extensively
+
+**Refactoring Strategy**: Extract into 6 focused classes
+
+```
+crackerjack/core/workflow/
+├── __init__.py                        # Exports, ~50 lines
+├── workflow_orchestrator.py           # Core orchestration, ~400 lines
+├── workflow_pipeline.py               # Pipeline coordination, ~350 lines
+├── issue_parser.py                    # Issue parsing logic, ~300 lines
+├── fix_verification_service.py        # Fix verification, ~250 lines
+├── ai_coordination_service.py         # AI agent coordination, ~350 lines
+└── workflow_logger.py                 # Logging/debug helpers, ~300 lines
+```
+
+**Extraction Plan**:
+
+1. **IssueParser** (~300 lines)
+   - Extract ~30 methods related to parsing errors
+   - Methods matching: `_parse_*`, `_extract_*`, `_check_*_error*`
+
+2. **FixVerificationService** (~250 lines)
+   - Extract ~10 methods for fix verification
+   - Methods matching: `_verify_*`, `_check_fix_*`, `_validate_*`
+
+3. **AICoordinationService** (~350 lines)
+   - Extract ~15 methods for AI agent coordination
+   - Methods matching: `_coordinate_*`, `_select_agent*`, `_ai_*`
+
+4. **WorkflowLogger** (~300 lines)
+   - Extract ~20 methods for logging/debugging
+   - Methods matching: `_log_*`, `_debug_*`, `_report_*`
+
+5. **WorkflowPipeline** (~350 lines)
+   - Remaining pipeline coordination logic
+   - Keep only core workflow execution methods
+
+6. **WorkflowOrchestrator** (~400 lines)
+   - Keep existing class, simplify with extracted services
+   - Use DI to inject the new services
+
+**Migration Steps**:
+1. Create new directory structure
+2. Extract one service at a time (start with WorkflowLogger - least dependencies)
+3. Update imports in workflow_orchestrator.py
+4. Add `@depends.inject` decorators for DI
+5. Run tests after each extraction
+6. Update protocol definitions if needed
+
+### 2.2 Split regex_patterns.py (3,002 → ~1,000 lines)
+**Impact**: -2,000 lines through better organization
+
+**Current Issues**:
+- 178 ValidatedPattern instances in single dictionary
+- 25 utility functions mixed with data
+- Hard to find specific patterns
+
+**Refactoring Strategy**: Split by domain into pattern registry
+
+```
+crackerjack/services/regex_patterns/
+├── __init__.py                        # Registry + loader, ~200 lines
+├── core.py                            # Base classes, ~150 lines
+├── utils.py                           # Utility functions, ~150 lines
+├── formatting.py                      # ~30 patterns, ~300 lines
+├── security.py                        # ~25 patterns, ~250 lines
+├── testing.py                         # ~20 patterns, ~200 lines
+├── documentation.py                   # ~20 patterns, ~200 lines
+├── imports.py                         # ~15 patterns, ~150 lines
+├── versioning.py                      # ~15 patterns, ~150 lines
+├── path_safety.py                     # ~20 patterns, ~200 lines
+└── misc.py                            # Remaining patterns, ~250 lines
+```
+
+**Pattern Categories**:
+- **Formatting**: Style, whitespace, line length patterns
+- **Security**: Path safety, injection detection, credential patterns
+- **Testing**: Test detection, assertion patterns
+- **Documentation**: Docstring, comment patterns
+- **Imports**: Import statement patterns
+- **Versioning**: Version number, changelog patterns
+- **Path Safety**: Filesystem path patterns
+- **Misc**: Remaining uncategorized patterns
+
+**Registry Design**:
+```python
+# __init__.py
+from .core import ValidatedPattern, PatternRegistry
+
+# Auto-load all patterns from submodules
+registry = PatternRegistry()
+registry.load_from_modules([
+    'formatting', 'security', 'testing', 'documentation',
+    'imports', 'versioning', 'path_safety', 'misc'
+])
+
+# Maintain backward compatibility
+SAFE_PATTERNS = registry.patterns  # Returns combined dict
+```
+
+**Migration Steps**:
+1. Create directory structure
+2. Move base classes to `core.py`
+3. Move utility functions to `utils.py`
+4. Split patterns by domain (one file at a time)
+5. Create registry loader
+6. Update imports (should be minimal - most import from `regex_patterns` not internals)
+7. Run tests
+
+### 2.3 Split monitoring_endpoints.py (1,875 → ~600 lines)
+**Impact**: -1,275 lines through endpoint organization
+
+**Current Issues**:
+- Mix of WebSocket and REST endpoints
+- 24 top-level functions
+- Embedded HTML template
+
+**Refactoring Strategy**: Split by endpoint domain
+
+```
+crackerjack/mcp/websocket/endpoints/
+├── __init__.py                        # Router registration, ~100 lines
+├── telemetry_endpoints.py             # Telemetry APIs, ~200 lines
+├── metrics_endpoints.py               # Metrics APIs, ~300 lines
+├── intelligence_endpoints.py          # Intelligence APIs, ~400 lines
+├── dependency_endpoints.py            # Dependency APIs, ~300 lines
+├── heatmap_endpoints.py               # Heatmap APIs, ~300 lines
+├── dashboard_endpoints.py             # Dashboard APIs, ~200 lines
+└── templates/
+    └── monitoring_dashboard.html      # Extract HTML template
+```
+
+**Migration Steps**:
+1. Create directory structure
+2. Extract HTML template first
+3. Group endpoints by domain
+4. Create router modules
+5. Update main monitoring_endpoints.py to import and register routers
+6. Run tests
+
+---
+
+## Phase 3: Agent Simplification (Optional - Agents Work Well)
+
+Per CLAUDE.md, agents use legacy `AgentContext` pattern (40% ACB compliance) but are working well. This phase is **optional** and lower priority.
+
+### 3.1 Split test_creation_agent.py (2,158 → ~1,000 lines)
+**Impact**: -1,158 lines
+
+**Refactoring Strategy**: Extract into 4 specialized classes
+
+```
+crackerjack/agents/test_creation/
+├── __init__.py                        # Agent facade, ~100 lines
+├── test_creation_agent.py             # Core agent logic, ~300 lines
+├── template_generator.py              # Test templates, ~500 lines
+├── coverage_analyzer.py               # Coverage analysis, ~350 lines
+├── ast_analyzer.py                    # AST parsing, ~250 lines
+└── parameter_generator.py             # Argument generation, ~350 lines
+```
+
+### 3.2 Split performance_agent.py (1,677 → ~800 lines)
+**Impact**: -877 lines
+
+```
+crackerjack/agents/performance/
+├── __init__.py
+├── performance_agent.py               # Core agent, ~300 lines
+├── pattern_detector.py                # Pattern detection, ~400 lines
+├── ast_analyzer.py                    # AST analysis, ~300 lines
+└── recommendations.py                 # Recommendations, ~350 lines
+```
+
+### 3.3 Split refactoring_agent.py (1,259 → ~600 lines)
+**Impact**: -659 lines
+
+```
+crackerjack/agents/refactoring/
+├── __init__.py
+├── refactoring_agent.py               # Core agent, ~250 lines
+├── complexity_analyzer.py             # Complexity detection, ~350 lines
+├── code_transformer.py                # Code transformations, ~300 lines
+└── dead_code_detector.py              # Dead code detection, ~250 lines
+```
+
+---
+
+## Phase 4: CLI and Orchestration Cleanup
+
+### 4.1 Continue CLI Modularization
+**Current**: `__main__.py` has 1,729 lines, 57 functions
+
+**Action**: Continue extracting command groups (already started)
+
+```
+crackerjack/cli/handlers/
+├── release_commands.py                # Release workflow commands
+├── server_commands.py                 # MCP/server commands
+├── workflow_commands.py               # Workflow commands
+└── monitoring_commands.py             # Monitoring commands
+```
+
+**Target**: `__main__.py` < 300 lines (just routing)
+
+### 4.2 Audit Orchestrator/Coordinator Overlap
+**Action**: Document clear responsibilities
+
+**Orchestrators** (9 classes):
+- workflow_orchestrator.py (2 classes)
+- async_workflow_orchestrator.py
+- hook_orchestrator.py
+- advanced_orchestrator.py
+- qa_orchestrator.py
+- agent_orchestrator.py
+
+**Coordinators** (6 classes):
+- phase_coordinator.py
+- session_coordinator.py
+- autofix_coordinator.py
+- Agent coordinators (2)
+
+**Research Questions**:
+1. Is there genuine overlap or proper separation?
+2. Can any be consolidated?
+3. Should orchestrators delegate to coordinators?
+
+---
+
+## Phase 5: Service Consolidation Audit
+
+### 5.1 Review Quality Baseline Services
+**Files**:
+- `services/quality/quality_baseline.py` (8.1K)
+- `services/quality/quality_baseline_enhanced.py` (24K)
+- `services/quality/quality_intelligence.py` (28K)
+
+**Questions**:
+1. Is base version used independently?
+2. Can enhanced version replace base?
+3. Is there duplication between enhanced and intelligence?
+
+### 5.2 Review Performance Monitoring Overlap
+**Files** (31 files reference "performance"):
+- `services/performance_monitor.py`
+- `services/monitoring/performance_monitor.py`
+- `services/monitoring/performance_cache.py`
+- `services/monitoring/performance_benchmarks.py`
+- `services/performance_cache.py`
+- `core/performance.py`
+- `core/performance_monitor.py`
+
+**Action**: Audit for genuine duplication vs proper separation
+
+---
+
+## Implementation Guidelines
+
+### Critical Rules
+1. **Maintain 100% functionality** - no feature removal
+2. **Preserve all tests** - update imports only
+3. **Use protocol-based DI** - follow ACB architecture
+4. **One change at a time** - test after each refactoring
+5. **Update imports carefully** - use grep to find all references
+
+### Testing Strategy
+```bash
+# After each change:
+python -m crackerjack --run-tests           # Run full test suite
+python -m crackerjack                        # Quality checks
+
+# Verify imports:
+grep -r "from crackerjack.core.workflow_orchestrator" crackerjack/
+grep -r "import crackerjack.services.regex_patterns" crackerjack/
+```
+
+### Commit Strategy
+```bash
+# Small, focused commits:
+git commit -m "refactor: extract IssueParser from WorkflowPipeline"
+git commit -m "refactor: split regex patterns into domain modules"
+git commit -m "chore: remove backup files"
+```
+
+---
+
+## Success Metrics
+
+### Quantitative Goals
+- ✅ Zero files > 2,000 lines (currently 3 files)
+- ✅ < 5 files > 1,000 lines (currently 10 files)
+- ✅ Zero backup files (currently 3 files)
+- ✅ Zero duplicate files (currently 4+ files)
+- ✅ Reduce top 10 largest files from 17,500 → 10,000 lines (~43% reduction)
+
+### Qualitative Goals
+- ✅ Easier to find specific functionality
+- ✅ Better separation of concerns
+- ✅ Improved testability
+- ✅ Clearer architecture
+- ✅ Faster onboarding for new contributors
+
+### Coverage Maintenance
+- **Maintain 19.6% baseline** (never reduce)
+- Coverage should stay same or improve
+- All existing tests must pass
+
+---
+
+## Risk Assessment
+
+### Low Risk (Phase 1)
+- Deleting backup files
+- Extracting HTML templates
+- Moving duplicate files
+
+### Medium Risk (Phase 2)
+- Splitting large files (imports must be updated)
+- Registry pattern for regex patterns
+- Endpoint reorganization
+
+### Higher Risk (Phase 3-5)
+- Agent refactoring (works well, don't break)
+- Orchestrator consolidation (complex dependencies)
+- Service consolidation (used widely)
+
+---
+
+## Rollback Plan
+
+For each phase:
+1. Work on feature branch
+2. Commit small changes frequently
+3. If issues arise: `git revert <commit-hash>`
+4. Run tests before and after each change
+5. Keep backup branch: `git branch backup-before-refactor`
+
+---
+
+## Timeline Estimate
+
+| Phase | Duration | Line Reduction | Risk |
+|-------|----------|----------------|------|
+| Phase 1 | 1-2 hours | -3,785 lines | Low |
+| Phase 2 | 2-3 days | -5,132 lines | Medium |
+| Phase 3 | 3-5 days | -2,694 lines | Medium |
+| Phase 4 | 1-2 days | -1,000 lines | Medium |
+| Phase 5 | 2-3 days | TBD | Medium-High |
+| **Total** | **2-3 weeks** | **~12,600+ lines** | - |
+
+---
+
+## Next Steps
+
+1. **Review this plan** - Confirm approach and priorities
+2. **Start with Phase 1** - Quick wins to build momentum
+3. **Proceed incrementally** - One phase at a time
+4. **Test religiously** - After every change
+5. **Update documentation** - Reflect new structure
+
+---
+
+## Questions for Review
+
+1. Should we proceed with all phases or focus on specific ones?
+2. Are the agent refactorings (Phase 3) worth it given they work well?
+3. Any specific areas of concern or additional priorities?
+4. Should we create a feature branch for this work?
+
+---
+
+**Status**: ✅ Plan Ready for Review and Approval
+**Next Action**: Await confirmation to proceed with Phase 1
