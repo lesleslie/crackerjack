@@ -399,6 +399,7 @@ class AsyncHookExecutor:
             status="timeout",
             duration=duration,
             issues_found=[f"Hook timed out after {duration: .1f}s"],
+            issues_count=1,  # Timeout counts as 1 issue
             stage=hook.stage.value,
         )
 
@@ -457,13 +458,18 @@ class AsyncHookExecutor:
             issues_count=len(parsed_output.get("issues", [])),
         )
 
+        issues = parsed_output.get("issues", [])
+        # If hook failed but has no issues, count it as 1 issue
+        issues_count = max(len(issues), 1) if status == "failed" else len(issues)
+
         return HookResult(
             id=parsed_output.get("hook_id", hook.name),
             name=hook.name,
             status=status,
             duration=duration,
             files_processed=parsed_output.get("files_processed", 0),
-            issues_found=parsed_output.get("issues", []),
+            issues_found=issues,
+            issues_count=issues_count,  # Ensure failed hooks show at least 1 issue
             stage=hook.stage.value,
         )
 
@@ -493,6 +499,7 @@ class AsyncHookExecutor:
                 status="error",
                 duration=duration,
                 issues_found=["Event loop closed during execution"],
+                issues_count=1,  # Error counts as 1 issue
                 stage=hook.stage.value,
             )
         else:
@@ -519,6 +526,7 @@ class AsyncHookExecutor:
             status="error",
             duration=duration,
             issues_found=[str(error)],
+            issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
         )
 

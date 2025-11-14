@@ -475,6 +475,7 @@ class IndividualHookExecutor:
                 name=hook.name,
                 status="failed",
                 duration=hook.timeout,
+                issues_count=1,  # Timeout counts as 1 issue
             )
         except Exception as e:
             progress.status = "failed"
@@ -486,6 +487,7 @@ class IndividualHookExecutor:
                 name=hook.name,
                 status="failed",
                 duration=progress.duration or 0,
+                issues_count=1,  # Error counts as 1 issue
             )
 
     async def _run_command_with_streaming(

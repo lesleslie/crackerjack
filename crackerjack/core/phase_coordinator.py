@@ -627,11 +627,13 @@ class PhaseCoordinator:
 
         for result in results:
             status_style = self._status_style(result.status)
+            # Use issues_count if available (total count), otherwise fall back to len(issues_found)
+            issues_display = result.issues_count if hasattr(result, 'issues_count') and result.issues_count > 0 else (len(result.issues_found) if result.issues_found else 0)
             table.add_row(
                 self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
                 f"{result.duration:.2f}s",
-                str(len(result.issues_found) if result.issues_found else 0),
+                str(issues_display),
             )
 
         return table
