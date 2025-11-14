@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.44.9] - 2025-11-14
+
+### Changed
+
+- Update deps, docs
+
+### Fixed
+
+- Remove hardcoded 'crackerjack' path assumptions
+
 ## [0.44.8] - 2025-11-14
 
 ### Changed
