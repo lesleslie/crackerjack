@@ -454,11 +454,16 @@ class IndividualHookExecutor:
                     parsed_output["errors"] + parsed_output["warnings"]
                 )
 
+                status = "passed" if result.returncode == 0 else "failed"
+                # Ensure failed hooks always have at least 1 issue count
+                issues_count = 1 if status == "failed" else 0
+
                 hook_result = HookResult(
                     id=hook.name,
                     name=hook.name,
-                    status="passed" if result.returncode == 0 else "failed",
+                    status=status,
                     duration=progress.duration or 0,
+                    issues_count=issues_count,
                 )
 
                 self._print_hook_summary(hook.name, hook_result, progress)
