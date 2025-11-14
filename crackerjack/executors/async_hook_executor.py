@@ -451,6 +451,25 @@ class AsyncHookExecutor:
 
         status = "passed" if return_code == 0 else "failed"
 
+        # Debug logging for hooks that show FAILED with 0 issues
+        if return_code != 0 and hook.name in {
+            "ruff-format",
+            "ruff-check",
+            "codespell",
+        }:
+            self.console.print(
+                f"[red]DEBUG {hook.name}: EXIT CODE={return_code}[/red]"
+            )
+            self.console.print(
+                f"[yellow]STDOUT (first 500 chars): {output_text[:500]}[/yellow]"
+            )
+            stderr_text = (
+                self._last_stderr.decode() if self._last_stderr else ""
+            )
+            self.console.print(
+                f"[yellow]STDERR (first 500 chars): {stderr_text[:500]}[/yellow]"
+            )
+
         self.logger.info(
             "Hook execution completed",
             hook=hook.name,
