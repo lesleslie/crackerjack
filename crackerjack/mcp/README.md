@@ -39,48 +39,57 @@ The MCP package provides a comprehensive FastMCP server that enables Claude and 
 Tools are organized into specialized modules:
 
 ### Core Tools (`tools/core_tools.py`)
+
 - **execute_crackerjack**: Start iterative auto-fixing with job tracking
 - **run_crackerjack_stage**: Execute specific quality stages (fast, comprehensive, tests)
 - **get_comprehensive_status**: Full project status including health metrics
 - **session_management**: Session lifecycle (start, checkpoint, resume, end)
 
 ### Execution Tools (`tools/execution_tools.py`)
+
 - Workflow execution with subagent coordination
 - Stage validation and argument parsing
 - Settings adaptation for different execution modes
 
 ### Error Analysis (`tools/error_analyzer.py`)
+
 - **analyze_errors**: Categorize and analyze code quality errors
 - **analyze_errors_with_caching**: AI-powered error analysis with cached patterns
 - Pattern detection and recommendation generation
 - Error classification by type (security, performance, complexity, etc.)
 
 ### Progress Tools (`tools/progress_tools.py`)
+
 - **get_job_progress**: Real-time progress for running jobs
 - **get_stage_status**: Current status of quality stages
 - Job metadata and completion tracking
 
 ### Intelligence Tools (`tools/intelligence_tools.py`)
+
 - **get_next_action**: Optimal next action based on session state
 - **smart_error_analysis**: Advanced error analysis with context
 - Intelligent recommendations and fix suggestions
 
 ### Monitoring Tools (`tools/monitoring_tools.py`)
+
 - Health metrics collection and reporting
 - Performance tracking
 - Resource usage monitoring
 
 ### Semantic Tools (`tools/semantic_tools.py`)
+
 - Code comprehension and semantic analysis
 - Context-aware recommendations
 - Pattern recognition and suggestions
 
 ### Proactive Tools (`tools/proactive_tools.py`)
+
 - Predictive issue prevention
 - Preemptive optimization suggestions
 - Pattern-based early detection
 
 ### Utility Tools (`tools/utility_tools.py`)
+
 - Helper functions for tool development
 - Common validation and formatting utilities
 
@@ -135,7 +144,7 @@ Intelligent caching system learns from error patterns:
     "recommendations": ["Fix 1", "Fix 2"],
     "confidence": 0.85,
     "occurrences": 12,
-    "last_seen": datetime
+    "last_seen": datetime,
 }
 ```
 
@@ -186,19 +195,14 @@ From Claude or other MCP clients:
 
 ```python
 # Execute quality workflow
-execute_crackerjack(
-    command="test",
-    ai_agent_mode=True,
-    timeout=600
-)
+execute_crackerjack(command="test", ai_agent_mode=True, timeout=600)
 
 # Get job progress
 progress = get_job_progress(job_id="abc123")
 
 # Analyze errors with AI
 analysis = analyze_errors_with_caching(
-    errors=["Type error on line 42"],
-    context={"file": "main.py"}
+    errors=["Type error on line 42"], context={"file": "main.py"}
 )
 
 # Get smart recommendations
@@ -309,11 +313,11 @@ Typical MCP server performance:
 ## Best Practices
 
 1. **Use Job IDs**: Always track jobs by their UUIDs
-2. **Monitor Progress**: Use WebSocket for long-running jobs
-3. **Handle Errors**: Check job status and error messages
-4. **Cache Patterns**: Let error caching learn common issues
-5. **Session Management**: Use checkpoints for resumability
-6. **Rate Limits**: Respect rate limits in automation
+1. **Monitor Progress**: Use WebSocket for long-running jobs
+1. **Handle Errors**: Check job status and error messages
+1. **Cache Patterns**: Let error caching learn common issues
+1. **Session Management**: Use checkpoints for resumability
+1. **Rate Limits**: Respect rate limits in automation
 
 ## Troubleshooting
 

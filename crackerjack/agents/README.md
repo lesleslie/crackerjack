@@ -24,22 +24,26 @@ The agents package contains 12 specialized AI agents that work together to autom
 #### Code Quality Agents
 
 - **RefactoringAgent** (confidence: 0.9)
+
   - Reduces complexity ≤15 per function
   - Extracts helper methods using SOLID principles
   - Removes dead code and unused variables
   - Primary focus: KISS and DRY principles
 
 - **FormattingAgent** (confidence: 0.8)
+
   - Code style and import organization
   - Handles ruff, black, isort violations
   - Enforces consistent formatting standards
 
 - **DRYAgent** (confidence: 0.8)
+
   - Eliminates code duplication
   - Extracts common patterns to utilities
   - Identifies repeated logic across modules
 
 - **ImportOptimizationAgent**
+
   - Removes unused imports
   - Restructures import statements
   - Optimizes import organization
@@ -47,6 +51,7 @@ The agents package contains 12 specialized AI agents that work together to autom
 #### Security & Performance
 
 - **SecurityAgent** (confidence: 0.8)
+
   - Fixes shell injection vulnerabilities
   - Replaces weak cryptography (MD5/SHA1 → SHA256)
   - Removes insecure random functions
@@ -54,6 +59,7 @@ The agents package contains 12 specialized AI agents that work together to autom
   - Masks tokens and credentials
 
 - **PerformanceAgent** (confidence: 0.85)
+
   - Detects O(n²) patterns and inefficient algorithms
   - Optimizes string building and list concatenation
   - Improves loop efficiency
@@ -62,16 +68,19 @@ The agents package contains 12 specialized AI agents that work together to autom
 #### Testing & Documentation
 
 - **TestCreationAgent** (confidence: 0.8)
+
   - Fixes test failures and missing fixtures
   - Handles dependency issues in tests
   - Improves test coverage
 
 - **TestSpecialistAgent** (confidence: 0.8)
+
   - Advanced testing scenarios
   - Complex fixture management
   - Integration test patterns
 
 - **DocumentationAgent** (confidence: 0.8)
+
   - Auto-generates changelogs
   - Maintains .md file consistency
   - Updates documentation with code changes
@@ -79,18 +88,21 @@ The agents package contains 12 specialized AI agents that work together to autom
 #### Advanced Intelligence
 
 - **SemanticAgent** (confidence: 0.85)
+
   - Advanced semantic analysis
   - Code comprehension and context understanding
   - Intelligent refactoring based on business logic
   - Deep code pattern recognition
 
 - **ArchitectAgent** (confidence: 0.85)
+
   - High-level architectural patterns
   - Design recommendations
   - System-level optimization strategies
   - Cross-module refactoring guidance
 
 - **EnhancedProactiveAgent** (confidence: 0.9)
+
   - Proactive issue prevention
   - Predictive quality monitoring
   - Preemptive optimization
@@ -230,10 +242,10 @@ Typical agent performance (per iteration):
 ## Best Practices
 
 1. **Start with `--ai-fix`**: Let coordinator route to appropriate agents
-2. **Use `--ai-debug`**: Enable detailed logging for troubleshooting
-3. **Review Changes**: AI fixes should be reviewed before committing
-4. **Iterate Gradually**: Default 10 iterations prevents infinite loops
-5. **Trust High Confidence**: Fixes with confidence ≥0.85 are typically safe
+1. **Use `--ai-debug`**: Enable detailed logging for troubleshooting
+1. **Review Changes**: AI fixes should be reviewed before committing
+1. **Iterate Gradually**: Default 10 iterations prevents infinite loops
+1. **Trust High Confidence**: Fixes with confidence ≥0.85 are typically safe
 
 ## Related
 

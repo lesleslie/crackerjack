@@ -26,9 +26,9 @@
 ### How It Works
 
 1. **Baseline Protection**: Coverage cannot drop below 19.6% (current baseline)
-2. **Tolerance Window**: ±2% fluctuation allowed for test infrastructure changes
-3. **Milestone Progression**: Advance through milestones toward 100%
-4. **Ratchet Effect**: Each milestone becomes the new minimum
+1. **Tolerance Window**: ±2% fluctuation allowed for test infrastructure changes
+1. **Milestone Progression**: Advance through milestones toward 100%
+1. **Ratchet Effect**: Each milestone becomes the new minimum
 
 ### Milestones
 
@@ -62,6 +62,7 @@ precision = 2
 ### Why No `fail_under` in Config?
 
 The ratchet system is implemented in the test workflow itself, not as a static configuration value. This allows for:
+
 - Dynamic baseline adjustments
 - Milestone celebration
 - Tolerance windows
@@ -98,12 +99,14 @@ python -m pytest --cov=crackerjack --cov-report=json
 ### Improving Coverage
 
 **Incremental Approach** (recommended):
+
 - Target 2-5% improvement per development session
 - Focus on low-hanging fruit (simple functions, error paths, edge cases)
 - Write focused tests (each covers 1-3 lines)
 - Time-box efforts (10-15 minutes maximum per session)
 
 **What to Test:**
+
 - ✅ Property getters and setters
 - ✅ Simple validation logic
 - ✅ Error handling paths
@@ -111,6 +114,7 @@ python -m pytest --cov=crackerjack --cov-report=json
 - ✅ Configuration loading and defaults
 
 **What to Skip (for now):**
+
 - ❌ Complex async operations
 - ❌ External integrations (unless mocked)
 - ❌ Complex state management
@@ -141,6 +145,7 @@ python -m pytest --cov=crackerjack --cov-report=json
 ### Why is the target 100%?
 
 100% coverage doesn't mean perfect testing, but it means:
+
 - All code paths are exercised at least once
 - Dead code is identified and removed
 - Edge cases are considered
@@ -149,6 +154,7 @@ python -m pytest --cov=crackerjack --cov-report=json
 ### What about the 42% reference?
 
 The 42% mentioned in some docs (RULES.md, AGENTS.md) is a **milestone target**, not the current baseline. It represents:
+
 - Approximately halfway to 100% coverage
 - A significant quality achievement
 - The next major milestone after 25%
@@ -156,11 +162,13 @@ The 42% mentioned in some docs (RULES.md, AGENTS.md) is a **milestone target**, 
 ### Can coverage temporarily drop?
 
 Yes, within the ±2% tolerance window for:
+
 - Test infrastructure changes
 - Refactoring that temporarily breaks tests
 - Major architectural changes
 
 However, any drop must be:
+
 - Temporary (fixed within 1-2 commits)
 - Documented with reason
 - Compensated in next improvement cycle
@@ -168,10 +176,11 @@ However, any drop must be:
 ### What if I can't maintain the baseline?
 
 If coverage drops below baseline:
+
 1. Identify why (refactoring, removed tests, infrastructure)
-2. Add focused tests to recover coverage
-3. If baseline is truly too high, discuss with team
-4. Never commit code that drops coverage without plan to recover
+1. Add focused tests to recover coverage
+1. If baseline is truly too high, discuss with team
+1. Never commit code that drops coverage without plan to recover
 
 ## References
 
@@ -185,6 +194,7 @@ If coverage drops below baseline:
 ### Pre-commit Checks
 
 Coverage checks run as part of the test workflow:
+
 ```bash
 python -m crackerjack --run-tests
 ```
@@ -206,6 +216,7 @@ python -m pytest --cov=crackerjack --cov-report=term-missing tests/
 ## Contact
 
 For questions about coverage policy:
+
 - Review this document first
 - Check existing coverage reports
 - Consult CLAUDE.md for developer guidelines

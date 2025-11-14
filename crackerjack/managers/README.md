@@ -13,6 +13,7 @@ The managers package provides high-level coordination classes that sit between t
 ### Hook Management
 
 - **hook_manager.py**: Synchronous hook execution manager
+
   - Direct adapter invocation (no pre-commit wrapper)
   - Hook lifecycle management (init, execute, cleanup)
   - Result aggregation and reporting
@@ -21,6 +22,7 @@ The managers package provides high-level coordination classes that sit between t
   - Protocol-based dependency injection
 
 - **async_hook_manager.py**: Asynchronous hook execution manager
+
   - Async-first architecture for parallel execution
   - Up to 11 concurrent adapters
   - Non-blocking I/O operations
@@ -63,6 +65,7 @@ Based on Phase 2-4 refactoring audit:
 | PublishManager | 75% | ⚠️ Mixed | Some legacy patterns, mostly good |
 
 **Common Improvements Needed:**
+
 - Remove manual service instantiation
 - Standardize protocol imports from `models/protocols.py`
 - Eliminate factory functions in favor of DI
@@ -125,7 +128,7 @@ await manager.init()
 # Parallel execution with progress tracking
 results = await manager.run_hooks_parallel(
     hooks=["ruff", "zuban", "bandit"],
-    progress_callback=lambda p: print(f"Progress: {p}%")
+    progress_callback=lambda p: print(f"Progress: {p}%"),
 )
 
 # Real-time results as they complete
@@ -145,7 +148,7 @@ await manager.init()
 await manager.publish(
     bump_type="patch",  # 1.0.0 → 1.0.1
     create_tag=True,
-    push_tag=True
+    push_tag=True,
 )
 
 # Check if authentication is configured
@@ -162,6 +165,7 @@ else:
 **Purpose:** Rapid feedback for essential checks
 
 **Hooks:**
+
 - Ruff formatting and linting
 - Trailing whitespace cleanup
 - UV lock file updates
@@ -169,6 +173,7 @@ else:
 - Spell checking (codespell)
 
 **Retry Logic:**
+
 - Format hooks retry once if they fail (formatting often fixes cascade issues)
 - Other hooks don't retry
 
@@ -177,6 +182,7 @@ else:
 **Purpose:** Thorough static analysis
 
 **Hooks:**
+
 - Zuban type checking (20-200x faster than pyright)
 - Bandit security analysis
 - Dead code detection (skylos, 20x faster than vulture)
@@ -185,6 +191,7 @@ else:
 - Modern Python patterns (refurb)
 
 **Execution:**
+
 - All hooks run, collecting ALL failures (don't stop on first)
 - Results aggregated for batch AI fixing
 - Real-time console output
@@ -204,21 +211,25 @@ else:
 ### Publishing Steps
 
 1. **Pre-validation**
+
    - All quality hooks must pass
    - Tests must pass
    - No uncommitted changes
 
-2. **Version Bump**
+1. **Version Bump**
+
    - Update `pyproject.toml`
    - Update `__version__.py`
    - Generate changelog entry
 
-3. **Git Operations**
+1. **Git Operations**
+
    - Commit version bump
    - Create git tag (v1.0.1)
    - Push to remote
 
-4. **Build & Publish**
+1. **Build & Publish**
+
    - Build package with UV
    - Publish to PyPI
    - Verify upload
@@ -260,21 +271,22 @@ test_timeout: 300
 ## Best Practices
 
 1. **Use DI**: Always get managers via `depends.get(ManagerClass)`
-2. **Initialize Async**: Call `await manager.init()` before use
-3. **Handle Results**: Check all hook results, don't assume success
-4. **Retry Formatting**: Let format hooks retry once (they fix cascade issues)
-5. **Validate Before Publish**: Always run quality + tests before publishing
-6. **Secure Tokens**: Use keyring, never commit tokens
-7. **Tag Releases**: Always create git tags for versions
-8. **Monitor Progress**: Use progress callbacks for long operations
-9. **Batch Failures**: Collect all failures before fixing (don't stop on first)
-10. **Use Real-time Output**: Async managers provide better UX
+1. **Initialize Async**: Call `await manager.init()` before use
+1. **Handle Results**: Check all hook results, don't assume success
+1. **Retry Formatting**: Let format hooks retry once (they fix cascade issues)
+1. **Validate Before Publish**: Always run quality + tests before publishing
+1. **Secure Tokens**: Use keyring, never commit tokens
+1. **Tag Releases**: Always create git tags for versions
+1. **Monitor Progress**: Use progress callbacks for long operations
+1. **Batch Failures**: Collect all failures before fixing (don't stop on first)
+1. **Use Real-time Output**: Async managers provide better UX
 
 ## Anti-Patterns to Avoid
 
 ```python
 # ❌ Manual service instantiation
 self.git_service = GitService()
+
 
 # ✅ Use dependency injection
 @depends.inject
@@ -284,6 +296,7 @@ def __init__(self, git: Inject[GitServiceProtocol] = None):
 
 # ❌ Factory functions
 self.logger = get_logger()
+
 
 # ✅ Inject dependencies
 @depends.inject
