@@ -576,7 +576,8 @@ class PhaseCoordinator:
         name = self._strip_ansi(result.name)
         status = result.status.upper()
         duration = f"{result.duration:.2f}s"
-        issues = str(len(result.issues_found) if result.issues_found else 0)
+        # Passed hooks always show 0 issues
+        issues = "0" if result.status == "passed" else str(len(result.issues_found) if result.issues_found else 0)
         self.console.print(
             f"  - {name} :: {status} | {duration} | issues={issues}",
             highlight=False,
@@ -627,12 +628,16 @@ class PhaseCoordinator:
 
         for result in results:
             status_style = self._status_style(result.status)
-            # Use issues_count if available (total count), otherwise fall back to len(issues_found)
-            issues_display = (
-                result.issues_count
-                if hasattr(result, "issues_count") and result.issues_count > 0
-                else (len(result.issues_found) if result.issues_found else 0)
-            )
+            # Passed hooks always show 0 issues (files processed != issues found)
+            if result.status == "passed":
+                issues_display = 0
+            else:
+                # For failed hooks, use issues_count if available, otherwise len(issues_found)
+                issues_display = (
+                    result.issues_count
+                    if hasattr(result, "issues_count") and result.issues_count > 0
+                    else (len(result.issues_found) if result.issues_found else 0)
+                )
             table.add_row(
                 self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
