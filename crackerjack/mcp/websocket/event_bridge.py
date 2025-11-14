@@ -153,11 +153,8 @@ class EventBusWebSocketBridge:
             websocket: WebSocket connection to remove
         """
         if job_id in self._clients:
-            try:
+            with suppress(ValueError):
                 self._clients[job_id].remove(websocket)
-            except ValueError:
-                # Client not in list, already removed
-                pass
 
             # Clean up empty job client lists
             if not self._clients[job_id]:

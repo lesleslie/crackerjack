@@ -200,7 +200,7 @@ class HealthMetricsService:
             if result.stdout:
                 try:
                     lint_data = json.loads(result.stdout)
-                    return len(lint_data) if isinstance(lint_data, list[t.Any]) else 0
+                    return len(lint_data) if isinstance(lint_data, list) else 0
                 except json.JSONDecodeError:
                     return len(result.stdout.splitlines())
 

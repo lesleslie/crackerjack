@@ -4,6 +4,7 @@ import subprocess
 import time
 import typing as t
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -146,23 +147,19 @@ class HookExecutor:
         for hook in strategy.hooks:
             # Start tick
             if self._progress_start_callback:
-                try:
+                with suppress(Exception):
                     self._started_hooks += 1
                     total = self._total_hooks or len(strategy.hooks)
                     self._progress_start_callback(self._started_hooks, total)
-                except Exception:
-                    pass
             result = self.execute_single_hook(hook)
             results.append(result)
             self._display_hook_result(result)
             # Completion tick
             if self._progress_callback:
-                try:
+                with suppress(Exception):
                     self._completed_hooks += 1
                     total = self._total_hooks or len(strategy.hooks)
                     self._progress_callback(self._completed_hooks, total)
-                except Exception:
-                    pass
         return results
 
     def _execute_parallel(self, strategy: HookStrategy) -> list[HookResult]:
@@ -186,24 +183,20 @@ class HookExecutor:
     ) -> None:
         """Execute a single hook and update progress callbacks."""
         if self._progress_start_callback:
-            try:
+            with suppress(Exception):
                 self._started_hooks += 1
                 total = self._total_hooks or len(results) + 1  # Approximate total
                 self._progress_start_callback(self._started_hooks, total)
-            except Exception:
-                pass
 
         result = self.execute_single_hook(hook)
         results.append(result)
         self._display_hook_result(result)
 
         if self._progress_callback:
-            try:
+            with suppress(Exception):
                 self._completed_hooks += 1
                 total = self._total_hooks or len(results)
                 self._progress_callback(self._completed_hooks, total)
-            except Exception:
-                pass
 
     def _execute_parallel_hooks(
         self,
@@ -216,12 +209,10 @@ class HookExecutor:
         # Wrap execution to emit a start tick inside the worker thread
         def _run_with_start(h: HookDefinition) -> HookResult:
             if self._progress_start_callback:
-                try:
+                with suppress(Exception):
                     self._started_hooks += 1
                     total_local = self._total_hooks or len(results) + len(other_hooks)
                     self._progress_start_callback(self._started_hooks, total_local)
-                except Exception:
-                    pass
             return self.execute_single_hook(h)
 
         with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
@@ -261,12 +252,10 @@ class HookExecutor:
     def _update_progress_on_completion(self) -> None:
         """Update progress callback when a hook completes."""
         if self._progress_callback:
-            try:
+            with suppress(Exception):
                 self._completed_hooks += 1
                 total = self._total_hooks or self._completed_hooks  # Approximate total
                 self._progress_callback(self._completed_hooks, total)
-            except Exception:
-                pass
 
     def execute_single_hook(self, hook: HookDefinition) -> HookResult:
         start_time = time.time()
@@ -325,7 +314,7 @@ class HookExecutor:
 
         # If no files changed, return None to skip the hook entirely
         # (or run full scan depending on configuration)
-        return changed_files if changed_files else None
+        return changed_files or None
 
     def _run_hook_subprocess(
         self, hook: HookDefinition
@@ -487,15 +476,13 @@ class HookExecutor:
 
     def _is_header_or_separator_line(self, line: str) -> bool:
         """Check if the line is a header or separator line."""
-        return any(x in line for x in ["Path", "─────", "┌", "└", "├", "┼", "┤", "┃"])
+        return any(x in line for x in ("Path", "─────", "┌", "└", "├", "┼", "┤", "┃"))
 
     def _extract_complexity_from_parts(self, parts: list[str]) -> int | None:
         """Extract complexity value from line parts."""
         if len(parts) >= 4:
-            try:
+            with suppress(ValueError, IndexError):
                 return int(parts[-1])
-            except (ValueError, IndexError):
-                pass
         return None
 
     def _should_include_line(self, line: str) -> bool:
@@ -526,29 +513,28 @@ class HookExecutor:
 
     def _parse_refurb_issues(self, output: str) -> list[str]:
         """Parse refurb output to count actual violations."""
-        issues = []
-        for line in output.split("\n"):
-            # Refurb format: "file.py:10:5 [FURB101]: message"
-            if "[FURB" in line and ":" in line:
-                issues.append(line.strip())
-        return issues
+        return [
+            line.strip()
+            for line in output.split("\n")
+            if "[FURB" in line and ":" in line
+        ]
 
     def _parse_gitleaks_issues(self, output: str) -> list[str]:
         """Parse gitleaks output - ignore warnings, only count leaks."""
         # Gitleaks outputs "no leaks found" when clean
         if "no leaks found" in output.lower():
             return []
-        # Count actual leak findings (JSON or text format)
-        issues = []
-        for line in output.split("\n"):
-            # Skip warnings about .gitleaksignore format
-            if "WRN" in line and "Invalid .gitleaksignore" in line:
-                continue
-            # Look for actual leak findings
-            if any(x in line.lower() for x in ["leak", "secret", "credential", "api"]):
-                if "found" not in line.lower():  # Skip summary lines
-                    issues.append(line.strip())
-        return issues
+        return [
+            line.strip()
+            for line in output.split("\n")
+            if not (
+                "WRN" in line and "Invalid .gitleaksignore" in line
+            )  # Skip warnings about .gitleaksignore format
+            and any(
+                x in line.lower() for x in ("leak", "secret", "credential", "api")
+            )  # Look for actual leak findings
+            and "found" not in line.lower()  # Skip summary lines
+        ]
 
     def _parse_creosote_issues(self, output: str) -> list[str]:
         """Parse creosote output - only count unused dependencies."""

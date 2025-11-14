@@ -369,7 +369,7 @@ class PhaseCoordinator:
 
     def _setup_progress_callbacks(
         self, progress: Progress
-    ) -> dict[str, t.Callable[[int, int], None]]:
+    ) -> dict[str, t.Callable[[int, int], None] | None | dict[str, t.Any]]:
         """Setup progress callbacks and store originals for restoration."""
         task_id_holder = {"task_id": None}
 
@@ -418,7 +418,7 @@ class PhaseCoordinator:
                 import time
 
                 start_time = time.time()
-                hook_results = hook_runner() or []
+                hook_results = hook_runner()
                 self._last_hook_results = hook_results
                 elapsed_time = time.time() - start_time
 
@@ -457,7 +457,7 @@ class PhaseCoordinator:
         self._last_hook_summary = summary
         self._report_hook_results(suite_name, self._last_hook_results, summary, attempt)
 
-        if summary.get("failed", 0) == 0 and summary.get("errors", 0) == 0:
+        if summary.get("failed", 0) == 0 == summary.get("errors", 0):
             return True
 
         self.logger.warning(
@@ -535,7 +535,7 @@ class PhaseCoordinator:
         self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
 
         stats = self._calculate_hook_statistics(results)
-        hooks_to_show = stats["failed_hooks"] if stats["failed_hooks"] else results
+        hooks_to_show = stats["failed_hooks"] or results
 
         for result in hooks_to_show:
             self._print_plain_hook_result(result)
@@ -566,15 +566,17 @@ class PhaseCoordinator:
             "total_passed": len(passed_hooks),
             "total_failed": len(failed_hooks),
             "total_other": len(other_hooks),
-            "total_issues_found": sum(len(r.issues_found) for r in results),
+            "total_issues_found": sum(
+                len(r.issues_found) if r.issues_found else 0 for r in results
+            ),
         }
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
         """Print a single hook result in plain format."""
-        name = self._strip_ansi(str(result.name))
+        name = self._strip_ansi(result.name)
         status = result.status.upper()
         duration = f"{result.duration:.2f}s"
-        issues = str(len(result.issues_found))
+        issues = str(len(result.issues_found) if result.issues_found else 0)
         self.console.print(
             f"  - {name} :: {status} | {duration} | issues={issues}",
             highlight=False,
@@ -629,10 +631,35 @@ class PhaseCoordinator:
                 self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
                 f"{result.duration:.2f}s",
-                str(len(result.issues_found)),
+                str(len(result.issues_found) if result.issues_found else 0),
             )
 
         return table
+
+    def _format_issues(self, issues: list[str]) -> list[dict[str, str | int | None]]:
+        """Format hook issues into structured dictionaries."""
+
+        def _format_single_issue(issue):
+            if hasattr(issue, "file_path") and hasattr(issue, "line_number"):
+                return {
+                    "file": str(getattr(issue, "file_path", "unknown")),
+                    "line": getattr(issue, "line_number", 0),
+                    "message": getattr(issue, "message", str(issue)),
+                    "code": getattr(issue, "code", None),
+                    "severity": getattr(issue, "severity", "warning"),
+                    "suggestion": getattr(issue, "suggestion", None),
+                }
+
+            return {
+                "file": "unknown",
+                "line": 0,
+                "message": str(issue),
+                "code": None,
+                "severity": "warning",
+                "suggestion": None,
+            }
+
+        return [_format_single_issue(issue) for issue in issues]
 
     def to_json(self, results: list[HookResult], suite_name: str = "") -> dict:
         """Export hook results as structured JSON for automation.
@@ -650,24 +677,18 @@ class PhaseCoordinator:
         """
         return {
             "suite": suite_name,
-            "summary": self._calculate_statistics(results),
+            "summary": self._calculate_hook_statistics(results),
             "hooks": [
                 {
                     "name": result.name,
                     "status": result.status,
                     "duration": round(result.duration, 2),
-                    "issues_count": len(result.issues_found),
-                    "issues": [
-                        {
-                            "file": str(issue.file_path),
-                            "line": issue.line_number,
-                            "message": issue.message,
-                            "code": getattr(issue, "code", None),
-                            "severity": getattr(issue, "severity", "warning"),
-                            "suggestion": getattr(issue, "suggestion", None),
-                        }
-                        for issue in result.issues_found
-                    ],
+                    "issues_count": len(result.issues_found)
+                    if result.issues_found
+                    else 0,
+                    "issues": self._format_issues(result.issues_found)
+                    if result.issues_found
+                    else [],
                 }
                 for result in results
             ],
@@ -687,6 +708,70 @@ class PhaseCoordinator:
             expand=True,
         )
 
+    def _format_failing_hooks(
+        self, suite_name: str, results: list[HookResult]
+    ) -> list[HookResult]:
+        """Get list of failing hooks and print header.
+
+        Returns:
+            List of failing hook results
+        """
+        failing = [
+            result
+            for result in results
+            if result.status.lower() in {"failed", "error", "timeout"}
+        ]
+
+        if failing:
+            self.console.print(
+                f"[red]Details for failing {suite_name} hooks:[/red]", highlight=False
+            )
+
+        return failing
+
+    def _display_issue_details(self, result: HookResult) -> None:
+        """Display specific issue details if found."""
+        if not result.issues_found:
+            return
+
+        for issue in result.issues_found:
+            self.console.print(f"      - {self._strip_ansi(issue)}", highlight=False)
+
+    def _display_timeout_info(self, result: HookResult) -> None:
+        """Display timeout information."""
+        if result.is_timeout:
+            self.console.print(
+                "      - Hook timed out during execution", highlight=False
+            )
+
+    def _display_exit_code_info(self, result: HookResult) -> None:
+        """Display exit code with helpful context."""
+        if result.exit_code is not None and result.exit_code != 0:
+            exit_msg = f"Exit code: {result.exit_code}"
+            # Add helpful context for common exit codes
+            if result.exit_code == 137:
+                exit_msg += " (killed - possibly timeout or out of memory)"
+            elif result.exit_code == 139:
+                exit_msg += " (segmentation fault)"
+            elif result.exit_code in {126, 127}:
+                exit_msg += " (command not found or not executable)"
+            self.console.print(f"      - {exit_msg}", highlight=False)
+
+    def _display_error_message(self, result: HookResult) -> None:
+        """Display error message preview."""
+        if result.error_message:
+            # Show first line or first 200 chars of error
+            error_preview = result.error_message.split("\n")[0][:200]
+            self.console.print(f"      - Error: {error_preview}", highlight=False)
+
+    def _display_generic_failure(self, result: HookResult) -> None:
+        """Display generic failure message if no specific details available."""
+        if not result.is_timeout and not result.exit_code and not result.error_message:
+            self.console.print(
+                "      - Hook failed with no detailed error information",
+                highlight=False,
+            )
+
     def _display_hook_failures(
         self,
         suite_name: str,
@@ -697,64 +782,42 @@ class PhaseCoordinator:
         if not (options.verbose or getattr(options, "ai_debug", False)):
             return
 
-        failing = [
-            result
-            for result in results
-            if result.status.lower() in {"failed", "error", "timeout"}
-        ]
-
+        failing = self._format_failing_hooks(suite_name, results)
         if not failing:
             return
 
-        self.console.print(
-            f"[red]Details for failing {suite_name} hooks:[/red]", highlight=False
-        )
+        # Process each failing hook
         for result in failing:
-            self.console.print(
-                f"  - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
-                highlight=False,
-            )
+            self._print_single_hook_failure(result)
 
-            # Show specific issues if found
-            if result.issues_found:
-                for issue in result.issues_found:
-                    issue_str = str(issue) if not isinstance(issue, str) else issue
-                    self.console.print(
-                        f"      - {self._strip_ansi(issue_str)}", highlight=False
-                    )
-            else:
-                # If no issues but hook failed, show why (exit code, error message, timeout)
-                if result.is_timeout:
-                    self.console.print(
-                        "      - Hook timed out during execution", highlight=False
-                    )
-                if result.exit_code is not None and result.exit_code != 0:
-                    exit_msg = f"Exit code: {result.exit_code}"
-                    # Add helpful context for common exit codes
-                    if result.exit_code == 137:
-                        exit_msg += " (killed - possibly timeout or out of memory)"
-                    elif result.exit_code == 139:
-                        exit_msg += " (segmentation fault)"
-                    elif result.exit_code in {126, 127}:
-                        exit_msg += " (command not found or not executable)"
-                    self.console.print(f"      - {exit_msg}", highlight=False)
-                if result.error_message:
-                    # Show first line or first 200 chars of error
-                    error_preview = result.error_message.split("\n")[0][:200]
-                    self.console.print(
-                        f"      - Error: {error_preview}", highlight=False
-                    )
-                # If still no details shown, provide generic message
-                if (
-                    not result.is_timeout
-                    and not result.exit_code
-                    and not result.error_message
-                ):
-                    self.console.print(
-                        "      - Hook failed with no detailed error information",
-                        highlight=False,
-                    )
         self.console.print()
+
+    def _print_single_hook_failure(self, result: HookResult) -> None:
+        """Print details of a single hook failure."""
+        self.console.print(
+            f"  - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
+            highlight=False,
+        )
+
+        if result.issues_found:
+            self._print_hook_issues(result)
+        else:
+            self._display_failure_reasons(result)
+
+    def _print_hook_issues(self, result: HookResult) -> None:
+        """Print issues found for a hook."""
+        # Type assertion: issues_found is never None after __post_init__
+        assert result.issues_found is not None
+        for issue in result.issues_found:
+            # Show the issue with consistent formatting
+            self.console.print(f"      - {self._strip_ansi(issue)}", highlight=False)
+
+    def _display_failure_reasons(self, result: HookResult) -> None:
+        """Display reasons why a hook failed."""
+        self._display_timeout_info(result)
+        self._display_exit_code_info(result)
+        self._display_error_message(result)
+        self._display_generic_failure(result)
 
     def _display_cleaning_header(self) -> None:
         sep = make_separator("-")

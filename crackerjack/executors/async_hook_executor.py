@@ -1,6 +1,7 @@
 import asyncio
 import time
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -240,19 +241,15 @@ class AsyncHookExecutor:
         self, proc: asyncio.subprocess.Process
     ) -> None:
         """Wait briefly for process to terminate."""
-        try:
+        with suppress(TimeoutError, RuntimeError):
             await asyncio.wait_for(proc.wait(), timeout=0.1)
-        except (TimeoutError, RuntimeError):
-            pass
 
     async def _cleanup_pending_tasks(self) -> None:
         """Cancel any pending hook-related tasks."""
-        try:
+        with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             pending_tasks = self._get_pending_hook_tasks(loop)
             await self._cancel_tasks(pending_tasks)
-        except RuntimeError:
-            pass
 
     def _get_pending_hook_tasks(self, loop: asyncio.AbstractEventLoop) -> list:
         """Get list of pending hook-related tasks."""

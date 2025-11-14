@@ -105,8 +105,10 @@ class ProgressHookExecutor(HookExecutor):
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in results)
 
+        # Calculate performance gain for the summary
+        performance_gain = 0.0  # Default value for progress executor
         if not self.quiet:
-            self._print_summary(strategy, results, success)
+            self._print_summary(strategy, results, success, performance_gain)
 
         return HookExecutionResult(
             strategy_name=strategy.name,

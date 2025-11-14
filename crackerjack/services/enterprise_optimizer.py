@@ -313,7 +313,7 @@ class DataCompactionManager:
         return file_mtime < cutoff_date
 
     def _build_compaction_result(
-        self, data_type: str, rules: dict[str, t.Any], stats: dict[str, int]
+        self, data_type: str, rules: dict[str, t.Any], stats: dict[str, t.Any]
     ) -> dict[str, t.Any]:
         """Build the compaction result dictionary."""
         return {

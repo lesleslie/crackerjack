@@ -222,6 +222,55 @@ class ZubanAdapter(BaseToolAdapter):
         column_number = int(parts[2].strip()) if has_column else None
         return has_column, column_number
 
+    def _parse_with_column_format(
+        self, file_path_str: str, line_str: str, parts: list[str]
+    ) -> tuple[Path, int, int | None, str, str] | None:
+        """Parse format: file:line:col: error: message [code]."""
+        if not line_str.isdigit():
+            return None
+
+        line_number = int(line_str)
+        column_number = int(line_str)
+
+        # Third part would be the error type
+        severity_and_message = parts[2].strip() if len(parts) > 2 else ""
+        message_with_code = parts[3].strip() if len(parts) > 3 else severity_and_message
+
+        # Extract code from message (like [operator])
+        message, code = self._extract_message_and_code(message_with_code)
+
+        return (Path(file_path_str), line_number, column_number, message, code)
+
+    def _parse_without_column_format(
+        self, file_path_str: str, line_str: str, parts: list[str]
+    ) -> tuple[Path, int, int | None, str, str]:
+        """Parse format: file:line: error: message [code] (no column)."""
+        file_path = Path(file_path_str)
+        message_with_code = (
+            parts[2].strip() + ":" + parts[3].strip()
+            if len(parts) > 3
+            else parts[2].strip()
+        )
+        message, code = self._extract_message_and_code(message_with_code)
+        # No column number in this format
+        return file_path, int(line_str), None, message, code
+
+    def _parse_standard_format(
+        self, file_path_str: str, line_str: str, parts: list[str]
+    ) -> tuple[Path, int, int | None, str, str]:
+        """Parse standard format: file:line: error: message [code]."""
+        file_path = Path(file_path_str)
+        line_number = int(line_str)
+
+        # Second part after colon is severity/error type
+        severity_and_message = parts[2].strip()
+        message_with_code = parts[3].strip() if len(parts) > 3 else severity_and_message
+
+        # Extract message and code
+        message, code = self._extract_message_and_code(message_with_code)
+
+        return file_path, line_number, None, message, code
+
     def _extract_parts_from_line(
         self, line: str
     ) -> tuple[Path, int, int | None, str, str] | None:
@@ -240,68 +289,29 @@ class ZubanAdapter(BaseToolAdapter):
             file_path_str = parts[0].strip()
             line_str = parts[1].strip()
 
-            if (
-                not line_str
-            ):  # If second part after colon is empty, it might have column info
+            if not line_str:
+                # If second part after colon is empty, it might have column info
                 # Maybe format is: file:line:col: error: message [code]
                 if len(parts) >= 4:
                     line_str = parts[1].strip()
-                    line_number = int(line_str)
+                    int(line_str)
 
                     # Check if second part is a column number
-                    if line_str.isdigit():
-                        # It's likely: file:line:col: error: message [code]
-                        column_number = int(line_str)
-                        # Third part would be the error type
-                        severity_and_message = (
-                            parts[2].strip() if len(parts) > 2 else ""
-                        )
-                        message_with_code = (
-                            parts[3].strip() if len(parts) > 3 else severity_and_message
-                        )
+                    result = self._parse_with_column_format(
+                        file_path_str, line_str, parts
+                    )
+                    if result is not None:
+                        return result
 
-                        # Extract code from message (like [operator])
-                        message, code = self._extract_message_and_code(
-                            message_with_code
-                        )
-
-                        return (
-                            Path(file_path_str),
-                            line_number,
-                            column_number,
-                            message,
-                            code,
-                        )
-                    else:
-                        # It might be: file:line: error: message [code]
-                        file_path = Path(file_path_str)
-                        message_with_code = (
-                            parts[2].strip() + ":" + parts[3].strip()
-                            if len(parts) > 3
-                            else parts[2].strip()
-                        )
-                        message, code = self._extract_message_and_code(
-                            message_with_code
-                        )
-                        # No column number in this format
-                        return file_path, int(line_str), None, message, code
+                    # Not column format, try without column
+                    return self._parse_without_column_format(
+                        file_path_str, line_str, parts
+                    )
                 else:
                     return None
             else:
                 # Format: file:line: error: message [code]
-                file_path = Path(file_path_str)
-                line_number = int(line_str)
-
-                # Second part after colon is severity/error type
-                severity_and_message = parts[2].strip()
-                message_with_code = (
-                    parts[3].strip() if len(parts) > 3 else severity_and_message
-                )
-
-                # Extract message and code
-                message, code = self._extract_message_and_code(message_with_code)
-
-                return file_path, line_number, None, message, code
+                return self._parse_standard_format(file_path_str, line_str, parts)
         except (ValueError, IndexError):
             return None
 

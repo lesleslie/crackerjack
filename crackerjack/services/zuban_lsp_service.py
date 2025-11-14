@@ -359,7 +359,7 @@ class ZubanLSPService:
         # This is a simplified implementation
         # In a production system, you'd want to use proper async I/O
         loop = asyncio.get_event_loop()
-        line = await loop.run_in_executor(None, self.process.stdout.readline)
+        line = await loop.run_in_executor(None, self.process.stdout.readline)  # type: ignore[call-arg]
         return line.decode("utf-8").rstrip("\r\n")
 
     async def _read_bytes_async(self, count: int) -> bytes:
@@ -368,7 +368,7 @@ class ZubanLSPService:
             return b""
 
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, self.process.stdout.read, count)
+        data = await loop.run_in_executor(None, self.process.stdout.read, count)  # type: ignore[call-arg]
         return data
 
 

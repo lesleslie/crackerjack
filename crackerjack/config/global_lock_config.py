@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import socket
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from acb.depends import depends
@@ -31,7 +32,7 @@ class GlobalLockConfig:
         """Check if any backwards compatibility parameters are provided."""
         return any(
             param is not None
-            for param in [
+            for param in (
                 enabled,
                 timeout_seconds,
                 stale_lock_hours,
@@ -40,7 +41,7 @@ class GlobalLockConfig:
                 max_retry_attempts,
                 retry_delay_seconds,
                 enable_lock_monitoring,
-            ]
+            )
         )
 
     def _build_settings_from_compatibility_params(
@@ -153,11 +154,8 @@ class GlobalLockConfig:
         lock_dir = self._settings.lock_directory
         lock_dir.mkdir(parents=True, exist_ok=True)
         # Enforce secure permissions (owner rwx only)
-        try:
+        with suppress(Exception):
             lock_dir.chmod(0o700)
-        except Exception:
-            # Best-effort; ignore on platforms/filesystems that don't support chmod
-            pass
 
     def __getattr__(self, item: str):
         return getattr(self._settings, item)
@@ -188,7 +186,7 @@ class GlobalLockConfig:
             return cls(custom)
 
         # Handle flat CLI options with global_lock_* prefix
-        params = {}
+        params: dict[str, t.Any] = {}
         if hasattr(options, "disable_global_locks"):
             params["enabled"] = not options.disable_global_locks
         if hasattr(options, "global_lock_timeout"):

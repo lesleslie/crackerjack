@@ -95,11 +95,20 @@ if WATCHDOG_AVAILABLE:
         def on_created(self, event: FileSystemEvent) -> None:
             self.on_modified(event)
 else:
-
-    class ProgressFileHandler:
+    # Create a stub class with the same interface when watchdog is not available
+    class ProgressFileHandler:  # type: ignore[no-redef]
         def __init__(
             self, callback: Callable[[str, dict[str, t.Any]], None], progress_dir: Path
         ) -> None:
+            self.callback = callback
+            self.progress_dir = progress_dir
+            self._last_processed: dict[str, float] = {}
+            self._debounce_delay = 0.1
+
+        def on_modified(self, event: FileSystemEvent) -> None:
+            pass
+
+        def on_created(self, event: FileSystemEvent) -> None:
             pass
 
 

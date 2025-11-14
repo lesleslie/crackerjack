@@ -239,7 +239,7 @@ class ComplexipyAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "high_complexity": sum(1 for i in issues if i.severity == "error"),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "files_affected": len({str(i.file_path) for i in issues}),
             },
         )
         return issues
@@ -395,7 +395,7 @@ class ComplexipyAdapter(BaseToolAdapter):
             "Parsed Complexipy text output (fallback)",
             extra={
                 "total_issues": len(issues),
-                "files_with_issues": len(set(str(i.file_path) for i in issues)),
+                "files_with_issues": len({str(i.file_path) for i in issues}),
             },
         )
         return issues

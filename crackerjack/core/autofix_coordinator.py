@@ -1,4 +1,5 @@
 import subprocess
+from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
@@ -18,12 +19,13 @@ class AutofixCoordinator:
         self.pkg_path = pkg_path or Path.cwd()
         # Bind logger context with name for tracing
         _logger = logger or depends.get_sync(Logger)
-        self.logger = _logger.bind(logger="crackerjack.autofix")
+        if hasattr(_logger, "bind"):
+            self.logger = _logger.bind(logger="crackerjack.autofix")
+        else:
+            self.logger = _logger
         if not hasattr(self.logger, "name"):
-            try:
+            with suppress(Exception):
                 setattr(self.logger, "name", "crackerjack.autofix")
-            except Exception:
-                pass
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:

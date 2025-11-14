@@ -261,7 +261,7 @@ class SmartCacheManager:
         hook_name: str,
         project_state: dict[str, t.Any],
     ) -> bool:
-        external_hooks = set()
+        external_hooks: set[str] = set()
         if hook_name in external_hooks:
             return False
 

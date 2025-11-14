@@ -83,7 +83,7 @@ class DependencyContainer:
         # The decorator will inject all dependencies from the DI container
         self.register_transient(
             PublishManager,
-            lambda: PublishManagerImpl(),
+            PublishManagerImpl,
         )
 
         return self

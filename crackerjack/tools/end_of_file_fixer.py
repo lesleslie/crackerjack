@@ -79,6 +79,73 @@ def fix_end_of_file(file_path: Path) -> bool:
         return False
 
 
+def _collect_files_to_check(args: argparse.Namespace) -> list[Path]:
+    """Collect files to check for end-of-file issues.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        List of file paths to process
+    """
+    # Default to all git-tracked text files if none specified
+    if not args.files:
+        # Get all tracked text files (respects .gitignore via git ls-files)
+        files = get_files_by_extension(
+            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
+        )
+        if not files:
+            # Fallback to Python files if not in git repo
+            files = list(Path.cwd().rglob("*.py"))
+    else:
+        files = args.files
+
+    # Filter to existing files only
+    return [f for f in files if f.is_file()]
+
+
+def _process_files_in_check_mode(files: list[Path]) -> int:
+    """Process files in check-only mode.
+
+    Args:
+        files: List of file paths to check
+
+    Returns:
+        Count of files with end-of-file issues
+    """
+    modified_count = 0
+    for file_path in files:
+        try:
+            content = file_path.read_bytes()
+            needs_fix, _ = needs_newline_fix(content)
+
+            if needs_fix:
+                print(f"Missing/incorrect end-of-file: {file_path}")  # noqa: T201
+                modified_count += 1
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
+    return modified_count
+
+
+def _process_files_in_fix_mode(files: list[Path]) -> int:
+    """Process files in fix mode.
+
+    Args:
+        files: List of file paths to fix
+
+    Returns:
+        Count of files modified
+    """
+    modified_count = 0
+    for file_path in files:
+        try:
+            if fix_end_of_file(file_path):
+                modified_count += 1
+        except Exception as e:
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
+    return modified_count
+
+
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for end-of-file-fixer tool.
 
@@ -105,41 +172,17 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Default to all git-tracked text files if none specified
-    if not args.files:
-        # Get all tracked text files (respects .gitignore via git ls-files)
-        files = get_files_by_extension(
-            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
-        )
-        if not files:
-            # Fallback to Python files if not in git repo
-            files = list(Path.cwd().rglob("*.py"))
-    else:
-        files = args.files
-
-    # Filter to existing files only
-    files = [f for f in files if f.is_file()]
+    files = _collect_files_to_check(args)
 
     if not files:
         print("No files to check")  # noqa: T201
         return 0
 
-    # Process files
-    modified_count = 0
-    for file_path in files:
-        try:
-            content = file_path.read_bytes()
-            needs_fix, _ = needs_newline_fix(content)
-
-            if needs_fix:
-                if args.check:
-                    print(f"Missing/incorrect end-of-file: {file_path}")  # noqa: T201
-                    modified_count += 1
-                else:
-                    if fix_end_of_file(file_path):
-                        modified_count += 1
-        except Exception as e:
-            print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
+    # Process files based on mode
+    if args.check:
+        modified_count = _process_files_in_check_mode(files)
+    else:
+        modified_count = _process_files_in_fix_mode(files)
 
     # Return appropriate exit code
     if modified_count > 0:

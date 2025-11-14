@@ -1,3 +1,4 @@
+from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
@@ -76,16 +77,14 @@ def get_console_width() -> int:
     3) Default: 70
     """
     # 1) Try ACB settings via DI
-    try:
+    with suppress(Exception):
         settings = depends.get_sync(CrackerjackSettings)
         width = getattr(getattr(settings, "console", None), "width", None)
         if isinstance(width, int) and width > 0:
             return width
-    except Exception:
-        pass
 
     # 2) Try pyproject.toml
-    try:
+    with suppress(Exception):
         from pathlib import Path as _P
 
         import tomli
@@ -99,8 +98,6 @@ def get_console_width() -> int:
             )
             if isinstance(width, int) and width > 0:
                 return width
-    except Exception:
-        pass
 
     # 3) Default
     return 70
@@ -193,7 +190,7 @@ def register_services() -> None:
 
     # 8. Register Quality Baseline Service
     # Foundation for quality tracking and intelligence
-    try:
+    with suppress(Exception):
         quality_baseline = EnhancedQualityBaselineService()
         depends.set(QualityBaselineProtocol, quality_baseline)
 
@@ -201,16 +198,12 @@ def register_services() -> None:
         # Depends on quality baseline service
         quality_intelligence = QualityIntelligenceService(quality_baseline)
         depends.set(QualityIntelligenceProtocol, quality_intelligence)
-    except Exception:
-        # Graceful fallback if quality services cannot be instantiated
-        # (e.g., due to cache adapter unavailability)
-        pass
 
     # 10. Register Manager Layer Services
     # Services used by test_manager.py and publish_manager.py
 
     # Get console and pkg_path for service initialization
-    try:
+    with suppress(Exception):
         console = depends.get_sync(Console)
         pkg_path = depends.get_sync(Path)
 
@@ -237,17 +230,9 @@ def register_services() -> None:
         depends.set(ChangelogGeneratorProtocol, changelog_generator)
 
         # 10f. LSP Client (concrete type - optional service with graceful fallback)
-        try:
+        with suppress(Exception):
             lsp_client = LSPClient()
             depends.set(LSPClient, lsp_client)
-        except Exception:
-            # LSP client is optional - may not be available in all environments
-            pass
-
-    except Exception:
-        # Graceful fallback if console/pkg_path not available
-        # Manager services will be unavailable but won't crash application
-        pass
 
 
 # Service registration is called explicitly by application entry point

@@ -156,11 +156,11 @@ class JobPanel(Widget):
     def __init__(self, job_data: dict[str, t.Any], **kwargs: t.Any) -> None:
         super().__init__(**kwargs)
         self.job_data = job_data
-        self.completion_time = None
+        self.completion_time: float | None = None
         self.iteration_count = job_data.get("iteration", 0)
         self.max_iterations = job_data.get("max_iterations", 5)
-        self.fade_timer = None
-        self.remove_timer = None
+        self.fade_timer: t.Any | None = None  # Timer object or None
+        self.remove_timer: t.Any | None = None  # Timer object or None
         self.fade_level = 0
         self.border_style = self._calculate_border_style()
 
@@ -420,7 +420,7 @@ class CrackerjackDashboard(App):
         super().__init__()
         self.progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
         self.websocket_url = "ws://localhost:8675"
-        self.refresh_timer = None
+        self.refresh_timer: t.Any | None = None  # Timer object or None
         self._refresh_counter = 0
         self.dev = False
         self.active_jobs: dict[str, t.Any] = {}
@@ -890,7 +890,7 @@ class CrackerjackDashboard(App):
             container.query("Label").remove()
             self.active_jobs.clear()
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         with suppress(Exception):
             if self.refresh_timer:
                 self.refresh_timer.stop()

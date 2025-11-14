@@ -81,6 +81,66 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
         return False
 
 
+def _collect_files_to_check(args: argparse.Namespace) -> list[Path]:
+    """Collect files to check for trailing whitespace.
+
+    Args:
+        args: Parsed command-line arguments
+
+    Returns:
+        List of file paths to process
+    """
+    # Default to all git-tracked files if none specified
+    if not args.files:
+        # Get all tracked text files (respects .gitignore via git ls-files)
+        files = get_files_by_extension(
+            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
+        )
+        if not files:
+            # Fallback to Python files if not in git repo
+            files = list(Path.cwd().rglob("*.py"))
+    else:
+        files = args.files
+
+    # Filter to existing files only
+    return [f for f in files if f.is_file()]
+
+
+def _process_files_in_check_mode(files: list[Path]) -> int:
+    """Process files in check-only mode.
+
+    Args:
+        files: List of file paths to check
+
+    Returns:
+        Count of files with trailing whitespace
+    """
+    modified_count = 0
+    for file_path in files:
+        content = file_path.read_text(encoding="utf-8")
+        lines = content.splitlines(keepends=True)
+        if any(has_trailing_whitespace(line) for line in lines):
+            print(f"Trailing whitespace found: {file_path}")  # noqa: T201
+            modified_count += 1
+    return modified_count
+
+
+def _process_files_in_fix_mode(files: list[Path]) -> int:
+    """Process files in fix mode.
+
+    Args:
+        files: List of file paths to fix
+
+    Returns:
+        Count of files modified
+    """
+    modified_count = 0
+    for file_path in files:
+        if fix_trailing_whitespace(file_path):
+            modified_count += 1
+    return modified_count
+
+
 def main(argv: list[str] | None = None) -> int:
     """Main entry point for trailing-whitespace tool.
 
@@ -107,39 +167,17 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-    # Default to all git-tracked files if none specified
-    if not args.files:
-        # Get all tracked text files (respects .gitignore via git ls-files)
-        files = get_files_by_extension(
-            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
-        )
-        if not files:
-            # Fallback to Python files if not in git repo
-            files = list(Path.cwd().rglob("*.py"))
-    else:
-        files = args.files
-
-    # Filter to existing files only
-    files = [f for f in files if f.is_file()]
+    files = _collect_files_to_check(args)
 
     if not files:
         print("No files to check")  # noqa: T201
         return 0
 
-    # Process files
-    modified_count = 0
-    for file_path in files:
-        if args.check:
-            # Check mode: just detect, don't fix
-            content = file_path.read_text(encoding="utf-8")
-            lines = content.splitlines(keepends=True)
-            if any(has_trailing_whitespace(line) for line in lines):
-                print(f"Trailing whitespace found: {file_path}")  # noqa: T201
-                modified_count += 1
-        else:
-            # Fix mode: remove trailing whitespace
-            if fix_trailing_whitespace(file_path):
-                modified_count += 1
+    # Process files based on mode
+    if args.check:
+        modified_count = _process_files_in_check_mode(files)
+    else:
+        modified_count = _process_files_in_fix_mode(files)
 
     # Return appropriate exit code
     if modified_count > 0:

@@ -20,7 +20,7 @@ class SessionCoordinator:
 
     def __init__(
         self,
-        console: object | None = None,
+        console: Console | None = None,
         pkg_path: Path | None = None,
         web_job_id: str | None = None,
     ) -> None:
@@ -122,7 +122,7 @@ class SessionCoordinator:
             self.tasks = self.session_tracker.tasks
             self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
 
-        normalized = (status or "").lower()
+        normalized = status.lower()
         if normalized == "completed":
             self.session_tracker.complete_task(task_id, details, files_changed)
             return
@@ -173,7 +173,7 @@ class SessionCoordinator:
 
     def cleanup_resources(self) -> None:
         """Execute registered cleanup handlers and release tracked resources."""
-        for handler in list(self.cleanup_handlers):
+        for handler in self.cleanup_handlers.copy():
             try:
                 handler()
             except Exception as exc:  # pragma: no cover - defensive

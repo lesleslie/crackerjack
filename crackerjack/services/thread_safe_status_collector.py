@@ -6,6 +6,7 @@ import typing as t
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
+from ..mcp.context import MCPServerContext
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
 

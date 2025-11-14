@@ -7,6 +7,7 @@ unchanged files and reuse previous results.
 import hashlib
 import json
 from collections.abc import Callable
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -156,9 +157,8 @@ class IncrementalExecutor:
         """Save cache to disk."""
         cache_file = self.cache_dir / "incremental_cache.json"
 
-        entries = []
-        for entry in self._cache.values():
-            entries.append(
+        data = {
+            "entries": [
                 {
                     "tool_name": entry.tool_name,
                     "file_hash": {
@@ -172,15 +172,12 @@ class IncrementalExecutor:
                     "success": entry.success,
                     "error_message": entry.error_message,
                 }
-            )
+                for entry in self._cache.values()
+            ]
+        }
 
-        data = {"entries": entries}
-
-        try:
+        with suppress(OSError):
             cache_file.write_text(json.dumps(data, indent=2))
-        except OSError:
-            # Silently fail on cache write errors
-            pass
 
     def execute_incremental(
         self,
@@ -359,7 +356,7 @@ class IncrementalExecutor:
             Dictionary with cache statistics
         """
         total_entries = len(self._cache)
-        tools = set(entry.tool_name for entry in self._cache.values())
+        tools = {entry.tool_name for entry in self._cache.values()}
         success_count = sum(1 for entry in self._cache.values() if entry.success)
 
         return {

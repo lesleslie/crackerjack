@@ -452,7 +452,7 @@ class ConfigTemplateService:
         """Update version tracking file."""
         version_file = project_path / ".crackerjack-config.yaml"
 
-        data = {"version": "1.0.0", "configs": {}}
+        data: dict[str, t.Any] = {"version": "1.0.0", "configs": {}}
         if version_file.exists():
             with suppress(Exception):
                 with version_file.open() as f:

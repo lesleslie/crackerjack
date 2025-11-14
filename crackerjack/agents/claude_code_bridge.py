@@ -435,6 +435,82 @@ class ClaudeCodeBridge:
             files_modified=[],
         )
 
+    async def _validate_ai_result(
+        self, ai_result: dict[str, t.Any], issue: Issue
+    ) -> tuple[str, str, float, list[str], list[str]] | None:
+        """Validate AI result and extract fields.
+
+        Returns:
+            Tuple of (fixed_code, explanation, confidence, changes_made, side_effects)
+            or None if validation failed (already returned FixResult)
+        """
+        # Check if AI fix was successful
+        if not ai_result.get("success"):
+            ai_result.get("error", "Unknown AI error")
+            return None
+
+        # Extract AI response fields
+        (
+            fixed_code,
+            explanation,
+            confidence,
+            changes_made,
+            potential_side_effects,
+        ) = self._extract_ai_response_fields(ai_result)
+
+        # Validate confidence threshold
+        min_confidence = 0.7  # Match AI fixer's default
+        if confidence < min_confidence:
+            return None
+
+        return (
+            fixed_code,
+            explanation,
+            confidence,
+            changes_made,
+            potential_side_effects,
+        )
+
+    async def _apply_ai_fix(
+        self,
+        file_path: str,
+        fixed_code: str,
+        confidence: float,
+        changes_made: list[str],
+        potential_side_effects: list[str],
+        fix_type: str,
+        issue: Issue,
+        dry_run: bool,
+    ) -> FixResult:
+        """Apply AI fix to file using SafeFileModifier."""
+        modify_result = await self._apply_fix_to_file(file_path, fixed_code, dry_run)
+
+        if not modify_result.get("success"):
+            error_msg = modify_result.get("error", "Unknown modification error")
+            self.logger.error(f"File modification failed: {error_msg}")
+
+            return FixResult(
+                success=False,
+                confidence=confidence,
+                fixes_applied=[],
+                remaining_issues=[issue.id],
+                recommendations=[
+                    f"File modification failed: {error_msg}",
+                    "",
+                ],
+                files_modified=[],
+            )
+
+        # Success - fix applied
+        return self._handle_successful_ai_fix(
+            issue,
+            file_path,
+            confidence,
+            changes_made,
+            potential_side_effects,
+            fix_type,
+        )
+
     async def consult_on_issue(
         self,
         issue: Issue,
@@ -479,57 +555,41 @@ class ClaudeCodeBridge:
                 fix_type=fix_type,
             )
 
-            # Check if AI fix was successful
-            if not ai_result.get("success"):
-                error_msg = ai_result.get("error", "Unknown AI error")
-                return self._handle_error_response(error_msg, issue)
+            # Validate AI result
+            validation_result = await self._validate_ai_result(ai_result, issue)
+            if validation_result is None:
+                # Validation failed - extract error from ai_result
+                if not ai_result.get("success"):
+                    error_msg = ai_result.get("error", "Unknown AI error")
+                    return self._handle_error_response(error_msg, issue)
+                else:
+                    # Low confidence
+                    _, explanation, confidence, *_ = self._extract_ai_response_fields(
+                        ai_result
+                    )
+                    return self._handle_low_confidence_response(
+                        confidence, explanation, issue
+                    )
 
-            # Extract AI response fields
             (
                 fixed_code,
                 explanation,
                 confidence,
                 changes_made,
                 potential_side_effects,
-            ) = self._extract_ai_response_fields(ai_result)
-
-            # Validate confidence threshold
-            min_confidence = 0.7  # Match AI fixer's default
-            if confidence < min_confidence:
-                return self._handle_low_confidence_response(
-                    confidence, explanation, issue
-                )
+            ) = validation_result
 
             # Apply fix using SafeFileModifier
             if not dry_run and fixed_code:
-                modify_result = await self._apply_fix_to_file(
-                    file_path, fixed_code, dry_run
-                )
-
-                if not modify_result.get("success"):
-                    error_msg = modify_result.get("error", "Unknown modification error")
-                    self.logger.error(f"File modification failed: {error_msg}")
-
-                    return FixResult(
-                        success=False,
-                        confidence=confidence,
-                        fixes_applied=[],
-                        remaining_issues=[issue.id],
-                        recommendations=[
-                            f"File modification failed: {error_msg}",
-                            explanation,
-                        ],
-                        files_modified=[],
-                    )
-
-                # Success - fix applied
-                return self._handle_successful_ai_fix(
-                    issue,
+                return await self._apply_ai_fix(
                     file_path,
+                    fixed_code,
                     confidence,
                     changes_made,
                     potential_side_effects,
                     fix_type,
+                    issue,
+                    dry_run,
                 )
             else:
                 # Dry-run mode or no code - just report recommendation

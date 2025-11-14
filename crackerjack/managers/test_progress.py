@@ -139,6 +139,30 @@ class TestProgress:
 
         return " | ".join(status_parts)
 
+    def _format_progress_counters(self) -> list[str]:
+        """Format pass/fail/skip/error status counters.
+
+        Returns:
+            List of formatted status counter strings
+        """
+        status_parts = []
+        if self.completed > 0:
+            progress_pct = (self.completed / self.total_tests) * 100
+            status_parts.append(
+                f"[dim]{self.completed}/{self.total_tests} ({progress_pct:.0f}%)[/dim]"
+            )
+
+        if self.passed > 0:
+            status_parts.append(f"[green]✅ {self.passed}[/green]")
+        if self.failed > 0:
+            status_parts.append(f"[red]❌ {self.failed}[/red]")
+        if self.skipped > 0:
+            status_parts.append(f"[yellow]⏭ {self.skipped}[/yellow]")
+        if self.errors > 0:
+            status_parts.append(f"[red]💥 {self.errors}[/red]")
+
+        return status_parts
+
     def _format_execution_progress(self) -> str:
         parts = []
 
@@ -148,22 +172,7 @@ class TestProgress:
             parts.append(f"⠋ [cyan]Running {self.total_tests} tests[/cyan]")
 
             # Add status counters with emojis if any tests have completed
-            status_parts = []
-            if self.completed > 0:
-                progress_pct = (self.completed / self.total_tests) * 100
-                status_parts.append(
-                    f"[dim]{self.completed}/{self.total_tests} ({progress_pct:.0f}%)[/dim]"
-                )
-
-            if self.passed > 0:
-                status_parts.append(f"[green]✅ {self.passed}[/green]")
-            if self.failed > 0:
-                status_parts.append(f"[red]❌ {self.failed}[/red]")
-            if self.skipped > 0:
-                status_parts.append(f"[yellow]⏭ {self.skipped}[/yellow]")
-            if self.errors > 0:
-                status_parts.append(f"[red]💥 {self.errors}[/red]")
-
+            status_parts = self._format_progress_counters()
             if status_parts:
                 parts.append(" | ".join(status_parts))
 

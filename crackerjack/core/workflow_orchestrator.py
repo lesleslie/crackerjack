@@ -15,6 +15,8 @@ from __future__ import annotations
 import asyncio
 import time
 import typing as t
+from contextlib import suppress
+from importlib.metadata import version
 from pathlib import Path
 
 from acb.config import Config
@@ -137,10 +139,9 @@ class WorkflowPipeline:
             return await self._run_event_driven_workflow(
                 options, workflow_id, event_context, start_time
             )
-        else:
-            return await self._run_sequential_workflow(
-                options, workflow_id, event_context, start_time
-            )
+        return await self._run_sequential_workflow(
+            options, workflow_id, event_context, start_time
+        )
 
     async def _run_sequential_workflow(
         self,
@@ -169,7 +170,7 @@ class WorkflowPipeline:
         )
         await self._publish_event(
             final_event,
-            {**event_context, "success": success},
+            event_context | {"success": success},
         )
         self._performance_monitor.end_workflow(workflow_id, success)
         return success
@@ -192,8 +193,8 @@ class WorkflowPipeline:
         self._performance_monitor.end_workflow(workflow_id, False)
         await self._publish_event(
             WorkflowEvent.WORKFLOW_FAILED,
-            {
-                **event_context,
+            event_context
+            | {
                 "error": str(e),
                 "error_type": type(e).__name__,
             },
@@ -208,7 +209,7 @@ class WorkflowPipeline:
 
     def _unsubscribe_all_subscriptions(self, subscriptions: list[str]) -> None:
         """Unsubscribe from all event subscriptions."""
-        for subscription_id in list(subscriptions):
+        for subscription_id in subscriptions.copy():
             if self._event_bus:
                 self._event_bus.unsubscribe(subscription_id)
             subscriptions.remove(subscription_id)
@@ -253,10 +254,7 @@ class WorkflowPipeline:
         error: Exception | None = None,
     ) -> None:
         """Publish workflow failure event."""
-        payload: dict[str, t.Any] = {
-            **event_context,
-            "stage": stage,
-        }
+        payload: dict[str, t.Any] = event_context | {"stage": stage}
         if error is not None:
             payload["error"] = str(error)
             payload["error_type"] = type(error).__name__
@@ -442,7 +440,7 @@ class WorkflowPipeline:
 
             await self._publish_event(
                 WorkflowEvent.WORKFLOW_COMPLETED,
-                {**event_context, "success": True},
+                event_context | {"success": True},
             )
             return EventHandlerResult(success=True)
         except Exception as exc:  # pragma: no cover - defensive
@@ -550,40 +548,32 @@ class WorkflowPipeline:
                 event, start_time, workflow_id, completion_future, subscriptions
             )
 
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.WORKFLOW_SESSION_READY,
-                on_session_ready,
-            )
-        )
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.CONFIG_PHASE_COMPLETED,
-                on_config_completed,
-            )
-        )
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.QUALITY_PHASE_COMPLETED,
-                on_quality_completed,
-            )
-        )
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.PUBLISH_PHASE_COMPLETED,
-                on_publish_completed,
-            )
-        )
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.WORKFLOW_COMPLETED,
-                on_workflow_completed,
-            )
-        )
-        subscriptions.append(
-            self._event_bus.subscribe(
-                WorkflowEvent.WORKFLOW_FAILED,
-                on_workflow_failed,
+        subscriptions.extend(
+            (
+                self._event_bus.subscribe(
+                    WorkflowEvent.WORKFLOW_SESSION_READY,
+                    on_session_ready,
+                ),
+                self._event_bus.subscribe(
+                    WorkflowEvent.CONFIG_PHASE_COMPLETED,
+                    on_config_completed,
+                ),
+                self._event_bus.subscribe(
+                    WorkflowEvent.QUALITY_PHASE_COMPLETED,
+                    on_quality_completed,
+                ),
+                self._event_bus.subscribe(
+                    WorkflowEvent.PUBLISH_PHASE_COMPLETED,
+                    on_publish_completed,
+                ),
+                self._event_bus.subscribe(
+                    WorkflowEvent.WORKFLOW_COMPLETED,
+                    on_workflow_completed,
+                ),
+                self._event_bus.subscribe(
+                    WorkflowEvent.WORKFLOW_FAILED,
+                    on_workflow_failed,
+                ),
             )
         )
 
@@ -1457,11 +1447,9 @@ class WorkflowPipeline:
             "\n[bold cyan]🔍 Running Post-Cleaning Fast Hooks Sanity Check...[/bold cyan]"
         )
         # Allow a single re-run after cleaning by resetting the session guard
-        try:
+        with suppress(Exception):
             # Access PhaseCoordinator instance to reset its duplicate guard
             setattr(self.phases, "_fast_hooks_started", False)
-        except Exception:
-            pass
         success = self._run_fast_hooks_phase(options)
         if success:
             self.console.print("[green]✅ Post-cleaning sanity check passed[/green]")
@@ -2934,28 +2922,36 @@ class WorkflowOrchestrator:
         self.session.fail_task(task_id, error)
 
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_cleaning_phase(options)
+        result: bool = self.phases.run_cleaning_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_fast_hooks_only(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_fast_hooks_only(options)
+        result: bool = self.phases.run_fast_hooks_only(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_comprehensive_hooks_only(options)
+        result: bool = self.phases.run_comprehensive_hooks_only(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_hooks_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_hooks_phase(options)
+        result: bool = self.phases.run_hooks_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_testing_phase(options)
+        result: bool = self.phases.run_testing_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_publishing_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_publishing_phase(options)
+        result: bool = self.phases.run_publishing_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_commit_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_commit_phase(options)
+        result: bool = self.phases.run_commit_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     def run_configuration_phase(self, options: OptionsProtocol) -> bool:
-        return self.phases.run_configuration_phase(options)
+        result: bool = self.phases.run_configuration_phase(options)  # type: ignore[arg-type,assignment]
+        return result
 
     async def run_complete_workflow(self, options: OptionsProtocol) -> bool:
         result: bool = await self.pipeline.run_complete_workflow(options)
@@ -2973,7 +2969,7 @@ class WorkflowOrchestrator:
 
     async def _cleanup_pipeline_executors(self) -> None:
         """Clean up specific pipeline executors."""
-        try:
+        with suppress(Exception):
             # Try to call specific async cleanup methods on executors/pipeline if they exist
             if hasattr(self, "pipeline") and hasattr(self.pipeline, "phases"):
                 await self._cleanup_executor_if_exists(
@@ -2982,9 +2978,6 @@ class WorkflowOrchestrator:
                 await self._cleanup_executor_if_exists(
                     self.pipeline.phases, "_async_executor"
                 )
-        except Exception:
-            # If executor cleanup fails, continue with general cleanup
-            pass
 
     async def _cleanup_executor_if_exists(
         self, phases_obj: t.Any, executor_attr: str
@@ -2997,16 +2990,13 @@ class WorkflowOrchestrator:
 
     async def _cleanup_remaining_tasks(self) -> None:
         """Clean up any remaining asyncio tasks."""
-        try:
+        with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             # Get all pending tasks
             pending_tasks = [
                 task for task in asyncio.all_tasks(loop) if not task.done()
             ]
             await self._cancel_pending_tasks(pending_tasks)
-        except RuntimeError:
-            # No running event loop (already closed)
-            pass
 
     async def _cancel_pending_tasks(self, pending_tasks: list) -> None:
         """Cancel pending tasks with proper error handling."""
@@ -3043,7 +3033,7 @@ class WorkflowOrchestrator:
 
     def _get_version(self) -> str:
         try:
-            return version()
+            return version("crackerjack")
         except Exception:
             return "unknown"
 

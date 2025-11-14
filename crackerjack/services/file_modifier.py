@@ -183,7 +183,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         fixed_content: str,
         dry_run: bool,
         create_backup: bool,
-    ) -> dict[str, str | bool | None]:
+    ) -> dict[str, t.Any]:
         """Internal implementation of fix application with atomic writes.
 
         Security features:
@@ -206,7 +206,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         path = Path(file_path)
 
         # Validation
-        result = self._validate_fix_inputs(path, fixed_content)
+        result: dict[str, t.Any] = self._validate_fix_inputs(path, fixed_content)
         if not result["success"]:
             return result
 
@@ -217,6 +217,8 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         original_content = result["content"]
 
         # Generate diff
+        # Type assertion: content is str when success is True
+        assert isinstance(original_content, str)
         diff = self._generate_diff(original_content, fixed_content, file_path)
 
         # Dry-run mode - just return diff
@@ -224,10 +226,14 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             return self._create_dry_run_result(diff)
 
         # Create backup if requested
+        # Type assertion: content is str when success is True
+        assert isinstance(original_content, str)
         result = self._handle_backup(path, original_content, create_backup, diff)
         if not result["success"]:
             return result
         backup_path = result.get("backup_path")
+        # Type assertion: backup_path is Path | None after successful backup creation
+        assert backup_path is None or isinstance(backup_path, Path)
 
         # Apply the fix atomically
         return self._atomic_write_fix(path, fixed_content, diff, backup_path, file_path)

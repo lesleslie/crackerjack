@@ -280,6 +280,8 @@ class BaseToolAdapter(QAAdapterBase):
         try:
             exec_result = await self._execute_tool(command, target_files, start_time)
         except TimeoutError:
+            # At this point, settings should be initialized by the init() method
+            assert self.settings is not None, "Settings should be initialized"
             return self._create_result(
                 status=QAResultStatus.ERROR,
                 message=f"Tool execution timed out after {self.settings.timeout_seconds}s",
@@ -288,7 +290,7 @@ class BaseToolAdapter(QAAdapterBase):
         except Exception as e:
             return self._create_result(
                 status=QAResultStatus.ERROR,
-                message=f"Tool execution failed: {str(e)}",
+                message=f"Tool execution failed: {e}",
                 start_time=start_time,
             )
 
@@ -366,6 +368,8 @@ class BaseToolAdapter(QAAdapterBase):
                 cwd=Path.cwd(),
             )
 
+            # At this point, settings should be initialized by the init() method
+            assert self.settings is not None, "Settings should be initialized"
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 process.communicate(),
                 timeout=self.settings.timeout_seconds,
@@ -378,7 +382,9 @@ class BaseToolAdapter(QAAdapterBase):
 
             # Non-zero exit code doesn't always mean failure
             # Some tools return 1 when they find issues
-            success = process.returncode == 0 or (process.returncode == 1 and stdout)
+            success = process.returncode == 0 or (
+                process.returncode == 1 and bool(stdout)
+            )
 
             return ToolExecutionResult(
                 success=success,
@@ -393,11 +399,11 @@ class BaseToolAdapter(QAAdapterBase):
         except TimeoutError:
             # Kill the process if it times out
             if process:
-                try:
+                from contextlib import suppress
+
+                with suppress(Exception):
                     process.kill()
                     await process.wait()
-                except Exception:
-                    pass
             raise
 
     async def validate_tool_available(self) -> bool:
@@ -453,8 +459,7 @@ class BaseToolAdapter(QAAdapterBase):
         tool_available = await self.validate_tool_available()
         tool_version = await self.get_tool_version() if tool_available else None
 
-        return {
-            **base_health,
+        return base_health | {
             "tool_name": self.tool_name,
             "tool_available": tool_available,
             "tool_version": tool_version,
@@ -508,7 +513,7 @@ class BaseToolAdapter(QAAdapterBase):
         # Build details from issues
         details_lines = []
         for issue in issues[:10]:  # Limit to first 10 for readability
-            loc = f"{issue.file_path}"
+            loc = str(issue.file_path)
             if issue.line_number:
                 loc += f":{issue.line_number}"
             if issue.column_number:
@@ -582,16 +587,15 @@ class BaseToolAdapter(QAAdapterBase):
 
         if "format" in tool_lower or "fmt" in tool_lower:
             return QACheckType.FORMAT
-        elif any(x in tool_lower for x in ["type", "pyright", "mypy", "zuban"]):
+        if any(x in tool_lower for x in ("type", "pyright", "mypy", "zuban")):
             return QACheckType.TYPE
-        elif any(x in tool_lower for x in ["bandit", "safety", "gitleaks", "semgrep"]):
+        if any(x in tool_lower for x in ("bandit", "safety", "gitleaks", "semgrep")):
             return QACheckType.SECURITY
-        elif any(x in tool_lower for x in ["test", "pytest", "unittest"]):
+        if any(x in tool_lower for x in ("test", "pytest", "unittest")):
             return QACheckType.TEST
-        elif any(x in tool_lower for x in ["refactor", "refurb", "complex"]):
+        if any(x in tool_lower for x in ("refactor", "refurb", "complex")):
             return QACheckType.REFACTOR
-        else:
-            return QACheckType.LINT
+        return QACheckType.LINT
 
     def get_default_config(self) -> QACheckConfig:
         """Get default configuration for tool adapter.

@@ -190,9 +190,9 @@ class ToolFilter:
         if include:
             # Include only matching files
             return [f for f in files if f in matching_files]
-        else:
-            # Exclude matching files
-            return [f for f in files if f not in matching_files]
+
+        # Exclude matching files
+        return [f for f in files if f not in matching_files]
 
     def should_run_tool(self, tool_name: str) -> bool:
         """Check if a specific tool should run.

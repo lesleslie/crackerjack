@@ -596,6 +596,31 @@ class TestManager:
             )
         return current_coverage
 
+    def _try_service_coverage(self) -> float | None:
+        """Try coverage service fallback.
+
+        Returns:
+            Coverage value if available, None otherwise
+        """
+        try:
+            current_coverage = self._get_coverage_from_service()
+            if current_coverage is not None:
+                self.console.print(
+                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
+                )
+            return current_coverage
+        except AttributeError:
+            # Service method doesn't exist, skip
+            return None
+
+    def _handle_zero_coverage_fallback(self, current_coverage: float | None) -> None:
+        """Handle 0.0% fallback case when coverage.json exists."""
+        coverage_json_path = self.pkg_path / "coverage.json"
+        if current_coverage is None and coverage_json_path.exists():
+            self.console.print(
+                "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
+            )
+
     def _get_fallback_coverage(
         self, ratchet_result: dict[str, t.Any], current_coverage: float | None
     ) -> float | None:
@@ -612,21 +637,9 @@ class TestManager:
 
         # Tertiary: Try coverage service, but only accept non-zero values
         if current_coverage is None:
-            try:
-                current_coverage = self._get_coverage_from_service()
-                if current_coverage is not None:
-                    self.console.print(
-                        f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
-                    )
-            except AttributeError:
-                # Service method doesn't exist, skip
-                pass
-            else:
-                coverage_json_path = self.pkg_path / "coverage.json"
-                if current_coverage is None and coverage_json_path.exists():
-                    self.console.print(
-                        "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
-                    )
+            current_coverage = self._try_service_coverage()
+            if current_coverage is None:
+                self._handle_zero_coverage_fallback(current_coverage)
 
         return current_coverage
 

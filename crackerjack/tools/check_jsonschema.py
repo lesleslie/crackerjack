@@ -35,6 +35,23 @@ def _check_filename_pattern_schema(json_file: Path) -> Path | None:
     return None
 
 
+def _resolve_local_schema_path(json_file: Path, schema_ref: str) -> Path | None:
+    """Resolve a local schema file path.
+
+    Args:
+        json_file: The JSON file containing the schema reference
+        schema_ref: The schema reference string
+
+    Returns:
+        Path to schema file if found, None otherwise
+    """
+    if schema_ref.endswith((".json", ".schema.json")):
+        schema_path = json_file.parent / schema_ref
+        if schema_path.is_file():
+            return schema_path
+    return None
+
+
 def _check_internal_schema_ref(json_file: Path) -> Path | None:
     """Try to find a schema reference inside the JSON file."""
     try:
@@ -44,11 +61,7 @@ def _check_internal_schema_ref(json_file: Path) -> Path | None:
         if isinstance(data, dict):
             schema_ref = data.get("$schema")
             if schema_ref and isinstance(schema_ref, str):
-                # If schema_ref is a local file path, try to load it
-                if schema_ref.endswith((".json", ".schema.json")):
-                    schema_path = json_file.parent / schema_ref
-                    if schema_path.is_file():
-                        return schema_path
+                return _resolve_local_schema_path(json_file, schema_ref)
     except (OSError, json.JSONDecodeError):
         pass
     return None

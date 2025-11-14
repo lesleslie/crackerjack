@@ -2,6 +2,7 @@ import asyncio
 import subprocess
 import time
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -66,14 +67,14 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
 
     async def async_cleanup(self) -> None:
         """Async cleanup for any remaining tasks."""
-        try:
+        with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
-            pending_tasks = [
+            pending_tasks = (
                 task
                 for task in asyncio.all_tasks(loop)
                 if not task.done()
                 and ("hook" in str(task).lower() or "parallel" in str(task).lower())
-            ]
+            )
 
             for task in pending_tasks:
                 if not task.done():
@@ -87,9 +88,6 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
                             return
                         else:
                             raise
-        except RuntimeError:
-            # No running event loop
-            pass
 
     def health_check(self) -> bool:
         return True
@@ -351,14 +349,14 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
 
     async def async_cleanup(self) -> None:
         """Async cleanup for any remaining command executor tasks."""
-        try:
+        with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
-            pending_tasks = [
+            pending_tasks = (
                 task
                 for task in asyncio.all_tasks(loop)
                 if not task.done()
                 and ("command" in str(task).lower() or "async" in str(task).lower())
-            ]
+            )
 
             for task in pending_tasks:
                 if not task.done():
@@ -372,9 +370,6 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
                             return
                         else:
                             raise
-        except RuntimeError:
-            # No running event loop
-            pass
 
     async def execute_command(
         self,

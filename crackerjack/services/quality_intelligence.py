@@ -241,7 +241,7 @@ class QualityIntelligenceService:
 
     def _calculate_statistical_metrics(
         self, values: list[float]
-    ) -> dict[str, float] | None:
+    ) -> dict[str, t.Any] | None:
         """Calculate statistical metrics for anomaly detection."""
         values_array = np.array(values)
         mean_val = np.mean(values_array)
@@ -253,10 +253,10 @@ class QualityIntelligenceService:
         z_scores = np.abs((values_array - mean_val) / std_val)
 
         return {
-            "mean": mean_val,
-            "std": std_val,
-            "z_scores": z_scores,
-            "values_array": values_array,
+            "mean": float(mean_val),
+            "std": float(std_val),
+            "z_scores": z_scores.tolist(),  # Convert to Python list
+            "values_array": values_array.tolist(),  # Convert to Python list
         }
 
     def _identify_outlier_anomalies(
@@ -349,7 +349,7 @@ class QualityIntelligenceService:
 
     def _extract_metrics_data(self, baselines: list[t.Any]) -> dict[str, list[float]]:
         """Extract metric data from baselines for correlation analysis."""
-        metrics_data = {
+        metrics_data: dict[str, list[float]] = {
             "quality_score": [],
             "coverage_percent": [],
             "hook_failures": [],
@@ -539,8 +539,13 @@ class QualityIntelligenceService:
         values_array = np.array(values)
         time_indices = np.arange(len(values))
 
-        slope, intercept, r_value, p_value, std_err = stats.linregress(
-            time_indices, values_array
+        result = stats.linregress(time_indices, values_array)
+        slope, intercept, _r_value, _p_value, _std_err = (
+            result.slope,
+            result.intercept,
+            result.rvalue,
+            result.pvalue,
+            result.stderr,
         )
 
         future_index = len(values) + horizon_days
@@ -569,10 +574,10 @@ class QualityIntelligenceService:
         predicted_value = regression_results["predicted_value"]
 
         residuals = values_array - (slope * time_indices + intercept)
-        residual_std = np.std(residuals)
+        residual_std = float(np.std(residuals))
 
         future_index = len(values) + regression_results["horizon_days"]
-        t_value = stats.t.ppf((1 + confidence_level) / 2, len(values) - 2)
+        t_value = float(stats.t.ppf((1 + confidence_level) / 2, len(values) - 2))
 
         margin_error = self._calculate_margin_error(
             t_value, residual_std, len(values), future_index, time_indices

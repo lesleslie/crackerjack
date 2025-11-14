@@ -17,6 +17,8 @@ if t.TYPE_CHECKING:
 
 
 class HookManagerImpl:
+    executor: HookExecutor | LSPAwareHookExecutor | ProgressHookExecutor
+
     def _setup_git_service(self, use_incremental: bool, pkg_path: Path):
         """Setup GitService for incremental execution."""
         from crackerjack.services.git import GitService
@@ -57,7 +59,7 @@ class HookManagerImpl:
             console = depends.get_sync(Console)
             self.console = console  # Store console for later use
             # Use ProgressHookExecutor with inline hook status (no progress bar)
-            self.executor = ProgressHookExecutor(
+            self.executor = ProgressHookExecutor(  # type: ignore[assignment]
                 console,
                 pkg_path,
                 verbose,
@@ -67,6 +69,58 @@ class HookManagerImpl:
                 use_incremental=use_incremental,
                 git_service=git_service,
             )
+
+    def _load_from_project_config(
+        self,
+        config_path: Path,
+        enable_orchestration: bool | None,
+        orchestration_mode: str | None,
+    ) -> None:
+        """Load orchestration config from project .crackerjack.yaml file."""
+        from crackerjack.orchestration.config import OrchestrationConfig
+
+        loaded_config = OrchestrationConfig.load(config_path)
+        self._orchestration_config: t.Any = loaded_config  # Can be either OrchestrationConfig or HookOrchestratorSettings
+        # Extract orchestration settings with param override
+        self.orchestration_enabled = (
+            enable_orchestration
+            if enable_orchestration is not None
+            else loaded_config.enable_orchestration
+        )
+        self.orchestration_mode = (
+            orchestration_mode
+            if orchestration_mode is not None
+            else loaded_config.orchestration_mode
+        )
+
+    def _create_default_orchestration_config(
+        self,
+        enable_orchestration: bool | None,
+        orchestration_mode: str | None,
+        enable_caching: bool,
+        cache_backend: str,
+    ) -> None:
+        """Create default orchestration config from constructor params."""
+        from crackerjack.orchestration.hook_orchestrator import (
+            HookOrchestratorSettings,
+        )
+
+        self._orchestration_config = HookOrchestratorSettings(
+            enable_caching=enable_caching,
+            cache_backend=cache_backend,
+        )
+        # Default to enabled unless explicitly disabled
+        # Fallback chain: explicit param -> DI settings -> True
+        self.orchestration_enabled = (
+            bool(enable_orchestration)
+            if enable_orchestration is not None
+            else getattr(self._settings, "enable_orchestration", True)
+        )
+        self.orchestration_mode = (
+            orchestration_mode
+            if orchestration_mode is not None
+            else (self._settings.orchestration_mode or "acb")
+        )
 
     def _load_orchestration_config(
         self,
@@ -95,46 +149,17 @@ class HookManagerImpl:
             )
             self.orchestration_mode = orchestration_config.orchestration_mode
         else:
-            # Try to load from project config file
-            from crackerjack.orchestration.config import OrchestrationConfig
-
             config_path = pkg_path / ".crackerjack.yaml"
             if config_path.exists():
-                # Load from file
-                loaded_config = OrchestrationConfig.load(config_path)
-                self._orchestration_config = loaded_config
-                # Extract orchestration settings with param override
-                self.orchestration_enabled = (
-                    enable_orchestration
-                    if enable_orchestration is not None
-                    else loaded_config.enable_orchestration
-                )
-                self.orchestration_mode = (
-                    orchestration_mode
-                    if orchestration_mode is not None
-                    else loaded_config.orchestration_mode
+                self._load_from_project_config(
+                    config_path, enable_orchestration, orchestration_mode
                 )
             else:
-                # Create default config from constructor params
-                from crackerjack.orchestration.hook_orchestrator import (
-                    HookOrchestratorSettings,
-                )
-
-                self._orchestration_config = HookOrchestratorSettings(
-                    enable_caching=enable_caching,
-                    cache_backend=cache_backend,
-                )
-                # Default to enabled unless explicitly disabled
-                # Fallback chain: explicit param -> DI settings -> True
-                self.orchestration_enabled = (
-                    bool(enable_orchestration)
-                    if enable_orchestration is not None
-                    else getattr(self._settings, "enable_orchestration", True)
-                )
-                self.orchestration_mode = (
-                    orchestration_mode
-                    if orchestration_mode is not None
-                    else (self._settings.orchestration_mode or "acb")
+                self._create_default_orchestration_config(
+                    enable_orchestration,
+                    orchestration_mode,
+                    enable_caching,
+                    cache_backend,
                 )
 
     def __init__(
@@ -152,9 +177,9 @@ class HookManagerImpl:
         orchestration_mode: str | None = None,
         enable_caching: bool = True,
         cache_backend: str = "memory",
+        console: t.Any = None,  # Accept console parameter for DI
     ) -> None:
         self.pkg_path = pkg_path
-        self.executor: HookExecutor
         self.debug = debug
 
         # Get GitService for incremental execution
@@ -385,7 +410,7 @@ class HookManagerImpl:
 
         # Switch executor based on the enable flag
         if enable:
-            self.executor = LSPAwareHookExecutor(
+            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -393,7 +418,7 @@ class HookManagerImpl:
                 use_tool_proxy=self.tool_proxy_enabled,
             )
         else:
-            self.executor = HookExecutor(
+            self.executor = HookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),

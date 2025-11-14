@@ -1,5 +1,6 @@
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
@@ -46,41 +47,14 @@ class LSPAwareHookExecutor(HookExecutor):
         results = []
 
         # Check if LSP server is available
-        lsp_available = self.lsp_client.is_server_running()
-
-        if lsp_available and not self.quiet:
-            server_info = self.lsp_client.get_server_info()
-            if server_info:
-                self.console.print(
-                    f"🔍 LSP server available (PID: {server_info['pid']}), using optimized execution"
-                )
+        lsp_available = self._check_lsp_availability()
 
         # Execute hooks with LSP optimization and tool proxy resilience
         for hook in strategy.hooks:
-            # Start tick for progress if configured
-            if getattr(self, "_progress_start_callback", None):
-                try:
-                    # _total_hooks/_started_hooks are initialized by set_progress_callbacks on base class
-                    self._started_hooks += 1  # type: ignore[attr-defined]
-                    total = self._total_hooks or len(strategy.hooks)  # type: ignore[attr-defined]
-                    self._progress_start_callback(self._started_hooks, total)  # type: ignore[attr-defined]
-                except Exception:
-                    pass
-            if self._should_use_lsp_for_hook(hook, lsp_available):
-                result = self._execute_lsp_hook(hook)
-            elif self._should_use_tool_proxy(hook):
-                result = self._execute_hook_with_proxy(hook)
-            else:
-                result = self.execute_single_hook(hook)
+            self._handle_progress_start(len(strategy.hooks))
+            result = self._execute_single_hook_with_strategies(hook, lsp_available)
             results.append(result)
-            # Completion tick for progress if configured
-            if getattr(self, "_progress_callback", None):
-                try:
-                    self._completed_hooks += 1  # type: ignore[attr-defined]
-                    total = self._total_hooks or len(strategy.hooks)  # type: ignore[attr-defined]
-                    self._progress_callback(self._completed_hooks, total)  # type: ignore[attr-defined]
-                except Exception:
-                    pass
+            self._handle_progress_completion(len(strategy.hooks))
 
         duration = time.time() - start_time
         success = all(result.status in ("passed", "skipped") for result in results)
@@ -92,6 +66,51 @@ class LSPAwareHookExecutor(HookExecutor):
             success=success,
             concurrent_execution=False,
         )
+
+    def _check_lsp_availability(self) -> bool:
+        """Check if LSP server is available and print info message."""
+        lsp_available = self.lsp_client.is_server_running()
+
+        if lsp_available and not self.quiet:
+            server_info = self.lsp_client.get_server_info()
+            if server_info:
+                self.console.print(
+                    f"🔍 LSP server available (PID: {server_info['pid']}), using optimized execution"
+                )
+
+        return lsp_available
+
+    def _execute_single_hook_with_strategies(
+        self, hook: HookDefinition, lsp_available: bool
+    ) -> HookResult:
+        """Execute a single hook using appropriate strategy."""
+        if self._should_use_lsp_for_hook(hook, lsp_available):
+            return self._execute_lsp_hook(hook)
+        elif self._should_use_tool_proxy(hook):
+            return self._execute_hook_with_proxy(hook)
+
+        return self.execute_single_hook(hook)
+
+    def _handle_progress_start(self, total_hooks: int | None = None) -> None:
+        """Handle progress start callback."""
+        with suppress(Exception):
+            callback = getattr(self, "_progress_start_callback", None)
+            if callback:
+                # _total_hooks/_started_hooks are initialized by set_progress_callbacks on base class
+                self._started_hooks += 1  # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
+                if total:
+                    callback(self._started_hooks, total)  # type: ignore[attr-defined]
+
+    def _handle_progress_completion(self, total_hooks: int | None = None) -> None:
+        """Handle progress completion callback."""
+        with suppress(Exception):
+            callback = getattr(self, "_progress_callback", None)
+            if callback:
+                self._completed_hooks += 1  # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
+                if total:
+                    callback(self._completed_hooks, total)  # type: ignore[attr-defined]
 
     def _should_use_lsp_for_hook(
         self, hook: HookDefinition, lsp_available: bool

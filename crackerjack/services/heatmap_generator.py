@@ -205,7 +205,11 @@ class HeatMapGenerator:
         bucket_config: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         """Build error count matrix for files and time buckets."""
-        error_matrix: dict[str, dict[int, int]] = defaultdict(lambda: defaultdict(int))
+        from collections import defaultdict
+
+        error_matrix: dict[str, t.Any] = defaultdict(
+            lambda: defaultdict(int)  # type: ignore[call-overload]
+        )
 
         for file_path, errors in self.error_data.items():
             for error in errors:
@@ -450,7 +454,7 @@ class HeatMapGenerator:
 
     def _calculate_metric_max_values(self, metric_types: list[str]) -> dict[str, float]:
         """Calculate max values for normalization."""
-        max_values = {}
+        max_values: dict[str, float] = {}
         for metric_type in metric_types:
             values = [
                 data["metrics"][metric_type]
@@ -558,8 +562,13 @@ class HeatMapGenerator:
         self, test_errors: list[dict[str, t.Any]]
     ) -> defaultdict[str, defaultdict[str, int]]:
         """Group test errors by file and error type."""
+        from collections import defaultdict as dd
+
+        def make_inner_defaultdict() -> defaultdict[str, int]:
+            return dd(int)
+
         test_matrix: defaultdict[str, defaultdict[str, int]] = defaultdict(
-            lambda: defaultdict(int)
+            make_inner_defaultdict
         )
 
         for error in test_errors:

@@ -87,12 +87,13 @@ class AgentActivityWidget(Widget):
     def on_mount(self) -> None:
         table = self.query_one("#agents-detail-table", DataTable)
         table.add_columns(
-            ("Agent", 20),
-            ("Status", 10),
-            ("Type", 15),
-            ("Conf.", 8),
-            ("Time", 10),
+            "Agent",
+            "Status",
+            "Type",
+            "Conf.",
+            "Time",
         )
+        # Setting widths for columns if needed would be done separately
         table.zebra_stripes = True
         table.styles.max_height = 6
 
@@ -220,11 +221,12 @@ class JobProgressPanel(Widget):
         yield Label(f"Status: {status}", classes="status-label")
         yield Label(f"Iteration: {iteration} / {max_iterations}")
 
-        yield ProgressBar(
+        progress_bar = ProgressBar(
             total=100,
-            progress=progress,
             id=f"job-progress-{self.job_data.get('job_id', 'unknown')}",
         )
+        progress_bar.progress = progress  # Set progress after creating the widget
+        yield progress_bar
 
         elapsed = time.time() - self.start_time
         yield Label(f"⏱️ Elapsed: {self._format_time(elapsed)}")
@@ -276,11 +278,11 @@ class ServiceHealthPanel(Widget):
     def on_mount(self) -> None:
         table = self.query_one("#services-table", DataTable)
         table.add_columns(
-            ("Service", 20),
-            ("Status", 12),
-            ("Health", 10),
-            ("Uptime", 15),
-            ("Last Check", 20),
+            "Service",
+            "Status",
+            "Health",
+            "Uptime",
+            "Last Check",
         )
         table.zebra_stripes = True
 
@@ -348,8 +350,8 @@ class EnhancedCrackerjackDashboard(App):
         self.websocket_url = websocket_url
         self.data_collector = JobDataCollector(progress_dir, websocket_url)
         self.service_manager = ServiceManager()
-        self.update_timer = None
-        self.jobs_data = {}
+        self.update_timer: t.Any = None
+        self.jobs_data: dict[str, t.Any] = {}
 
     def compose(self) -> ComposeResult:
         yield Label("🚀 Crackerjack Progress Monitor", id="header")
@@ -365,7 +367,11 @@ class EnhancedCrackerjackDashboard(App):
         yield Footer()
 
     def on_mount(self) -> None:
-        self.update_timer = self.set_interval(1.0, self.update_dashboard)
+        self.update_timer = self.set_interval(1.0, self._update_dashboard_wrapper)
+
+    def _update_dashboard_wrapper(self) -> None:
+        """Wrapper to call the async update_dashboard method."""
+        self.call_later(self.update_dashboard)
 
     async def update_dashboard(self) -> None:
         try:
@@ -373,9 +379,11 @@ class EnhancedCrackerjackDashboard(App):
             jobs_data = jobs_result.get("data", {})
 
             services = self.service_manager.collect_services_data()
-            self.query_one("#service-panel", ServiceHealthPanel).update_services(
-                services,
+            service_panel = self.query_one("#service-panel", ServiceHealthPanel)
+            typed_services: list[dict[str, t.Any]] = t.cast(
+                list[dict[str, t.Any]], services
             )
+            service_panel.update_services(typed_services)
 
             if jobs_data.get("individual_jobs"):
                 aggregated_agent_data = self._aggregate_agent_data(
@@ -457,7 +465,8 @@ async def run_enhanced_progress_monitor(
         progress_dir = Path(tempfile.gettempdir()) / "crackerjack-mcp-progress"
 
     restorer = TerminalRestorer()
-    restorer.setup_handlers()
+    if hasattr(restorer, "setup_handlers"):
+        restorer.setup_handlers()
 
     try:
         app = EnhancedCrackerjackDashboard(progress_dir, websocket_url)
@@ -465,11 +474,13 @@ async def run_enhanced_progress_monitor(
         if dev_mode:
             console = depends.get_sync(Console)
             console.print("[bold cyan]🛠️ Development Mode: Enabled[/bold cyan]")
-            app.dev = True
+            # Add dev attribute to the app instance if it doesn't exist
+            app.dev = True  # type: ignore[attr-defined]
 
         await app.run_async()
     finally:
-        restorer.restore()
+        if hasattr(restorer, "restore"):
+            restorer.restore()
 
 
 if __name__ == "__main__":

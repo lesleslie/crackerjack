@@ -445,7 +445,7 @@ class APIExtractorImpl(APIExtractorProtocol):
         for base in node.bases:
             base_name = self._get_node_name(base)
             if "Protocol" in base_name and isinstance(
-                service_info["protocols_implemented"], list[t.Any]
+                service_info["protocols_implemented"], list
             ):
                 service_info["protocols_implemented"].append(base_name)
 

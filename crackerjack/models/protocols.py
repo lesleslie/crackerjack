@@ -360,9 +360,7 @@ class ConfigMergeServiceProtocol(ServiceProtocol, t.Protocol):
 class HookLockManagerProtocol(t.Protocol):
     def requires_lock(self, hook_name: str) -> bool: ...
 
-    async def acquire_hook_lock(
-        self, hook_name: str
-    ) -> t.AsyncContextManager[None]: ...
+    def acquire_hook_lock(self, hook_name: str) -> t.AsyncContextManager[None]: ...
 
     def get_lock_stats(self) -> dict[str, t.Any]: ...
 
@@ -870,7 +868,7 @@ class PerformanceCacheProtocol(t.Protocol):
 class QualityBaselineProtocol(t.Protocol):
     """Protocol for quality baseline tracking."""
 
-    def get_baseline(self) -> dict[str, t.Any]:
+    def get_current_baseline(self) -> dict[str, t.Any]:
         """Get current baseline metrics."""
         ...
 

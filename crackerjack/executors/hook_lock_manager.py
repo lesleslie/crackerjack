@@ -6,7 +6,7 @@ import time
 import typing as t
 import uuid
 from collections import defaultdict
-from contextlib import AbstractAsyncContextManager, asynccontextmanager, suppress
+from contextlib import asynccontextmanager, suppress
 from pathlib import Path
 
 from ..config.global_lock_config import GlobalLockConfig, get_global_lock_config
@@ -63,9 +63,7 @@ class HookLockManager:
         return hook_name in self._hooks_requiring_locks
 
     @asynccontextmanager
-    async def acquire_hook_lock(
-        self, hook_name: str
-    ) -> AbstractAsyncContextManager[None]:
+    async def acquire_hook_lock(self, hook_name: str) -> t.AsyncIterator[None]:
         if not self.requires_lock(hook_name):
             yield
             return
@@ -506,7 +504,13 @@ class HookLockManager:
 
     def enable_global_lock(self, enabled: bool = True) -> None:
         self._global_lock_enabled = enabled
-        self._global_config.enabled = enabled
+        # Update the settings model if supported
+        if hasattr(self._global_config._settings, "enabled"):
+            # Create a new settings object with updated enabled value
+            new_settings = self._global_config._settings.model_copy(
+                update={"enabled": enabled}
+            )
+            self._global_config._settings = new_settings
         self.logger.info(
             f"Global lock functionality {'enabled' if enabled else 'disabled'}"
         )

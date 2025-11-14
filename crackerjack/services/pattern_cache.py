@@ -195,7 +195,7 @@ class PatternCache:
         if not self._patterns:
             return {"total_patterns": 0}
 
-        patterns_by_type = {}
+        patterns_by_type: dict[str, int] = {}
         total_usage = 0
         avg_success_rate = 0.0
 

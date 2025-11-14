@@ -109,13 +109,11 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         Returns:
             List of files matching the pattern
         """
-        filtered = []
-        for file_path in files:
-            # Check both absolute and relative patterns
-            if fnmatch(str(file_path), pattern) or fnmatch(file_path.name, pattern):
-                filtered.append(file_path)
-
-        return filtered
+        return [
+            file_path
+            for file_path in files
+            if fnmatch(str(file_path), pattern) or fnmatch(file_path.name, pattern)
+        ]
 
     def filter_by_tool(self, files: list[Path], tool: str) -> list[Path]:
         """Filter files relevant to a specific tool.
@@ -198,12 +196,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         # Normalize extensions to include leading dot
         normalized = [ext if ext.startswith(".") else f".{ext}" for ext in extensions]
 
-        filtered = []
-        for file_path in files:
-            if file_path.suffix in normalized:
-                filtered.append(file_path)
-
-        return filtered
+        return [file_path for file_path in files if file_path.suffix in normalized]
 
     def get_python_files(self, files: list[Path]) -> list[Path]:
         """Convenience method to filter Python files.

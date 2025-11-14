@@ -356,9 +356,9 @@ class QualityBaselineService(QualityBaselineProtocol):
         raise RuntimeError(msg)
 
     # Protocol methods
-    def get_baseline(self) -> dict[str, t.Any]:
+    def get_current_baseline(self) -> dict[str, t.Any]:
         """Protocol method for getting baseline metrics."""
-        baseline = super().get_baseline()
+        baseline = self.get_baseline()  # Call the existing method
         if baseline:
             return baseline.to_dict()
         return {}

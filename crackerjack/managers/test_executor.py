@@ -89,7 +89,7 @@ class TestExecutor:
         if not test_path_found:
             collect_cmd.append("tests" if (self.pkg_path / "tests").exists() else ".")
 
-        try:
+        with suppress(Exception):
             result = subprocess.run(
                 collect_cmd,
                 cwd=self.pkg_path,
@@ -106,9 +106,6 @@ class TestExecutor:
                 match = re.search(r"collected\s+(\d+)\s+(?:item|test)s?", result.stdout)
                 if match:
                     return int(match.group(1))
-        except Exception:
-            # If collection fails, continue with normal execution
-            pass
 
         return 0  # Return 0 if collection fails
 

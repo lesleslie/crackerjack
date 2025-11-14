@@ -173,21 +173,21 @@ class ErrorPatternAnalyzer:
 
         for file_path in files:
             for error_type in error_types:
-                count = file_error_counts[file_path].get(error_type, 0)
-                if count > 0:
-                    intensity: float = count / max_value if max_value > 0 else 0.0
+                count_val = float(file_error_counts[file_path].get(error_type, 0))
+                if count_val > 0:
+                    intensity = count_val / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
                     severity = self._get_severity_for_type(error_type)
 
                     cells.append(
                         HeatMapCell(
                             x=file_path,
                             y=error_type,
-                            value=count,
+                            value=count_val,
                             color_intensity=intensity,
                             tooltip_data={
                                 "file": file_path,
                                 "error_type": error_type,
-                                "count": count,
+                                "count": int(count_val),
                                 "severity": severity,
                             },
                             severity=severity,
@@ -300,7 +300,7 @@ class ErrorPatternAnalyzer:
         cells = []
         for time_label in time_labels:
             for error_type in error_types:
-                count = temporal_counts[time_label].get(error_type, 0)
+                count = float(temporal_counts[time_label].get(error_type, 0))
                 if count > 0:
                     cell = self._create_temporal_cell(
                         time_label, error_type, count, max_value
@@ -313,7 +313,7 @@ class ErrorPatternAnalyzer:
         self, time_label: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single temporal heatmap cell."""
-        intensity: float = count / max_value if max_value > 0 else 0.0
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -392,7 +392,7 @@ class ErrorPatternAnalyzer:
         cells = []
         for function_id in functions:
             for error_type in error_types:
-                count = function_error_counts[function_id].get(error_type, 0)
+                count = float(function_error_counts[function_id].get(error_type, 0))
                 if count > 0:
                     cell = self._create_function_cell(
                         function_id, error_type, count, max_value
@@ -405,7 +405,7 @@ class ErrorPatternAnalyzer:
         self, function_id: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
         """Create a single function heatmap cell."""
-        intensity: float = count / max_value if max_value > 0 else 0.0
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
