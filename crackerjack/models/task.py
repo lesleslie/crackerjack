@@ -39,7 +39,9 @@ class HookResult:
     duration: float
     files_processed: int = 0
     issues_found: list[str] | None = None
-    issues_count: int = 0  # Total count of issues (may exceed len(issues_found) if truncated)
+    issues_count: int = (
+        0  # Total count of issues (may exceed len(issues_found) if truncated)
+    )
     stage: str = "pre-commit"
     exit_code: int | None = None  # Non-zero exit codes for failed hooks
     error_message: str | None = None  # Error details from stderr or exceptions
