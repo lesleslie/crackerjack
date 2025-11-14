@@ -17,10 +17,6 @@ from acb.console import Console
 from acb.depends import Inject, depends
 
 from crackerjack.agents.base import AgentContext
-from crackerjack.agents.enhanced_coordinator import (
-    EnhancedAgentCoordinator,
-    create_enhanced_coordinator,
-)
 from crackerjack.events import WorkflowEvent, WorkflowEventBus
 from crackerjack.models.protocols import (
     DebugServiceProtocol,
@@ -652,9 +648,10 @@ class WorkflowPhaseExecutor:
         )
         security_gates.configure(self.phases, None)
 
-        publishing_requested, security_blocks = (
-            await security_gates.check_security_gates_for_publishing(options)
-        )
+        (
+            publishing_requested,
+            security_blocks,
+        ) = await security_gates.check_security_gates_for_publishing(options)
 
         if publishing_requested and security_blocks:
             return await security_gates.handle_security_gate_failure(options)
@@ -1153,7 +1150,9 @@ class WorkflowPhaseExecutor:
 
         return os.environ.get("AI_AGENT_DEBUG", "0") == "1"
 
-    async def _publish_event(self, event: WorkflowEvent, data: dict[str, t.Any]) -> None:
+    async def _publish_event(
+        self, event: WorkflowEvent, data: dict[str, t.Any]
+    ) -> None:
         """Publish workflow event if event bus is available."""
         if self._event_bus:
             await self._event_bus.publish_async(event, data)

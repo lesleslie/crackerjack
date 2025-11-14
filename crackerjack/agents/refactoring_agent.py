@@ -412,7 +412,6 @@ class RefactoringAgent(SubAgent):
             remaining_issues=[f"Error processing file: {error}"],
         )
 
-
     async def _find_semantic_complex_patterns(
         self, content: str, file_path: Path
     ) -> list[dict[str, t.Any]]:
@@ -421,8 +420,10 @@ class RefactoringAgent(SubAgent):
 
         try:
             # Delegate to complexity analyzer helper
-            code_elements = self._complexity_analyzer.extract_code_functions_for_semantic_analysis(
-                content
+            code_elements = (
+                self._complexity_analyzer.extract_code_functions_for_semantic_analysis(
+                    content
+                )
             )
 
             for element in code_elements:

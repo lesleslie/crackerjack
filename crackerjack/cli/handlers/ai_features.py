@@ -22,6 +22,7 @@ def handle_contextual_ai(
     console.print("[cyan]🤖[/cyan] Running contextual AI assistant analysis...")
 
     try:
+
         class FileSystemImpl:
             def read_file(self, path: str | t.Any) -> str:
                 return Path(path).read_text()

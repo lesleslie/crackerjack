@@ -156,9 +156,7 @@ def handle_changelog_commands(
     changelog_path = services["pkg_path"] / "CHANGELOG.md"
 
     if changelog_dry_run:
-        return handle_changelog_dry_run(
-            services["generator"], changelog_since, options
-        )
+        return handle_changelog_dry_run(services["generator"], changelog_since, options)
 
     if generate_changelog:
         return handle_changelog_generation(

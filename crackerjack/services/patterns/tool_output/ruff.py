@@ -4,8 +4,6 @@ This module provides regex patterns for parsing Ruff static analysis tool output
 including error messages and summary lines.
 """
 
-import re
-
 from ..core import ValidatedPattern
 
 PATTERNS = {

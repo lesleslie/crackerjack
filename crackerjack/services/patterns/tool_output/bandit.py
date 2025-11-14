@@ -4,8 +4,6 @@ This module provides regex patterns for parsing Bandit security analysis tool ou
 including issue detection, location information, confidence, and severity levels.
 """
 
-import re
-
 from ..core import ValidatedPattern
 
 PATTERNS = {

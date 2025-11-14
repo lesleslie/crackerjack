@@ -199,9 +199,7 @@ class TestCoverageAnalyzer:
                 continue
 
             if not ast_analyzer.has_corresponding_test(str(py_file)):
-                module_info = await self._analyze_module_priority(
-                    py_file, ast_analyzer
-                )
+                module_info = await self._analyze_module_priority(py_file, ast_analyzer)
                 uncovered.append(module_info)
 
         uncovered.sort(key=operator.itemgetter("priority_score"), reverse=True)
@@ -472,7 +470,9 @@ class TestCoverageAnalyzer:
 
         try:
             test_results = await self._generate_module_tests(
-                module_path, TestASTAnalyzer(self.context), TestTemplateGenerator(self.context)
+                module_path,
+                TestASTAnalyzer(self.context),
+                TestTemplateGenerator(self.context),
             )
             fixes.extend(test_results["fixes"])
             files.extend(test_results["files"])

@@ -82,9 +82,7 @@ def _register_websocket_endpoints(
     register_metrics_websockets(
         app, job_manager, ws_manager, services["quality_service"]
     )
-    register_intelligence_websockets(
-        app, ws_manager, services["intelligence_service"]
-    )
+    register_intelligence_websockets(app, ws_manager, services["intelligence_service"])
     register_dependency_websockets(app, ws_manager, services["dependency_analyzer"])
     register_heatmap_websockets(app, services["error_analyzer"])
 
@@ -99,9 +97,7 @@ def _register_rest_api_endpoints(
     register_metrics_api_endpoints(app, job_manager, services["quality_service"])
     register_intelligence_api_endpoints(app, services["intelligence_service"])
     register_dependency_api_endpoints(app, services["dependency_analyzer"])
-    register_heatmap_api_endpoints(
-        app, services["error_analyzer"], services["cache"]
-    )
+    register_heatmap_api_endpoints(app, services["error_analyzer"], services["cache"])
 
 
 def _register_dashboard_endpoint(app: FastAPI) -> None:

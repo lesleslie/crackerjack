@@ -217,8 +217,8 @@ class PerformanceAgent(SubAgent):
 
         try:
             # Delegate to AST analyzer helper
-            critical_functions = self._ast_analyzer.extract_performance_critical_functions(
-                content
+            critical_functions = (
+                self._ast_analyzer.extract_performance_critical_functions(content)
             )
 
             for func in critical_functions:
@@ -259,6 +259,24 @@ class PerformanceAgent(SubAgent):
 
         return issues
 
+    def _generate_optimization_summary(self) -> str:
+        """Generate a summary of optimization results."""
+        total_files = len(self.performance_metrics)
+        total_optimizations = sum(
+            metrics.get("optimizations_applied", 0)
+            for metrics in self.performance_metrics.values()
+        )
+
+        total_time = sum(
+            metrics.get("analysis_duration", 0)
+            for metrics in self.performance_metrics.values()
+        )
+
+        return (
+            f"Performance optimization summary: "
+            f"{total_optimizations} optimizations applied across {total_files} files "
+            f"in {total_time:.2f}s total"
+        )
 
     async def _generate_enhanced_recommendations(
         self, issues: list[dict[str, t.Any]]

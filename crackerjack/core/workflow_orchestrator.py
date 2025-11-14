@@ -39,7 +39,6 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.services.logging import LoggingContext
 from crackerjack.services.memory_optimizer import memory_optimized
-from crackerjack.services.monitoring.performance_monitor import phase_monitor
 
 from .phase_coordinator import PhaseCoordinator
 from .session_coordinator import SessionController, SessionCoordinator
@@ -652,7 +651,9 @@ class WorkflowPipeline:
     async def _execute_workflow_with_timing(
         self, options: OptionsProtocol, start_time: float, workflow_id: str
     ) -> bool:
-        success = await self._phase_executor._execute_workflow_phases(options, workflow_id)
+        success = await self._phase_executor._execute_workflow_phases(
+            options, workflow_id
+        )
         self.session.finalize_session(start_time, success)
 
         duration = time.time() - start_time
@@ -821,7 +822,9 @@ class WorkflowPipeline:
             self._phase_executor._handle_hooks_completion(False)
             return False
 
-        comprehensive_success = self._phase_executor._run_comprehensive_hooks_phase(options)
+        comprehensive_success = self._phase_executor._run_comprehensive_hooks_phase(
+            options
+        )
         self._phase_executor._handle_hooks_completion(comprehensive_success)
 
         return comprehensive_success
@@ -843,6 +846,135 @@ class WorkflowPipeline:
 
         self._phase_executor._mark_code_cleaning_complete()
         return True
+
+    def _is_publishing_workflow(self, options: OptionsProtocol) -> bool:
+        """Check if this is a publishing workflow."""
+        return bool(
+            getattr(options, "publish", False) or getattr(options, "all", False)
+        )
+
+    def _update_mcp_status(self, phase: str, status: str) -> None:
+        """Update MCP (Model Context Protocol) status."""
+        # Check if _mcp_state_manager exists and is not None
+        mcp_state_manager = getattr(self, "_mcp_state_manager", None)
+        if mcp_state_manager:
+            try:
+                mcp_state_manager.update_status(phase, status)
+            except (AttributeError, TypeError, RuntimeError) as e:
+                # If MCP is not available or fails, continue without error
+                self.logger.debug(f"MCP status update failed: {e}")
+
+    async def _execute_quality_phase(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
+        """Execute the quality phase of the workflow."""
+        try:
+            # Check if this is a publishing workflow
+            is_publishing = self._is_publishing_workflow(options)
+
+            # Run comprehensive hooks phase
+            comprehensive_success = self.phases.run_comprehensive_hooks_only(options)
+            if not comprehensive_success and is_publishing:
+                return False  # For publishing workflows, quality failures should stop execution
+
+            # Run testing phase if requested
+            if getattr(options, "test", False):
+                testing_success = self.phases.run_testing_phase(options)
+                if not testing_success and is_publishing:
+                    return False  # For publishing workflows, test failures should stop execution
+
+            return comprehensive_success
+        except Exception as e:
+            self.logger.error(f"Quality phase execution failed: {e}")
+            return False
+
+    async def _execute_publishing_workflow(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
+        """Execute the publishing workflow phase."""
+        try:
+            # Run publishing phase
+            publishing_success = self.phases.run_publishing_phase(options)
+            return publishing_success
+        except Exception as e:
+            self.logger.error(f"Publishing workflow execution failed: {e}")
+            return False
+
+    async def _execute_commit_workflow(
+        self, options: OptionsProtocol, workflow_id: str
+    ) -> bool:
+        """Execute the commit workflow phase."""
+        try:
+            # Run commit phase
+            commit_success = self.phases.run_commit_phase(options)
+            return commit_success
+        except Exception as e:
+            self.logger.error(f"Commit workflow execution failed: {e}")
+            return False
+
+    def _has_code_cleaning_run(self) -> bool:
+        """Check if code cleaning has already run in this session."""
+        # Check session metadata or a dedicated flag
+        if (
+            self.session.session_tracker
+            and "code_cleaning_completed" in self.session.session_tracker.metadata
+        ):
+            return bool(
+                self.session.session_tracker.metadata["code_cleaning_completed"]
+            )
+        return False
+
+    def _mark_code_cleaning_complete(self) -> None:
+        """Mark that code cleaning has been completed."""
+        if self.session.session_tracker:
+            self.session.session_tracker.metadata["code_cleaning_completed"] = True
+
+    def _run_code_cleaning_phase(self, options: OptionsProtocol) -> bool:
+        """Execute code cleaning phase - wrapper for ACB workflow compatibility."""
+        result: bool = self.phases.run_cleaning_phase(options)  # type: ignore[arg-type,assignment]
+        return result
+
+    def _run_post_cleaning_fast_hooks(self, options: OptionsProtocol) -> bool:
+        """Run fast hooks after code cleaning phase."""
+        result: bool = self.phases.run_fast_hooks_only(options)  # type: ignore[arg-type,assignment]
+        return result
+
+    def _run_fast_hooks_phase(self, options: OptionsProtocol) -> bool:
+        """Execute fast hooks phase - wrapper for ACB workflow compatibility."""
+        result: bool = self.phases.run_fast_hooks_only(options)  # type: ignore[arg-type,assignment]
+        return result
+
+    def _run_comprehensive_hooks_phase(self, options: OptionsProtocol) -> bool:
+        """Execute comprehensive hooks phase - wrapper for ACB workflow compatibility."""
+        result: bool = self.phases.run_comprehensive_hooks_only(options)  # type: ignore[arg-type,assignment]
+        return result
+
+    def _run_testing_phase(self, options: OptionsProtocol) -> bool:
+        """Execute testing phase - wrapper for ACB workflow compatibility."""
+        result: bool = self.phases.run_testing_phase(options)  # type: ignore[arg-type,assignment]
+        return result
+
+    def _configure_session_cleanup(self, options: OptionsProtocol) -> None:
+        """Configure session cleanup handlers."""
+        # Add any necessary session cleanup configuration here
+        self.session.register_cleanup(self._cleanup_workflow_resources)
+        if hasattr(self, "_mcp_state_manager") and self._mcp_state_manager:
+            self.session.register_cleanup(self._mcp_state_manager.cleanup)
+
+    def _initialize_zuban_lsp(self, options: OptionsProtocol) -> None:
+        """Initialize Zuban LSP server if needed."""
+        # Placeholder implementation - actual LSP initialization would go here
+        pass
+
+    def _configure_hook_manager_lsp(self, options: OptionsProtocol) -> None:
+        """Configure hook manager LSP settings."""
+        # Placeholder implementation - actual hook manager LSP configuration would go here
+        pass
+
+    def _register_lsp_cleanup_handler(self, options: OptionsProtocol) -> None:
+        """Register LSP cleanup handler."""
+        # Placeholder implementation - actual LSP cleanup handler would go here
+        pass
 
     async def _run_ai_agent_fixing_phase(self, options: OptionsProtocol) -> bool:
         self._initialize_ai_fixing_phase(options)

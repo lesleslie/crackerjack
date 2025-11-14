@@ -6,7 +6,6 @@ from pathlib import Path
 from acb.console import Console
 from acb.depends import Inject, depends
 
-
 # =============================================================================
 # Heatmap Generation
 # =============================================================================
@@ -21,8 +20,6 @@ def handle_heatmap_generation(
 ) -> bool:
     if not heatmap:
         return True
-
-    from pathlib import Path
 
     from crackerjack.services.heatmap_generator import HeatMapGenerator
 
@@ -178,7 +175,6 @@ def save_anomaly_report(
 ) -> None:
     import json
     from datetime import datetime
-    from pathlib import Path
 
     report_data = {
         "timestamp": datetime.now().isoformat(),
@@ -372,7 +368,6 @@ def save_analytics_dashboard(
 ) -> None:
     import json
     from datetime import datetime
-    from pathlib import Path
 
     dashboard_data = {
         "timestamp": datetime.now().isoformat(),

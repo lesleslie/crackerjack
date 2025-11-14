@@ -7,22 +7,216 @@ This module contains command coordinators for:
 - Zuban LSP lifecycle (start, stop, restart)
 """
 
-from ..handlers import (
-    handle_dashboard_mode,
-    handle_enhanced_monitor_mode,
-    handle_mcp_server,
-    handle_monitor_mode,
-    handle_restart_mcp_server,
-    handle_restart_websocket_server,
-    handle_restart_zuban_lsp,
-    handle_start_websocket_server,
-    handle_start_zuban_lsp,
-    handle_stop_mcp_server,
-    handle_stop_websocket_server,
-    handle_stop_zuban_lsp,
-    handle_unified_dashboard_mode,
-    handle_watchdog_mode,
-)
+import asyncio
+from pathlib import Path
+
+from acb.console import Console
+from acb.depends import Inject, depends
+
+
+@depends.inject  # type: ignore[misc]
+def handle_mcp_server(
+    websocket_port: int | None = None, console: Inject[Console] = None
+) -> None:
+    from crackerjack.mcp.server import main as start_mcp_main
+
+    project_path = str(Path.cwd())
+
+    if websocket_port:
+        start_mcp_main(project_path, websocket_port)
+    else:
+        start_mcp_main(project_path)
+
+
+@depends.inject  # type: ignore[misc]
+def handle_monitor_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
+    from crackerjack.mcp.progress_monitor import run_progress_monitor
+
+    console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/ bold cyan]")
+    console.print(
+        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/ bold yellow]",
+    )
+
+    try:
+        asyncio.run(run_progress_monitor(dev_mode=dev_mode))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Monitor stopped[/ yellow]")
+
+
+@depends.inject  # type: ignore[misc]
+def handle_enhanced_monitor_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
+    from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
+
+    console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/ bold magenta]")
+    console.print(
+        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/ bold cyan]",
+    )
+
+    try:
+        asyncio.run(run_enhanced_progress_monitor(dev_mode=dev_mode))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Enhanced Monitor stopped[/ yellow]")
+
+
+@depends.inject  # type: ignore[misc]
+def handle_dashboard_mode(
+    dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
+    from crackerjack.mcp.dashboard import run_dashboard
+
+    console.print("[bold green]🎯 Starting Comprehensive Dashboard[/ bold green]")
+    console.print(
+        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/ bold cyan]",
+    )
+
+    try:
+        run_dashboard()
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
+
+
+@depends.inject  # type: ignore[misc]
+def handle_unified_dashboard_mode(
+    port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None
+) -> None:
+    from crackerjack.monitoring.websocket_server import CrackerjackMonitoringServer
+
+    console.print("[bold green]🚀 Starting Unified Monitoring Dashboard[/bold green]")
+    console.print(
+        f"[bold cyan]🌐 WebSocket server on port {port} with real-time streaming and web UI[/bold cyan]",
+    )
+
+    try:
+        server = CrackerjackMonitoringServer()
+        asyncio.run(server.start_monitoring(port))
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Unified Dashboard stopped[/yellow]")
+    except Exception as e:
+        console.print(f"\n[red]❌ Unified Dashboard failed: {e}[/red]")
+
+
+@depends.inject  # type: ignore[misc]
+def handle_watchdog_mode(console: Inject[Console] = None) -> None:
+    from crackerjack.mcp.service_watchdog import main as start_watchdog
+
+    try:
+        asyncio.run(start_watchdog())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
+
+
+def handle_start_websocket_server(port: int = 8675) -> None:
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(start=True, port=port)
+
+
+def handle_stop_websocket_server() -> None:
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(stop=True)
+
+
+def handle_restart_websocket_server(port: int = 8675) -> None:
+    from crackerjack.mcp.websocket.server import handle_websocket_server_command
+
+    handle_websocket_server_command(restart=True, port=port)
+
+
+@depends.inject  # type: ignore[misc]
+def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
+    from crackerjack.services.server_manager import (
+        list_server_status,
+        stop_all_servers,
+    )
+
+    console.print("[bold red]🛑 Stopping MCP Servers[/ bold red]")
+
+    list_server_status(console)
+
+    if stop_all_servers(console):
+        console.print("\n[bold green]✅ All servers stopped successfully[/ bold green]")
+    else:
+        console.print("\n[bold red]❌ Some servers failed to stop[/ bold red]")
+        raise SystemExit(1)
+
+
+@depends.inject  # type: ignore[misc]
+def handle_restart_mcp_server(
+    websocket_port: int | None = None, console: Inject[Console] = None
+) -> None:
+    from crackerjack.services.server_manager import restart_mcp_server
+
+    if restart_mcp_server(websocket_port, console):
+        console.print("\n[bold green]✅ MCP server restart completed[/ bold green]")
+    else:
+        console.print("\n[bold red]❌ MCP server restart failed[/ bold red]")
+        raise SystemExit(1)
+
+
+@depends.inject  # type: ignore[misc]
+def handle_start_zuban_lsp(
+    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
+) -> None:
+    """Start Zuban LSP server."""
+    from crackerjack.services.zuban_lsp_service import (
+        create_zuban_lsp_service,
+    )
+
+    console.print("[bold cyan]🚀 Starting Zuban LSP Server[/bold cyan]")
+
+    async def _start() -> None:
+        lsp_service = await create_zuban_lsp_service(
+            port=port, mode=mode, console=console
+        )
+        if await lsp_service.start():
+            console.print(
+                f"[bold green]✅ Zuban LSP server started on port {port} ({mode} mode)[/bold green]"
+            )
+        else:
+            console.print("[bold red]❌ Failed to start Zuban LSP server[/bold red]")
+            raise SystemExit(1)
+
+    try:
+        asyncio.run(_start())
+    except KeyboardInterrupt:
+        console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
+
+
+@depends.inject  # type: ignore[misc]
+def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
+    """Stop Zuban LSP server."""
+    from crackerjack.services.server_manager import stop_zuban_lsp
+
+    console.print("[bold red]🛑 Stopping Zuban LSP Server[/bold red]")
+
+    if stop_zuban_lsp(console):
+        console.print(
+            "\n[bold green]✅ Zuban LSP server stopped successfully[/bold green]"
+        )
+    else:
+        console.print("\n[bold red]❌ Failed to stop Zuban LSP server[/bold red]")
+        raise SystemExit(1)
+
+
+@depends.inject  # type: ignore[misc]
+def handle_restart_zuban_lsp(
+    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
+) -> None:
+    """Restart Zuban LSP server."""
+    from crackerjack.services.server_manager import restart_zuban_lsp
+
+    if restart_zuban_lsp(console):
+        console.print(
+            "\n[bold green]✅ Zuban LSP server restart completed[/bold green]"
+        )
+    else:
+        console.print("\n[bold red]❌ Zuban LSP server restart failed[/bold red]")
+        raise SystemExit(1)
 
 
 def handle_monitoring_commands(

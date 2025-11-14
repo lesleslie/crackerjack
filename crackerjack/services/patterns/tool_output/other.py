@@ -4,8 +4,6 @@ This module provides regex patterns for parsing output from various development 
 including mypy (type checking), vulture (dead code detection), and complexipy (complexity analysis).
 """
 
-import re
-
 from ..core import ValidatedPattern
 
 PATTERNS = {

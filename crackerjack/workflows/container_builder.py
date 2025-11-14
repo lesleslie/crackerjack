@@ -462,15 +462,37 @@ class WorkflowContainerBuilder:
         self._registered.add("PhaseCoordinator")
 
     def _register_level7_pipeline(self) -> None:
-        """Register Level 7 pipeline: WorkflowPipeline.
+        """Register Level 7 pipeline: WorkflowPhaseExecutor and WorkflowPipeline.
 
         This is the top-level service that depends on all previous levels.
         """
+        from crackerjack.core.workflow.workflow_phase_executor import (
+            WorkflowPhaseExecutor,
+        )
         from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
-        # WorkflowPipeline - uses @depends.inject (all Level 1-6 services)
+        # Since WorkflowPhaseExecutor has @depends.inject on its __init__ method,
+        # Bevy should automatically handle creating instances when WorkflowPipeline
+        # requests it via dependency injection. But we still need to make sure
+        # Bevy recognizes it as a class it can instantiate using its @depends.inject
+        # decorated constructor.
+        # For this to work, all of WorkflowPhaseExecutor's dependencies must be in the container:
+        # - Console (Level 1) ✓
+        # - LoggerProtocol (Level 1) ✓
+        # - Path (Level 1) ✓
+        # - DebugServiceProtocol (Level 2) ✓
+        # - QualityIntelligenceProtocol (Level 2 or 4.5) ✓
+        # If all dependencies are available, Bevy's @depends.inject should work automatically.
+        # But let's explicitly signal that this type can be handled by Bevy's injection system.
+
+        # Register the type with Bevy so it knows it can create instances when requested
+        # The Bevy system should handle the @depends.inject automatically when this type is requested
+        depends.set(WorkflowPhaseExecutor, WorkflowPhaseExecutor)
+        self._registered.add("WorkflowPhaseExecutor")
+
+        # WorkflowPipeline - uses @depends.inject (all Level 1-6 services + WorkflowPhaseExecutor)
         # Auto-wires: Console, Config, PerformanceMonitor, MemoryOptimizer,
-        # PerformanceCache, Debugger, Logger, SessionCoordinator, PhaseCoordinator
+        # PerformanceCache, Debugger, Logger, SessionCoordinator, PhaseCoordinator, WorkflowPhaseExecutor
         # Optional: QualityIntelligence, PerformanceBenchmarks
         workflow_pipeline = WorkflowPipeline()
         depends.set(WorkflowPipeline, workflow_pipeline)

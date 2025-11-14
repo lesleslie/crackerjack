@@ -453,7 +453,9 @@ class VectorStore:
         query_embedding = self.embedding_service.generate_embedding(query.query)
 
         # Get all embeddings from database
-        embeddings_data = self._get_all_embeddings(query.file_types)
+        embeddings_data: list[dict[str, t.Any]] = self._get_all_embeddings(
+            query.file_types
+        )
 
         if not embeddings_data:
             return []
@@ -677,6 +679,11 @@ class VectorStore:
         """Context manager entry."""
         return self
 
-    def __exit__(self, exc_type: t.Any, exc_val: t.Any, exc_tb: t.Any) -> None:
+    def __exit__(
+        self,
+        exc_type: type[BaseException] | None,
+        exc_val: BaseException | None,
+        exc_tb: t.Any,
+    ) -> None:
         """Context manager exit."""
         self.close()

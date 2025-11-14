@@ -28,7 +28,10 @@ from crackerjack.services.memory_optimizer import memory_optimized
 
 if t.TYPE_CHECKING:
     from crackerjack.core.phase_coordinator import PhaseCoordinator
-    from crackerjack.core.session_coordinator import SessionController, SessionCoordinator
+    from crackerjack.core.session_coordinator import (
+        SessionController,
+        SessionCoordinator,
+    )
 
 
 class WorkflowEventOrchestrator:

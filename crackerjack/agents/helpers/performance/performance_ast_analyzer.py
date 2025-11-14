@@ -3,7 +3,7 @@
 import ast
 import typing as t
 
-from ..base import AgentContext
+from ...base import AgentContext
 
 
 class PerformanceASTAnalyzer:
@@ -207,7 +207,8 @@ class PerformanceASTAnalyzer:
         name = function_info.get("name", "")
 
         performance_indicators = [
-            "for " in body and len([line for line in body.split("\n") if "for " in line]) > 1,
+            "for " in body
+            and len([line for line in body.split("\n") if "for " in line]) > 1,
             "while " in body,
             body.count("for ") > 0 and len(body) > 200,
             any(pattern in body for pattern in (".append(", "+=", ".extend(", "len(")),
@@ -349,8 +350,8 @@ class PerformanceASTAnalyzer:
         metrics["total_classes"] = collector.class_count
 
         if collector.function_lengths:
-            metrics["average_function_length"] = sum(
+            metrics["average_function_length"] = sum(collector.function_lengths) / len(
                 collector.function_lengths
-            ) / len(collector.function_lengths)
+            )
 
         return metrics
