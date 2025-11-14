@@ -548,7 +548,7 @@ class AsyncHookExecutor:
             issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
             exit_code=1,
-            error_message=f"{type(error).__name__}: {str(error)}",
+            error_message=f"{type(error).__name__}: {error}",
             is_timeout=False,
         )
 

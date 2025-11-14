@@ -577,7 +577,11 @@ class PhaseCoordinator:
         status = result.status.upper()
         duration = f"{result.duration:.2f}s"
         # Passed hooks always show 0 issues
-        issues = "0" if result.status == "passed" else str(len(result.issues_found) if result.issues_found else 0)
+        issues = (
+            "0"
+            if result.status == "passed"
+            else str(len(result.issues_found) if result.issues_found else 0)
+        )
         self.console.print(
             f"  - {name} :: {status} | {duration} | issues={issues}",
             highlight=False,
