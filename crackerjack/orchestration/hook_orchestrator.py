@@ -988,9 +988,9 @@ class HookOrchestratorAdapter:
         # Extract error details for failed hooks
         exit_code = proc_result.returncode if status == "failed" else None
         error_message = None
-        if status == "failed" and proc_result.stderr.strip():
-            # Capture stderr for failed hooks (truncate if very long)
-            error_message = proc_result.stderr.strip()[:500]
+        if status == "failed" and output_text.strip():
+            # Capture stdout + stderr for failed hooks (truncate if very long)
+            error_message = output_text.strip()[:500]
 
         return HookResult(
             id=hook.name,
