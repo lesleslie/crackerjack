@@ -411,6 +411,40 @@ class SkylosAdapter(BaseToolAdapter):
         """Return refactor check type."""
         return QACheckType.REFACTOR
 
+    def _detect_package_directory(self) -> str:
+        """Detect the package directory name from pyproject.toml.
+
+        Returns:
+            Package directory name (e.g., 'crackerjack', 'session_mgmt_mcp')
+        """
+        from contextlib import suppress
+
+        current_dir = Path.cwd()
+
+        # Try to read package name from pyproject.toml
+        pyproject_path = current_dir / "pyproject.toml"
+        if pyproject_path.exists():
+            with suppress(Exception):
+                import tomllib
+
+                with pyproject_path.open("rb") as f:
+                    data = tomllib.load(f)
+
+                if "project" in data and "name" in data["project"]:
+                    # Convert package name to directory name (replace - with _)
+                    package_name = str(data["project"]["name"]).replace("-", "_")
+
+                    # Verify directory exists
+                    if (current_dir / package_name).exists():
+                        return package_name
+
+        # Fallback to directory name if package dir exists
+        if (current_dir / current_dir.name).exists():
+            return current_dir.name
+
+        # Default fallback
+        return "src"
+
     def get_default_config(self) -> QACheckConfig:
         """Get default configuration for Skylos adapter.
 
@@ -419,12 +453,15 @@ class SkylosAdapter(BaseToolAdapter):
         """
         from crackerjack.models.qa_config import QACheckConfig
 
+        # Dynamically detect package directory
+        package_dir = self._detect_package_directory()
+
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.REFACTOR,  # Dead code detection is refactoring
             enabled=True,
-            file_patterns=["crackerjack/**/*.py"],  # Target package directory
+            file_patterns=[f"{package_dir}/**/*.py"],  # Dynamically detected package directory
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",
