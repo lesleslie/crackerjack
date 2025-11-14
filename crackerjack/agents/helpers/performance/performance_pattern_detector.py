@@ -5,8 +5,8 @@ import operator
 import typing as t
 from contextlib import suppress
 
+from ...base import AgentContext
 from ...services.regex_patterns import SAFE_PATTERNS
-from ..base import AgentContext
 
 
 class PerformancePatternDetector:
@@ -59,9 +59,7 @@ class PerformancePatternDetector:
 
         return issues
 
-    def _detect_nested_loops_enhanced(
-        self, tree: ast.AST
-    ) -> list[dict[str, t.Any]]:
+    def _detect_nested_loops_enhanced(self, tree: ast.AST) -> list[dict[str, t.Any]]:
         """Detect nested loops with complexity analysis.
 
         Args:
@@ -125,9 +123,7 @@ class PerformancePatternDetector:
         return len([n for n in nested_loops if n["priority"] in ("high", "critical")])
 
     @staticmethod
-    def _generate_nested_loop_suggestions(
-        nested_loops: list[dict[str, t.Any]]
-    ) -> str:
+    def _generate_nested_loop_suggestions(nested_loops: list[dict[str, t.Any]]) -> str:
         """Generate optimization suggestions for nested loops.
 
         Args:
@@ -192,7 +188,9 @@ class PerformancePatternDetector:
         """
         return ListOpAnalyzer()
 
-    def _build_list_ops_issues(self, analyzer: "ListOpAnalyzer") -> list[dict[str, t.Any]]:
+    def _build_list_ops_issues(
+        self, analyzer: "ListOpAnalyzer"
+    ) -> list[dict[str, t.Any]]:
         """Build issue data from list operation analysis.
 
         Args:
@@ -217,9 +215,7 @@ class PerformancePatternDetector:
         ]
 
     @staticmethod
-    def _generate_list_op_suggestions(
-        list_ops: list[dict[str, t.Any]]
-    ) -> str:
+    def _generate_list_op_suggestions(list_ops: list[dict[str, t.Any]]) -> str:
         """Generate optimization suggestions for list operations.
 
         Args:
@@ -829,9 +825,7 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
         self._handle_loop_node(node, "while")
         self.generic_visit(node)
 
-    def _handle_loop_node(
-        self, node: ast.For | ast.While, loop_type: str
-    ) -> None:
+    def _handle_loop_node(self, node: ast.For | ast.While, loop_type: str) -> None:
         """Handle loop node detection."""
         self._loop_stack.append((node.lineno, loop_type))
 
@@ -860,7 +854,7 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
         elif depth == 3:
             return "O(n³)"
         elif depth >= 4:
-            return f"O(n⁴+)"
+            return "O(n⁴+)"
         return "O(n)"
 
     @staticmethod
@@ -904,7 +898,9 @@ class ListOpAnalyzer(ast.NodeVisitor):
                     {
                         "line_number": node.lineno,
                         "type": "inefficient_list_concat",
-                        "optimization": "append" if len(node.value.elts) == 1 else "extend",
+                        "optimization": "append"
+                        if len(node.value.elts) == 1
+                        else "extend",
                         "impact_factor": impact,
                         "performance_gain": f"{max(2, min(50, impact * 5))}x",
                     }

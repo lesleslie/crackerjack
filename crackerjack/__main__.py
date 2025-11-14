@@ -1,6 +1,5 @@
 import typing as t
 import warnings
-from pathlib import Path
 
 import typer
 from acb.console import Console
@@ -16,9 +15,8 @@ warnings.filterwarnings(
 )
 
 if t.TYPE_CHECKING:
-    from crackerjack.services.changelog_automation import ChangelogGenerator
+    pass
 
-from crackerjack.services.git import GitService
 
 from .cli import (
     CLI_OPTIONS,
@@ -31,39 +29,14 @@ from .cli import (
 from .cli.cache_handlers import _handle_cache_commands
 from .cli.handlers import (
     handle_config_updates,
-    handle_dashboard_mode,
-    handle_enhanced_monitor_mode,
-    handle_mcp_server,
-    handle_monitor_mode,
-    handle_restart_mcp_server,
-    handle_restart_websocket_server,
-    handle_restart_zuban_lsp,
-    handle_start_websocket_server,
-    handle_start_zuban_lsp,
-    handle_stop_mcp_server,
-    handle_stop_websocket_server,
-    handle_stop_zuban_lsp,
-    handle_watchdog_mode,
-)
-from .cli.semantic_handlers import (
-    handle_remove_from_semantic_index,
-    handle_semantic_index,
-    handle_semantic_search,
-    handle_semantic_stats,
 )
 from .cli.handlers.advanced import (
     handle_advanced_optimizer,
-    setup_advanced_optimizer,
-    run_advanced_optimization,
-    display_advanced_results,
-    display_advanced_metrics,
-    display_advanced_recommendations,
-    save_advanced_report,
 )
 from .cli.handlers.ai_features import handle_contextual_ai
 from .cli.handlers.analytics import (
-    handle_heatmap_generation,
     handle_anomaly_detection,
+    handle_heatmap_generation,
     handle_predictive_analytics,
 )
 from .cli.handlers.changelog import (
@@ -72,9 +45,6 @@ from .cli.handlers.changelog import (
     setup_debug_and_verbose_flags,
 )
 from .cli.handlers.coverage import (
-    display_coverage_info,
-    display_coverage_report,
-    display_ratchet_status,
     handle_coverage_status,
 )
 from .cli.handlers.documentation import (
@@ -82,6 +52,12 @@ from .cli.handlers.documentation import (
     handle_mkdocs_integration,
 )
 from .cli.handlers.monitoring import handle_server_commands
+from .cli.semantic_handlers import (
+    handle_remove_from_semantic_index,
+    handle_semantic_index,
+    handle_semantic_search,
+    handle_semantic_stats,
+)
 
 console = Console()
 app = typer.Typer(
@@ -426,8 +402,6 @@ def _handle_specialized_analytics(local_vars: t.Any) -> bool:
         return False
 
     return _handle_advanced_features(local_vars)
-
-
 
 
 @depends.inject  # type: ignore[misc]

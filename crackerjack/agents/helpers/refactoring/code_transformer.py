@@ -297,14 +297,11 @@ class CodeTransformer:
         if stripped.startswith("if ") and len(stripped) > 50:
             return True
         return (
-            stripped.startswith(("for ", "while "))
-            and current_section_type != "loop"
+            stripped.startswith(("for ", "while ")) and current_section_type != "loop"
         )
 
     @staticmethod
-    def _initialize_new_section(
-        line: str, stripped: str
-    ) -> tuple[list[str], str]:
+    def _initialize_new_section(line: str, stripped: str) -> tuple[list[str], str]:
         """Initialize new section.
 
         Args:
@@ -344,9 +341,7 @@ class CodeTransformer:
         }
 
     @staticmethod
-    def _extract_function_content(
-        lines: list[str], func_info: dict[str, t.Any]
-    ) -> str:
+    def _extract_function_content(lines: list[str], func_info: dict[str, t.Any]) -> str:
         """Extract function content.
 
         Args:
@@ -429,7 +424,9 @@ class CodeTransformer:
         new_lines = CodeTransformer._replace_function_with_calls(
             lines, func_info, extracted_helpers
         )
-        return CodeTransformer._add_helper_definitions(new_lines, func_info, extracted_helpers)
+        return CodeTransformer._add_helper_definitions(
+            new_lines, func_info, extracted_helpers
+        )
 
     @staticmethod
     def _replace_function_with_calls(

@@ -139,6 +139,7 @@ class DeadCodeDetector:
             tree: AST tree
             content: File content
         """
+
         class UnreachableCodeDetector(ast.NodeVisitor):
             def __init__(self) -> None:
                 self.unreachable_blocks: list[dict[str, t.Any]] = []
@@ -253,9 +254,7 @@ class DeadCodeDetector:
         return lines_to_remove
 
     @staticmethod
-    def _should_remove_import_line(
-        line: str, unused_import: dict[str, str]
-    ) -> bool:
+    def _should_remove_import_line(line: str, unused_import: dict[str, str]) -> bool:
         """Check if import line should be removed.
 
         Args:
@@ -299,9 +298,7 @@ class DeadCodeDetector:
         return lines_to_remove
 
     @staticmethod
-    def _find_redundant_lines(
-        lines: list[str], analysis: dict[str, t.Any]
-    ) -> set[int]:
+    def _find_redundant_lines(lines: list[str], analysis: dict[str, t.Any]) -> set[int]:
         """Find redundant code lines.
 
         Args:

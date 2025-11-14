@@ -125,8 +125,8 @@ class ComplexityAnalyzer:
 
         if current_function:
             current_function["end_line"] = len(lines)
-            current_function["estimated_complexity"] = self._estimate_function_complexity(
-                current_function["body"]
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
             )
             functions.append(current_function)
 
@@ -186,8 +186,8 @@ class ComplexityAnalyzer:
         """
         if current_function:
             current_function["end_line"] = line_index
-            current_function["estimated_complexity"] = self._estimate_function_complexity(
-                current_function["body"]
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
             )
             functions.append(current_function)
 
@@ -228,8 +228,8 @@ class ComplexityAnalyzer:
             return current_function
         else:
             current_function["end_line"] = line_index
-            current_function["estimated_complexity"] = self._estimate_function_complexity(
-                current_function["body"]
+            current_function["estimated_complexity"] = (
+                self._estimate_function_complexity(current_function["body"])
             )
             functions.append(current_function)
             return None

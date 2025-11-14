@@ -1,10 +1,12 @@
 """Utility functions for regex pattern operations."""
 
 import re
-from .core import ValidatedPattern, CompiledPatternCache, MAX_ITERATIONS
 
 # Import for type checking - circular import avoided
 from typing import TYPE_CHECKING
+
+from .core import MAX_ITERATIONS, CompiledPatternCache, ValidatedPattern
+
 if TYPE_CHECKING:
     pass  # SAFE_PATTERNS imported at runtime to avoid circular imports
 
@@ -27,6 +29,7 @@ def validate_all_patterns() -> dict[str, bool]:
 def find_pattern_for_text(text: str) -> list[str]:
     """Find all patterns that match the given text."""
     from . import SAFE_PATTERNS
+
     return [name for name, pattern in SAFE_PATTERNS.items() if pattern.test(text)]
 
 
@@ -53,6 +56,7 @@ def get_pattern_description(pattern_name: str) -> str:
 def fix_multi_word_hyphenation(text: str) -> str:
     """Fix multi-word hyphenation iteratively."""
     from . import SAFE_PATTERNS
+
     return SAFE_PATTERNS["fix_spaced_hyphens"].apply_iteratively(text)
 
 
@@ -112,18 +116,21 @@ def apply_security_fixes(content: str) -> str:
 def apply_test_fixes(content: str) -> str:
     """Apply common test-related fixes to content."""
     from . import SAFE_PATTERNS
+
     return SAFE_PATTERNS["normalize_assert_statements"].apply(content)
 
 
 def is_valid_job_id(job_id: str) -> bool:
     """Check if a job ID is valid."""
     from . import SAFE_PATTERNS
+
     return SAFE_PATTERNS["validate_job_id_alphanumeric"].test(job_id)
 
 
 def remove_coverage_fail_under(addopts: str) -> str:
     """Remove --cov-fail-under from pytest addopts."""
     from . import SAFE_PATTERNS
+
     return SAFE_PATTERNS["remove_coverage_fail_under"].apply(addopts)
 
 

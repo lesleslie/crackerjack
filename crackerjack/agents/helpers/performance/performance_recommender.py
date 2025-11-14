@@ -4,8 +4,8 @@ import operator
 import typing as t
 from dataclasses import dataclass
 
+from ...base import AgentContext
 from ...services.regex_patterns import SAFE_PATTERNS
-from ..base import AgentContext
 
 
 @dataclass
@@ -62,7 +62,9 @@ class PerformanceRecommender:
                     optimizations_applied.append(result.optimization_description)
 
         if optimizations_applied:
-            self.context.log(f"Applied optimizations: {', '.join(optimizations_applied)}")
+            self.context.log(
+                f"Applied optimizations: {', '.join(optimizations_applied)}"
+            )
 
         return "\n".join(lines) if modified else content
 
@@ -365,9 +367,7 @@ class PerformanceRecommender:
                 indent = original_line[
                     : len(original_line) - len(original_line.lstrip())
                 ]
-                comment = (
-                    f"{indent}# Performance: Consider caching format string outside loop"
-                )
+                comment = f"{indent}# Performance: Consider caching format string outside loop"
                 lines.insert(line_idx, comment)
                 modified = True
 

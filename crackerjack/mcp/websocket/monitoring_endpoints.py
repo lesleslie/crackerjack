@@ -16,6 +16,6 @@ The actual implementation has been split into organized modules:
 All imports should work exactly as before via the main factory function.
 """
 
-from .monitoring import create_monitoring_endpoints
+from .monitoring import MonitoringWebSocketManager, create_monitoring_endpoints
 
-__all__ = ["create_monitoring_endpoints"]
+__all__ = ["create_monitoring_endpoints", "MonitoringWebSocketManager"]

@@ -4,8 +4,6 @@ This module provides regex patterns for parsing Pyright static type checker outp
 including errors, warnings, and summary information.
 """
 
-import re
-
 from ..core import ValidatedPattern
 
 PATTERNS = {

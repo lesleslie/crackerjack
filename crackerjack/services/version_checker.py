@@ -138,8 +138,8 @@ class VersionChecker:
             async with aiohttp.ClientSession(timeout=timeout) as session:
                 async with session.get(url) as response:
                     response.raise_for_status()
-                    data = await response.json()
-                    return data.get("info", {}).get("version")  # type: ignore[no-any-return]
+                    data: dict[str, t.Any] = await response.json()
+                    return data.get("info", {}).get("version")
 
         except Exception:
             return None

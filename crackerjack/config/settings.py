@@ -1,4 +1,3 @@
-import typing as t
 from pathlib import Path
 
 from acb.config import Settings
@@ -33,9 +32,9 @@ class TestSettings(Settings):
 
 
 class PublishSettings(Settings):
-    publish: t.Any | None = None
-    bump: t.Any | None = None
-    all: t.Any | None = None
+    publish: str | None = None
+    bump: str | None = None
+    all: str | None = None
     no_git_tags: bool = False
     skip_version_check: bool = False
 

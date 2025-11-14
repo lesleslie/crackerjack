@@ -12,7 +12,7 @@ from acb import console as acb_console
 from acb.console import Console
 
 from crackerjack.agents.coordinator import AgentCoordinator
-from crackerjack.services.acb_cache_adapter import CrackerjackCache
+from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -705,7 +705,7 @@ graph TD
             if p.exists()
         )
 
-        return latest_source > oldest_doc  # type: ignore[no-any-return]
+        return latest_source > oldest_doc
 
     async def _write_documentation_files(self, result: DocumentationResult) -> None:
         """Write generated documentation to files."""
