@@ -26,11 +26,15 @@ def main(argv: list[str] | None = None) -> int:
     This wrapper automatically discovers git-tracked .md and .markdown files
     and passes them to mdformat, ensuring .gitignore patterns are respected.
 
+    Behavior:
+    - First run: Formats files and returns exit code 1 (fail to signal changes)
+    - Second run: Files already formatted, returns exit code 0 (pass)
+
     Args:
         argv: Optional arguments to pass to mdformat
 
     Returns:
-        Exit code from mdformat command
+        Exit code: 0 if no changes needed, 1 if files were formatted
     """
     # Get all git-tracked markdown files (automatically respects .gitignore)
     md_files = get_git_tracked_files("*.md")
@@ -53,19 +57,44 @@ def main(argv: list[str] | None = None) -> int:
 
     # Execute mdformat
     try:
-        result = subprocess.run(
+        # First, check if files need formatting (dry-run)
+        check_cmd = cmd + ["--check"]
+        check_result = subprocess.run(
+            check_cmd,
+            cwd=Path.cwd(),
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+
+        # If check passed (exit code 0), files are already formatted
+        if check_result.returncode == 0:
+            print(f"All {len(files)} markdown files already formatted correctly")
+            return 0
+
+        # Files need formatting - run mdformat to fix them
+        format_result = subprocess.run(
             cmd,
             cwd=Path.cwd(),
-            check=False,  # Don't raise on non-zero exit (mdformat returns 1 for issues found)
-            capture_output=True,  # Capture stdout/stderr for error reporting
-            text=True,  # Return strings instead of bytes
+            check=False,
+            capture_output=True,
+            text=True,
         )
-        # Forward output to stdout/stderr so it's visible in logs
-        if result.stdout:
-            print(result.stdout, end="")
-        if result.stderr:
-            print(result.stderr, end="", file=sys.stderr)
-        return result.returncode
+
+        # Forward output to stdout/stderr
+        if format_result.stdout:
+            print(format_result.stdout, end="")
+        if format_result.stderr:
+            print(format_result.stderr, end="", file=sys.stderr)
+
+        # Return exit code 1 to indicate files were formatted (changes made)
+        # This causes the hook to fail on first run, pass on second run
+        files_formatted = check_result.returncode  # Non-zero means files needed formatting
+        if files_formatted:
+            print(f"Formatted {len(files)} markdown files - run crackerjack again to verify")
+            return 1  # Fail to signal changes were made
+
+        return 0
     except FileNotFoundError:
         print(
             "Error: mdformat not found. Install with: uv pip install mdformat mdformat-ruff",
