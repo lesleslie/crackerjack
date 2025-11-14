@@ -1,5 +1,16 @@
 ______________________________________________________________________
 
+## [0.44.13] - 2025-11-14
+
+### Changed
+
+- Update core, deps
+
+### Fixed
+
+- Add error_message fields to all async hook error paths
+- Show 0 issues for passed hooks instead of file count
+
 ## [0.44.12] - 2025-11-14
 
 ### Changed
