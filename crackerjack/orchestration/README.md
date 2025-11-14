@@ -13,6 +13,7 @@ The orchestration package provides the core workflow engine that coordinates qua
 ### Orchestrators
 
 - **hook_orchestrator.py**: Main orchestrator for quality hook execution
+
   - Direct adapter invocation (no pre-commit wrapper overhead)
   - Dependency resolution and intelligent ordering
   - Adaptive execution strategies (fast, comprehensive, dependency-aware)
@@ -20,6 +21,7 @@ The orchestration package provides the core workflow engine that coordinates qua
   - 70% cache hit rate in typical workflows
 
 - **advanced_orchestrator.py**: Advanced orchestration with enhanced features
+
   - Multi-stage workflow coordination
   - AI agent integration
   - Progress tracking and reporting
@@ -61,6 +63,7 @@ Intelligent caching system for hook results:
 - **Cache Adapters**: Pluggable cache backends
 
 **Benefits:**
+
 - 70% cache hit rate in typical workflows
 - Content-aware invalidation (only re-run when files actually change)
 - Configurable TTL (default 3600s/1 hour)
@@ -106,11 +109,13 @@ Error Analysis & AI Fixing (if enabled)
 The orchestration layer has been migrated from pre-commit subprocess calls to direct ACB adapter execution:
 
 **Old Approach (Pre-commit):**
+
 ```bash
 pre-commit run ruff --all-files  # Subprocess overhead
 ```
 
 **New Approach (ACB):**
+
 ```bash
 python -m crackerjack --fast  # Direct Python API, 70% faster
 ```
@@ -149,12 +154,11 @@ from crackerjack.orchestration.advanced_orchestrator import AdvancedOrchestrator
 orchestrator = AdvancedOrchestrator(
     enable_ai_fixing=True,
     max_iterations=10,
-    progress_callback=lambda p: print(f"Progress: {p}%")
+    progress_callback=lambda p: print(f"Progress: {p}%"),
 )
 
 result = await orchestrator.execute_workflow(
-    stages=["fast_hooks", "tests", "comprehensive_hooks"],
-    ai_agent_mode=True
+    stages=["fast_hooks", "tests", "comprehensive_hooks"], ai_agent_mode=True
 )
 ```
 
@@ -162,6 +166,7 @@ result = await orchestrator.execute_workflow(
 
 ```python
 from crackerjack.orchestration.execution_strategies import ExecutionStrategy
+
 
 class CustomStrategy(ExecutionStrategy):
     def should_run_hook(self, hook_name: str) -> bool:
@@ -172,13 +177,16 @@ class CustomStrategy(ExecutionStrategy):
         # Custom parallelism
         return 5
 
+
 orchestrator = HookOrchestrator(strategy=CustomStrategy())
 ```
 
 ### Coverage Improvement Workflow
 
 ```python
-from crackerjack.orchestration.coverage_improvement import CoverageImprovementOrchestrator
+from crackerjack.orchestration.coverage_improvement import (
+    CoverageImprovementOrchestrator,
+)
 
 coverage_orch = CoverageImprovementOrchestrator()
 
@@ -248,10 +256,7 @@ Timeout strategies prevent hanging:
 
 ```python
 try:
-    result = await asyncio.wait_for(
-        hook.execute(),
-        timeout=hook_timeout
-    )
+    result = await asyncio.wait_for(hook.execute(), timeout=hook_timeout)
 except asyncio.TimeoutError:
     # Continue with other hooks
     log.warning(f"Hook {hook.name} timed out, continuing...")
@@ -275,13 +280,13 @@ cache.set(cache_key, result, ttl=3600)
 ## Best Practices
 
 1. **Choose Appropriate Strategy**: Use `FastStrategy` for rapid feedback, `ComprehensiveStrategy` for thorough analysis
-2. **Enable Caching**: Cache dramatically improves performance for repeated runs
-3. **Set Reasonable Timeouts**: Balance thoroughness with responsiveness
-4. **Monitor Concurrency**: Adjust concurrency limits based on available resources
-5. **Use Dependency Ordering**: Ensure hooks run in correct order
-6. **Handle Timeouts Gracefully**: Don't let one slow hook block everything
-7. **Track Progress**: Provide feedback for long-running workflows
-8. **Leverage AI Fixing**: Use AI agents for iterative improvement
+1. **Enable Caching**: Cache dramatically improves performance for repeated runs
+1. **Set Reasonable Timeouts**: Balance thoroughness with responsiveness
+1. **Monitor Concurrency**: Adjust concurrency limits based on available resources
+1. **Use Dependency Ordering**: Ensure hooks run in correct order
+1. **Handle Timeouts Gracefully**: Don't let one slow hook block everything
+1. **Track Progress**: Provide feedback for long-running workflows
+1. **Leverage AI Fixing**: Use AI agents for iterative improvement
 
 ## Troubleshooting
 

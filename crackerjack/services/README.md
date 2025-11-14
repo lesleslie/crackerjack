@@ -13,6 +13,7 @@ The services package contains 60+ specialized service modules organized into fun
 ### Core Infrastructure
 
 **Filesystem & File Operations**
+
 - `filesystem.py`: Core filesystem operations with path validation
 - `enhanced_filesystem.py`: Advanced filesystem operations with atomic writes
 - `file_modifier.py`: Safe file modification with backup and rollback
@@ -21,28 +22,33 @@ The services package contains 60+ specialized service modules organized into fun
 - `backup_service.py`: Automated backup creation and management
 
 **Version Control**
+
 - `git.py`: Git operations (commit, push, status, branch management)
 - `intelligent_commit.py`: AI-powered commit message generation
 - `changelog_automation.py`: Automatic changelog generation from commits
 
 **Configuration Management**
+
 - `unified_config.py`: Unified configuration loading and validation
 - `config_merge.py`: Intelligent configuration merging for initialization
 - `config_template.py`: Configuration template management and versioning
 - `config_integrity.py`: Configuration validation and integrity checking
 
 **Initialization**
+
 - `initialization.py`: Project initialization and setup workflows
 
 ### Quality & Testing
 
 **Coverage & Testing**
+
 - `coverage_ratchet.py`: Coverage ratchet system (never decrease coverage)
 - `coverage_badge_service.py`: Coverage badge generation and updates
 - `incremental_executor.py`: Incremental test execution
 - `parallel_executor.py`: Parallel test execution with pytest-xdist
 
 **Quality Enforcement**
+
 - `tool_filter.py`: Quality tool filtering and selection
 - `tool_version_service.py`: Tool version management and compatibility
 - `quality/` subdirectory — Quality-specific services
@@ -50,6 +56,7 @@ The services package contains 60+ specialized service modules organized into fun
 ### Security
 
 **Input Validation & Security**
+
 - `input_validator.py`: Comprehensive input validation framework
 - `validation_rate_limiter.py`: Rate limiting for validation failures
 - `security.py`: Core security utilities and validation
@@ -58,6 +65,7 @@ The services package contains 60+ specialized service modules organized into fun
 - `secure_subprocess.py`: Safe subprocess execution without shell injection
 
 **Status & Authentication**
+
 - `status_security_manager.py`: Security manager for status operations
 - `status_authentication.py`: Authentication for status endpoints
 - `bounded_status_operations.py`: Bounded operations for status queries
@@ -65,11 +73,13 @@ The services package contains 60+ specialized service modules organized into fun
 - `secure_status_formatter.py`: Secure formatting for status output
 
 **Resource Management**
+
 - `websocket_resource_limiter.py`: WebSocket connection and resource limits
 
 ### Monitoring & Metrics
 
 **Health & Metrics**
+
 - `health_metrics.py`: Health metrics collection and reporting
 - `metrics.py`: General metrics tracking and aggregation
 - `profiler.py`: Performance profiling and analysis
@@ -77,6 +87,7 @@ The services package contains 60+ specialized service modules organized into fun
 - `monitoring/` subdirectory — Monitoring-specific services
 
 **Debugging & Logging**
+
 - `debug.py`: Debug utilities and helpers
 - `logging.py`: Structured logging configuration
 - `log_manager.py`: Log file management and rotation
@@ -84,6 +95,7 @@ The services package contains 60+ specialized service modules organized into fun
 ### Pattern Analysis & Intelligence
 
 **Pattern Detection & Analysis**
+
 - `regex_patterns.py`: Centralized regex pattern registry (advanced-grade)
 - `regex_utils.py`: Regex utilities and validation
 - `pattern_detector.py`: Code pattern detection and analysis
@@ -91,12 +103,14 @@ The services package contains 60+ specialized service modules organized into fun
 - `error_pattern_analyzer.py`: Error pattern analysis and categorization
 
 **AI & Intelligence**
+
 - `anomaly_detector.py`: Anomaly detection in code and metrics
 - `predictive_analytics.py`: Predictive analytics for quality trends
 - `ai/` subdirectory — AI-specific services
 - `vector_store.py`: Vector storage for semantic search
 
 **Analysis & Optimization**
+
 - `dependency_analyzer.py`: Dependency graph analysis
 - `version_analyzer.py`: Version compatibility analysis
 - `heatmap_generator.py`: Code complexity heatmap generation
@@ -106,16 +120,19 @@ The services package contains 60+ specialized service modules organized into fun
 ### Documentation & Code Analysis
 
 **Documentation**
+
 - `documentation_generator.py`: Automated API documentation generation
 - `documentation_service.py`: Documentation management and updates
 
 **Code Intelligence**
+
 - `api_extractor.py`: API surface extraction and analysis
 - `smart_scheduling.py`: Intelligent task scheduling
 
 ### Language Server Protocol (LSP)
 
 **LSP Integration**
+
 - `lsp_client.py`: Generic LSP client implementation
 - `zuban_lsp_service.py`: Zuban LSP service integration
 - `server_manager.py`: LSP server lifecycle management
@@ -123,6 +140,7 @@ The services package contains 60+ specialized service modules organized into fun
 ### Utilities
 
 **Cache & Performance**
+
 - `cache.py`: General-purpose caching
 - `terminal_utils.py`: Terminal and console utilities
 - `version_checker.py`: Version checking and updates
@@ -191,8 +209,7 @@ await git.init()
 
 # Commit with intelligent message
 await git.commit_changes(
-    message="Auto-generated commit message",
-    files=["file1.py", "file2.py"]
+    message="Auto-generated commit message", files=["file1.py", "file2.py"]
 )
 ```
 
@@ -236,6 +253,7 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 ### AI Services (`ai/`)
 
 AI-specific services for code analysis and generation:
+
 - Claude integration
 - Code generation
 - Semantic analysis
@@ -244,6 +262,7 @@ AI-specific services for code analysis and generation:
 ### Monitoring Services (`monitoring/`)
 
 Health and performance monitoring:
+
 - Real-time metrics
 - Performance tracking
 - Resource monitoring
@@ -252,6 +271,7 @@ Health and performance monitoring:
 ### Quality Services (`quality/`)
 
 Quality enforcement and tracking:
+
 - Quality metrics
 - Standards enforcement
 - Compliance tracking
@@ -260,10 +280,11 @@ Quality enforcement and tracking:
 ### Pattern Services (`patterns/`)
 
 Pattern detection and analysis:
+
 - Code pattern recognition
 - Anti-pattern detection
 - Pattern libraries
-- See [patterns/README.md](<./patterns/README.md>) (if exists)
+- See [patterns/README.md](./patterns/README.md) (if exists)
 
 ## Configuration
 
@@ -277,6 +298,7 @@ settings = depends.get(CrackerjackSettings)
 ```
 
 Configuration files:
+
 - `settings/crackerjack.yaml` — Base configuration
 - `settings/local.yaml` — Local overrides (gitignored)
 
@@ -305,8 +327,7 @@ Use `secure_path_utils.py` for all path operations:
 from crackerjack.services.secure_path_utils import SecurePathValidator
 
 validated_path = SecurePathValidator.validate_file_path(
-    user_path,
-    base_directory=project_root
+    user_path, base_directory=project_root
 )
 ```
 
@@ -318,23 +339,22 @@ Use `secure_subprocess.py` instead of direct subprocess calls:
 from crackerjack.services.secure_subprocess import SecureSubprocess
 
 result = await SecureSubprocess.run_command(
-    ["python", "-m", "pytest"],
-    cwd=project_root
+    ["python", "-m", "pytest"], cwd=project_root
 )
 ```
 
 ## Best Practices
 
 1. **Use DI**: Always use dependency injection via `@depends.inject`
-2. **Import Protocols**: Import from `models/protocols.py`, not concrete classes
-3. **Validate Input**: Use input_validator for all external input
-4. **Secure Paths**: Use SecurePathValidator for path operations
-5. **Centralize Patterns**: Use regex_patterns.py instead of raw regex
-6. **Handle Errors**: Use structured error handling with specific exceptions
-7. **Log Security Events**: Use security_logger for security-relevant operations
-8. **Cache Appropriately**: Use cache service for expensive operations
-9. **Async When Needed**: Use async/await for I/O-bound operations
-10. **Test Thoroughly**: Add tests for all new services
+1. **Import Protocols**: Import from `models/protocols.py`, not concrete classes
+1. **Validate Input**: Use input_validator for all external input
+1. **Secure Paths**: Use SecurePathValidator for path operations
+1. **Centralize Patterns**: Use regex_patterns.py instead of raw regex
+1. **Handle Errors**: Use structured error handling with specific exceptions
+1. **Log Security Events**: Use security_logger for security-relevant operations
+1. **Cache Appropriately**: Use cache service for expensive operations
+1. **Async When Needed**: Use async/await for I/O-bound operations
+1. **Test Thoroughly**: Add tests for all new services
 
 ## Related
 

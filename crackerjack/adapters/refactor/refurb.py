@@ -371,7 +371,9 @@ class RefurbAdapter(BaseToolAdapter):
             check_name=self.adapter_name,
             check_type=QACheckType.REFACTOR,
             enabled=True,
-            file_patterns=[f"{package_dir}/**/*.py"],  # Dynamically detected package directory
+            file_patterns=[
+                f"{package_dir}/**/*.py"
+            ],  # Dynamically detected package directory
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",

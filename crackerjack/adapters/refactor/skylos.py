@@ -461,7 +461,9 @@ class SkylosAdapter(BaseToolAdapter):
             check_name=self.adapter_name,
             check_type=QACheckType.REFACTOR,  # Dead code detection is refactoring
             enabled=True,
-            file_patterns=[f"{package_dir}/**/*.py"],  # Dynamically detected package directory
+            file_patterns=[
+                f"{package_dir}/**/*.py"
+            ],  # Dynamically detected package directory
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",
