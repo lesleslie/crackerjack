@@ -344,12 +344,12 @@ class AsyncHookExecutor:
             return self._handle_general_error(e, hook, start_time)
 
     def _get_repo_root(self) -> Path:
-        """Determine the repository root directory."""
-        return (
-            self.pkg_path.parent
-            if self.pkg_path.name == "crackerjack"
-            else self.pkg_path
-        )
+        """Determine the repository root directory.
+
+        Returns pkg_path directly to ensure hooks run in the correct project directory
+        regardless of the project name.
+        """
+        return self.pkg_path
 
     async def _execute_process_with_timeout(
         self,

@@ -693,7 +693,8 @@ graph TD
             return True
 
         # Check if source files are newer than generated docs
-        source_paths = list[t.Any](Path("crackerjack").rglob("*.py"))
+        # Use project_path to find source files instead of hardcoded "crackerjack"
+        source_paths = list[t.Any](self.project_path.rglob("*.py"))
         if not source_paths:
             return True
 

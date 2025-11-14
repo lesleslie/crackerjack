@@ -515,14 +515,11 @@ class IndividualHookExecutor:
         return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
-        repo_root = (
-            self.pkg_path.parent
-            if self.pkg_path.name == "crackerjack"
-            else self.pkg_path
-        )
+        # Use pkg_path directly as the working directory for hook execution
+        # This ensures hooks run in the correct project directory regardless of project name
         return await asyncio.create_subprocess_exec(
             *cmd,
-            cwd=repo_root,
+            cwd=self.pkg_path,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
