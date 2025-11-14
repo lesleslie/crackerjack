@@ -1,3 +1,5 @@
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Services](<./README.md>)
+
 # Services
 
 Service abstractions and provider integrations for infrastructure, quality, monitoring, and AI capabilities.

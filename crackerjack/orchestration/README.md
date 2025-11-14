@@ -1,3 +1,5 @@
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Orchestration](<./README.md>)
+
 # Orchestration
 
 Workflow orchestration, execution strategies, caching, and coordination for quality enforcement pipelines.
