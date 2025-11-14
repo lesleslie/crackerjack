@@ -897,7 +897,11 @@ class HookOrchestratorAdapter:
 
         # Get the actual total count of issues from qa_result
         # This may be larger than len(issues) if issues were truncated for display
-        total_issues = qa_result.issues_found if hasattr(qa_result, 'issues_found') else len(issues)
+        total_issues = (
+            qa_result.issues_found
+            if hasattr(qa_result, "issues_found")
+            else len(issues)
+        )
 
         return HookResult(
             id=hook.name,

@@ -89,9 +89,13 @@ def main(argv: list[str] | None = None) -> int:
 
         # Return exit code 1 to indicate files were formatted (changes made)
         # This causes the hook to fail on first run, pass on second run
-        files_formatted = check_result.returncode  # Non-zero means files needed formatting
+        files_formatted = (
+            check_result.returncode
+        )  # Non-zero means files needed formatting
         if files_formatted:
-            print(f"Formatted {len(files)} markdown files - run crackerjack again to verify")
+            print(
+                f"Formatted {len(files)} markdown files - run crackerjack again to verify"
+            )
             return 1  # Fail to signal changes were made
 
         return 0
