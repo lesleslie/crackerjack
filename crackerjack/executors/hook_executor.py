@@ -391,6 +391,8 @@ class HookExecutor:
             "ruff-format",
             "ruff-check",
             "codespell",
+            "semgrep",
+            "complexipy",
         }:
             self.console.print(
                 f"[red]DEBUG {hook.name}: EXIT CODE={result.returncode}[/red]"

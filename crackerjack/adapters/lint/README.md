@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Lint](<./README.md>)
+> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Lint](./README.md)
 
 # Lint Adapter
 
@@ -44,4 +44,4 @@ async def run_codespell() -> None:
 ## Notes
 
 - Use a shared `ignore_words_file` to standardize noisy tokens across repos
-- For Ruff linting, see [Format](<../format/README.md>)
+- For Ruff linting, see [Format](../format/README.md)
