@@ -1,5 +1,35 @@
 ______________________________________________________________________
 
+## [0.44.11] - 2025-11-14
+
+### Changed
+
+- cli: Extract command handlers from __main__.py into 7 focused modules
+- cli: Update __main__.py to use extracted handler modules (1,520 → 517 lines)
+- Consolidate quality and performance services - delete deprecated duplicates
+- Extract performance and refactoring agent helpers
+- Extract test_creation_agent helpers into focused modules
+- Extract workflow_orchestrator.py into 5 focused modules
+- Remove backup and duplicate files (Phase 1)
+- Split monitoring_endpoints.py into organized modules
+- Split regex_patterns.py into organized domain modules
+- Update agents to delegate to helper modules
+- Update core, deps, docs, tests
+
+### Documentation
+
+- Add comprehensive final project summary
+- Add comprehensive package refactoring plan
+- Update REFACTORING_PLAN.md - ALL PHASES COMPLETE
+- Update REFACTORING_PLAN.md - Future Enhancements complete
+- Update REFACTORING_PLAN.md - Phase 2 100% complete
+- Update REFACTORING_PLAN.md - Phase 4 and Phase 5 COMPLETE
+- Update REFACTORING_PLAN.md with Phase 2 progress
+
+### Internal
+
+- Remove backup files from refactoring (monitoring_endpoints_old.py, regex_patterns_old.py)
+
 ## [0.44.10] - 2025-11-14
 
 ### Changed
