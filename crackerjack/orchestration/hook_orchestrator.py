@@ -895,6 +895,10 @@ class HookOrchestratorAdapter:
             # For adapter-based hooks, use details as error message
             error_message = qa_result.details[:500]  # Truncate if very long
 
+        # Get the actual total count of issues from qa_result
+        # This may be larger than len(issues) if issues were truncated for display
+        total_issues = qa_result.issues_found if hasattr(qa_result, 'issues_found') else len(issues)
+
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -902,6 +906,7 @@ class HookOrchestratorAdapter:
             duration=self._elapsed(start_time),
             files_processed=files_processed,
             issues_found=issues,
+            issues_count=total_issues,  # Store the actual total count
             stage=hook.stage.value,
             exit_code=exit_code,  # Adapters don't provide exit codes directly
             error_message=error_message,
@@ -920,6 +925,7 @@ class HookOrchestratorAdapter:
             duration=duration,
             files_processed=0,
             issues_found=[f"Hook timed out after {hook.timeout}s"],
+            issues_count=1,  # Timeout counts as 1 issue
             stage=hook.stage.value,
             exit_code=124,  # Standard timeout exit code
             error_message=f"Execution exceeded timeout of {hook.timeout}s",
@@ -937,6 +943,7 @@ class HookOrchestratorAdapter:
             duration=self._elapsed(start_time),
             files_processed=0,
             issues_found=[f"Adapter execution error: {error}"],
+            issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
             exit_code=1,
             error_message=str(error),
