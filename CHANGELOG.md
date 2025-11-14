@@ -1,5 +1,22 @@
 ______________________________________________________________________
 
+## [0.44.14] - 2025-11-14
+
+### Changed
+
+- Update core, deps, docs
+
+### Fixed
+
+- Correct hook issue counting and dynamic package detection
+
+### Documentation
+
+- Add comprehensive documentation audit report
+- Complete medium/low priority audit fixes and update report
+- Expand minimal package READMEs (high priority issue #3)
+- Resolve critical coverage inconsistencies and update audit report
+
 ## [0.44.13] - 2025-11-14
 
 ### Changed
