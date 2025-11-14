@@ -1,3 +1,5 @@
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Agents](<./README.md>)
+
 # Agents
 
 Specialized AI agents for autonomous code quality improvement and intelligent refactoring.

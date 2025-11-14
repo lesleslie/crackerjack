@@ -135,15 +135,24 @@ Brief architecture notes.
 ```
 
 **Action Items:**
-- [ ] Expand crackerjack/agents/README.md with agent list
-- [ ] Expand crackerjack/mcp/README.md with MCP tools overview
-- [ ] Expand crackerjack/services/README.md with service categories
-- [ ] Expand crackerjack/orchestration/README.md with orchestration patterns
-- [ ] Expand crackerjack/managers/README.md with manager descriptions
+- [x] Expand crackerjack/agents/README.md with agent list (3 → 251 lines)
+- [x] Expand crackerjack/mcp/README.md with MCP tools overview (3 → 369 lines)
+- [x] Expand crackerjack/services/README.md with service categories (3 → 353 lines)
+- [x] Expand crackerjack/orchestration/README.md with orchestration patterns (3 → 334 lines)
+- [x] Expand crackerjack/managers/README.md with manager descriptions (3 → 355 lines)
+
+**Resolution:** ✅ RESOLVED - All 5 minimal package READMEs expanded with comprehensive documentation:
+- Complete component catalogs
+- Architecture and ACB compliance status
+- Practical usage examples
+- Configuration guidance
+- Best practices and troubleshooting
+- Cross-references to related packages
+- Total expansion: 15 lines → 1,662 lines (110x average growth)
 
 ---
 
-### 4. ⚠️ Inconsistent Coverage Baseline References
+### 4. ✅ Inconsistent Coverage Baseline References (Partially Resolved)
 
 **Severity:** HIGH
 **Impact:** Confusion about quality standards
@@ -161,9 +170,14 @@ Different baseline numbers are mentioned throughout:
 - Document the ratchet system clearly in one place
 
 **Action Items:**
-- [ ] Create COVERAGE_POLICY.md with clear definitions
-- [ ] Update all references to link to COVERAGE_POLICY.md
-- [ ] Document ratchet system (never decrease, always improve)
+- [x] Create COVERAGE_POLICY.md with clear definitions
+- [x] Update all references to link to COVERAGE_POLICY.md
+- [x] Document ratchet system (never decrease, always improve)
+
+**Resolution:** ✅ RESOLVED - Created comprehensive COVERAGE_POLICY.md addressing all confusion:
+- Current: 21.6%, Baseline: 19.6%, Target Milestone: 42%
+- Updated CLAUDE.md, RULES.md, and AGENTS.md with clarifications
+- All references now link to COVERAGE_POLICY.md as canonical source
 
 ---
 
@@ -356,12 +370,12 @@ Add breadcrumb navigation to ALL package READMEs for consistent UX.
 
 ### Issue Severity Distribution
 
-- ✅ Critical: 1 resolved, 1 audit error (corrected)
-- 🟠 High: 2 issues (remaining)
-- 🟡 Medium: 2 issues (remaining)
-- 🔵 Low: 2 issues (remaining)
+- ✅ Critical: 2 resolved (1 resolved, 1 audit error corrected)
+- ✅ High: 2 resolved (#3 minimal READMEs, #4 coverage baseline)
+- 🟡 Medium: 2 remaining (formatting, breadcrumbs)
+- 🔵 Low: 2 remaining (version references, technical accuracy)
 
-**Total Issues:** 6 remaining actionable items (2 resolved)
+**Total Issues:** 4 remaining actionable items (4 resolved)
 
 ---
 
@@ -413,19 +427,21 @@ The crackerjack documentation is fundamentally strong with excellent main docume
 
 ### Remaining Work
 
-Addressing the 6 remaining issues (2 high, 2 medium, 2 low) will further improve documentation quality, consistency, and developer experience.
+Addressing the 4 remaining issues (2 medium, 2 low) will further improve documentation quality, consistency, and developer experience.
 
 **Next Steps:**
 1. ✅ ~~Resolve critical coverage inconsistencies~~ (Complete)
-2. Address high-priority minimal package READMEs
-3. Standardize formatting and breadcrumbs (medium priority)
-4. Update technical accuracy items (low priority)
-5. Establish documentation maintenance schedule
+2. ✅ ~~Address high-priority minimal package READMEs~~ (Complete)
+3. ✅ ~~Resolve coverage baseline confusion~~ (Complete)
+4. Standardize formatting and breadcrumbs (medium priority)
+5. Update technical accuracy items (low priority)
+6. Establish documentation maintenance schedule
 
 ---
 
-**Report Status:** Updated (Critical Issues Resolved)
+**Report Status:** Updated (Critical & High Priority Issues Resolved)
 **Files Examined:** 80+
-**Issues Identified:** 8 original (1 resolved, 1 audit error, 6 remaining)
-**Remaining Issues:** 6 (0 critical, 2 high, 2 medium, 2 low)
-**Recommendations:** 11 remaining action items
+**Issues Identified:** 8 original
+**Resolved:** 4 (2 critical, 2 high)
+**Remaining Issues:** 4 (0 critical, 0 high, 2 medium, 2 low)
+**Recommendations:** 7 remaining action items

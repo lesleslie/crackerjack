@@ -1,3 +1,5 @@
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Managers](<./README.md>)
+
 # Managers
 
 Manager classes that coordinate components, resources, and state for quality enforcement, testing, and publishing workflows.

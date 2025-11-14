@@ -1,3 +1,5 @@
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [MCP](<./README.md>)
+
 # MCP
 
 Model Context Protocol (MCP) server implementation for AI agent interoperability and real-time workflow monitoring.
