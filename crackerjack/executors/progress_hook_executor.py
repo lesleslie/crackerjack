@@ -250,6 +250,7 @@ class ProgressHookExecutor(HookExecutor):
                             status="error",
                             duration=0.0,
                             issues_found=[str(e)],
+                            issues_count=1,  # Error counts as 1 issue
                             stage=hook.stage.value,
                         )
                         results.append(error_result)

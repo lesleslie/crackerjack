@@ -240,6 +240,7 @@ class HookExecutor:
                 status="error",
                 duration=0.0,
                 issues_found=[str(e)],
+                issues_count=1,  # Error counts as 1 issue
                 stage=hook.stage.value,
                 exit_code=1,
                 error_message=str(e),
@@ -420,6 +421,18 @@ class HookExecutor:
             # Capture stderr for failed hooks (truncate if very long)
             error_message = result.stderr.strip()[:500]
 
+        # If hook failed but has no parsed issues, use raw output as error details
+        output_text = (result.stdout + result.stderr).strip()
+        if status == "failed" and not issues_found and output_text:
+            # Split output into lines and take first 10 non-empty lines as issues
+            error_lines = [
+                line.strip() for line in output_text.split("\n") if line.strip()
+            ][:10]
+            issues_found = error_lines or ["Hook failed with non-zero exit code"]
+
+        # Ensure failed hooks always have at least 1 issue count
+        issues_count = max(len(issues_found), 1 if status == "failed" else 0)
+
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -427,6 +440,7 @@ class HookExecutor:
             duration=duration,
             files_processed=parsed_output["files_processed"],
             issues_found=issues_found,
+            issues_count=issues_count,
             stage=hook.stage.value,
             exit_code=exit_code,
             error_message=error_message,
@@ -565,6 +579,7 @@ class HookExecutor:
             status="timeout",
             duration=duration,
             issues_found=[f"Hook timed out after {duration: .1f}s"],
+            issues_count=1,  # Timeout counts as 1 issue
             stage=hook.stage.value,
             exit_code=124,  # Standard timeout exit code
             error_message=f"Execution exceeded timeout of {duration:.1f}s",
@@ -581,6 +596,7 @@ class HookExecutor:
             status="error",
             duration=duration,
             issues_found=[str(error)],
+            issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
             exit_code=1,
             error_message=str(error),

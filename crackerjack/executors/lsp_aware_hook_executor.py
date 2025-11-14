@@ -152,13 +152,18 @@ class LSPAwareHookExecutor(HookExecutor):
 
         self._display_lsp_results(hook, has_errors, output, summary)
 
+        # Ensure failed hooks always have at least 1 issue count
+        issues_found = [output] if has_errors else []
+        issues_count = max(len(issues_found), 1 if has_errors else 0)
+
         return HookResult(
             id=f"{hook.name}-lsp-{int(time.time())}",
             name=f"{hook.name}-lsp",
             status="failed" if has_errors else "passed",
             duration=duration,
             files_processed=len(diagnostics),
-            issues_found=[output] if has_errors else [],
+            issues_found=issues_found,
+            issues_count=issues_count,
         )
 
     def _format_lsp_output(self, diagnostics: dict[str, t.Any], duration: float) -> str:
@@ -232,13 +237,18 @@ class LSPAwareHookExecutor(HookExecutor):
             )
             output = self._format_proxy_output(tool_name, tool_status, duration)
 
+            # Ensure failed hooks always have at least 1 issue count
+            issues_found = [output] if status == "failed" else []
+            issues_count = max(len(issues_found), 1 if status == "failed" else 0)
+
             return HookResult(
                 id=f"{hook.name}-proxy-{int(time.time())}",
                 name=f"{hook.name}-proxy",
                 status=status,
                 duration=duration,
                 files_processed=1,  # Placeholder value
-                issues_found=[output] if status == "failed" else [],
+                issues_found=issues_found,
+                issues_count=issues_count,
             )
 
         except Exception as e:
