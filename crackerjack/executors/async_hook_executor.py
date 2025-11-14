@@ -399,6 +399,7 @@ class AsyncHookExecutor:
             status="timeout",
             duration=duration,
             issues_found=[f"Hook timed out after {duration: .1f}s"],
+            issues_count=1,  # Timeout counts as 1 issue
             stage=hook.stage.value,
         )
 
@@ -457,14 +458,27 @@ class AsyncHookExecutor:
             issues_count=len(parsed_output.get("issues", [])),
         )
 
+        issues = parsed_output.get("issues", [])
+        # If hook failed but has no parsed issues, use raw output as error details
+        if status == "failed" and not issues and output_text:
+            # Split output into lines and take first 10 non-empty lines as issues
+            error_lines = [line.strip() for line in output_text.split('\n') if line.strip()][:10]
+            issues = error_lines if error_lines else ["Hook failed with non-zero exit code"]
+
+        # Ensure failed hooks always have at least 1 issue count
+        issues_count = max(len(issues), 1) if status == "failed" else len(issues)
+
         return HookResult(
             id=parsed_output.get("hook_id", hook.name),
             name=hook.name,
             status=status,
             duration=duration,
             files_processed=parsed_output.get("files_processed", 0),
-            issues_found=parsed_output.get("issues", []),
+            issues_found=issues,
+            issues_count=issues_count,
             stage=hook.stage.value,
+            exit_code=return_code,  # Include exit code for debugging
+            error_message=output_text[:500] if status == "failed" and output_text else None,  # First 500 chars of error
         )
 
     def _decode_process_output(self, stdout: bytes | None, stderr: bytes | None) -> str:
@@ -493,6 +507,7 @@ class AsyncHookExecutor:
                 status="error",
                 duration=duration,
                 issues_found=["Event loop closed during execution"],
+                issues_count=1,  # Error counts as 1 issue
                 stage=hook.stage.value,
             )
         else:
@@ -519,6 +534,7 @@ class AsyncHookExecutor:
             status="error",
             duration=duration,
             issues_found=[str(error)],
+            issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
         )
 

@@ -46,8 +46,9 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
             if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
                 return item.name
 
-    # Fallback: use 'crackerjack' for backward compatibility
-    return "crackerjack"
+    # Method 3: Use the directory name as the package name
+    # This is better than defaulting to "crackerjack" which could search the wrong directory
+    return pkg_path.name
 
 
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
