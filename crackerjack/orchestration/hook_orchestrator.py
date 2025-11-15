@@ -1066,6 +1066,8 @@ class HookOrchestratorAdapter:
         if self._is_formatting_success(hook, proc_result, output_text):
             return "passed"
 
+        # For tools like ruff that return 1 when they detect issues but execute successfully
+        # These should still be considered "passed" execution-wise but may have issues found
         if self._is_analysis_tool_success(hook, proc_result):
             return "passed"
 
@@ -1088,7 +1090,13 @@ class HookOrchestratorAdapter:
         """Check if analysis tool return code 1 indicates findings (not failure)."""
         if proc_result.returncode != 1:
             return False
-        return hook.name in {"creosote", "complexipy", "refurb"}
+        return hook.name in {
+            "creosote",
+            "complexipy",
+            "refurb",
+            "ruff-check",
+            "ruff-format",
+        }
 
     def _is_bandit_success(
         self, hook: HookDefinition, proc_result: t.Any, output_text: str
