@@ -300,7 +300,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=240,  # 4 minutes - matches adapter default, reduced from excessive 11 min
+        timeout=240,  # 4 minutes - matches adapter default
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
