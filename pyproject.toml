@@ -75,25 +75,32 @@ dependencies = [
     "scipy-stubs==1.16.2.3",
     "session-mgmt-mcp>=0.4.0",
     "mcp-common>=0.2.0",
-    "acb>=0.28.1",
+    "acb>=0.30.0",
     "mdformat>=0.7.22",
     "mdformat-ruff>=0.1.3",
+    "bevy==3.1.0b12",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 # SAST (Static Application Security Testing) tools
-# Install with: uv sync --extra sast
-# NOTE: Semgrep excluded due to rich<13.6 dependency conflict (crackerjack requires rich>=14.1)
-#       Use system-installed semgrep via Homebrew instead
+# Install with: uv sync --group sast
 sast = [
     "bandit>=1.8.6",  # Python security linter
-    # "semgrep>=1.95",  # Disabled: incompatible with rich>=14.1 (requires rich<13.6)
+#     "semgrep>=1.95",  # Disabled: incompatible with rich>=14.1 (requires rich<13.6)
 ]
 
 # SCA (Software Composition Analysis) - Dependency vulnerability scanning
-# Install with: uv sync --extra dependency
+# Install with: uv sync --group dependency
 dependency = [
     "pip-audit>=2.7.0",  # Dependency vulnerability scanner (CVE detection)
+]
+
+# Development dependencies
+# Install with: uv sync --group dev
+dev = [
+    "excalidraw-mcp>=0.34.0",
+    "session-mgmt-mcp>=0.4.0",
+    "ty>=0.0.0a6",  # Experimental type checker (Astral) - monitoring only, not for production use
 ]
 
 [project.license]
@@ -294,6 +301,7 @@ keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
 
+
 # [tool.uv.sources.acb]
 # path = "../acb"
 # editable = true
@@ -352,6 +360,7 @@ exclude-deps = [
     "structlog",
     "mdformat",
     "mdformat-ruff",
+    "bevy",
 ]
 
 [tool.refurb]
@@ -425,10 +434,3 @@ port = 8677
 timeout = 10.0
 enable_diagnostics = true
 real_time_feedback = true
-
-[dependency-groups]
-dev = [
-    "excalidraw-mcp>=0.34.0",
-    "session-mgmt-mcp>=0.4.0",
-    "ty>=0.0.0a6",  # Experimental type checker (Astral) - monitoring only, not for production use
-]
