@@ -1,0 +1,11 @@
+🐛 AI Debug Mode Configuration: 
+ • Debug Mode: ✅ Enabled
+ • Verbose Mode: ✅ Enabled
+ • Structured logging enabled for debugging
+🚀 Crackerjack Workflow Engine (ACB-Powered)
+Building DI container (28 services across 7 levels)...
+
+✓ DI container ready with WorkflowPipeline
+Selected workflow: Standard Quality Workflow
+Orchestration: ⚡ enabled (acb mode) - async hooks with caching
+Workflow failed: name 'Console' is not defined

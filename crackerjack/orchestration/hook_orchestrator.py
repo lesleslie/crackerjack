@@ -878,19 +878,13 @@ class HookOrchestratorAdapter:
 
         return issues
 
-    def _create_success_result(
-        self, hook: HookDefinition, qa_result: t.Any, start_time: float
-    ) -> HookResult:
-        """Create a HookResult for successful execution."""
-        files_processed = (
-            len(qa_result.files_checked) if hasattr(qa_result, "files_checked") else 0
-        )
-        status = self._determine_status(hook, qa_result)
-        issues = self._build_issues_list(qa_result)
-
-        # Extract error details for failed hooks from adapter results
+    def _extract_error_details(
+        self, hook: HookDefinition, qa_result: t.Any, status: str, issues: list[str]
+    ) -> tuple[int | None, str | None, list[str]]:
+        """Extract error details for failed hooks from adapter results."""
         exit_code = None
         error_message = None
+
         if status == "failed":
             if hasattr(qa_result, "details") and qa_result.details:
                 # For adapter-based hooks, use details as error message
@@ -906,8 +900,16 @@ class HookOrchestratorAdapter:
                     issues = error_lines or ["Hook failed with no parseable output"]
             elif not issues:
                 # Failed hook with no details and no issues
-                issues = ["Hook failed with no output"]
+                issues = [
+                    f"Hook {hook.name} failed with no detailed output (exit code: {qa_result.exit_code if hasattr(qa_result, 'exit_code') else 'unknown'})"
+                ]
 
+        return exit_code, error_message, issues
+
+    def _calculate_total_issues(
+        self, qa_result: t.Any, status: str, issues: list[str]
+    ) -> int:
+        """Calculate the total count of issues from qa_result."""
         # Get the actual total count of issues from qa_result
         # This may be larger than len(issues) if issues were truncated for display
         total_issues = (
@@ -919,6 +921,26 @@ class HookOrchestratorAdapter:
         # Ensure failed hooks always have at least 1 issue count
         if status == "failed":
             total_issues = max(total_issues, 1)
+
+        return total_issues
+
+    def _create_success_result(
+        self, hook: HookDefinition, qa_result: t.Any, start_time: float
+    ) -> HookResult:
+        """Create a HookResult for successful execution."""
+        files_processed = (
+            len(qa_result.files_checked) if hasattr(qa_result, "files_checked") else 0
+        )
+        status = self._determine_status(hook, qa_result)
+        issues = self._build_issues_list(qa_result)
+
+        # Extract error details for failed hooks from adapter results
+        exit_code, error_message, issues = self._extract_error_details(
+            hook, qa_result, status, issues
+        )
+
+        # Calculate the total issues count
+        total_issues = self._calculate_total_issues(qa_result, status, issues)
 
         return HookResult(
             id=hook.name,
@@ -1122,7 +1144,9 @@ class HookOrchestratorAdapter:
         # Get combined output
         output_text = (proc_result.stdout or "") + (proc_result.stderr or "")
         if not output_text.strip():
-            return ["Hook failed with no output"]
+            return [
+                f"Hook failed with exit code {getattr(proc_result, 'returncode', 'unknown')} and no output"
+            ]
 
         # Try to extract meaningful error lines (first 10 non-empty lines)
         error_lines = [
