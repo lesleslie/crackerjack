@@ -179,8 +179,25 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.codespell_wrapper",
         ],
-        "ruff-check": ["uv", "run", "python", "-m", "ruff", "check", "."],
-        "ruff-format": ["uv", "run", "python", "-m", "ruff", "format", "."],
+        "ruff-check": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "ruff",
+            "check",
+            f"./{package_name}",
+        ],
+        "ruff-format": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "ruff",
+            "format",
+            "--check",
+            f"./{package_name}",
+        ],
         # Mdformat in auto-fix mode for fast hooks (no --check)
         "mdformat": [
             "uv",
