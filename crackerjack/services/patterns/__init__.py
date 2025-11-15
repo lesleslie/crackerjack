@@ -46,20 +46,20 @@ from .core import (
 )
 
 # Build the complete SAFE_PATTERNS registry for backward compatibility
-SAFE_PATTERNS: dict[str, ValidatedPattern] = {
-    **formatting.PATTERNS,
-    **versioning.PATTERNS,
-    **validation.PATTERNS,
-    **utilities.PATTERNS,
-    **url_sanitization.PATTERNS,
-    **agents.PATTERNS,
-    **templates.PATTERNS,
-    **code.PATTERNS,
-    **documentation.PATTERNS,
-    **tool_output.PATTERNS,
-    **testing.PATTERNS,
-    **security.PATTERNS,
-}
+SAFE_PATTERNS: dict[str, ValidatedPattern] = (
+    formatting.PATTERNS
+    | versioning.PATTERNS
+    | validation.PATTERNS
+    | utilities.PATTERNS
+    | url_sanitization.PATTERNS
+    | agents.PATTERNS
+    | templates.PATTERNS
+    | code.PATTERNS
+    | documentation.PATTERNS
+    | tool_output.PATTERNS
+    | testing.PATTERNS
+    | security.PATTERNS
+)
 
 # Import utility functions for backward compatibility
 from .utils import (

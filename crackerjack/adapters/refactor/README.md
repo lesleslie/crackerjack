@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Refactor](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Refactor](<./README.md>)
 
 # Refactor Adapters
 
@@ -55,5 +55,5 @@ async def find_unused_deps() -> None:
 
 ## Related
 
-- [Complexity](../complexity/README.md) — Use complexity reports to target refactors
-- [Format](../format/README.md) — Formatting changes often enable simpler refactors
+- [Complexity](<../complexity/README.md>) — Use complexity reports to target refactors
+- [Format](<../format/README.md>) — Formatting changes often enable simpler refactors

@@ -879,25 +879,22 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def predict_quality_issues(self) -> list[dict[str, t.Any]]:
         """Predict potential quality issues."""
         predictions = self.generate_advanced_predictions()
-        issue_predictions = []
 
-        for pred in predictions:
-            if pred.risk_assessment in ("high", "critical"):
-                issue_predictions.append(
-                    {
-                        "metric": pred.metric_name,
-                        "predicted_value": pred.predicted_value,
-                        "risk_level": pred.risk_assessment,
-                        "confidence_interval": {
-                            "lower": pred.confidence_lower,
-                            "upper": pred.confidence_upper,
-                        },
-                        "prediction_horizon": pred.prediction_horizon_days,
-                        "factors": pred.factors,
-                    }
-                )
-
-        return issue_predictions
+        return [
+            {
+                "metric": pred.metric_name,
+                "predicted_value": pred.predicted_value,
+                "risk_level": pred.risk_assessment,
+                "confidence_interval": {
+                    "lower": pred.confidence_lower,
+                    "upper": pred.confidence_upper,
+                },
+                "prediction_horizon": pred.prediction_horizon_days,
+                "factors": pred.factors,
+            }
+            for pred in predictions
+            if pred.risk_assessment in ("high", "critical")
+        ]
 
     def recommend_improvements(self) -> list[dict[str, t.Any]]:
         """Recommend quality improvements."""

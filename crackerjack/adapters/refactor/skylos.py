@@ -265,7 +265,7 @@ class SkylosAdapter(BaseToolAdapter):
             "Parsed Skylos output",
             extra={
                 "total_issues": len(issues),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "files_affected": len({str(i.file_path) for i in issues}),
             },
         )
         return issues

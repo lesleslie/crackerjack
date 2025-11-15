@@ -132,7 +132,7 @@ class QAOrchestrator:
 
         # Sort checks: formatters first if configured
         if self.config.run_formatters_first:
-            checks = sorted(checks, key=lambda c: (not c.is_formatter, c.check_name))
+            checks.sort(key=lambda c: (not c.is_formatter, c.check_name))
 
         # Execute checks
         results = await self._execute_checks(checks, files)
@@ -294,7 +294,7 @@ class QAOrchestrator:
                     check_name=adapter.adapter_name,
                     check_type=config.check_type,
                     status=QAResultStatus.ERROR,
-                    message=f"Check failed: {str(e)}",
+                    message=f"Check failed: {e}",
                     details=str(e),
                 )
 
@@ -434,7 +434,7 @@ class QAOrchestrator:
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
         # Load YAML configuration
-        with open(config_path) as f:
+        with config_path.open() as f:
             config_data = yaml.safe_load(f)
 
         # Create orchestrator config

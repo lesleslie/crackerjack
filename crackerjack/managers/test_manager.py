@@ -439,7 +439,7 @@ class TestManager:
 
     def _extract_test_metrics(self, summary_text: str, stats: dict[str, t.Any]) -> None:
         """Extract individual test metrics from summary text."""
-        for metric in ["passed", "failed", "skipped", "error", "xfailed", "xpassed"]:
+        for metric in ("passed", "failed", "skipped", "error", "xfailed", "xpassed"):
             metric_pattern = rf"(\d+)\s+{metric}"
             metric_match = re.search(metric_pattern, summary_text, re.IGNORECASE)
             if metric_match:

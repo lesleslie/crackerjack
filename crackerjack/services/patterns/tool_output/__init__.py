@@ -11,11 +11,6 @@ from .pyright import PATTERNS as PYRIGHT_PATTERNS
 from .ruff import PATTERNS as RUFF_PATTERNS
 
 # Merge all tool output patterns into a single registry
-PATTERNS = {
-    **RUFF_PATTERNS,
-    **PYRIGHT_PATTERNS,
-    **BANDIT_PATTERNS,
-    **OTHER_PATTERNS,
-}
+PATTERNS = RUFF_PATTERNS | PYRIGHT_PATTERNS | BANDIT_PATTERNS | OTHER_PATTERNS
 
 __all__ = ["PATTERNS"]

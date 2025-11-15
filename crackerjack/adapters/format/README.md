@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Format](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Format](<./README.md>)
 
 # Format Adapter
 
@@ -68,5 +68,5 @@ async def format_md() -> None:
 
 ## Related
 
-- [Lint](../lint/README.md) — Codespell for spelling and text issues
-- [Type](../type/README.md) — Type safety complements style enforcement
+- [Lint](<../lint/README.md>) — Codespell for spelling and text issues
+- [Type](<../type/README.md>) — Type safety complements style enforcement

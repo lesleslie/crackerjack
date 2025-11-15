@@ -384,19 +384,18 @@ class UtilityCheckAdapter(QAAdapterBase):
                 issues_fixed=issues_fixed,
                 execution_time_ms=elapsed_ms,
             )
-        else:
-            return QAResult(
-                check_id=MODULE_ID,
-                check_name=self.adapter_name,
-                check_type=QACheckType.FORMAT,
-                status=QAResultStatus.FAILURE,
-                message=f"Found {issues_found} pattern violations",
-                files_checked=files,
-                files_modified=files_modified,
-                issues_found=issues_found,
-                issues_fixed=issues_fixed,
-                execution_time_ms=elapsed_ms,
-            )
+        return QAResult(
+            check_id=MODULE_ID,
+            check_name=self.adapter_name,
+            check_type=QACheckType.FORMAT,
+            status=QAResultStatus.FAILURE,
+            message=f"Found {issues_found} pattern violations",
+            files_checked=files,
+            files_modified=files_modified,
+            issues_found=issues_found,
+            issues_fixed=issues_fixed,
+            execution_time_ms=elapsed_ms,
+        )
 
     async def _check_text_pattern(
         self,
@@ -522,17 +521,16 @@ class UtilityCheckAdapter(QAAdapterBase):
                 issues_fixed=issues_fixed,
                 execution_time_ms=elapsed_ms,
             )
-        else:
-            return QAResult(
-                check_id=MODULE_ID,
-                check_name=self.adapter_name,
-                check_type=QACheckType.FORMAT,
-                status=QAResultStatus.FAILURE,
-                message=f"Found {issues_found} files missing EOF newlines",
-                files_checked=files,
-                issues_found=issues_found,
-                execution_time_ms=elapsed_ms,
-            )
+        return QAResult(
+            check_id=MODULE_ID,
+            check_name=self.adapter_name,
+            check_type=QACheckType.FORMAT,
+            status=QAResultStatus.FAILURE,
+            message=f"Found {issues_found} files missing EOF newlines",
+            files_checked=files,
+            issues_found=issues_found,
+            execution_time_ms=elapsed_ms,
+        )
 
     async def _check_syntax_validation(
         self,
@@ -570,7 +568,7 @@ class UtilityCheckAdapter(QAAdapterBase):
 
             except Exception as e:
                 issues_found += 1
-                error_details.append(f"{file_path}: {str(e)}")
+                error_details.append(f"{file_path}: {e}")
                 # Add structured logging for failures
                 logger.warning(
                     "Failed to validate file syntax",
@@ -597,18 +595,17 @@ class UtilityCheckAdapter(QAAdapterBase):
                 files_checked=files,
                 execution_time_ms=elapsed_ms,
             )
-        else:
-            return QAResult(
-                check_id=MODULE_ID,
-                check_name=self.adapter_name,
-                check_type=QACheckType.FORMAT,
-                status=QAResultStatus.FAILURE,
-                message=f"Found {issues_found} {parser_type.upper()} syntax errors",
-                details="\n".join(error_details),
-                files_checked=files,
-                issues_found=issues_found,
-                execution_time_ms=elapsed_ms,
-            )
+        return QAResult(
+            check_id=MODULE_ID,
+            check_name=self.adapter_name,
+            check_type=QACheckType.FORMAT,
+            status=QAResultStatus.FAILURE,
+            message=f"Found {issues_found} {parser_type.upper()} syntax errors",
+            details="\n".join(error_details),
+            files_checked=files,
+            issues_found=issues_found,
+            execution_time_ms=elapsed_ms,
+        )
 
     async def _check_size_limit(
         self,
@@ -669,18 +666,17 @@ class UtilityCheckAdapter(QAAdapterBase):
                 files_checked=files,
                 execution_time_ms=elapsed_ms,
             )
-        else:
-            return QAResult(
-                check_id=MODULE_ID,
-                check_name=self.adapter_name,
-                check_type=QACheckType.FORMAT,
-                status=QAResultStatus.FAILURE,
-                message=f"Found {issues_found} files exceeding size limit",
-                details="\n".join(large_files),
-                files_checked=files,
-                issues_found=issues_found,
-                execution_time_ms=elapsed_ms,
-            )
+        return QAResult(
+            check_id=MODULE_ID,
+            check_name=self.adapter_name,
+            check_type=QACheckType.FORMAT,
+            status=QAResultStatus.FAILURE,
+            message=f"Found {issues_found} files exceeding size limit",
+            details="\n".join(large_files),
+            files_checked=files,
+            issues_found=issues_found,
+            execution_time_ms=elapsed_ms,
+        )
 
     async def _check_dependency_lock(
         self,
@@ -751,7 +747,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 check_name=self.adapter_name,
                 check_type=QACheckType.FORMAT,
                 status=QAResultStatus.ERROR,
-                message=f"Dependency lock check failed: {str(e)}",
+                message=f"Dependency lock check failed: {e}",
                 files_checked=files,
                 execution_time_ms=elapsed_ms,
             )

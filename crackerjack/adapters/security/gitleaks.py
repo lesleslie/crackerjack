@@ -293,7 +293,7 @@ class GitleaksAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "high_entropy": sum(1 for i in issues if i.severity == "error"),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "files_affected": len({str(i.file_path) for i in issues}),
             },
         )
         return issues
