@@ -985,12 +985,19 @@ class HookOrchestratorAdapter:
         status = self._determine_hook_status(hook, proc_result, output_text)
         issues = self._collect_issues(status, proc_result)
 
+        # Semgrep-specific JSON error parsing
+        if hook.name == "semgrep" and status == "failed":
+            issues = self._parse_semgrep_json_errors(output_text, issues)
+
         # Extract error details for failed hooks
         exit_code = proc_result.returncode if status == "failed" else None
         error_message = None
         if status == "failed" and output_text.strip():
             # Capture stdout + stderr for failed hooks (truncate if very long)
             error_message = output_text.strip()[:500]
+
+        # Ensure failed hooks always have at least 1 issue count
+        issues_count = max(len(issues), 1 if status == "failed" else 0)
 
         return HookResult(
             id=hook.name,
@@ -999,6 +1006,7 @@ class HookOrchestratorAdapter:
             duration=self._elapsed(start_time),
             files_processed=files_processed,
             issues_found=issues,
+            issues_count=issues_count,
             stage=hook.stage.value,
             exit_code=exit_code,
             error_message=error_message,
@@ -1080,13 +1088,70 @@ class HookOrchestratorAdapter:
     def _collect_issues(self, status: str, proc_result: t.Any) -> list[str]:
         """Collect issues from subprocess output if hook failed.
 
-        NOTE: This returns an empty list for legacy subprocess hooks because
-        the display code expects ToolIssue objects with .file_path, .line_number, etc.
-        Raw stdout/stderr strings will cause AttributeError when accessed as objects.
-        Use QA adapters for proper issue parsing instead of subprocess hooks.
+        For subprocess hooks (non-adapter), extracts error information from output.
+        Returns list of strings since the display layer handles both string and object types.
         """
-        # Don't return raw stdout/stderr - the display code expects objects, not strings
-        return []
+        if status == "passed":
+            return []
+
+        # Get combined output
+        output_text = (proc_result.stdout or "") + (proc_result.stderr or "")
+        if not output_text.strip():
+            return ["Hook failed with no output"]
+
+        # Try to extract meaningful error lines (first 10 non-empty lines)
+        error_lines = [
+            line.strip() for line in output_text.split("\n") if line.strip()
+        ][:10]
+
+        return error_lines if error_lines else ["Hook failed with non-zero exit code"]
+
+    def _parse_semgrep_json_errors(
+        self, output_text: str, fallback_issues: list[str]
+    ) -> list[str]:
+        """Parse semgrep JSON output to extract errors from errors array.
+
+        Semgrep returns JSON with:
+        - "results": Security/code quality findings (usually empty when download fails)
+        - "errors": Configuration errors, download failures, etc.
+
+        Args:
+            output_text: Combined stdout + stderr from semgrep
+            fallback_issues: Issues collected from raw output (used if JSON parsing fails)
+
+        Returns:
+            List of formatted error strings
+        """
+        import json
+
+        try:
+            json_data = json.loads(output_text.strip())
+
+            issues = []
+
+            # Extract security findings from results array
+            if "results" in json_data:
+                for result in json_data.get("results", []):
+                    path = result.get("path", "unknown")
+                    line_num = result.get("start", {}).get("line", "?")
+                    rule_id = result.get("check_id", "unknown-rule")
+                    message = result.get("extra", {}).get(
+                        "message", "Security issue detected"
+                    )
+                    issues.append(f"{path}:{line_num} - {rule_id}: {message}")
+
+            # Extract errors (download failures, config errors, etc.)
+            if "errors" in json_data:
+                for error in json_data.get("errors", []):
+                    error_type = error.get("type", "SemgrepError")
+                    error_msg = error.get("message", str(error))
+                    issues.append(f"{error_type}: {error_msg}")
+
+            return issues if issues else fallback_issues
+
+        except json.JSONDecodeError:
+            # JSON parsing failed, use fallback
+            return fallback_issues
 
     async def _maybe_cache(self, hook: HookDefinition, result: HookResult) -> None:
         if not (self.settings.enable_caching and self._cache_adapter):
@@ -1126,6 +1191,7 @@ class HookOrchestratorAdapter:
             duration=0.0,
             files_processed=0,
             issues_found=[str(error)],
+            issues_count=1,  # Error counts as 1 issue
             stage=hook.stage.value,
             exit_code=1,
             error_message=str(error),

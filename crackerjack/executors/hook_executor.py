@@ -386,24 +386,6 @@ class HookExecutor:
                 f"returncode={result.returncode}[/yellow]"
             )
 
-        # Debug logging for hooks that show FAILED with 0 issues
-        if result.returncode != 0 and hook.name in {
-            "ruff-format",
-            "ruff-check",
-            "codespell",
-            "semgrep",
-            "complexipy",
-        }:
-            self.console.print(
-                f"[red]DEBUG {hook.name}: EXIT CODE={result.returncode}[/red]"
-            )
-            self.console.print(
-                f"[yellow]STDOUT (first 500 chars): {result.stdout[:500]}[/yellow]"
-            )
-            self.console.print(
-                f"[yellow]STDERR (first 500 chars): {result.stderr[:500]}[/yellow]"
-            )
-
         if hook.is_formatting and result.returncode == 1:
             output_text = result.stdout + result.stderr
             if "files were modified by this hook" in output_text:
