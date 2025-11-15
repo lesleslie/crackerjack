@@ -891,9 +891,22 @@ class HookOrchestratorAdapter:
         # Extract error details for failed hooks from adapter results
         exit_code = None
         error_message = None
-        if status == "failed" and hasattr(qa_result, "details") and qa_result.details:
-            # For adapter-based hooks, use details as error message
-            error_message = qa_result.details[:500]  # Truncate if very long
+        if status == "failed":
+            if hasattr(qa_result, "details") and qa_result.details:
+                # For adapter-based hooks, use details as error message
+                error_message = qa_result.details[:500]  # Truncate if very long
+
+                # If no issues were parsed but hook failed, extract error from details
+                if not issues:
+                    error_lines = [
+                        line.strip()
+                        for line in qa_result.details.split("\n")
+                        if line.strip()
+                    ][:10]
+                    issues = error_lines if error_lines else ["Hook failed with no parseable output"]
+            elif not issues:
+                # Failed hook with no details and no issues
+                issues = ["Hook failed with no output"]
 
         # Get the actual total count of issues from qa_result
         # This may be larger than len(issues) if issues were truncated for display
@@ -902,6 +915,10 @@ class HookOrchestratorAdapter:
             if hasattr(qa_result, "issues_found")
             else len(issues)
         )
+
+        # Ensure failed hooks always have at least 1 issue count
+        if status == "failed":
+            total_issues = max(total_issues, 1)
 
         return HookResult(
             id=hook.name,
