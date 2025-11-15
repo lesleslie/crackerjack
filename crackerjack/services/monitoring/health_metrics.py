@@ -6,7 +6,7 @@ import tomllib
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -232,20 +232,20 @@ class HealthMetricsService(HealthMetricsServiceProtocol, ServiceProtocol):
                     await self._repository.upsert(
                         project_root=str(self.project_root),
                         data={
-                            "lint_error_trend": list(legacy.lint_error_trend),
-                            "test_coverage_trend": list(legacy.test_coverage_trend),
-                            "dependency_age": dict(legacy.dependency_age),
+                            "lint_error_trend": legacy.lint_error_trend.copy(),
+                            "test_coverage_trend": legacy.test_coverage_trend.copy(),
+                            "dependency_age": legacy.dependency_age.copy(),
                             "config_completeness": legacy.config_completeness,
-                            "last_updated": datetime.utcfromtimestamp(
-                                legacy.last_updated
+                            "last_updated": datetime.fromtimestamp(
+                                legacy.last_updated, tz=UTC
                             ),
                         },
                     )
                 return legacy or ProjectHealth()
             return ProjectHealth(
-                lint_error_trend=list(record.lint_error_trend or []),
-                test_coverage_trend=list(record.test_coverage_trend or []),
-                dependency_age=dict(record.dependency_age or {}),
+                lint_error_trend=(record.lint_error_trend or []).copy(),
+                test_coverage_trend=(record.test_coverage_trend or []).copy(),
+                dependency_age=(record.dependency_age or {}).copy(),
                 config_completeness=record.config_completeness,
                 last_updated=record.last_updated.timestamp(),
             )
@@ -269,11 +269,11 @@ class HealthMetricsService(HealthMetricsServiceProtocol, ServiceProtocol):
             await self._repository.upsert(
                 project_root=str(self.project_root),
                 data={
-                    "lint_error_trend": list(health.lint_error_trend),
-                    "test_coverage_trend": list(health.test_coverage_trend),
-                    "dependency_age": dict(health.dependency_age),
+                    "lint_error_trend": health.lint_error_trend.copy(),
+                    "test_coverage_trend": health.test_coverage_trend.copy(),
+                    "dependency_age": health.dependency_age.copy(),
                     "config_completeness": health.config_completeness,
-                    "last_updated": datetime.utcfromtimestamp(health.last_updated),
+                    "last_updated": datetime.fromtimestamp(health.last_updated, tz=UTC),
                 },
             )
 

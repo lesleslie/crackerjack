@@ -257,7 +257,7 @@ class PyscnAdapter(BaseToolAdapter):
                 "total_issues": len(issues),
                 "errors": sum(1 for i in issues if i.severity == "error"),
                 "warnings": sum(1 for i in issues if i.severity == "warning"),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "files_affected": len({str(i.file_path) for i in issues}),
             },
         )
         return issues
@@ -287,7 +287,7 @@ class PyscnAdapter(BaseToolAdapter):
             "Parsed Pyscn text output (fallback)",
             extra={
                 "total_issues": len(issues),
-                "files_with_issues": len(set(str(i.file_path) for i in issues)),
+                "files_with_issues": len({str(i.file_path) for i in issues}),
             },
         )
         return issues

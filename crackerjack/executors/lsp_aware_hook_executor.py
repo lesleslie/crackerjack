@@ -152,6 +152,20 @@ class LSPAwareHookExecutor(HookExecutor):
 
         self._display_lsp_results(hook, has_errors, output, summary)
 
+        # Create hook result
+        return self._create_lsp_hook_result(
+            hook, duration, has_errors, output, diagnostics
+        )
+
+    def _create_lsp_hook_result(
+        self,
+        hook: HookDefinition,
+        duration: float,
+        has_errors: bool,
+        output: str,
+        diagnostics: dict,
+    ) -> HookResult:
+        """Create the HookResult for LSP execution."""
         # Ensure failed hooks always have at least 1 issue count
         issues_found = [output] if has_errors else []
         issues_count = max(len(issues_found), 1 if has_errors else 0)
@@ -212,55 +226,66 @@ class LSPAwareHookExecutor(HookExecutor):
         start_time = time.time()
 
         try:
-            if not self.quiet:
-                self.console.print(
-                    f"🛡️ Using resilient execution for {hook.name}", style="blue"
-                )
-
-            # Parse hook entry to extract tool name and args
-            tool_name, args = self._parse_hook_entry(hook)
-
-            # Execute through tool proxy
-            if self.tool_proxy is not None:
-                exit_code = self.tool_proxy.execute_tool(tool_name, args)
-            else:
-                exit_code = -1  # Error code when tool proxy is not available
-
-            duration = time.time() - start_time
-            status = "passed" if exit_code == 0 else "failed"
-
-            # Get tool status for output
-            tool_status = (
-                self.tool_proxy.get_tool_status().get(tool_name, {})
-                if self.tool_proxy is not None
-                else {}
-            )
-            output = self._format_proxy_output(tool_name, tool_status, duration)
-
-            # Ensure failed hooks always have at least 1 issue count
-            issues_found = [output] if status == "failed" else []
-            issues_count = max(len(issues_found), 1 if status == "failed" else 0)
-
-            return HookResult(
-                id=f"{hook.name}-proxy-{int(time.time())}",
-                name=f"{hook.name}-proxy",
-                status=status,
-                duration=duration,
-                files_processed=1,  # Placeholder value
-                issues_found=issues_found,
-                issues_count=issues_count,
-            )
-
+            return self._perform_proxy_execution(hook, start_time)
         except Exception as e:
-            duration = time.time() - start_time
-            error_msg = f"Tool proxy execution failed: {e}"
+            return self._handle_proxy_execution_error(hook, start_time, e)
 
-            if not self.quiet:
-                self.console.print(f"❌ {hook.name} (proxy): {error_msg}", style="red")
-                self.console.print(f"🔄 Falling back to regular {hook.name} execution")
+    def _perform_proxy_execution(
+        self, hook: HookDefinition, start_time: float
+    ) -> HookResult:
+        """Perform the actual proxy execution."""
+        if not self.quiet:
+            self.console.print(
+                f"🛡️ Using resilient execution for {hook.name}", style="blue"
+            )
 
-            # Fallback to regular execution
-            return self.execute_single_hook(hook)
+        # Parse hook entry to extract tool name and args
+        tool_name, args = self._parse_hook_entry(hook)
+
+        # Execute through tool proxy
+        if self.tool_proxy is not None:
+            exit_code = self.tool_proxy.execute_tool(tool_name, args)
+        else:
+            exit_code = -1  # Error code when tool proxy is not available
+
+        duration = time.time() - start_time
+        status = "passed" if exit_code == 0 else "failed"
+
+        # Get tool status for output
+        tool_status = (
+            self.tool_proxy.get_tool_status().get(tool_name, {})
+            if self.tool_proxy is not None
+            else {}
+        )
+        output = self._format_proxy_output(tool_name, tool_status, duration)
+
+        # Ensure failed hooks always have at least 1 issue count
+        issues_found = [output] if status == "failed" else []
+        issues_count = max(len(issues_found), 1 if status == "failed" else 0)
+
+        return HookResult(
+            id=f"{hook.name}-proxy-{int(time.time())}",
+            name=f"{hook.name}-proxy",
+            status=status,
+            duration=duration,
+            files_processed=1,  # Placeholder value
+            issues_found=issues_found,
+            issues_count=issues_count,
+        )
+
+    def _handle_proxy_execution_error(
+        self, hook: HookDefinition, start_time: float, error: Exception
+    ) -> HookResult:
+        """Handle proxy execution errors with fallback."""
+        time.time() - start_time
+        error_msg = f"Tool proxy execution failed: {error}"
+
+        if not self.quiet:
+            self.console.print(f"❌ {hook.name} (proxy): {error_msg}", style="red")
+            self.console.print(f"🔄 Falling back to regular {hook.name} execution")
+
+        # Fallback to regular execution
+        return self.execute_single_hook(hook)
 
     def _parse_hook_entry(self, hook: HookDefinition) -> tuple[str, list[str]]:
         """Parse hook entry to extract tool name and arguments."""

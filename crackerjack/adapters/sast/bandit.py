@@ -275,7 +275,7 @@ class BanditAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "high_severity": sum(1 for i in issues if i.severity == "error"),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
+                "files_affected": len({str(i.file_path) for i in issues}),
             },
         )
         return issues
@@ -319,18 +319,16 @@ class BanditAdapter(BaseToolAdapter):
 
             # Parse line numbers
             elif "Line:" in line:
-                try:
+                with suppress(IndexError, ValueError):
                     line_num_str = line.split("Line:")[1].strip()
                     current_line = int(line_num_str)
-                except (IndexError, ValueError):
-                    pass
 
         logger.info(
             "Parsed Bandit text output (fallback)",
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len(
-                    set(str(i.file_path) for i in issues if i.file_path)
+                    {str(i.file_path) for i in issues if i.file_path}
                 ),
             },
         )

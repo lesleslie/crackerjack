@@ -235,7 +235,7 @@ class MdformatAdapter(BaseToolAdapter):
         Returns:
             ToolIssue if valid markdown file, None otherwise
         """
-        try:
+        with suppress(Exception):
             file_path = Path(line)
             if file_path.exists() and file_path.suffix in (".md", ".markdown"):
                 return ToolIssue(
@@ -245,8 +245,6 @@ class MdformatAdapter(BaseToolAdapter):
                     severity="warning",
                     suggestion="Run mdformat to format this file",
                 )
-        except Exception:
-            pass
 
         return None
 

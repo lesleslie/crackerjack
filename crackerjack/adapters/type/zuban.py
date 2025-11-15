@@ -427,7 +427,7 @@ class ZubanAdapter(BaseToolAdapter):
             "Parsed Zuban text output",
             extra={
                 "total_issues": len(issues),
-                "files_with_issues": len(set(str(i.file_path) for i in issues)),
+                "files_with_issues": len({str(i.file_path) for i in issues}),
             },
         )
         return issues

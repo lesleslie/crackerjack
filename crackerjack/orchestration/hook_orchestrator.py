@@ -903,11 +903,7 @@ class HookOrchestratorAdapter:
                         for line in qa_result.details.split("\n")
                         if line.strip()
                     ][:10]
-                    issues = (
-                        error_lines
-                        if error_lines
-                        else ["Hook failed with no parseable output"]
-                    )
+                    issues = error_lines or ["Hook failed with no parseable output"]
             elif not issues:
                 # Failed hook with no details and no issues
                 issues = ["Hook failed with no output"]
@@ -1125,7 +1121,7 @@ class HookOrchestratorAdapter:
             line.strip() for line in output_text.split("\n") if line.strip()
         ][:10]
 
-        return error_lines if error_lines else ["Hook failed with non-zero exit code"]
+        return error_lines or ["Hook failed with non-zero exit code"]
 
     def _parse_semgrep_json_errors(
         self, output_text: str, fallback_issues: list[str]
@@ -1168,7 +1164,7 @@ class HookOrchestratorAdapter:
                     error_msg = error.get("message", str(error))
                     issues.append(f"{error_type}: {error_msg}")
 
-            return issues if issues else fallback_issues
+            return issues or fallback_issues
 
         except json.JSONDecodeError:
             # JSON parsing failed, use fallback

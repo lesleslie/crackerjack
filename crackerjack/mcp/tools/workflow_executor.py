@@ -256,7 +256,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
     # The decorator will inject all dependencies from the DI container
     container.register_singleton(
         PublishManager,
-        factory=lambda: PublishManagerImpl(),
+        factory=PublishManagerImpl,
     )
 
     container.register_singleton(

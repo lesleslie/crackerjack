@@ -198,7 +198,7 @@ class ComplexipyAdapter(BaseToolAdapter):
 
         if self.settings.use_json_output and json_file.exists():
             try:
-                with open(json_file) as f:
+                with json_file.open() as f:
                     data = json.load(f)
                 logger.debug(
                     "Read Complexipy JSON file",
@@ -425,7 +425,7 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             ToolIssue if valid complexity data found, otherwise None
         """
-        try:
+        with suppress(ValueError, IndexError):
             func_data = self._extract_function_data(line)
             if func_data:
                 func_name, line_number, complexity = func_data
@@ -442,8 +442,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                         code="COMPLEXITY",
                         severity=severity,
                     )
-        except (ValueError, IndexError):
-            pass  # Skip invalid lines
 
         return None
 

@@ -17,6 +17,7 @@ from __future__ import annotations
 import json
 import typing as t
 from contextlib import suppress
+from enum import StrEnum
 from pathlib import Path
 from uuid import UUID, uuid4
 
@@ -39,7 +40,7 @@ MODULE_ID = uuid4()
 MODULE_STATUS = "stable"
 
 
-class RuffMode(str):
+class RuffMode(StrEnum):
     """Ruff execution modes."""
 
     CHECK = "check"

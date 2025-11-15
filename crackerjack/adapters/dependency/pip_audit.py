@@ -277,11 +277,11 @@ class PipAuditAdapter(BaseToolAdapter):
     def _count_affected_packages(self, data: dict) -> int:
         """Count the number of affected packages."""
         return len(
-            set(
+            {
                 dep.get("name")
                 for dep in data.get("dependencies", [])
                 if dep.get("vulns")
-            )
+            }
         )
 
     async def parse_output(

@@ -222,8 +222,8 @@ class RefurbAdapter(BaseToolAdapter):
             "Parsed Refurb output",
             extra={
                 "total_issues": len(issues),
-                "files_affected": len(set(str(i.file_path) for i in issues)),
-                "unique_codes": len(set(i.code for i in issues if i.code)),
+                "files_affected": len({str(i.file_path) for i in issues}),
+                "unique_codes": len({i.code for i in issues if i.code}),
             },
         )
         return issues
