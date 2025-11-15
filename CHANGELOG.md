@@ -1,5 +1,27 @@
 ______________________________________________________________________
 
+## [0.44.15] - 2025-11-14
+
+### Added
+
+- Enhance semgrep JSON parsing to extract errors from errors array
+- Fix orchestration layer to properly extract semgrep JSON errors
+
+### Changed
+
+- Add diagnostic logging for hooks showing FAILED with 0 issues
+- Expand diagnostic logging to all hooks with failures
+- Update core, docs, tests
+
+### Fixed
+
+- Correct hook issue counting for failed hooks with zero detected issues
+- Ensure adapter-based hooks show errors when failing with 0 parsed issues
+
+### Internal
+
+- Remove debug logging from hook executors
+
 ## [0.44.14] - 2025-11-14
 
 ### Changed
