@@ -483,6 +483,10 @@ class HookExecutor:
                 f"output_len={len(error_output)}[/yellow]"
             )
 
+        # Semgrep needs special JSON parsing to extract from "errors" array
+        if hook.name == "semgrep":
+            return self._parse_semgrep_issues(error_output)
+
         if hook.name in reporting_tools:
             # Always parse output for reporting tools (they exit 0 even with findings)
             if hook.name == "complexipy":
@@ -585,6 +589,67 @@ class HookExecutor:
                     issues.append(f"Unused dependency: {dep_name}")
             if not line.strip():
                 parsing_unused = False
+        return issues
+
+    def _parse_semgrep_issues(self, output: str) -> list[str]:
+        """Parse semgrep JSON output to extract both findings and errors.
+
+        Semgrep returns JSON with two arrays:
+        - "results": Security/code quality findings
+        - "errors": Configuration, download, or execution errors
+
+        This method extracts issues from both arrays to provide comprehensive error reporting.
+        """
+        import json
+        import sys
+
+        issues = []
+
+        print("\n=== SEMGREP PARSING DEBUG ===", file=sys.stderr)
+        print(f"Output length: {len(output)}", file=sys.stderr)
+        print(f"First 200 chars: {output[:200]}", file=sys.stderr)
+
+        try:
+            # Try to parse as JSON
+            json_data = json.loads(output.strip())
+            print("JSON parsed successfully", file=sys.stderr)
+            print(f"Has 'results': {'results' in json_data}", file=sys.stderr)
+            print(f"Has 'errors': {'errors' in json_data}", file=sys.stderr)
+
+            # Extract findings from results array
+            if "results" in json_data:
+                for result in json_data.get("results", []):
+                    # Format: "file.py:line - rule_id: message"
+                    path = result.get("path", "unknown")
+                    line_num = result.get("start", {}).get("line", "?")
+                    rule_id = result.get("check_id", "unknown-rule")
+                    message = result.get("extra", {}).get(
+                        "message", "Security issue detected"
+                    )
+                    issues.append(f"{path}:{line_num} - {rule_id}: {message}")
+
+            # Extract errors from errors array (config errors, download failures, etc.)
+            if "errors" in json_data:
+                errors_list = json_data.get("errors", [])
+                print(f"Found {len(errors_list)} errors", file=sys.stderr)
+                for error in errors_list:
+                    error_type = error.get("type", "SemgrepError")
+                    error_msg = error.get("message", str(error))
+                    issue_str = f"{error_type}: {error_msg}"
+                    print(f"Adding error: {issue_str}", file=sys.stderr)
+                    issues.append(issue_str)
+
+        except json.JSONDecodeError as e:
+            # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
+            print(f"JSON decode error: {e}", file=sys.stderr)
+            if output.strip():
+                issues = [line.strip() for line in output.split("\n") if line.strip()][
+                    :10
+                ]
+
+        print(f"Returning {len(issues)} issues", file=sys.stderr)
+        print(f"Issues: {issues}", file=sys.stderr)
+        print("=== END SEMGREP PARSING ===\n", file=sys.stderr)
         return issues
 
     def _create_timeout_result(
