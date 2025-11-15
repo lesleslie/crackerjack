@@ -903,7 +903,11 @@ class HookOrchestratorAdapter:
                         for line in qa_result.details.split("\n")
                         if line.strip()
                     ][:10]
-                    issues = error_lines if error_lines else ["Hook failed with no parseable output"]
+                    issues = (
+                        error_lines
+                        if error_lines
+                        else ["Hook failed with no parseable output"]
+                    )
             elif not issues:
                 # Failed hook with no details and no issues
                 issues = ["Hook failed with no output"]

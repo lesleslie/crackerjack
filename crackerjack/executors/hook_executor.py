@@ -509,10 +509,6 @@ class HookExecutor:
 
     def _parse_complexipy_issues(self, output: str) -> list[str]:
         """Parse complexipy table output to count actual violations (complexity > 15)."""
-        # TEMP: Always print to diagnose issue
-        print(
-            f"\n🔍 DEBUG _parse_complexipy_issues called, output length: {len(output)}"
-        )
         issues = []
         for line in output.split("\n"):
             # Match table rows: │ path │ file │ function │ complexity │
@@ -525,8 +521,6 @@ class HookExecutor:
                     # Only count functions exceeding limit (15)
                     if complexity is not None and complexity > 15:
                         issues.append(line.strip())
-        # TEMP: Always print result
-        print(f"🔍 DEBUG _parse_complexipy_issues returning {len(issues)} issues")
         return issues
 
     def _parse_refurb_issues(self, output: str) -> list[str]:
@@ -583,20 +577,12 @@ class HookExecutor:
         This method extracts issues from both arrays to provide comprehensive error reporting.
         """
         import json
-        import sys
 
         issues = []
-
-        print("\n=== SEMGREP PARSING DEBUG ===", file=sys.stderr)
-        print(f"Output length: {len(output)}", file=sys.stderr)
-        print(f"First 200 chars: {output[:200]}", file=sys.stderr)
 
         try:
             # Try to parse as JSON
             json_data = json.loads(output.strip())
-            print("JSON parsed successfully", file=sys.stderr)
-            print(f"Has 'results': {'results' in json_data}", file=sys.stderr)
-            print(f"Has 'errors': {'errors' in json_data}", file=sys.stderr)
 
             # Extract findings from results array
             if "results" in json_data:
@@ -612,26 +598,18 @@ class HookExecutor:
 
             # Extract errors from errors array (config errors, download failures, etc.)
             if "errors" in json_data:
-                errors_list = json_data.get("errors", [])
-                print(f"Found {len(errors_list)} errors", file=sys.stderr)
-                for error in errors_list:
+                for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
                     error_msg = error.get("message", str(error))
-                    issue_str = f"{error_type}: {error_msg}"
-                    print(f"Adding error: {issue_str}", file=sys.stderr)
-                    issues.append(issue_str)
+                    issues.append(f"{error_type}: {error_msg}")
 
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
-            print(f"JSON decode error: {e}", file=sys.stderr)
             if output.strip():
                 issues = [line.strip() for line in output.split("\n") if line.strip()][
                     :10
                 ]
 
-        print(f"Returning {len(issues)} issues", file=sys.stderr)
-        print(f"Issues: {issues}", file=sys.stderr)
-        print("=== END SEMGREP PARSING ===\n", file=sys.stderr)
         return issues
 
     def _create_timeout_result(

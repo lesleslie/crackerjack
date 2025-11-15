@@ -451,30 +451,6 @@ class AsyncHookExecutor:
 
         status = "passed" if return_code == 0 else "failed"
 
-        # Debug logging for hooks that show FAILED with 0 issues
-        if hook.name in {
-            "ruff-format",
-            "ruff-check",
-            "codespell",
-            "semgrep",
-            "complexipy",
-        }:
-            import sys
-
-            stderr_text = self._last_stderr.decode() if self._last_stderr else ""
-            print(f"\n{'=' * 70}", file=sys.stderr)
-            print(f"DEBUG {hook.name}: EXIT CODE={return_code}", file=sys.stderr)
-            print(f"STDOUT (first 500 chars):\n{output_text[:500]}", file=sys.stderr)
-            print(f"STDERR (first 500 chars):\n{stderr_text[:500]}", file=sys.stderr)
-            print(f"{'=' * 70}\n", file=sys.stderr)
-            self.console.print(f"[red]DEBUG {hook.name}: EXIT CODE={return_code}[/red]")
-            self.console.print(
-                f"[yellow]STDOUT (first 500 chars): {output_text[:500]}[/yellow]"
-            )
-            self.console.print(
-                f"[yellow]STDERR (first 500 chars): {stderr_text[:500]}[/yellow]"
-            )
-
         self.logger.info(
             "Hook execution completed",
             hook=hook.name,
@@ -673,20 +649,12 @@ class AsyncHookExecutor:
         This method extracts issues from both arrays to provide comprehensive error reporting.
         """
         import json
-        import sys
 
         issues = []
-
-        print("\n=== ASYNC SEMGREP PARSING DEBUG ===", file=sys.stderr)
-        print(f"Output length: {len(output)}", file=sys.stderr)
-        print(f"First 200 chars: {output[:200]}", file=sys.stderr)
 
         try:
             # Try to parse as JSON
             json_data = json.loads(output.strip())
-            print("JSON parsed successfully", file=sys.stderr)
-            print(f"Has 'results': {'results' in json_data}", file=sys.stderr)
-            print(f"Has 'errors': {'errors' in json_data}", file=sys.stderr)
 
             # Extract findings from results array
             if "results" in json_data:
@@ -702,26 +670,18 @@ class AsyncHookExecutor:
 
             # Extract errors from errors array (config errors, download failures, etc.)
             if "errors" in json_data:
-                errors_list = json_data.get("errors", [])
-                print(f"Found {len(errors_list)} errors", file=sys.stderr)
-                for error in errors_list:
+                for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
                     error_msg = error.get("message", str(error))
-                    issue_str = f"{error_type}: {error_msg}"
-                    print(f"Adding error: {issue_str}", file=sys.stderr)
-                    issues.append(issue_str)
+                    issues.append(f"{error_type}: {error_msg}")
 
-        except json.JSONDecodeError as e:
+        except json.JSONDecodeError:
             # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
-            print(f"JSON decode error: {e}", file=sys.stderr)
             if output.strip():
                 issues = [line.strip() for line in output.split("\n") if line.strip()][
                     :10
                 ]
 
-        print(f"Returning {len(issues)} issues", file=sys.stderr)
-        print(f"Issues: {issues}", file=sys.stderr)
-        print("=== END ASYNC SEMGREP PARSING ===\n", file=sys.stderr)
         return issues
 
     def _parse_hook_output(
@@ -737,18 +697,10 @@ class AsyncHookExecutor:
         Returns:
             Dictionary with parsed results including files_processed
         """
-        import sys
-
-        print(
-            f"\n>>> _parse_hook_output called: hook_name='{hook_name}', returncode={returncode}",
-            file=sys.stderr,
-        )
-
         result = self._initialize_parse_result(returncode, output)
 
         # Special handling for semgrep
         if hook_name == "semgrep":
-            print(">>> Entering semgrep parsing block", file=sys.stderr)
             result["files_processed"] = self._parse_semgrep_output_async(output)
             result["issues"] = self._parse_semgrep_issues_async(output)
             return result
