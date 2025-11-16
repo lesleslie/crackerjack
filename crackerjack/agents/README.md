@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Agents](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../CLAUDE.md) | [Agents](./README.md)
 
 # Agents
 
@@ -249,11 +249,11 @@ Typical agent performance (per iteration):
 
 ## Related
 
-- [Adapters](<../adapters/README.md>) — Quality tools that agents fix issues from
-- [Orchestration](<../orchestration/README.md>) — Workflow coordination layer
-- [MCP](<../mcp/README.md>) — Model Context Protocol integration
-- [AGENTS.md](<../../AGENTS.md>) — Repository guidelines for agent development
-- [CLAUDE.md](<../../CLAUDE.md>) — AI agent system overview
+- [Adapters](../adapters/README.md) — Quality tools that agents fix issues from
+- [Orchestration](../orchestration/README.md) — Workflow coordination layer
+- [MCP](../mcp/README.md) — Model Context Protocol integration
+- [AGENTS.md](../../AGENTS.md) — Repository guidelines for agent development
+- [CLAUDE.md](../../CLAUDE.md) — AI agent system overview
 
 ## Future Enhancements
 

@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Services](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../CLAUDE.md) | [Services](./README.md)
 
 # Services
 
@@ -257,7 +257,7 @@ AI-specific services for code analysis and generation:
 - Claude integration
 - Code generation
 - Semantic analysis
-- See [ai/README.md](<./ai/README.md>)
+- See [ai/README.md](./ai/README.md)
 
 ### Monitoring Services (`monitoring/`)
 
@@ -266,7 +266,7 @@ Health and performance monitoring:
 - Real-time metrics
 - Performance tracking
 - Resource monitoring
-- See [monitoring/README.md](<./monitoring/README.md>)
+- See [monitoring/README.md](./monitoring/README.md)
 
 ### Quality Services (`quality/`)
 
@@ -275,7 +275,7 @@ Quality enforcement and tracking:
 - Quality metrics
 - Standards enforcement
 - Compliance tracking
-- See [quality/README.md](<./quality/README.md>)
+- See [quality/README.md](./quality/README.md)
 
 ### Pattern Services (`patterns/`)
 
@@ -358,11 +358,11 @@ result = await SecureSubprocess.run_command(
 
 ## Related
 
-- [Adapters](<../adapters/README.md>) — Quality tool adapters that use services
-- [Managers](<../managers/README.md>) — Managers that coordinate services
-- [Orchestration](<../orchestration/README.md>) — Orchestration using services
-- [Config](<../config/README.md>) — ACB Settings integration
-- [SECURITY.md](<../../SECURITY.md>) — Security documentation
+- [Adapters](../adapters/README.md) — Quality tool adapters that use services
+- [Managers](../managers/README.md) — Managers that coordinate services
+- [Orchestration](../orchestration/README.md) — Orchestration using services
+- [Config](../config/README.md) — ACB Settings integration
+- [SECURITY.md](../../SECURITY.md) — Security documentation
 
 ## Future Enhancements
 
