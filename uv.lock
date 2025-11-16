@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "acb"
-version = "0.31.2"
+version = "0.31.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioconsole" },
@@ -41,9 +41,9 @@ dependencies = [
     { name = "uuid-utils" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/bc/e8/00542ac72badcf8de4053cc017c6d9ca9f41c0905c05bf1bb12a78daac93/acb-0.31.2.tar.gz", hash = "sha256:a53fdf87fa9b7f6233c6a6047212be2e9d53f637ee3b89230b4313993bf3224b", size = 1387456, upload-time = "2025-11-16T07:45:09.771Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/13/2b/2d61e55dc60b2db6b6de820a903c3717ef7bc44e2702c2673789c309f8d2/acb-0.31.4.tar.gz", hash = "sha256:461eb99af1788324300772eab013edbefe5f91010cdf796c83848e71aa7a573e", size = 1387456, upload-time = "2025-11-16T12:36:48.662Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/67/64/952217411777eadf0d7e36c977df05adcd48bdffc7461c23b2351e74c189/acb-0.31.2-py3-none-any.whl", hash = "sha256:7e1c286f0f0b597571571d0b7242c6d22bf1759c0e12cd89641c62677f9528df", size = 798331, upload-time = "2025-11-16T07:45:06.337Z" },
+    { url = "https://files.pythonhosted.org/packages/e2/fe/cfe69d05a0438b825411dc6dd9f97fddd3885a0b1a3eefd5cd8a879d8526/acb-0.31.4-py3-none-any.whl", hash = "sha256:ad05a768495d6a7b27ccb43d8a7b205740f6d4037171633a988c17a4e9a591ad", size = 798328, upload-time = "2025-11-16T12:36:46.006Z" },
 ]
 
 [[package]]
@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.44.22"
+version = "0.44.23"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
@@ -739,7 +739,7 @@ sast = [
 
 [package.metadata]
 requires-dist = [
-    { name = "acb", specifier = ">=0.31.1" },
+    { name = "acb", specifier = ">=0.31.4" },
     { name = "aiofiles", specifier = ">=25.1.0" },
     { name = "aiohttp", specifier = ">=3.13.2" },
     { name = "bevy", specifier = ">=3.1.0b12" },
@@ -749,7 +749,7 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.121.2" },
     { name = "fastmcp", specifier = ">=2.13.1" },
     { name = "hatchling", specifier = ">=1.27.0" },
-    { name = "hypothesis", specifier = ">=6.148.0" },
+    { name = "hypothesis", specifier = ">=6.148.1" },
     { name = "jinja2", specifier = ">=3.1.6" },
     { name = "keyring", specifier = ">=25.6.0" },
     { name = "mcp", specifier = ">=1.21.0" },
@@ -776,7 +776,7 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.14.5" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "scipy", specifier = ">=1.16.3" },
-    { name = "scipy-stubs", specifier = ">=1.16.2.3" },
+    { name = "scipy-stubs", specifier = ">=1.16.3.0" },
     { name = "session-mgmt-mcp", specifier = ">=0.9.2" },
     { name = "skylos", specifier = ">=2.5.0" },
     { name = "structlog", specifier = ">=25.5.0" },
@@ -1541,14 +1541,14 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.148.0"
+version = "6.148.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6e/a5/8565e19f407fb7a2f57cccecf6894e05c047414f2b50a51a37af49a9f5ae/hypothesis-6.148.0.tar.gz", hash = "sha256:d61cca7f7cb56f2941b14d288fd134ba846af0ba8ed12374b581ab865d4e14a0", size = 468651, upload-time = "2025-11-15T06:58:17.605Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/fd/5f/b08ad8dc0a79c3828dd137b4f55243f5d0342b02e963f5298dcb3bec7021/hypothesis-6.148.1.tar.gz", hash = "sha256:98851429bd89b0c8835e8ebca6705c28dec56517576e5606fc3b841ddb0dc1c7", size = 468664, upload-time = "2025-11-16T07:58:37.959Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/02/f2/17075fb571eb11ca82c2a7b1e3a3f2c158567b44cdee90f639bf277014ca/hypothesis-6.148.0-py3-none-any.whl", hash = "sha256:bacb28721d1d3c1fd0b7bed82723f716635875a755726ab3f6e5f60cea6c1b4d", size = 535691, upload-time = "2025-11-15T06:58:16.246Z" },
+    { url = "https://files.pythonhosted.org/packages/a4/39/a4f6a711970e6c23be35b967907f766064e27945f5b44855a00fa14af3bb/hypothesis-6.148.1-py3-none-any.whl", hash = "sha256:2cca1a20e8fcd230da86bb6d9f3e940a052caef0d4327c12b5694d164ea0f89e", size = 535684, upload-time = "2025-11-16T07:58:36.175Z" },
 ]
 
 [[package]]
