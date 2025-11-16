@@ -1,5 +1,28 @@
 ______________________________________________________________________
 
+## [0.44.22] - 2025-11-16
+
+### Changed
+
+- Fix markdown link formatting across documentation
+- Simplify configuration and improve quality
+- Update core, deps, docs
+
+### Fixed
+
+- hooks: Remove hardcoded package name from complexipy parser
+- Windows compatibility, semgrep error categorization, docs
+
+### Documentation
+
+- Add comprehensive configuration consolidation audit
+- Add comprehensive hooks and tools audit report
+- Add comprehensive tempfile coverage output analysis
+- Add comprehensive tempfile JSON output analysis
+- Add cross-project configuration consolidation audit
+- Add unified implementation plan from 3 audits
+- Update audit documents with implementation status
+
 ## [0.44.21] - 2025-11-16
 
 ### Fixed
