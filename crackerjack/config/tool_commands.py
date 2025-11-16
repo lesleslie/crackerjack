@@ -85,7 +85,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "zuban",
             "check",
             "--config-file",
-            "mypy.ini",
+            "mypy.ini",  # Required: zuban v0.2.2 can't parse [tool.mypy] from pyproject.toml
             "--no-error-summary",  # Don't show error summary which may be causing issues
             f"./{package_name}",
         ],
