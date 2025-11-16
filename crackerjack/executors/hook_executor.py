@@ -624,7 +624,7 @@ class HookExecutor:
         from collections import Counter
 
         # Try to extract from file paths in output (format: ./package_name/file.py)
-        path_pattern = r'\./([a-z_][a-z0-9_]*)/[a-z_]'
+        path_pattern = r"\./([a-z_][a-z0-9_]*)/[a-z_]"
         matches = re.findall(path_pattern, output, re.IGNORECASE)
 
         if matches:
@@ -718,11 +718,25 @@ class HookExecutor:
         - "results": Security/code quality findings
         - "errors": Configuration, download, or execution errors
 
+        Error categorization:
+        - CODE_ERROR_TYPES: Actual code issues that should fail the build
+        - INFRA_ERROR_TYPES: Infrastructure issues (network, timeouts) that should warn only
+
         This method extracts issues from both arrays to provide comprehensive error reporting.
         """
         import json
 
         issues = []
+
+        # Infrastructure errors that shouldn't fail the build
+        INFRA_ERROR_TYPES = {
+            "NetworkError",
+            "DownloadError",
+            "TimeoutError",
+            "ConnectionError",
+            "HTTPError",
+            "SSLError",
+        }
 
         try:
             # Try to parse as JSON
@@ -740,12 +754,21 @@ class HookExecutor:
                     )
                     issues.append(f"{path}:{line_num} - {rule_id}: {message}")
 
-            # Extract errors from errors array (config errors, download failures, etc.)
+            # Extract errors from errors array with categorization
             if "errors" in json_data:
                 for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
                     error_msg = error.get("message", str(error))
-                    issues.append(f"{error_type}: {error_msg}")
+
+                    # Infrastructure errors: warn but don't fail the build
+                    if error_type in INFRA_ERROR_TYPES:
+                        self.console.print(
+                            f"[yellow]Warning: Semgrep infrastructure error: "
+                            f"{error_type}: {error_msg}[/yellow]"
+                        )
+                    else:
+                        # Code/config errors: add to issues (will fail the build)
+                        issues.append(f"{error_type}: {error_msg}")
 
         except json.JSONDecodeError:
             # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
@@ -1173,8 +1196,8 @@ class HookExecutor:
         system_path = os.environ.get("PATH", "")
         if system_path:
             venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-            path_parts = [p for p in system_path.split(": ") if p != venv_bin]
-            clean_env["PATH"] = ": ".join(path_parts)
+            path_parts = [p for p in system_path.split(os.pathsep) if p != venv_bin]
+            clean_env["PATH"] = os.pathsep.join(path_parts)
 
     def _get_python_vars_to_exclude(self) -> set[str]:
         """Get the set of Python variables to exclude."""
