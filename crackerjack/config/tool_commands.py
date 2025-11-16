@@ -86,7 +86,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "check",
             "--config-file",
             "mypy.ini",  # Required: zuban v0.2.2 can't parse [tool.mypy] from pyproject.toml
-            "--no-error-summary",  # Don't show error summary which may be causing issues
+            "--no-error-summary",  # Suppress summary line (e.g., "Found N errors") to keep issue output clean
             f"./{package_name}",
         ],
         # ========================================================================
