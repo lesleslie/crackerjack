@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [AI](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [AI](<./README.md>)
 
 # AI Adapter
 
@@ -61,5 +61,5 @@ async def fix_with_ai() -> None:
 
 ## Related
 
-- [Type](../type/README.md) — Type checking that often informs fix prompts
-- [Refactor](../refactor/README.md) — Refactoring tools that pair well with AI fixes
+- [Type](<../type/README.md>) — Type checking that often informs fix prompts
+- [Refactor](<../refactor/README.md>) — Refactoring tools that pair well with AI fixes

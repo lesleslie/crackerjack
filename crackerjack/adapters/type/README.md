@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Type](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Type](<./README.md>)
 
 # Type Adapters
 
@@ -44,9 +44,9 @@ async def run_zuban() -> None:
 
 ## LSP Integration
 
-For editor-like performance, see [LSP adapters](../lsp/README.md) to run Zuban diagnostics via LSP with automatic CLI fallback.
+For editor-like performance, see [LSP adapters](<../lsp/README.md>) to run Zuban diagnostics via LSP with automatic CLI fallback.
 
 ## Related
 
-- [AI](../ai/README.md) — AI-assisted fixes frequently target type issues
-- [Format](../format/README.md) — Consistent style improves type readability
+- [AI](<../ai/README.md>) — AI-assisted fixes frequently target type issues
+- [Format](<../format/README.md>) — Consistent style improves type readability

@@ -453,7 +453,7 @@ from ..managers.test_manager import TestManager
 from ..models.protocols import TestManagerProtocol
 ```
 
-**Current Status**: 21.6% coverage (baseline: 19.6%, targeting 100% via ratchet system). See [COVERAGE_POLICY.md](./COVERAGE_POLICY.md) for complete details.
+**Current Status**: 21.6% coverage (baseline: 19.6%, targeting 100% via ratchet system). See [COVERAGE_POLICY.md](<./COVERAGE_POLICY.md>) for complete details.
 
 - make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference

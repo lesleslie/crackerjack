@@ -24,7 +24,7 @@
 ## Testing Guidelines
 
 - Prefer `pytest` fixtures from `tests/conftest.py` and reuse documentation assets from `test_docs_site/` when validating rendered output.
-- Work toward 42% milestone (current: 21.6%, baseline: 19.6%); consult `coverage.json` or `htmlcov/` after changes. See [COVERAGE_POLICY.md](./COVERAGE_POLICY.md).
+- Work toward 42% milestone (current: 21.6%, baseline: 19.6%); consult `coverage.json` or `htmlcov/` after changes. See [COVERAGE_POLICY.md](<./COVERAGE_POLICY.md>).
 - Use markers `chaos`, `ai_generated`, and `breakthrough` to isolate expensive suites; document new fixtures and markers alongside the relevant tests.
 
 ## Commit & Pull Request Guidelines

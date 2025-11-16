@@ -726,9 +726,43 @@ class HookExecutor:
         """
         import json
 
-        issues = []
+        try:
+            # Try to parse as JSON
+            json_data = json.loads(output.strip())
+            issues = []
 
-        # Infrastructure errors that shouldn't fail the build
+            # Extract findings from results array
+            issues.extend(self._extract_semgrep_results(json_data))
+
+            # Extract errors from errors array with categorization
+            issues.extend(self._extract_semgrep_errors(json_data))
+
+            return issues
+
+        except json.JSONDecodeError:
+            # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
+            if output.strip():
+                return [line.strip() for line in output.split("\n") if line.strip()][
+                    :10
+                ]
+
+        return []
+
+    def _extract_semgrep_results(self, json_data: dict) -> list[str]:
+        """Extract findings from semgrep results."""
+        issues = []
+        for result in json_data.get("results", []):
+            # Format: "file.py:line - rule_id: message"
+            path = result.get("path", "unknown")
+            line_num = result.get("start", {}).get("line", "?")
+            rule_id = result.get("check_id", "unknown-rule")
+            message = result.get("extra", {}).get("message", "Security issue detected")
+            issues.append(f"{path}:{line_num} - {rule_id}: {message}")
+        return issues
+
+    def _extract_semgrep_errors(self, json_data: dict) -> list[str]:
+        """Extract errors from semgrep errors with categorization."""
+        issues = []
         INFRA_ERROR_TYPES = {
             "NetworkError",
             "DownloadError",
@@ -738,45 +772,19 @@ class HookExecutor:
             "SSLError",
         }
 
-        try:
-            # Try to parse as JSON
-            json_data = json.loads(output.strip())
+        for error in json_data.get("errors", []):
+            error_type = error.get("type", "SemgrepError")
+            error_msg = error.get("message", str(error))
 
-            # Extract findings from results array
-            if "results" in json_data:
-                for result in json_data.get("results", []):
-                    # Format: "file.py:line - rule_id: message"
-                    path = result.get("path", "unknown")
-                    line_num = result.get("start", {}).get("line", "?")
-                    rule_id = result.get("check_id", "unknown-rule")
-                    message = result.get("extra", {}).get(
-                        "message", "Security issue detected"
-                    )
-                    issues.append(f"{path}:{line_num} - {rule_id}: {message}")
-
-            # Extract errors from errors array with categorization
-            if "errors" in json_data:
-                for error in json_data.get("errors", []):
-                    error_type = error.get("type", "SemgrepError")
-                    error_msg = error.get("message", str(error))
-
-                    # Infrastructure errors: warn but don't fail the build
-                    if error_type in INFRA_ERROR_TYPES:
-                        self.console.print(
-                            f"[yellow]Warning: Semgrep infrastructure error: "
-                            f"{error_type}: {error_msg}[/yellow]"
-                        )
-                    else:
-                        # Code/config errors: add to issues (will fail the build)
-                        issues.append(f"{error_type}: {error_msg}")
-
-        except json.JSONDecodeError:
-            # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
-            if output.strip():
-                issues = [line.strip() for line in output.split("\n") if line.strip()][
-                    :10
-                ]
-
+            # Infrastructure errors: warn but don't fail the build
+            if error_type in INFRA_ERROR_TYPES:
+                self.console.print(
+                    f"[yellow]Warning: Semgrep infrastructure error: "
+                    f"{error_type}: {error_msg}[/yellow]"
+                )
+            else:
+                # Code/config errors: add to issues (will fail the build)
+                issues.append(f"{error_type}: {error_msg}")
         return issues
 
     def _create_timeout_result(
