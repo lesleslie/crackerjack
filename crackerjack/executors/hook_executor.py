@@ -610,16 +610,53 @@ class HookExecutor:
                 return int(parts[-1])
         return None
 
-    def _should_include_line(self, line: str) -> bool:
-        """Check if the line should be included in the output."""
-        return "│" in line and "crackerjack" in line
+    def _detect_package_from_output(self, output: str) -> str:
+        """Auto-detect package name from tool output.
+
+        Looks for common patterns like:
+        - Table rows with paths: │ ./package_name/...
+        - File paths: package_name/file.py
+
+        Returns:
+            Detected package name, or falls back to pkg_path detection
+        """
+        import re
+        from collections import Counter
+
+        # Try to extract from file paths in output (format: ./package_name/file.py)
+        path_pattern = r'\./([a-z_][a-z0-9_]*)/[a-z_]'
+        matches = re.findall(path_pattern, output, re.IGNORECASE)
+
+        if matches:
+            # Return most common package name found
+            return Counter(matches).most_common(1)[0][0]
+
+        # Fallback to detecting from pyproject.toml (existing logic)
+        from crackerjack.config.tool_commands import _detect_package_name_cached
+
+        return _detect_package_name_cached(str(self.pkg_path))
+
+    def _should_include_line(self, line: str, package_name: str) -> bool:
+        """Check if the line should be included in the output.
+
+        Args:
+            line: Line from complexipy output
+            package_name: Name of the package being scanned
+
+        Returns:
+            True if line contains the package name and is a table row
+        """
+        return "│" in line and package_name in line
 
     def _parse_complexipy_issues(self, output: str) -> list[str]:
         """Parse complexipy table output to count actual violations (complexity > 15)."""
+        # Auto-detect package name from output
+        package_name = self._detect_package_from_output(output)
+
         issues = []
         for line in output.split("\n"):
             # Match table rows: │ path │ file │ function │ complexity │
-            if self._should_include_line(line):
+            if self._should_include_line(line, package_name):
                 # Skip header/separator rows
                 if not self._is_header_or_separator_line(line):
                     # Extract complexity value (last column)
