@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "acb"
-version = "0.31.1"
+version = "0.31.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioconsole" },
@@ -41,9 +41,9 @@ dependencies = [
     { name = "uuid-utils" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e7/c9/d57e21c0a43aa0d30f3465259a4a1799556c5ffb875396528909064c491e/acb-0.31.1.tar.gz", hash = "sha256:96ed62489784a8aeca8d9aeda31dd9db81ae79a3fd7b54b649f686d25a61d388", size = 1364822, upload-time = "2025-11-08T23:25:41.632Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bc/e8/00542ac72badcf8de4053cc017c6d9ca9f41c0905c05bf1bb12a78daac93/acb-0.31.2.tar.gz", hash = "sha256:a53fdf87fa9b7f6233c6a6047212be2e9d53f637ee3b89230b4313993bf3224b", size = 1387456, upload-time = "2025-11-16T07:45:09.771Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/83/8d/8cc1cc13e62ce5b728eef6158068801884d8a7a94b703f4ec246a44c9a83/acb-0.31.1-py3-none-any.whl", hash = "sha256:5e63286b5cee84a848a9d374c75c1ca8f32429d624d55c5a0cf228194be5426f", size = 793296, upload-time = "2025-11-08T23:25:38.6Z" },
+    { url = "https://files.pythonhosted.org/packages/67/64/952217411777eadf0d7e36c977df05adcd48bdffc7461c23b2351e74c189/acb-0.31.2-py3-none-any.whl", hash = "sha256:7e1c286f0f0b597571571d0b7242c6d22bf1759c0e12cd89641c62677f9528df", size = 798331, upload-time = "2025-11-16T07:45:06.337Z" },
 ]
 
 [[package]]
@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.44.19"
+version = "0.44.20"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
