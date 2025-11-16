@@ -169,9 +169,7 @@ terminal_width = 70
 
 # Test parallelization settings
 test_workers = 0  # 0 = auto-detect, 1 = sequential, >1 = explicit, <0 = fractional
-auto_detect_workers = true  # Enable pytest-xdist auto-detection
 max_workers = 8  # Maximum parallel workers (safety limit)
-min_workers = 2  # Minimum parallel workers (when auto-detecting)
 memory_per_worker_gb = 2.0  # Minimum memory per worker (prevents OOM)
 
 [tool.codespell]
@@ -228,7 +226,7 @@ min_rounds = 1
 max_time = 5.0
 
 [tool.coverage.run]
-branch = false
+branch = true  # Enable branch coverage for more accurate metrics
 source = [
     "crackerjack",
 ]
@@ -369,29 +367,8 @@ enable_all = true
 quiet = true
 python_version = "3.13"
 ignore = [
-    "FURB184",
-    "FURB120",
-]
-
-[[tool.refurb.amend]]
-path = "tests"
-ignore = [
-    "FURB184",
-    "FURB120",
-]
-
-[[tool.refurb.amend]]
-path = "test_*.py"
-ignore = [
-    "FURB184",
-    "FURB120",
-]
-
-[[tool.refurb.amend]]
-path = "*_test.py"
-ignore = [
-    "FURB184",
-    "FURB120",
+    "FURB184",  # Already applies to ALL files including tests
+    "FURB120",  # Already applies to ALL files including tests
 ]
 
 [tool.bandit]
@@ -421,6 +398,11 @@ exclude_patterns = [
 max_complexity = 15
 
 [tool.mypy]
+# NOTE: Full mypy config in mypy.ini (zuban limitation)
+# Zuban v0.2.2 has a bug parsing [tool.mypy] from pyproject.toml
+# Error: "Expected tool.mypy to be simple table in pyproject.toml"
+# Once zuban is fixed, consolidate mypy.ini contents here
+# See: UNIFIED_IMPLEMENTATION_PLAN.md Phase 2 Task 2.1 (BLOCKED)
 python_version = "3.13"
 
 [tool.zuban]
