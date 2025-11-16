@@ -217,13 +217,9 @@ markers = [
     "ai_generated: marks test as AI-generated test",
     "breakthrough: marks test as breakthrough frontier test",
 ]
-
-[tool.pytest.benchmark]
-disable_gc = true
-warmup = false
-warmup_iterations = 0
-min_rounds = 1
-max_time = 5.0
+# pytest-benchmark configuration (CLI options, not ini_options)
+# Benchmark settings are passed via command line or kept in separate [tool.pytest.benchmark]
+# Removed to avoid "Unknown config option" warnings
 
 [tool.coverage.run]
 branch = true  # Enable branch coverage for more accurate metrics

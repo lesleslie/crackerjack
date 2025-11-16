@@ -839,49 +839,77 @@ class HookOrchestratorAdapter:
         )
 
     def _build_issues_list(self, qa_result: t.Any) -> list[str]:
-        """Build the issues list from the QA result."""
+        """Build the issues list from the QA result.
+
+        This method uses the adapter's pre-formatted details string directly
+        instead of re-parsing it, which preserves the original formatting and
+        prevents loss of detailed error information.
+
+        Args:
+            qa_result: QAResult from adapter execution
+
+        Returns:
+            List of issue strings for display. Returns empty list if no issues.
+        """
         if qa_result.issues_found == 0:
             return []
 
+        # NEW: Use adapter's pre-formatted details directly
         if qa_result.details:
-            # Parse all detailed issues from details
+            # Parse detail lines from the adapter's formatted output
             detail_lines = [
                 line.strip()
                 for line in qa_result.details.split("\n")
                 if line.strip() and not line.strip().startswith("...")
             ]
 
-            # Show first 20 issues, then add summary for remainder
-            max_displayed = 20
-            if len(detail_lines) > max_displayed:
-                issues = detail_lines[:max_displayed]
-                remaining = len(detail_lines) - max_displayed
-                issues.append(
-                    f"... and {remaining} more issue{'s' if remaining != 1 else ''} "
-                    f"(run with --ai-debug for full details)"
-                )
-            else:
-                issues = detail_lines
+            # If we successfully parsed details, use them
+            if detail_lines:
+                # Show first 20 issues, then add summary for remainder
+                max_displayed = 20
+                if len(detail_lines) > max_displayed:
+                    issues = detail_lines[:max_displayed]
+                    remaining = len(detail_lines) - max_displayed
+                    issues.append(
+                        f"... and {remaining} more issue{'s' if remaining != 1 else ''} "
+                        f"(run with --ai-debug for full details)"
+                    )
+                else:
+                    issues = detail_lines
 
-            # If qa_result reports more issues than we have details for, note it
-            if qa_result.issues_found > len(detail_lines):
-                extra = qa_result.issues_found - len(detail_lines)
-                issues.append(
-                    f"... and {extra} additional issue{'s' if extra != 1 else ''} without details"
-                )
-        else:
-            # No details available - show summary
-            count = qa_result.issues_found
-            issues = [
-                f"{count} issue{'s' if count != 1 else ''} found (no detailed output available)"
-            ]
+                # If qa_result reports more issues than we have details for, note it
+                if qa_result.issues_found > len(detail_lines):
+                    extra = qa_result.issues_found - len(detail_lines)
+                    issues.append(
+                        f"... and {extra} additional issue{'s' if extra != 1 else ''} without details"
+                    )
 
-        return issues
+                return issues
+
+        # Fallback: No details available or details parsing failed
+        # This should only happen when the adapter doesn't provide detailed output
+        count = qa_result.issues_found
+        return [
+            f"{count} issue{'s' if count != 1 else ''} found (run with --ai-debug for full details)"
+        ]
 
     def _extract_error_details(
         self, hook: HookDefinition, qa_result: t.Any, status: str, issues: list[str]
     ) -> tuple[int | None, str | None, list[str]]:
-        """Extract error details for failed hooks from adapter results."""
+        """Extract error details for failed hooks from adapter results.
+
+        Note: This method should only add the generic fallback if _build_issues_list
+        hasn't already provided a fallback message. This prevents double-fallback.
+
+        Args:
+            hook: Hook definition
+            qa_result: QAResult from adapter execution
+            status: Hook status (passed/failed)
+            issues: Issues list from _build_issues_list
+
+        Returns:
+            Tuple of (exit_code, error_message, updated_issues)
+        """
         exit_code = None
         error_message = None
 
@@ -890,7 +918,8 @@ class HookOrchestratorAdapter:
                 # For adapter-based hooks, use details as error message
                 error_message = qa_result.details[:500]  # Truncate if very long
 
-                # If no issues were parsed but hook failed, extract error from details
+                # Only extract error from details if issues list is truly empty
+                # (not just a fallback message from _build_issues_list)
                 if not issues:
                     error_lines = [
                         line.strip()
@@ -899,7 +928,8 @@ class HookOrchestratorAdapter:
                     ][:10]
                     issues = error_lines or ["Hook failed with no parseable output"]
             elif not issues:
-                # Failed hook with no details and no issues
+                # Only add generic fallback if we have absolutely no information
+                # This should be rare since _build_issues_list provides a fallback
                 issues = [
                     f"Hook {hook.name} failed with no detailed output (exit code: {qa_result.exit_code if hasattr(qa_result, 'exit_code') else 'unknown'})"
                 ]

@@ -165,6 +165,22 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ),
         ],
     ),
+    "spacing_after_comma": ValidatedPattern(
+        name="spacing_after_comma",
+        pattern=r",(?! |\n|$)",
+        replacement=r", ",
+        description="Add space after comma if missing (skip if already spaced, at end of line, or end of string)",
+        global_replace=True,
+        test_cases=[
+            ("func(a,b,c)", "func(a, b, c)"),
+            ("func(a, b, c)", "func(a, b, c)"),
+            ("[1,2,3]", "[1, 2, 3]"),
+            ("[1, 2, 3]", "[1, 2, 3]"),
+            ("{'x':1,'y':2,'z':3}", "{'x':1, 'y':2, 'z':3}"),
+            ("trailing,\nnewline", "trailing,\nnewline"),
+            ("end_comma,", "end_comma,"),
+        ],
+    ),
     "spacing_after_colon": ValidatedPattern(
         name="spacing_after_colon",
         pattern=r"(?<!https)(?<!http)(?<!ftp)(?<!file)(?<!: )(\b[a-zA-Z_][a-zA-Z0-9_]*):([a-zA-Z0-9_][^ \n:]*)",

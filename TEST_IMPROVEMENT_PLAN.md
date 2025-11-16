@@ -53,9 +53,9 @@ assert result is not None or result is None
 
 #### Agents Layer (4.3% coverage)
 
-- **22 of 23 agents untested** including:
+- **22 of 9 agents untested** including:
   - `coordinator.py` - NO TESTS (critical!)
-  - All 12 specialized agents (RefactoringAgent, SecurityAgent, etc.)
+  - All 9 specialized agents (RefactoringAgent, SecurityAgent, etc.)
 
 #### Core Layer (6.25% coverage)
 

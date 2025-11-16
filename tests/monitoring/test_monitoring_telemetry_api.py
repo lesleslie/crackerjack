@@ -8,10 +8,12 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from crackerjack.mcp.websocket.monitoring_endpoints import (
+from crackerjack.mcp.websocket.monitoring.api.telemetry import (
+    register_telemetry_api_endpoints,
+)
+from crackerjack.mcp.websocket.monitoring.models import (
     HealthResponseModel,
     TelemetryResponseModel,
-    _register_telemetry_api_endpoints,
 )
 from crackerjack.services.quality.quality_baseline_enhanced import (
     TrendDirection,
@@ -93,7 +95,7 @@ def test_app() -> TestClient:
         "telemetry": FakeTelemetry(),
     }
     job_manager = FakeJobManager()
-    _register_telemetry_api_endpoints(app, job_manager, services)
+    register_telemetry_api_endpoints(app, job_manager, services)
     return TestClient(app)
 
 

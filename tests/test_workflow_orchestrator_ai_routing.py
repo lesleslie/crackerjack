@@ -7,7 +7,6 @@ from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.cli.options import Options
 
 
-@pytest.mark.skip(reason="WorkflowOrchestrator AI routing tests require complex nested ACB DI setup - integration test, not unit test")
 @pytest.fixture
 def mock_options_with_ai_agent():
     """Options with AI agent enabled."""

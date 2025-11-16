@@ -53,14 +53,59 @@ class TestSafePatternApplicator:
         """Test has_preserved_comment method"""
         applicator = SafePatternApplicator()
 
-        # Test shebang comment
+        # Test shebang comments (still useful for executable scripts)
+        assert applicator.has_preserved_comment("#!/usr/bin/env python3") is True
         assert applicator.has_preserved_comment("#! /usr/bin/env python") is True
 
-        # Test coding comment
-        assert applicator.has_preserved_comment("# coding: utf-8") is True
+        # Test nosec comments (Bandit security suppression - critical)
+        assert applicator.has_preserved_comment("# nosec B311") is True
+        assert applicator.has_preserved_comment("    # nosec B608") is True
+        assert applicator.has_preserved_comment("# nosec") is True
+
+        # Test other critical preserved patterns
+        assert applicator.has_preserved_comment("# type: ignore") is True
+        assert applicator.has_preserved_comment("# noqa") is True
+        assert applicator.has_preserved_comment("# pragma: no cover") is True
+        assert applicator.has_preserved_comment("# TODO: fix this") is True
+
+        # Test obsolete encoding declarations (should NOT be preserved - Python 3.0+)
+        assert applicator.has_preserved_comment("# coding: utf-8") is False
+        assert applicator.has_preserved_comment("# -*- coding: utf-8 -*-") is False
 
         # Test regular comment
         assert applicator.has_preserved_comment("# This is a regular comment") is False
+
+    def test_inline_nosec_preservation(self):
+        """Test that inline nosec comments are preserved"""
+        from crackerjack.code_cleaner import CodeCleaner
+        from pathlib import Path
+        import tempfile
+
+        cleaner = CodeCleaner(console=Console(), base_directory=Path(tempfile.gettempdir()))
+
+        # Test code with inline nosec comments
+        test_code = '''import random
+value = random.random()  # nosec B311
+other = 123  # regular comment
+result = value * 2  # type: ignore
+'''
+
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+            f.write(test_code)
+            temp_path = Path(f.name)
+
+        try:
+            result = cleaner.clean_file(temp_path)
+            cleaned = temp_path.read_text()
+
+            # Verify nosec and type: ignore are preserved
+            assert '# nosec B311' in cleaned
+            assert '# type: ignore' in cleaned
+            # Verify regular comment is removed
+            assert '# regular comment' not in cleaned
+
+        finally:
+            temp_path.unlink()
 
 
 class TestCodeCleaner:

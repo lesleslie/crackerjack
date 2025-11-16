@@ -3,7 +3,7 @@
 import ast
 import typing as t
 
-from ..base import AgentContext
+from ...base import AgentContext
 
 
 class DeadCodeDetector:

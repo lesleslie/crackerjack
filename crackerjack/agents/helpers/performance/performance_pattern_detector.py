@@ -5,8 +5,8 @@ import operator
 import typing as t
 from contextlib import suppress
 
+from ....services.regex_patterns import SAFE_PATTERNS
 from ...base import AgentContext
-from ...services.regex_patterns import SAFE_PATTERNS
 
 
 class PerformancePatternDetector:
