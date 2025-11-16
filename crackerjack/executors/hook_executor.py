@@ -610,16 +610,53 @@ class HookExecutor:
                 return int(parts[-1])
         return None
 
-    def _should_include_line(self, line: str) -> bool:
-        """Check if the line should be included in the output."""
-        return "│" in line and "crackerjack" in line
+    def _detect_package_from_output(self, output: str) -> str:
+        """Auto-detect package name from tool output.
+
+        Looks for common patterns like:
+        - Table rows with paths: │ ./package_name/...
+        - File paths: package_name/file.py
+
+        Returns:
+            Detected package name, or falls back to pkg_path detection
+        """
+        import re
+        from collections import Counter
+
+        # Try to extract from file paths in output (format: ./package_name/file.py)
+        path_pattern = r"\./([a-z_][a-z0-9_]*)/[a-z_]"
+        matches = re.findall(path_pattern, output, re.IGNORECASE)
+
+        if matches:
+            # Return most common package name found
+            return Counter(matches).most_common(1)[0][0]
+
+        # Fallback to detecting from pyproject.toml (existing logic)
+        from crackerjack.config.tool_commands import _detect_package_name_cached
+
+        return _detect_package_name_cached(str(self.pkg_path))
+
+    def _should_include_line(self, line: str, package_name: str) -> bool:
+        """Check if the line should be included in the output.
+
+        Args:
+            line: Line from complexipy output
+            package_name: Name of the package being scanned
+
+        Returns:
+            True if line contains the package name and is a table row
+        """
+        return "│" in line and package_name in line
 
     def _parse_complexipy_issues(self, output: str) -> list[str]:
         """Parse complexipy table output to count actual violations (complexity > 15)."""
+        # Auto-detect package name from output
+        package_name = self._detect_package_from_output(output)
+
         issues = []
         for line in output.split("\n"):
             # Match table rows: │ path │ file │ function │ complexity │
-            if self._should_include_line(line):
+            if self._should_include_line(line, package_name):
                 # Skip header/separator rows
                 if not self._is_header_or_separator_line(line):
                     # Extract complexity value (last column)
@@ -681,11 +718,25 @@ class HookExecutor:
         - "results": Security/code quality findings
         - "errors": Configuration, download, or execution errors
 
+        Error categorization:
+        - CODE_ERROR_TYPES: Actual code issues that should fail the build
+        - INFRA_ERROR_TYPES: Infrastructure issues (network, timeouts) that should warn only
+
         This method extracts issues from both arrays to provide comprehensive error reporting.
         """
         import json
 
         issues = []
+
+        # Infrastructure errors that shouldn't fail the build
+        INFRA_ERROR_TYPES = {
+            "NetworkError",
+            "DownloadError",
+            "TimeoutError",
+            "ConnectionError",
+            "HTTPError",
+            "SSLError",
+        }
 
         try:
             # Try to parse as JSON
@@ -703,12 +754,21 @@ class HookExecutor:
                     )
                     issues.append(f"{path}:{line_num} - {rule_id}: {message}")
 
-            # Extract errors from errors array (config errors, download failures, etc.)
+            # Extract errors from errors array with categorization
             if "errors" in json_data:
                 for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
                     error_msg = error.get("message", str(error))
-                    issues.append(f"{error_type}: {error_msg}")
+
+                    # Infrastructure errors: warn but don't fail the build
+                    if error_type in INFRA_ERROR_TYPES:
+                        self.console.print(
+                            f"[yellow]Warning: Semgrep infrastructure error: "
+                            f"{error_type}: {error_msg}[/yellow]"
+                        )
+                    else:
+                        # Code/config errors: add to issues (will fail the build)
+                        issues.append(f"{error_type}: {error_msg}")
 
         except json.JSONDecodeError:
             # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
@@ -1136,8 +1196,8 @@ class HookExecutor:
         system_path = os.environ.get("PATH", "")
         if system_path:
             venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-            path_parts = [p for p in system_path.split(": ") if p != venv_bin]
-            clean_env["PATH"] = ": ".join(path_parts)
+            path_parts = [p for p in system_path.split(os.pathsep) if p != venv_bin]
+            clean_env["PATH"] = os.pathsep.join(path_parts)
 
     def _get_python_vars_to_exclude(self) -> set[str]:
         """Get the set of Python variables to exclude."""

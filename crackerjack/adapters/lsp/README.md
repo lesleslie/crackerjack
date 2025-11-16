@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [LSP](<./README.md>)
+> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [LSP](./README.md)
 
 # LSP Adapters
 
@@ -45,5 +45,5 @@ CLI helpers are available to manage Zuban LSP via `python -m crackerjack` option
 
 ## Related
 
-- [Type](<../type/README.md>) — Non-LSP type checkers and settings
-- [Refactor](<../refactor/README.md>) — Skylos-based dead code detection
+- [Type](../type/README.md) — Non-LSP type checkers and settings
+- [Refactor](../refactor/README.md) — Skylos-based dead code detection
