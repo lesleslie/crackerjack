@@ -4,25 +4,26 @@
 **Scope:** Tool configuration files, pyproject.toml simplification, unused settings
 **Status:** 🎯 Significant consolidation opportunities identified
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 Audit identified **12 consolidation opportunities** and **15+ redundant/unused settings** across configuration files. Primary recommendations:
 
 1. **Eliminate mypy.ini** → Consolidate into pyproject.toml (saves 1 config file)
-2. **Simplify gitleaksignore** → Can use crackerjack settings (optional)
-3. **Remove duplicate pyright/mypy configs** in pyproject.toml
-4. **Consolidate test worker settings** → Remove redundant config keys
-5. **Simplify tool.refurb** → Remove duplicate test path ignores
+1. **Simplify gitleaksignore** → Can use crackerjack settings (optional)
+1. **Remove duplicate pyright/mypy configs** in pyproject.toml
+1. **Consolidate test worker settings** → Remove redundant config keys
+1. **Simplify tool.refurb** → Remove duplicate test path ignores
 
 **Impact:**
+
 - ✅ Reduce from 5 config files to 3-4
 - ✅ Remove ~30 lines of redundant configuration
 - ✅ Single source of truth for all tool configs
 - ✅ Easier maintenance and onboarding
 
----
+______________________________________________________________________
 
 ## Current Configuration Inventory 📋
 
@@ -56,7 +57,7 @@ Audit identified **12 consolidation opportunities** and **15+ redundant/unused s
 [tool.crackerjack]           # ✅ Correct location
 ```
 
----
+______________________________________________________________________
 
 ## Issue #1: CRITICAL - Duplicate mypy Configuration 🚨
 
@@ -96,6 +97,7 @@ python_version = "3.13"
 ```
 
 **Problem:**
+
 - mypy/zuban read from `mypy.ini` (via `--config-file mypy.ini` flag)
 - pyproject.toml has `[tool.mypy]` section that's **IGNORED**
 - Configuration is **split between two files**
@@ -156,16 +158,18 @@ git rm mypy.ini
 **Verification:**
 
 Both mypy and zuban support reading from `[tool.mypy]` in pyproject.toml:
+
 - **mypy**: Native support since v0.900
 - **zuban**: As a mypy wrapper, inherits mypy's config discovery
 
 **Benefits:**
+
 - ✅ One less config file
 - ✅ Single source of truth
 - ✅ Better discoverability
 - ✅ Follows PEP 518 standards
 
----
+______________________________________________________________________
 
 ## Issue #2: Redundant Test Worker Settings ⚙️
 
@@ -186,10 +190,12 @@ memory_per_worker_gb = 2.0  # ✅ Keep - Safety feature
 ### Analysis
 
 **auto_detect_workers is redundant:**
+
 - When `test_workers = 0`, auto-detection is **implicit**
 - Having both creates confusion: "What if test_workers=0 but auto_detect_workers=false?"
 
 **min_workers is unused:**
+
 - pytest-xdist doesn't support minimum worker config
 - Crackerjack doesn't enforce this limit
 - Value is never read in code
@@ -214,7 +220,7 @@ memory_per_worker_gb = 2.0  # Minimum memory per worker (prevents OOM)
 **Lines removed:** 2
 **Clarity improved:** Yes - fewer knobs to understand
 
----
+______________________________________________________________________
 
 ## Issue #3: Redundant Refurb Test Ignores 📝
 
@@ -249,11 +255,13 @@ ignore = ["FURB184", "FURB120"]
 ### Analysis
 
 **Why it's redundant:**
+
 1. Global `ignore` already applies to ALL files
-2. Test files get the same ignore rules as non-test files
-3. Three `amend` blocks add no additional value
+1. Test files get the same ignore rules as non-test files
+1. Three `amend` blocks add no additional value
 
 **Refurb behavior:**
+
 - Global `ignore` applies to **all paths**
 - `amend` only needed if **different** rules for different paths
 
@@ -275,7 +283,7 @@ ignore = [
 **Lines removed:** 18
 **Behavior:** Identical (global ignore already covered test files)
 
----
+______________________________________________________________________
 
 ## Issue #4: Pyright/Mypy Overlap 🔍
 
@@ -311,24 +319,28 @@ pythonVersion = "3.13"
 **hooks.py uses zuban, not pyright:**
 
 ```python
-HookDefinition(
-    name="zuban",  # ✅ Active type checker
-    command=[],
-    timeout=80,
-    stage=HookStage.COMPREHENSIVE,
-    security_level=SecurityLevel.HIGH,
-    use_precommit_legacy=False,
-),
+(
+    HookDefinition(
+        name="zuban",  # ✅ Active type checker
+        command=[],
+        timeout=80,
+        stage=HookStage.COMPREHENSIVE,
+        security_level=SecurityLevel.HIGH,
+        use_precommit_legacy=False,
+    ),
+)
 ```
 
 ### Analysis
 
 **Questions:**
+
 1. Is pyright config **used anywhere**?
-2. Is it for IDE support (VS Code)?
-3. Should it be kept for editor integration?
+1. Is it for IDE support (VS Code)?
+1. Should it be kept for editor integration?
 
 **Findings:**
+
 ```bash
 $ grep -r "pyright" crackerjack/
 # Returns: pyproject.toml config only, no execution code
@@ -368,7 +380,7 @@ If team doesn't use VS Code or pyright:
 
 **Recommendation:** Keep simplified version (Option A) for IDE support
 
----
+______________________________________________________________________
 
 ## Issue #5: Creosote Exclude List 📦
 
@@ -392,12 +404,14 @@ exclude-deps = [
 ### Analysis
 
 **Why so many excludes?**
+
 - Development tools not imported in production code
 - Test dependencies
 - Build system tools
 - Type stubs
 
 **Problem:**
+
 - Manual maintenance required
 - Easy to forget to add new dev dependencies
 - Clutters pyproject.toml
@@ -430,11 +444,12 @@ exclude-deps = [
 **Lines reduced:** 50+ → ~10
 
 **Benefits:**
+
 - ✅ Automatically excludes new test dependencies
 - ✅ Automatically excludes new type stubs
 - ✅ Less manual maintenance
 
----
+______________________________________________________________________
 
 ## Issue #6: .codespell-ignore Empty 📝
 
@@ -484,7 +499,7 @@ ignore-words-list = "crate,uptodate,nd,nin"
 
 **Recommendation:** Keep file (Option A) - useful for future project-specific terms
 
----
+______________________________________________________________________
 
 ## Issue #7: .gitleaksignore Review 🔐
 
@@ -518,17 +533,20 @@ pyproject.toml
 ### Analysis
 
 **Questions:**
+
 1. Should `pyproject.toml` be excluded from secret scanning?
-2. Should `*.md` be excluded? (might contain leaked secrets in docs)
+1. Should `*.md` be excluded? (might contain leaked secrets in docs)
 
 **Recommendations:**
 
 **✅ Keep as-is:**
+
 - Documentation often contains example API keys
 - Test files have mock secrets
 - Lock files have no secrets
 
 **⚠️ Consider removing:**
+
 ```gitignore
 # Remove overly broad exclusion
 # **/*.md  # ❌ Too broad - might miss secrets in README
@@ -539,6 +557,7 @@ pyproject.toml
 ```
 
 **🔧 Consider adding:**
+
 ```gitignore
 # Additional safe exclusions
 **/node_modules/**
@@ -547,7 +566,7 @@ pyproject.toml
 
 **Recommendation:** Keep current config but monitor for false negatives
 
----
+______________________________________________________________________
 
 ## Issue #8: Unused Coverage Settings 📊
 
@@ -578,18 +597,22 @@ omit = [
 ### Analysis
 
 **branch = false:**
+
 - Disables branch coverage (only line coverage)
 - Recommendation: **Enable branch coverage** for better quality
 
 **__init__.py excluded:**
+
 - Most __init__.py are empty (re-exports only)
 - Recommendation: **Keep excluded**
 
 **__main__.py excluded:**
+
 - Entry point with CLI boilerplate
 - Recommendation: **Keep excluded** (tested via integration tests)
 
 **data_file will change:**
+
 - When tempfile coverage is implemented, this becomes obsolete
 - Will be set via `COVERAGE_FILE` environment variable
 
@@ -616,11 +639,12 @@ omit = [
 ```
 
 **Benefits:**
+
 - ✅ More accurate coverage (branch vs line)
 - ✅ Catches untested error paths
 - ✅ Industry best practice
 
----
+______________________________________________________________________
 
 ## Issue #9: Pytest Markers - Many Unused? 🏷️
 
@@ -660,6 +684,7 @@ $ grep -r "@pytest.mark" tests/ | grep -oE "@pytest\.mark\.[a-z_]+" | sort | uni
 ```
 
 **Expected findings:**
+
 - unit, integration, benchmark - **likely used**
 - chaos, mutation, breakthrough - **likely unused**
 
@@ -677,13 +702,14 @@ grep -r "@pytest.mark\." tests/ | \
 **Step 2:** Remove unused markers
 
 Keep only markers that are:
+
 1. Actually used in tests
-2. Planned for near-term use
-3. Required by pytest plugins
+1. Planned for near-term use
+1. Required by pytest plugins
 
 **Estimated removal:** ~8-10 unused markers
 
----
+______________________________________________________________________
 
 ## Issue #10: Ruff Exclude Patterns ⚙️
 
@@ -711,11 +737,13 @@ exclude = [
 **Question:** Should tests be linted?
 
 **Pros of linting tests:**
+
 - Maintains code quality in test suite
 - Catches bugs in test code
 - Enforces consistent style
 
 **Cons:**
+
 - Tests may have different style requirements
 - Test fixtures can trigger false positives
 
@@ -745,7 +773,7 @@ Tests have different quality standards - keep excluded.
 
 **Recommendation:** Option A - lint tests with relaxed rules
 
----
+______________________________________________________________________
 
 ## Consolidation Summary 📊
 
@@ -775,7 +803,7 @@ Tests have different quality standards - keep excluded.
 
 **Net change:** -58 lines (after adding mypy config)
 
----
+______________________________________________________________________
 
 ## Implementation Plan 🛠️
 
@@ -859,7 +887,7 @@ Tests have different quality standards - keep excluded.
 
 **Lines changed:** ~0 (restructure)
 
----
+______________________________________________________________________
 
 ## Testing Checklist ✅
 
@@ -896,7 +924,7 @@ python -m crackerjack --run-tests
 # Should pass all checks
 ```
 
----
+______________________________________________________________________
 
 ## Migration for Users 📢
 
@@ -922,18 +950,20 @@ hooks:
     config_file: "mypy.ini"  # Explicitly set
 ```
 
----
+______________________________________________________________________
 
 ## Risks & Mitigation ⚠️
 
 ### Risk 1: Zuban Can't Read pyproject.toml
 
 **Mitigation:**
+
 - Test extensively before merging
 - Keep mypy.ini in git history for easy rollback
 - Document migration in CHANGELOG
 
 **Rollback:**
+
 ```bash
 git show HEAD~1:mypy.ini > mypy.ini
 # Revert tool_commands.py changes
@@ -942,6 +972,7 @@ git show HEAD~1:mypy.ini > mypy.ini
 ### Risk 2: Creosote Categories Not Supported
 
 **Mitigation:**
+
 - Check creosote version: `uv run creosote --version`
 - Verify in documentation before implementing
 - If not supported, keep current approach
@@ -949,6 +980,7 @@ git show HEAD~1:mypy.ini > mypy.ini
 ### Risk 3: Branch Coverage Breaks CI
 
 **Mitigation:**
+
 - Update coverage baseline to new branch coverage values
 - Adjust coverage requirements if needed
 - Monitor first few CI runs
@@ -956,11 +988,12 @@ git show HEAD~1:mypy.ini > mypy.ini
 ### Risk 4: Breaking IDE Users
 
 **Mitigation:**
+
 - Don't remove pyright config if VS Code users rely on it
 - Survey team before making IDE-related changes
 - Document which configs are for CI vs IDE
 
----
+______________________________________________________________________
 
 ## Future Enhancements 🚀
 
@@ -969,50 +1002,55 @@ git show HEAD~1:mypy.ini > mypy.ini
 Currently **not possible** but watch for future support:
 
 1. **mdformat config**
+
    - Currently: CLI flags only
    - Future: `[tool.mdformat]` support?
 
-2. **gitleaks config**
+1. **gitleaks config**
+
    - Currently: .gitleaksignore file
    - Future: `[tool.gitleaks]` support?
 
-3. **semgrep rules**
+1. **semgrep rules**
+
    - Currently: Remote ruleset (`p/security-audit`)
    - Future: Local rules in pyproject.toml?
 
 ### Settings YAML Review
 
 Separately audit `settings/crackerjack.yaml`:
+
 - Are all settings used?
 - Can any be moved to pyproject.toml?
 - Are defaults sensible?
 
----
+______________________________________________________________________
 
 ## Recommendations Priority 🎯
 
 ### Must Do (Priority 1)
 
 1. ✅ **Eliminate mypy.ini** - Consolidate into pyproject.toml
-2. ✅ **Remove refurb redundancy** - Delete duplicate amend blocks
-3. ✅ **Enable branch coverage** - Better quality metrics
+1. ✅ **Remove refurb redundancy** - Delete duplicate amend blocks
+1. ✅ **Enable branch coverage** - Better quality metrics
 
 ### Should Do (Priority 2)
 
 4. ✅ **Simplify test workers** - Remove redundant config keys
-5. ✅ **Modernize creosote** - Use categories instead of lists
-6. ✅ **Audit pytest markers** - Remove unused markers
+1. ✅ **Modernize creosote** - Use categories instead of lists
+1. ✅ **Audit pytest markers** - Remove unused markers
 
 ### Nice to Have (Priority 3)
 
 7. ⚠️ **Simplify pyright** - Only if not used by IDEs
-8. ⚠️ **Lint test files** - Team decision needed
+1. ⚠️ **Lint test files** - Team decision needed
 
----
+______________________________________________________________________
 
 ## Summary Statistics 📈
 
 **Before Consolidation:**
+
 - Configuration files: 5
 - Total config lines: ~500
 - Tools configured: 14
@@ -1020,6 +1058,7 @@ Separately audit `settings/crackerjack.yaml`:
 - Redundant settings: 12+
 
 **After Consolidation:**
+
 - Configuration files: 4 (-1)
 - Total config lines: ~420 (-80)
 - Tools configured: 14 (same)
@@ -1027,20 +1066,22 @@ Separately audit `settings/crackerjack.yaml`:
 - Redundant settings: 0 ✅
 
 **Maintenance Impact:**
+
 - Single source of truth: pyproject.toml
 - Fewer files to search when configuring tools
 - Follows Python community standards (PEP 518)
 - Easier onboarding for new developers
 
----
+______________________________________________________________________
 
 **Next Steps:**
+
 1. Review this audit with the team
-2. Approve consolidation priorities
-3. Implement Phase 1 (critical consolidations)
-4. Test thoroughly
-5. Document changes in CHANGELOG
-6. Update documentation (CLAUDE.md, README.md)
+1. Approve consolidation priorities
+1. Implement Phase 1 (critical consolidations)
+1. Test thoroughly
+1. Document changes in CHANGELOG
+1. Update documentation (CLAUDE.md, README.md)
 
 **Estimated Effort:** 2-3 days across 3 weeks
 **Risk Level:** Low (all changes reversible, tested incrementally)

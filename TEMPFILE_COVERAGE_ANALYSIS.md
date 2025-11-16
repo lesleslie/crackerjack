@@ -4,7 +4,7 @@
 
 **Answer:** YES - Highly recommended! Coverage files currently clutter the project directory.
 
----
+______________________________________________________________________
 
 ## Current State ⚠️
 
@@ -19,6 +19,7 @@
 | `tests/htmlcov/` | tests/ | Legacy HTML reports | ✅ Yes |
 
 **Configuration (pyproject.toml):**
+
 ```toml
 [tool.coverage.run]
 data_file = ".coverage"  # ⚠️ Root directory
@@ -37,30 +38,35 @@ addopts = """
 ### Problems with Current Approach
 
 1. **Directory Clutter**
+
    - `.coverage` files visible in project root
    - `htmlcov/` directory in root (often large)
    - `coverage.json` in root
 
-2. **CI/CD Conflicts**
+1. **CI/CD Conflicts**
+
    - Multiple CI jobs can conflict on `.coverage` file
    - Parallel test runners create `.coverage.machine.pid.seq` files
 
-3. **User Confusion**
+1. **User Confusion**
+
    - Developers wonder "should I commit these?"
    - VS Code/IDEs show coverage files in file explorer
 
-4. **Cross-Tool Issues**
+1. **Cross-Tool Issues**
+
    - Health metrics service reads from `htmlcov/index.html`
    - Backup service excludes `htmlcov/`
    - Various adapters exclude `**/htmlcov/**`
 
----
+______________________________________________________________________
 
 ## Recommended Solution 🎯
 
 ### Move Coverage Data to Temp/Cache Directory
 
 **Benefits:**
+
 - ✅ Clean project root
 - ✅ No gitignore needed for coverage files
 - ✅ Automatic cleanup of old coverage data
@@ -68,6 +74,7 @@ addopts = """
 - ✅ Consistent with XDG Base Directory Specification
 
 **Location:**
+
 ```
 ~/.cache/crackerjack/coverage/{project-name}/
 ├── .coverage
@@ -78,13 +85,14 @@ addopts = """
     └── ...
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Plan 📋
 
 ### Phase 1: Update pyproject.toml Configuration
 
 **Current:**
+
 ```toml
 [tool.coverage.run]
 data_file = ".coverage"
@@ -94,6 +102,7 @@ addopts = "--cov=crackerjack --cov-report=html:htmlcov --cov-report=json"
 ```
 
 **New (with tempfile support):**
+
 ```toml
 [tool.coverage.run]
 # Coverage data file will be set dynamically by TestCommandBuilder
@@ -139,24 +148,19 @@ class TestCommandBuilder:
 
         # Create unique directory per project
         project_name = self.pkg_path.name
-        project_hash = hashlib.md5(
-            str(self.pkg_path.absolute()).encode()
-        ).hexdigest()[:8]
+        project_hash = hashlib.md5(str(self.pkg_path.absolute()).encode()).hexdigest()[
+            :8
+        ]
 
         coverage_dir = (
-            base_cache
-            / "crackerjack"
-            / "coverage"
-            / f"{project_name}-{project_hash}"
+            base_cache / "crackerjack" / "coverage" / f"{project_name}-{project_hash}"
         )
         coverage_dir.mkdir(parents=True, exist_ok=True)
 
         return coverage_dir
 
     def build_test_command(
-        self,
-        options: OptionsProtocol,
-        workers: int
+        self, options: OptionsProtocol, workers: int
     ) -> tuple[list[str], dict[str, str]]:
         """Build pytest command with tempfile coverage paths.
 
@@ -172,12 +176,14 @@ class TestCommandBuilder:
         cmd = ["uv", "run", "pytest"]
 
         # Add coverage options
-        cmd.extend([
-            f"--cov={self.pkg_path.name}",
-            "--cov-report=term-missing:skip-covered",
-            f"--cov-report=html:{self.cache_dir / 'htmlcov'}",
-            f"--cov-report=json:{self.cache_dir / 'coverage.json'}",
-        ])
+        cmd.extend(
+            [
+                f"--cov={self.pkg_path.name}",
+                "--cov-report=term-missing:skip-covered",
+                f"--cov-report=html:{self.cache_dir / 'htmlcov'}",
+                f"--cov-report=json:{self.cache_dir / 'coverage.json'}",
+            ]
+        )
 
         # Add worker config
         if workers != 1:
@@ -287,15 +293,10 @@ def get_coverage_cache_dir(project_root: Path) -> Path:
     base_cache = Path(xdg_cache) if xdg_cache else Path.home() / ".cache"
 
     project_name = project_root.name
-    project_hash = hashlib.md5(
-        str(project_root.absolute()).encode()
-    ).hexdigest()[:8]
+    project_hash = hashlib.md5(str(project_root.absolute()).encode()).hexdigest()[:8]
 
     coverage_dir = (
-        base_cache
-        / "crackerjack"
-        / "coverage"
-        / f"{project_name}-{project_hash}"
+        base_cache / "crackerjack" / "coverage" / f"{project_name}-{project_hash}"
     )
     coverage_dir.mkdir(parents=True, exist_ok=True)
 
@@ -358,6 +359,7 @@ def open_coverage_report(project_root: Path) -> bool:
         return False
 
     import webbrowser
+
     webbrowser.open(f"file://{html_path}")
     return True
 
@@ -383,19 +385,21 @@ def clear_coverage_cache(project_root: Path) -> bool:
         return False
 ```
 
----
+______________________________________________________________________
 
 ## Updated Commands 🔧
 
 ### Opening Coverage Reports
 
 **Old (project root):**
+
 ```bash
 # Opens ./htmlcov/index.html
 open htmlcov/index.html
 ```
 
 **New (cache directory):**
+
 ```bash
 # Opens ~/.cache/crackerjack/coverage/my-project-abc123/htmlcov/index.html
 python -m crackerjack --open-coverage
@@ -414,11 +418,12 @@ crackerjack coverage clean
 crackerjack coverage clear
 ```
 
----
+______________________________________________________________________
 
 ## Benefits Summary ✨
 
 ### 1. **Clean Project Root**
+
 ```
 my-project/
 ├── src/
@@ -434,6 +439,7 @@ my-project/
 ```
 
 ### 2. **Better CI/CD**
+
 ```yaml
 # GitHub Actions - no conflicts between jobs
 jobs:
@@ -444,11 +450,13 @@ jobs:
 ```
 
 ### 3. **Automatic Cleanup**
+
 - Old coverage data automatically cleaned
 - Keep last N runs for comparison
 - No manual deletion needed
 
 ### 4. **Multi-Project Support**
+
 ```
 ~/.cache/crackerjack/coverage/
 ├── project-a-abc123/
@@ -460,43 +468,50 @@ jobs:
 ```
 
 ### 5. **XDG Compliance**
+
 - Follows Linux/Unix standards
 - Respects `$XDG_CACHE_HOME`
 - Easy to clear: `rm -rf ~/.cache/crackerjack`
 
----
+______________________________________________________________________
 
 ## Migration Path 🛣️
 
 ### Step 1: Add Utilities (Week 1)
+
 - [ ] Create `utils/coverage_cache.py`
 - [ ] Add `get_coverage_cache_dir()` function
 - [ ] Add tests for cache directory creation
 
 ### Step 2: Update Test Builder (Week 1)
+
 - [ ] Modify `TestCommandBuilder.build_test_command()`
 - [ ] Set `COVERAGE_FILE` environment variable
 - [ ] Update coverage report paths
 - [ ] Add tests
 
 ### Step 3: Update Services (Week 2)
+
 - [ ] Update `HealthMetricsService.get_coverage_percentage()`
 - [ ] Update any other services reading coverage files
 - [ ] Add backward compatibility for existing coverage files
 
 ### Step 4: Add CLI Commands (Week 2)
+
 - [ ] `crackerjack coverage show` - Open HTML report
 - [ ] `crackerjack coverage clean` - Clean old data
 - [ ] `crackerjack coverage clear` - Clear all data
 - [ ] `crackerjack coverage path` - Print cache directory path
 
 ### Step 5: Documentation (Week 3)
+
 - [ ] Update README.md
 - [ ] Update CLAUDE.md
 - [ ] Add migration guide for existing projects
 - [ ] Update troubleshooting guide
 
 ### Step 6: Backward Compatibility (Week 3)
+
 ```python
 def get_coverage_percentage(self) -> float | None:
     """Read coverage from cache directory with fallback."""
@@ -517,7 +532,7 @@ def get_coverage_percentage(self) -> float | None:
     return None
 ```
 
----
+______________________________________________________________________
 
 ## Configuration Options ⚙️
 
@@ -559,29 +574,32 @@ export CRACKERJACK_COVERAGE_USE_ROOT=1
 export CRACKERJACK_COVERAGE_KEEP_RUNS=10
 ```
 
----
+______________________________________________________________________
 
 ## Rollback Plan 🔙
 
 If tempfiles cause issues:
 
 1. **Immediate Rollback:**
+
    ```bash
    export CRACKERJACK_COVERAGE_USE_ROOT=1
    ```
 
-2. **Configuration Rollback:**
+1. **Configuration Rollback:**
+
    ```yaml
    # settings/local.yaml
    coverage:
      use_cache_dir: false
    ```
 
-3. **Code Rollback:**
+1. **Code Rollback:**
+
    - Revert `TestCommandBuilder` changes
    - Keep `coverage_cache.py` utilities for future use
 
----
+______________________________________________________________________
 
 ## Comparison with Other Tools 🔍
 
@@ -596,12 +614,13 @@ If tempfiles cause issues:
 | **Ruby (SimpleCov)** | `coverage/` in project root | Standard location |
 
 **Crackerjack Approach:**
+
 - ✅ More aggressive cleanup
 - ✅ XDG-compliant
 - ✅ Multi-project support
 - ✅ Automatic old data cleanup
 
----
+______________________________________________________________________
 
 ## Risks & Mitigation ⚠️
 
@@ -610,6 +629,7 @@ If tempfiles cause issues:
 **Problem:** Cache paths can get long on deeply nested projects
 
 **Mitigation:**
+
 - Use hash instead of full path
 - Max length: `~/.cache/crackerjack/coverage/project-name-12345678/`
 
@@ -618,6 +638,7 @@ If tempfiles cause issues:
 **Problem:** Cache directory not writable in some environments
 
 **Mitigation:**
+
 ```python
 def get_coverage_cache_dir(project_root: Path) -> Path:
     """Get writable coverage cache directory."""
@@ -625,7 +646,7 @@ def get_coverage_cache_dir(project_root: Path) -> Path:
         Path(os.environ.get("XDG_CACHE_HOME", "")),
         Path.home() / ".cache",
         project_root / ".crackerjack-cache",  # Fallback
-        Path("/tmp") / "crackerjack-cache",   # Last resort
+        Path("/tmp") / "crackerjack-cache",  # Last resort
     ]
 
     for candidate in candidates:
@@ -641,6 +662,7 @@ def get_coverage_cache_dir(project_root: Path) -> Path:
 **Problem:** CI cache directories cleared between runs
 
 **Mitigation:**
+
 - Document CI cache configuration
 - Provide option to use project root in CI
 
@@ -652,7 +674,7 @@ def get_coverage_cache_dir(project_root: Path) -> Path:
     CRACKERJACK_COVERAGE_USE_ROOT: 1  # Use project root in CI
 ```
 
----
+______________________________________________________________________
 
 ## Testing Plan 🧪
 
@@ -660,6 +682,7 @@ def get_coverage_cache_dir(project_root: Path) -> Path:
 
 ```python
 # tests/test_coverage_cache.py
+
 
 def test_get_coverage_cache_dir():
     """Test coverage cache directory creation."""
@@ -722,7 +745,7 @@ def test_coverage_data_in_cache(tmp_path):
     assert not (tmp_path / "htmlcov").exists()
 ```
 
----
+______________________________________________________________________
 
 ## Recommendation 🎯
 
@@ -731,26 +754,30 @@ def test_coverage_data_in_cache(tmp_path):
 **Priority:** Priority 2 (after fixing hardcoded package name issue)
 
 **Benefits:**
+
 - ✅ Clean project directories
 - ✅ Better developer experience
 - ✅ XDG compliance
 - ✅ Automatic cleanup
 
 **Effort:** ~2-3 days
+
 - Day 1: Implement utilities + test builder changes
 - Day 2: Update services + add CLI commands
 - Day 3: Testing + documentation
 
 **Risk:** Low
+
 - Easy rollback via environment variable
 - Backward compatibility with fallback
 - No breaking changes to external APIs
 
----
+______________________________________________________________________
 
 **Next Steps:**
+
 1. ✅ Review and approve this design
-2. Create `utils/coverage_cache.py`
-3. Update `TestCommandBuilder`
-4. Add CLI commands
-5. Update documentation
+1. Create `utils/coverage_cache.py`
+1. Update `TestCommandBuilder`
+1. Add CLI commands
+1. Update documentation
