@@ -939,7 +939,16 @@ class HookOrchestratorAdapter:
     def _calculate_total_issues(
         self, qa_result: t.Any, status: str, issues: list[str]
     ) -> int:
-        """Calculate the total count of issues from qa_result."""
+        """Calculate the total count of issues from qa_result.
+
+        This method distinguishes between:
+        1. Genuine code issues (show actual count)
+        2. Configuration/tool errors (show 0, not forced to 1)
+        3. Parsing failures (may show 1 if no issues parseable)
+
+        The key insight: QAResultStatus.ERROR indicates a config/tool error,
+        not a code quality issue. These should show 0 issues, not 1.
+        """
         # Get the actual total count of issues from qa_result
         # This may be larger than len(issues) if issues were truncated for display
         total_issues = (
@@ -948,9 +957,23 @@ class HookOrchestratorAdapter:
             else len(issues)
         )
 
-        # Ensure failed hooks always have at least 1 issue count
-        if status == "failed":
-            total_issues = max(total_issues, 1)
+        # Only force "1 issue" for genuine parsing failures, not config errors
+        if status == "failed" and total_issues == 0:
+            # Check if this is a config/tool error vs code quality failure
+            if (
+                hasattr(qa_result, "status")
+                and qa_result.status == QAResultStatus.ERROR
+            ):
+                # Config/tool error - show actual count (0)
+                # This prevents misleading "1 issue" for things like:
+                # - Missing binary
+                # - Invalid configuration
+                # - Tool initialization failures
+                return 0
+            else:
+                # Parsing failure or unexpected error - show 1 to indicate problem
+                # This handles cases where the tool found issues but we couldn't parse them
+                return max(total_issues, 1)
 
         return total_issues
 
