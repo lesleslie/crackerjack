@@ -103,8 +103,14 @@ class ComplexipyAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = ComplexipySettings()
-            logger.info("Using default ComplexipySettings")
+            # Load max_complexity from pyproject.toml and use it to initialize settings
+            config_data = self._load_config_from_pyproject()
+            max_complexity = config_data.get("max_complexity", 15)
+            self.settings = ComplexipySettings(max_complexity=max_complexity)
+            logger.info(
+                "Using default ComplexipySettings",
+                extra={"max_complexity": max_complexity},
+            )
         await super().init()
         logger.debug(
             "ComplexipyAdapter initialization complete",
@@ -155,7 +161,10 @@ class ComplexipyAdapter(BaseToolAdapter):
             cmd.append("--output-json")
 
         # Max complexity threshold (correct flag: --max-complexity-allowed, not --max-complexity)
-        cmd.extend(["--max-complexity-allowed", str(self.settings.max_complexity)])
+        # Load max_complexity from pyproject.toml configuration instead of settings
+        config_data = self._load_config_from_pyproject()
+        max_complexity = config_data.get("max_complexity", self.settings.max_complexity)
+        cmd.extend(["--max-complexity-allowed", str(max_complexity)])
 
         # NOTE: --cognitive and --maintainability flags don't exist in complexipy
         # Complexity tool only reports cyclomatic complexity, not cognitive/maintainability
@@ -164,14 +173,14 @@ class ComplexipyAdapter(BaseToolAdapter):
         # Sort results
         cmd.extend(["--sort", self.settings.sort_by])
 
-        # Add targets
+        # Add targets - files are already filtered by _get_target_files based on config
         cmd.extend([str(f) for f in files])
 
         logger.info(
             "Built Complexipy command",
             extra={
                 "file_count": len(files),
-                "max_complexity": self.settings.max_complexity,
+                "max_complexity": max_complexity,
                 "include_cognitive": self.settings.include_cognitive,
                 "include_maintainability": self.settings.include_maintainability,
             },
@@ -477,22 +486,86 @@ class ComplexipyAdapter(BaseToolAdapter):
         """
         from crackerjack.models.qa_config import QACheckConfig
 
+        # Load configuration from pyproject.toml to get actual exclude patterns and max_complexity
+        config_data = self._load_config_from_pyproject()
+        exclude_patterns = config_data.get(
+            "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
+        )
+        max_complexity = config_data.get("max_complexity", 15)
+
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.COMPLEXITY,
             enabled=True,
             file_patterns=["**/*.py"],
-            exclude_patterns=["**/.venv/**", "**/venv/**", "**/tests/**"],
+            exclude_patterns=exclude_patterns,
             timeout_seconds=90,
             parallel_safe=True,
             stage="comprehensive",  # Complexity analysis in comprehensive stage
             settings={
-                "max_complexity": 15,
+                "max_complexity": max_complexity,
                 "include_cognitive": True,
                 "include_maintainability": True,
                 "sort_by": "complexity",
             },
+        )
+
+    def _load_config_from_pyproject(self) -> dict:
+        """Load complexipy configuration from pyproject.toml.
+
+        Returns:
+            Dictionary with complexipy configuration or defaults
+        """
+        import tomllib
+        from pathlib import Path
+
+        pyproject_path = Path.cwd() / "pyproject.toml"
+        config = {
+            "exclude_patterns": ["**/.venv/**", "**/venv/**", "**/tests/**"],
+            "max_complexity": 15,
+        }
+
+        if pyproject_path.exists():
+            try:
+                with pyproject_path.open("rb") as f:
+                    toml_config = tomllib.load(f)
+                complexipy_config = toml_config.get("tool", {}).get("complexipy", {})
+
+                # Load exclude patterns if specified
+                exclude_patterns = complexipy_config.get("exclude_patterns")
+                if exclude_patterns:
+                    config["exclude_patterns"] = exclude_patterns
+                    logger.info(
+                        "Loaded exclude patterns from pyproject.toml",
+                        extra={"exclude_patterns": exclude_patterns},
+                    )
+
+                # Load max complexity if specified
+                max_complexity = complexipy_config.get("max_complexity")
+                if max_complexity is not None:
+                    config["max_complexity"] = max_complexity
+                    logger.info(
+                        "Loaded max_complexity from pyproject.toml",
+                        extra={"max_complexity": max_complexity},
+                    )
+            except (tomllib.TOMLDecodeError, OSError) as e:
+                logger.warning(
+                    "Failed to load complexipy config from pyproject.toml, using defaults",
+                    extra={"error": str(e)},
+                )
+
+        return config
+
+    def _load_exclude_patterns_from_config(self) -> list[str]:
+        """Load exclude patterns from pyproject.toml configuration.
+
+        Returns:
+            List of exclude patterns from pyproject.toml or defaults
+        """
+        config = self._load_config_from_pyproject()
+        return config.get(
+            "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
         )
 
 
