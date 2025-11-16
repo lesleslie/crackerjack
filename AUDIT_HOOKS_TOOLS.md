@@ -8,11 +8,12 @@
 
 This audit identified **7 critical issues** that cause false positives, missed errors, or incorrectly reported issues when crackerjack is used in other projects. The root cause is **hardcoded assumptions** about package names and overly aggressive or insufficient output parsing.
 
----
+______________________________________________________________________
 
 ## 🚨 Critical Issues
 
 ### 1. **Hardcoded Package Name in Complexipy Parser**
+
 **Severity:** CRITICAL
 **Location:** `crackerjack/executors/hook_executor.py:615`
 **Impact:** Complexipy errors are **silently ignored** in all non-crackerjack projects
@@ -24,11 +25,13 @@ def _should_include_line(self, line: str) -> bool:
 ```
 
 **Problem:**
+
 - This method filters complexipy table output to only show lines containing "crackerjack"
 - In other projects (e.g., `my-project`), ALL complexipy violations are dropped
 - Users see "✅ passed" when there are actually complexity violations
 
 **Solution:**
+
 ```python
 def _should_include_line(self, line: str, package_name: str) -> bool:
     """Check if the line should be included in the output."""
@@ -37,13 +40,15 @@ def _should_include_line(self, line: str, package_name: str) -> bool:
 ```
 
 **Required Changes:**
-1. Pass `package_name` from command detection in `tool_commands.py`
-2. Update `_parse_complexipy_issues` to accept package name parameter
-3. Update `_extract_issues_for_reporting_tools` call chain
 
----
+1. Pass `package_name` from command detection in `tool_commands.py`
+1. Update `_parse_complexipy_issues` to accept package name parameter
+1. Update `_extract_issues_for_reporting_tools` call chain
+
+______________________________________________________________________
 
 ### 2. **Zuban `--no-error-summary` Flag**
+
 **Severity:** HIGH
 **Location:** `crackerjack/config/tool_commands.py:89`
 **Impact:** May suppress critical type checking summary information
@@ -58,21 +63,24 @@ def _should_include_line(self, line: str, package_name: str) -> bool:
 ```
 
 **Problem:**
+
 - Comment says "Don't show error summary which may be causing issues"
 - No evidence provided for what issues this causes
 - Disabling error summary makes debugging type errors harder for users
 - May hide useful aggregate information
 
 **Investigation Needed:**
+
 1. What specific issue was this trying to fix?
-2. Does zuban output error summary in a format that breaks parsing?
-3. Can we parse zuban output correctly WITH the error summary?
+1. Does zuban output error summary in a format that breaks parsing?
+1. Can we parse zuban output correctly WITH the error summary?
 
 **Recommendation:** Remove `--no-error-summary` unless there's documented evidence it causes false positives
 
----
+______________________________________________________________________
 
 ### 3. **Creosote Dependency Parsing Fragility**
+
 **Severity:** MEDIUM
 **Location:** `crackerjack/executors/hook_executor.py:658-675`
 **Impact:** May miss unused dependencies or report false positives
@@ -99,21 +107,24 @@ def _parse_creosote_issues(self, output: str) -> list[str]:
 ```
 
 **Problems:**
+
 1. **Assumption:** Unused dependencies are listed after a header containing "unused" and "dependenc"
-2. **Fragile:** Breaks if creosote changes output format
-3. **ANSI codes:** Only filters lines starting with `[`, but ANSI codes can appear anywhere
-4. **No validation:** Doesn't verify dependency names are valid package names
+1. **Fragile:** Breaks if creosote changes output format
+1. **ANSI codes:** Only filters lines starting with `[`, but ANSI codes can appear anywhere
+1. **No validation:** Doesn't verify dependency names are valid package names
 
 **Test Cases Missing:**
+
 - Creosote output with color codes in middle of line
 - Creosote output with multiple sections (unused, missing, etc.)
 - Creosote output with empty lines between dependencies
 
 **Solution:** Use structured output if creosote supports it (JSON), or add comprehensive test fixtures
 
----
+______________________________________________________________________
 
 ### 4. **Gitleaks Warning Filtering Too Aggressive**
+
 **Severity:** MEDIUM
 **Location:** `crackerjack/executors/hook_executor.py:641-656`
 **Impact:** May hide legitimate secrets or report false positives
@@ -138,28 +149,32 @@ def _parse_gitleaks_issues(self, output: str) -> list[str]:
 ```
 
 **Problems:**
+
 1. **Keyword matching:** `any(x in line.lower() for x in ("leak", "secret", ...))` is too broad
    - Matches "no leaks found" (filtered by earlier check, but fragile)
    - Matches "checking for leaks..." (progress messages)
    - Matches "api.example.com" (URLs, not API keys)
-2. **Summary exclusion:** `"found" not in line.lower()` excludes any line with "found"
+1. **Summary exclusion:** `"found" not in line.lower()` excludes any line with "found"
    - Could exclude "API key found in file.py:10"
-3. **No structure:** Relies on unstructured text parsing instead of JSON
+1. **No structure:** Relies on unstructured text parsing instead of JSON
 
 **Better Approach:**
+
 ```python
 # Use gitleaks JSON output: --report-format json
 # Then parse structured data instead of text matching
 ```
 
 **Required Changes:**
-1. Update `tool_commands.py` to add `--report-format=json` flag
-2. Rewrite parser to handle JSON output
-3. Add test fixtures with real gitleaks JSON output
 
----
+1. Update `tool_commands.py` to add `--report-format=json` flag
+1. Rewrite parser to handle JSON output
+1. Add test fixtures with real gitleaks JSON output
+
+______________________________________________________________________
 
 ### 5. **Semgrep Error Array Interpretation**
+
 **Severity:** MEDIUM
 **Location:** `crackerjack/executors/hook_executor.py:706-711`
 **Impact:** Infrastructure errors reported as code issues
@@ -174,6 +189,7 @@ if "errors" in json_data:
 ```
 
 **Problem:**
+
 - Semgrep "errors" array contains both:
   - **Code issues:** Syntax errors, parsing failures in target code
   - **Infrastructure issues:** Rule download failures, network timeouts, config errors
@@ -181,6 +197,7 @@ if "errors" in json_data:
 - Network issues or rule download problems cause hook to fail even when code is clean
 
 **Example False Positive:**
+
 ```json
 {
   "results": [],
@@ -192,9 +209,11 @@ if "errors" in json_data:
   ]
 }
 ```
+
 Result: Hook fails ❌ even though code has no security issues
 
 **Solution:**
+
 ```python
 # Categorize errors - only fail on code-related errors
 CODE_ERROR_TYPES = {"ParseError", "SyntaxError", "LexicalError"}
@@ -209,9 +228,10 @@ for error in json_data.get("errors", []):
         self.console.print(f"[yellow]⚠️ Semgrep {error_type}: {error_msg}[/yellow]")
 ```
 
----
+______________________________________________________________________
 
 ### 6. **Regex Pattern Assumptions in Ruff Parser**
+
 **Severity:** LOW
 **Location:** `crackerjack/services/patterns/tool_output/ruff.py:12`
 **Impact:** May fail to parse ruff errors if format changes
@@ -225,19 +245,22 @@ for error in json_data.get("errors", []):
 ```
 
 **Problem:**
+
 - Assumes ruff output format: `file: line: col: CODE message`
 - Ruff may change output format between versions
 - No fallback if pattern doesn't match
 
 **Current Mitigation:**
+
 - Pattern is only used for TRANSFORMATION, not for error detection
 - Actual error detection uses broader heuristics in `_extract_issues_for_regular_tools`
 
 **Recommendation:** Document that this pattern is for beautification only, not parsing
 
----
+______________________________________________________________________
 
 ### 7. **Path Separator Hardcoding**
+
 **Severity:** LOW
 **Location:** `crackerjack/executors/hook_executor.py:1139`
 **Impact:** May break on Windows systems
@@ -248,63 +271,73 @@ def _update_path(self, clean_env: dict[str, str]) -> None:
     system_path = os.environ.get("PATH", "")
     if system_path:
         venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-        path_parts = [p for p in system_path.split(": ") if p != venv_bin]  # ❌ Colon separator
+        path_parts = [
+            p for p in system_path.split(": ") if p != venv_bin
+        ]  # ❌ Colon separator
         clean_env["PATH"] = ": ".join(path_parts)  # ❌ Should use os.pathsep
 ```
 
 **Problem:**
+
 - Uses `: ` (colon) as path separator on all platforms
 - Windows uses `;` (semicolon) as separator
 - Code will malfunction on Windows
 
 **Solution:**
+
 ```python
 import os
+
 path_parts = [p for p in system_path.split(os.pathsep) if p != venv_bin]
 clean_env["PATH"] = os.pathsep.join(path_parts)
 ```
 
----
+______________________________________________________________________
 
 ## ✅ Correctly Implemented Areas
 
 ### 1. **Refurb Parsing**
+
 ```python
 def _parse_refurb_issues(self, output: str) -> list[str]:
     return [
-        line.strip()
-        for line in output.split("\n")
-        if "[FURB" in line and ":" in line
+        line.strip() for line in output.split("\n") if "[FURB" in line and ":" in line
     ]
 ```
+
 - Simple, robust pattern matching
 - Refurb uses consistent `[FURB###]` format
 - No hardcoded package names
 
 ### 2. **Reporting Tool Detection**
+
 ```python
 reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
 if hook.name in reporting_tools and issues_found:
     status = "failed"
 ```
+
 - Correctly identifies tools that exit 0 even when finding issues
 - Properly overrides status based on parsed issues
 
 ### 3. **Timeout Handling**
+
 - Clean timeout detection with proper exit codes
 - Detailed error messages for debugging
 - Distinguishes timeouts from other errors
 
 ### 4. **Incremental Execution**
+
 - Smart file extension mapping
 - Proper fallback to full scans
 - Only runs on changed files when supported
 
----
+______________________________________________________________________
 
 ## 🔧 Recommended Fixes (Priority Order)
 
 ### Priority 1: Fix Hardcoded Package Name (CRITICAL)
+
 **File:** `crackerjack/executors/hook_executor.py`
 
 ```python
@@ -336,19 +369,22 @@ def _detect_package_from_output(self, output: str) -> str:
     from pathlib import Path
 
     # Try to extract from file paths in output
-    path_pattern = r'\./([a-z_][a-z0-9_]*)/[a-z_]'
+    path_pattern = r"\./([a-z_][a-z0-9_]*)/[a-z_]"
     matches = re.findall(path_pattern, output)
     if matches:
         # Return most common package name
         from collections import Counter
+
         return Counter(matches).most_common(1)[0][0]
 
     # Fallback to detecting from pyproject.toml (existing logic)
     from crackerjack.config.tool_commands import _detect_package_name_cached
+
     return _detect_package_name_cached(str(self.pkg_path))
 ```
 
 ### Priority 2: Use Structured Output Formats
+
 **File:** `crackerjack/config/tool_commands.py`
 
 Add JSON output flags where supported:
@@ -370,9 +406,11 @@ Add JSON output flags where supported:
 ```
 
 ### Priority 3: Remove or Document `--no-error-summary`
+
 **File:** `crackerjack/config/tool_commands.py:89`
 
 **Option A:** Remove flag (recommended)
+
 ```python
 "zuban": [
     "uv", "run", "zuban", "check",
@@ -383,6 +421,7 @@ Add JSON output flags where supported:
 ```
 
 **Option B:** Document rationale
+
 ```python
 "zuban": [
     "uv", "run", "zuban", "check",
@@ -393,6 +432,7 @@ Add JSON output flags where supported:
 ```
 
 ### Priority 4: Fix Path Separator
+
 **File:** `crackerjack/executors/hook_executor.py:1139`
 
 ```python
@@ -403,30 +443,39 @@ def _update_path(self, clean_env: dict[str, str]) -> None:
     system_path = os.environ.get("PATH", "")
     if system_path:
         venv_bin = str(Path(self.pkg_path) / ".venv" / "bin")
-        path_parts = [p for p in system_path.split(os.pathsep) if p != venv_bin]  # ✅ Use os.pathsep
+        path_parts = [
+            p for p in system_path.split(os.pathsep) if p != venv_bin
+        ]  # ✅ Use os.pathsep
         clean_env["PATH"] = os.pathsep.join(path_parts)  # ✅ Use os.pathsep
 ```
 
----
+______________________________________________________________________
 
 ## 📋 Testing Recommendations
 
 ### 1. Cross-Project Testing
+
 Create test fixtures with different project names:
+
 ```python
-@pytest.mark.parametrize("package_name", [
-    "crackerjack",
-    "my_project",
-    "foo-bar",  # Hyphens converted to underscores
-    "complex_pkg_name_2024",
-])
+@pytest.mark.parametrize(
+    "package_name",
+    [
+        "crackerjack",
+        "my_project",
+        "foo-bar",  # Hyphens converted to underscores
+        "complex_pkg_name_2024",
+    ],
+)
 def test_complexipy_parsing_with_different_packages(package_name):
     # Test that complexipy parser works for any package name
     ...
 ```
 
 ### 2. Tool Output Fixtures
+
 Create fixtures for each tool's actual output:
+
 ```
 tests/fixtures/tool_outputs/
 ├── complexipy/
@@ -447,7 +496,9 @@ tests/fixtures/tool_outputs/
 ```
 
 ### 3. Integration Tests
+
 Test crackerjack against real projects:
+
 ```bash
 # Test suite
 ./tests/integration/test_external_projects.sh
@@ -460,7 +511,7 @@ Test crackerjack against real projects:
 # - Clean project
 ```
 
----
+______________________________________________________________________
 
 ## 📊 Impact Analysis
 
@@ -474,34 +525,38 @@ Test crackerjack against real projects:
 | Ruff pattern | LOW | None (not used for detection) | No | No |
 | Path separator | LOW | Windows users | N/A | N/A (runtime error) |
 
----
+______________________________________________________________________
 
 ## 🎯 Action Items
 
 1. **Immediate (This Week)**
+
    - [ ] Fix hardcoded "crackerjack" in complexipy parser
    - [ ] Add package name auto-detection
    - [ ] Test against 3 external projects
 
-2. **Short Term (Next Sprint)**
+1. **Short Term (Next Sprint)**
+
    - [ ] Investigate zuban `--no-error-summary` rationale
    - [ ] Add gitleaks JSON parsing
    - [ ] Fix path separator for Windows
    - [ ] Add tool output test fixtures
 
-3. **Medium Term (Next Month)**
+1. **Medium Term (Next Month)**
+
    - [ ] Refactor all parsers to use structured output (JSON)
    - [ ] Create integration test suite
    - [ ] Document all tool output formats
    - [ ] Add parser robustness tests
 
-4. **Long Term (Roadmap)**
+1. **Long Term (Roadmap)**
+
    - [ ] Consider using tool adapters/plugins pattern
    - [ ] Add parser versioning for tool compatibility
    - [ ] Create parser validation framework
    - [ ] Add telemetry for parser failures
 
----
+______________________________________________________________________
 
 ## 📚 References
 
@@ -511,7 +566,7 @@ Test crackerjack against real projects:
 - Regex patterns: `crackerjack/services/patterns/tool_output/`
 - Metrics collector: `crackerjack/services/metrics.py`
 
----
+______________________________________________________________________
 
 **Audit Completed By:** Claude Code
 **Review Status:** Pending implementation

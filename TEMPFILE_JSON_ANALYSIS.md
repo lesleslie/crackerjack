@@ -4,7 +4,7 @@
 
 **Answer:** YES - Recommended with caveats. Current implementation is already clean for most tools.
 
----
+______________________________________________________________________
 
 ## Current State ✅
 
@@ -21,6 +21,7 @@ Most tools currently output JSON to **stdout**, which subprocess captures direct
 | ruff | N/A | stdout | ❌ No |
 
 **Current Implementation:**
+
 ```python
 result = subprocess.run(
     command,
@@ -33,7 +34,7 @@ result = subprocess.run(
 
 This is **already clean** - no files are created in the project directory.
 
----
+______________________________________________________________________
 
 ## When Tempfiles ARE Needed 🎯
 
@@ -42,6 +43,7 @@ This is **already clean** - no files are created in the project directory.
 Some tools REQUIRE a file path and cannot output to stdout:
 
 **Example: Hypothetical Tool**
+
 ```bash
 # Won't work - no stdout option
 bandit -r . --format json  # ❌ Writes to bandit-report.json in cwd
@@ -77,7 +79,7 @@ debug_dir.mkdir(parents=True, exist_ok=True)
 report_file = debug_dir / f"semgrep-{job_id}.json"
 ```
 
----
+______________________________________________________________________
 
 ## Recommended Implementation 🔧
 
@@ -247,7 +249,9 @@ def _run_with_tempfile(
 ### Option 2: Always Use Tempfiles (More Aggressive)
 
 ```python
-def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProcess[str]:
+def _run_hook_subprocess(
+    self, hook: HookDefinition
+) -> subprocess.CompletedProcess[str]:
     """Run hook subprocess - always use tempfile for JSON output tools."""
     # ... setup code
 
@@ -260,13 +264,14 @@ def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProc
         return self._run_standard(command, repo_root, clean_env, hook.timeout)
 ```
 
----
+______________________________________________________________________
 
 ## Tool-Specific Flags 📋
 
 ### Adding Output Flags to tool_commands.py
 
 **Current (stdout):**
+
 ```python
 "gitleaks": [
     "uv", "run", "gitleaks", "protect",
@@ -275,6 +280,7 @@ def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProc
 ```
 
 **With Tempfile Support (modified at runtime):**
+
 ```python
 # In HookExecutor._run_with_tempfile(), dynamically add:
 "gitleaks": [
@@ -294,11 +300,12 @@ def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProc
 | ruff | `--output-file` | `ruff check --output-format json --output-file report.json` |
 | mypy | `--json-report` | `mypy --json-report report` |
 
----
+______________________________________________________________________
 
 ## Benefits of Tempfile Approach ✨
 
 ### 1. **Debug Mode Reports**
+
 ```python
 # Debug mode preserves reports
 ~/.cache/crackerjack/reports/
@@ -308,18 +315,21 @@ def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProc
 ```
 
 ### 2. **Large Repo Performance**
+
 - Semgrep on 5000+ files: ~10% faster with file output
 - Avoids large stdout buffers (>10MB)
 
 ### 3. **Audit Trail**
+
 - Keep last N reports for comparison
 - Useful for CI/CD debugging
 
 ### 4. **Progress Tracking**
+
 - Tools can write to file progressively
 - stdout remains free for progress messages
 
----
+______________________________________________________________________
 
 ## Drawbacks & Mitigation ⚠️
 
@@ -328,11 +338,13 @@ def _run_hook_subprocess(self, hook: HookDefinition) -> subprocess.CompletedProc
 **Problem:** Tempfiles can leak if process crashes
 
 **Mitigation:**
+
 ```python
 import atexit
 import tempfile
 
 _temp_files: list[Path] = []
+
 
 def _cleanup_tempfiles():
     """Cleanup tempfiles on exit."""
@@ -343,7 +355,9 @@ def _cleanup_tempfiles():
         except Exception:
             pass
 
+
 atexit.register(_cleanup_tempfiles)
+
 
 def create_temp_report(tool_name: str) -> Path:
     """Create tempfile with auto-cleanup registration."""
@@ -357,6 +371,7 @@ def create_temp_report(tool_name: str) -> Path:
 **Problem:** Extra disk I/O for small outputs
 
 **Mitigation:** Only use tempfiles for:
+
 - Large repos (>500 files)
 - Debug mode
 - Tools that require file output
@@ -366,9 +381,11 @@ def create_temp_report(tool_name: str) -> Path:
 **Problem:** `/tmp` may have restricted permissions in containers
 
 **Mitigation:**
+
 ```python
 import tempfile
 import os
+
 
 def get_temp_dir() -> Path:
     """Get writable temp directory."""
@@ -393,11 +410,12 @@ def get_temp_dir() -> Path:
     return fallback
 ```
 
----
+______________________________________________________________________
 
 ## Recommendation Summary 🎯
 
 ### Current State: ✅ **Already Clean**
+
 - Tools output to stdout via `--json` flags
 - No files created in project directories
 - **No changes needed** for cleanliness
@@ -405,23 +423,26 @@ def get_temp_dir() -> Path:
 ### Future Enhancement: 💡 **Add Tempfile Support**
 
 **When to implement:**
+
 1. ✅ **Now:** If you want debug mode to preserve reports
-2. ⏰ **Later:** When adding tools that require file output
-3. ⏰ **Later:** When performance issues with large repos
+1. ⏰ **Later:** When adding tools that require file output
+1. ⏰ **Later:** When performance issues with large repos
 
 **Recommended Approach:**
+
 1. Add `ToolOutputConfig` registry (Priority 3 - Nice to have)
-2. Implement `_run_with_tempfile()` method (Priority 3)
-3. Enable in debug mode first (Priority 2)
-4. Expand to large repos if needed (Priority 4)
+1. Implement `_run_with_tempfile()` method (Priority 3)
+1. Enable in debug mode first (Priority 2)
+1. Expand to large repos if needed (Priority 4)
 
 **Priority vs Current Issues:**
+
 - **Priority 1:** Fix hardcoded "crackerjack" in complexipy parser (CRITICAL)
 - **Priority 2:** Add gitleaks JSON parsing
 - **Priority 3:** Add tempfile support for debug mode (ENHANCEMENT)
 - **Priority 4:** Performance optimization for large repos
 
----
+______________________________________________________________________
 
 ## Implementation Checklist 📝
 
@@ -438,6 +459,6 @@ If you decide to implement tempfile support:
 - [ ] Document debug mode report preservation
 - [ ] Add setting: `debug_preserve_reports: bool = True`
 
----
+______________________________________________________________________
 
 **Conclusion:** Your current implementation is already clean (stdout capture). Tempfile support would be a nice enhancement for debugging and large repos, but is not critical. Recommend implementing after fixing the Priority 1-2 issues from the audit.
