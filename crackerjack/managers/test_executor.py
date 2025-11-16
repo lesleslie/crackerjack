@@ -3,6 +3,7 @@ import subprocess
 import threading
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console

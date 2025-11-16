@@ -34,18 +34,23 @@ class SafePatternApplicator:
         return content
 
     def has_preserved_comment(self, line: str) -> bool:
-        if line.strip().startswith("#! /"):
+        # Preserve shebangs (still useful for executable scripts)
+        if line.strip().startswith(("#! /", "#!/")):
             return True
 
         line_lower = line.lower()
         preserved_keywords = [
-            "coding: ",
-            "encoding: ",
-            "type: ",
+            # Security & linting directives (critical)
+            "nosec",
             "noqa",
             "pragma",
+            # Type checking directives (critical)
+            "type: ",
+            # Security markers (custom)
             "regex ok",
+            # Task tracking (useful)
             "todo",
+            # Note: "coding:" and "encoding:" removed - obsolete since Python 3.0
         ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
@@ -1120,12 +1125,18 @@ class CodeCleaner(BaseModel):
             return '"' in line or "'" in line or "#" in line
 
         def _process_line_for_comment_removal(self, line: str) -> str:
-            """Process line to remove comments while preserving strings."""
+            """Process line to remove comments while preserving strings and special comments."""
             result_chars = []
             string_state = {"in_string": False, "quote_char": None}
 
             for i, char in enumerate(line):
-                if self._should_break_for_comment(char, string_state):
+                should_stop, preserve_rest = self._should_stop_for_comment(
+                    char, string_state, line, i
+                )
+                if should_stop:
+                    if preserve_rest:
+                        # Preserve the rest of the line (special comment like nosec, noqa, type:)
+                        result_chars.extend(line[i:])
                     break
 
                 self._update_string_state(char, i, line, string_state)
@@ -1133,11 +1144,24 @@ class CodeCleaner(BaseModel):
 
             return "".join(result_chars).rstrip()
 
-        def _should_break_for_comment(
-            self, char: str, string_state: dict[str, t.Any]
-        ) -> bool:
-            """Check if we should break for a comment character."""
-            return not string_state["in_string"] and char == "#"
+        def _should_stop_for_comment(
+            self, char: str, string_state: dict[str, t.Any], line: str, index: int
+        ) -> tuple[bool, bool]:
+            """Check if we should stop processing at comment.
+
+            Returns:
+                (should_stop, preserve_rest): should_stop=True when comment found,
+                                              preserve_rest=True if comment should be kept
+            """
+            if string_state["in_string"] or char != "#":
+                return (False, False)
+
+            # Check if the comment portion should be preserved
+            comment_part = line[index:].strip()
+            if _safe_applicator.has_preserved_comment(comment_part):
+                return (True, True)  # Stop processing, preserve the comment
+
+            return (True, False)  # Stop processing, discard the comment
 
         def _update_string_state(
             self, char: str, index: int, line: str, string_state: dict[str, t.Any]

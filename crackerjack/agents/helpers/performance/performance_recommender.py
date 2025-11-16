@@ -4,8 +4,8 @@ import operator
 import typing as t
 from dataclasses import dataclass
 
+from ....services.regex_patterns import SAFE_PATTERNS
 from ...base import AgentContext
-from ...services.regex_patterns import SAFE_PATTERNS
 
 
 @dataclass
