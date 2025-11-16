@@ -664,7 +664,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.44.18"
+version = "0.44.19"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
@@ -716,6 +716,7 @@ dependencies = [
     { name = "types-psutil" },
     { name = "types-pyyaml" },
     { name = "uv" },
+    { name = "uv-bump" },
     { name = "uvicorn" },
     { name = "vulture" },
     { name = "watchdog" },
@@ -738,68 +739,69 @@ sast = [
 
 [package.metadata]
 requires-dist = [
-    { name = "acb", specifier = ">=0.30.0" },
-    { name = "aiofiles", specifier = ">=24.1" },
-    { name = "aiohttp", specifier = ">=3.12.14" },
+    { name = "acb", specifier = ">=0.31.1" },
+    { name = "aiofiles", specifier = ">=25.1.0" },
+    { name = "aiohttp", specifier = ">=3.13.2" },
     { name = "bevy", specifier = ">=3.1.0b12" },
     { name = "codespell", specifier = ">=2.4.1" },
-    { name = "complexipy", specifier = ">=3.3" },
-    { name = "creosote", specifier = ">=4.0.3" },
-    { name = "fastapi", specifier = ">=0.116.1" },
-    { name = "fastmcp", specifier = ">=2.10.6" },
-    { name = "hatchling", specifier = ">=1.25" },
-    { name = "hypothesis", specifier = ">=6.100" },
-    { name = "jinja2", specifier = ">=3.1" },
-    { name = "keyring", specifier = ">=25.6" },
-    { name = "mcp", specifier = ">=1.12.2" },
-    { name = "mcp-common", specifier = ">=0.2.0" },
-    { name = "mdformat", specifier = ">=0.7.22" },
+    { name = "complexipy", specifier = ">=4.2.0" },
+    { name = "creosote", specifier = ">=4.1.0" },
+    { name = "fastapi", specifier = ">=0.121.2" },
+    { name = "fastmcp", specifier = ">=2.13.1" },
+    { name = "hatchling", specifier = ">=1.27.0" },
+    { name = "hypothesis", specifier = ">=6.148.0" },
+    { name = "jinja2", specifier = ">=3.1.6" },
+    { name = "keyring", specifier = ">=25.6.0" },
+    { name = "mcp", specifier = ">=1.21.0" },
+    { name = "mcp-common", specifier = ">=0.3.2" },
+    { name = "mdformat", specifier = ">=1.0.0" },
     { name = "mdformat-ruff", specifier = ">=0.1.3" },
-    { name = "nltk", specifier = ">=3.9.1" },
-    { name = "numpy", specifier = ">=2.2.1" },
-    { name = "onnxruntime", specifier = ">=1.19.0" },
-    { name = "psutil", specifier = ">=6.1.0" },
-    { name = "pydantic", specifier = ">=2.11.7" },
+    { name = "nltk", specifier = ">=3.9.2" },
+    { name = "numpy", specifier = ">=2.3.4" },
+    { name = "onnxruntime", specifier = ">=1.23.2" },
+    { name = "psutil", specifier = ">=7.1.3" },
+    { name = "pydantic", specifier = ">=2.12.4" },
     { name = "pyleak", specifier = ">=0.1.14" },
-    { name = "pyright", specifier = ">=1.1.403" },
-    { name = "pytest", specifier = ">=8.4.1" },
-    { name = "pytest-asyncio", specifier = ">=1" },
-    { name = "pytest-benchmark", specifier = ">=5.1" },
-    { name = "pytest-cov", specifier = ">=6.2.1" },
-    { name = "pytest-mock", specifier = ">=3.14.1" },
-    { name = "pytest-timeout", specifier = ">=2.4" },
-    { name = "pytest-xdist", specifier = ">=3.8" },
-    { name = "pyyaml", specifier = ">=6.0.2" },
-    { name = "refurb", specifier = ">=2.1" },
-    { name = "rich", specifier = ">=14.1" },
-    { name = "ruff", specifier = ">=0.12.9" },
-    { name = "scikit-learn", specifier = ">=1.6.1" },
-    { name = "scipy", specifier = ">=1.14.0" },
-    { name = "scipy-stubs", specifier = "==1.16.2.3" },
-    { name = "session-mgmt-mcp", specifier = ">=0.4.0" },
-    { name = "skylos", specifier = ">=2.1.2" },
-    { name = "structlog", specifier = ">=24.4" },
-    { name = "textual", specifier = ">=0.89" },
-    { name = "tomli-w", specifier = ">=1.2" },
-    { name = "transformers", specifier = ">=4.21.0" },
-    { name = "typer", specifier = ">=0.16" },
-    { name = "types-aiofiles", specifier = ">=24.1.0.20240626" },
-    { name = "types-psutil", specifier = ">=6.0.0.12" },
-    { name = "types-pyyaml", specifier = ">=6.0.12.12" },
-    { name = "uv", specifier = ">=0.7.20" },
-    { name = "uvicorn", specifier = ">=0.32.1" },
+    { name = "pyright", specifier = ">=1.1.407" },
+    { name = "pytest", specifier = ">=9.0.1" },
+    { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "pytest-benchmark", specifier = ">=5.2.3" },
+    { name = "pytest-cov", specifier = ">=7.0.0" },
+    { name = "pytest-mock", specifier = ">=3.15.1" },
+    { name = "pytest-timeout", specifier = ">=2.4.0" },
+    { name = "pytest-xdist", specifier = ">=3.8.0" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+    { name = "refurb", specifier = ">=2.2.0" },
+    { name = "rich", specifier = ">=14.2.0" },
+    { name = "ruff", specifier = ">=0.14.5" },
+    { name = "scikit-learn", specifier = ">=1.7.2" },
+    { name = "scipy", specifier = ">=1.16.3" },
+    { name = "scipy-stubs", specifier = ">=1.16.2.3" },
+    { name = "session-mgmt-mcp", specifier = ">=0.9.2" },
+    { name = "skylos", specifier = ">=2.5.0" },
+    { name = "structlog", specifier = ">=25.5.0" },
+    { name = "textual", specifier = ">=6.6.0" },
+    { name = "tomli-w", specifier = ">=1.2.0" },
+    { name = "transformers", specifier = ">=4.57.1" },
+    { name = "typer", specifier = ">=0.20.0" },
+    { name = "types-aiofiles", specifier = ">=25.1.0.20251011" },
+    { name = "types-psutil", specifier = ">=7.0.0.20251116" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20250915" },
+    { name = "uv", specifier = ">=0.9.9" },
+    { name = "uv-bump", specifier = ">=0.3.1" },
+    { name = "uvicorn", specifier = ">=0.38.0" },
     { name = "vulture", specifier = ">=2.14" },
-    { name = "watchdog", specifier = ">=6" },
+    { name = "watchdog", specifier = ">=6.0.0" },
     { name = "websockets", specifier = ">=15.0.1" },
-    { name = "zuban", specifier = ">=0.0.22" },
+    { name = "zuban", specifier = ">=0.2.2" },
 ]
 
 [package.metadata.requires-dev]
-dependency = [{ name = "pip-audit", specifier = ">=2.7.0" }]
+dependency = [{ name = "pip-audit", specifier = ">=2.9.0" }]
 dev = [
     { name = "excalidraw-mcp", specifier = ">=0.34.0" },
-    { name = "session-mgmt-mcp", specifier = ">=0.4.0" },
-    { name = "ty", specifier = ">=0.0.0a6" },
+    { name = "session-mgmt-mcp", specifier = ">=0.9.2" },
+    { name = "ty", specifier = ">=0.0.1a26" },
 ]
 sast = [{ name = "bandit", specifier = ">=1.8.6" }]
 
@@ -3556,14 +3558,14 @@ wheels = [
 
 [[package]]
 name = "scipy-stubs"
-version = "1.16.2.3"
+version = "1.16.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "optype", extra = ["numpy"] },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6b/47/b165711b36a1afb8d5f408393487586e07f8bdb86f829b5b904c1ddd091f/scipy_stubs-1.16.2.3.tar.gz", hash = "sha256:b1afd21442699b8bdd399508187bddcedc6c29a34b188fd603396cb6754c2a91", size = 355436, upload-time = "2025-10-08T01:38:37.403Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/bd/68/c53c3bce6bd069a164015be1be2671c968b526be4af1e85db64c88f04546/scipy_stubs-1.16.3.0.tar.gz", hash = "sha256:d6943c085e47a1ed431309f9ca582b6a206a9db808a036132a0bf01ebc34b506", size = 356462, upload-time = "2025-10-28T22:05:31.198Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/29/9f/3d8f613d0c3be9348cb0c351328249b7a2428f13329447ec6f395628d7b0/scipy_stubs-1.16.2.3-py3-none-any.whl", hash = "sha256:05e93238bdaedb7fa1afedf9c3a2337f94fec3d8c33fb2d403c933e1bcc7412e", size = 556848, upload-time = "2025-10-08T01:38:35.697Z" },
+    { url = "https://files.pythonhosted.org/packages/86/1c/0ba7305fa01cfe7a6f1b8c86ccdd1b7a0d43fa9bd769c059995311e291a2/scipy_stubs-1.16.3.0-py3-none-any.whl", hash = "sha256:90e5d82ced2183ef3c5c0a28a77df8cc227458624364fa0ff975ad24fa89d6ad", size = 557713, upload-time = "2025-10-28T22:05:29.454Z" },
 ]
 
 [[package]]
@@ -4163,6 +4165,15 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/85/5c/5b20529430140cc39255c0884da734610ccaaf2fd15f2cfabd29f6193d01/uv-0.9.9-py3-none-win32.whl", hash = "sha256:1d25f1aca2f8a3b24f3fdf9b029a9a923c429a828be7c9eee9fa073addedbc36", size = 19272132, upload-time = "2025-11-12T18:45:14.352Z" },
     { url = "https://files.pythonhosted.org/packages/f2/38/562295348cf2eb567fd5ea44512a645ea5bec2661a7e07b7f14fda54cb07/uv-0.9.9-py3-none-win_amd64.whl", hash = "sha256:1201765ae39643ef66bc6decfc44c5f8540fcaeae8b0914553b32e670f1941da", size = 21316052, upload-time = "2025-11-12T18:45:18.897Z" },
     { url = "https://files.pythonhosted.org/packages/9d/62/47e8d16da92ffb095388e45cc3f6e6c2ba1404d80590fb9528305517c7f3/uv-0.9.9-py3-none-win_arm64.whl", hash = "sha256:2695624ee43a8932c3fb414a98e4aed3b4f60306a24acd68e2b288dd5a58c370", size = 19821476, upload-time = "2025-11-12T18:45:22.462Z" },
+]
+
+[[package]]
+name = "uv-bump"
+version = "0.3.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/76/4b/e06a8613f78eb1f27c2a035d6aa856e4244b152a483025bd63f5f47fb391/uv_bump-0.3.1.tar.gz", hash = "sha256:a4fb9f366169b657973a57cde10f75890c7776edf6e4451349f0dfaea89ceb17", size = 4807, upload-time = "2025-09-28T15:57:03.577Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cf/2b/c341295394b63a6fe5407fd9ed3a148b255d9f5d3dc5b3db9a55a2c99082/uv_bump-0.3.1-py3-none-any.whl", hash = "sha256:4e3b2c7f95e444b44784a715975266ab30ae79776c2d5d71eab38d22c8767a1e", size = 6128, upload-time = "2025-09-28T15:57:02.205Z" },
 ]
 
 [[package]]
