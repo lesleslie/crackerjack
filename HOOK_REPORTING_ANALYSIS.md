@@ -5,7 +5,7 @@
 The hook reporting system has two distinct issues that cause misleading output:
 
 1. **Fast hooks (ruff-format, codespell, ruff-check)**: Show "1 issue" with no details
-2. **Comprehensive hooks (complexipy)**: Show "Hook failed with no detailed output"
+1. **Comprehensive hooks (complexipy)**: Show "Hook failed with no detailed output"
 
 Both issues stem from how adapter errors are handled and reported in the orchestrator.
 
@@ -24,13 +24,15 @@ if not issues:
 ```
 
 **Problem Flow**:
+
 1. Adapter executes successfully but finds issues
-2. Adapter returns `QAResult` with `issues_found > 0` but `details=""` or `None`
-3. `_build_issues_list()` tries to parse `details` but finds nothing
-4. `_extract_error_details()` creates fallback generic message
-5. Table shows `issues_count=1` (the generic message) instead of actual issue count
+1. Adapter returns `QAResult` with `issues_found > 0` but `details=""` or `None`
+1. `_build_issues_list()` tries to parse `details` but finds nothing
+1. `_extract_error_details()` creates fallback generic message
+1. Table shows `issues_count=1` (the generic message) instead of actual issue count
 
 **Actual vs Expected**:
+
 - **Actual**: `ruff-format FAILED 5.31s 1` with message "Hook ruff-format failed with no detailed output"
 - **Expected**: `ruff-format FAILED 5.31s 15` with actual file/line details
 
@@ -63,11 +65,13 @@ return QAResult(
 ```
 
 **Problem**: The base adapter **DOES** build details correctly, so the issue must be in:
+
 1. How complexipy adapter parses its output
-2. How the result is passed through the orchestrator
-3. How the phase coordinator displays it
+1. How the result is passed through the orchestrator
+1. How the phase coordinator displays it
 
 **Key Suspect**: `complexipy.json` file reading
+
 - Complexipy outputs to `complexipy.json` file
 - If file doesn't exist or is malformed, falls back to stdout parsing
 - Fallback may be failing silently
@@ -107,9 +111,9 @@ return QAResult(
 The orchestrator is **double-processing** the adapter results:
 
 1. **Adapter** (`ComplexipyAdapter`) creates detailed `QAResult.details` string ✅
-2. **Orchestrator** (`_build_issues_list`) tries to **re-parse** `details` string ❌
-3. If parsing fails, orchestrator creates **generic fallback message** ❌
-4. **Original detailed output is lost** ❌
+1. **Orchestrator** (`_build_issues_list`) tries to **re-parse** `details` string ❌
+1. If parsing fails, orchestrator creates **generic fallback message** ❌
+1. **Original detailed output is lost** ❌
 
 ## Solution Strategy
 
@@ -133,15 +137,19 @@ def _build_issues_list(self, qa_result: t.Any) -> list[str]:
         return detail_lines if detail_lines else []
 
     # Fallback for adapters that don't provide details
-    return [f"{qa_result.issues_found} issues found (run with --ai-debug for full details)"]
+    return [
+        f"{qa_result.issues_found} issues found (run with --ai-debug for full details)"
+    ]
 ```
 
 **Pros**:
+
 - Minimal changes
 - Preserves adapter formatting
 - Works for all adapters
 
 **Cons**:
+
 - Still requires adapters to populate `details` correctly
 
 ### Option 2: Store Structured Issues in HookResult
@@ -163,11 +171,13 @@ class HookResult:
 ```
 
 **Pros**:
+
 - Preserves full structured data
 - Enables rich formatting
 - Better for AI agent integration
 
 **Cons**:
+
 - Larger refactor
 - Changes public API
 - Overkill for simple fix
@@ -177,10 +187,11 @@ class HookResult:
 **Change**: Ensure complexipy adapter returns proper details in expected format
 
 **Investigate**:
+
 1. Is `complexipy.json` file being created?
-2. Is JSON parsing succeeding?
-3. Is `_build_details()` being called?
-4. Is `details` string populated in `QAResult`?
+1. Is JSON parsing succeeding?
+1. Is `_build_details()` being called?
+1. Is `details` string populated in `QAResult`?
 
 ## Testing Plan
 
@@ -255,25 +266,28 @@ async def test_phase_coordinator_displays_details():
 ## Implementation Priority
 
 1. **Investigate** (15 min): Run complexipy manually and verify `complexipy.json` file creation
-2. **Debug** (15 min): Add logging to `_build_issues_list()` to see what `qa_result.details` contains
-3. **Fix** (30 min): Implement Option 1 (pass through adapter details)
-4. **Test** (45 min): Create comprehensive tests as outlined above
-5. **Validate** (15 min): Run full test suite and verify output
+1. **Debug** (15 min): Add logging to `_build_issues_list()` to see what `qa_result.details` contains
+1. **Fix** (30 min): Implement Option 1 (pass through adapter details)
+1. **Test** (45 min): Create comprehensive tests as outlined above
+1. **Validate** (15 min): Run full test suite and verify output
 
 ## Files to Modify
 
 ### Primary Changes
+
 - `crackerjack/orchestration/hook_orchestrator.py`
   - Method: `_build_issues_list()` (line 841)
   - Method: `_extract_error_details()` (line 881)
 
 ### Test Files to Create
+
 - `tests/unit/orchestration/test_hook_result_details.py`
 - `tests/integration/test_hook_reporting_e2e.py`
 
 ## Expected Outcome
 
 ### Before
+
 ```
 ❌ Fast hooks attempt 1: 11/14 passed in 49.17s
 
@@ -293,6 +307,7 @@ Details for failing fast hooks:
 ```
 
 ### After
+
 ```
 ❌ Fast hooks attempt 1: 11/14 passed in 49.17s
 

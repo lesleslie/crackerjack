@@ -15,8 +15,8 @@ The `HookOrchestrator._build_issues_list()` method was correctly parsing adapter
 Enhanced `_build_issues_list()` method in `crackerjack/orchestration/hook_orchestrator.py` to:
 
 1. **Use adapter's pre-formatted details directly** instead of re-parsing
-2. **Return early with parsed details** when successfully extracted
-3. **Provide better fallback messaging** that directs users to `--ai-debug` flag
+1. **Return early with parsed details** when successfully extracted
+1. **Provide better fallback messaging** that directs users to `--ai-debug` flag
 
 ### Changes Made
 
@@ -52,6 +52,7 @@ def _build_issues_list(self, qa_result: t.Any) -> list[str]:
 
     return issues  # Could return empty list, triggering generic fallback
 
+
 # After (simplified)
 def _build_issues_list(self, qa_result: t.Any) -> list[str]:
     if qa_result.issues_found == 0:
@@ -73,13 +74,15 @@ def _build_issues_list(self, qa_result: t.Any) -> list[str]:
 ### Created Tests
 
 1. **Unit Tests**: `tests/unit/orchestration/test_hook_result_details.py` (400+ lines)
+
    - `TestAdapterDetailsPopulation` - Verifies adapters populate details
    - `TestOrchestratorPreservesDetails` - Verifies orchestrator preserves details
    - `TestBuildIssuesListMethod` - **All 4 tests PASSING** ✅
    - `TestIssuesCountAccuracy` - Verifies issue counts are accurate ✅
    - `TestPhaseCoordinatorDisplay` - Tests display logic ✅
 
-2. **Integration Tests**: `tests/integration/test_hook_reporting_e2e.py` (300+ lines)
+1. **Integration Tests**: `tests/integration/test_hook_reporting_e2e.py` (300+ lines)
+
    - End-to-end tests for complexipy, ruff-format, codespell
    - Generic fallback behavior tests
    - Issue count consistency tests
@@ -101,6 +104,7 @@ TestPhaseCoordinatorDisplay::test_hook_failure_display_shows_actual_details PASS
 ## Verification
 
 ### Fast Hooks - Before Fix
+
 ```
 ❌ Fast hooks attempt 1: 11/14 passed in 49.17s
 
@@ -117,6 +121,7 @@ Details for failing fast hooks:
 ```
 
 ### Fast Hooks - After Fix
+
 ```
 ✅ Fast hooks attempt 1: 14/14 passed in 57.76s
 
@@ -156,6 +161,7 @@ Details for failing fast hooks:
 ## Impact
 
 ### Positive
+
 - ✅ **Actual issue details now displayed** instead of generic fallback
 - ✅ **Correct issue counts** shown in table
 - ✅ **Better user guidance** with `--ai-debug` flag mention
@@ -163,20 +169,21 @@ Details for failing fast hooks:
 - ✅ **All core tests passing** - no regressions
 
 ### Minimal
+
 - ⚠️ Some integration tests need mock updates (non-critical, testing infrastructure only)
 - ⚠️ Fallback message changed slightly (better wording)
 
 ## Documentation
 
 1. **Analysis Document**: `HOOK_REPORTING_ANALYSIS.md` - Comprehensive root cause analysis
-2. **Test Suite**: 700+ lines of tests covering all scenarios
-3. **This Summary**: Implementation details and verification
+1. **Test Suite**: 700+ lines of tests covering all scenarios
+1. **This Summary**: Implementation details and verification
 
 ## Next Steps
 
 1. **Optional**: Update integration test mocks for `HookDefinition` and `ToolExecutionResult` constructors
-2. **Optional**: Test with actual failing hooks in a real scenario to verify user-facing output
-3. **Recommended**: Update documentation to mention `--ai-debug` flag for detailed hook output
+1. **Optional**: Test with actual failing hooks in a real scenario to verify user-facing output
+1. **Recommended**: Update documentation to mention `--ai-debug` flag for detailed hook output
 
 ## Files Modified
 
