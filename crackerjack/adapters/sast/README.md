@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [SAST](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [SAST](<./README.md>)
 
 # SAST Adapters
 
@@ -127,6 +127,6 @@ assert adapter._get_check_type() == QACheckType.SAST
 
 ## Related
 
-- [Security](../security/README.md) — Secret leak prevention with Gitleaks
-- [Type](../type/README.md) — Type safety prevents classes of vulnerabilities
-- [Lint](../lint/README.md) — Code quality supports secure coding practices
+- [Security](<../security/README.md>) — Secret leak prevention with Gitleaks
+- [Type](<../type/README.md>) — Type safety prevents classes of vulnerabilities
+- [Lint](<../lint/README.md>) — Code quality supports secure coding practices

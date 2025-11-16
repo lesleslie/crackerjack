@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Complexity](./README.md)
+> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Complexity](<./README.md>)
 
 # Complexity Adapter
 
@@ -49,5 +49,5 @@ async def analyze_complexity() -> None:
 
 ## Related
 
-- [Refactor](../refactor/README.md) — Tools to modernize and reduce complexity
-- [Format](../format/README.md) — Formatting often improves readability and maintainability
+- [Refactor](<../refactor/README.md>) — Tools to modernize and reduce complexity
+- [Format](<../format/README.md>) — Formatting often improves readability and maintainability
