@@ -1,10 +1,40 @@
 ______________________________________________________________________
 
-## [0.44.21] - 2025-11-15
+## [0.44.21] - 2025-11-16
+
+### Fixed
+
+- **CRITICAL:** Remove hardcoded "crackerjack" package name from complexipy parser
+  - Added auto-detection of package name from tool output using regex
+  - Fixes 100% of external projects where complexity violations were silently ignored
+  - Falls back to pyproject.toml detection if regex fails
+- Fix Windows path separator compatibility in PATH environment variable handling
+  - Replace hardcoded `": "` with `os.pathsep` for cross-platform support
+- Categorize semgrep errors to distinguish code vs infrastructure issues
+  - Network/timeout errors now warn instead of failing builds
+  - Only code/config errors fail the build
+  - Improves CI/CD resilience to transient network issues
 
 ### Changed
 
-- Update dependencies
+- Simplify configuration in pyproject.toml
+  - Remove 3 redundant `[[tool.refurb.amend]]` blocks (18 lines)
+  - Remove redundant test worker settings: `auto_detect_workers`, `min_workers`
+  - Enable branch coverage for more accurate metrics (`branch = true`)
+- Document zuban v0.2.2 limitation with `[tool.mypy]` parsing
+  - Keep mypy.ini with clear explanation why it's needed
+  - Add migration path for when zuban is fixed
+- Improve zuban `--no-error-summary` flag documentation
+  - Document rationale: suppresses summary line to keep issue output clean
+
+### Audit & Documentation
+
+- Comprehensive audit of hooks and tools for false/faulty error reporting
+- Cross-project configuration consolidation analysis (6 projects)
+- Unified implementation plan consolidating 3 audit documents (17 tasks)
+- Updated IMPLEMENTATION_SUMMARY.md with detailed Phase 1-4 completion
+
+______________________________________________________________________
 
 ## [0.44.20] - 2025-11-15
 

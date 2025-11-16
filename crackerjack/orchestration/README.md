@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Orchestration](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../CLAUDE.md) | [Orchestration](./README.md)
 
 # Orchestration
 
@@ -69,7 +69,7 @@ Intelligent caching system for hook results:
 - Configurable TTL (default 3600s/1 hour)
 - File hash verification prevents stale results
 
-See [cache/README.md](<./cache/README.md>) for details.
+See [cache/README.md](./cache/README.md) for details.
 
 ### Strategies (`strategies/`)
 
@@ -80,7 +80,7 @@ Execution strategy implementations:
 - **Timeout Management**: Graceful degradation on timeouts
 - **Parallelization**: Concurrent execution for independent hooks
 
-See [strategies/README.md](<./strategies/README.md>) for details.
+See [strategies/README.md](./strategies/README.md) for details.
 
 ## Architecture
 
@@ -324,11 +324,11 @@ clear_cache()
 
 ## Related
 
-- [Managers](<../managers/README.md>) — Managers that use orchestration
-- [Adapters](<../adapters/README.md>) — Adapters orchestrated by hooks
-- [Services](<../services/README.md>) — Services used by orchestration
-- [Agents](<../agents/README.md>) — AI agents coordinated by orchestration
-- [Main README](<../../README.md>) — Workflow overview
+- [Managers](../managers/README.md) — Managers that use orchestration
+- [Adapters](../adapters/README.md) — Adapters orchestrated by hooks
+- [Services](../services/README.md) — Services used by orchestration
+- [Agents](../agents/README.md) — AI agents coordinated by orchestration
+- [Main README](../../README.md) — Workflow overview
 
 ## Future Enhancements
 
