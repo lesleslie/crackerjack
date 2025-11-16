@@ -1,5 +1,15 @@
 ______________________________________________________________________
 
+## [0.44.24] - 2025-11-16
+
+### Changed
+
+- Update config, deps
+
+### Documentation
+
+- Clean up documentation structure
+
 ## [0.44.23] - 2025-11-16
 
 ### Changed
