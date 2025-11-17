@@ -5,6 +5,7 @@
 Hooks were showing misleading "1 issue" in the issues column when they failed due to configuration or tool errors, even though there were 0 actual code quality issues. This was causing confusion for users who thought there were code problems when the actual issue was a misconfiguration.
 
 **User Report** (from ../acb project):
+
 - ruff-format: Showed "1 issue" but had 0 actual issues (config error)
 - codespell: Showed "1 issue" but had 0 actual issues (config error)
 - complexipy: Showed "1 issue" but had 0 violations above threshold
@@ -21,8 +22,9 @@ if status == "failed":
 ```
 
 This logic didn't distinguish between:
+
 1. **Code quality failures** (actual violations found) → should show actual count
-2. **Configuration/tool errors** (invalid config, missing binary) → should show 0
+1. **Configuration/tool errors** (invalid config, missing binary) → should show 0
 
 ## Solution Implemented
 
@@ -43,9 +45,7 @@ def _calculate_total_issues(
     not a code quality issue. These should show 0 issues, not 1.
     """
     total_issues = (
-        qa_result.issues_found
-        if hasattr(qa_result, "issues_found")
-        else len(issues)
+        qa_result.issues_found if hasattr(qa_result, "issues_found") else len(issues)
     )
 
     # Only force "1 issue" for genuine parsing failures, not config errors
@@ -64,31 +64,34 @@ def _calculate_total_issues(
 ### Key Changes
 
 1. **Config/tool errors** (`status=ERROR`) → Show 0 issues
-2. **Code quality failures** (`status=FAILURE`) → Show actual count
-3. **Parsing failures** (can't parse output but tool failed) → May show 1
+1. **Code quality failures** (`status=FAILURE`) → Show actual count
+1. **Parsing failures** (can't parse output but tool failed) → May show 1
 
 ## Test Coverage
 
 Created comprehensive test suite in `tests/unit/orchestration/test_issue_count_fix.py`:
 
 ### TestIssueCountFix (6 tests):
+
 1. ✅ `test_config_error_shows_zero_issues`: Config errors show 0, not 1
-2. ✅ `test_code_violations_show_actual_count`: Real violations show actual count (95)
-3. ✅ `test_parsing_failure_shows_one_issue`: Parsing failures may show 0 or 1
-4. ✅ `test_passed_hook_with_zero_issues`: Passed hooks show 0
-5. ✅ `test_warning_status_shows_actual_count`: Warnings show actual count
-6. ✅ `test_tool_error_with_stderr_output`: Tool errors show 0
+1. ✅ `test_code_violations_show_actual_count`: Real violations show actual count (95)
+1. ✅ `test_parsing_failure_shows_one_issue`: Parsing failures may show 0 or 1
+1. ✅ `test_passed_hook_with_zero_issues`: Passed hooks show 0
+1. ✅ `test_warning_status_shows_actual_count`: Warnings show actual count
+1. ✅ `test_tool_error_with_stderr_output`: Tool errors show 0
 
 ### TestIssueCountEdgeCases (3 tests):
+
 7. ✅ `test_missing_qa_result_status_attribute`: Handles missing status gracefully
-8. ✅ `test_status_passed_with_nonzero_issues`: Inconsistent status handled
-9. ✅ `test_large_issue_count`: Large counts preserved accurately
+1. ✅ `test_status_passed_with_nonzero_issues`: Inconsistent status handled
+1. ✅ `test_large_issue_count`: Large counts preserved accurately
 
 **All 9 tests PASSING** ✅
 
 ## Expected Behavior After Fix
 
 ### Before (Misleading):
+
 ```
 Hook Results:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -100,6 +103,7 @@ ruff-check     FAILED   0.15s      95      ✅ Correct
 ```
 
 ### After (Truthful):
+
 ```
 Hook Results:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -115,16 +119,19 @@ ruff-check     FAILED   0.15s      95      ✅ Correct
 ## Files Modified
 
 1. **`crackerjack/orchestration/hook_orchestrator.py`**:
+
    - Modified `_calculate_total_issues()` method (lines 939-975)
    - Added comprehensive docstring explaining the distinction
    - Preserved backward compatibility for code quality failures
 
-2. **`tests/unit/orchestration/test_issue_count_fix.py`**:
+1. **`tests/unit/orchestration/test_issue_count_fix.py`**:
+
    - New test file with 9 comprehensive tests
    - Covers all edge cases and scenarios
    - All tests passing
 
-3. **`HOOK_ISSUE_COUNT_ROOT_CAUSE.md`**:
+1. **`HOOK_ISSUE_COUNT_ROOT_CAUSE.md`**:
+
    - Comprehensive 400+ line root cause analysis
    - Data flow diagrams
    - Solution options comparison
@@ -135,20 +142,23 @@ ruff-check     FAILED   0.15s      95      ✅ Correct
 Created three analysis documents:
 
 1. **`HOOK_ISSUE_COUNT_ROOT_CAUSE.md`**: Detailed root cause analysis with data flow
-2. **`HOOK_ISSUE_COUNT_FIX_SUMMARY.md`**: This implementation summary
-3. Investigation scripts (removed after testing): Demonstrated the bug behavior
+1. **`HOOK_ISSUE_COUNT_FIX_SUMMARY.md`**: This implementation summary
+1. Investigation scripts (removed after testing): Demonstrated the bug behavior
 
 ## Impact Assessment
 
 ### Breaking Changes
+
 - **None** - This is a bug fix for misleading display behavior
 
 ### Affected Components
+
 - Hook result display in phase coordinator
 - MCP server status reporting
 - Any code that relies on `issues_count` field
 
 ### Backward Compatibility
+
 - ✅ Fully compatible - only changes the `issues_count` value for ERROR status
 - ✅ No changes to HookResult structure or API
 - ✅ No changes to adapter interfaces
@@ -158,7 +168,7 @@ Created three analysis documents:
 To verify the fix works in the user's ../acb project:
 
 1. Run `python -m crackerjack` in the acb directory
-2. Check the hook results table:
+1. Check the hook results table:
    - ruff-format should show **0 issues** if config error
    - codespell should show **0 issues** if config error
    - complexipy should show **0 issues** if no violations
@@ -172,18 +182,21 @@ To verify the fix works in the user's ../acb project:
 The fix leverages the existing `QAResultStatus` enum to make a semantic distinction:
 
 - **`QAResultStatus.ERROR`** = Tool/configuration problem (not code issues)
+
   - Missing binary
   - Invalid configuration
   - Tool initialization failure
   - → Show 0 issues (truthful)
 
 - **`QAResultStatus.FAILURE`** = Code quality violation
+
   - Lint errors
   - Format violations
   - Type errors
   - → Show actual count (e.g., 95 E402 violations)
 
 - **`QAResultStatus.WARNING`** = Non-blocking issues
+
   - Style warnings
   - Optional improvements
   - → Show actual count
@@ -194,9 +207,9 @@ This semantic distinction was already present in the codebase via the `QAResultS
 ## Next Steps
 
 1. ✅ Fix implemented and tested
-2. ⏳ User verification in ../acb project (awaiting feedback)
-3. ⏳ Consider if other display logic needs similar fixes
-4. ⏳ Update documentation if needed
+1. ⏳ User verification in ../acb project (awaiting feedback)
+1. ⏳ Consider if other display logic needs similar fixes
+1. ⏳ Update documentation if needed
 
 ## Related Files
 
@@ -205,7 +218,7 @@ This semantic distinction was already present in the codebase via the `QAResultS
 - **Models**: `crackerjack/models/qa_results.py` (QAResultStatus enum)
 - **Display**: `crackerjack/core/phase_coordinator.py` (renders the table)
 
----
+______________________________________________________________________
 
 **Status**: ✅ Fix implemented, tested, and ready for user verification
 **Test Results**: 9/9 tests passing

@@ -560,14 +560,22 @@ class PhaseCoordinator:
 
         # Calculate total issues using issues_count (which may be larger than len(issues_found))
         # Passed hooks always contribute 0 issues
+        # Config errors (is_config_error=True) are counted separately
         total_issues = 0
+        config_errors = 0
         for r in results:
             if r.status == "passed":
                 continue
-            # Use issues_count if available (may be truncated list), otherwise len(issues_found)
-            if hasattr(r, "issues_count") and r.issues_count > 0:
+            # Count config errors separately - they're not code quality issues
+            if hasattr(r, "is_config_error") and r.is_config_error:
+                config_errors += 1
+                continue
+            # Use issues_count directly (don't fall back to len(issues_found))
+            # because issues_found may contain error detail lines, not actual issues
+            if hasattr(r, "issues_count"):
                 total_issues += r.issues_count
             elif r.issues_found:
+                # Legacy fallback for old HookResults without issues_count
                 total_issues += len(r.issues_found)
 
         return {
@@ -579,6 +587,7 @@ class PhaseCoordinator:
             "total_failed": len(failed_hooks),
             "total_other": len(other_hooks),
             "total_issues_found": total_issues,
+            "config_errors": config_errors,
         }
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
@@ -586,12 +595,18 @@ class PhaseCoordinator:
         name = self._strip_ansi(result.name)
         status = result.status.upper()
         duration = f"{result.duration:.2f}s"
-        # Passed hooks always show 0 issues
-        issues = (
-            "0"
-            if result.status == "passed"
-            else str(len(result.issues_found) if result.issues_found else 0)
-        )
+
+        # Determine issues display (matches Rich table logic)
+        if result.status == "passed":
+            issues = "0"
+        elif hasattr(result, "is_config_error") and result.is_config_error:
+            # Config/tool error - show simple symbol instead of misleading count
+            issues = "[yellow]![/yellow]"
+        else:
+            # For failed hooks with code violations, use issues_count
+            # Don't fall back to len(issues_found) - it may contain error detail lines
+            issues = str(result.issues_count if hasattr(result, "issues_count") else 0)
+
         self.console.print(
             f"  - {name} :: {status} | {duration} | issues={issues}",
             highlight=False,
@@ -599,9 +614,12 @@ class PhaseCoordinator:
 
     def _print_plain_summary(self, stats: dict[str, t.Any]) -> None:
         """Print summary statistics in plain format."""
+        issues_text = f"{stats['total_issues_found']} issues found"
+        if stats.get("config_errors", 0) > 0:
+            issues_text += f" ({stats['config_errors']} config)"
+
         self.console.print(
-            f"  Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, "
-            f"{stats['total_issues_found']} issues found",
+            f"  Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, {issues_text}",
             highlight=False,
         )
 
@@ -615,6 +633,16 @@ class PhaseCoordinator:
         panel = self._build_results_panel(suite_name, table, summary_text)
 
         self.console.print(panel)
+
+        # Add legend if any config errors are present
+        has_config_errors = any(
+            hasattr(r, "is_config_error") and r.is_config_error for r in results
+        )
+        if has_config_errors:
+            self.console.print(
+                "[dim][yellow]![/yellow]  = Configuration or tool error (not code issues)[/dim]"
+            )
+
         self.console.print()
 
     def _build_summary_text(self, stats: dict[str, t.Any]) -> str:
@@ -625,7 +653,12 @@ class PhaseCoordinator:
         )
         if stats["total_other"] > 0:
             summary_text += f" | Other: [yellow]{stats['total_other']}[/yellow]"
-        summary_text += f" | Issues found: [white]{stats['total_issues_found']}[/white]"
+
+        # Show issues found with config count in parentheses if present
+        issues_text = f"[white]{stats['total_issues_found']}[/white]"
+        if stats.get("config_errors", 0) > 0:
+            issues_text += f" [dim]({stats['config_errors']} config)[/dim]"
+        summary_text += f" | Issues found: {issues_text}"
         return summary_text
 
     def _build_results_table(self, results: list[HookResult]) -> Table:
@@ -644,19 +677,23 @@ class PhaseCoordinator:
             status_style = self._status_style(result.status)
             # Passed hooks always show 0 issues (files processed != issues found)
             if result.status == "passed":
-                issues_display = 0
+                issues_display = "0"
+            elif hasattr(result, "is_config_error") and result.is_config_error:
+                # Config/tool error - show simple symbol instead of misleading count
+                # Using "!" instead of emoji to avoid width issues in terminal
+                issues_display = "[yellow]![/yellow]"
             else:
-                # For failed hooks, use issues_count if available, otherwise len(issues_found)
-                issues_display = (
-                    result.issues_count
-                    if hasattr(result, "issues_count") and result.issues_count > 0
-                    else (len(result.issues_found) if result.issues_found else 0)
+                # For failed hooks with code violations, use issues_count
+                # IMPORTANT: Use issues_count directly, don't fall back to len(issues_found)
+                # because issues_found may contain display messages that aren't actual issues
+                issues_display = str(
+                    result.issues_count if hasattr(result, "issues_count") else 0
                 )
             table.add_row(
                 self._strip_ansi(result.name),
                 f"[{status_style}]{result.status.upper()}[/{status_style}]",
                 f"{result.duration:.2f}s",
-                str(issues_display),
+                issues_display,
             )
 
         return table

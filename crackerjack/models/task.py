@@ -46,6 +46,9 @@ class HookResult:
     exit_code: int | None = None  # Non-zero exit codes for failed hooks
     error_message: str | None = None  # Error details from stderr or exceptions
     is_timeout: bool = False  # Whether hook failed due to timeout
+    is_config_error: bool = (
+        False  # Whether failure is due to config/tool error (not code issues)
+    )
 
     def __post_init__(self) -> None:
         if self.issues_found is None:
