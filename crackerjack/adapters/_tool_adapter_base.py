@@ -282,15 +282,25 @@ class BaseToolAdapter(QAAdapterBase):
         except TimeoutError:
             # At this point, settings should be initialized by the init() method
             assert self.settings is not None, "Settings should be initialized"
+            timeout_msg = (
+                f"Tool execution timed out after {self.settings.timeout_seconds}s"
+            )
             return self._create_result(
                 status=QAResultStatus.ERROR,
-                message=f"Tool execution timed out after {self.settings.timeout_seconds}s",
+                message=timeout_msg,
+                details=timeout_msg,
                 start_time=start_time,
             )
         except Exception as e:
+            error_msg = f"Tool execution failed: {e}"
+            # Include full traceback in details for better debugging
+            import traceback
+
+            error_details = f"{error_msg}\n\nFull traceback:\n{traceback.format_exc()}"
             return self._create_result(
                 status=QAResultStatus.ERROR,
-                message=f"Tool execution failed: {e}",
+                message=error_msg,
+                details=error_details,
                 start_time=start_time,
             )
 
@@ -323,9 +333,46 @@ class BaseToolAdapter(QAAdapterBase):
         if not root.exists():
             root = Path.cwd()
 
+        # Standard directories to always exclude (even if not in config)
+        # These are directories that should never be scanned
+        standard_excludes = {
+            ".venv",
+            "venv",
+            ".env",
+            "env",
+            ".tox",
+            ".nox",
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            ".git",
+            ".hg",
+            ".svn",
+            "node_modules",
+            ".uv",
+            "dist",
+            "build",
+            "*.egg-info",
+        }
+
+        # Conditionally exclude tests directory only for comprehensive hooks
+        # Fast hooks (formatters, linters) should check test files
+        # Comprehensive hooks (type checking, security) can skip tests
+        if (
+            cfg
+            and hasattr(cfg, "is_comprehensive_stage")
+            and cfg.is_comprehensive_stage
+        ):
+            standard_excludes.add("tests")
+
         candidates = [p for p in root.rglob("*.py")]
         result: list[Path] = []
         for path in candidates:
+            # Skip if path contains any standard exclude directory
+            if any(excluded in path.parts for excluded in standard_excludes):
+                continue
+
             # Include if matches include patterns
             include = any(path.match(pattern) for pattern in cfg.file_patterns)
             if not include:
@@ -549,6 +596,7 @@ class BaseToolAdapter(QAAdapterBase):
         message: str,
         start_time: float,
         files: list[Path] | None = None,
+        details: str | None = None,
     ) -> QAResult:
         """Create a QAResult with standard fields.
 
@@ -557,6 +605,7 @@ class BaseToolAdapter(QAAdapterBase):
             message: Result message
             start_time: Start time for duration
             files: Optional files list
+            details: Optional detailed error output
 
         Returns:
             QAResult
@@ -569,6 +618,7 @@ class BaseToolAdapter(QAAdapterBase):
             check_type=self._get_check_type(),
             status=status,
             message=message,
+            details=details or "",
             files_checked=files or [],
             execution_time_ms=elapsed_ms,
             metadata={"tool_version": self._tool_version},

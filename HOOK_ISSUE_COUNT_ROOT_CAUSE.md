@@ -3,6 +3,7 @@
 ## Problem Statement
 
 From user testing in `../acb` project:
+
 - **ruff-check**: Correctly shows 95 E402 violations ✅
 - **ruff-format**: Shows "1 issue" but has 0 actual issues (config error) ❌
 - **codespell**: Shows "1 issue" but has 0 actual issues (config error) ❌
@@ -20,9 +21,7 @@ def _calculate_total_issues(
     # Get the actual total count of issues from qa_result
     # This may be larger than len(issues) if issues were truncated for display
     total_issues = (
-        qa_result.issues_found
-        if hasattr(qa_result, "issues_found")
-        else len(issues)
+        qa_result.issues_found if hasattr(qa_result, "issues_found") else len(issues)
     )
 
     # Ensure failed hooks always have at least 1 issue count
@@ -35,6 +34,7 @@ def _calculate_total_issues(
 ### The Bug
 
 **Line 952-953**: `max(total_issues, 1)` forces failed hooks to show at least "1 issue" even when:
+
 - No actual code issues were found (`qa_result.issues_found = 0`)
 - The failure is due to a configuration error
 - The failure is due to a tool error (missing binary, invalid args, etc.)
@@ -42,13 +42,15 @@ def _calculate_total_issues(
 ### Why This Happens
 
 1. **Tool Configuration Errors**: When tools like ruff-format or codespell have config issues:
+
    - They exit with code 1
    - Adapter returns `QAResult(status=ERROR, issues_found=0)`
    - `_determine_status()` returns `"failed"` (line 838)
    - `_calculate_total_issues()` forces `max(0, 1) = 1`
    - Display shows "1 issue"
 
-2. **Reporting Tools with No Violations**: When tools like complexipy find no violations:
+1. **Reporting Tools with No Violations**: When tools like complexipy find no violations:
+
    - They exit with code 0
    - Adapter returns `QAResult(status=SUCCESS, issues_found=0)`
    - `_determine_status()` returns `"passed"` (line 836)
@@ -117,14 +119,16 @@ HookResult(
 ## Why Was This Design Decision Made?
 
 The `max(total_issues, 1)` logic was likely added to ensure that failed hooks always show:
+
 - **Something** in the issues column (not 0)
 - **Visual indication** that the hook failed
 - **Prevents confusion** where a failed hook shows "0 issues"
 
 However, this creates a **misleading display** when:
+
 1. The failure is a configuration error (not code issues)
-2. The tool has an error (binary not found, invalid args)
-3. The adapter couldn't parse the output
+1. The tool has an error (binary not found, invalid args)
+1. The adapter couldn't parse the output
 
 ## Solution Options
 
@@ -136,9 +140,7 @@ def _calculate_total_issues(
 ) -> int:
     """Calculate the total count of issues from qa_result."""
     total_issues = (
-        qa_result.issues_found
-        if hasattr(qa_result, "issues_found")
-        else len(issues)
+        qa_result.issues_found if hasattr(qa_result, "issues_found") else len(issues)
     )
 
     # Only force "1 issue" if hook truly failed with no parseable output
@@ -155,11 +157,13 @@ def _calculate_total_issues(
 ```
 
 **Pros**:
+
 - Fixes the misleading "1 issue" for config errors
 - Preserves the safety net for unexpected failures
 - Uses `qa_result.status` to distinguish error types
 
 **Cons**:
+
 - More complex logic
 - May still show "1 issue" in some edge cases
 
@@ -170,19 +174,17 @@ def _calculate_total_issues(
     self, qa_result: t.Any, status: str, issues: list[str]
 ) -> int:
     """Calculate the total count of issues from qa_result."""
-    return (
-        qa_result.issues_found
-        if hasattr(qa_result, "issues_found")
-        else len(issues)
-    )
+    return qa_result.issues_found if hasattr(qa_result, "issues_found") else len(issues)
 ```
 
 **Pros**:
+
 - Simple, clear logic
 - Trusts the adapter's issue count
 - No misleading "1 issue" for config errors
 
 **Cons**:
+
 - Failed hooks with no parseable output will show "0 issues"
 - Users might be confused why a failed hook shows "0"
 - Loses the visual cue in the issues column
@@ -195,9 +197,7 @@ def _calculate_total_issues(
 ) -> int:
     """Calculate the total count of issues from qa_result."""
     total_issues = (
-        qa_result.issues_found
-        if hasattr(qa_result, "issues_found")
-        else len(issues)
+        qa_result.issues_found if hasattr(qa_result, "issues_found") else len(issues)
     )
 
     # Only force "1 issue" for genuine parsing failures (not config/tool errors)
@@ -214,41 +214,48 @@ def _calculate_total_issues(
 ```
 
 **Pros**:
+
 - Distinguishes between config errors (show 0) and parsing failures (show 1)
 - Uses `QAResultStatus.ERROR` as the discriminator
 - Clear semantic distinction
 
 **Cons**:
+
 - Assumes adapters correctly set `status=ERROR` for config issues
 
 ## Recommended Fix
 
 **Option 3** is the recommended solution because:
+
 1. It uses the existing `QAResultStatus` enum to distinguish error types
-2. Config/tool errors (status=ERROR) show 0 issues (truthful)
-3. Parsing failures (status=FAILURE) can still show 1 issue if needed
-4. Preserves semantic correctness while maintaining useful visual cues
+1. Config/tool errors (status=ERROR) show 0 issues (truthful)
+1. Parsing failures (status=FAILURE) can still show 1 issue if needed
+1. Preserves semantic correctness while maintaining useful visual cues
 
 ## Testing Plan
 
 ### Test Cases
 
 1. **Hook with config error** (ruff-format, codespell):
+
    - qa_result.status = ERROR
    - qa_result.issues_found = 0
    - Expected: issues_count = 0
 
-2. **Hook with code violations** (ruff-check with 95 E402s):
+1. **Hook with code violations** (ruff-check with 95 E402s):
+
    - qa_result.status = FAILURE
    - qa_result.issues_found = 95
    - Expected: issues_count = 95
 
-3. **Reporting tool with no violations** (complexipy):
+1. **Reporting tool with no violations** (complexipy):
+
    - qa_result.status = SUCCESS
    - qa_result.issues_found = 0
    - Expected: status="passed", issues_count = 0
 
-4. **Hook with parsing failure** (tool output in unexpected format):
+1. **Hook with parsing failure** (tool output in unexpected format):
+
    - qa_result.status = FAILURE
    - qa_result.issues_found = 0
    - Expected: issues_count = 1 (or 0, depending on implementation)
@@ -256,25 +263,31 @@ def _calculate_total_issues(
 ## Files to Modify
 
 1. `crackerjack/orchestration/hook_orchestrator.py`:
+
    - Modify `_calculate_total_issues()` (lines 939-956)
 
-2. `tests/unit/orchestration/test_hook_result_details.py`:
+1. `tests/unit/orchestration/test_hook_result_details.py`:
+
    - Add test for config error case
    - Add test for parsing failure case
 
-3. `tests/integration/test_hook_reporting_e2e.py`:
+1. `tests/integration/test_hook_reporting_e2e.py`:
+
    - Add end-to-end test with actual tool config error
 
 ## Impact Assessment
 
 ### Breaking Changes
+
 - **None** - This is a bug fix for misleading display
 
 ### Affected Components
+
 - Hook result display in phase coordinator
 - MCP server status reporting
 - Any code that relies on `issues_count` field
 
 ### Backward Compatibility
+
 - Fully compatible - only changes the `issues_count` value
 - No changes to HookResult structure or API

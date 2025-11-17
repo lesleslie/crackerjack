@@ -995,6 +995,13 @@ class HookOrchestratorAdapter:
         # Calculate the total issues count
         total_issues = self._calculate_total_issues(qa_result, status, issues)
 
+        # Determine if this is a config/tool error (not code issues)
+        is_config_error = (
+            status == "failed"
+            and hasattr(qa_result, "status")
+            and qa_result.status == QAResultStatus.ERROR
+        )
+
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -1007,6 +1014,7 @@ class HookOrchestratorAdapter:
             exit_code=exit_code,  # Adapters don't provide exit codes directly
             error_message=error_message,
             is_timeout=False,
+            is_config_error=is_config_error,  # Mark config/tool errors
         )
 
     def _create_timeout_result(

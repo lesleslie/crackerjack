@@ -3,6 +3,7 @@
 ## Current Problem
 
 After the fix, hooks show truthful issue counts:
+
 ```
 ruff-format    FAILED   0.05s      0    ← Confusing: why FAILED with 0 issues?
 codespell      FAILED   0.03s      0    ← Confusing: why FAILED with 0 issues?
@@ -29,6 +30,7 @@ Show a distinct symbol in the Issues column for config/tool errors:
 ```
 
 **Symbol Choices**:
+
 - `⚠️` (warning triangle) - Clear, recognizable
 - `✗` (cross) - Simple, indicates failure
 - `⚙️` (gear) - Suggests config/tool issue
@@ -36,16 +38,19 @@ Show a distinct symbol in the Issues column for config/tool errors:
 - `ERR` (text) - Explicit but takes more space
 
 **Pros**:
+
 - ✅ Immediately obvious it's not a code issue count
 - ✅ Doesn't require counting or mental math
 - ✅ Works well with Rich's emoji support
 - ✅ Consistent with UX patterns (symbols for special states)
 
 **Cons**:
+
 - ⚠️ Requires symbol font support (but Rich handles this)
 - ⚠️ Screen readers might need special handling
 
 **Implementation**:
+
 ```python
 # In phase_coordinator.py _create_summary_table()
 if result.status == "passed":
@@ -57,7 +62,7 @@ else:
         issues_display = result.issues_count  # Code violations
 ```
 
----
+______________________________________________________________________
 
 ### Option 2: Colored Numbers with Suffix
 
@@ -75,20 +80,24 @@ Use color + text suffix to distinguish error types:
 ```
 
 **Color Scheme**:
+
 - **Yellow/Orange** for config errors: `[yellow]0 (err)[/yellow]`
 - **Red** for code violations: `[red]95[/red]`
 - **White** for passed: `0`
 
 **Pros**:
+
 - ✅ Still shows numeric "0" for clarity
 - ✅ Color-blind friendly with suffix
 - ✅ Explains what the "0" means
 
 **Cons**:
+
 - ⚠️ More verbose
 - ⚠️ Suffix might be too subtle
 
 **Implementation**:
+
 ```python
 if result.status == "passed":
     issues_display = "0"
@@ -99,7 +108,7 @@ else:
         issues_display = f"[red]{result.issues_count}[/red]"
 ```
 
----
+______________________________________________________________________
 
 ### Option 3: Two-Column Issues Display
 
@@ -118,16 +127,18 @@ Split the Issues column into "Code" and "Config" sub-columns:
 ```
 
 **Pros**:
+
 - ✅ Very explicit separation
 - ✅ Easy to scan both types
 - ✅ Numeric for both (easier comparison)
 
 **Cons**:
+
 - ⚠️ Takes more horizontal space
 - ⚠️ Adds complexity to the table
 - ⚠️ Might be overkill for rare config errors
 
----
+______________________________________________________________________
 
 ### Option 4: Colored Background Highlight
 
@@ -145,16 +156,19 @@ Use background colors to distinguish error types:
 ```
 
 **Pros**:
+
 - ✅ Color-coded for quick scanning
 - ✅ Doesn't change the number format
 - ✅ Works with existing Rich styling
 
 **Cons**:
+
 - ⚠️ Background colors can be hard to read
 - ⚠️ Might clash with terminal themes
 - ⚠️ Less accessible
 
 **Implementation**:
+
 ```python
 if result.status == "passed":
     issues_display = "0"
@@ -165,7 +179,7 @@ else:
         issues_display = f"[on red]{result.issues_count}[/on red]"  # Red background
 ```
 
----
+______________________________________________________________________
 
 ### Option 5: Negative Number for Config Errors (Novel)
 
@@ -183,16 +197,18 @@ Use negative numbers to indicate config errors (e.g., -1 = config error):
 ```
 
 **Pros**:
+
 - ✅ Still numeric (sortable, comparable)
 - ✅ Visually distinct from 0
 - ✅ Convention: negative = error state
 
 **Cons**:
+
 - ⚠️ Non-intuitive (what does -1 mean?)
 - ⚠️ Requires documentation/tooltip
 - ⚠️ Might confuse users
 
----
+______________________________________________________________________
 
 ## Recommendation: Option 1 (Symbol) + Tooltip
 
@@ -212,6 +228,7 @@ Legend: ⚠️ = Configuration/tool error
 ```
 
 **Alternative Symbols**:
+
 - `⚠️` (Warning) - Most universal
 - `⚙️` (Gear) - Suggests config issue
 - `❌` (Red X) - Error indicator
@@ -221,7 +238,7 @@ Legend: ⚠️ = Configuration/tool error
 **Implementation Locations**:
 
 1. **`crackerjack/core/phase_coordinator.py:643-660`** (display logic)
-2. **`crackerjack/orchestration/hook_orchestrator.py:939-975`** (data preparation)
+1. **`crackerjack/orchestration/hook_orchestrator.py:939-975`** (data preparation)
 
 **Code Changes**:
 
@@ -252,23 +269,26 @@ if any(self._is_config_error(r) for r in results):
     console.print("\n[dim]⚠️ = Configuration or tool error (not code issues)[/dim]")
 ```
 
----
+______________________________________________________________________
 
 ## Hybrid Approach: Contextual Display
 
 Show different formats based on context:
 
 **In Summary Table** (space-constrained):
+
 ```
 Issues: ⚠️   (symbol only)
 ```
 
 **In Detailed Output** (verbose):
+
 ```
 Issues: 0 (config error: invalid configuration file)
 ```
 
 **In JSON/API** (programmatic):
+
 ```json
 {
   "issues_count": 0,
@@ -277,7 +297,7 @@ Issues: 0 (config error: invalid configuration file)
 }
 ```
 
----
+______________________________________________________________________
 
 ## User Preference Configuration
 
@@ -291,30 +311,31 @@ display:
   show_config_error_legend: true    # Show legend below table
 ```
 
----
+______________________________________________________________________
 
 ## Accessibility Considerations
 
 For users with visual impairments or terminal limitations:
 
 1. **Text Alternative**: `ERR` or `CFG` instead of symbols
-2. **Screen Reader Hint**: Use aria-label equivalent in Rich
-3. **Color-Blind Safe**: Don't rely on color alone (use symbol + color)
-4. **High Contrast Mode**: Ensure symbols are visible in all terminal themes
+1. **Screen Reader Hint**: Use aria-label equivalent in Rich
+1. **Color-Blind Safe**: Don't rely on color alone (use symbol + color)
+1. **High Contrast Mode**: Ensure symbols are visible in all terminal themes
 
----
+______________________________________________________________________
 
 ## Final Recommendation
 
 **Implement Option 1 with these enhancements**:
 
 1. **Primary**: Use `⚠️` symbol for config errors
-2. **Fallback**: Add `(err)` suffix if terminal doesn't support emoji
-3. **Legend**: Show legend footer if any config errors present
-4. **Config**: Allow users to customize via settings
-5. **Accessibility**: Provide text alternative in `--verbose` mode
+1. **Fallback**: Add `(err)` suffix if terminal doesn't support emoji
+1. **Legend**: Show legend footer if any config errors present
+1. **Config**: Allow users to customize via settings
+1. **Accessibility**: Provide text alternative in `--verbose` mode
 
 **Example Output**:
+
 ```
 Fast Hooks Results:
 ┌──────────────┬────────┬──────────┬────────┐
@@ -334,6 +355,7 @@ Details:
 ```
 
 This provides:
+
 - ✅ Clear visual distinction
 - ✅ No confusion about "0 issues" meaning
 - ✅ Accessible (symbol + text legend)
