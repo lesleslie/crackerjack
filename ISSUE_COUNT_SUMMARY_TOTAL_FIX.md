@@ -15,6 +15,7 @@ But all 3 failed hooks were config errors (showing "!"), so the total should be 
 The `_calculate_hook_statistics()` method was counting error detail lines as "issues" for config errors.
 
 **The Bug** (phase_coordinator.py:564-571):
+
 ```python
 for r in results:
     if r.status == "passed":
@@ -27,13 +28,15 @@ for r in results:
 ```
 
 **Why This Failed**:
+
 1. Config errors have `issues_count=0` (correct)
-2. Condition `r.issues_count > 0` evaluates to False
-3. Falls through to `elif r.issues_found:`
-4. `issues_found` contains error detail lines (traceback)
-5. Example: 10 traceback lines → counted as "10 issues"
+1. Condition `r.issues_count > 0` evaluates to False
+1. Falls through to `elif r.issues_found:`
+1. `issues_found` contains error detail lines (traceback)
+1. Example: 10 traceback lines → counted as "10 issues"
 
 **The Math**:
+
 - 3 failed fast hooks × ~10 detail lines each = **30 "issues"** ❌
 - 1 failed comprehensive hook × ~10 detail lines = **10 "issues"** ❌
 
@@ -44,6 +47,7 @@ for r in results:
 **File**: `crackerjack/core/phase_coordinator.py:561-577`
 
 **Before**:
+
 ```python
 total_issues = 0
 for r in results:
@@ -56,6 +60,7 @@ for r in results:
 ```
 
 **After**:
+
 ```python
 # Calculate total issues using issues_count (which may be larger than len(issues_found))
 # Passed hooks always contribute 0 issues
@@ -83,6 +88,7 @@ for r in results:
 The plain text output (`issues=10`) also needed the same fix to show "!" for config errors.
 
 **Before**:
+
 ```python
 def _print_plain_hook_result(self, result: HookResult) -> None:
     issues = (
@@ -96,6 +102,7 @@ def _print_plain_hook_result(self, result: HookResult) -> None:
 ```
 
 **After**:
+
 ```python
 def _print_plain_hook_result(self, result: HookResult) -> None:
     # Determine issues display (matches Rich table logic)
@@ -119,6 +126,7 @@ def _print_plain_hook_result(self, result: HookResult) -> None:
 ### Before (Incorrect)
 
 **Rich Table**:
+
 ```
 ╭──────────────────────── Fast Hook Results ─────────────────────────╮
 │   ruff-format                 FAILED           39.75s          !   │
@@ -129,6 +137,7 @@ def _print_plain_hook_result(self, result: HookResult) -> None:
 ```
 
 **Plain Text**:
+
 ```
 Fast Hook Results:
   - ruff-format :: FAILED | 39.75s | issues=10  ← WRONG!
@@ -139,6 +148,7 @@ Fast Hook Results:
 ### After (Correct)
 
 **Rich Table**:
+
 ```
 ╭──────────────────────── Fast Hook Results ─────────────────────────╮
 │   ruff-format                 FAILED           39.75s          !   │
@@ -150,6 +160,7 @@ Fast Hook Results:
 ```
 
 **Plain Text**:
+
 ```
 Fast Hook Results:
   - ruff-format :: FAILED | 39.75s | issues=!  ✅ CORRECT!
@@ -162,23 +173,26 @@ Fast Hook Results:
 This is the **fourth and final fix** in the issue count display system:
 
 1. ✅ **Display Fallback Bug** (FINAL_IMPLEMENTATION_SUMMARY.md): Fixed `len(issues_found)` fallback in Rich table display
-2. ✅ **Emoji Panel Width** (FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
-3. ✅ **Error Details Display** (ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
-4. ✅ **Summary Total Calculation** (THIS FIX): Fixed total issue count to exclude config errors
+1. ✅ **Emoji Panel Width** (FINAL_IMPLEMENTATION_SUMMARY.md): Changed from ⚠️ to "!" for terminal compatibility
+1. ✅ **Error Details Display** (ERROR_DETAILS_DISPLAY_FIX.md): Added traceback to `details` field for better debugging
+1. ✅ **Summary Total Calculation** (THIS FIX): Fixed total issue count to exclude config errors
 
 ## Benefits
 
 ### 1. Accurate Totals
+
 - ✅ Config errors don't inflate issue counts
 - ✅ Summary totals match individual hook displays
 - ✅ "0 issues found" when all failures are config errors
 
 ### 2. Consistent Display
+
 - ✅ Rich table and plain text show same information
 - ✅ "!" symbol used consistently across formats
 - ✅ No confusion between error details and code issues
 
 ### 3. Correct Semantics
+
 - ✅ Config errors explicitly excluded from issue counts
 - ✅ Total reflects actual code quality problems
 - ✅ Users see true impact at a glance
@@ -186,6 +200,7 @@ This is the **fourth and final fix** in the issue count display system:
 ## Files Modified
 
 **`crackerjack/core/phase_coordinator.py`**:
+
 - Lines 561-577: Skip config errors in summary calculation
 - Lines 590-610: Show "!" for config errors in plain text output
 
@@ -196,12 +211,14 @@ This is the **fourth and final fix** in the issue count display system:
 ### Manual Verification
 
 Run in a project with config errors (like ../acb):
+
 ```bash
 cd /Users/les/Projects/acb
 python -m crackerjack
 ```
 
 Expected results:
+
 - Individual hooks with config errors show "!"
 - Summary total shows "0 issues found" (not 30 or 10)
 - Both Rich table and plain text formats match
@@ -209,6 +226,7 @@ Expected results:
 ### Automated Testing
 
 All existing unit tests continue to pass:
+
 - 9 tests in `tests/unit/orchestration/test_issue_count_fix.py` ✅
 - Integration with previous fixes maintained ✅
 

@@ -16,14 +16,17 @@ Implemented **Option 1 (Symbol with Legend)** from the UX design options to clea
 @dataclass
 class HookResult:
     # ... existing fields ...
-    is_config_error: bool = False  # Whether failure is due to config/tool error (not code issues)
+    is_config_error: bool = (
+        False  # Whether failure is due to config/tool error (not code issues)
+    )
 ```
 
 **Purpose**: Allows the display layer to distinguish between:
+
 - Code quality failures (`is_config_error=False`) → Show issue count
 - Config/tool errors (`is_config_error=True`) → Show warning symbol
 
----
+______________________________________________________________________
 
 ### 2. Set `is_config_error` Flag in Hook Orchestrator
 
@@ -51,11 +54,12 @@ def _create_success_result(
 ```
 
 **Logic**:
+
 - If `status == "failed"` AND `qa_result.status == QAResultStatus.ERROR`
 - Then `is_config_error = True`
 - This leverages the existing `QAResultStatus.ERROR` enum value
 
----
+______________________________________________________________________
 
 ### 3. Display Warning Symbol for Config Errors
 
@@ -89,7 +93,7 @@ def _build_results_table(self, results: list[HookResult]) -> Table:
     return table
 ```
 
----
+______________________________________________________________________
 
 ### 4. Add Legend Footer
 
@@ -98,9 +102,7 @@ def _build_results_table(self, results: list[HookResult]) -> Table:
 **Change**: Show legend when config errors are present:
 
 ```python
-def _render_rich_hook_results(
-    self, suite_name: str, results: list[HookResult]
-) -> None:
+def _render_rich_hook_results(self, suite_name: str, results: list[HookResult]) -> None:
     """Render hook results in Rich format."""
     stats = self._calculate_hook_statistics(results)
     summary_text = self._build_summary_text(stats)
@@ -122,15 +124,17 @@ def _render_rich_hook_results(
 ```
 
 **Behavior**:
+
 - Legend only appears when at least one hook has `is_config_error=True`
 - Uses `[dim]` style for subtlety
 - Placed between the results panel and the blank line separator
 
----
+______________________________________________________________________
 
 ## Expected Output
 
 ### Before (Confusing):
+
 ```
 Fast Hooks Results:
 ┌──────────────┬────────┬──────────┬────────┐
@@ -144,6 +148,7 @@ Fast Hooks Results:
 ```
 
 ### After (Clear):
+
 ```
 Fast Hooks Results:
 ┌──────────────┬────────┬──────────┬────────┐
@@ -158,36 +163,42 @@ Fast Hooks Results:
 ⚠️  = Configuration or tool error (not code issues)
 ```
 
----
+______________________________________________________________________
 
 ## Benefits
 
 ### 1. Clear Visual Distinction
+
 - ✅ **Symbol vs Number**: Config errors use `⚠️`, code violations use numbers
 - ✅ **No Confusion**: Users immediately understand FAILED ⚠️ ≠ code problem
 - ✅ **Scannable**: Quick visual scan shows which failures need config fixes
 
 ### 2. Backward Compatible
+
 - ✅ **No Breaking Changes**: Only adds new field and display logic
 - ✅ **Graceful Degradation**: `hasattr()` checks ensure old HookResults still work
 - ✅ **Existing Tests Pass**: All 9 unit tests passing
 
 ### 3. User Experience
+
 - ✅ **Self-Documenting**: Legend explains the symbol
 - ✅ **Contextual**: Legend only appears when relevant
 - ✅ **Rich-Compatible**: Uses Rich emoji support for cross-terminal compatibility
 
 ### 4. Semantic Correctness
+
 - ✅ **Leverages Existing Enums**: Uses `QAResultStatus.ERROR` distinction
 - ✅ **Single Source of Truth**: Status determination centralized in orchestrator
 - ✅ **Type-Safe**: Uses dataclass boolean field
 
----
+______________________________________________________________________
 
 ## Testing
 
 ### Unit Tests
+
 All existing tests pass (9/9):
+
 ```bash
 tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountFix::test_config_error_shows_zero_issues PASSED
 tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountFix::test_code_violations_show_actual_count PASSED
@@ -201,15 +212,16 @@ tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountEdgeCases::test_
 ```
 
 ### Integration Testing
+
 To verify in the user's ../acb project:
 
 1. Run `python -m crackerjack` in the acb directory
-2. Check the Fast Hooks Results table:
+1. Check the Fast Hooks Results table:
    - Config errors (ruff-format, codespell) should show `⚠️`
    - Code violations (ruff-check) should show actual count (e.g., 95)
    - Legend should appear at bottom if any `⚠️` present
 
----
+______________________________________________________________________
 
 ## Alternative Symbol Options
 
@@ -226,21 +238,22 @@ If the warning triangle doesn't display well in some terminals, these alternativ
 
 **Recommendation**: Stick with `⚠️` for its universal recognition and Rich's excellent emoji support.
 
----
+______________________________________________________________________
 
 ## Files Modified
 
 1. **`crackerjack/models/task.py`**: Added `is_config_error` field to HookResult
-2. **`crackerjack/orchestration/hook_orchestrator.py`**: Set flag based on QAResultStatus.ERROR
-3. **`crackerjack/core/phase_coordinator.py`**: Display symbol and legend
+1. **`crackerjack/orchestration/hook_orchestrator.py`**: Set flag based on QAResultStatus.ERROR
+1. **`crackerjack/core/phase_coordinator.py`**: Display symbol and legend
 
 **Total Changes**: 3 files, ~20 lines of code added
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 ### Configuration Option
+
 Add user preference for symbol choice:
 
 ```yaml
@@ -251,19 +264,25 @@ display:
 ```
 
 ### Tooltip/Help Text
+
 In interactive mode, add hover help:
+
 ```
 Issues: ⚠️  (Press 'h' for help)
 ```
 
 ### Color Coding
+
 Add color to the symbol for extra visibility:
+
 ```python
 issues_display = "[yellow]⚠️[/yellow]"  # Yellow warning
 ```
 
 ### Detailed Error Summary
+
 After the legend, show specific errors:
+
 ```
 ⚠️  = Configuration or tool error (not code issues)
 
@@ -272,11 +291,12 @@ Config Errors:
 - codespell: Binary not found in PATH
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
 Implemented a clean, intuitive UX solution that:
+
 - **Eliminates confusion** between config errors and code violations
 - **Maintains backward compatibility** with existing code
 - **Provides clear visual feedback** via the `⚠️` symbol

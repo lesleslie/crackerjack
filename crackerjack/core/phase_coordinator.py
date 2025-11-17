@@ -609,7 +609,6 @@ class PhaseCoordinator:
 
         self.console.print(
             f"  - {name} :: {status} | {duration} | issues={issues}",
-            highlight=False,
         )
 
     def _print_plain_summary(self, stats: dict[str, t.Any]) -> None:
@@ -640,12 +639,14 @@ class PhaseCoordinator:
         )
         if has_config_errors:
             self.console.print(
-                "[dim][yellow]![/yellow]  = Configuration or tool error (not code issues)[/dim]"
+                "  [dim][yellow]![/yellow] = Configuration or tool error (not code "
+                "issues)[/dim]"
             )
 
         self.console.print()
 
-    def _build_summary_text(self, stats: dict[str, t.Any]) -> str:
+    @staticmethod
+    def _build_summary_text(stats: dict[str, t.Any]) -> str:
         """Build summary text for Rich display."""
         summary_text = (
             f"Total: [white]{stats['total_hooks']}[/white] | Passed:"
