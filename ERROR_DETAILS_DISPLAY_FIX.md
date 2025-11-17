@@ -11,15 +11,18 @@ When tools failed with exceptions (like complexipy's RuntimeError), the error de
 ### The Data Flow
 
 1. **Exception Caught** (`_tool_adapter_base.py:290-303`)
+
    - Tool execution fails with RuntimeError
    - Exception handler creates QAResult with `message` field set
    - **BUT** `details` field was not being set
 
-2. **QAResult Structure** (`models/qa_results.py:60-67`)
+1. **QAResult Structure** (`models/qa_results.py:60-67`)
+
    - Has both `message` (summary) and `details` (full output) fields
    - `_create_result()` wasn't accepting/setting `details` parameter
 
-3. **Display Logic** (`hook_orchestrator.py:917`)
+1. **Display Logic** (`hook_orchestrator.py:917`)
+
    - `_extract_error_details()` checks `if qa_result.details:`
    - Empty string evaluates to False, skips using the error message
    - Falls through to generic fallback message
@@ -65,6 +68,7 @@ issues = [f"Hook {hook.name} failed with no detailed output..."]
 **File**: `crackerjack/adapters/_tool_adapter_base.py:546-578`
 
 **Before**:
+
 ```python
 def _create_result(
     self,
@@ -76,6 +80,7 @@ def _create_result(
 ```
 
 **After**:
+
 ```python
 def _create_result(
     self,
@@ -101,6 +106,7 @@ def _create_result(
 **File**: `crackerjack/adapters/_tool_adapter_base.py:280-303`
 
 **Before**:
+
 ```python
 except Exception as e:
     return self._create_result(
@@ -111,6 +117,7 @@ except Exception as e:
 ```
 
 **After**:
+
 ```python
 except Exception as e:
     error_msg = f"Tool execution failed: {e}"
@@ -127,6 +134,7 @@ except Exception as e:
 ```
 
 **Also updated timeout handler**:
+
 ```python
 except TimeoutError:
     timeout_msg = f"Tool execution timed out after {self.settings.timeout_seconds}s"
@@ -141,6 +149,7 @@ except TimeoutError:
 ## Expected Behavior After Fix
 
 ### Before (Generic Error)
+
 ```
 Details for failing hooks:
   - complexipy (failed)
@@ -148,6 +157,7 @@ Details for failing hooks:
 ```
 
 ### After (Detailed Error)
+
 ```
 Details for failing hooks:
   - complexipy (failed)
@@ -167,21 +177,25 @@ Details for failing hooks:
 ## Benefits
 
 ### 1. Better Debugging Experience
+
 - ✅ Full traceback shown instead of generic message
 - ✅ Exact error location and cause visible
 - ✅ Stack trace helps identify configuration issues
 
 ### 2. Faster Issue Resolution
+
 - ✅ No need to guess what went wrong
 - ✅ Clear indication of Settings initialization conflicts
 - ✅ Error messages guide users to solutions
 
 ### 3. Consistent Error Reporting
+
 - ✅ All exceptions now provide detailed output
 - ✅ Timeouts include timeout duration in details
 - ✅ Tool failures show actual error messages
 
 ### 4. Backward Compatible
+
 - ✅ `details` parameter is optional (defaults to None)
 - ✅ Existing calls to `_create_result()` still work
 - ✅ All existing code continues to function
@@ -198,10 +212,11 @@ This fix addresses the user's report:
 > ```
 
 Now complexipy (and all other tools) will show:
+
 1. **What failed**: The actual RuntimeError message
-2. **Why it failed**: Settings require async initialization
-3. **Where it failed**: Full traceback showing line 109 in complexipy.py
-4. **How to fix**: Error message suggests using `await Settings.create_async()`
+1. **Why it failed**: Settings require async initialization
+1. **Where it failed**: Full traceback showing line 109 in complexipy.py
+1. **How to fix**: Error message suggests using `await Settings.create_async()`
 
 ## Files Modified
 
@@ -216,6 +231,7 @@ Now complexipy (and all other tools) will show:
 ### Manual Verification
 
 Run crackerjack in a project with tool failures:
+
 ```bash
 cd /Users/les/Projects/acb
 python -m crackerjack --verbose
@@ -226,6 +242,7 @@ Expected: Error details now show in "Details for failing hooks" section
 ### Automated Testing
 
 Existing unit tests continue to pass:
+
 - All 9 tests in `tests/unit/orchestration/test_issue_count_fix.py` ✅
 - Backward compatibility maintained ✅
 
@@ -234,6 +251,7 @@ Existing unit tests continue to pass:
 Successfully fixed the error details display issue by ensuring that exception messages and tracebacks are captured in the `details` field of QAResult. This provides users with actionable debugging information instead of generic "failed with no detailed output" messages.
 
 The fix is:
+
 - ✅ **Minimal**: Only 1 file changed, ~25 lines
 - ✅ **Safe**: Backward compatible, optional parameter
 - ✅ **Effective**: Provides full tracebacks for all tool failures

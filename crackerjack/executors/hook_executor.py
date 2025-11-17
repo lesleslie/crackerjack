@@ -668,12 +668,69 @@ class HookExecutor:
         return issues
 
     def _parse_refurb_issues(self, output: str) -> list[str]:
-        """Parse refurb output to count actual violations."""
-        return [
-            line.strip()
-            for line in output.split("\n")
-            if "[FURB" in line and ":" in line
-        ]
+        """Parse refurb output to count actual violations with shortened paths.
+
+        Refurb output format: "path/to/file.py: line: col [FURB###]: message"
+        Returns format: "relative/path.py:line [FURB###] message"
+        """
+        import re
+
+        issues = []
+        for line in output.split("\n"):
+            if "[FURB" not in line or ":" not in line:
+                continue
+
+            # Match refurb format: path: line: col [FURB###]: message
+            # Example: ./crackerjack/core/phase.py: 42: 10 [FURB123]: Use dict.get() instead
+            # Note: Allow spaces after colons (": 42: 10" not ":42:10")
+            match = re.search(
+                r"(.+?):\s*(\d+):\s*\d+\s+\[(\w+)\]:\s*(.+)", line.strip()
+            )
+
+            if match:
+                file_path, line_num, error_code, message = match.groups()
+
+                # Shorten path to be relative to project root
+                short_path = self._shorten_path(file_path)
+
+                # Format: path:line [CODE] message
+                formatted = f"{short_path}:{line_num} [{error_code}] {message.strip()}"
+                issues.append(formatted)
+            else:
+                # Fallback: keep original line if parsing fails
+                issues.append(line.strip())
+
+        return issues
+
+    def _shorten_path(self, path: str) -> str:
+        """Shorten file path to be relative to project root.
+
+        Args:
+            path: Absolute or relative file path
+
+        Returns:
+            Shortened path relative to pkg_path, or basename if outside project
+        """
+        try:
+            # Convert to Path object
+            file_path = Path(path)
+
+            # Try to make it relative to pkg_path if it's absolute
+            if file_path.is_absolute():
+                try:
+                    relative = file_path.relative_to(self.pkg_path)
+                    return str(relative).replace("\\", "/")
+                except ValueError:
+                    # Path is outside project, just use basename
+                    return file_path.name
+
+            # Already relative - clean up by removing leading "./"
+            clean_path = str(file_path).lstrip("./")
+            return clean_path.replace("\\", "/")
+
+        except Exception:
+            # Fallback: return original path
+            return path
 
     def _parse_gitleaks_issues(self, output: str) -> list[str]:
         """Parse gitleaks output - ignore warnings, only count leaks."""

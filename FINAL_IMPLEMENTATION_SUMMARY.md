@@ -3,6 +3,7 @@
 ## Problems Solved
 
 ### 1. ✅ All Hooks Showing "1 Issue" Instead of Actual Counts
+
 **Root Cause**: Display fallback logic in `phase_coordinator.py` was counting fallback messages as issues.
 
 **Fix**: Removed flawed fallback, now directly uses `issues_count` from HookResult.
@@ -10,16 +11,19 @@
 **Location**: `crackerjack/core/phase_coordinator.py:665-667`
 
 ### 2. ✅ Config Errors vs Code Violations Indistinguishable
+
 **Root Cause**: No visual distinction between tool execution errors and actual code quality issues.
 
 **Fix**: Added `is_config_error` field to HookResult and display "!" symbol for config errors.
 
 **Locations**:
+
 - `crackerjack/models/task.py:49` - Added `is_config_error` field
 - `crackerjack/orchestration/hook_orchestrator.py:999-1003` - Set flag based on `QAResultStatus.ERROR`
 - `crackerjack/core/phase_coordinator.py:658-661` - Display "!" for config errors
 
 ### 3. ✅ Emoji Breaking Panel Width
+
 **Root Cause**: ⚠️ emoji is double-width character, causing terminal rendering issues.
 
 **Fix**: Changed from ⚠️ to "!" (single-width ASCII character).
@@ -29,6 +33,7 @@
 ## Expected Output
 
 ### Before (All Bugs)
+
 ```
 ╭──────────────────────── Fast Hook Results ─────────────────────────╮
 │   Hook                        Status         Duration     Issues   │
@@ -46,6 +51,7 @@ Details for failing hooks:
 ```
 
 ### After (All Fixes Applied)
+
 ```
 ╭──────────────────────── Fast Hook Results ─────────────────────────╮
 │   Hook                        Status         Duration     Issues   │
@@ -72,6 +78,7 @@ Details for failing hooks:
 ## Key Changes
 
 ### `crackerjack/models/task.py`
+
 ```python
 @dataclass
 class HookResult:
@@ -80,6 +87,7 @@ class HookResult:
 ```
 
 ### `crackerjack/orchestration/hook_orchestrator.py`
+
 ```python
 # Set the flag when creating HookResult
 is_config_error = (
@@ -90,6 +98,7 @@ is_config_error = (
 ```
 
 ### `crackerjack/core/phase_coordinator.py`
+
 ```python
 # Display logic
 if result.status == "passed":
@@ -98,36 +107,36 @@ elif hasattr(result, "is_config_error") and result.is_config_error:
     issues_display = "!"  # Config error symbol (ASCII-safe)
 else:
     # CRITICAL FIX: Don't fall back to len(issues_found)
-    issues_display = str(
-        result.issues_count if hasattr(result, "issues_count") else 0
-    )
+    issues_display = str(result.issues_count if hasattr(result, "issues_count") else 0)
 
 # Legend
 if has_config_errors:
-    self.console.print(
-        "[dim]!  = Configuration or tool error (not code issues)[/dim]"
-    )
+    self.console.print("[dim]!  = Configuration or tool error (not code issues)[/dim]")
 ```
 
 ## Benefits
 
 ### 1. Accurate Issue Counts
+
 - ✅ Config errors: Show "!" (not "0" or "1")
 - ✅ Code violations: Show actual count (e.g., "95")
 - ✅ Passed hooks: Show "0"
 - ✅ Parsing failures: Show "1"
 
 ### 2. Clear Visual Distinction
+
 - ✅ "!" immediately indicates config problem (not code problem)
 - ✅ Numbers indicate actual code quality issues
 - ✅ Legend explains the symbol
 
 ### 3. Terminal Compatibility
+
 - ✅ Single-width ASCII character (no panel breaking)
 - ✅ Works in all terminals (no emoji font issues)
 - ✅ Screen reader friendly
 
 ### 4. Backward Compatible
+
 - ✅ Uses `hasattr()` checks for new fields
 - ✅ Graceful degradation for old HookResults
 - ✅ All existing tests pass (9/9)
@@ -145,7 +154,9 @@ if has_config_errors:
 ## Testing
 
 ### Unit Tests
+
 All 9 tests passing ✅:
+
 ```bash
 tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountFix::test_config_error_shows_zero_issues PASSED
 tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountFix::test_code_violations_show_actual_count PASSED
@@ -159,13 +170,16 @@ tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountEdgeCases::test_
 ```
 
 ### Integration Testing
+
 Run in ../acb project to verify:
+
 ```bash
 cd /Users/les/Projects/acb
 python -m crackerjack
 ```
 
 Expected results:
+
 - Config errors (ruff-format, codespell) → Show "!"
 - Code violations (ruff-check if any) → Show actual count
 - No panel width issues
@@ -174,12 +188,15 @@ Expected results:
 ## Files Modified
 
 1. **`crackerjack/models/task.py`** (line 49)
+
    - Added `is_config_error: bool = False` field
 
-2. **`crackerjack/orchestration/hook_orchestrator.py`** (lines 999-1003, 1017)
+1. **`crackerjack/orchestration/hook_orchestrator.py`** (lines 999-1003, 1017)
+
    - Set `is_config_error` flag based on `QAResultStatus.ERROR`
 
-3. **`crackerjack/core/phase_coordinator.py`** (lines 658-667, 625)
+1. **`crackerjack/core/phase_coordinator.py`** (lines 658-667, 625)
+
    - Display "!" for config errors
    - Fixed fallback logic to trust `issues_count`
    - Updated legend to use "!"
@@ -187,24 +204,25 @@ Expected results:
 ## Documentation Created
 
 1. **`HOOK_ISSUE_COUNT_ROOT_CAUSE.md`** - Root cause analysis (400+ lines)
-2. **`HOOK_ISSUE_COUNT_FIX_SUMMARY.md`** - Initial fix summary
-3. **`HOOK_ISSUE_COUNT_DISPLAY_OPTIONS.md`** - UX design options
-4. **`SYMBOL_DISPLAY_IMPLEMENTATION.md`** - Symbol display implementation
-5. **`SYMBOL_DISPLAY_CRITICAL_FIX.md`** - Critical fallback bug analysis
-6. **`FINAL_IMPLEMENTATION_SUMMARY.md`** - This document
+1. **`HOOK_ISSUE_COUNT_FIX_SUMMARY.md`** - Initial fix summary
+1. **`HOOK_ISSUE_COUNT_DISPLAY_OPTIONS.md`** - UX design options
+1. **`SYMBOL_DISPLAY_IMPLEMENTATION.md`** - Symbol display implementation
+1. **`SYMBOL_DISPLAY_CRITICAL_FIX.md`** - Critical fallback bug analysis
+1. **`FINAL_IMPLEMENTATION_SUMMARY.md`** - This document
 
 ## Next Steps
 
 1. ✅ **Fix Applied** - All code changes complete
-2. ✅ **Tests Passing** - All 9 unit tests pass
-3. ⏳ **User Verification** - Test in ../acb to confirm fix works
-4. ⏳ **Complexipy Investigation** - If complexipy still shows issues, investigate further
+1. ✅ **Tests Passing** - All 9 unit tests pass
+1. ⏳ **User Verification** - Test in ../acb to confirm fix works
+1. ⏳ **Complexipy Investigation** - If complexipy still shows issues, investigate further
 
 ## Summary
 
 Successfully fixed three critical bugs in hook result display:
+
 1. Issue count display fallback bug
-2. Config error vs code violation distinction
-3. Emoji breaking panel width
+1. Config error vs code violation distinction
+1. Emoji breaking panel width
 
 The fix is production-ready, well-tested, and backward compatible.
