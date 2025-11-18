@@ -60,9 +60,16 @@ def register_telemetry_api_endpoints(
     async def reset_monitoring_events() -> TelemetryResponseModel:
         await telemetry.reset()
         snapshot = await telemetry.snapshot()
+        data = TelemetrySnapshotModel(
+            counts=snapshot.get("counts", {}),
+            recent_events=[
+                TelemetryEventModel.model_validate(event) for event in snapshot.get("recent_events", [])
+            ],
+            last_error=None  # Adjust based on how last_error is stored in snapshot
+        )
         return TelemetryResponseModel(
             status="success",
-            data=TelemetrySnapshotModel.from_snapshot(snapshot),
+            data=data,
             timestamp=datetime.now(),
         )
 
