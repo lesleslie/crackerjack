@@ -110,7 +110,7 @@ class HookManagerImpl:
             cache_backend=cache_backend,
         )
         # Default to enabled unless explicitly disabled
-        # Fallback chain: explicit param -> DI settings -> True
+        # Fallback chain: explicit param -> DI settings -> True (application default)
         self.orchestration_enabled = (
             bool(enable_orchestration)
             if enable_orchestration is not None
@@ -144,10 +144,12 @@ class HookManagerImpl:
             # Legacy parameters (enable_orchestration, orchestration_mode) are ignored
             # when an explicit config object is provided
             self._orchestration_config = orchestration_config
-            self.orchestration_enabled = (
-                False  # orchestration_config.enable_orchestration
+            self.orchestration_enabled = getattr(
+                orchestration_config, "enable_orchestration", False
             )
-            self.orchestration_mode = orchestration_config.orchestration_mode
+            self.orchestration_mode = getattr(
+                orchestration_config, "orchestration_mode", "acb"
+            )
         else:
             config_path = pkg_path / ".crackerjack.yaml"
             if config_path.exists():

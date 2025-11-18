@@ -154,6 +154,29 @@ def reset_hook_lock_manager_singleton():
     # Import here to avoid circular imports
     from crackerjack.executors.hook_lock_manager import HookLockManager
 
+    # Get existing instance if any and cancel its heartbeat tasks to prevent resource leaks
+    try:
+        existing_instance = HookLockManager._instance
+        if existing_instance is not None:
+            import asyncio
+            # Cancel any existing heartbeat tasks to prevent resource leaks
+            for task in existing_instance._heartbeat_tasks.values():
+                if task and not task.done():
+                    task.cancel()
+                    # Wait briefly for task cancellation to complete
+                    try:
+                        asyncio.get_event_loop().run_until_complete(task)  # This will raise CancelledError
+                    except (asyncio.CancelledError, RuntimeError):
+                        # Expected when task is cancelled
+                        pass
+            # Clear the heartbeat tasks dictionary
+            existing_instance._heartbeat_tasks.clear()
+            # Clear active locks
+            existing_instance._active_global_locks.clear()
+    except Exception:
+        # If no instance exists or any other error, continue
+        pass
+
     # Reset singleton before test
     HookLockManager._instance = None
     HookLockManager._initialized = False

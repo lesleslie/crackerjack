@@ -1,5 +1,6 @@
 from crackerjack.__main__ import (
     app,
+    console,
 )
 from crackerjack.cli.options import BumpOption, Options
 
@@ -38,16 +39,17 @@ class TestOptions:
         assert options.ai_agent is False
 
     def test_options_with_values(self) -> None:
+        # Use new field names for initialization (backward compatibility is handled by properties)
         options = Options(
-            clean=True,
-            test=True,
+            strip_code=True,
+            run_tests=True,
             interactive=True,
             verbose=True,
             commit=True,
             publish=BumpOption.patch,
             bump=BumpOption.minor,
             benchmark=True,
-            ai_agent=True,
+            ai_fix=True,
         )
 
         assert options.clean is True
@@ -58,7 +60,7 @@ class TestOptions:
         assert options.publish == BumpOption.patch
         assert options.bump == BumpOption.minor
         assert options.benchmark is True
-        assert options.ai_agent is True
+        assert bool(options.ai_agent) is True  # ai_agent uses ai_fix which can be None/bool
 
     def test_options_with_all_flags(self) -> None:
         options = Options(

@@ -10,12 +10,17 @@ Requires actual tool execution with test fixtures.
 
 import tempfile
 from pathlib import Path
+from uuid import uuid4
 
 import pytest
 
+from crackerjack.models.qa_results import QACheckType
+
 from crackerjack.config.hooks import HookDefinition, HookStage, SecurityLevel
 from crackerjack.core.phase_coordinator import PhaseCoordinator
+from crackerjack.models.qa_results import QAResult, QAResultStatus
 from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+from crackerjack.config.tool_commands import get_tool_command
 
 
 class TestComplexipyReportingE2E:
@@ -82,8 +87,11 @@ def highly_complex_function(a, b, c, d, e):
     @pytest.mark.asyncio
     async def test_orchestrator_preserves_complexipy_details(self, complex_test_file):
         """Verify orchestrator preserves complexipy details in HookResult."""
+        from crackerjack.config.tool_commands import get_tool_command
+
         hook = HookDefinition(
             name="complexipy",
+            command=get_tool_command("complexipy"),
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.LOW,
             timeout=90,
@@ -237,6 +245,7 @@ class TestGenericFallbackBehavior:
 
         hook = HookDefinition(
             name="test-hook",
+            command=get_tool_command("trailing-whitespace"),  # Using a common tool command as default
             stage=HookStage.FAST,
             security_level=SecurityLevel.LOW,
             timeout=30,
@@ -244,6 +253,9 @@ class TestGenericFallbackBehavior:
 
         # Test Case 1: Adapter provides details - should NOT use fallback
         qa_result_with_details = QAResult(
+            check_id=uuid4(),
+            check_name="test-hook",
+            check_type=QACheckType.LINT,
             status=QAResultStatus.FAILURE,
             message="Found issues",
             details="file.py:10: Actual issue detail",
@@ -269,6 +281,9 @@ class TestGenericFallbackBehavior:
 
         # Test Case 2: Adapter provides NO details - should use fallback
         qa_result_no_details = QAResult(
+            check_id=uuid4(),
+            check_name="test-hook",
+            check_type=QACheckType.LINT,
             status=QAResultStatus.FAILURE,
             message="Found issues",
             details="",  # Empty
@@ -307,6 +322,7 @@ class TestIssueCountConsistency:
 
         hook = HookDefinition(
             name="complexipy",
+            command=get_tool_command("complexipy"),
             stage=HookStage.COMPREHENSIVE,
             security_level=SecurityLevel.LOW,
             timeout=90,
@@ -323,6 +339,9 @@ class TestIssueCountConsistency:
             from crackerjack.models.qa_results import QAResult, QAResultStatus
 
             qa_result = QAResult(
+                check_id=uuid4(),
+                check_name="complexipy",
+                check_type=QACheckType.COMPLEXITY,
                 status=QAResultStatus.FAILURE,
                 message="Complexity issues found",
                 details="\n".join(
