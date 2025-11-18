@@ -1,6 +1,7 @@
 import asyncio
 import time
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from acb.depends import Inject, depends
@@ -191,13 +192,12 @@ class AsyncWorkflowPipeline:
 
         return done, pending
 
-    async def _cleanup_pending_tasks(self, pending: set[asyncio.Task[t.Any]]) -> None:
+    @staticmethod
+    async def _cleanup_pending_tasks(pending: set[asyncio.Task[t.Any]]) -> None:
         for task in pending:
             task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await task
-            except asyncio.CancelledError:
-                pass
 
     async def _process_task_results(
         self,
@@ -434,7 +434,8 @@ class AsyncWorkflowPipeline:
             issue, IssueType.FORMATTING, Priority.MEDIUM, "refurb"
         )
 
-    def _parse_single_test_issue(self, issue: str) -> Issue:
+    @staticmethod
+    def _parse_single_test_issue(issue: str) -> Issue:
         import uuid
 
         from crackerjack.agents.base import Issue, IssueType, Priority
@@ -453,8 +454,9 @@ class AsyncWorkflowPipeline:
             stage="test",
         )
 
+    @staticmethod
     def _create_generic_issue(
-        self, issue: str, issue_type: IssueType, priority: Priority, stage: str
+        issue: str, issue_type: IssueType, priority: Priority, stage: str
     ) -> Issue:
         import uuid
 

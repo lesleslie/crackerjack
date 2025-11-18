@@ -63,8 +63,8 @@ class TestHookManagerOrchestrationIntegration:
     """Test HookManager integration with orchestrator."""
 
     def test_initialization_without_orchestration(self, console: Console, pkg_path: Path):
-        """Test that orchestration is disabled by default."""
-        manager = HookManagerImpl(pkg_path=pkg_path)
+        """Test initialization with orchestration explicitly disabled."""
+        manager = HookManagerImpl(pkg_path=pkg_path, enable_orchestration=False)
 
         assert manager.orchestration_enabled is False
         assert manager._orchestrator is None
@@ -118,7 +118,7 @@ class TestHookManagerOrchestrationIntegration:
 
     def test_execution_info_without_orchestration(self, console: Console, pkg_path: Path):
         """Test execution info when orchestration is disabled."""
-        manager = HookManagerImpl(pkg_path=pkg_path)
+        manager = HookManagerImpl(pkg_path=pkg_path, enable_orchestration=False)
         info = manager.get_execution_info()
 
         assert info["orchestration_enabled"] is False
@@ -232,11 +232,11 @@ class TestBackwardCompatibility:
     """Test that existing workflows continue working unchanged."""
 
     def test_default_initialization_unchanged(self, console: Console, pkg_path: Path):
-        """Test that default initialization doesn't enable orchestration."""
+        """Test that default initialization enables orchestration by default."""
         manager = HookManagerImpl(pkg_path=pkg_path)
 
-        # Orchestration should be disabled by default
-        assert manager.orchestration_enabled is False
+        # Orchestration should be enabled by default
+        assert manager.orchestration_enabled is True
 
         # Legacy features should still work
         assert manager.lsp_optimization_enabled is False

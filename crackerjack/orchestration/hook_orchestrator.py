@@ -128,7 +128,8 @@ class HookOrchestratorAdapter:
             },
         )
 
-    def _resolve_event_bus(self) -> WorkflowEventBus | None:
+    @staticmethod
+    def _resolve_event_bus() -> WorkflowEventBus | None:
         """Resolve workflow event bus from dependency injection."""
         try:
             return cast(WorkflowEventBus, depends.get(WorkflowEventBus))
@@ -696,7 +697,8 @@ class HookOrchestratorAdapter:
         )
         return None
 
-    def _pass_result(self, hook: HookDefinition, duration: float) -> HookResult:
+    @staticmethod
+    def _pass_result(hook: HookDefinition, duration: float) -> HookResult:
         return HookResult(
             id=hook.name,
             name=hook.name,
@@ -740,7 +742,8 @@ class HookOrchestratorAdapter:
         }
         return factories.get(hook_name)
 
-    def _build_ruff_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_ruff_adapter(hook: HookDefinition) -> t.Any:
         """Build Ruff adapter for format or check mode."""
         from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
 
@@ -755,19 +758,22 @@ class HookOrchestratorAdapter:
             )
         )
 
-    def _build_bandit_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_bandit_adapter(hook: HookDefinition) -> t.Any:
         """Build Bandit security adapter."""
-        from crackerjack.adapters.security.bandit import BanditAdapter
+        from crackerjack.adapters.sast.bandit import BanditAdapter
 
         return BanditAdapter()
 
-    def _build_codespell_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_codespell_adapter(hook: HookDefinition) -> t.Any:
         """Build Codespell lint adapter."""
         from crackerjack.adapters.lint.codespell import CodespellAdapter
 
         return CodespellAdapter()
 
-    def _build_gitleaks_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_gitleaks_adapter(hook: HookDefinition) -> t.Any:
         """Build Gitleaks security adapter."""
         from crackerjack.adapters.security.gitleaks import GitleaksAdapter
 
@@ -782,41 +788,48 @@ class HookOrchestratorAdapter:
             raise ValueError(msg)
         return SkylosAdapter(context=self.execution_context)
 
-    def _build_zuban_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_zuban_adapter(hook: HookDefinition) -> t.Any:
         """Build Zuban type checking adapter."""
         from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
 
         return ZubanAdapter(settings=ZubanSettings())
 
-    def _build_complexipy_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_complexipy_adapter(hook: HookDefinition) -> t.Any:
         """Build Complexipy complexity adapter."""
         from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
 
         return ComplexipyAdapter()
 
-    def _build_creosote_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_creosote_adapter(hook: HookDefinition) -> t.Any:
         """Build Creosote refactor adapter."""
         from crackerjack.adapters.refactor.creosote import CreosoteAdapter
 
         return CreosoteAdapter()
 
-    def _build_refurb_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_refurb_adapter(hook: HookDefinition) -> t.Any:
         """Build Refurb refactor adapter."""
         from crackerjack.adapters.refactor.refurb import RefurbAdapter
 
         return RefurbAdapter()
 
-    def _build_mdformat_adapter(self, hook: HookDefinition) -> t.Any:
+    @staticmethod
+    def _build_mdformat_adapter(hook: HookDefinition) -> t.Any:
         """Build Mdformat markdown adapter."""
         from crackerjack.adapters.format.mdformat import MdformatAdapter
 
         return MdformatAdapter()
 
-    def _get_reporting_tools(self) -> set[str]:
+    @staticmethod
+    def _get_reporting_tools() -> set[str]:
         """Get the set of tools that report issues."""
         return {"complexipy", "refurb", "gitleaks", "creosote"}
 
-    def _get_formatters(self) -> set[str]:
+    @staticmethod
+    def _get_formatters() -> set[str]:
         """Get the set of formatting tools."""
         return {"ruff-format"}
 
@@ -838,7 +851,8 @@ class HookOrchestratorAdapter:
             else "failed"
         )
 
-    def _build_issues_list(self, qa_result: t.Any) -> list[str]:
+    @staticmethod
+    def _build_issues_list(qa_result: t.Any) -> list[str]:
         """Build the issues list from the QA result.
 
         This method uses the adapter's pre-formatted details string directly
@@ -893,8 +907,9 @@ class HookOrchestratorAdapter:
             f"{count} issue{'s' if count != 1 else ''} found (run with --ai-debug for full details)"
         ]
 
+    @staticmethod
     def _extract_error_details(
-        self, hook: HookDefinition, qa_result: t.Any, status: str, issues: list[str]
+        hook: HookDefinition, qa_result: t.Any, status: str, issues: list[str]
     ) -> tuple[int | None, str | None, list[str]]:
         """Extract error details for failed hooks from adapter results.
 
@@ -931,13 +946,19 @@ class HookOrchestratorAdapter:
                 # Only add generic fallback if we have absolutely no information
                 # This should be rare since _build_issues_list provides a fallback
                 issues = [
-                    f"Hook {hook.name} failed with no detailed output (exit code: {qa_result.exit_code if hasattr(qa_result, 'exit_code') else 'unknown'})"
+                    f"Hook {hook.name} failed with no detailed output (exit code: "
+                    f"{
+                        qa_result.exit_code
+                        if hasattr(qa_result, 'exit_code')
+                        else 'unknown'
+                    })"
                 ]
 
         return exit_code, error_message, issues
 
+    @staticmethod
     def _calculate_total_issues(
-        self, qa_result: t.Any, status: str, issues: list[str]
+        qa_result: t.Any, status: str, issues: list[str]
     ) -> int:
         """Calculate the total count of issues from qa_result.
 
@@ -1113,7 +1134,8 @@ class HookOrchestratorAdapter:
             is_timeout=False,
         )
 
-    def _extract_file_count(self, output_text: str) -> int:
+    @staticmethod
+    def _extract_file_count(output_text: str) -> int:
         """Extract file count from subprocess output using regex patterns."""
         import re
 
@@ -1159,17 +1181,17 @@ class HookOrchestratorAdapter:
 
         return "failed"
 
+    @staticmethod
     def _is_formatting_success(
-        self, hook: HookDefinition, proc_result: t.Any, output_text: str
+        hook: HookDefinition, proc_result: t.Any, output_text: str
     ) -> bool:
         """Check if formatting tool return code 1 indicates successful modification."""
         if not hook.is_formatting or proc_result.returncode != 1:
             return False
         return "files were modified by this hook" in output_text.lower()
 
-    def _is_analysis_tool_success(
-        self, hook: HookDefinition, proc_result: t.Any
-    ) -> bool:
+    @staticmethod
+    def _is_analysis_tool_success(hook: HookDefinition, proc_result: t.Any) -> bool:
         """Check if analysis tool return code 1 indicates findings (not failure)."""
         if proc_result.returncode != 1:
             return False
@@ -1181,8 +1203,9 @@ class HookOrchestratorAdapter:
             "ruff-format",
         }
 
+    @staticmethod
     def _is_bandit_success(
-        self, hook: HookDefinition, proc_result: t.Any, output_text: str
+        hook: HookDefinition, proc_result: t.Any, output_text: str
     ) -> bool:
         """Check if bandit return code 1 indicates findings (not failure)."""
         if hook.name != "bandit" or proc_result.returncode != 1:
@@ -1193,7 +1216,8 @@ class HookOrchestratorAdapter:
             or "no issues identified" not in output_text_lower
         )
 
-    def _collect_issues(self, status: str, proc_result: t.Any) -> list[str]:
+    @staticmethod
+    def _collect_issues(status: str, proc_result: t.Any) -> list[str]:
         """Collect issues from subprocess output if hook failed.
 
         For subprocess hooks (non-adapter), extracts error information from output.
@@ -1206,7 +1230,9 @@ class HookOrchestratorAdapter:
         output_text = (proc_result.stdout or "") + (proc_result.stderr or "")
         if not output_text.strip():
             return [
-                f"Hook failed with exit code {getattr(proc_result, 'returncode', 'unknown')} and no output"
+                f"Hook failed with exit code {
+                    getattr(proc_result, 'returncode', 'unknown')
+                } and no output"
             ]
 
         # Try to extract meaningful error lines (first 10 non-empty lines)
@@ -1216,8 +1242,9 @@ class HookOrchestratorAdapter:
 
         return error_lines or ["Hook failed with non-zero exit code"]
 
+    @staticmethod
     def _parse_semgrep_json_errors(
-        self, output_text: str, fallback_issues: list[str]
+        output_text: str, fallback_issues: list[str]
     ) -> list[str]:
         """Parse semgrep JSON output to extract errors from errors array.
 
@@ -1284,7 +1311,8 @@ class HookOrchestratorAdapter:
 
         return time.time() - start_time
 
-    def _error_result(self, hook: HookDefinition, error: BaseException) -> HookResult:
+    @staticmethod
+    def _error_result(hook: HookDefinition, error: BaseException) -> HookResult:
         """Create error HookResult from exception.
 
         Args:
@@ -1355,7 +1383,8 @@ class HookOrchestratorAdapter:
                 extra={"event": event.value, "error": str(exc)},
             )
 
-    def _summarize_results(self, results: list[HookResult]) -> dict[str, t.Any]:
+    @staticmethod
+    def _summarize_results(results: list[HookResult]) -> dict[str, t.Any]:
         """Summarize hook results for telemetry payloads."""
         counts = Counter(result.status for result in results)
         return {

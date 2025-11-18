@@ -445,9 +445,42 @@ class SecureSubprocessExecutor:
         try:
             resolved_path = cwd_path.resolve()
 
+            # Get the original path's components to check for path traversal patterns
+            original_path_obj = Path(cwd)
+            original_parts = original_path_obj.parts
+            if ".." in original_parts or any(
+                part.startswith("../") for part in original_parts
+            ):
+                # Check if the resolved path is within the safe base (project directory or temp)
+                safe_root = (
+                    Path.cwd().parent.resolve()
+                )  # Use parent of project root as broader safe root
+                try:
+                    resolved_path.relative_to(safe_root)
+                except ValueError:
+                    # If relative_to raises ValueError, path is outside safe root
+                    path_str = str(resolved_path)
+                    self.security_logger.log_path_traversal_attempt(
+                        attempted_path=path_str,
+                        base_directory=str(safe_root),
+                    )
+                    raise CommandValidationError(
+                        f"Dangerous working directory: {path_str}"
+                    )
+
             path_str = str(resolved_path)
-            if ".." in path_str or path_str.startswith(
-                ("/etc", "/usr/bin", "/bin", "/sbin")
+            # Check for system directories, including macOS /private variants
+            if path_str.startswith(
+                (
+                    "/etc",
+                    "/usr/bin",
+                    "/bin",
+                    "/sbin",
+                    "/private/etc",
+                    "/private/usr/bin",
+                    "/private/bin",
+                    "/private/sbin",
+                )
             ):
                 self.security_logger.log_path_traversal_attempt(
                     attempted_path=path_str,

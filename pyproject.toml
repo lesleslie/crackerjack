@@ -297,10 +297,6 @@ publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
 
 
-# [tool.uv.sources.acb]
-# path = "../acb"
-# editable = true
-
 [tool.creosote]
 paths = [
     "crackerjack",
@@ -404,8 +400,6 @@ python_version = "3.13"
 [tool.zuban]
 strict = true
 show_error_codes = true
-
-
 
 [tool.zuban.lsp]
 host = "127.0.0.1"
