@@ -1,0 +1,63 @@
+{
+  "session_summary": {
+    "project": "crackerjack",
+    "final_quality_score": 67,
+    "session_end_time": "2025-11-18T10:45:43.951918",
+    "working_directory": "/Users/les/Projects/crackerjack",
+    "recommendations": [
+      "\u26a0\ufe0f Moderate quality - focus on improvements below",
+      "\ud83e\uddea Critical: Increase test coverage (8.9% \u2192 target 80%+)",
+      "\ud83c\udf3f Consider feature branch workflow and issue tracking"
+    ]
+  },
+  "quality_data": {
+    "total_score": 67,
+    "version": "2.0",
+    "project_health": {
+      "total": 25,
+      "tooling_score": 15,
+      "maturity_score": 10,
+      "details": {
+        "package_mgmt": "modern (pyproject.toml + lockfile)",
+        "version_control": "active git repository",
+        "dependency_mgmt": "recently updated",
+        "testing": "comprehensive (216 test files)",
+        "documentation": "comprehensive (50 docs)",
+        "ci_cd": "none"
+      }
+    },
+    "permissions_health": {
+      "permissions_count": 0,
+      "session_available": true,
+      "tool_count": 0
+    },
+    "session_health": {
+      "status": "active"
+    },
+    "tool_health": {
+      "count": 0
+    },
+    "recommendations": [
+      "\u26a0\ufe0f Moderate quality - focus on improvements below",
+      "\ud83e\uddea Critical: Increase test coverage (8.9% \u2192 target 80%+)",
+      "\ud83c\udf3f Consider feature branch workflow and issue tracking"
+    ],
+    "timestamp": "2025-11-18T10:45:43.951597",
+    "trust_score": {
+      "permissions_count": 0,
+      "session_available": true,
+      "tool_count": 0
+    },
+    "breakdown": {
+      "project_health": 25,
+      "permissions": 1,
+      "session_management": 20,
+      "tools": 0,
+      "code_quality": 15,
+      "dev_velocity": 9,
+      "security": 10.0
+    }
+  },
+  "generated_at": "2025-11-18T10:45:43.952053",
+  "handoff_type": "session_handoff"
+}
