@@ -35,7 +35,11 @@ def test_check_ast_integration():
         )
 
         # Create executor and run hook
-        executor = AsyncHookExecutor(test_dir)
+        import logging
+        from rich.console import Console
+        logger = logging.getLogger(__name__)
+        console = Console()
+        executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=test_dir)
 
         # Run the hook on both files
         result = executor._execute_hook_sync(
@@ -75,7 +79,11 @@ def test_json_hooks_integration():
         )
 
         # Create executor and run hooks
-        executor = AsyncHookExecutor(test_dir)
+        import logging
+        from rich.console import Console
+        logger = logging.getLogger(__name__)
+        console = Console()
+        executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=test_dir)
 
         # Test check-json on valid file
         result = executor._execute_hook_sync(
@@ -121,7 +129,11 @@ def test_check_added_large_files_integration():
         )
 
         # Create executor and run hook
-        executor = AsyncHookExecutor(test_dir)
+        import logging
+        from rich.console import Console
+        logger = logging.getLogger(__name__)
+        console = Console()
+        executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=test_dir)
 
         # Run the hook on both files
         result = executor._execute_hook_sync(
@@ -156,7 +168,11 @@ def test_hook_execution_with_timeout():
         with open(py_file, "w") as f:
             f.write("def test():\n    pass\n")
 
-        executor = AsyncHookExecutor(test_dir)
+        import logging
+        from rich.console import Console
+        logger = logging.getLogger(__name__)
+        console = Console()
+        executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=test_dir)
 
         # Run the hook (this should timeout)
         result = executor._execute_hook_sync(
