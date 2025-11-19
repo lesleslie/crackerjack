@@ -17,6 +17,7 @@ from crackerjack.services.quality.quality_baseline_enhanced import (
 
 from ..models import (
     HealthResponseModel,
+    TelemetryEventModel,
     TelemetryResponseModel,
     TelemetrySnapshotModel,
     UnifiedMetricsModel,
@@ -42,9 +43,10 @@ def register_telemetry_api_endpoints(
         data = TelemetrySnapshotModel(
             counts=snapshot.get("counts", {}),
             recent_events=[
-                TelemetryEventModel.model_validate(event) for event in snapshot.get("recent_events", [])
+                TelemetryEventModel.model_validate(event)
+                for event in snapshot.get("recent_events", [])
             ],
-            last_error=None  # Adjust based on how last_error is stored in snapshot
+            last_error=None,  # Adjust based on how last_error is stored in snapshot
         )
         return TelemetryResponseModel(
             status="success",
@@ -63,9 +65,10 @@ def register_telemetry_api_endpoints(
         data = TelemetrySnapshotModel(
             counts=snapshot.get("counts", {}),
             recent_events=[
-                TelemetryEventModel.model_validate(event) for event in snapshot.get("recent_events", [])
+                TelemetryEventModel.model_validate(event)
+                for event in snapshot.get("recent_events", [])
             ],
-            last_error=None  # Adjust based on how last_error is stored in snapshot
+            last_error=None,  # Adjust based on how last_error is stored in snapshot
         )
         return TelemetryResponseModel(
             status="success",
@@ -79,7 +82,9 @@ def register_telemetry_api_endpoints(
         summary="Retrieve aggregated monitoring health metrics",
     )
     async def get_monitoring_health() -> HealthResponseModel:
-        unified_metrics = await get_current_metrics(quality_service, job_manager)
+        unified_metrics = await get_current_metrics(
+            quality_service, job_manager
+        )  # Use the function parameters
         return HealthResponseModel(
             status=_derive_health_status(unified_metrics),
             data=UnifiedMetricsModel.from_domain(unified_metrics),

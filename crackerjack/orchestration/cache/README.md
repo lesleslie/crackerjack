@@ -289,7 +289,7 @@ async def execute_with_cache(
 ## Related Documentation
 
 - [Orchestration Strategies](<../strategies/README.md>) - Execution strategies using cache
-- [Hook Orchestration](</crackerjack/orchestration/README.md>) - Overall orchestration
+- [Hook Orchestration](<../README.md>) - Overall orchestration
 - [Models](<../../models/README.md>) - HookResult and cache protocols
 - [CLAUDE.md](<../../../CLAUDE.md>) - Architecture patterns
 

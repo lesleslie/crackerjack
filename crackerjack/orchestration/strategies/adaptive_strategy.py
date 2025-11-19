@@ -508,6 +508,8 @@ class AdaptiveExecutionStrategy:
             name=hook.name,
             status="passed",
             duration=0.0,
+            issues_found=[],  # Initialize with empty list to match expected format
+            files_processed=0,
         )
 
     def _create_timeout_result(

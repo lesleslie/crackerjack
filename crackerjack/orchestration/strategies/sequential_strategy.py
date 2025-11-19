@@ -294,4 +294,6 @@ class SequentialExecutionStrategy:
             name=hook.name,
             status="passed",
             duration=0.0,
+            issues_found=[],  # Initialize with empty list to match expected format
+            files_processed=0,
         )
