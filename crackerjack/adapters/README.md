@@ -10,7 +10,8 @@ Interfaces and adapters to external tools/services or subsystems. Each adapter f
 - [Lint](<./lint/README.md>) — Spelling and simple linters (Codespell)
 - [LSP](<./lsp/README.md>) — Rust tools with LSP (Zuban, Skylos)
 - [Refactor](<./refactor/README.md>) — Modernization and dead-code (Refurb, Creosote, Skylos)
-- [Security](<./security/README.md>) — Static analysis and secrets (Bandit, Gitleaks, Pyscn)
+- [SAST](<./sast/README.md>) — Static application security testing (Semgrep, Bandit, Pyscn)
+- [Security](<./security/README.md>) — Secret leak prevention and credential detection (Gitleaks)
 - [Type](<./type/README.md>) — Static type checking (Zuban, Pyrefly, Ty)
 - [Utility](<./utility/README.md>) — Small config-driven checks (EOF newline, regex, size)
 
