@@ -37,7 +37,7 @@ Comprehensive documentation with architecture, examples, best practices, and tro
 
 | File | Score | Strengths |
 |------|-------|-----------|
-| `agents/README.md` | 95/100 | Complete architecture, 12 agents documented, usage examples, compliance status |
+| `agents/README.md` | 95/100 | Complete architecture, 9 agents documented, usage examples, compliance status |
 | `managers/README.md` | 93/100 | Detailed workflow, DI patterns, configuration, anti-patterns |
 | `services/README.md` | 92/100 | 60+ services categorized, security considerations, best practices |
 | `orchestration/README.md` | 94/100 | Execution flow, performance metrics, caching details, patterns |
@@ -129,7 +129,7 @@ Single-sentence descriptions with no examples, architecture, or guidance.
 13. EnhancedProactiveAgent
 
 **Recommendation:**
-- Update to "13 specialized agents" OR
+- Update to "9 specialized agents" OR
 - Clarify that ProactiveAgent is a base class and count is "12 user-facing agents + 1 base agent"
 
 #### ISSUE: Missing SAST Adapter Reference

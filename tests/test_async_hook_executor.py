@@ -29,7 +29,9 @@ class TestAsyncHookExecutor:
 
     @pytest.fixture
     def async_executor(self, console, pkg_path):
-        return AsyncHookExecutor(console, pkg_path, max_concurrent=2)
+        import logging
+        logger = logging.getLogger(__name__)
+        return AsyncHookExecutor(logger=logger, console=console, pkg_path=pkg_path, max_concurrent=2)
 
     @pytest.fixture
     def mock_hook(self):
@@ -353,9 +355,11 @@ class TestAsyncHookExecutionResult:
 @pytest.mark.asyncio
 @pytest.mark.skip(reason="AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test")
 async def test_semaphore_concurrency_limiting() -> None:
+    import logging
     console = Console(force_terminal=False)
     pkg_path = Path.cwd()
-    executor = AsyncHookExecutor(console, pkg_path, max_concurrent=1)
+    logger = logging.getLogger(__name__)
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=pkg_path, max_concurrent=1)
 
     concurrent_count = 0
     max_concurrent = 0

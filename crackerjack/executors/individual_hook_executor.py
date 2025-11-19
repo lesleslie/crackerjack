@@ -356,6 +356,7 @@ class IndividualHookExecutor:
         self,
         strategy: HookStrategy,
     ) -> IndividualExecutionResult:
+        """Execute hook strategy with individual (sequential) execution and progress tracking."""
         start_time = time.time()
         self._print_strategy_header(strategy)
 
@@ -365,6 +366,38 @@ class IndividualHookExecutor:
             await self._execute_single_hook_in_strategy(hook, execution_state)
 
         return self._finalize_execution_result(strategy, execution_state, start_time)
+
+    async def execute_strategy(
+        self,
+        strategy: HookStrategy,
+    ) -> IndividualExecutionResult:
+        """Execute hook strategy - API-compatible method matching other executors."""
+        start_time = time.time()
+        self._print_strategy_header(strategy)
+
+        execution_state = self._initialize_execution_state()
+
+        for hook in strategy.hooks:
+            await self._execute_single_hook_in_strategy(hook, execution_state)
+
+        # Call finalize with original strategy name instead of modified one
+        total_duration = time.time() - start_time
+        success = all(r.status == "passed" for r in execution_state["hook_results"])
+
+        self._print_individual_summary(
+            strategy,
+            execution_state["hook_results"],
+            execution_state["hook_progress"],
+        )
+
+        return IndividualExecutionResult(
+            strategy_name=strategy.name,  # Use original name, not with "_individual" suffix
+            hook_results=execution_state["hook_results"],
+            hook_progress=execution_state["hook_progress"],
+            total_duration=total_duration,
+            success=success,
+            execution_order=execution_state["execution_order"],
+        )
 
     def _initialize_execution_state(self) -> dict[str, t.Any]:
         return {"hook_results": [], "hook_progress": [], "execution_order": []}
