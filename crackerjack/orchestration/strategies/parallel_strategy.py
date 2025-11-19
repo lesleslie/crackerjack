@@ -222,6 +222,8 @@ class ParallelExecutionStrategy:
             name=hook.name,
             status="passed",
             duration=0.0,
+            issues_found=[],  # Initialize with empty list to match expected format
+            files_processed=0,
         )
 
     def _error_result(self, hook: HookDefinition, error: BaseException) -> HookResult:

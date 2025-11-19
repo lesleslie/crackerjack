@@ -53,7 +53,9 @@ async def get_current_metrics(
         unified = await asyncio.to_thread(
             quality_service.create_unified_metrics,
             current_metrics,
-            len(job_manager.active_connections),
+            len(job_manager.active_connections)
+            if hasattr(job_manager, "active_connections")
+            else 0,
         )
         return unified
     except Exception:
@@ -63,7 +65,9 @@ async def get_current_metrics(
             quality_score=0,
             test_coverage=0.0,
             hook_duration=0.0,
-            active_jobs=len(job_manager.active_connections),
+            active_jobs=len(job_manager.active_connections)
+            if hasattr(job_manager, "active_connections")
+            else 0,
             error_count=0,
             trend_direction=TrendDirection.STABLE,
             predictions={},

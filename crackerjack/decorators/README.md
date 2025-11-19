@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../README.md) | [Crackerjack Package](<../README.md>) | [Decorators](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [Crackerjack Package](<../README.md>) | [Decorators](<./README.md>)
 
 # Decorators
 
@@ -170,4 +170,4 @@ async def fetch_and_process() -> dict:
 - [Exceptions](<../exceptions/README.md>) - Custom exception types
 - [Errors](<../errors/README.md>) - Error handling and error types
 - [MCP Cache](<../mcp/README.md>) - Error pattern caching for AI analysis
-- [Architecture: ACB Patterns](../../CLAUDE.md#critical-architectural-pattern-protocol-based-di) - Dependency injection patterns
+- [Architecture: ACB Patterns](<../../CLAUDE.md#critical-architectural-pattern-protocol-based-di>) - Dependency injection patterns

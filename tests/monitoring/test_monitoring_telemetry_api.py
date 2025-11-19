@@ -95,7 +95,9 @@ def test_app() -> TestClient:
         "telemetry": FakeTelemetry(),
     }
     job_manager = FakeJobManager()
-    register_telemetry_api_endpoints(app, job_manager, services)
+    quality_service = services["quality_service"]
+    telemetry = services["telemetry"]
+    register_telemetry_api_endpoints(app, job_manager, telemetry, quality_service)
     return TestClient(app)
 
 

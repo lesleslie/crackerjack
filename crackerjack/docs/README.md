@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](../../README.md) | [Crackerjack Package](<../README.md>) | [Docs](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [Crackerjack Package](<../README.md>) | [Docs](<./README.md>)
 
 # Package Docs
 

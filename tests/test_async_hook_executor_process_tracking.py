@@ -1,20 +1,35 @@
 """Tests for AsyncHookExecutor process tracking and cleanup."""
 
 import asyncio
+import logging
 from pathlib import Path
+
+from rich.console import Console
 
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 
 
 def test_async_hook_executor_initialization():
     """Test that AsyncHookExecutor initializes with empty process tracking."""
-    executor = AsyncHookExecutor(Path("."))
+    logger = logging.getLogger(__name__)
+    console = Console()
+    executor = AsyncHookExecutor(
+        logger=logger,
+        console=console,
+        pkg_path=Path(".")
+    )
     assert len(executor._running_processes) == 0
 
 
 async def test_async_hook_executor_process_tracking():
     """Test that AsyncHookExecutor tracks running processes."""
-    executor = AsyncHookExecutor(Path("."))
+    logger = logging.getLogger(__name__)
+    console = Console()
+    executor = AsyncHookExecutor(
+        logger=logger,
+        console=console,
+        pkg_path=Path(".")
+    )
 
     # Create a simple subprocess to track
     proc = await asyncio.create_subprocess_exec(
@@ -42,7 +57,13 @@ async def test_async_hook_executor_process_tracking():
 
 async def test_async_hook_executor_cleanup():
     """Test that AsyncHookExecutor cleanup terminates running processes."""
-    executor = AsyncHookExecutor(Path("."))
+    logger = logging.getLogger(__name__)
+    console = Console()
+    executor = AsyncHookExecutor(
+        logger=logger,
+        console=console,
+        pkg_path=Path(".")
+    )
 
     # Create a subprocess that will run for a bit
     proc = await asyncio.create_subprocess_exec(
