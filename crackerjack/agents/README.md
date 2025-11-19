@@ -6,7 +6,7 @@ Specialized AI agents for autonomous code quality improvement and intelligent re
 
 ## Overview
 
-The agents package contains 12 specialized AI agents that work together to automatically fix code quality issues, improve architecture, and maintain high standards. Each agent focuses on a specific domain (security, performance, documentation, etc.) with confidence-based routing and collaborative problem-solving.
+The agents package contains 13 specialized AI agents that work together to automatically fix code quality issues, improve architecture, and maintain high standards. Each agent focuses on a specific domain (security, performance, documentation, etc.) with confidence-based routing and collaborative problem-solving.
 
 ## Core Components
 
