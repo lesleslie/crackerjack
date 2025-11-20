@@ -9,6 +9,7 @@ from acb.console import Console
 
 from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy
+from crackerjack.executors.hook_executor import HookExecutionResult
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
@@ -370,7 +371,7 @@ class IndividualHookExecutor:
     async def execute_strategy(
         self,
         strategy: HookStrategy,
-    ) -> IndividualExecutionResult:
+    ) -> HookExecutionResult:  # Changed return type to match base class
         """Execute hook strategy - API-compatible method matching other executors."""
         start_time = time.time()
         self._print_strategy_header(strategy)
@@ -390,13 +391,12 @@ class IndividualHookExecutor:
             execution_state["hook_progress"],
         )
 
-        return IndividualExecutionResult(
+        # Return HookExecutionResult to maintain interface compatibility
+        return HookExecutionResult(
             strategy_name=strategy.name,  # Use original name, not with "_individual" suffix
-            hook_results=execution_state["hook_results"],
-            hook_progress=execution_state["hook_progress"],
+            results=execution_state["hook_results"],
             total_duration=total_duration,
             success=success,
-            execution_order=execution_state["execution_order"],
         )
 
     def _initialize_execution_state(self) -> dict[str, t.Any]:

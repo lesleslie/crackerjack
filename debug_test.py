@@ -8,14 +8,14 @@ from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter,
 
 async def debug_test():
     """Debug the failing test scenario."""
-    
+
     # Create sample hooks like in the test
     fast_strategy = HookStrategy(
         name="fast",
         hooks=[
             HookDefinition(
                 name="ruff-format",
-                command=["uv", "run", "ruff", "format"], 
+                command=["uv", "run", "ruff", "format"],
                 timeout=60,
                 stage=HookStage.FAST,
                 security_level=SecurityLevel.LOW,

@@ -79,20 +79,19 @@ from acb.depends import depends
 baseline = depends.get(QualityBaselineEnhanced)
 
 # Record current metrics
-await baseline.record_metrics({
-    "coverage": 21.6,
-    "complexity": 8.2,
-    "lint_issues": 0,
-    "security_issues": 0
-})
+await baseline.record_metrics(
+    {"coverage": 21.6, "complexity": 8.2, "lint_issues": 0, "security_issues": 0}
+)
 
 # Check if current metrics meet baseline
-results = await baseline.validate_metrics({
-    "coverage": 22.1,  # Improved!
-    "complexity": 8.2,
-    "lint_issues": 0,
-    "security_issues": 0
-})
+results = await baseline.validate_metrics(
+    {
+        "coverage": 22.1,  # Improved!
+        "complexity": 8.2,
+        "lint_issues": 0,
+        "security_issues": 0,
+    }
+)
 
 if results.all_passed:
     print("✅ All quality metrics improved or maintained")
@@ -117,7 +116,7 @@ detector = depends.get(PatternDetector)
 # Detect patterns in code file
 patterns = await detector.detect_patterns(
     file_path=Path("src/main.py"),
-    pattern_types=["complexity", "duplication", "security"]
+    pattern_types=["complexity", "duplication", "security"],
 )
 
 for pattern in patterns:
@@ -129,9 +128,7 @@ for pattern in patterns:
         print(f"  Suggestion: {pattern.suggestion}")
 
 # Detect error patterns from test output
-error_patterns = await detector.detect_error_patterns(
-    error_output=test_failure_output
-)
+error_patterns = await detector.detect_error_patterns(error_output=test_failure_output)
 
 for error in error_patterns:
     print(f"Error Category: {error.category}")
@@ -149,18 +146,22 @@ from acb.depends import depends
 detector = depends.get(AnomalyDetector)
 
 # Configure thresholds
-detector.configure_thresholds({
-    "coverage": {"min": 19.6, "warning": 20.0},
-    "complexity": {"max": 15, "warning": 12},
-    "test_duration": {"max": 300, "warning": 240}
-})
+detector.configure_thresholds(
+    {
+        "coverage": {"min": 19.6, "warning": 20.0},
+        "complexity": {"max": 15, "warning": 12},
+        "test_duration": {"max": 300, "warning": 240},
+    }
+)
 
 # Check for anomalies
-anomalies = await detector.detect_anomalies({
-    "coverage": 18.5,  # Below minimum!
-    "complexity": 14,
-    "test_duration": 285
-})
+anomalies = await detector.detect_anomalies(
+    {
+        "coverage": 18.5,  # Below minimum!
+        "complexity": 14,
+        "test_duration": 285,
+    }
+)
 
 if anomalies:
     print("⚠️  Anomalies detected:")
@@ -209,12 +210,14 @@ from acb.depends import depends
 orchestrator = depends.get(QAOrchestrator)
 
 # Configure quality checks
-orchestrator.configure({
-    "tools": ["ruff", "pytest", "mypy", "bandit"],
-    "parallel": True,
-    "fail_fast": False,  # Run all checks even if one fails
-    "retry_attempts": 1
-})
+orchestrator.configure(
+    {
+        "tools": ["ruff", "pytest", "mypy", "bandit"],
+        "parallel": True,
+        "fail_fast": False,  # Run all checks even if one fails
+        "retry_attempts": 1,
+    }
+)
 
 # Run orchestrated quality checks
 results = await orchestrator.run_qa_workflow()
@@ -319,14 +322,12 @@ for pattern in patterns:
     if pattern.type == "complexity":
         # Route to RefactoringAgent
         await orchestrator.execute_agent(
-            agent_type="refactoring",
-            context={"patterns": [pattern]}
+            agent_type="refactoring", context={"patterns": [pattern]}
         )
     elif pattern.type == "security":
         # Route to SecurityAgent
         await orchestrator.execute_agent(
-            agent_type="security",
-            context={"patterns": [pattern]}
+            agent_type="security", context={"patterns": [pattern]}
         )
 ```
 
@@ -340,14 +341,13 @@ from acb.depends import depends
 orchestrator = depends.get(QAOrchestrator)
 engine = depends.get(CrackerjackWorkflowEngine)
 
+
 # Register QA orchestrator as workflow action
 @engine.register_action("run_quality_checks")
 async def run_quality_checks(context):
     results = await orchestrator.run_qa_workflow()
-    return {
-        "success": results.status == "passed",
-        "results": results.tool_results
-    }
+    return {"success": results.status == "passed", "results": results.tool_results}
+
 
 # Quality checks now integrated into workflows
 workflow_result = await engine.execute_workflow("STANDARD_WORKFLOW")
@@ -356,15 +356,15 @@ workflow_result = await engine.execute_workflow("STANDARD_WORKFLOW")
 ## Best Practices
 
 1. **Enable Ratcheting** - Always use coverage ratchet to prevent degradation
-2. **Cache Aggressively** - Enable pattern caching for large projects
-3. **Set Appropriate Baselines** - Start with achievable baselines, improve incrementally
-4. **Monitor Trends** - Review quality trends regularly, not just current values
-5. **Configure Thresholds** - Set anomaly thresholds based on project needs
-6. **Use Orchestration** - Leverage QA orchestrator for consistent quality checks
-7. **Parallel When Possible** - Enable parallel execution to speed up checks
-8. **Review Patterns** - Regularly review detected patterns for false positives
-9. **Integrate with CI/CD** - Run quality checks in CI/CD pipeline
-10. **Document Baselines** - Keep quality baseline changes in version control
+1. **Cache Aggressively** - Enable pattern caching for large projects
+1. **Set Appropriate Baselines** - Start with achievable baselines, improve incrementally
+1. **Monitor Trends** - Review quality trends regularly, not just current values
+1. **Configure Thresholds** - Set anomaly thresholds based on project needs
+1. **Use Orchestration** - Leverage QA orchestrator for consistent quality checks
+1. **Parallel When Possible** - Enable parallel execution to speed up checks
+1. **Review Patterns** - Regularly review detected patterns for false positives
+1. **Integrate with CI/CD** - Run quality checks in CI/CD pipeline
+1. **Document Baselines** - Keep quality baseline changes in version control
 
 ## Performance Considerations
 

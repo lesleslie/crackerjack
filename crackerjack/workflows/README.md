@@ -15,6 +15,7 @@ The workflows package provides high-level workflow definitions and execution eng
 ACB workflow engine with event bridge for backward compatibility:
 
 **Features:**
+
 - **Automatic Parallel Execution** - Dependency-based parallel step execution
 - **Event Bridge** - Emits crackerjack-specific events for backward compatibility
 - **Built-in Retry Logic** - Exponential backoff for transient failures
@@ -23,12 +24,11 @@ ACB workflow engine with event bridge for backward compatibility:
 - **Timing & Metrics** - Automatic execution time tracking
 
 **Key Capabilities:**
+
 ```python
 class CrackerjackWorkflowEngine(BasicWorkflowEngine):
     async def execute(
-        self,
-        workflow: WorkflowDefinition,
-        context: dict | None = None
+        self, workflow: WorkflowDefinition, context: dict | None = None
     ) -> WorkflowResult:
         """Execute workflow with parallel step execution."""
 ```
@@ -38,15 +38,17 @@ class CrackerjackWorkflowEngine(BasicWorkflowEngine):
 Declarative workflow structures using ACB's WorkflowDefinition:
 
 **Available Workflows:**
+
 1. **FAST_HOOKS_WORKFLOW** - Quick formatters and basic checks (~5s)
-2. **COMPREHENSIVE_HOOKS_WORKFLOW** - Type checking, security, complexity (~30s)
-3. **STANDARD_WORKFLOW** - Full quality checks with parallel phases
-4. **TEST_WORKFLOW** - Test execution with coverage reporting
-5. **COMMIT_WORKFLOW** - Pre-commit validation workflow
-6. **PUBLISH_WORKFLOW** - PyPI publishing workflow
-7. **COMPREHENSIVE_PARALLEL_WORKFLOW** - Maximum parallelization
+1. **COMPREHENSIVE_HOOKS_WORKFLOW** - Type checking, security, complexity (~30s)
+1. **STANDARD_WORKFLOW** - Full quality checks with parallel phases
+1. **TEST_WORKFLOW** - Test execution with coverage reporting
+1. **COMMIT_WORKFLOW** - Pre-commit validation workflow
+1. **PUBLISH_WORKFLOW** - PyPI publishing workflow
+1. **COMPREHENSIVE_PARALLEL_WORKFLOW** - Maximum parallelization
 
 **Workflow Selection:**
+
 ```python
 def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
     """Select appropriate workflow based on CLI options."""
@@ -57,12 +59,14 @@ def select_workflow_for_options(options: OptionsProtocol) -> WorkflowDefinition:
 Registry of workflow action handlers:
 
 **Features:**
+
 - **Action Registration** - Register custom action handlers
 - **DI Integration** - Actions automatically get dependencies injected
 - **Error Handling** - Standardized error handling for actions
 - **Context Passing** - Pass state between workflow steps
 
 **Built-in Actions:**
+
 - `run_configuration` - Configure project settings
 - `run_fast_hooks` - Execute fast quality hooks
 - `run_comprehensive_hooks` - Execute comprehensive hooks
@@ -77,6 +81,7 @@ Registry of workflow action handlers:
 Adapter translating ACB workflow events to crackerjack events:
 
 **Features:**
+
 - **Backward Compatibility** - Maintains compatibility with existing event consumers
 - **Event Translation** - Maps WorkflowStep to crackerjack events
 - **State Mapping** - Translates workflow states to step events
@@ -87,6 +92,7 @@ Adapter translating ACB workflow events to crackerjack events:
 Builds DI containers for workflow execution:
 
 **Features:**
+
 - **Dependency Registration** - Registers all workflow dependencies
 - **Service Configuration** - Configures services based on options
 - **Lifecycle Management** - Manages service initialization/cleanup
@@ -97,6 +103,7 @@ Builds DI containers for workflow execution:
 Legacy iterative auto-fix workflow (pre-ACB integration):
 
 **Features:**
+
 - **Iterative Fixing** - Multiple fix iterations until success
 - **Pattern Learning** - Learns from successful fixes
 - **Quality Gates** - Validates fixes meet quality standards
@@ -252,8 +259,7 @@ engine = depends.get(CrackerjackWorkflowEngine)
 
 # Execute workflow
 result = await engine.execute(
-    workflow=FAST_HOOKS_WORKFLOW,
-    context={"options": options}
+    workflow=FAST_HOOKS_WORKFLOW, context={"options": options}
 )
 
 # Check result
@@ -310,6 +316,7 @@ result = await engine.execute(custom_workflow, context={})
 ```python
 from crackerjack.workflows import ACTION_REGISTRY
 
+
 @ACTION_REGISTRY.register("run_custom_check")
 async def run_custom_check(context: dict) -> dict:
     """Custom quality check action."""
@@ -321,7 +328,7 @@ async def run_custom_check(context: dict) -> dict:
     return {
         "success": results.passed,
         "issues": results.issues,
-        "duration": results.duration
+        "duration": results.duration,
     }
 ```
 
@@ -333,14 +340,17 @@ from crackerjack.workflows.event_bridge import EventBridgeAdapter
 
 engine = CrackerjackWorkflowEngine()
 
+
 # Register event handlers
 @engine.event_bridge.on_step_started
 async def handle_step_started(step_id: str, context: dict):
     print(f"Starting step: {step_id}")
 
+
 @engine.event_bridge.on_step_completed
 async def handle_step_completed(step_id: str, result: dict):
     print(f"Completed step: {step_id} - {result.get('success')}")
+
 
 # Execute workflow with event handling
 result = await engine.execute(STANDARD_WORKFLOW)
@@ -403,11 +413,11 @@ parallel_workflow = WorkflowDefinition(
 ```python
 @dataclass
 class WorkflowResult:
-    state: WorkflowState           # COMPLETED, FAILED, CANCELLED
-    steps: list[StepResult]        # Results from each step
-    duration: float                # Total execution time (seconds)
-    error: str | None              # Error message if failed
-    context: dict                  # Final execution context
+    state: WorkflowState  # COMPLETED, FAILED, CANCELLED
+    steps: list[StepResult]  # Results from each step
+    duration: float  # Total execution time (seconds)
+    error: str | None  # Error message if failed
+    context: dict  # Final execution context
 
     @property
     def success(self) -> bool:
@@ -424,22 +434,22 @@ class WorkflowResult:
 
 ```python
 class WorkflowState(Enum):
-    PENDING = "pending"       # Not yet started
-    RUNNING = "running"       # Currently executing
-    COMPLETED = "completed"   # Successfully completed
-    FAILED = "failed"         # Failed with errors
-    CANCELLED = "cancelled"   # Cancelled by user
+    PENDING = "pending"  # Not yet started
+    RUNNING = "running"  # Currently executing
+    COMPLETED = "completed"  # Successfully completed
+    FAILED = "failed"  # Failed with errors
+    CANCELLED = "cancelled"  # Cancelled by user
 ```
 
 ## Step States
 
 ```python
 class StepState(Enum):
-    PENDING = "pending"       # Waiting for dependencies
-    RUNNING = "running"       # Currently executing
-    COMPLETED = "completed"   # Successfully completed
-    FAILED = "failed"         # Failed with error
-    SKIPPED = "skipped"       # Skipped due to conditions
+    PENDING = "pending"  # Waiting for dependencies
+    RUNNING = "running"  # Currently executing
+    COMPLETED = "completed"  # Successfully completed
+    FAILED = "failed"  # Failed with error
+    SKIPPED = "skipped"  # Skipped due to conditions
 ```
 
 ## Configuration
@@ -486,6 +496,7 @@ from crackerjack.intelligence import get_agent_orchestrator
 engine = CrackerjackWorkflowEngine()
 agent_orchestrator = get_agent_orchestrator()
 
+
 # Register AI fixing action
 @ACTION_REGISTRY.register("run_ai_fixing")
 async def run_ai_fixing(context: dict) -> dict:
@@ -505,35 +516,33 @@ async def run_ai_fixing(context: dict) -> dict:
 ```python
 from crackerjack.executors import CachedHookExecutor
 
+
 @ACTION_REGISTRY.register("run_fast_hooks")
 async def run_fast_hooks(context: dict) -> dict:
     options = context["options"]
-    executor = CachedHookExecutor(
-        console=console,
-        pkg_path=options.pkg_path
-    )
+    executor = CachedHookExecutor(console=console, pkg_path=options.pkg_path)
 
     result = executor.execute_strategy("fast_hooks")
 
     return {
         "success": result.success,
         "duration": result.total_duration,
-        "cache_hit_rate": result.cache_hit_rate
+        "cache_hit_rate": result.cache_hit_rate,
     }
 ```
 
 ## Best Practices
 
 1. **Use Declarative Definitions** - Define workflows declaratively for clarity
-2. **Enable Parallelization** - Mark independent steps as parallel for speed
-3. **Set Appropriate Timeouts** - Configure realistic timeouts for each step
-4. **Handle Failures Gracefully** - Use retry logic for transient failures
-5. **Minimize Dependencies** - Only declare necessary dependencies for max parallelism
-6. **Use Event Bridge** - Leverage event system for progress tracking
-7. **Context Passing** - Use context to share state between steps
-8. **Workflow Selection** - Auto-select workflows based on CLI options
-9. **Monitor Performance** - Track workflow execution metrics
-10. **Test Custom Actions** - Thoroughly test custom action handlers
+1. **Enable Parallelization** - Mark independent steps as parallel for speed
+1. **Set Appropriate Timeouts** - Configure realistic timeouts for each step
+1. **Handle Failures Gracefully** - Use retry logic for transient failures
+1. **Minimize Dependencies** - Only declare necessary dependencies for max parallelism
+1. **Use Event Bridge** - Leverage event system for progress tracking
+1. **Context Passing** - Use context to share state between steps
+1. **Workflow Selection** - Auto-select workflows based on CLI options
+1. **Monitor Performance** - Track workflow execution metrics
+1. **Test Custom Actions** - Thoroughly test custom action handlers
 
 ## Performance Considerations
 

@@ -726,7 +726,7 @@ class HookOrchestratorAdapter:
         self, hook_name: str
     ) -> t.Callable[[HookDefinition], t.Any] | None:
         """Get adapter factory function for hook name."""
-        factories = {
+        factories: dict[str, t.Callable[[HookDefinition], t.Any]] = {
             "ruff-check": self._build_ruff_adapter,
             "ruff-format": self._build_ruff_adapter,
             "bandit": self._build_bandit_adapter,

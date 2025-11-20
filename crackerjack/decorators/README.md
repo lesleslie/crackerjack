@@ -14,10 +14,11 @@ Cross-cutting decorators and helper wrappers for error handling, retry logic, va
 from crackerjack.decorators import handle_errors
 from crackerjack.errors import FileError
 
+
 @handle_errors(
     error_types=[FileNotFoundError, PermissionError],
     transform_to=FileError,
-    fallback={}
+    fallback={},
 )
 def load_config(path: str) -> dict:
     with open(path) as f:
@@ -32,6 +33,7 @@ from crackerjack.decorators import log_errors
 
 logger = logging.getLogger(__name__)
 
+
 @log_errors(logger=logger, level="error", include_traceback=True)
 async def critical_operation() -> bool:
     return await perform_operation()
@@ -41,6 +43,7 @@ async def critical_operation() -> bool:
 
 ```python
 from crackerjack.decorators import graceful_degradation
+
 
 @graceful_degradation(fallback_value=[], warn=True)
 def get_optional_features() -> list[str]:
@@ -55,6 +58,7 @@ def get_optional_features() -> list[str]:
 ```python
 from crackerjack.decorators import retry
 
+
 @retry(max_attempts=3, exceptions=[ConnectionError], backoff=0.5)
 async def fetch_data() -> dict:
     return await api_client.get()
@@ -64,6 +68,7 @@ async def fetch_data() -> dict:
 
 ```python
 from crackerjack.decorators import with_timeout
+
 
 @with_timeout(seconds=30, error_message="Operation timed out")
 def heavy_computation() -> int:
@@ -77,12 +82,10 @@ def heavy_computation() -> int:
 ```python
 from crackerjack.decorators import validate_args
 
+
 @validate_args(
-    validators={
-        "path": lambda p: Path(p).exists(),
-        "count": lambda n: n > 0
-    },
-    type_check=True
+    validators={"path": lambda p: Path(p).exists(), "count": lambda n: n > 0},
+    type_check=True,
 )
 def process_files(path: str, count: int) -> bool:
     return True
@@ -95,6 +98,7 @@ def process_files(path: str, count: int) -> bool:
 ```python
 from crackerjack.decorators import cache_errors
 from pathlib import Path
+
 
 @cache_errors(error_type="lint", auto_analyze=True)
 async def run_linter(files: list[Path]) -> bool:
@@ -111,9 +115,11 @@ Keep decorator implementation complexity ≤15 per function using helper methods
 ```python
 def _create_async_wrapper(func, config):
     """Helper to create async wrapper - reduces complexity."""
+
     @wraps(func)
     async def wrapper(*args, **kwargs):
         return await func(*args, **kwargs)
+
     return wrapper
 ```
 
@@ -123,6 +129,7 @@ All decorators automatically detect function type using `is_async_function`:
 
 ```python
 from crackerjack.decorators.utils import is_async_function
+
 
 def decorator(func):
     if is_async_function(func):
@@ -168,6 +175,6 @@ async def fetch_and_process() -> dict:
 ## Related
 
 - [Exceptions](<../exceptions/README.md>) - Custom exception types
-- [Errors](<../errors/README.md>) - Error handling and error types
+- [Errors](../errors/README.md) - Error handling and error types
 - [MCP Cache](<../mcp/README.md>) - Error pattern caching for AI analysis
 - [Architecture: ACB Patterns](<../../CLAUDE.md#critical-architectural-pattern-protocol-based-di>) - Dependency injection patterns

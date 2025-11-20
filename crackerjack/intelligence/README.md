@@ -15,6 +15,7 @@ The intelligence package provides the core AI agent system for crackerjack, incl
 Central registry for all AI agents with capability tracking:
 
 **Features:**
+
 - **Agent Registration** - Register agents with metadata and capabilities
 - **Capability Discovery** - Find agents by capability requirements
 - **Source Tracking** - Track agent origin (built-in, plugin, custom)
@@ -22,39 +23,42 @@ Central registry for all AI agents with capability tracking:
 - **Dynamic Loading** - Load agents on-demand from various sources
 
 **Agent Metadata:**
+
 ```python
 @dataclass
 class AgentMetadata:
-    name: str                    # Agent identifier
-    description: str             # Human-readable description
-    version: str                 # Agent version
+    name: str  # Agent identifier
+    description: str  # Human-readable description
+    version: str  # Agent version
     capabilities: list[AgentCapability]  # What the agent can do
     confidence_threshold: float  # Minimum confidence to execute
-    source: AgentSource         # Where agent came from
+    source: AgentSource  # Where agent came from
 ```
 
 **Agent Capabilities:**
+
 ```python
 class AgentCapability(Enum):
-    REFACTORING = "refactoring"           # Code restructuring
-    PERFORMANCE = "performance"           # Performance optimization
-    SECURITY = "security"                 # Security fixes
-    DOCUMENTATION = "documentation"       # Documentation updates
-    TESTING = "testing"                   # Test creation/fixes
-    DRY = "dry"                          # Code deduplication
-    FORMATTING = "formatting"             # Code formatting
-    IMPORT_OPTIMIZATION = "import_opt"    # Import cleanup
-    SEMANTIC_ANALYSIS = "semantic"        # Semantic understanding
-    ARCHITECTURE = "architecture"         # Architecture recommendations
-    PROACTIVE_PREVENTION = "proactive"    # Proactive issue prevention
+    REFACTORING = "refactoring"  # Code restructuring
+    PERFORMANCE = "performance"  # Performance optimization
+    SECURITY = "security"  # Security fixes
+    DOCUMENTATION = "documentation"  # Documentation updates
+    TESTING = "testing"  # Test creation/fixes
+    DRY = "dry"  # Code deduplication
+    FORMATTING = "formatting"  # Code formatting
+    IMPORT_OPTIMIZATION = "import_opt"  # Import cleanup
+    SEMANTIC_ANALYSIS = "semantic"  # Semantic understanding
+    ARCHITECTURE = "architecture"  # Architecture recommendations
+    PROACTIVE_PREVENTION = "proactive"  # Proactive issue prevention
 ```
 
 **Agent Sources:**
+
 ```python
 class AgentSource(Enum):
-    BUILTIN = "builtin"      # Crackerjack built-in agents
-    PLUGIN = "plugin"        # Third-party plugins
-    CUSTOM = "custom"        # User-defined agents
+    BUILTIN = "builtin"  # Crackerjack built-in agents
+    PLUGIN = "plugin"  # Third-party plugins
+    CUSTOM = "custom"  # User-defined agents
 ```
 
 ### Agent Selector (`agent_selector.py`)
@@ -62,6 +66,7 @@ class AgentSource(Enum):
 Intelligent agent selection based on task requirements:
 
 **Features:**
+
 - **Task Analysis** - Analyzes error context to determine requirements
 - **Capability Matching** - Matches tasks to agent capabilities
 - **Confidence Scoring** - Scores each agent's suitability for task
@@ -69,25 +74,27 @@ Intelligent agent selection based on task requirements:
 - **Fallback Strategy** - Provides fallback agents if primary unavailable
 
 **Task Context:**
+
 ```python
 @dataclass
 class TaskContext:
-    error_type: str              # Type of error/issue
-    file_path: Path              # Affected file
-    error_message: str           # Full error message
-    stack_trace: str | None      # Stack trace if available
-    code_snippet: str | None     # Relevant code snippet
-    severity: str                # Error severity level
+    error_type: str  # Type of error/issue
+    file_path: Path  # Affected file
+    error_message: str  # Full error message
+    stack_trace: str | None  # Stack trace if available
+    code_snippet: str | None  # Relevant code snippet
+    severity: str  # Error severity level
 ```
 
 **Agent Scoring:**
+
 ```python
 @dataclass
 class AgentScore:
-    agent_name: str              # Agent identifier
-    score: float                 # Suitability score (0.0-1.0)
-    confidence: float            # Agent confidence threshold
-    reasoning: str               # Why this agent was selected
+    agent_name: str  # Agent identifier
+    score: float  # Suitability score (0.0-1.0)
+    confidence: float  # Agent confidence threshold
+    reasoning: str  # Why this agent was selected
     capabilities_matched: list[str]  # Matched capabilities
 ```
 
@@ -96,6 +103,7 @@ class AgentScore:
 Coordinates agent execution with strategy patterns:
 
 **Features:**
+
 - **Execution Strategies** - Sequential, parallel, or pipeline execution
 - **Result Aggregation** - Combines results from multiple agents
 - **Error Handling** - Graceful degradation on agent failures
@@ -103,35 +111,38 @@ Coordinates agent execution with strategy patterns:
 - **Rollback Support** - Can rollback failed agent changes
 
 **Execution Strategies:**
+
 ```python
 class ExecutionStrategy(Enum):
-    SEQUENTIAL = "sequential"    # One agent at a time
-    PARALLEL = "parallel"        # All agents concurrently
-    PIPELINE = "pipeline"        # Output of one feeds next
+    SEQUENTIAL = "sequential"  # One agent at a time
+    PARALLEL = "parallel"  # All agents concurrently
+    PIPELINE = "pipeline"  # Output of one feeds next
     CONDITIONAL = "conditional"  # Execute based on conditions
 ```
 
 **Execution Request:**
+
 ```python
 @dataclass
 class ExecutionRequest:
-    task_context: TaskContext         # What to fix
-    selected_agents: list[str]        # Which agents to use
-    strategy: ExecutionStrategy       # How to execute
-    max_concurrent: int = 3           # Max parallel agents
-    timeout: int = 300                # Execution timeout
+    task_context: TaskContext  # What to fix
+    selected_agents: list[str]  # Which agents to use
+    strategy: ExecutionStrategy  # How to execute
+    max_concurrent: int = 3  # Max parallel agents
+    timeout: int = 300  # Execution timeout
     rollback_on_failure: bool = True  # Rollback if failed
 ```
 
 **Execution Result:**
+
 ```python
 @dataclass
 class ExecutionResult:
-    success: bool                     # Overall success
-    agents_executed: list[str]        # Agents that ran
-    changes_made: list[dict]          # Code changes applied
-    errors: list[str]                 # Errors encountered
-    execution_time: float             # Total execution time
+    success: bool  # Overall success
+    agents_executed: list[str]  # Agents that ran
+    changes_made: list[dict]  # Code changes applied
+    errors: list[str]  # Errors encountered
+    execution_time: float  # Total execution time
     confidence_scores: dict[str, float]  # Agent confidence scores
 ```
 
@@ -140,6 +151,7 @@ class ExecutionResult:
 Learns from successful/failed fixes to improve over time:
 
 **Features:**
+
 - **Pattern Learning** - Learns successful fix patterns
 - **Failure Analysis** - Analyzes why fixes failed
 - **Confidence Adjustment** - Adjusts agent confidence based on history
@@ -147,31 +159,23 @@ Learns from successful/failed fixes to improve over time:
 - **Success Rate Tracking** - Tracks per-agent success rates
 
 **Learning System:**
+
 ```python
 class AdaptiveLearningSystem:
     def record_success(
-        self,
-        agent_name: str,
-        task_context: TaskContext,
-        fix_applied: str
+        self, agent_name: str, task_context: TaskContext, fix_applied: str
     ) -> None:
         """Record successful fix for learning."""
 
     def record_failure(
-        self,
-        agent_name: str,
-        task_context: TaskContext,
-        error: str
+        self, agent_name: str, task_context: TaskContext, error: str
     ) -> None:
         """Record failed fix for analysis."""
 
     def get_success_rate(self, agent_name: str) -> float:
         """Get agent success rate."""
 
-    def recommend_agent(
-        self,
-        task_context: TaskContext
-    ) -> tuple[str, float]:
+    def recommend_agent(self, task_context: TaskContext) -> tuple[str, float]:
         """Recommend best agent based on learning."""
 ```
 
@@ -180,6 +184,7 @@ class AdaptiveLearningSystem:
 Integration layer connecting intelligence system to crackerjack:
 
 **Features:**
+
 - **Workflow Integration** - Integrates agents with ACB workflows
 - **Error Routing** - Routes errors to appropriate agents
 - **Result Processing** - Processes agent results for display
@@ -192,21 +197,25 @@ Crackerjack's intelligence system coordinates 12 specialized agents (defined in 
 ### Code Quality Agents
 
 1. **RefactoringAgent** (0.9 confidence)
+
    - **Capabilities**: REFACTORING
    - **Focus**: Complexity ≤15, dead code removal, method extraction
    - **Triggers**: Cognitive complexity violations, long methods
 
-2. **DRYAgent** (0.8 confidence)
+1. **DRYAgent** (0.8 confidence)
+
    - **Capabilities**: DRY
    - **Focus**: Code duplication detection and elimination
    - **Triggers**: Duplicate code patterns, repeated logic
 
-3. **FormattingAgent** (0.8 confidence)
+1. **FormattingAgent** (0.8 confidence)
+
    - **Capabilities**: FORMATTING
    - **Focus**: Code style, formatting violations
    - **Triggers**: Ruff format issues, style violations
 
-4. **ImportOptimizationAgent**
+1. **ImportOptimizationAgent**
+
    - **Capabilities**: IMPORT_OPTIMIZATION
    - **Focus**: Import cleanup, unused imports, import organization
    - **Triggers**: Unused imports, import violations
@@ -214,11 +223,13 @@ Crackerjack's intelligence system coordinates 12 specialized agents (defined in 
 ### Performance & Security Agents
 
 5. **PerformanceAgent** (0.85 confidence)
+
    - **Capabilities**: PERFORMANCE
    - **Focus**: O(n²) detection, optimization opportunities
    - **Triggers**: Performance anti-patterns, slow code
 
-6. **SecurityAgent** (0.8 confidence)
+1. **SecurityAgent** (0.8 confidence)
+
    - **Capabilities**: SECURITY
    - **Focus**: Hardcoded paths, unsafe operations, injection vulnerabilities
    - **Triggers**: Bandit violations, security warnings
@@ -226,16 +237,19 @@ Crackerjack's intelligence system coordinates 12 specialized agents (defined in 
 ### Testing & Documentation Agents
 
 7. **TestCreationAgent** (0.8 confidence)
+
    - **Capabilities**: TESTING
    - **Focus**: Test failures, fixture creation, test coverage
    - **Triggers**: Test failures, missing tests, low coverage
 
-8. **TestSpecialistAgent** (0.8 confidence)
+1. **TestSpecialistAgent** (0.8 confidence)
+
    - **Capabilities**: TESTING
    - **Focus**: Advanced testing scenarios, complex fixtures, mocking
    - **Triggers**: Complex test failures, async test issues
 
-9. **DocumentationAgent** (0.8 confidence)
+1. **DocumentationAgent** (0.8 confidence)
+
    - **Capabilities**: DOCUMENTATION
    - **Focus**: Changelog, README consistency, API documentation
    - **Triggers**: Documentation inconsistencies, missing docs
@@ -243,16 +257,19 @@ Crackerjack's intelligence system coordinates 12 specialized agents (defined in 
 ### Advanced Intelligence Agents
 
 10. **SemanticAgent** (0.85 confidence)
+
     - **Capabilities**: SEMANTIC_ANALYSIS
     - **Focus**: Semantic analysis, code comprehension, intelligent refactoring
     - **Triggers**: Semantic violations, architectural issues
 
-11. **ArchitectAgent** (0.85 confidence)
+01. **ArchitectAgent** (0.85 confidence)
+
     - **Capabilities**: ARCHITECTURE
     - **Focus**: Architecture patterns, design recommendations, system optimization
     - **Triggers**: Architectural violations, design issues
 
-12. **EnhancedProactiveAgent** (0.9 confidence)
+01. **EnhancedProactiveAgent** (0.9 confidence)
+
     - **Capabilities**: PROACTIVE_PREVENTION
     - **Focus**: Proactive prevention, predictive monitoring, preemptive optimization
     - **Triggers**: Quality trends, predicted issues
@@ -267,9 +284,7 @@ from crackerjack.intelligence import AgentRegistry, AgentCapability, get_agent_r
 registry = get_agent_registry()
 
 # Find agents by capability
-refactoring_agents = registry.get_agents_by_capability(
-    AgentCapability.REFACTORING
-)
+refactoring_agents = registry.get_agents_by_capability(AgentCapability.REFACTORING)
 
 for agent in refactoring_agents:
     print(f"Agent: {agent.name}")
@@ -293,7 +308,7 @@ task = TaskContext(
     error_type="complexity",
     file_path=Path("src/complex_module.py"),
     error_message="Complexity of 18 exceeds maximum of 15",
-    severity="high"
+    severity="high",
 )
 
 # Select best agents for task
@@ -312,7 +327,7 @@ from crackerjack.intelligence import (
     AgentOrchestrator,
     ExecutionRequest,
     ExecutionStrategy,
-    get_agent_orchestrator
+    get_agent_orchestrator,
 )
 
 orchestrator = get_agent_orchestrator()
@@ -323,7 +338,7 @@ request = ExecutionRequest(
     selected_agents=["refactoring", "semantic"],
     strategy=ExecutionStrategy.SEQUENTIAL,
     timeout=300,
-    rollback_on_failure=True
+    rollback_on_failure=True,
 )
 
 result = await orchestrator.execute(request)
@@ -347,7 +362,7 @@ learning = get_learning_system()
 learning.record_success(
     agent_name="refactoring",
     task_context=task,
-    fix_applied="Extracted method to reduce complexity"
+    fix_applied="Extracted method to reduce complexity",
 )
 
 # Get success rate
@@ -369,9 +384,10 @@ from crackerjack.intelligence import (
     get_learning_system,
     ExecutionRequest,
     ExecutionStrategy,
-    TaskContext
+    TaskContext,
 )
 from pathlib import Path
+
 
 async def ai_fix_error(error_message: str, file_path: Path) -> bool:
     # Setup
@@ -385,7 +401,7 @@ async def ai_fix_error(error_message: str, file_path: Path) -> bool:
         error_type="auto_detected",
         file_path=file_path,
         error_message=error_message,
-        severity="high"
+        severity="high",
     )
 
     # Select agents
@@ -397,7 +413,7 @@ async def ai_fix_error(error_message: str, file_path: Path) -> bool:
         task_context=task,
         selected_agents=agent_names,
         strategy=ExecutionStrategy.SEQUENTIAL,
-        timeout=300
+        timeout=300,
     )
 
     result = await orchestrator.execute(request)
@@ -408,14 +424,12 @@ async def ai_fix_error(error_message: str, file_path: Path) -> bool:
             learning.record_success(
                 agent_name=agent_name,
                 task_context=task,
-                fix_applied=str(result.changes_made)
+                fix_applied=str(result.changes_made),
             )
     else:
         for agent_name in result.agents_executed:
             learning.record_failure(
-                agent_name=agent_name,
-                task_context=task,
-                error=str(result.errors)
+                agent_name=agent_name, task_context=task, error=str(result.errors)
             )
 
     return result.success
@@ -472,6 +486,7 @@ from crackerjack.intelligence import get_agent_orchestrator
 engine = CrackerjackWorkflowEngine()
 orchestrator = get_agent_orchestrator()
 
+
 # Register AI fixing as workflow action
 @engine.register_action("ai_fix")
 async def ai_fix_action(context):
@@ -493,15 +508,15 @@ async def ai_fix_action(context):
 ## Best Practices
 
 1. **Set Appropriate Confidence Thresholds** - Don't set too low or agents may make incorrect changes
-2. **Use Learning System** - Enable adaptive learning to improve agent selection over time
-3. **Start with High-Confidence Agents** - Begin with RefactoringAgent (0.9) and EnhancedProactiveAgent (0.9)
-4. **Monitor Success Rates** - Track agent success rates and adjust confidence thresholds
-5. **Sequential for Safety** - Use sequential execution strategy for safety-critical fixes
-6. **Enable Rollback** - Always enable rollback for automatic agent execution
-7. **Batch Similar Issues** - Group similar errors for more efficient agent execution
-8. **Use Semantic Agent** - Leverage SemanticAgent for complex refactoring scenarios
-9. **Debug Mode** - Use `--ai-debug` flag when developing or testing agents
-10. **Review Changes** - Always review agent-generated changes before committing
+1. **Use Learning System** - Enable adaptive learning to improve agent selection over time
+1. **Start with High-Confidence Agents** - Begin with RefactoringAgent (0.9) and EnhancedProactiveAgent (0.9)
+1. **Monitor Success Rates** - Track agent success rates and adjust confidence thresholds
+1. **Sequential for Safety** - Use sequential execution strategy for safety-critical fixes
+1. **Enable Rollback** - Always enable rollback for automatic agent execution
+1. **Batch Similar Issues** - Group similar errors for more efficient agent execution
+1. **Use Semantic Agent** - Leverage SemanticAgent for complex refactoring scenarios
+1. **Debug Mode** - Use `--ai-debug` flag when developing or testing agents
+1. **Review Changes** - Always review agent-generated changes before committing
 
 ## Performance Considerations
 

@@ -13,6 +13,7 @@ The orchestration cache provides intelligent result caching for pre-commit hooks
 ### tool_proxy_cache.py - Content-Based Caching
 
 **ToolProxyCacheAdapter** - Main cache implementation:
+
 - Content-based cache keys using SHA256 file hashing
 - Configurable TTL (time-to-live) per result
 - Automatic invalidation on file content changes
@@ -21,6 +22,7 @@ The orchestration cache provides intelligent result caching for pre-commit hooks
 - In-memory storage with optional disk persistence
 
 **Cache Key Format:**
+
 ```
 {hook_name}:{config_hash}:{content_hash}
 
@@ -29,6 +31,7 @@ ruff-format:a3f21b8c:7d9e4a2f
 ```
 
 **ToolProxyCacheSettings** - Configuration model:
+
 - `default_ttl` - Default time-to-live in seconds (default: 3600)
 - `max_cache_size_mb` - Maximum cache size in MB (default: 100)
 - `enable_compression` - Enable result compression (default: True)
@@ -36,6 +39,7 @@ ruff-format:a3f21b8c:7d9e4a2f
 ### memory_cache.py - In-Memory Cache
 
 **MemoryCacheAdapter** - Simple LRU cache:
+
 - Fast in-memory storage
 - Least Recently Used (LRU) eviction
 - No persistence (ephemeral)
@@ -108,7 +112,7 @@ print(f"Expired entries: {stats['expired_entries']}")
 print(f"Cache directory: {stats['cache_dir']}")
 
 # Calculate hit rate
-hit_rate = stats['active_entries'] / stats['total_entries']
+hit_rate = stats["active_entries"] / stats["total_entries"]
 print(f"Cache hit rate: {hit_rate:.1%}")
 ```
 
@@ -129,8 +133,8 @@ for key in cache._cache.keys():
 The cache key is computed from three components:
 
 1. **Hook Name**: Identifies the tool (ruff-format, pyright, etc.)
-2. **Config Hash**: SHA256 of hook configuration (command, timeout, stage, security level)
-3. **Content Hash**: SHA256 of all input file contents
+1. **Config Hash**: SHA256 of hook configuration (command, timeout, stage, security level)
+1. **Content Hash**: SHA256 of all input file contents
 
 **Example computation:**
 
@@ -143,7 +147,9 @@ config_data = {
     "stage": "fast",
     "security_level": "low",
 }
-config_hash = hashlib.sha256(json.dumps(config_data, sort_keys=True).encode()).hexdigest()[:16]
+config_hash = hashlib.sha256(
+    json.dumps(config_data, sort_keys=True).encode()
+).hexdigest()[:16]
 
 # File contents
 content_hasher = hashlib.sha256()
@@ -161,9 +167,9 @@ cache_key = f"{hook.name}:{config_hash}:{content_hash}"
 Cache entries are automatically invalidated when:
 
 1. **TTL Expiration**: Entry exceeds configured time-to-live
-2. **Content Changes**: File content hash changes
-3. **Configuration Changes**: Hook configuration modified
-4. **Manual Invalidation**: Explicit `clear()` call
+1. **Content Changes**: File content hash changes
+1. **Configuration Changes**: Hook configuration modified
+1. **Manual Invalidation**: Explicit `clear()` call
 
 **Automatic Invalidation:**
 
@@ -223,16 +229,19 @@ cache = ToolProxyCacheAdapter(
 ## Performance Impact
 
 **Before Caching:**
+
 - Every hook executes on every run
 - ~30-60s for comprehensive hooks
 - Redundant work on unchanged files
 
 **With 70% Cache Hit Rate:**
+
 - Only 30% of hooks execute
 - ~10-20s for comprehensive hooks
 - 2-3x faster workflow execution
 
 **Example Workflow:**
+
 ```
 Without cache: 45s total (15 hooks × 3s each)
 With cache:    15s total (5 misses × 3s each)
@@ -242,14 +251,14 @@ Speedup:       3x faster
 ## Best Practices
 
 1. **Use Content-Based Keys**: Always compute keys from file content, not timestamps
-2. **Configure TTL Appropriately**:
+1. **Configure TTL Appropriately**:
    - Fast hooks: 1 hour (3600s)
    - Comprehensive hooks: 2-4 hours (7200-14400s)
    - Security checks: 24 hours (86400s)
-3. **Monitor Hit Rates**: Aim for 60-80% hit rates in typical development
-4. **Clear Stale Entries**: Periodically clear expired entries
-5. **Size Management**: Monitor cache size, adjust `max_cache_size_mb` if needed
-6. **Compression**: Enable for large results (security scans, type checking)
+1. **Monitor Hit Rates**: Aim for 60-80% hit rates in typical development
+1. **Clear Stale Entries**: Periodically clear expired entries
+1. **Size Management**: Monitor cache size, adjust `max_cache_size_mb` if needed
+1. **Compression**: Enable for large results (security scans, type checking)
 
 ## Architecture Integration
 
@@ -267,6 +276,7 @@ from crackerjack.orchestration.cache import ToolProxyCacheAdapter
 
 # Register cache adapter
 depends.set(ToolProxyCacheAdapter)
+
 
 # Use via dependency injection
 @depends.inject
