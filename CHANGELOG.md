@@ -1,5 +1,22 @@
 ______________________________________________________________________
 
+## [0.44.29] - 2025-11-19
+
+### Changed
+
+- Crackerjack (quality: 67/100) - 2025-11-17 02:09:39
+- Crackerjack (quality: 67/100) - 2025-11-18 10:45:28
+- Crackerjack (quality: 67/100) - 2025-11-18 10:47:06
+- Crackerjack (quality: 67/100) - 2025-11-19 13:45:14
+- Update config, core, deps, docs, tests
+- Update config, core, docs, tests
+
+### Documentation
+
+- Add comprehensive README.md audit report
+- Complete comprehensive README audit fixes (batch 2 + 3)
+- Expand critical README files (batch 1)
+
 ## [0.44.28] - 2025-11-16
 
 ### Changed
