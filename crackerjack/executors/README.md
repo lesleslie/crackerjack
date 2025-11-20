@@ -31,6 +31,7 @@ The executors package provides specialized execution engines for running quality
 Base executor providing fundamental hook execution capabilities:
 
 **Features:**
+
 - **Sequential Execution** - Run hooks one after another
 - **Parallel Execution** - Run compatible hooks concurrently
 - **Strategy Execution** - Execute predefined hook strategies (fast/comprehensive)
@@ -40,6 +41,7 @@ Base executor providing fundamental hook execution capabilities:
 - **Result Aggregation** - Collect and summarize execution results
 
 **Usage:**
+
 ```python
 from crackerjack.executors import HookExecutor
 from pathlib import Path
@@ -55,9 +57,7 @@ executor = HookExecutor(
 
 # Execute strategy
 result = executor.execute_strategy(
-    strategy_name="fast_hooks",
-    parallel=True,
-    max_workers=4
+    strategy_name="fast_hooks", parallel=True, max_workers=4
 )
 ```
 
@@ -66,6 +66,7 @@ result = executor.execute_strategy(
 Asynchronous executor for concurrent workflow integration:
 
 **Features:**
+
 - **True Async Execution** - Native asyncio support
 - **Concurrent Hook Groups** - Run independent hook groups in parallel
 - **Event Loop Integration** - Works with existing event loops
@@ -73,14 +74,13 @@ Asynchronous executor for concurrent workflow integration:
 - **Backpressure Handling** - Prevents system overload
 
 **Usage:**
+
 ```python
 from crackerjack.executors import AsyncHookExecutor
 
+
 async def run_hooks():
-    executor = AsyncHookExecutor(
-        console=console,
-        pkg_path=pkg_path
-    )
+    executor = AsyncHookExecutor(console=console, pkg_path=pkg_path)
 
     # Run hooks asynchronously
     result = await executor.execute_strategy_async("fast_hooks")
@@ -93,6 +93,7 @@ async def run_hooks():
 Smart caching executor with intelligent cache invalidation:
 
 **Features:**
+
 - **Result Caching** - Cache hook execution results
 - **File-Based Invalidation** - Invalidate cache when files change
 - **Smart Cache Manager** - Intelligent cache key generation
@@ -101,19 +102,18 @@ Smart caching executor with intelligent cache invalidation:
 - **Memory Efficient** - LRU eviction for large projects
 
 **Cache Strategy:**
+
 ```python
 from crackerjack.executors import CachedHookExecutor, SmartCacheManager
 
 cache_manager = SmartCacheManager(
     cache_dir=Path(".crackerjack/cache"),
     ttl_seconds=3600,  # 1 hour
-    max_cache_size_mb=100
+    max_cache_size_mb=100,
 )
 
 executor = CachedHookExecutor(
-    console=console,
-    pkg_path=pkg_path,
-    cache_manager=cache_manager
+    console=console, pkg_path=pkg_path, cache_manager=cache_manager
 )
 
 # First execution - cache miss
@@ -130,6 +130,7 @@ print(f"Performance gain: {result2.performance_gain:.1%}")
 Real-time progress tracking with rich console output:
 
 **Features:**
+
 - **Live Progress Display** - Real-time progress bars
 - **Task Tracking** - Individual hook progress
 - **Time Estimates** - Remaining time calculations
@@ -137,15 +138,14 @@ Real-time progress tracking with rich console output:
 - **Detailed Reporting** - Per-hook execution details
 
 **Usage:**
+
 ```python
 from crackerjack.executors import ProgressHookExecutor
 from rich.progress import Progress
 
 with Progress() as progress:
     executor = ProgressHookExecutor(
-        console=console,
-        pkg_path=pkg_path,
-        progress=progress
+        console=console, pkg_path=pkg_path, progress=progress
     )
 
     # Progress automatically tracked and displayed
@@ -157,6 +157,7 @@ with Progress() as progress:
 Execute single hooks with detailed error reporting:
 
 **Features:**
+
 - **Single Hook Focus** - Detailed execution of one hook
 - **Enhanced Error Reporting** - Full error context and stack traces
 - **Debugging Support** - Verbose output for troubleshooting
@@ -164,19 +165,20 @@ Execute single hooks with detailed error reporting:
 - **Output Streaming** - Real-time stdout/stderr streaming
 
 **Usage:**
+
 ```python
 from crackerjack.executors import IndividualHookExecutor
 
 executor = IndividualHookExecutor(
     console=console,
     pkg_path=pkg_path,
-    debug=True  # Enable debug output
+    debug=True,  # Enable debug output
 )
 
 # Execute single hook
 result = executor.execute_hook(
     hook_name="ruff-check",
-    files=[Path("src/main.py")]  # Optional file targeting
+    files=[Path("src/main.py")],  # Optional file targeting
 )
 
 if not result.success:
@@ -189,6 +191,7 @@ if not result.success:
 LSP-optimized executor for ultra-fast type checking:
 
 **Features:**
+
 - **LSP Integration** - Communicates with running LSP servers
 - **Incremental Analysis** - Only check changed files
 - **Fallback Support** - Falls back to direct execution if LSP unavailable
@@ -196,20 +199,19 @@ LSP-optimized executor for ultra-fast type checking:
 - **Shared State** - Leverages LSP server's incremental compilation
 
 **Performance:**
+
 ```
 Traditional execution:  ~30-60s
 LSP-aware execution:    ~2-5s (10-20x faster)
 ```
 
 **Usage:**
+
 ```python
 from crackerjack.executors import LSPAwareHookExecutor
 
 executor = LSPAwareHookExecutor(
-    console=console,
-    pkg_path=pkg_path,
-    lsp_enabled=True,
-    fallback_enabled=True
+    console=console, pkg_path=pkg_path, lsp_enabled=True, fallback_enabled=True
 )
 
 # Uses LSP server if available, falls back otherwise
@@ -221,6 +223,7 @@ result = executor.execute_type_checking()
 Prevents concurrent execution conflicts with file-based locking:
 
 **Features:**
+
 - **File-Based Locks** - Prevents multiple simultaneous executions
 - **Timeout Support** - Configurable lock acquisition timeout
 - **Deadlock Prevention** - Automatic lock release on timeout
@@ -228,12 +231,13 @@ Prevents concurrent execution conflicts with file-based locking:
 - **Context Manager Support** - Automatic lock cleanup
 
 **Usage:**
+
 ```python
 from crackerjack.executors import HookLockManager
 
 lock_manager = HookLockManager(
     lock_dir=Path(".crackerjack/locks"),
-    timeout=60  # seconds
+    timeout=60,  # seconds
 )
 
 with lock_manager.acquire_lock("fast_hooks"):
@@ -246,6 +250,7 @@ with lock_manager.acquire_lock("fast_hooks"):
 Proxy layer for tool execution with unified error handling:
 
 **Features:**
+
 - **Unified Interface** - Consistent tool execution API
 - **Error Normalization** - Standardized error reporting
 - **Output Parsing** - Structured output from various tools
@@ -253,21 +258,14 @@ Proxy layer for tool execution with unified error handling:
 - **Timeout Enforcement** - Prevents hung processes
 
 **Usage:**
+
 ```python
 from crackerjack.executors import ToolProxy
 
-proxy = ToolProxy(
-    console=console,
-    timeout=120,
-    retries=1
-)
+proxy = ToolProxy(console=console, timeout=120, retries=1)
 
 # Execute tool through proxy
-result = proxy.execute_tool(
-    tool_name="ruff",
-    args=["check", "src"],
-    cwd=pkg_path
-)
+result = proxy.execute_tool(tool_name="ruff", args=["check", "src"], cwd=pkg_path)
 ```
 
 ## Execution Patterns
@@ -282,7 +280,7 @@ executor = HookExecutor(console=console, pkg_path=pkg_path)
 # Execute hooks one by one
 result = executor.execute_strategy(
     strategy_name="fast_hooks",
-    parallel=False  # Sequential execution
+    parallel=False,  # Sequential execution
 )
 
 print(f"Total duration: {result.total_duration:.2f}s")
@@ -295,7 +293,7 @@ print(f"Total duration: {result.total_duration:.2f}s")
 result = executor.execute_strategy(
     strategy_name="comprehensive_hooks",
     parallel=True,
-    max_workers=4  # Number of parallel workers
+    max_workers=4,  # Number of parallel workers
 )
 
 print(f"Concurrent execution: {result.concurrent_execution}")
@@ -307,10 +305,7 @@ print(f"Duration: {result.total_duration:.2f}s")
 ```python
 from crackerjack.executors import CachedHookExecutor
 
-cached_executor = CachedHookExecutor(
-    console=console,
-    pkg_path=pkg_path
-)
+cached_executor = CachedHookExecutor(console=console, pkg_path=pkg_path)
 
 # First run - populates cache
 result1 = cached_executor.execute_strategy("fast_hooks")
@@ -327,13 +322,14 @@ print(f"Performance gain: {result2.performance_gain:.1%}")
 ```python
 from crackerjack.executors import AsyncHookExecutor
 
+
 async def run_quality_checks():
     executor = AsyncHookExecutor(console=console, pkg_path=pkg_path)
 
     # Run multiple hook strategies concurrently
     fast_result, comp_result = await asyncio.gather(
         executor.execute_strategy_async("fast_hooks"),
-        executor.execute_strategy_async("comprehensive_hooks")
+        executor.execute_strategy_async("comprehensive_hooks"),
     )
 
     return fast_result, comp_result
@@ -347,9 +343,7 @@ from rich.progress import Progress
 
 with Progress() as progress:
     executor = ProgressHookExecutor(
-        console=console,
-        pkg_path=pkg_path,
-        progress=progress
+        console=console, pkg_path=pkg_path, progress=progress
     )
 
     # Progress bars automatically displayed
@@ -363,14 +357,14 @@ All executors return `HookExecutionResult` with comprehensive execution data:
 ```python
 @dataclass
 class HookExecutionResult:
-    strategy_name: str          # Strategy executed
-    results: list[HookResult]   # Individual hook results
-    total_duration: float       # Total execution time
-    success: bool               # Overall success status
+    strategy_name: str  # Strategy executed
+    results: list[HookResult]  # Individual hook results
+    total_duration: float  # Total execution time
+    success: bool  # Overall success status
     concurrent_execution: bool  # Was execution parallel?
-    cache_hits: int             # Number of cache hits
-    cache_misses: int           # Number of cache misses
-    performance_gain: float     # Performance improvement %
+    cache_hits: int  # Number of cache hits
+    cache_misses: int  # Number of cache misses
+    performance_gain: float  # Performance improvement %
 
     @property
     def failed_count(self) -> int:
@@ -431,11 +425,7 @@ lock_dir: ".crackerjack/locks"
 from crackerjack.executors import HookExecutor
 from pathlib import Path
 
-executor = HookExecutor(
-    console=console,
-    pkg_path=Path.cwd(),
-    verbose=True
-)
+executor = HookExecutor(console=console, pkg_path=Path.cwd(), verbose=True)
 
 # Execute fast hooks
 result = executor.execute_strategy("fast_hooks")
@@ -455,15 +445,12 @@ else:
 ```python
 from crackerjack.executors import CachedHookExecutor
 
-executor = CachedHookExecutor(
-    console=console,
-    pkg_path=pkg_path
-)
+executor = CachedHookExecutor(console=console, pkg_path=pkg_path)
 
 # Multiple executions to demonstrate caching
 for i in range(3):
     result = executor.execute_strategy("fast_hooks")
-    print(f"Run {i+1}:")
+    print(f"Run {i + 1}:")
     print(f"  Duration: {result.total_duration:.2f}s")
     print(f"  Cache hits: {result.cache_hits}")
     print(f"  Cache hit rate: {result.cache_hit_rate:.1%}")
@@ -475,11 +462,7 @@ for i in range(3):
 ```python
 from crackerjack.executors import LSPAwareHookExecutor
 
-executor = LSPAwareHookExecutor(
-    console=console,
-    pkg_path=pkg_path,
-    lsp_enabled=True
-)
+executor = LSPAwareHookExecutor(console=console, pkg_path=pkg_path, lsp_enabled=True)
 
 # Fast type checking via LSP
 result = executor.execute_type_checking()
@@ -500,9 +483,7 @@ console = Console()
 
 with Progress() as progress:
     executor = ProgressHookExecutor(
-        console=console,
-        pkg_path=pkg_path,
-        progress=progress
+        console=console, pkg_path=pkg_path, progress=progress
     )
 
     # Rich progress bars displayed automatically
@@ -521,7 +502,7 @@ custom_hook = HookDefinition(
     command=["python", "-m", "my_tool"],
     timeout=120,
     stage=HookStage.COMPREHENSIVE,
-    retry_on_failure=False
+    retry_on_failure=False,
 )
 
 executor = HookExecutor(console=console, pkg_path=pkg_path)
@@ -541,6 +522,7 @@ from crackerjack.executors import CachedHookExecutor
 engine = CrackerjackWorkflowEngine()
 executor = CachedHookExecutor(console=console, pkg_path=pkg_path)
 
+
 # Register executor as workflow action
 @engine.register_action("run_fast_hooks")
 async def run_fast_hooks(context):
@@ -551,15 +533,15 @@ async def run_fast_hooks(context):
 ## Best Practices
 
 1. **Use Cached Executor** - Enable caching for repeated executions (development workflow)
-2. **Enable Parallelization** - Run independent hooks in parallel when possible
-3. **Configure Timeouts** - Set appropriate timeouts for long-running hooks
-4. **Monitor Cache Performance** - Track cache hit rates and adjust TTL
-5. **Use LSP Executor** - Enable LSP for 10-20x faster type checking
-6. **Handle Lock Timeouts** - Configure lock timeouts to prevent deadlocks
-7. **Track Progress** - Use ProgressHookExecutor for long-running operations
-8. **Retry Formatting Only** - Only retry formatting hooks, not analysis hooks
-9. **Async for Workflows** - Use AsyncHookExecutor for workflow integration
-10. **Monitor Performance** - Track execution metrics and optimize slow hooks
+1. **Enable Parallelization** - Run independent hooks in parallel when possible
+1. **Configure Timeouts** - Set appropriate timeouts for long-running hooks
+1. **Monitor Cache Performance** - Track cache hit rates and adjust TTL
+1. **Use LSP Executor** - Enable LSP for 10-20x faster type checking
+1. **Handle Lock Timeouts** - Configure lock timeouts to prevent deadlocks
+1. **Track Progress** - Use ProgressHookExecutor for long-running operations
+1. **Retry Formatting Only** - Only retry formatting hooks, not analysis hooks
+1. **Async for Workflows** - Use AsyncHookExecutor for workflow integration
+1. **Monitor Performance** - Track execution metrics and optimize slow hooks
 
 ## Performance Considerations
 

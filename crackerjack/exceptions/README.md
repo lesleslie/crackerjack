@@ -20,6 +20,7 @@ BaseException
 Enhanced error with rich formatting for failed tool executions. Provides detailed context including exit codes, stdout/stderr, duration, and actionable suggestions.
 
 **Features:**
+
 - Rich console formatting with syntax highlighting
 - Automatic output truncation for readability
 - Actionable error messages with suggestions
@@ -48,10 +49,7 @@ from pathlib import Path
 
 try:
     result = subprocess.run(
-        ["ruff", "check", "."],
-        capture_output=True,
-        text=True,
-        cwd=project_dir
+        ["ruff", "check", "."], capture_output=True, text=True, cwd=project_dir
     )
     if result.returncode != 0:
         raise ToolExecutionError(
@@ -61,7 +59,7 @@ try:
             stderr=result.stderr,
             command=["ruff", "check", "."],
             cwd=project_dir,
-            duration=2.5
+            duration=2.5,
         )
 except ToolExecutionError as e:
     # Rich formatted output
@@ -83,7 +81,7 @@ error = ToolExecutionError(
     tool="pytest",
     exit_code=1,
     stderr="test_example.py::test_feature FAILED",
-    duration=3.2
+    duration=3.2,
 )
 
 # Display with rich formatting
@@ -92,6 +90,7 @@ console.print(panel)
 ```
 
 **Output:**
+
 ```
 ╭─ ❌ Tool Execution Failed: pytest ─────────────╮
 │ Tool: pytest                                   │
@@ -109,9 +108,7 @@ The `get_actionable_message()` method provides smart error pattern detection:
 
 ```python
 error = ToolExecutionError(
-    tool="ruff",
-    exit_code=1,
-    stderr="ModuleNotFoundError: No module named 'requests'"
+    tool="ruff", exit_code=1, stderr="ModuleNotFoundError: No module named 'requests'"
 )
 
 print(error.get_actionable_message())
@@ -121,6 +118,7 @@ print(error.get_actionable_message())
 ```
 
 **Common Patterns Detected:**
+
 - Permission denied → Check file permissions
 - Command not found → Ensure tool is installed
 - Timeout errors → Increase timeout setting
@@ -137,6 +135,7 @@ Simple exception for configuration validation and integrity issues.
 
 ```python
 from crackerjack.exceptions import ConfigIntegrityError
+
 
 def validate_config(config: dict) -> None:
     if "required_field" not in config:
@@ -159,17 +158,14 @@ from crackerjack.exceptions import ToolExecutionError
 import subprocess
 import time
 
+
 def run_tool(tool: str, args: list[str], cwd: Path) -> bool:
     """Run tool with comprehensive error reporting."""
     start = time.time()
 
     try:
         result = subprocess.run(
-            [tool] + args,
-            capture_output=True,
-            text=True,
-            cwd=cwd,
-            timeout=300
+            [tool] + args, capture_output=True, text=True, cwd=cwd, timeout=300
         )
 
         if result.returncode != 0:
@@ -180,7 +176,7 @@ def run_tool(tool: str, args: list[str], cwd: Path) -> bool:
                 stderr=result.stderr,
                 command=[tool] + args,
                 cwd=cwd,
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
         return True
@@ -192,7 +188,7 @@ def run_tool(tool: str, args: list[str], cwd: Path) -> bool:
             stderr=f"Tool execution timed out after {e.timeout}s",
             command=[tool] + args,
             cwd=cwd,
-            duration=e.timeout
+            duration=e.timeout,
         ) from e
 ```
 
@@ -203,11 +199,9 @@ from crackerjack.exceptions import ToolExecutionError
 from acb.console import Console
 from acb.depends import depends
 
+
 @depends.inject
-def execute_with_nice_errors(
-    func: callable,
-    console: Console = depends()
-) -> bool:
+def execute_with_nice_errors(func: callable, console: Console = depends()) -> bool:
     """Execute function with rich error formatting."""
     try:
         return func()
@@ -224,12 +218,11 @@ from crackerjack.exceptions import ConfigIntegrityError
 from pathlib import Path
 import yaml
 
+
 def load_and_validate_config(path: Path) -> dict:
     """Load config with integrity validation."""
     if not path.exists():
-        raise ConfigIntegrityError(
-            f"Configuration file not found: {path}"
-        )
+        raise ConfigIntegrityError(f"Configuration file not found: {path}")
 
     with open(path) as f:
         config = yaml.safe_load(f)
@@ -255,10 +248,7 @@ Provides consistent, rich error reporting across the codebase:
 # ✅ Good - Rich error context
 if exit_code != 0:
     raise ToolExecutionError(
-        tool="mypy",
-        exit_code=exit_code,
-        stderr=stderr,
-        duration=duration
+        tool="mypy", exit_code=exit_code, stderr=stderr, duration=duration
     )
 
 # ❌ Bad - Generic exception
@@ -279,14 +269,11 @@ raise ToolExecutionError(
     stderr=result.stderr,
     command=full_command,
     cwd=project_dir,
-    duration=elapsed
+    duration=elapsed,
 )
 
 # ⚠️ Minimal - Missing helpful context
-raise ToolExecutionError(
-    tool="pytest",
-    exit_code=1
-)
+raise ToolExecutionError(tool="pytest", exit_code=1)
 ```
 
 ### Use format_rich() for User-Facing Errors
@@ -309,6 +296,6 @@ except ToolExecutionError as e:
 ## Related
 
 - [Decorators](<../decorators/README.md>) - Error handling decorators
-- [Errors](<../errors/README.md>) - Core error types and CrackerjackError base
+- [Errors](../errors/README.md) - Core error types and CrackerjackError base
 - [MCP](<../mcp/README.md>) - Error caching and pattern analysis
 - [Console Integration](https://github.com/Textualize/rich) - Rich console formatting

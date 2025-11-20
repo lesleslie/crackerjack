@@ -22,7 +22,8 @@ class ExecutionStrategyProtocol(Protocol):
         hooks: list[HookDefinition],
         max_parallel: int = 3,
         timeout: int = 300,
-        executor_callable: Callable[[HookDefinition], Awaitable[HookResult]] | None = None,
+        executor_callable: Callable[[HookDefinition], Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Execute hooks according to strategy."""
         ...
@@ -42,6 +43,7 @@ class ExecutionStrategyProtocol(Protocol):
 **File:** `sequential_strategy.py`
 
 **Features:**
+
 - One hook executes at a time (respects dependencies)
 - Early exit on critical security failures
 - Per-hook timeout handling with `asyncio.wait_for()`
@@ -49,6 +51,7 @@ class ExecutionStrategyProtocol(Protocol):
 - Predictable execution order
 
 **Use Cases:**
+
 - Hooks have dependencies (e.g., gitleaks → bandit)
 - Resource constraints require sequential execution
 - Debugging requires isolated execution
@@ -98,6 +101,7 @@ SequentialExecutionStrategy(
 **File:** `parallel_strategy.py`
 
 **Features:**
+
 - Concurrent execution using `asyncio.gather()`
 - Semaphore-based resource limiting (`asyncio.Semaphore`)
 - Per-hook timeout handling
@@ -105,6 +109,7 @@ SequentialExecutionStrategy(
 - Maximum throughput for independent hooks
 
 **Use Cases:**
+
 - Hooks are independent (no dependencies)
 - Want to maximize throughput
 - System has sufficient resources (CPU, memory)
@@ -158,6 +163,7 @@ ParallelExecutionStrategy(
 **File:** `adaptive_strategy.py`
 
 **Features:**
+
 - Topological sort for dependency-aware wave computation
 - Parallel execution within each wave (independent hooks)
 - Sequential execution between waves (respects dependencies)
@@ -165,13 +171,15 @@ ParallelExecutionStrategy(
 - Optimal parallelism for mixed workloads
 
 **Algorithm:**
+
 1. Compute execution waves using topological sort
-2. Wave 1: All hooks with zero dependencies (execute in parallel)
-3. Wave 2: Hooks whose dependencies completed (execute in parallel)
-4. Wave N: Repeat until all hooks executed
-5. Stop early if critical hook fails
+1. Wave 1: All hooks with zero dependencies (execute in parallel)
+1. Wave 2: Hooks whose dependencies completed (execute in parallel)
+1. Wave N: Repeat until all hooks executed
+1. Stop early if critical hook fails
 
 **Use Cases:**
+
 - Mixed workload with some dependencies
 - Want maximum parallelism while respecting dependencies
 - Critical failures should stop dependent hooks
@@ -185,7 +193,7 @@ from crackerjack.orchestration.strategies import AdaptiveExecutionStrategy
 # Define dependency graph: dependent → [prerequisites]
 dependency_graph = {
     "bandit": ["gitleaks"],  # bandit depends on gitleaks
-    "refurb": ["zuban"],     # refurb depends on zuban
+    "refurb": ["zuban"],  # refurb depends on zuban
 }
 
 strategy = AdaptiveExecutionStrategy(
@@ -262,6 +270,7 @@ import asyncio
 from crackerjack.config.hooks import HookDefinition
 from crackerjack.models.task import HookResult
 
+
 class CustomExecutionStrategy:
     """Custom execution strategy."""
 
@@ -270,7 +279,8 @@ class CustomExecutionStrategy:
         hooks: list[HookDefinition],
         max_parallel: int = 3,
         timeout: int = 300,
-        executor_callable: Callable[[HookDefinition], Awaitable[HookResult]] | None = None,
+        executor_callable: Callable[[HookDefinition], Awaitable[HookResult]]
+        | None = None,
     ) -> list[HookResult]:
         """Custom execution logic."""
         results = []
@@ -312,6 +322,7 @@ from acb.depends import depends
 from crackerjack.orchestration.strategies import AdaptiveExecutionStrategy
 from crackerjack.models.protocols import HookOrchestratorProtocol
 
+
 @depends.inject
 async def run_hooks_with_strategy(
     orchestrator: HookOrchestratorProtocol = depends(),
@@ -347,12 +358,12 @@ async def run_hooks_with_strategy(
 ## Best Practices
 
 1. **Choose Strategy Appropriately**: Match strategy to workload characteristics
-2. **Configure max_parallel**: Set based on available CPU cores and memory
-3. **Set Reasonable Timeouts**: Hook timeouts should account for worst-case scenarios
-4. **Handle Critical Failures**: Use `stop_on_critical_failure` for security hooks
-5. **Monitor Performance**: Track execution times and adjust strategies
-6. **Log Structured Data**: Strategies provide comprehensive logging for debugging
-7. **Test Strategies**: Verify strategy behavior with test suites
+1. **Configure max_parallel**: Set based on available CPU cores and memory
+1. **Set Reasonable Timeouts**: Hook timeouts should account for worst-case scenarios
+1. **Handle Critical Failures**: Use `stop_on_critical_failure` for security hooks
+1. **Monitor Performance**: Track execution times and adjust strategies
+1. **Log Structured Data**: Strategies provide comprehensive logging for debugging
+1. **Test Strategies**: Verify strategy behavior with test suites
 
 ## Configuration via Settings
 

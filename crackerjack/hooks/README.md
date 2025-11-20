@@ -15,12 +15,14 @@ The hooks system provides intelligent integration with quality tools through bot
 Crackerjack uses a two-stage hook execution model for optimal performance:
 
 1. **Fast Hooks** (~5s) - Quick formatters and basic checks with automatic retry
+
    - Formatting tools (Ruff, trailing whitespace, end-of-file fixer)
    - Import sorting
    - Basic static analysis
    - **Retry Policy**: Automatically retry once if failed
 
-2. **Comprehensive Hooks** (~30s) - Thorough analysis without retry
+1. **Comprehensive Hooks** (~30s) - Thorough analysis without retry
+
    - Type checking (Zuban/mypy via LSP)
    - Security scanning (Bandit)
    - Complexity analysis
@@ -97,18 +99,21 @@ Crackerjack uses a two-stage hook execution model for optimal performance:
 LSP-aware type checking hook that communicates with running Zuban LSP server:
 
 **Features:**
+
 - **Fast Type Checking** - Uses running LSP server (no process spawn overhead)
 - **Incremental Analysis** - Checks only modified files when possible
 - **Fallback Support** - Falls back to direct Zuban execution if LSP unavailable
 - **Smart Caching** - Leverages LSP server's incremental compilation cache
 
 **Benefits:**
+
 - 10-20x faster than spawning separate type checker process
 - Real-time feedback during development
 - Shared analysis state with IDE
 - Reduced memory usage (single server process)
 
 **Usage:**
+
 ```python
 from crackerjack.hooks.lsp_hook import main as lsp_hook_main
 
@@ -125,18 +130,18 @@ Hooks are defined in `/home/user/crackerjack/crackerjack/config/hooks.py`:
 ```python
 @dataclass
 class HookDefinition:
-    name: str                    # Hook identifier
-    command: list[str]           # Command to execute
-    timeout: int = 60            # Execution timeout (seconds)
-    stage: HookStage = FAST      # FAST or COMPREHENSIVE
-    description: str | None      # Human-readable description
-    retry_on_failure: bool       # Auto-retry if failed
-    is_formatting: bool          # Is this a formatter?
-    manual_stage: bool           # Manual pre-commit stage
-    config_path: Path | None     # Custom config file path
-    security_level: SecurityLevel # CRITICAL, HIGH, MEDIUM, LOW
-    use_precommit_legacy: bool   # Use pre-commit wrapper
-    accepts_file_paths: bool     # Accepts individual file paths
+    name: str  # Hook identifier
+    command: list[str]  # Command to execute
+    timeout: int = 60  # Execution timeout (seconds)
+    stage: HookStage = FAST  # FAST or COMPREHENSIVE
+    description: str | None  # Human-readable description
+    retry_on_failure: bool  # Auto-retry if failed
+    is_formatting: bool  # Is this a formatter?
+    manual_stage: bool  # Manual pre-commit stage
+    config_path: Path | None  # Custom config file path
+    security_level: SecurityLevel  # CRITICAL, HIGH, MEDIUM, LOW
+    use_precommit_legacy: bool  # Use pre-commit wrapper
+    accepts_file_paths: bool  # Accepts individual file paths
 ```
 
 ### HookStrategy
@@ -146,19 +151,19 @@ Groups hooks with execution strategy:
 ```python
 @dataclass
 class HookStrategy:
-    name: str                           # Strategy name
-    hooks: list[HookDefinition]         # Hooks to execute
-    timeout: int = 300                  # Total timeout
-    retry_policy: RetryPolicy = NONE    # Retry behavior
-    parallel: bool = False              # Parallel execution
-    max_workers: int = 3                # Max parallel workers
+    name: str  # Strategy name
+    hooks: list[HookDefinition]  # Hooks to execute
+    timeout: int = 300  # Total timeout
+    retry_policy: RetryPolicy = NONE  # Retry behavior
+    parallel: bool = False  # Parallel execution
+    max_workers: int = 3  # Max parallel workers
 ```
 
 ### Hook Stages
 
 ```python
 class HookStage(Enum):
-    FAST = "fast"                # Fast hooks (~5s)
+    FAST = "fast"  # Fast hooks (~5s)
     COMPREHENSIVE = "comprehensive"  # Comprehensive hooks (~30s)
 ```
 
@@ -166,19 +171,19 @@ class HookStage(Enum):
 
 ```python
 class RetryPolicy(Enum):
-    NONE = "none"                 # No retry
+    NONE = "none"  # No retry
     FORMATTING_ONLY = "formatting_only"  # Retry formatters only
-    ALL_HOOKS = "all_hooks"       # Retry all hooks
+    ALL_HOOKS = "all_hooks"  # Retry all hooks
 ```
 
 ### Security Levels
 
 ```python
 class SecurityLevel(Enum):
-    CRITICAL = "critical"         # Security-critical hooks
-    HIGH = "high"                 # High-priority checks
-    MEDIUM = "medium"             # Standard checks
-    LOW = "low"                   # Low-priority checks
+    CRITICAL = "critical"  # Security-critical hooks
+    HIGH = "high"  # High-priority checks
+    MEDIUM = "medium"  # Standard checks
+    LOW = "low"  # Low-priority checks
 ```
 
 ## Creating Custom Hooks
@@ -198,7 +203,7 @@ CUSTOM_HOOK = HookDefinition(
     retry_on_failure=False,
     security_level=SecurityLevel.MEDIUM,
     use_precommit_legacy=False,  # Direct invocation
-    accepts_file_paths=True,     # Can process individual files
+    accepts_file_paths=True,  # Can process individual files
 )
 ```
 
@@ -209,6 +214,7 @@ For tools with LSP support:
 ```python
 #!/usr/bin/env python3
 """LSP-aware hook for custom tool."""
+
 import sys
 from pathlib import Path
 from acb.console import Console
@@ -269,10 +275,7 @@ from acb.depends import depends
 executor = depends.get(HookExecutor)
 
 # Execute hooks sequentially
-result = await executor.execute_strategy(
-    strategy_name="fast_hooks",
-    parallel=False
-)
+result = await executor.execute_strategy(strategy_name="fast_hooks", parallel=False)
 ```
 
 ### Parallel Execution
@@ -280,9 +283,7 @@ result = await executor.execute_strategy(
 ```python
 # Execute compatible hooks in parallel
 result = await executor.execute_strategy(
-    strategy_name="comprehensive_hooks",
-    parallel=True,
-    max_workers=4
+    strategy_name="comprehensive_hooks", parallel=True, max_workers=4
 )
 ```
 
@@ -291,8 +292,7 @@ result = await executor.execute_strategy(
 ```python
 # Execute specific hooks
 result = await executor.execute_hooks(
-    hooks=["ruff-format", "ruff-check"],
-    stage=HookStage.FAST
+    hooks=["ruff-format", "ruff-check"], stage=HookStage.FAST
 )
 ```
 
@@ -305,8 +305,7 @@ from pathlib import Path
 modified_files = [Path("src/main.py"), Path("tests/test_main.py")]
 
 result = await executor.execute_hooks_on_files(
-    hooks=["ruff-check", "mypy"],
-    files=modified_files
+    hooks=["ruff-check", "mypy"], files=modified_files
 )
 ```
 
@@ -356,11 +355,7 @@ from crackerjack.executors import HookExecutor
 from pathlib import Path
 
 # Initialize executor
-executor = HookExecutor(
-    console=console,
-    pkg_path=Path.cwd(),
-    verbose=True
-)
+executor = HookExecutor(console=console, pkg_path=Path.cwd(), verbose=True)
 
 # Run fast hooks
 fast_result = await executor.execute_strategy("fast_hooks")
@@ -428,15 +423,15 @@ Hooks are executed by specialized executors (see [Executors](<../executors/READM
 ## Best Practices
 
 1. **Use Two-Stage Model** - Separate fast and comprehensive hooks for optimal workflow
-2. **Enable LSP** - Use LSP integration for 10-20x faster type checking
-3. **Retry Formatters** - Enable auto-retry for formatting hooks only
-4. **Collect All Issues** - Don't fail fast in comprehensive stage
-5. **Parallel Execution** - Enable parallel execution for independent hooks
-6. **Set Appropriate Timeouts** - Configure per-hook timeouts based on codebase size
-7. **Use Incremental Execution** - Target only modified files when possible
-8. **Security Levels** - Assign appropriate security levels for prioritization
-9. **Cache Results** - Use CachedHookExecutor for repeated runs
-10. **Monitor Performance** - Track hook execution times and optimize slow hooks
+1. **Enable LSP** - Use LSP integration for 10-20x faster type checking
+1. **Retry Formatters** - Enable auto-retry for formatting hooks only
+1. **Collect All Issues** - Don't fail fast in comprehensive stage
+1. **Parallel Execution** - Enable parallel execution for independent hooks
+1. **Set Appropriate Timeouts** - Configure per-hook timeouts based on codebase size
+1. **Use Incremental Execution** - Target only modified files when possible
+1. **Security Levels** - Assign appropriate security levels for prioritization
+1. **Cache Results** - Use CachedHookExecutor for repeated runs
+1. **Monitor Performance** - Track hook execution times and optimize slow hooks
 
 ## Performance Optimization
 

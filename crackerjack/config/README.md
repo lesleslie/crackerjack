@@ -31,8 +31,8 @@ settings/
 Configuration is loaded with the following priority (highest to lowest):
 
 1. **`settings/local.yaml`** — Local developer overrides (gitignored)
-2. **`settings/crackerjack.yaml`** — Base project configuration
-3. **Default values** in `CrackerjackSettings` class definitions
+1. **`settings/crackerjack.yaml`** — Base project configuration
+1. **Default values** in `CrackerjackSettings` class definitions
 
 ### Loading Modes
 
@@ -162,6 +162,7 @@ class GlobalLockSettings(Settings):
 from acb.depends import depends, Inject
 from crackerjack.config import CrackerjackSettings
 
+
 @depends.inject
 def my_function(settings: Inject[CrackerjackSettings] = None) -> None:
     # Access nested settings
@@ -277,26 +278,31 @@ hooks:
 ## Configuration Best Practices
 
 1. **Use settings/local.yaml for Development**
+
    - Never commit local.yaml to git
    - Override defaults for your workflow
    - Test different configurations
 
-2. **Keep Base Configuration Minimal**
+1. **Keep Base Configuration Minimal**
+
    - settings/crackerjack.yaml should have sane defaults
    - Document why non-obvious values are chosen
    - Use comments to explain complex settings
 
-3. **Validate Configuration**
+1. **Validate Configuration**
+
    - Pydantic provides automatic validation
    - Add custom validators for business rules
    - Use type hints for all settings
 
-4. **Access via Dependency Injection**
+1. **Access via Dependency Injection**
+
    - Use `Inject[CrackerjackSettings]` in functions
    - Avoid `Settings.load()` in business logic
    - Let DI container manage lifecycle
 
-5. **Organize by Domain**
+1. **Organize by Domain**
+
    - Group related settings in sub-classes
    - Use clear, descriptive names
    - Follow the existing pattern
@@ -375,6 +381,7 @@ Settings are validated using Pydantic:
 ```python
 from pydantic import field_validator, model_validator
 
+
 class TestSettings(Settings):
     test_workers: int = 0
 
@@ -393,11 +400,13 @@ Old configuration methods are deprecated:
 ```python
 # ❌ Old approach (deprecated)
 from crackerjack.config import get_config
+
 config = get_config()
 
 # ✅ New approach (ACB Settings)
 from acb.depends import depends, Inject
 from crackerjack.config import CrackerjackSettings
+
 
 @depends.inject
 def my_func(settings: Inject[CrackerjackSettings] = None):

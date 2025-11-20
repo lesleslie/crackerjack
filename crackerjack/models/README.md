@@ -15,6 +15,7 @@ The models package provides the foundational data structures and protocol-based 
 **This is the heart of Crackerjack's architecture.** Always import protocols from here, never concrete classes.
 
 **Core Service Protocols:**
+
 - `ServiceProtocol` - Base protocol for all ACB services with lifecycle management
 - `Console` (ConsoleInterface) - Rich console output interface
 - `TestManagerProtocol` - Test execution and coverage management
@@ -23,38 +24,45 @@ The models package provides the foundational data structures and protocol-based 
 - `SecurityServiceProtocol` - Security validation and secret detection
 
 **Configuration & File System:**
+
 - `UnifiedConfigurationServiceProtocol` - Centralized configuration access
 - `FileSystemServiceProtocol` / `EnhancedFileSystemServiceProtocol` - File operations
 - `GitServiceProtocol` / `GitInterface` - Git repository interactions
 - `SmartFileFilterProtocol` - Intelligent file filtering
 
 **Quality Assurance:**
+
 - `QAAdapterProtocol` - Base protocol for all QA check adapters
 - `QAOrchestratorProtocol` - QA check coordination and execution
 
 **Hook Orchestration (Phase 3):**
+
 - `ExecutionStrategyProtocol` - Hook execution strategies (parallel/sequential/adaptive)
 - `CacheStrategyProtocol` - Result caching strategies
 - `HookOrchestratorProtocol` - Hook lifecycle and dependency resolution
 
 **Performance & Monitoring:**
+
 - `PerformanceMonitorProtocol` - Workflow performance tracking
 - `PerformanceBenchmarkProtocol` / `PerformanceBenchmarkServiceProtocol` - Benchmarking
 - `MemoryOptimizerProtocol` - Memory optimization tracking
 - `PerformanceCacheProtocol` - Performance result caching
 
 **Agent System (Phase 4):**
+
 - `AgentCoordinatorProtocol` - AI agent coordination and issue routing
 - `AgentTrackerProtocol` - Agent execution metrics tracking
 - `AgentDebuggerProtocol` - Agent debugging and activity logging
 
 **Orchestration:**
+
 - `ServiceWatchdogProtocol` - Service health monitoring and restart
 - `TimeoutManagerProtocol` - Centralized timeout management
 - `ParallelExecutorProtocol` / `ParallelHookExecutorProtocol` - Parallel task execution
 - `AsyncCommandExecutorProtocol` - Async command execution with caching
 
 **Publishing & Documentation:**
+
 - `PublishManager` - Package publishing and versioning
 - `DocumentationServiceProtocol` - Automated documentation generation
 - `APIExtractorProtocol` / `DocumentationGeneratorProtocol` / `DocumentationValidatorProtocol` - Doc tooling
@@ -62,32 +70,38 @@ The models package provides the foundational data structures and protocol-based 
 ### Configuration Models
 
 **qa_config.py** - Quality assurance configuration:
+
 - `QACheckConfig` - Configuration for individual QA checks
 - Check-specific settings (file patterns, timeouts, retries)
 - Pydantic validation for type safety
 
 **config.py** - Core configuration models:
+
 - Project-wide configuration structures
 - ACB Settings integration
 - Environment-specific overrides
 
 **config_adapter.py** - Configuration adapters:
+
 - Bridges between different configuration formats
 - Legacy config migration support
 
 ### Result Models
 
 **qa_results.py** - Quality assurance results:
+
 - `QAResult` - Individual check results
 - `QACheckType` - Enumeration of check types
 - Result aggregation structures
 
 **results.py** - Execution results:
+
 - `ExecutionResult` - Individual execution outcomes
 - `ParallelExecutionResult` - Parallel execution aggregation
 - Performance metrics and timing data
 
 **task.py** - Task and hook models:
+
 - `HookResult` - Pre-commit hook execution results
 - `SessionTracker` - Session metadata and task tracking
 - Task lifecycle management
@@ -95,11 +109,13 @@ The models package provides the foundational data structures and protocol-based 
 ### Specialized Models
 
 **semantic_models.py** - Semantic analysis models:
+
 - Code comprehension structures
 - Semantic analysis results
 - Intelligent refactoring support
 
 **resource_protocols.py** - Resource management protocols:
+
 - Resource lifecycle interfaces
 - Resource cleanup coordination
 
@@ -110,7 +126,12 @@ The models package provides the foundational data structures and protocol-based 
 ```python
 # ✅ CORRECT - Always import protocols from models/protocols.py
 from acb.depends import depends, Inject
-from crackerjack.models.protocols import Console, TestManagerProtocol, SecurityServiceProtocol
+from crackerjack.models.protocols import (
+    Console,
+    TestManagerProtocol,
+    SecurityServiceProtocol,
+)
+
 
 @depends.inject
 def setup_environment(
@@ -158,11 +179,11 @@ self.logger = logging.getLogger(__name__)
 ## Why Protocol-Based DI?
 
 1. **Loose Coupling**: Depend on interfaces, not implementations
-2. **Testability**: Easy to mock with protocol implementations
-3. **Flexibility**: Swap implementations without changing dependents
-4. **Type Safety**: Runtime type checking via `@runtime_checkable`
-5. **Clear Contracts**: Protocol defines exact interface requirements
-6. **ACB Integration**: Seamless integration with ACB dependency injection
+1. **Testability**: Easy to mock with protocol implementations
+1. **Flexibility**: Swap implementations without changing dependents
+1. **Type Safety**: Runtime type checking via `@runtime_checkable`
+1. **Clear Contracts**: Protocol defines exact interface requirements
+1. **ACB Integration**: Seamless integration with ACB dependency injection
 
 ## Usage Examples
 
@@ -170,6 +191,7 @@ self.logger = logging.getLogger(__name__)
 
 ```python
 from crackerjack.models.protocols import Console, FileSystemServiceProtocol
+
 
 def process_files(
     console: Console,
@@ -190,6 +212,7 @@ def process_files(
 import typing as t
 from crackerjack.models.protocols import ServiceProtocol
 
+
 @t.runtime_checkable
 class MyServiceProtocol(ServiceProtocol, t.Protocol):
     """Custom service protocol extending base ServiceProtocol."""
@@ -197,6 +220,7 @@ class MyServiceProtocol(ServiceProtocol, t.Protocol):
     def custom_operation(self, data: str) -> bool:
         """Custom operation for this service."""
         ...
+
 
 class MyService:
     """Concrete implementation of MyServiceProtocol."""
@@ -230,6 +254,7 @@ from crackerjack.models.protocols import Console, TestManagerProtocol
 depends.set(Console, MyConsoleImplementation())
 depends.set(TestManagerProtocol, MyTestManager())
 
+
 # Inject in functions/classes
 @depends.inject
 def my_function(
@@ -248,6 +273,7 @@ Models use **Pydantic** for validation and type safety:
 ```python
 from pydantic import BaseModel, Field
 
+
 class MyConfig(BaseModel):
     """Example configuration model."""
 
@@ -259,12 +285,12 @@ class MyConfig(BaseModel):
 ## Best Practices
 
 1. **ALWAYS Import Protocols**: Never import concrete classes for dependencies
-2. **Use @runtime_checkable**: Mark all protocols with `@runtime_checkable`
-3. **Extend ServiceProtocol**: Base all service protocols on `ServiceProtocol`
-4. **Use Inject[T]**: Use `Inject[ProtocolType]` type hints for DI parameters
-5. **Validate with Pydantic**: Use Pydantic models for configuration validation
-6. **Document Protocols**: Add comprehensive docstrings to protocol methods
-7. **Type Annotate Everything**: Use Python 3.13+ type hints (`|` unions)
+1. **Use @runtime_checkable**: Mark all protocols with `@runtime_checkable`
+1. **Extend ServiceProtocol**: Base all service protocols on `ServiceProtocol`
+1. **Use Inject[T]**: Use `Inject[ProtocolType]` type hints for DI parameters
+1. **Validate with Pydantic**: Use Pydantic models for configuration validation
+1. **Document Protocols**: Add comprehensive docstrings to protocol methods
+1. **Type Annotate Everything**: Use Python 3.13+ type hints (`|` unions)
 
 ## Related Documentation
 

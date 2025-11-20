@@ -135,12 +135,7 @@ The `Options` Pydantic model provides type-safe option parsing with validation:
 from crackerjack.cli.options import Options, BumpOption
 
 # Parse and validate options
-options = Options(
-    run_tests=True,
-    ai_fix=True,
-    test_workers=4,
-    publish=BumpOption.patch
-)
+options = Options(run_tests=True, ai_fix=True, test_workers=4, publish=BumpOption.patch)
 ```
 
 ### Bump Options
@@ -173,6 +168,7 @@ Most handlers use ACB dependency injection (90% compliance):
 ```python
 from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console, CrackerjackCache
+
 
 @depends.inject
 def handle_quality_check(
@@ -217,6 +213,7 @@ python -m crackerjack --interactive
 ```
 
 **Features:**
+
 - Step-by-step guidance
 - Option validation with helpful errors
 - Confirmation prompts for destructive actions
@@ -230,11 +227,7 @@ The `CrackerjackCLIFacade` provides simplified command routing:
 from crackerjack.cli.facade import CrackerjackCLIFacade
 
 facade = CrackerjackCLIFacade()
-result = await facade.run_quality_workflow(
-    fast=True,
-    ai_fix=True,
-    verbose=True
-)
+result = await facade.run_quality_workflow(fast=True, ai_fix=True, verbose=True)
 ```
 
 **Note:** Facade needs DI integration (currently manual instantiation).
@@ -248,15 +241,14 @@ result = await facade.run_quality_workflow(
 class Options(BaseModel):
     my_new_option: bool = False
 
+
 # 2. Add Click/Typer parameter (__main__.py)
 @click.option("--my-new-option", is_flag=True, help="Enable new feature")
-
 # 3. Create handler (handlers/my_feature.py)
 @depends.inject
-def handle_my_feature(
-    console: Inject[Console] = None
-) -> None:
+def handle_my_feature(console: Inject[Console] = None) -> None:
     console.print("[cyan]Running new feature...[/cyan]")
+
 
 # 4. Route in main (__main__.py)
 if options.my_new_option:
@@ -269,6 +261,7 @@ if options.my_new_option:
 # handlers/my_handlers.py
 from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console
+
 
 @depends.inject
 async def handle_my_command(
@@ -284,13 +277,13 @@ async def handle_my_command(
 ## Best Practices
 
 1. **Use Protocol-Based DI**: Import from `models/protocols.py`, not concrete classes
-2. **Validate Options Early**: Use Pydantic validators in the `Options` model
-3. **Keep Handlers Focused**: Single responsibility per handler
-4. **Provide User Feedback**: Use rich console for progress and status
-5. **Handle Errors Gracefully**: Catch exceptions and provide helpful error messages
-6. **Support --verbose**: Add verbose logging for troubleshooting
-7. **Document Options**: Clear help text for all CLI options
-8. **Test Interactive Flows**: Verify prompts and validation work correctly
+1. **Validate Options Early**: Use Pydantic validators in the `Options` model
+1. **Keep Handlers Focused**: Single responsibility per handler
+1. **Provide User Feedback**: Use rich console for progress and status
+1. **Handle Errors Gracefully**: Catch exceptions and provide helpful error messages
+1. **Support --verbose**: Add verbose logging for troubleshooting
+1. **Document Options**: Clear help text for all CLI options
+1. **Test Interactive Flows**: Verify prompts and validation work correctly
 
 ## Anti-Patterns to Avoid
 

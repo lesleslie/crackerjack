@@ -13,6 +13,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Coordinators
 
 **session_coordinator.py** - Lightweight session tracking:
+
 - `SessionCoordinator` - Session lifecycle management
 - Session metadata and task tracking via `SessionTracker`
 - Cleanup handler registration and execution
@@ -20,6 +21,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - Gold standard ACB integration with protocol-based DI
 
 **phase_coordinator.py** - Execution phase coordination:
+
 - Fast hooks phase (~5s): formatting, basic checks
 - Test phase: full test suite with coverage
 - Comprehensive hooks phase (~30s): type checking, security
@@ -27,6 +29,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - Phase dependency management and ordering
 
 **autofix_coordinator.py** - AI agent autofix coordination:
+
 - Agent-based issue fixing orchestration
 - Batch processing of quality issues
 - Confidence-based agent selection
@@ -34,12 +37,14 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - Integration with 12 specialized AI agents
 
 **async_workflow_orchestrator.py** - Async workflow management:
+
 - Asynchronous workflow execution
 - Parallel phase execution support
 - Event-driven workflow coordination
 - Resource pooling and lifecycle management
 
 **proactive_workflow.py** - Proactive quality monitoring:
+
 - Predictive issue detection
 - Preemptive optimization recommendations
 - Trend analysis and quality forecasting
@@ -48,6 +53,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Workflow Orchestration
 
 **workflow_orchestrator.py** - Main workflow pipeline:
+
 - `WorkflowPipeline` - End-to-end workflow execution
 - Hook execution (fast → comprehensive)
 - Test management integration
@@ -55,6 +61,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - Error aggregation and reporting
 
 **workflow/** - Specialized workflow components:
+
 - `workflow_ai_coordinator.py` - AI agent workflow integration
 - `workflow_event_orchestrator.py` - Event-driven workflow coordination
 - `workflow_issue_parser.py` - Quality issue parsing and categorization
@@ -64,6 +71,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Service Management
 
 **service_watchdog.py** - Service health monitoring:
+
 - Monitors long-running services (MCP server, WebSocket server)
 - Automatic restart on failure
 - Health check coordination
@@ -71,12 +79,14 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - **⚠️ Needs DI integration** (currently uses factory functions)
 
 **timeout_manager.py** - Centralized timeout management:
+
 - Per-operation timeout configuration
 - Timeout strategy selection (fixed, adaptive, exponential backoff)
 - Timeout enforcement and tracking
 - Performance metrics for timeout tuning
 
 **resource_manager.py** - Resource lifecycle coordination:
+
 - Resource registration and tracking
 - Cleanup coordination across components
 - Memory optimization support
@@ -85,12 +95,14 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Performance & Monitoring
 
 **performance.py** - Performance tracking utilities:
+
 - Execution timing decorators
 - Performance metric collection
 - Benchmark helpers
 - Performance regression detection
 
 **performance_monitor.py** - Workflow performance monitoring:
+
 - Per-workflow performance tracking
 - Phase-level performance metrics
 - Performance trend analysis
@@ -99,12 +111,14 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Lifecycle Management
 
 **file_lifecycle.py** - File operation lifecycle:
+
 - Atomic file operations
 - Backup and rollback support
 - Safe file modification
 - File lock coordination
 
 **websocket_lifecycle.py** - WebSocket connection lifecycle:
+
 - WebSocket connection management
 - Reconnection logic
 - Event subscription handling
@@ -113,12 +127,14 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Dependency Injection Containers
 
 **container.py** - Base DI container:
+
 - Service registration
 - Dependency resolution
 - Singleton management
 - Factory function support
 
 **enhanced_container.py** - Enhanced DI container:
+
 - Advanced dependency injection features
 - Circular dependency detection
 - Lazy initialization support
@@ -132,6 +148,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 from acb.depends import depends, Inject
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.protocols import Console
+
 
 @depends.inject
 def run_workflow(
@@ -156,6 +173,7 @@ def run_workflow(
 
 ```python
 from crackerjack.core.phase_coordinator import PhaseCoordinator
+
 
 @depends.inject
 async def execute_quality_pipeline(
@@ -209,6 +227,7 @@ async def run_full_workflow(
 ```python
 from crackerjack.core.performance_monitor import PerformanceMonitor
 
+
 @depends.inject
 def monitored_operation(
     perf_monitor: Inject[PerformanceMonitor] = None,
@@ -235,6 +254,7 @@ def monitored_operation(
 
 ```python
 from crackerjack.core.timeout_manager import TimeoutManager
+
 
 @depends.inject
 def execute_with_timeout(
@@ -293,6 +313,7 @@ Resources are managed through registration and cleanup:
 ```python
 from crackerjack.core.resource_manager import ResourceManager
 
+
 @depends.inject
 def manage_resources(
     resource_mgr: Inject[ResourceManager] = None,
@@ -333,23 +354,25 @@ timeout = settings.workflow_timeout
 ## Best Practices
 
 1. **Use Protocol-Based DI**: Always inject dependencies via protocols
-2. **Coordinate, Don't Implement**: Coordinators orchestrate, services implement
-3. **Track Performance**: Use `PerformanceMonitor` for execution metrics
-4. **Manage Lifecycle**: Register resources for automatic cleanup
-5. **Handle Timeouts**: Use `TimeoutManager` for consistent timeout handling
-6. **Log Structured Data**: Use structured logging with context
-7. **Fail Gracefully**: Coordinators should handle errors and report clearly
+1. **Coordinate, Don't Implement**: Coordinators orchestrate, services implement
+1. **Track Performance**: Use `PerformanceMonitor` for execution metrics
+1. **Manage Lifecycle**: Register resources for automatic cleanup
+1. **Handle Timeouts**: Use `TimeoutManager` for consistent timeout handling
+1. **Log Structured Data**: Use structured logging with context
+1. **Fail Gracefully**: Coordinators should handle errors and report clearly
 
 ## Compliance Status
 
 Based on Phase 2-4 refactoring audit:
 
 - **Coordinators (70% compliant)**:
+
   - ✅ `SessionCoordinator` - Gold standard ACB integration
   - ✅ Phase coordinators use proper DI
   - ⚠️ Async coordinators need protocol standardization
 
 - **Orchestration (70% compliant)**:
+
   - ✅ `WorkflowOrchestrator` - DI containers, lifecycle management
   - ⚠️ `ServiceWatchdog` - Needs DI integration (factory functions, manual fallbacks)
 

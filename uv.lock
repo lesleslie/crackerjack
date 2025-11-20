@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "acb"
-version = "0.31.7"
+version = "0.31.8"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioconsole" },
@@ -42,9 +42,9 @@ dependencies = [
     { name = "uuid-utils" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/c9/81/bf8ed0b683852899e87a43b16ca5950266d3bb80ebb4b82e84fcf1ff145e/acb-0.31.7.tar.gz", hash = "sha256:afa49b9316de6f19efc985d5f95fd138968217a9839a069db8c679d755496046", size = 1408671, upload-time = "2025-11-19T20:53:52.078Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/8e/1c/6a127b9d07b0ca61d8f529c512bc8a2bd2d17fe6ce952a91e1466adfa0ce/acb-0.31.8.tar.gz", hash = "sha256:aa20e7da54cf10494f70d31ce610f8a6432a090dd07e4d52e499ae4b096837ca", size = 1410692, upload-time = "2025-11-20T05:08:50.333Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/f8/2f9e608a0b9f518e8871ab94cad45848789ffac5f96b3f3772d750f57854/acb-0.31.7-py3-none-any.whl", hash = "sha256:5b3c86cb181f652710eb08002a43e5a4d9d117cc6d5f4b57853c2a2a097238e5", size = 806394, upload-time = "2025-11-19T20:53:48.459Z" },
+    { url = "https://files.pythonhosted.org/packages/26/5d/8d5fef17f3825ddf0d55eb8a6f4418453f07fb162c6d4c610896637b02b9/acb-0.31.8-py3-none-any.whl", hash = "sha256:df11b533a9a5055cc27c2bfac39c28746f6a4c385a6de1e317e219f34833bbce", size = 807643, upload-time = "2025-11-20T05:08:47.197Z" },
 ]
 
 [[package]]
@@ -253,11 +253,11 @@ wheels = [
 
 [[package]]
 name = "beartype"
-version = "0.22.5"
+version = "0.22.6"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/a6/09/9003e5662691056e0e8b2e6f57c799e71875fac0be0e785d8cb11557cd2a/beartype-0.22.5.tar.gz", hash = "sha256:516a9096cc77103c96153474fa35c3ebcd9d36bd2ec8d0e3a43307ced0fa6341", size = 1586256, upload-time = "2025-11-01T05:49:20.771Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/88/e2/105ceb1704cb80fe4ab3872529ab7b6f365cf7c74f725e6132d0efcf1560/beartype-0.22.6.tar.gz", hash = "sha256:97fbda69c20b48c5780ac2ca60ce3c1bb9af29b3a1a0216898ffabdd523e48f4", size = 1588975, upload-time = "2025-11-20T04:47:14.736Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/f6/073d19f7b571c08327fbba3f8e011578da67ab62a11f98911274ff80653f/beartype-0.22.5-py3-none-any.whl", hash = "sha256:d9743dd7cd6d193696eaa1e025f8a70fb09761c154675679ff236e61952dfba0", size = 1321700, upload-time = "2025-11-01T05:49:18.436Z" },
+    { url = "https://files.pythonhosted.org/packages/98/c9/ceecc71fe2c9495a1d8e08d44f5f31f5bca1350d5b2e27a4b6265424f59e/beartype-0.22.6-py3-none-any.whl", hash = "sha256:0584bc46a2ea2a871509679278cda992eadde676c01356ab0ac77421f3c9a093", size = 1324807, upload-time = "2025-11-20T04:47:11.837Z" },
 ]
 
 [[package]]
