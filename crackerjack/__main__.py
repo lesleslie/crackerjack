@@ -1,6 +1,28 @@
+"""Crackerjack - Opinionated Python project management tool.
+
+Early initialization: Configure logging before ACB imports to suppress startup messages.
+"""
+
+import logging
+import sys
 import typing as t
 import warnings
 
+# CRITICAL: Suppress ACB logger startup messages BEFORE any ACB imports
+# ACB's logger initializes at import time and emits "Application started" messages.
+# Configure Python's logging module early to intercept these messages.
+_EARLY_DEBUG_MODE = any(
+    arg in ("--debug", "-d", "--ai-debug") or arg.startswith("--debug=")
+    for arg in sys.argv[1:]
+)
+
+if not _EARLY_DEBUG_MODE:
+    # Suppress ACB startup logging for clean default UX
+    acb_logger = logging.getLogger("acb")
+    acb_logger.setLevel(logging.CRITICAL)
+    acb_logger.propagate = False
+
+# NOW safe to import ACB-dependent modules
 import typer
 from acb.console import Console
 from acb.depends import Inject, depends
