@@ -93,7 +93,27 @@ class PhaseCoordinator:
             backup_service=None,
         )
 
-        self.logger = logger
+        # Ensure logger is a proper instance, not an empty tuple, string, or other invalid value
+        if isinstance(logger, tuple) and len(logger) == 0:
+            # Log this issue for debugging
+            print(
+                "WARNING: PhaseCoordinator received empty tuple for logger dependency, creating fallback"
+            )
+            # Import and create a fallback logger if we got an empty tuple
+            from acb.logger import Logger as ACBLogger
+
+            self._logger = ACBLogger()
+        elif isinstance(logger, str):
+            # Log this issue for debugging
+            print(
+                f"WARNING: PhaseCoordinator received string for logger dependency: {logger!r}, creating fallback"
+            )
+            # Import and create a fallback logger if we got a string
+            from acb.logger import Logger as ACBLogger
+
+            self._logger = ACBLogger()
+        else:
+            self._logger = logger
 
         # Services injected via ACB DI
         self._memory_optimizer = memory_optimizer
@@ -113,6 +133,26 @@ class PhaseCoordinator:
 
         # Track if fast hooks have already started in this session to prevent duplicates
         self._fast_hooks_started: bool = False
+
+    @property
+    def logger(self) -> Logger:
+        """Safely access the logger instance, ensuring it's not an empty tuple or string."""
+        if hasattr(self, "_logger") and (
+            (isinstance(self._logger, tuple) and len(self._logger) == 0)
+            or isinstance(self._logger, str)
+        ):
+            from acb.logger import Logger as ACBLogger
+
+            print(
+                f"WARNING: PhaseCoordinator logger was invalid type ({type(self._logger).__name__}: {self._logger!r}), creating fresh logger instance"
+            )
+            self._logger = ACBLogger()
+        return self._logger
+
+    @logger.setter
+    def logger(self, value: Logger) -> None:
+        """Set the logger instance."""
+        self._logger = value
 
     # --- Output/formatting helpers -------------------------------------------------
     @staticmethod

@@ -108,9 +108,29 @@ settings_instance = load_settings(CrackerjackSettings)
 depends.set(CrackerjackSettings, settings_instance)
 
 # Register ACB Logger (auto-registers itself, but set explicitly for clarity)
-logger_instance = Logger()
-depends.set(Logger, logger_instance)
-depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
+# But first, ensure we don't have an empty tuple registered for Logger
+from crackerjack.utils.dependency_guard import (
+    ensure_logger_dependency,
+    validate_dependency_registration,
+)
+
+ensure_logger_dependency()
+
+# Explicitly set logger instances if not already set properly
+try:
+    current_logger = depends.get_sync(Logger)
+    if isinstance(current_logger, tuple) and len(current_logger) == 0:
+        logger_instance = Logger()
+        depends.set(Logger, logger_instance)
+        depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
+    else:
+        # Logger is already properly registered, just ensure LoggerProtocol is too
+        depends.set(LoggerProtocol, current_logger)
+except Exception:
+    # Logger not registered at all, so register it
+    logger_instance = Logger()
+    depends.set(Logger, logger_instance)
+    depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
 
 
 def register_services() -> None:
