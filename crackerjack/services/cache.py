@@ -67,11 +67,22 @@ def get_cache() -> Any:
     try:
         return depends.get(Cache)
     except Exception as exception:  # pragma: no cover - runtime safety
-        msg = (
-            "Failed to resolve ACB cache adapter via dependency injection. "
-            "Ensure adapters.yml specifies a valid cache adapter."
-        )
-        raise RuntimeError(msg) from exception
+        # Check if the error is specifically about the adapter not being found
+        error_msg = str(exception).lower()
+        if "adapter" in error_msg and "not found" in error_msg and "cache" in error_msg:
+            # Instead of raising an error, return None to trigger fallback behavior
+            import logging
+
+            logging.getLogger(__name__).warning(
+                "ACB cache adapter not found or not installed, using fallback behavior"
+            )
+            return None
+        else:
+            msg = (
+                "Failed to resolve ACB cache adapter via dependency injection. "
+                "Ensure adapters.yml specifies a valid cache adapter."
+            )
+            raise RuntimeError(msg) from exception
 
 
 class CrackerjackCache:
