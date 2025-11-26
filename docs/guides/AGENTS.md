@@ -1,1 +1,1 @@
-/Users/les/Projects/crackerjack/AGENTS.md
+../../AGENTS.md
