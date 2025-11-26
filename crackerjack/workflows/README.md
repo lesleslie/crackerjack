@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | Workflows
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Workflows
 
 # Workflows
 
@@ -576,7 +576,7 @@ Per concurrent step: ~20-50MB (depends on step type)
 - [Executors](<../executors/README.md>) - Hook execution engines
 - [Intelligence](<../intelligence/README.md>) - Agent orchestration
 - [Hooks](<../hooks/README.md>) - Hook system integration
-- [CLAUDE.md](<../../CLAUDE.md>) - Workflow architecture overview
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) - Workflow architecture overview
 
 ## Future Enhancements
 

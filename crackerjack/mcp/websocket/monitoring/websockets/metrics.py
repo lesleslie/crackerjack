@@ -19,7 +19,7 @@ from crackerjack.services.quality.quality_baseline_enhanced import (
     UnifiedMetrics,
 )
 
-from ..utils import get_current_metrics
+from ..metrics import get_monitoring_current_metrics
 from ..websocket_manager import MonitoringWebSocketManager
 
 
@@ -70,7 +70,9 @@ async def _handle_live_metrics_websocket(
 
     try:
         # Send initial metrics
-        current_metrics = await get_current_metrics(quality_service, job_manager)
+        current_metrics = await get_monitoring_current_metrics(
+            quality_service, job_manager
+        )
         await websocket.send_text(
             json.dumps(
                 {
@@ -88,7 +90,9 @@ async def _handle_live_metrics_websocket(
                 data = json.loads(message)
 
                 if data.get("type") == "request_update":
-                    metrics = await get_current_metrics(quality_service, job_manager)
+                    metrics = await get_monitoring_current_metrics(
+                        quality_service, job_manager
+                    )
                     await websocket.send_text(
                         json.dumps(
                             {
@@ -100,7 +104,9 @@ async def _handle_live_metrics_websocket(
                     )
 
             except TimeoutError:
-                metrics = await get_current_metrics(quality_service, job_manager)
+                metrics = await get_monitoring_current_metrics(
+                    quality_service, job_manager
+                )
                 await ws_manager.broadcast_metrics(metrics)
 
     except WebSocketDisconnect:
@@ -237,7 +243,9 @@ async def _handle_dashboard_websocket(
             telemetry = None
 
         while True:
-            current_metrics = await get_current_metrics(quality_service, job_manager)
+            current_metrics = await get_monitoring_current_metrics(
+                quality_service, job_manager
+            )
 
             metrics_dict = _create_dashboard_metrics_dict(current_metrics)
 

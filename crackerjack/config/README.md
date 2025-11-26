@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Config](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Config](<./README.md>)
 
 # Config
 
@@ -460,7 +460,7 @@ testing:
 - [Services](<../services/README.md>) — Services access configuration via DI
 - [Managers](<../managers/README.md>) — Managers configure orchestration
 - [Main README](<../../README.md>) — Configuration examples
-- [CLAUDE.md](<../../CLAUDE.md>) — ACB Settings integration overview
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) — ACB Settings integration overview
 
 ## Future Enhancements
 

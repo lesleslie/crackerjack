@@ -64,7 +64,7 @@ uv run pytest --maxfail=1
 - Agent/developer guide: `CLAUDE.md`
 - Security policy: `SECURITY.md`
 - Coding rules and constraints: `RULES.md`
-- Model-specific notes: `GEMINI.md`, `QWEN.md`
+- Model-specific notes: `QWEN.md`
 - Changelog and releases: `CHANGELOG.md`
 
 ## Migration Notes

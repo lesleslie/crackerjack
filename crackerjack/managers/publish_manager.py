@@ -6,6 +6,7 @@ from pathlib import Path
 from acb.console import Console
 from acb.depends import Inject, depends
 
+from crackerjack.core.retry import retry_api_call
 from crackerjack.models.protocols import (
     ChangelogGeneratorProtocol,
     FileSystemInterface,
@@ -14,7 +15,6 @@ from crackerjack.models.protocols import (
     SecurityServiceProtocol,
     VersionAnalyzerProtocol,
 )
-from crackerjack.utils.retry_utils import retry_api_call
 
 
 class PublishManagerImpl:

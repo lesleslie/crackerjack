@@ -68,8 +68,12 @@ class DependencyMonitorService:
 
     def _parse_dependencies(self) -> dict[str, str]:
         try:
-            with self.pyproject_path.open("rb") as f:
-                data = tomllib.load(f)
+            content = self.filesystem.read_file(self.pyproject_path)
+            if isinstance(content, bytes):
+                content_str = content.decode("utf-8")
+            else:
+                content_str = content
+            data = tomllib.loads(content_str)
 
             dependencies: dict[str, str] = {}
             project_data = data.get("project", {})
@@ -534,15 +538,13 @@ class DependencyMonitorService:
     def _load_update_cache(self) -> dict[str, t.Any]:
         with suppress(Exception):
             if self.cache_file.exists():
-                with self.cache_file.open() as f:
-                    return t.cast(dict[str, t.Any], json.load(f))
+                content = self.filesystem.read_file(self.cache_file)
+                return t.cast(dict[str, t.Any], json.loads(content))
         return {}
 
     def _save_update_cache(self, cache: dict[str, t.Any]) -> None:
         with suppress(Exception):
-            self.cache_file.parent.mkdir(exist_ok=True)
-            with self.cache_file.open("w") as f:
-                json.dump(cache, f, indent=2)
+            self.filesystem.write_file(self.cache_file, json.dumps(cache))
 
     def _report_vulnerabilities(
         self,

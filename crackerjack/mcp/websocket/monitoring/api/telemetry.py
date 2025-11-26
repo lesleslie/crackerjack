@@ -15,6 +15,7 @@ from crackerjack.services.quality.quality_baseline_enhanced import (
     UnifiedMetrics,
 )
 
+from ..metrics import get_monitoring_current_metrics
 from ..models import (
     HealthResponseModel,
     TelemetryEventModel,
@@ -22,7 +23,6 @@ from ..models import (
     TelemetrySnapshotModel,
     UnifiedMetricsModel,
 )
-from ..utils import get_current_metrics
 
 
 def register_telemetry_api_endpoints(
@@ -82,7 +82,7 @@ def register_telemetry_api_endpoints(
         summary="Retrieve aggregated monitoring health metrics",
     )
     async def get_monitoring_health() -> HealthResponseModel:
-        unified_metrics = await get_current_metrics(
+        unified_metrics = await get_monitoring_current_metrics(
             quality_service, job_manager
         )  # Use the function parameters
         return HealthResponseModel(
