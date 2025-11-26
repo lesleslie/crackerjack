@@ -665,7 +665,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.44.29"
+version = "0.44.30"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
