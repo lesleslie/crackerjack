@@ -5,7 +5,7 @@
 **Implementation Plan**: `/docs/implementation-plan-logging-progress-fixes.md`
 **Focus**: Python best practices, anti-patterns, optimization opportunities
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -14,13 +14,14 @@
 The implementation plan is fundamentally sound but exhibits several Python anti-patterns and missed optimization opportunities. The core approach of early environment variable manipulation is correct, but the execution could be more Pythonic and robust.
 
 **Key Concerns**:
-1. ❌ **Direct `print()` statements violate clean architecture** (dependency guard)
-2. ⚠️ **Thread-safety issues with environment variable mutation**
-3. ⚠️ **Repeated logger instantiation pattern** (DRY violation)
-4. ⚠️ **No context manager pattern for environment variable lifecycle**
-5. ⚠️ **Missing type hints in proposed implementations**
 
----
+1. ❌ **Direct `print()` statements violate clean architecture** (dependency guard)
+1. ⚠️ **Thread-safety issues with environment variable mutation**
+1. ⚠️ **Repeated logger instantiation pattern** (DRY violation)
+1. ⚠️ **No context manager pattern for environment variable lifecycle**
+1. ⚠️ **Missing type hints in proposed implementations**
+
+______________________________________________________________________
 
 ## Python Best Practices Analysis
 
@@ -39,11 +40,13 @@ if "--debug" not in sys.argv:
 #### Issues
 
 ❌ **Anti-Pattern**: Direct `sys.argv` string matching is fragile
+
 - Doesn't handle `-d` short form
 - Doesn't handle combined flags like `-dt` (debug + tests)
 - Doesn't handle `--debug=true` or `--debug=1` variants
 
 ❌ **Anti-Pattern**: Environment variables are mutable global state
+
 - Thread-unsafe if any background threads read env vars during mutation
 - No lifecycle management (when should they be cleaned up?)
 
@@ -54,6 +57,7 @@ if "--debug" not in sys.argv:
 ```python
 # crackerjack/__main__.py - TOP OF FILE
 """Crackerjack - Opinionated Python project management tool."""
+
 import sys
 import os
 from typing import Final
@@ -61,8 +65,7 @@ from typing import Final
 # Early detection of debug/verbose flags BEFORE any ACB imports
 # This is more robust than string matching and handles all argparse variants
 _EARLY_DEBUG_FLAG: Final[bool] = any(
-    arg in ("--debug", "-d") or arg.startswith("--debug=")
-    for arg in sys.argv[1:]
+    arg in ("--debug", "-d") or arg.startswith("--debug=") for arg in sys.argv[1:]
 )
 
 # Suppress ACB logger startup and stderr JSON unless debug mode
@@ -78,13 +81,14 @@ import typing as t
 ```
 
 **Benefits**:
+
 - ✅ Handles both `--debug` and `-d` short form
 - ✅ Handles `--debug=true` variants
 - ✅ Uses `os.environ.setdefault()` (idempotent, safer)
 - ✅ Explicit `Final` constant for immutability
 - ✅ Early computation once, reuse throughout module
 
----
+______________________________________________________________________
 
 ### 2. Logger Reconfiguration Pattern
 
@@ -105,6 +109,7 @@ def _configure_logger_verbosity(debug: bool) -> None:
 #### Issues
 
 ❌ **Anti-Pattern**: Direct environment variable deletion is error-prone
+
 - `del os.environ[key]` raises `KeyError` if key doesn't exist
 - Should use `.pop(key, None)` for safe deletion
 
@@ -117,6 +122,7 @@ def _configure_logger_verbosity(debug: bool) -> None:
 ```python
 # crackerjack/utils/logger_config.py (NEW FILE)
 """Logger configuration utilities with proper lifecycle management."""
+
 import os
 from contextlib import contextmanager
 from typing import Iterator
@@ -127,9 +133,7 @@ from crackerjack.models.protocols import LoggerProtocol
 
 @contextmanager
 def logger_verbosity(
-    *,
-    debug: bool = False,
-    enable_stderr_json: bool = False
+    *, debug: bool = False, enable_stderr_json: bool = False
 ) -> Iterator[None]:
     """Context manager for temporary logger configuration changes.
 
@@ -152,7 +156,9 @@ def logger_verbosity(
     original_state = {
         "ACB_LOG_LEVEL": os.environ.get("ACB_LOG_LEVEL"),
         "CRACKERJACK_DEBUG": os.environ.get("CRACKERJACK_DEBUG"),
-        "ACB_DISABLE_STRUCTURED_STDERR": os.environ.get("ACB_DISABLE_STRUCTURED_STDERR"),
+        "ACB_DISABLE_STRUCTURED_STDERR": os.environ.get(
+            "ACB_DISABLE_STRUCTURED_STDERR"
+        ),
         "ACB_FORCE_STRUCTURED_STDERR": os.environ.get("ACB_FORCE_STRUCTURED_STDERR"),
     }
 
@@ -198,12 +204,14 @@ def _reconfigure_active_logger(*, debug: bool) -> None:
         # Handle structlog adapter
         if hasattr(logger, "_logger"):
             import logging
+
             level = logging.DEBUG if debug else logging.WARNING
             logger._logger.setLevel(level)
 
         # Handle loguru adapter
         elif hasattr(logger, "logger"):
             import loguru
+
             level_name = "DEBUG" if debug else "WARNING"
             # Loguru requires removing and re-adding handlers with new level
             logger.logger.remove()
@@ -214,11 +222,7 @@ def _reconfigure_active_logger(*, debug: bool) -> None:
         pass
 
 
-def configure_logger_verbosity(
-    *,
-    debug: bool = False,
-    verbose: bool = False
-) -> None:
+def configure_logger_verbosity(*, debug: bool = False, verbose: bool = False) -> None:
     """Configure logger verbosity based on CLI flags (non-context-managed).
 
     This is the application-level configuration that persists throughout
@@ -255,6 +259,7 @@ configure_logger_verbosity(debug=debug, verbose=verbose)
 ```
 
 **Benefits**:
+
 - ✅ Safe environment variable deletion with `.pop(key, None)`
 - ✅ Context manager for testing isolation (restore state automatically)
 - ✅ Dynamic logger reconfiguration (not just env vars)
@@ -262,7 +267,7 @@ configure_logger_verbosity(debug=debug, verbose=verbose)
 - ✅ Proper error handling with protocol-based logger access
 - ✅ Separation of concerns: context manager vs application config
 
----
+______________________________________________________________________
 
 ### 3. Dependency Guard Print Statements
 
@@ -272,13 +277,16 @@ configure_logger_verbosity(debug=debug, verbose=verbose)
 
 ```python
 # Lines 28-30, 61-62, 86
-print("WARNING: Logger dependency was registered as empty tuple, replacing with fresh instance")
+print(
+    "WARNING: Logger dependency was registered as empty tuple, replacing with fresh instance"
+)
 print("INFO: Registering LoggerProtocol with fresh logger instance")
 ```
 
 #### Issues
 
 ❌ **CRITICAL Anti-Pattern**: Direct `print()` bypasses logging architecture
+
 - Violates clean architecture (bypasses ACB logger)
 - No structured logging (not machine-readable)
 - Output to stdout instead of proper logging stream
@@ -291,6 +299,7 @@ print("INFO: Registering LoggerProtocol with fresh logger instance")
 def _should_log_debug() -> bool:
     return os.environ.get("CRACKERJACK_DEBUG") == "1"
 
+
 if _should_log_debug():
     print("INFO: Registering LoggerProtocol with fresh logger instance")
 ```
@@ -300,6 +309,7 @@ if _should_log_debug():
 ```python
 # crackerjack/utils/dependency_guard.py
 """Dependency Guard module with proper logging."""
+
 import os
 import sys
 from typing import Any, Protocol, runtime_checkable
@@ -309,11 +319,7 @@ from acb.logger import Logger
 
 
 # Logging function that works during early initialization
-def _log_dependency_issue(
-    message: str,
-    *,
-    level: str = "WARNING"
-) -> None:
+def _log_dependency_issue(message: str, *, level: str = "WARNING") -> None:
     """Log dependency issues with proper fallback handling.
 
     This function handles the bootstrapping problem: we need to log issues
@@ -356,6 +362,7 @@ def ensure_logger_dependency() -> None:
                 "Logger dependency was registered as empty tuple, replacing with fresh instance"
             )
             from acb.logger import Logger as ACBLogger
+
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
 
@@ -364,12 +371,14 @@ def ensure_logger_dependency() -> None:
                 f"Logger dependency was registered as string ({logger_instance!r}), replacing with fresh instance"
             )
             from acb.logger import Logger as ACBLogger
+
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
 
     except Exception:
         # No logger registered, create one
         from acb.logger import Logger as ACBLogger
+
         fresh_logger = ACBLogger()
         depends.set(Logger, fresh_logger)
 
@@ -383,6 +392,7 @@ def ensure_logger_dependency() -> None:
                 "LoggerProtocol dependency was invalid, replacing with fresh instance"
             )
             from acb.logger import Logger as ACBLogger
+
             fresh_logger = ACBLogger()
             depends.set(LoggerProtocol, fresh_logger)
 
@@ -392,10 +402,10 @@ def ensure_logger_dependency() -> None:
         # Register LoggerProtocol if not available
         try:
             from acb.logger import Logger as ACBLogger
+
             fresh_logger = ACBLogger()
             _log_dependency_issue(
-                "Registering LoggerProtocol with fresh logger instance",
-                level="INFO"
+                "Registering LoggerProtocol with fresh logger instance", level="INFO"
             )
             depends.set(LoggerProtocol, fresh_logger)
         except NameError:
@@ -405,13 +415,14 @@ def ensure_logger_dependency() -> None:
 ```
 
 **Benefits**:
+
 - ✅ Proper logging with fallback to stderr (not stdout)
 - ✅ Conditional logging based on debug mode
 - ✅ No circular import issues (lazy import of Logger)
 - ✅ Machine-readable format `[CRACKERJACK:WARNING]`
 - ✅ Testable (can mock `sys.stderr`)
 
----
+______________________________________________________________________
 
 ### 4. Progress Bar Configuration
 
@@ -482,6 +493,7 @@ def _create_progress_bar(self) -> Progress:
 # crackerjack/config/__init__.py
 from rich.console import Console as RichConsole
 
+
 def _create_rich_console() -> RichConsole:
     """Create Rich console with proper terminal detection.
 
@@ -501,12 +513,13 @@ def _create_rich_console() -> RichConsole:
 ```
 
 **Benefits**:
+
 - ✅ Consistent `transient=True` across all progress bars
 - ✅ Explicit terminal detection at console level
 - ✅ Smooth refresh rate for better UX
 - ✅ Proper handling of non-interactive environments (CI/CD)
 
----
+______________________________________________________________________
 
 ## Thread Safety Analysis
 
@@ -519,6 +532,7 @@ os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
 ```
 
 **Problem**: `os.environ` is a shared global dictionary
+
 - Multiple threads reading/writing = race conditions
 - No locks or synchronization
 - ACB may spawn background threads during initialization
@@ -528,6 +542,7 @@ os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
 ```python
 # crackerjack/utils/logger_state.py (NEW FILE)
 """Thread-safe logger state management."""
+
 import threading
 from typing import Final
 
@@ -588,6 +603,7 @@ if get_debug_mode():
 ```
 
 **Benefits**:
+
 - ✅ Thread-safe (each thread has independent state)
 - ✅ No race conditions on global `os.environ`
 - ✅ Better testing isolation (threads don't interfere)
@@ -595,7 +611,7 @@ if get_debug_mode():
 
 **Note**: Environment variables still needed for ACB initialization, but internal state should use thread-local storage.
 
----
+______________________________________________________________________
 
 ## DRY Violations
 
@@ -604,6 +620,7 @@ if get_debug_mode():
 ```python
 # dependency_guard.py - Lines 32-35, 43-45, 64-67, 74-76, 84-88
 from acb.logger import Logger as ACBLogger
+
 fresh_logger = ACBLogger()
 depends.set(Logger, fresh_logger)
 ```
@@ -628,6 +645,7 @@ def _create_and_register_logger() -> Logger:
     # Also try to register as LoggerProtocol if available
     try:
         from crackerjack.models.protocols import LoggerProtocol
+
         depends.set(LoggerProtocol, fresh_logger)
     except ImportError:
         pass
@@ -640,12 +658,13 @@ fresh_logger = _create_and_register_logger()
 ```
 
 **Benefits**:
+
 - ✅ Single source of truth (DRY)
 - ✅ Easier to maintain (change once, affects all uses)
 - ✅ Testable (can mock the factory)
 - ✅ Type-safe (return type is explicit)
 
----
+______________________________________________________________________
 
 ## Type Hints Analysis
 
@@ -682,22 +701,20 @@ def configure_logger_verbosity(
         level: Explicit log level override (defaults based on debug/verbose)
     """
     # Determine effective log level
-    effective_level: Final[LogLevel] = (
-        level
-        or ("DEBUG" if debug else "WARNING")
-    )
+    effective_level: Final[LogLevel] = level or ("DEBUG" if debug else "WARNING")
 
     os.environ["ACB_LOG_LEVEL"] = effective_level
     # ... rest of implementation
 ```
 
 **Benefits**:
+
 - ✅ Explicit types for all parameters
 - ✅ `Literal` type for valid log levels (compile-time validation)
 - ✅ `Final` annotation for constants
 - ✅ `|` union syntax (Python 3.13+)
 
----
+______________________________________________________________________
 
 ## Testing Patterns
 
@@ -708,6 +725,7 @@ def configure_logger_verbosity(
 ```python
 # tests/utils/test_logger_config.py
 """Tests for logger configuration utilities."""
+
 import os
 import pytest
 from unittest.mock import Mock, patch
@@ -782,6 +800,7 @@ class TestLoggerVerbosity:
         with patch("sys.argv", ["crackerjack", "--debug", "other-args"]):
             # Re-import to trigger early detection
             from crackerjack import __main__
+
             # Verify early detection worked
             # (would need actual implementation to test properly)
             pass
@@ -816,23 +835,26 @@ class TestDependencyGuard:
 ```
 
 **Benefits**:
+
 - ✅ Test isolation with `clean_env` fixture
 - ✅ Context manager testing (state restoration)
 - ✅ Mock-based testing for external dependencies
 - ✅ Clear test names following pytest conventions
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
 ### 1. Early `sys.argv` Parsing
 
 **Current**: String matching in list comprehension
+
 ```python
 "--debug" not in sys.argv
 ```
 
 **Optimized**: Set-based lookup (O(1) vs O(n))
+
 ```python
 # Top of __main__.py
 _CLI_ARGS: Final[frozenset[str]] = frozenset(sys.argv[1:])
@@ -840,6 +862,7 @@ _EARLY_DEBUG_FLAG: Final[bool] = bool(_CLI_ARGS & {"--debug", "-d"})
 ```
 
 **Benefits**:
+
 - ✅ O(1) membership testing (vs O(n) list scan)
 - ✅ Immutable data structure (`frozenset`)
 - ✅ Handles multiple debug flags efficiently
@@ -847,6 +870,7 @@ _EARLY_DEBUG_FLAG: Final[bool] = bool(_CLI_ARGS & {"--debug", "-d"})
 ### 2. Logger Instance Checks
 
 **Current**: Multiple `isinstance()` checks
+
 ```python
 if isinstance(logger_instance, tuple) and len(logger_instance) == 0:
     # handle
@@ -855,6 +879,7 @@ elif isinstance(logger_instance, str):
 ```
 
 **Optimized**: Single `match` statement (Python 3.10+)
+
 ```python
 match logger_instance:
     case tuple() if len(logger_instance) == 0:
@@ -868,77 +893,81 @@ match logger_instance:
 ```
 
 **Benefits**:
+
 - ✅ More Pythonic (pattern matching)
 - ✅ Single type check (faster)
 - ✅ Exhaustive matching (better for maintenance)
 
----
+______________________________________________________________________
 
 ## Recommended Implementation Order
 
 ### Phase 1: Foundation (Day 1)
 
 1. ✅ Create `crackerjack/utils/logger_config.py` with thread-safe utilities
-2. ✅ Refactor `dependency_guard.py` to use proper logging
-3. ✅ Add comprehensive test suite for new utilities
+1. ✅ Refactor `dependency_guard.py` to use proper logging
+1. ✅ Add comprehensive test suite for new utilities
 
 ### Phase 2: Integration (Day 2)
 
 4. ✅ Update `__main__.py` with early debug detection
-5. ✅ Update `__main__.py` with post-parse logger configuration
-6. ✅ Update `progress_hook_executor.py` with consistent progress bar settings
+1. ✅ Update `__main__.py` with post-parse logger configuration
+1. ✅ Update `progress_hook_executor.py` with consistent progress bar settings
 
 ### Phase 3: Validation (Day 3)
 
 7. ✅ Run full test suite: `python -m crackerjack --run-tests`
-8. ✅ Manual testing of all flag combinations
-9. ✅ CI/CD pipeline validation
+1. ✅ Manual testing of all flag combinations
+1. ✅ CI/CD pipeline validation
 
----
+______________________________________________________________________
 
 ## Final Recommendations
 
 ### High Priority (Must Fix)
 
 1. ✅ **Replace direct `print()` with proper logging** (dependency_guard.py)
-2. ✅ **Add thread-local storage for logger state** (prevent race conditions)
-3. ✅ **Use context manager for environment variable lifecycle**
-4. ✅ **Add comprehensive type hints** (all new functions)
+1. ✅ **Add thread-local storage for logger state** (prevent race conditions)
+1. ✅ **Use context manager for environment variable lifecycle**
+1. ✅ **Add comprehensive type hints** (all new functions)
 
 ### Medium Priority (Should Fix)
 
 5. ✅ **Improve early debug detection** (handle `-d` short form)
-6. ✅ **Add factory function for logger creation** (DRY)
-7. ✅ **Use pattern matching for logger validation** (Python 3.10+)
-8. ✅ **Add explicit terminal detection** (progress bars)
+1. ✅ **Add factory function for logger creation** (DRY)
+1. ✅ **Use pattern matching for logger validation** (Python 3.10+)
+1. ✅ **Add explicit terminal detection** (progress bars)
 
 ### Low Priority (Nice to Have)
 
 9. ✅ **Use `frozenset` for CLI args** (performance optimization)
-10. ✅ **Add docstrings with Examples section** (better documentation)
-11. ✅ **Consider using `structlog` for structured logging** (if not already)
+1. ✅ **Add docstrings with Examples section** (better documentation)
+1. ✅ **Consider using `structlog` for structured logging** (if not already)
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 The implementation plan is **fundamentally sound** but exhibits several Python anti-patterns that should be addressed before merging:
 
 **Strengths**:
+
 - ✅ Correct approach (early env var manipulation)
 - ✅ Proper separation of concerns (logging vs progress)
 - ✅ Good test strategy outlined
 
 **Critical Issues**:
+
 - ❌ Direct `print()` statements violate architecture
 - ❌ No thread safety for environment variable mutation
 - ❌ Missing type hints in proposed implementations
 
 **Action Items**:
+
 1. Implement thread-safe logger configuration utilities
-2. Replace `print()` with proper logging in `dependency_guard.py`
-3. Add comprehensive test suite with proper fixtures
-4. Add full type hints to all new functions
-5. Use context managers for environment variable lifecycle
+1. Replace `print()` with proper logging in `dependency_guard.py`
+1. Add comprehensive test suite with proper fixtures
+1. Add full type hints to all new functions
+1. Use context managers for environment variable lifecycle
 
 With these improvements, the implementation will be production-ready and align with crackerjack's clean code philosophy: **EVERY LINE IS A LIABILITY**.
