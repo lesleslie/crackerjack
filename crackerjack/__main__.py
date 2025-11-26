@@ -22,6 +22,12 @@ if not _EARLY_DEBUG_MODE:
     acb_logger.setLevel(logging.CRITICAL)
     acb_logger.propagate = False
 
+    # Also suppress subloggers like acb.adapters.logger, acb.workflows, etc.
+    logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
+    logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
+    logging.getLogger("acb.console").setLevel(logging.CRITICAL)
+    logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
+
 # NOW safe to import ACB-dependent modules
 import typer
 from acb.console import Console
