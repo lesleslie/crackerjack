@@ -19,6 +19,7 @@ from rich.progress import (
 )
 from rich.table import Table
 
+from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.config import get_console_width
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
@@ -44,7 +45,6 @@ from crackerjack.services.parallel_executor import (
     AsyncCommandExecutor,
     ParallelHookExecutor,
 )
-from crackerjack.utils.console_utils import separator as make_separator
 
 if t.TYPE_CHECKING:
     pass  # All imports moved to top-level for runtime availability

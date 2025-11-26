@@ -10,6 +10,7 @@ from acb.depends import Inject, depends
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
+from rich.text import Text
 
 from crackerjack.config import get_console_width
 from crackerjack.models.protocols import (
@@ -21,6 +22,8 @@ from crackerjack.services.lsp_client import LSPClient
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
+
+ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 class TestManager:
@@ -316,7 +319,7 @@ class TestManager:
 
         # Parse and display test statistics panel
         stats = self._parse_test_statistics(output)
-        if stats["total"] > 0:  # Only show panel if tests were actually run
+        if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=True)
 
         if self.coverage_ratchet_enabled:
@@ -332,21 +335,56 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        self.console.print(f"[red]❌[/red] Tests failed in {duration: .1f}s")
+        self.console.print(f"[red]❌[/red] Tests failed in {duration:.1f}s")
 
         # Parse and display test statistics panel (use stdout for stats)
         combined_output = stdout + "\n" + stderr
-        stats = self._parse_test_statistics(combined_output)
-        if stats["total"] > 0:  # Only show panel if tests were actually run
+        clean_output = self._strip_ansi_codes(combined_output)
+        stats = self._parse_test_statistics(clean_output, already_clean=True)
+        if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=False)
 
-        # Extract and display failures if --verbose or --ai-debug is enabled
-        if options.verbose or getattr(options, "ai_debug", False):
-            self._last_test_failures = self._extract_failure_lines(combined_output)
-            if combined_output.strip():
-                self.console.print("\n[red]Test Output:[/red]")
-                self.console.print(combined_output)
+        # Always show key failure information, not just in verbose mode
+        if clean_output.strip():
+            # Extract and show essential failure details even in non-verbose mode
+            failure_lines = self._extract_failure_lines(clean_output)
+            if failure_lines:
+                self._last_test_failures = failure_lines
+                self._render_banner("Key Test Failures", line_style="red")
+
+                for failure in failure_lines:
+                    self.console.print(f"[red]• {failure}[/red]")
+            else:
+                self._last_test_failures = []
+
+            # Enhanced error reporting in verbose mode
+            if options.verbose or getattr(options, "ai_debug", False):
+                self._render_banner(
+                    "Full Test Output (Enhanced)",
+                    line_style="red",
+                )
+                # Use Rich-formatted output instead of raw dump
+                self._render_formatted_output(clean_output, options, already_clean=True)
         else:
+            # Show some information even when there's no output
+            border_line = "-" * getattr(options, "column_width", 70)
+            self.console.print("\n🧪 TESTS Failed test execution")
+            self.console.print(border_line)
+
+            self.console.print(
+                "    [yellow]This may indicate a timeout or critical error[/yellow]"
+            )
+            self.console.print(
+                f"    [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]"
+            )
+            if duration > 290:  # Approaching 300s timeout
+                self.console.print(
+                    "    [yellow]⚠️  Execution time was very close to timeout, may have timed out[/yellow]"
+                )
+            self.console.print(
+                "    [red]Workflow failed: Test workflow execution failed[/red]"
+            )
+            self.console.print(border_line)
             self._last_test_failures = []
 
         return False
@@ -358,7 +396,9 @@ class TestManager:
         )
         return False
 
-    def _parse_test_statistics(self, output: str) -> dict[str, t.Any]:
+    def _parse_test_statistics(
+        self, output: str, *, already_clean: bool = False
+    ) -> dict[str, t.Any]:
         """Parse test statistics from pytest output.
 
         Extracts metrics like passed, failed, skipped, errors, and duration
@@ -370,6 +410,7 @@ class TestManager:
         Returns:
             Dictionary containing test statistics
         """
+        clean_output = output if already_clean else self._strip_ansi_codes(output)
         stats = {
             "total": 0,
             "passed": 0,
@@ -384,21 +425,21 @@ class TestManager:
 
         try:
             # Extract summary and duration
-            summary_match = self._extract_pytest_summary(output)
+            summary_match = self._extract_pytest_summary(clean_output)
             if summary_match:
                 summary_text, duration = self._parse_summary_match(
-                    summary_match, output
+                    summary_match, clean_output
                 )
                 stats["duration"] = duration
 
                 # Extract metrics from summary
                 self._extract_test_metrics(summary_text, stats)
 
-                # Calculate total and fallback if needed
-                self._calculate_total_tests(stats, output)
+            # Calculate totals and fallback if summary missing
+            self._calculate_total_tests(stats, clean_output)
 
             # Extract coverage if present
-            stats["coverage"] = self._extract_coverage_from_output(output)
+            stats["coverage"] = self._extract_coverage_from_output(clean_output)
 
         except (ValueError, AttributeError) as e:
             self.console.print(f"[dim]⚠️ Failed to parse test statistics: {e}[/dim]")
@@ -466,19 +507,55 @@ class TestManager:
 
     def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
         """Manually count test results from output when parsing fails."""
-        stats["passed"] = len(
-            re.findall(r"(?:\.|✓)\s*(?:PASSED|pass)", output, re.IGNORECASE)
+        status_tokens = [
+            ("passed", "PASSED"),
+            ("failed", "FAILED"),
+            ("skipped", "SKIPPED"),
+            ("errors", "ERROR"),
+            ("xfailed", "XFAIL"),
+            ("xpassed", "XPASS"),
+        ]
+
+        for raw_line in output.splitlines():
+            line = raw_line.strip()
+            if "::" not in line:
+                continue
+
+            line_upper = line.upper()
+            if line_upper.startswith(
+                ("FAILED", "ERROR", "XPASS", "XFAIL", "SKIPPED", "PASSED")
+            ):
+                continue
+
+            for key, token in status_tokens:
+                if token in line_upper:
+                    stats[key] += 1
+                    break
+
+        stats["total"] = sum(
+            [
+                stats["passed"],
+                stats["failed"],
+                stats["skipped"],
+                stats["errors"],
+                stats.get("xfailed", 0),
+                stats.get("xpassed", 0),
+            ]
         )
-        stats["failed"] = len(
-            re.findall(r"(?:F|X|❌)\s*(?:FAILED|fail)", output, re.IGNORECASE)
-        ) or len(re.findall(r"FAILED", output))
-        stats["skipped"] = len(
-            re.findall(r"(?:s|S|.SKIPPED|skip)", output, re.IGNORECASE)
-        )
-        stats["errors"] = len(re.findall(r"ERROR|E\s+", output, re.IGNORECASE))
-        stats["total"] = (
-            stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
-        )
+
+        if stats["total"] == 0:
+            legacy_patterns = {
+                "passed": r"(?:\.|✓)\s*(?:PASSED|pass)",
+                "failed": r"(?:F|X|❌)\s*(?:FAILED|fail)",
+                "skipped": r"(?:s|S|.SKIPPED|skip)",
+                "errors": r"ERROR|E\s+",
+            }
+            for key, pattern in legacy_patterns.items():
+                stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
+
+            stats["total"] = (
+                stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
+            )
 
     def _extract_coverage_from_output(self, output: str) -> float | None:
         """Extract coverage percentage from pytest output."""
@@ -487,6 +564,22 @@ class TestManager:
         if coverage_match:
             return float(coverage_match.group(1))
         return None
+
+    def _should_render_test_panel(self, stats: dict[str, t.Any]) -> bool:
+        """Determine if the test results panel should be rendered."""
+        return any(
+            [
+                stats.get("total", 0) > 0,
+                stats.get("passed", 0) > 0,
+                stats.get("failed", 0) > 0,
+                stats.get("errors", 0) > 0,
+                stats.get("skipped", 0) > 0,
+                stats.get("xfailed", 0) > 0,
+                stats.get("xpassed", 0) > 0,
+                stats.get("duration", 0.0) > 0.0,
+                stats.get("coverage") is not None,
+            ]
+        )
 
     def _render_test_results_panel(
         self,
@@ -565,6 +658,31 @@ class TestManager:
         )
 
         self.console.print(panel)
+
+    def _render_banner(
+        self,
+        title: str,
+        *,
+        line_style: str = "red",
+        title_style: str | None = None,
+        char: str = "━",
+        padding: bool = True,
+    ) -> None:
+        """Render a horizontal banner that respects configured console width."""
+        width = max(20, get_console_width())
+        line_text = Text(char * width, style=line_style)
+        resolved_title_style = title_style or ("bold " + line_style).strip()
+        title_text = Text(title, style=resolved_title_style)
+
+        if padding:
+            self.console.print()
+
+        self.console.print(line_text)
+        self.console.print(title_text)
+        self.console.print(line_text)
+
+        if padding:
+            self.console.print()
 
     def _process_coverage_ratchet(self) -> bool:
         if not self.coverage_ratchet_enabled:
@@ -727,6 +845,424 @@ class TestManager:
                 failures.append(line.strip())
 
         return failures[:10]
+
+    @staticmethod
+    def _strip_ansi_codes(text: str) -> str:
+        """Remove ANSI escape sequences from a string."""
+        return ANSI_ESCAPE_RE.sub("", text)
+
+    def _split_output_sections(self, output: str) -> list[tuple[str, str]]:
+        """Split pytest output into logical sections for rendering.
+
+        Sections:
+        - header: Session start, test collection
+        - failure: Individual test failures with tracebacks
+        - summary: Short test summary info
+        - footer: Coverage, timing, final stats
+
+        Returns:
+            List of (section_type, section_content) tuples
+        """
+        sections = []
+        lines = output.split("\n")
+
+        current_section = []
+        current_type = "header"
+
+        for line in lines:
+            # Detect section boundaries
+            if "short test summary" in line.lower():
+                # Save previous section
+                if current_section:
+                    sections.append((current_type, "\n".join(current_section)))
+                current_section = [line]
+                current_type = "summary"
+
+            elif " FAILED " in line or " ERROR " in line:
+                # Save previous section
+                if current_section and current_type != "failure":
+                    sections.append((current_type, "\n".join(current_section)))
+                    current_section = []
+                current_type = "failure"
+                current_section.append(line)
+
+            elif line.startswith("=") and ("passed" in line or "failed" in line):
+                # Footer section
+                if current_section:
+                    sections.append((current_type, "\n".join(current_section)))
+                current_section = [line]
+                current_type = "footer"
+
+            else:
+                current_section.append(line)
+
+        # Add final section
+        if current_section:
+            sections.append((current_type, "\n".join(current_section)))
+
+        return sections
+
+    def _render_formatted_output(
+        self,
+        output: str,
+        options: OptionsProtocol,
+        *,
+        already_clean: bool = False,
+    ) -> None:
+        """Render test output with Rich formatting and sections.
+
+        Phase 2: Uses structured failure parser when available.
+
+        Args:
+            output: Raw pytest output text
+            options: Test options (for verbosity level)
+        """
+        from rich.panel import Panel
+
+        clean_output = output if already_clean else self._strip_ansi_codes(output)
+
+        # Try structured parsing first (Phase 2)
+        try:
+            failures = self._extract_structured_failures(clean_output)
+            if failures:
+                self._render_banner(
+                    "Detailed Failure Analysis",
+                    line_style="red",
+                    char="═",
+                )
+
+                self._render_structured_failure_panels(failures)
+
+                # Still show summary section
+                sections = self._split_output_sections(clean_output)
+                for section_type, section_content in sections:
+                    if section_type == "summary":
+                        panel = Panel(
+                            section_content.strip(),
+                            title="[bold yellow]📋 Test Summary[/bold yellow]",
+                            border_style="yellow",
+                            width=get_console_width(),
+                        )
+                        self.console.print(panel)
+                    elif section_type == "footer":
+                        self.console.print(
+                            f"\n[cyan]{section_content.strip()}[/cyan]\n"
+                        )
+
+                return
+
+        except Exception as e:
+            # Fallback to Phase 1 rendering if parsing fails
+            self.console.print(
+                f"[dim yellow]⚠️  Structured parsing failed: {e}[/dim yellow]"
+            )
+            self.console.print(
+                "[dim yellow]Falling back to standard formatting...[/dim yellow]\n"
+            )
+
+        # Fallback: Phase 1 section-based rendering
+        sections = self._split_output_sections(clean_output)
+
+        for section_type, section_content in sections:
+            if not section_content.strip():
+                continue
+
+            if section_type == "failure":
+                self._render_failure_section(section_content)
+            elif section_type == "summary":
+                panel = Panel(
+                    section_content.strip(),
+                    title="[bold yellow]📋 Test Summary[/bold yellow]",
+                    border_style="yellow",
+                    width=get_console_width(),
+                )
+                self.console.print(panel)
+            elif section_type == "footer":
+                self.console.print(f"\n[cyan]{section_content.strip()}[/cyan]\n")
+            else:
+                # Header and other sections (dimmed)
+                if options.verbose or getattr(options, "ai_debug", False):
+                    self.console.print(f"[dim]{section_content}[/dim]")
+
+    def _render_failure_section(self, section_content: str) -> None:
+        """Render a failure section with syntax highlighting.
+
+        Args:
+            section_content: Failure output text
+        """
+        from rich.panel import Panel
+        from rich.syntax import Syntax
+
+        # Apply Python syntax highlighting to tracebacks
+        syntax = Syntax(
+            section_content,
+            "python",
+            theme="monokai",
+            line_numbers=False,
+            word_wrap=True,
+            background_color="default",
+        )
+
+        panel = Panel(
+            syntax,
+            title="[bold red]❌ Test Failure[/bold red]",
+            border_style="red",
+            width=get_console_width(),
+        )
+        self.console.print(panel)
+
+    def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
+        """Extract structured failure information from pytest output.
+
+        This parser handles pytest's standard output format and extracts:
+        - Test names and locations
+        - Full tracebacks
+        - Assertion errors
+        - Captured output (stdout/stderr)
+        - Duration (if available)
+
+        Args:
+            output: Raw pytest output text
+
+        Returns:
+            List of TestFailure objects
+        """
+        import re
+
+        from crackerjack.models.test_models import TestFailure
+
+        failures = []
+        lines = output.split("\n")
+
+        current_failure = None
+        in_traceback = False
+        in_captured = False
+        capture_type = None
+
+        for i, line in enumerate(lines):
+            # Detect failure headers: "tests/test_foo.py::test_bar FAILED"
+            failure_match = re.match(r"^(.+?)\s+(FAILED|ERROR)\s*(?:\[(.+?)\])?", line)
+            if failure_match:
+                # Save previous failure
+                if current_failure:
+                    failures.append(current_failure)
+
+                test_path, status, params = failure_match.groups()
+
+                current_failure = TestFailure(
+                    test_name=test_path + (f"[{params}]" if params else ""),
+                    status=status,
+                    location=test_path,  # Will be refined when we see file:line
+                )
+                in_traceback = True
+                in_captured = False
+                continue
+
+            if not current_failure:
+                continue
+
+            # Detect location: "tests/test_foo.py:42: AssertionError"
+            location_match = re.match(r"^(.+?\.py):(\d+):\s*(.*)$", line)
+            if location_match and in_traceback:
+                file_path, line_num, error_type = location_match.groups()
+                current_failure.location = f"{file_path}:{line_num}"
+                if error_type:
+                    current_failure.short_summary = error_type
+                continue
+
+            # Detect assertion errors
+            if "AssertionError:" in line or line.strip().startswith("E       assert "):
+                assertion_text = line.strip().lstrip("E").strip()
+                if current_failure.assertion:
+                    current_failure.assertion += "\n" + assertion_text
+                else:
+                    current_failure.assertion = assertion_text
+                continue
+
+            # Detect captured output sections
+            if "captured stdout" in line.lower():
+                in_captured = True
+                capture_type = "stdout"
+                in_traceback = False
+                continue
+            elif "captured stderr" in line.lower():
+                in_captured = True
+                capture_type = "stderr"
+                in_traceback = False
+                continue
+
+            # Collect traceback lines
+            if in_traceback:
+                # Traceback lines typically start with spaces or special markers
+                if (
+                    line.startswith("    ")
+                    or line.startswith("\t")
+                    or line.startswith("E   ")
+                ):
+                    current_failure.traceback.append(line)
+                elif line.strip().startswith("=") or (
+                    i < len(lines) - 1 and "FAILED" in lines[i + 1]
+                ):
+                    # End of traceback
+                    in_traceback = False
+
+            # Collect captured output
+            if in_captured and capture_type:
+                if line.strip().startswith("=") or line.strip().startswith("_"):
+                    # End of captured section
+                    in_captured = False
+                    capture_type = None
+                else:
+                    if capture_type == "stdout":
+                        if current_failure.captured_stdout:
+                            current_failure.captured_stdout += "\n" + line
+                        else:
+                            current_failure.captured_stdout = line
+                    elif capture_type == "stderr":
+                        if current_failure.captured_stderr:
+                            current_failure.captured_stderr += "\n" + line
+                        else:
+                            current_failure.captured_stderr = line
+
+        # Save final failure
+        if current_failure:
+            failures.append(current_failure)
+
+        return failures
+
+    def _render_structured_failure_panels(self, failures: list["TestFailure"]) -> None:
+        """Render failures as Rich panels with tables and syntax highlighting.
+
+        Each failure is rendered in a panel containing:
+        - Summary table (test name, location, status)
+        - Assertion details (if present)
+        - Syntax-highlighted traceback
+        - Captured output (if any)
+
+        Args:
+            failures: List of TestFailure objects
+        """
+        from rich import box
+        from rich.console import Group
+        from rich.panel import Panel
+        from rich.syntax import Syntax
+        from rich.table import Table
+
+        if not failures:
+            return
+
+        # Group failures by file for better organization
+        failures_by_file: dict[str, list[TestFailure]] = {}
+        for failure in failures:
+            file_path = failure.get_file_path()
+            if file_path not in failures_by_file:
+                failures_by_file[file_path] = []
+            failures_by_file[file_path].append(failure)
+
+        # Render each file group
+        for file_path, file_failures in failures_by_file.items():
+            self.console.print(
+                f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n"
+            )
+
+            for i, failure in enumerate(file_failures, 1):
+                # Create details table
+                table = Table(
+                    show_header=False,
+                    box=box.SIMPLE,
+                    padding=(0, 1),
+                    border_style="red",
+                )
+                table.add_column("Key", style="cyan bold", width=12)
+                table.add_column("Value", overflow="fold")
+
+                # Add rows
+                table.add_row("Test", f"[yellow]{failure.test_name}[/yellow]")
+                table.add_row(
+                    "Location", f"[blue underline]{failure.location}[/blue underline]"
+                )
+                table.add_row("Status", f"[red bold]{failure.status}[/red bold]")
+
+                if failure.duration:
+                    table.add_row("Duration", f"{failure.duration:.3f}s")
+
+                # Add summary timing insight if available
+                duration_note = self._get_duration_note(failure)
+                if duration_note:
+                    table.add_row("Timing", duration_note)
+
+                # Components for panel
+                components = [table]
+
+                # Add assertion details
+                if failure.assertion:
+                    components.append("")  # Spacer
+                    components.append("[bold red]Assertion Error:[/bold red]")
+
+                    # Syntax highlight the assertion
+                    assertion_syntax = Syntax(
+                        failure.assertion,
+                        "python",
+                        theme="monokai",
+                        line_numbers=False,
+                        background_color="default",
+                    )
+                    components.append(assertion_syntax)
+
+                # Add relevant traceback (last 15 lines)
+                relevant_traceback = failure.get_relevant_traceback(max_lines=15)
+                if relevant_traceback:
+                    components.append("")  # Spacer
+                    components.append("[bold red]Traceback:[/bold red]")
+
+                    traceback_text = "\n".join(relevant_traceback)
+                    traceback_syntax = Syntax(
+                        traceback_text,
+                        "python",
+                        theme="monokai",
+                        line_numbers=False,
+                        word_wrap=True,
+                        background_color="default",
+                    )
+                    components.append(traceback_syntax)
+
+                # Add captured output if present
+                if failure.captured_stdout:
+                    components.append("")  # Spacer
+                    components.append("[bold yellow]Captured stdout:[/bold yellow]")
+                    components.append(f"[dim]{failure.captured_stdout}[/dim]")
+
+                if failure.captured_stderr:
+                    components.append("")  # Spacer
+                    components.append("[bold yellow]Captured stderr:[/bold yellow]")
+                    components.append(f"[dim]{failure.captured_stderr}[/dim]")
+
+                # Create grouped content
+                group = Group(*components)
+
+                # Render panel
+                panel = Panel(
+                    group,
+                    title=f"[bold red]❌ Failure {i}/{len(file_failures)}[/bold red]",
+                    border_style="red",
+                    width=get_console_width(),
+                    padding=(1, 2),
+                )
+
+            self.console.print(panel)
+
+    def _get_duration_note(self, failure: "TestFailure") -> str | None:
+        """Return a duration note highlighting long-running failures."""
+        if not failure.duration:
+            return None
+
+        if failure.duration > 5:
+            return (
+                f"[bold red]{failure.duration:.2f}s – investigate slow test[/bold red]"
+            )
+        if failure.duration > 2:
+            return f"[yellow]{failure.duration:.2f}s – moderately slow[/yellow]"
+        return None
 
     def _get_timeout(self, options: OptionsProtocol) -> int:
         return self.command_builder.get_test_timeout(options)

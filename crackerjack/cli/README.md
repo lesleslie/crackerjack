@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [CLI](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [CLI](<./README.md>)
 
 # CLI
 
@@ -382,7 +382,7 @@ export CRACKERJACK_DISABLE_AUTO_WORKERS=1
 - [Orchestration](<../orchestration/README.md>) — Workflow orchestration layer
 - [Options](<./options.py>) — Full list of CLI options
 - [Main README](<../../README.md>) — Command examples and workflows
-- [CLAUDE.md](<../../CLAUDE.md>) — Essential commands reference
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) — Essential commands reference
 
 ## Future Enhancements
 

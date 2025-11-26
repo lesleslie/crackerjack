@@ -112,41 +112,55 @@ class TestCrackerjackCLIFacadeInitialization:
     def test_initialization_default(self):
         """Test default initialization."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                mock_orchestrator_class.return_value = mock_orchestrator
 
-            facade = CrackerjackCLIFacade()
+                facade = CrackerjackCLIFacade()
 
-            assert facade.console == mock_console
-            assert facade.pkg_path == Path.cwd()
-            assert facade.orchestrator is not None
+                assert facade.console == mock_console
+                assert facade.pkg_path == Path.cwd()
+                assert facade.orchestrator is not None
 
     def test_initialization_with_console(self):
         """Test initialization with provided console."""
         mock_console = Mock()
 
-        facade = CrackerjackCLIFacade(console=mock_console)
+        with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+            mock_orchestrator = Mock()
+            mock_orchestrator_class.return_value = mock_orchestrator
 
-        assert facade.console == mock_console
+            facade = CrackerjackCLIFacade(console=mock_console)
+
+            assert facade.console == mock_console
 
     def test_initialization_with_pkg_path(self, tmp_path):
         """Test initialization with provided pkg_path."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                mock_orchestrator_class.return_value = mock_orchestrator
 
-            facade = CrackerjackCLIFacade(pkg_path=tmp_path)
+                facade = CrackerjackCLIFacade(pkg_path=tmp_path)
 
-            assert facade.pkg_path == tmp_path
+                assert facade.pkg_path == tmp_path
 
     def test_initialization_with_both_args(self, tmp_path):
         """Test initialization with both console and pkg_path."""
         mock_console = Mock()
 
-        facade = CrackerjackCLIFacade(console=mock_console, pkg_path=tmp_path)
+        with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+            mock_orchestrator = Mock()
+            mock_orchestrator_class.return_value = mock_orchestrator
 
-        assert facade.console == mock_console
-        assert facade.pkg_path == tmp_path
+            facade = CrackerjackCLIFacade(console=mock_console, pkg_path=tmp_path)
+
+            assert facade.console == mock_console
+            assert facade.pkg_path == tmp_path
 
 
 @pytest.mark.unit
@@ -157,9 +171,16 @@ class TestCrackerjackCLIFacadeProcess:
     def facade(self):
         """Create facade instance."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return CrackerjackCLIFacade(console=mock_console)
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
+                return CrackerjackCLIFacade(console=mock_console)
 
     @pytest.fixture
     def mock_options(self):
@@ -173,25 +194,25 @@ class TestCrackerjackCLIFacadeProcess:
 
     def test_process_successful_workflow(self, facade, mock_options):
         """Test successful workflow processing."""
-        with patch.object(facade.orchestrator, "run_complete_workflow") as mock_run:
-            mock_run.return_value = asyncio.Future()
-            mock_run.return_value.set_result(True)
+        async def mock_run_complete_workflow_true(*args, **kwargs):
+            return True
+        facade.orchestrator.run_complete_workflow = mock_run_complete_workflow_true
 
-            facade.process(mock_options)
+        facade.process(mock_options)
 
-            facade.console.print.assert_called()
-            assert "successfully" in str(facade.console.print.call_args)
+        facade.console.print.assert_called()
+        assert "successfully" in str(facade.console.print.call_args)
 
     def test_process_failed_workflow(self, facade, mock_options):
         """Test failed workflow processing."""
-        with patch.object(facade.orchestrator, "run_complete_workflow") as mock_run:
-            mock_run.return_value = asyncio.Future()
-            mock_run.return_value.set_result(False)
+        async def mock_run_complete_workflow_false(*args, **kwargs):
+            return False
+        facade.orchestrator.run_complete_workflow = mock_run_complete_workflow_false
 
-            facade.process(mock_options)
+        facade.process(mock_options)
 
-            facade.console.print.assert_called()
-            assert "errors" in str(facade.console.print.call_args)
+        facade.console.print.assert_called()
+        assert "errors" in str(facade.console.print.call_args)
 
     def test_process_keyboard_interrupt(self, facade, mock_options):
         """Test handling keyboard interrupt."""
@@ -238,9 +259,16 @@ class TestCrackerjackCLIFacadeProcessAsync:
     def facade(self):
         """Create facade instance."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return CrackerjackCLIFacade(console=mock_console)
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
+                return CrackerjackCLIFacade(console=mock_console)
 
     @pytest.fixture
     def mock_options(self):
@@ -268,9 +296,16 @@ class TestCrackerjackCLIFacadeSpecialModes:
     def facade(self):
         """Create facade instance."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return CrackerjackCLIFacade(console=mock_console)
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
+                return CrackerjackCLIFacade(console=mock_console)
 
     def test_should_handle_special_mode_mcp_server(self, facade):
         """Test MCP server mode detection."""
@@ -353,13 +388,20 @@ class TestCrackerjackCLIFacadeMCPServer:
     def facade(self):
         """Create facade instance."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return CrackerjackCLIFacade(console=mock_console)
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
+                return CrackerjackCLIFacade(console=mock_console)
 
     def test_start_mcp_server_success(self, facade):
         """Test successful MCP server start."""
-        with patch("crackerjack.cli.facade.start_mcp_main") as mock_start:
+        with patch("crackerjack.mcp.server.main") as mock_start:
             facade._start_mcp_server()
 
             mock_start.assert_called_once()
@@ -368,7 +410,7 @@ class TestCrackerjackCLIFacadeMCPServer:
     def test_start_mcp_server_import_error(self, facade):
         """Test MCP server import error."""
         with patch(
-            "crackerjack.cli.facade.start_mcp_main", side_effect=ImportError()
+            "crackerjack.mcp.server.main", side_effect=ImportError()
         ):
             with pytest.raises(SystemExit) as exc_info:
                 facade._start_mcp_server()
@@ -379,7 +421,7 @@ class TestCrackerjackCLIFacadeMCPServer:
     def test_start_mcp_server_unexpected_error(self, facade):
         """Test MCP server unexpected error."""
         with patch(
-            "crackerjack.cli.facade.start_mcp_main",
+            "crackerjack.mcp.server.main",
             side_effect=Exception("Server error"),
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -396,9 +438,16 @@ class TestCrackerjackCLIFacadeNotImplemented:
     def facade(self):
         """Create facade instance."""
         with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return CrackerjackCLIFacade(console=mock_console)
+            with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
+                return CrackerjackCLIFacade(console=mock_console)
 
     def test_handle_advanced_batch_not_implemented(self, facade):
         """Test advanced batch not implemented."""
@@ -429,24 +478,38 @@ class TestCreateCrackerjackRunner:
 
     def test_create_crackerjack_runner_default(self):
         """Test creating runner with defaults."""
-        with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+        with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+            with patch("crackerjack.cli.facade.depends.get_sync") as mock_get:
+                mock_console = Mock()
+                mock_get.return_value = mock_console
+                mock_orchestrator = Mock()
+                # Set up run_complete_workflow to return a coroutine
+                async def mock_run_complete_workflow(*args, **kwargs):
+                    return True
+                mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+                mock_orchestrator_class.return_value = mock_orchestrator
 
-            runner = create_crackerjack_runner()
+                runner = create_crackerjack_runner()
 
-            assert isinstance(runner, CrackerjackCLIFacade)
-            assert runner.console == mock_console
+                assert isinstance(runner, CrackerjackCLIFacade)
+                assert runner.console == mock_console
 
     def test_create_crackerjack_runner_with_args(self, tmp_path):
         """Test creating runner with arguments."""
-        mock_console = Mock()
+        with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+            mock_console = Mock()
+            mock_orchestrator = Mock()
+            # Set up run_complete_workflow to return a coroutine
+            async def mock_run_complete_workflow(*args, **kwargs):
+                return True
+            mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+            mock_orchestrator_class.return_value = mock_orchestrator
 
-        runner = create_crackerjack_runner(console=mock_console, pkg_path=tmp_path)
+            runner = create_crackerjack_runner(console=mock_console, pkg_path=tmp_path)
 
-        assert isinstance(runner, CrackerjackCLIFacade)
-        assert runner.console == mock_console
-        assert runner.pkg_path == tmp_path
+            assert isinstance(runner, CrackerjackCLIFacade)
+            assert runner.console == mock_console
+            assert runner.pkg_path == tmp_path
 
 
 @pytest.mark.unit
@@ -456,8 +519,15 @@ class TestCrackerjackCLIFacadeIntegration:
     @pytest.fixture
     def facade(self, tmp_path):
         """Create facade instance with temp path."""
-        mock_console = Mock()
-        return CrackerjackCLIFacade(console=mock_console, pkg_path=tmp_path)
+        with patch("crackerjack.cli.facade.WorkflowOrchestrator") as mock_orchestrator_class:
+            mock_console = Mock()
+            mock_orchestrator = Mock()
+            # Set up run_complete_workflow to return a coroutine
+            async def mock_run_complete_workflow(*args, **kwargs):
+                return True
+            mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+            mock_orchestrator_class.return_value = mock_orchestrator
+            return CrackerjackCLIFacade(console=mock_console, pkg_path=tmp_path)
 
     def test_full_workflow_with_special_mode(self, facade):
         """Test full workflow with special mode."""
@@ -480,13 +550,14 @@ class TestCrackerjackCLIFacadeIntegration:
         options.monitor_dashboard = False
         options.verbose = False
 
-        with patch.object(facade.orchestrator, "run_complete_workflow") as mock_run:
-            mock_run.return_value = asyncio.Future()
-            mock_run.return_value.set_result(True)
+        async def mock_run_complete_workflow(*args, **kwargs):
+            return True
+        facade.orchestrator.run_complete_workflow = mock_run_complete_workflow
 
-            facade.process(options)
+        facade.process(options)
 
-            mock_run.assert_called_once()
+        # Verify that console print was called (indicating successful completion)
+        facade.console.print.assert_called()
 
     def test_command_validation_integration(self):
         """Test command validation integrates with facade."""

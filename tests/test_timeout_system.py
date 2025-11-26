@@ -407,7 +407,8 @@ class TestAsyncWorkflowIntegration:
         session.fail_task = Mock()
 
         # Create pipeline with mocked dependencies
-        pipeline = AsyncWorkflowPipeline(console, pkg_path, session, phases)
+        logger = Mock()
+        pipeline = AsyncWorkflowPipeline(logger, console, pkg_path, session, phases)
 
         # Verify timeout manager is available
         assert pipeline.timeout_manager is not None

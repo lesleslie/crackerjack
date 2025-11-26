@@ -7,13 +7,13 @@ from pathlib import Path
 
 from acb.console import Console
 
+from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.regex_patterns import SAFE_PATTERNS
-from crackerjack.utils.console_utils import separator as make_separator
 
 
 @dataclass

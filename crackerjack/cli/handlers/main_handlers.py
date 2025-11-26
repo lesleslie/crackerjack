@@ -63,7 +63,7 @@ def setup_ai_agent_env(
 
 @depends.inject  # type: ignore[misc]
 def handle_interactive_mode(options: Options, console: Inject[Console] = None) -> None:
-    from crackerjack.cli.utils import get_package_version
+    from crackerjack.cli.version import get_package_version
 
     from ..interactive import launch_interactive_cli
 

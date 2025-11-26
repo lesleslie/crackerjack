@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | Intelligence
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Intelligence
 
 # Intelligence
 
@@ -543,7 +543,7 @@ Recommendation generation: <200ms
 - [Agents](<../agents/README.md>) - Individual agent implementations
 - [Workflows](<../workflows/README.md>) - Workflow integration
 - [Services/AI](<../services/ai/README.md>) - AI service layer
-- [CLAUDE.md](<../../CLAUDE.md>) - AI agent system overview
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) - AI agent system overview
 
 ## Future Enhancements
 
