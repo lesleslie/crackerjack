@@ -1,6 +1,6 @@
 # Orchestration Strategies
 
-> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](<../../../CLAUDE.md>) | [Orchestration](<../README.md>) | [Strategies](<./README.md>)
+> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Orchestration](<../README.md>) | [Strategies](<./README.md>)
 
 Execution strategy implementations for hook orchestration with parallel, sequential, and adaptive approaches.
 
@@ -389,7 +389,7 @@ hook_execution:
 - [Hook Orchestration](<../README.md>) - Overall orchestration architecture
 - [Models](<../../models/README.md>) - ExecutionStrategyProtocol definition
 - [Core](<../../core/README.md>) - Workflow coordinators
-- [CLAUDE.md](<../../../CLAUDE.md>) - Architecture patterns
+- [CLAUDE.md](../../../docs/guides/CLAUDE.md) - Architecture patterns
 
 ## Future Enhancements
 

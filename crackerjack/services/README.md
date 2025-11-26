@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Services](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Services](<./README.md>)
 
 # Services
 
@@ -362,7 +362,7 @@ result = await SecureSubprocess.run_command(
 - [Managers](<../managers/README.md>) — Managers that coordinate services
 - [Orchestration](<../orchestration/README.md>) — Orchestration using services
 - [Config](<../config/README.md>) — ACB Settings integration
-- [SECURITY.md](<../../SECURITY.md>) — Security documentation
+- [SECURITY.md](<../../docs/reference/SECURITY.md>) — Security documentation
 
 ## Future Enhancements
 

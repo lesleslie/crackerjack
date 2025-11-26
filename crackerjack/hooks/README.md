@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | Hooks
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Hooks
 
 # Hooks
 
@@ -473,7 +473,7 @@ print(f"Cache hit rate: {result2.cache_hit_rate:.1%}")
 - [Executors](<../executors/README.md>) - Hook execution engines
 - [Config](<../config/README.md>) - Hook configuration and definitions
 - [Workflows](<../workflows/README.md>) - Workflow integration
-- [CLAUDE.md](<../../CLAUDE.md>) - Two-stage quality process documentation
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) - Two-stage quality process documentation
 
 ## Future Enhancements
 

@@ -1,3 +1,22 @@
+import pytest
+from crackerjack.core.service_watchdog import (
+    get_service_watchdog,
+    uptime,
+    is_healthy,
+    add_service,
+    remove_service,
+    start_watchdog,
+    stop_watchdog,
+    start_service,
+    stop_service,
+    get_service_status,
+    get_all_services_status,
+    print_status_report,
+    signal_handler,
+    ServiceConfig
+)
+
+
 def test_get_service_watchdog_basic():
     """Test basic functionality of get_service_watchdog."""
     try:

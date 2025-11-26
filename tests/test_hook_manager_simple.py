@@ -19,7 +19,7 @@ def pkg_path(tmp_path):
 
 @pytest.fixture
 def hook_manager(console, pkg_path):
-    return HookManagerImpl(pkg_path)
+    return HookManagerImpl(pkg_path, console=console)
 
 
 class TestHookManager:
@@ -38,7 +38,7 @@ class TestHookManager:
         console,
         pkg_path,
     ) -> None:
-        HookManagerImpl(console, pkg_path)
+        HookManagerImpl(pkg_path, console=console)
 
         mock_executor_class.assert_called_once_with(console, pkg_path, False, False)
         mock_loader_class.assert_called_once()

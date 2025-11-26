@@ -24,7 +24,7 @@ from uuid import UUID, uuid4
 import tomli
 import yaml
 from acb.depends import depends
-from pydantic import Field, validator
+from pydantic import Field, field_validator
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
@@ -83,7 +83,7 @@ class UtilityCheckSettings(QABaseSettings):
         description="Command to run for DEPENDENCY_LOCK checks",
     )
 
-    @validator("pattern")
+    @field_validator("pattern")
     def validate_pattern(cls, v: str | None, values: dict[str, t.Any]) -> str | None:
         """Validate regex pattern using safe compilation.
 
@@ -109,7 +109,7 @@ class UtilityCheckSettings(QABaseSettings):
                 raise ValueError(f"Invalid regex pattern: {e}")
         return v
 
-    @validator("parser_type")
+    @field_validator("parser_type")
     def validate_parser_type(
         cls, v: str | None, values: dict[str, t.Any]
     ) -> str | None:
@@ -234,8 +234,8 @@ class UtilityCheckAdapter(QAAdapterBase):
 
         return result
 
+    @staticmethod
     def _is_file_excluded(
-        self,
         file_path: Path,
         exclude_patterns: list[str],
     ) -> bool:
@@ -772,7 +772,8 @@ class UtilityCheckAdapter(QAAdapterBase):
             execution_time_ms=elapsed_ms,
         )
 
-    def _get_check_type(self) -> QACheckType:
+    @staticmethod
+    def _get_check_type() -> QACheckType:
         """Determine QA check type based on utility check type.
 
         Utility checks map to FORMAT type since they can format/fix files.

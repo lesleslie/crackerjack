@@ -17,7 +17,7 @@ from crackerjack.services.quality.quality_baseline_enhanced import (
     EnhancedQualityBaselineService,
 )
 
-from ..utils import get_current_metrics
+from ..metrics import get_monitoring_current_metrics
 
 
 def register_metrics_api_endpoints(
@@ -29,7 +29,9 @@ def register_metrics_api_endpoints(
     async def get_metrics_summary() -> None:
         """Get current system summary."""
         try:
-            current_metrics = await get_current_metrics(quality_service, job_manager)
+            current_metrics = await get_monitoring_current_metrics(
+                quality_service, job_manager
+            )
             return JSONResponse(
                 {
                     "status": "success",

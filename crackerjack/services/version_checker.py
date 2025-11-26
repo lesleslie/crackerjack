@@ -6,7 +6,7 @@ import aiohttp
 from acb.console import Console
 from acb.depends import Inject, depends
 
-from crackerjack.utils.retry_utils import retry_api_call
+from crackerjack.core.retry import retry_api_call
 
 
 @dataclass

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from ..errors import CrackerjackError
 from ..mcp.cache import ErrorCache, ErrorPattern
-from .utils import get_function_context, is_async_function
+from .helpers import get_function_context, is_async_function
 
 
 def cache_errors(
