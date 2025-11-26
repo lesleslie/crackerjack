@@ -123,6 +123,9 @@ class ProgressHookExecutor(HookExecutor):
         Progress bar width is constrained to respect console width by limiting
         description text and using compact time format.
 
+        Logger output is suppressed at the source (logging level) to prevent
+        interference with progress bar updates.
+
         Returns:
             Configured Progress instance
         """
@@ -135,7 +138,8 @@ class ProgressHookExecutor(HookExecutor):
             TimeElapsedColumn(),
             TimeRemainingColumn(),
             console=self.console,
-            transient=False,  # Keep progress bar visible after completion
+            transient=True,  # Clear progress bar after completion (consistent with test progress)
+            refresh_per_second=10,  # Smooth single-line updates
         )
 
     def _execute_sequential_with_progress(
