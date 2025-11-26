@@ -20,6 +20,10 @@ from crackerjack.agents.enhanced_proactive_agent import (
 class TestEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
     """Concrete implementation for testing."""
 
+    async def can_handle(self, issue: Issue) -> float:
+        """Test implementation for can_handle."""
+        return 0.5  # Default confidence
+
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         """Simple test implementation."""
         return FixResult(

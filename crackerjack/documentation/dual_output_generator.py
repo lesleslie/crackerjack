@@ -760,7 +760,7 @@ graph TD
     def _get_version(self) -> str:
         """Get crackerjack version."""
         try:
-            from crackerjack.cli.utils import get_package_version
+            from crackerjack.cli.version import get_package_version
 
             return get_package_version()
         except Exception:

@@ -14,7 +14,7 @@ from crackerjack.services.dependency_analyzer import (
     DependencyGraph,
 )
 
-from ..utils import _apply_graph_filters
+from ..filters import _apply_graph_filters
 
 
 def register_dependency_api_endpoints(

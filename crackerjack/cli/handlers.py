@@ -265,7 +265,7 @@ def handle_restart_zuban_lsp(
 
 
 def handle_interactive_mode(options: Options) -> None:
-    from crackerjack.cli.utils import get_package_version
+    from crackerjack.cli.version import get_package_version
 
     from .interactive import launch_interactive_cli
 

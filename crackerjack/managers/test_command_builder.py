@@ -322,12 +322,30 @@ class TestCommandBuilder:
         cmd.extend(["--timeout", str(timeout)])
 
     def _add_verbosity_options(self, cmd: list[str], options: OptionsProtocol) -> None:
-        # Always use verbose mode to ensure collection headers are visible
-        cmd.append("-v")
+        """Add verbosity options with enhanced detail levels.
+
+        Verbosity Levels:
+        - Standard (-v): Basic test names
+        - Verbose (-vv): Assertions, captured output, test details
+        - Extra verbose (-vvv): Full locals, all test internals (ai_debug mode)
+        """
+        # Determine verbosity level
+        if options.verbose:
+            if getattr(options, "ai_debug", False):
+                cmd.append("-vvv")  # Extra verbose for AI debugging
+                self.console.print("[cyan]🔍 Using extra verbose mode (-vvv)[/cyan]")
+            else:
+                cmd.append("-vv")  # Double verbose shows more context
+                self.console.print("[cyan]🔍 Using verbose mode (-vv)[/cyan]")
+        else:
+            cmd.append("-v")  # Standard verbose
 
         cmd.extend(
             [
-                "--tb=short",
+                # Longer tracebacks in verbose mode
+                "--tb=long" if options.verbose else "--tb=short",
+                # Show all test outcomes summary (not just failures)
+                "-ra",
                 "--strict-markers",
                 "--strict-config",
             ]

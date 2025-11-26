@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](<../../CLAUDE.md>) | [Managers](<./README.md>)
+> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Managers](<./README.md>)
 
 # Managers
 

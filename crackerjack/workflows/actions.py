@@ -385,6 +385,81 @@ async def run_comprehensive_hooks(
     }
 
 
+async def _handle_test_exception(
+    event_bus: WorkflowEventBus | None,
+    step_id: str,
+    start_time: float,
+    exc: Exception,
+) -> None:
+    """Handle exceptions during test execution."""
+    # Phase 7.2: Emit failure event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.WORKFLOW_FAILED,
+            {
+                "step_id": step_id,
+                "phase": "testing",
+                "error": str(exc),
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
+    # Log the exception details before re-raising
+    import traceback
+
+    print(f"❌ Test execution failed with exception: {exc}")
+    print(f"Traceback: {traceback.format_exc()}")
+
+
+async def _handle_test_failure(
+    pipeline: WorkflowPipeline,
+    event_bus: WorkflowEventBus | None,
+    step_id: str,
+    start_time: float,
+) -> None:
+    """Handle test failure cases."""
+    # Phase 7.2: Emit failure event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.WORKFLOW_FAILED,
+            {
+                "step_id": step_id,
+                "phase": "testing",
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
+
+    # Try to get test failure details from test manager
+    test_manager = pipeline.phases.test_manager
+    if hasattr(test_manager, "get_test_failures"):
+        failures = test_manager.get_test_failures()
+        if failures:
+            print("\n📋 Test failures detected:")
+            for i, failure in enumerate(failures[:10], 1):  # Show first 10 failures
+                print(f"  {i}. {failure.strip()}")
+
+
+async def _handle_test_completion(
+    event_bus: WorkflowEventBus | None,
+    step_id: str,
+    start_time: float,
+) -> None:
+    """Handle test completion event."""
+    # Phase 7.2: Emit completion event
+    if event_bus:
+        await event_bus.publish(
+            WorkflowEvent.QUALITY_PHASE_COMPLETED,
+            {
+                "step_id": step_id,
+                "phase": "testing",
+                "success": True,
+                "timestamp": time.time(),
+                "duration": time.time() - start_time,
+            },
+        )
+
+
 @depends.inject  # type: ignore[misc]
 async def run_test_workflow(
     context: dict[str, t.Any],
@@ -435,47 +510,15 @@ async def run_test_workflow(
             options,
         )
     except Exception as exc:
-        # Phase 7.2: Emit failure event
-        if event_bus:
-            await event_bus.publish(
-                WorkflowEvent.WORKFLOW_FAILED,
-                {
-                    "step_id": step_id,
-                    "phase": "testing",
-                    "error": str(exc),
-                    "timestamp": time.time(),
-                    "duration": time.time() - start_time,
-                },
-            )
+        await _handle_test_exception(event_bus, step_id, start_time, exc)
         raise
 
     if not success:
-        # Phase 7.2: Emit failure event
-        if event_bus:
-            await event_bus.publish(
-                WorkflowEvent.WORKFLOW_FAILED,
-                {
-                    "step_id": step_id,
-                    "phase": "testing",
-                    "timestamp": time.time(),
-                    "duration": time.time() - start_time,
-                },
-            )
+        await _handle_test_failure(pipeline, event_bus, step_id, start_time)
         msg = "Test workflow execution failed"
         raise RuntimeError(msg)
 
-    # Phase 7.2: Emit completion event
-    if event_bus:
-        await event_bus.publish(
-            WorkflowEvent.QUALITY_PHASE_COMPLETED,
-            {
-                "step_id": step_id,
-                "phase": "testing",
-                "success": True,
-                "timestamp": time.time(),
-                "duration": time.time() - start_time,
-            },
-        )
+    await _handle_test_completion(event_bus, step_id, start_time)
 
     return {
         "phase": "test_workflow",

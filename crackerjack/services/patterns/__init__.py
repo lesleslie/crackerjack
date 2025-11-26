@@ -62,7 +62,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = (
 )
 
 # Import utility functions for backward compatibility
-from .utils import (
+from .operations import (
     RegexPatternsService,
     apply_formatting_fixes,
     apply_pattern_iteratively,

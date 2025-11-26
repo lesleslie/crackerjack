@@ -8,6 +8,7 @@ from acb.config import root_path
 from acb.depends import depends
 from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.managers.publish_manager import PublishManagerImpl
+from crackerjack.managers.test_command_builder import TestCommandBuilder
 from crackerjack.managers.test_manager import TestManagementImpl
 from crackerjack.models.protocols import CoverageRatchetProtocol, CoverageBadgeServiceProtocol
 
@@ -46,6 +47,7 @@ def managers_di_context(
         Console: mock_console_di,
         CoverageRatchetProtocol: mock_coverage_ratchet,
         CoverageBadgeServiceProtocol: mock_coverage_badge,
+        TestCommandBuilder: TestCommandBuilder(temp_project),
     }
 
     original_values = {}
@@ -86,7 +88,6 @@ def create_test_manager_with_path(temp_project):
     manager.pkg_path = temp_project
     # Recreate components with correct path
     from crackerjack.managers.test_executor import TestExecutor
-    from crackerjack.managers.test_command_builder import TestCommandBuilder
     manager.executor = TestExecutor(manager.console, temp_project)
     manager.command_builder = TestCommandBuilder(temp_project)
     return manager
@@ -426,6 +427,48 @@ class TestTestManagementImpl:
         assert stats["total"] == 10
         assert stats["passed"] == 10
         assert stats["coverage"] == 80.0
+
+    def test_parse_test_statistics_with_ansi_codes(
+        self, managers_di_context, temp_project
+    ) -> None:
+        """Ensure ANSI escape codes do not break parsing."""
+        manager = create_test_manager_with_path(temp_project)
+
+        pytest_output = (
+            "\x1b[32m================== 2 passed, 1 skipped in 0.42s ==================\x1b[0m"
+        )
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 3
+        assert stats["passed"] == 2
+        assert stats["skipped"] == 1
+        assert stats["duration"] == 0.42
+
+    def test_parse_test_statistics_fallback_counts(
+        self, managers_di_context, temp_project
+    ) -> None:
+        """Fallback counting should handle verbose lines without summaries."""
+        manager = create_test_manager_with_path(temp_project)
+
+        pytest_output = """
+        tests/test_alpha.py::test_pass PASSED
+        tests/test_alpha.py::test_fail FAILED
+        tests/test_alpha.py::test_skip SKIPPED
+        tests/test_alpha.py::test_error ERROR
+        tests/test_alpha.py::test_xpass XPASS
+        tests/test_alpha.py::test_xfail XFAIL
+        """
+
+        stats = manager._parse_test_statistics(pytest_output)
+
+        assert stats["total"] == 6
+        assert stats["passed"] == 1
+        assert stats["failed"] == 1
+        assert stats["skipped"] == 1
+        assert stats["errors"] == 1
+        assert stats["xpassed"] == 1
+        assert stats["xfailed"] == 1
 
     def test_parse_test_statistics_empty_output(self, managers_di_context, temp_project) -> None:
         """Test parsing of empty pytest output."""

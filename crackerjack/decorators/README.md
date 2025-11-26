@@ -128,7 +128,7 @@ def _create_async_wrapper(func, config):
 All decorators automatically detect function type using `is_async_function`:
 
 ```python
-from crackerjack.decorators.utils import is_async_function
+from crackerjack.decorators.helpers import is_async_function
 
 
 def decorator(func):
@@ -142,7 +142,7 @@ def decorator(func):
 Use `get_function_context` for rich error reporting:
 
 ```python
-from crackerjack.decorators.utils import get_function_context
+from crackerjack.decorators.helpers import get_function_context
 
 context = get_function_context(func)
 # Returns: {
@@ -177,4 +177,4 @@ async def fetch_and_process() -> dict:
 - [Exceptions](<../exceptions/README.md>) - Custom exception types
 - [Errors](../errors/README.md) - Error handling and error types
 - [MCP Cache](<../mcp/README.md>) - Error pattern caching for AI analysis
-- [Architecture: ACB Patterns](<../../CLAUDE.md#critical-architectural-pattern-protocol-based-di>) - Dependency injection patterns
+- [Architecture: ACB Patterns](../../docs/guides/CLAUDE.md#critical-architectural-pattern-protocol-based-di) - Dependency injection patterns

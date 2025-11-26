@@ -23,7 +23,7 @@ from ..errors import (
 from ..errors import (
     TimeoutError as CrackerjackTimeoutError,
 )
-from .utils import format_exception_chain, get_function_context, is_async_function
+from .helpers import format_exception_chain, get_function_context, is_async_function
 
 
 def _is_would_block_error(e: Exception) -> bool:

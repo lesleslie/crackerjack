@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](<../../../CLAUDE.md>) | [Services](<../README.md>) | AI Services
+> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Services](<../README.md>) | AI Services
 
 # AI Services
 
@@ -283,7 +283,7 @@ await limiter.acquire()
 - [Intelligence](<../../intelligence/README.md>) - Agent orchestration and selection
 - [Workflows](<../../workflows/README.md>) - Workflow integration with AI services
 - [Services](<../README.md>) - Parent services documentation
-- [CLAUDE.md](<../../../CLAUDE.md>) - AI agent system overview
+- [CLAUDE.md](../../../docs/guides/CLAUDE.md) - AI agent system overview
 
 ## Future Enhancements
 

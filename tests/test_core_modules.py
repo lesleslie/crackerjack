@@ -427,7 +427,7 @@ class TestCLIModulesBasic:
         assert cli_handlers_module is not None
 
     def test_cli_utils_import(self) -> None:
-        import crackerjack.cli.utils as cli_utils
+        import crackerjack.cli.version as cli_utils
 
         assert cli_utils is not None
 
