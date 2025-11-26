@@ -3,7 +3,7 @@
 **Date**: 2025-11-26
 **Quick Reference**: Essential Python patterns for the implementation
 
----
+______________________________________________________________________
 
 ## Top 5 Python Anti-Patterns Found
 
@@ -27,7 +27,7 @@ def _log_dependency_issue(message: str, *, level: str = "WARNING") -> None:
     print(f"[CRACKERJACK:{level}] {message}", file=sys.stderr)
 ```
 
----
+______________________________________________________________________
 
 ### 2. ❌ Environment Variable Deletion is Unsafe
 
@@ -46,7 +46,7 @@ if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
 os.environ.pop("ACB_DISABLE_STRUCTURED_STDERR", None)  # Safe, no KeyError
 ```
 
----
+______________________________________________________________________
 
 ### 3. ❌ No Thread Safety for Global State
 
@@ -63,16 +63,19 @@ os.environ["CRACKERJACK_DEBUG"] = "1"
 ```python
 # GOOD
 import threading
+
 _logger_state = threading.local()
+
 
 def get_debug_mode() -> bool:
     return getattr(_logger_state, "debug", False)
+
 
 def set_debug_mode(enabled: bool) -> None:
     _logger_state.debug = enabled
 ```
 
----
+______________________________________________________________________
 
 ### 4. ❌ DRY Violation: Repeated Logger Creation
 
@@ -81,6 +84,7 @@ def set_debug_mode(enabled: bool) -> None:
 ```python
 # BAD - Repeated everywhere
 from acb.logger import Logger as ACBLogger
+
 fresh_logger = ACBLogger()
 depends.set(Logger, fresh_logger)
 ```
@@ -91,15 +95,17 @@ depends.set(Logger, fresh_logger)
 # GOOD
 def _create_and_register_logger() -> Logger:
     from acb.logger import Logger as ACBLogger
+
     fresh_logger = ACBLogger()
     depends.set(Logger, fresh_logger)
     return fresh_logger
+
 
 # Use everywhere
 fresh_logger = _create_and_register_logger()
 ```
 
----
+______________________________________________________________________
 
 ### 5. ❌ Fragile String Matching for CLI Args
 
@@ -116,12 +122,11 @@ if "--debug" not in sys.argv:
 ```python
 # GOOD
 _EARLY_DEBUG_FLAG = any(
-    arg in ("--debug", "-d") or arg.startswith("--debug=")
-    for arg in sys.argv[1:]
+    arg in ("--debug", "-d") or arg.startswith("--debug=") for arg in sys.argv[1:]
 )
 ```
 
----
+______________________________________________________________________
 
 ## Essential Python Patterns to Use
 
@@ -153,7 +158,7 @@ def logger_verbosity(*, debug: bool = False) -> Iterator[None]:
 
 **Use Case**: Testing isolation (each test restores environment)
 
----
+______________________________________________________________________
 
 ### Pattern 2: Protocol-Based Dependency Injection
 
@@ -161,13 +166,14 @@ def logger_verbosity(*, debug: bool = False) -> Iterator[None]:
 # ALWAYS import protocols, never concrete classes
 from crackerjack.models.protocols import LoggerProtocol
 
+
 @depends.inject
 def configure_logger(logger: Inject[LoggerProtocol] = None) -> None:
     """Perfect ACB integration."""
     logger.info("Configured successfully")
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 3: Type Hints with Literal for Constants
 
@@ -176,15 +182,17 @@ from typing import Literal, Final
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
+
 def configure_logger(*, level: LogLevel = "WARNING") -> None:
     """Type-safe log level configuration."""
     os.environ["ACB_LOG_LEVEL"] = level
+
 
 # Constants should be Final
 _EARLY_DEBUG_FLAG: Final[bool] = "--debug" in sys.argv
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 4: Safe Environment Variable Operations
 
@@ -203,7 +211,7 @@ if "CRACKERJACK_DEBUG" in os.environ:
     # ...
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 5: Modern Python 3.13 Features
 
@@ -211,6 +219,7 @@ if "CRACKERJACK_DEBUG" in os.environ:
 # Use | unions (not Union)
 def configure(value: str | None = None) -> bool | None:
     pass
+
 
 # Use match statements (not if/elif chains)
 match logger_instance:
@@ -226,7 +235,7 @@ _CLI_ARGS: Final[frozenset[str]] = frozenset(sys.argv[1:])
 _EARLY_DEBUG_FLAG: Final[bool] = bool(_CLI_ARGS & {"--debug", "-d"})
 ```
 
----
+______________________________________________________________________
 
 ## Quick Implementation Checklist
 
@@ -259,7 +268,7 @@ _EARLY_DEBUG_FLAG: Final[bool] = bool(_CLI_ARGS & {"--debug", "-d"})
 - [ ] Test progress bar behavior across all flag combinations
 - [ ] Verify thread safety with concurrent test execution
 
----
+______________________________________________________________________
 
 ## Code Review Checklist
 
@@ -289,7 +298,7 @@ _EARLY_DEBUG_FLAG: Final[bool] = bool(_CLI_ARGS & {"--debug", "-d"})
 - [ ] Clear test names (`test_<behavior>_<condition>`)
 - [ ] Pytest conventions (class-based organization)
 
----
+______________________________________________________________________
 
 ## Performance Optimizations
 
@@ -319,28 +328,29 @@ match instance:
 # Use lazy imports (only if needed)
 def _create_logger() -> Logger:
     from acb.logger import Logger as ACBLogger  # Lazy
+
     return ACBLogger()
 ```
 
----
+______________________________________________________________________
 
 ## Common Pitfalls to Avoid
 
 1. ❌ Don't use `del os.environ[key]` → Use `.pop(key, None)`
-2. ❌ Don't use `print()` in library code → Use logging or stderr
-3. ❌ Don't mutate global state without thread safety → Use thread-local storage
-4. ❌ Don't repeat patterns → Extract to factory functions
-5. ❌ Don't skip type hints → Add to all new functions
-6. ❌ Don't hardcode values → Use constants with `Final` annotation
-7. ❌ Don't use `Union[X, None]` → Use `X | None` (Python 3.13+)
-8. ❌ Don't use bare `except:` → Catch specific exceptions
+1. ❌ Don't use `print()` in library code → Use logging or stderr
+1. ❌ Don't mutate global state without thread safety → Use thread-local storage
+1. ❌ Don't repeat patterns → Extract to factory functions
+1. ❌ Don't skip type hints → Add to all new functions
+1. ❌ Don't hardcode values → Use constants with `Final` annotation
+1. ❌ Don't use `Union[X, None]` → Use `X | None` (Python 3.13+)
+1. ❌ Don't use bare `except:` → Catch specific exceptions
 
----
+______________________________________________________________________
 
 ## One-Line Summary
 
 **Replace `print()` with logging, use `.pop()` for env vars, add thread-local storage, extract factory functions, and improve early debug detection.**
 
----
+______________________________________________________________________
 
 For full analysis and examples, see: `/docs/python-review-logging-progress-implementation.md`
