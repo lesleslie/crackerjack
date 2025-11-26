@@ -30,8 +30,23 @@ def _get_acb_logger() -> Logger:
     """Get ACB logger instance from dependency injection."""
     # Create a new logger instance directly
     # ACB's Logger class is already properly initialized
-    logger = Logger()
-    return logger
+    try:
+        # Attempt to get logger via ACB's dependency injection
+        logger = Logger()
+        # If Logger is a tuple (dependency injection marker), we need to handle it differently
+        if isinstance(logger, tuple):
+            # For now, fall back to a basic logger configuration
+            # In a proper ACB setup, this would be handled by the dependency system
+
+            from loguru import logger as loguru_logger
+
+            return loguru_logger.opt(depth=1)
+        return logger
+    except Exception:
+        # If there's an issue with ACB logger, fall back to loguru
+        from loguru import logger as loguru_logger
+
+        return loguru_logger.opt(depth=1)
 
 
 def _generate_correlation_id() -> str:
@@ -85,12 +100,30 @@ def get_logger(name: str) -> Any:
 
     # Get ACB logger and bind with context
     acb_logger = _get_acb_logger()
-    logger_with_context = acb_logger.bind(logger=name)
 
-    # Add correlation ID if available
-    correlation_id = get_correlation_id()
-    if correlation_id:
-        logger_with_context = logger_with_context.bind(correlation_id=correlation_id)
+    # Check if the logger has a bind method (ACB logger) or if it's a loguru logger
+    if hasattr(acb_logger, "bind"):
+        logger_with_context = acb_logger.bind(logger=name)
+
+        # Add correlation ID if available
+        correlation_id = get_correlation_id()
+        if correlation_id:
+            logger_with_context = logger_with_context.bind(
+                correlation_id=correlation_id
+            )
+    else:
+        # For loguru logger, we can add context via patch or extra
+        logger_with_context = acb_logger
+        # Add logger name to extra so it shows up in logs
+        import loguru
+
+        if isinstance(logger_with_context, loguru.Logger):
+            logger_with_context = acb_logger.patch(
+                lambda record: record["extra"].update({"logger": name})
+            )
+        else:
+            # If it's not even a loguru logger, just return as is
+            logger_with_context = acb_logger
 
     # Cache the logger for reuse
     _logger_cache[name] = logger_with_context
