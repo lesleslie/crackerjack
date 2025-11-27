@@ -56,7 +56,7 @@ class QualityBaselineService(QualityBaselineProtocol):
             self._repository: QualityBaselineRepository | None = repository
         else:
             try:
-                self._repository = depends.get(QualityBaselineRepository)
+                self._repository = depends.get_sync(QualityBaselineRepository)
             except Exception:
                 self._repository = None
 

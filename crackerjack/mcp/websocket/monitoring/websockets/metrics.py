@@ -238,7 +238,7 @@ async def _handle_dashboard_websocket(
     try:
         telemetry: WorkflowEventTelemetry | None
         try:
-            telemetry = depends.get(WorkflowEventTelemetry)
+            telemetry = depends.get_sync(WorkflowEventTelemetry)
         except Exception:
             telemetry = None
 

@@ -709,7 +709,7 @@ from typing import cast
 
 
 def get_workflow_options() -> CrackerjackSettings:
-    return cast(CrackerjackSettings, depends.get(CrackerjackSettings))
+    return cast(CrackerjackSettings, depends.get_sync(CrackerjackSettings))
 
 
 __all__ = [
