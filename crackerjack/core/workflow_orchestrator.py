@@ -872,18 +872,28 @@ class WorkflowPipeline:
             # Check if this is a publishing workflow
             is_publishing = self._is_publishing_workflow(options)
 
+            # Run fast hooks phase first
+            fast_success = self.phases.run_fast_hooks_only(options)
+            if not fast_success and is_publishing:
+                return False  # For publishing workflows, fast hook failures should stop execution
+
             # Run comprehensive hooks phase
             comprehensive_success = self.phases.run_comprehensive_hooks_only(options)
             if not comprehensive_success and is_publishing:
-                return False  # For publishing workflows, quality failures should stop execution
+                return False  # For publishing workflows, comprehensive hook failures should stop execution
+
+            # Both fast and comprehensive hooks must pass for success
+            quality_success = fast_success and comprehensive_success
 
             # Run testing phase if requested
             if getattr(options, "test", False):
                 testing_success = self.phases.run_testing_phase(options)
                 if not testing_success and is_publishing:
                     return False  # For publishing workflows, test failures should stop execution
+                # For non-publishing workflows, testing failures should factor into overall success too
+                quality_success = quality_success and testing_success
 
-            return comprehensive_success
+            return quality_success
         except Exception as e:
             self.logger.error(f"Quality phase execution failed: {e}")
             return False

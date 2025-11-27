@@ -216,7 +216,7 @@ class PyscnAdapter(BaseToolAdapter):
                 extra={"issues_count": len(data.get("issues", []))},
             )
         except json.JSONDecodeError as e:
-            logger.warning(
+            logger.debug(
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )

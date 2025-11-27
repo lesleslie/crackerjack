@@ -57,8 +57,12 @@ def _configure_structlog_for_level(log_level: int) -> None:
             )
         else:  # CRITICAL level or other suppressive levels
             # In normal mode, suppress all output
+            def dummy_processor(logger, method_name, event_dict):
+                """Dummy processor that returns the event dict unchanged without additional processing."""
+                return event_dict
+
             structlog.configure(
-                processors=[structlog.processors.DummyProcessor()],
+                processors=[dummy_processor],
                 logger_factory=structlog.testing.MemoryLoggerFactory(),
                 wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
                 cache_logger_on_first_use=True,
