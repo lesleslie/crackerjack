@@ -220,7 +220,7 @@ class BanditAdapter(BaseToolAdapter):
             )
         except json.JSONDecodeError as e:
             # Fallback to text parsing if JSON fails
-            logger.warning(
+            logger.debug(
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )

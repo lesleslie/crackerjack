@@ -73,9 +73,8 @@ crackerjack-ai-debug-*.log
 **/.claude/settings.local.json
 
 # Crackerjack patterns
-
-
-
+complexipy_results_*.json
+complexipy.json
 
 # Build/Distribution
 # Caches

@@ -208,7 +208,7 @@ class PyreflyAdapter(BaseToolAdapter):
                 extra={"files_count": len(data.get("files", []))},
             )
         except json.JSONDecodeError as e:
-            logger.warning(
+            logger.debug(
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )

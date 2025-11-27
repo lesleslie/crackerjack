@@ -255,7 +255,7 @@ class SkylosAdapter(BaseToolAdapter):
         try:
             issues = self._parse_json_output(result.raw_output)
         except json.JSONDecodeError:
-            logger.warning(
+            logger.debug(
                 "JSON parse failed, falling back to text parsing",
                 extra={"output_preview": result.raw_output[:200]},
             )
