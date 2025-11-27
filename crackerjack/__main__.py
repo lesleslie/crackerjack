@@ -19,6 +19,10 @@ _EARLY_DEBUG_MODE = any(
 _EARLY_VERBOSE_MODE = any(
     arg in ("--verbose", "-v") or arg.startswith("--verbose=") for arg in sys.argv[1:]
 )
+# Check if help is requested to suppress ACB startup messages completely
+_EARLY_HELP_MODE = any(
+    arg in ("--help", "-h") or arg.startswith("--help=") for arg in sys.argv[1:]
+)
 
 
 def _configure_structlog_for_level(log_level: int) -> None:
@@ -70,7 +74,24 @@ def _configure_structlog_for_level(log_level: int) -> None:
 
 
 if not _EARLY_DEBUG_MODE:
-    if not _EARLY_VERBOSE_MODE:
+    if _EARLY_HELP_MODE:
+        # In help mode, completely suppress ACB startup logging for clean UX
+        acb_logger = logging.getLogger("acb")
+        acb_logger.setLevel(logging.CRITICAL)
+        acb_logger.propagate = False
+
+        # Also suppress subloggers like acb.adapters.logger, acb.workflows, etc.
+        logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.console").setLevel(logging.CRITICAL)
+        logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
+        # Specifically target the loggers that were appearing in the output
+        logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
+
+        # Configure structlog to suppress output in help mode
+        _configure_structlog_for_level(logging.CRITICAL)
+    elif not _EARLY_VERBOSE_MODE:
         # In non-debug and non-verbose mode, suppress ACB startup logging for clean default UX
         acb_logger = logging.getLogger("acb")
         acb_logger.setLevel(logging.CRITICAL)

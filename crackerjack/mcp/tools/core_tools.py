@@ -150,7 +150,7 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
     The global settings remain unchanged.
     """
     # Get base settings from DI
-    base_settings = depends.get(CrackerjackSettings)
+    base_settings = depends.get_sync(CrackerjackSettings)
 
     # Create a new settings instance with stage-specific values
     # We copy the base settings and override specific fields

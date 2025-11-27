@@ -206,7 +206,7 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
             return
 
         # Load configuration from depends
-        config: Config = depends.get(Config)
+        config: Config = await depends.get(Config)
 
         # Build settings from config with validation
         self._settings = ClaudeCodeFixerSettings(

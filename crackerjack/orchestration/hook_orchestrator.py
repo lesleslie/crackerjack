@@ -132,7 +132,7 @@ class HookOrchestratorAdapter:
     def _resolve_event_bus() -> WorkflowEventBus | None:
         """Resolve workflow event bus from dependency injection."""
         try:
-            return cast(WorkflowEventBus, depends.get(WorkflowEventBus))
+            return cast(WorkflowEventBus, depends.get_sync(WorkflowEventBus))
         except Exception:
             logger.debug("Workflow event bus not available during orchestrator setup")
             return None

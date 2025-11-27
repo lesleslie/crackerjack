@@ -53,7 +53,7 @@ class DependencyMonitorService:
             self.project_root / ".crackerjack" / "dependency_cache.json"
         )
         try:
-            self._repository: DependencyMonitorRepository | None = depends.get(
+            self._repository: DependencyMonitorRepository | None = depends.get_sync(
                 DependencyMonitorRepository
             )
         except Exception:

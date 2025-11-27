@@ -352,7 +352,7 @@ class ToolProxy:
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
             # Create minimal context for adapter using ACB settings
-            settings = depends.get(CrackerjackSettings)
+            settings = depends.get_sync(CrackerjackSettings)
 
             # Import adapter from core_tools that converts settings to OptionsProtocol
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
@@ -373,7 +373,7 @@ class ToolProxy:
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
             # Create minimal context for adapter using ACB settings
-            settings = depends.get(CrackerjackSettings)
+            settings = depends.get_sync(CrackerjackSettings)
 
             # Import adapter from core_tools that converts settings to OptionsProtocol
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol

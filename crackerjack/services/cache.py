@@ -65,7 +65,7 @@ def get_cache() -> Any:
         )
         raise RuntimeError(msg)
     try:
-        return depends.get(Cache)
+        return depends.get_sync(Cache)
     except Exception as exception:  # pragma: no cover - runtime safety
         # Check if the error is specifically about the adapter not being found
         error_msg = str(exception).lower()

@@ -142,7 +142,7 @@ class HealthMetricsService(HealthMetricsServiceProtocol, ServiceProtocol):
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.max_trend_points = 20
         try:
-            self._repository: HealthMetricsRepository | None = depends.get(
+            self._repository: HealthMetricsRepository | None = depends.get_sync(
                 HealthMetricsRepository
             )
         except Exception:

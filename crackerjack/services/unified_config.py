@@ -32,7 +32,7 @@ class UnifiedConfigurationService:
 
     def _load_unified_config(self) -> CrackerjackSettings:
         try:
-            settings = depends.get(CrackerjackSettings)
+            settings = depends.get_sync(CrackerjackSettings)
             self.logger.info("Unified configuration loaded from acb")
             return settings
         except Exception as e:
