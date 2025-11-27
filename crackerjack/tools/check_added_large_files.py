@@ -14,9 +14,10 @@ Exit Codes:
 from __future__ import annotations
 
 import argparse
-import subprocess
 import sys
 from pathlib import Path
+
+from crackerjack.tools._git_utils import get_git_tracked_files
 
 
 def get_file_size(file_path: Path) -> int:
@@ -49,29 +50,6 @@ def format_size(size_bytes: int | float) -> str:
             return f"{size:.1f} {unit}"
         size /= 1024.0
     return f"{size:.1f} TB"
-
-
-def get_git_tracked_files() -> list[Path]:
-    """Get list of files tracked by git.
-
-    Returns:
-        List of Path objects for git-tracked files
-    """
-    try:
-        result = subprocess.run(
-            ["git", "ls-files"],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return [
-            Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
-        ]
-    except subprocess.CalledProcessError:
-        return []
-    except FileNotFoundError:
-        # Git not available
-        return []
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -114,7 +92,7 @@ def main(argv: list[str] | None = None) -> int:
 
     # Determine which files to check
     if not args.files:
-        # Get all git-tracked files
+        # Get all git-tracked files, respecting gitignore
         files = get_git_tracked_files()
         if not files:
             # Fallback to all files in current directory if not in git repo

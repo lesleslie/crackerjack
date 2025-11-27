@@ -878,13 +878,13 @@
   {
     "complexity": 2,
     "file_name": "__main__.py",
-    "function_name": "_configure_logging_for_execution",
+    "function_name": "_handle_semantic_commands",
     "path": "__main__.py"
   },
   {
-    "complexity": 2,
+    "complexity": 3,
     "file_name": "__main__.py",
-    "function_name": "_handle_semantic_commands",
+    "function_name": "_configure_logging_for_execution",
     "path": "__main__.py"
   },
   {

@@ -82,61 +82,10 @@ crackerjack-ai-debug-*.log
 # Coverage
 # Crackerjack specific
 # Development
-*$py.class
-**/.claude/settings.local.json
-*.egg-info/
-*.py[cod]
 *.pyc
-.DS_STORE
-.autotyping-cache/
-.coverage*
 .crackerjack-*
-.envrc
-.hypothesis/
-.idea/
-.mcp.json
-.mypy_cache/
-.pdm-build/
-.pdm-python
-.pdm.toml
-.pytest_cache/
-.ruff_cache/
-.venv/
-/.benchmarks/
-/.claude/
-/.crackerjack-hooks-updated
-/.crackerjack-mcp/
-/.crackerjack-state
-/.crackerjack/
-/.mcp-proxy.json
-/__pypackages__/
-/ai-agent-summary.json
-/bandit-report.json
-/build/
-/complexipy.json
-/coverage.json
 /dist/
-/error-context.json
-/examples/
-/feature-implementation-*.md
-/hooks-analysis.json
-/htmlcov/
-/project-structure.json
-/quality-metrics.json
-/scratch/
-/session_handoff_*.md
-/test-implementation-*.md
-/test-results.xml
-/tests/.benchmarks/
-/tests/htmlcov/
-/tmp/
-__pycache__/
-build/
-crackerjack-ai-debug-*.log
-crackerjack-debug-*.log
-dist/
 htmlcov/
-venv/
 /NOTES.md
 /.obsidian/
 /.smart-env/
@@ -144,5 +93,5 @@ venv/
 settings/local.yaml
 
 # Local settings overrides (ACB configuration)
-settings/local.yaml
 /.uv-cache/
+/.complexipy_cache/
