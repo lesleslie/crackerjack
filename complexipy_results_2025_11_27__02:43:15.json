@@ -878,13 +878,13 @@
   {
     "complexity": 2,
     "file_name": "__main__.py",
-    "function_name": "_configure_logging_for_execution",
+    "function_name": "_handle_semantic_commands",
     "path": "__main__.py"
   },
   {
-    "complexity": 2,
+    "complexity": 3,
     "file_name": "__main__.py",
-    "function_name": "_handle_semantic_commands",
+    "function_name": "_configure_logging_for_execution",
     "path": "__main__.py"
   },
   {
@@ -915,6 +915,12 @@
     "complexity": 4,
     "file_name": "__main__.py",
     "function_name": "_execute_semantic_operations",
+    "path": "__main__.py"
+  },
+  {
+    "complexity": 5,
+    "file_name": "__main__.py",
+    "function_name": "_configure_structlog_for_level",
     "path": "__main__.py"
   },
   {
@@ -2055,12 +2061,6 @@
     "complexity": 1,
     "file_name": "check_added_large_files.py",
     "function_name": "get_file_size",
-    "path": "check_added_large_files.py"
-  },
-  {
-    "complexity": 2,
-    "file_name": "check_added_large_files.py",
-    "function_name": "get_git_tracked_files",
     "path": "check_added_large_files.py"
   },
   {

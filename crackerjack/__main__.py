@@ -7,6 +7,7 @@ import logging
 import sys
 import typing as t
 import warnings
+from contextlib import suppress
 
 # CRITICAL: Suppress ACB logger startup messages BEFORE any ACB imports
 # ACB's logger initializes at import time and emits "Application started" messages.
@@ -15,21 +16,83 @@ _EARLY_DEBUG_MODE = any(
     arg in ("--debug", "-d", "--ai-debug") or arg.startswith("--debug=")
     for arg in sys.argv[1:]
 )
+_EARLY_VERBOSE_MODE = any(
+    arg in ("--verbose", "-v") or arg.startswith("--verbose=") for arg in sys.argv[1:]
+)
+
+
+def _configure_structlog_for_level(log_level: int) -> None:
+    """Configure structlog with appropriate filtering for the given log level."""
+    with suppress(ImportError):
+        import structlog
+
+        if log_level == logging.DEBUG:
+            # In debug mode, show all messages
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.add_log_level,
+                    structlog.stdlib.PositionalArgumentsFormatter(),
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.StackInfoRenderer(),
+                    structlog.processors.format_exc_info,
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+                ],
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.stdlib.BoundLogger,
+                cache_logger_on_first_use=True,
+            )
+        elif log_level == logging.ERROR:
+            # In verbose mode, show only ERROR and above
+            structlog.configure(
+                processors=[
+                    structlog.stdlib.add_log_level,
+                    structlog.processors.TimeStamper(fmt="iso"),
+                    structlog.processors.UnicodeDecoder(),
+                    structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+                ],
+                logger_factory=structlog.stdlib.LoggerFactory(),
+                wrapper_class=structlog.make_filtering_bound_logger(logging.ERROR),
+                cache_logger_on_first_use=True,
+            )
+        else:  # CRITICAL level or other suppressive levels
+            # In normal mode, suppress all output
+            structlog.configure(
+                processors=[structlog.processors.DummyProcessor()],
+                logger_factory=structlog.testing.MemoryLoggerFactory(),
+                wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
+                cache_logger_on_first_use=True,
+            )
+
 
 if not _EARLY_DEBUG_MODE:
-    # Suppress ACB startup logging for clean default UX
-    acb_logger = logging.getLogger("acb")
-    acb_logger.setLevel(logging.CRITICAL)
-    acb_logger.propagate = False
+    if not _EARLY_VERBOSE_MODE:
+        # In non-debug and non-verbose mode, suppress ACB startup logging for clean default UX
+        acb_logger = logging.getLogger("acb")
+        acb_logger.setLevel(logging.CRITICAL)
+        acb_logger.propagate = False
 
-    # Also suppress subloggers like acb.adapters.logger, acb.workflows, etc.
-    logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
-    logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
-    logging.getLogger("acb.console").setLevel(logging.CRITICAL)
-    logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
-    # Specifically target the loggers that were appearing in the output
-    logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
-    logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
+        # Also suppress subloggers like acb.adapters.logger, acb.workflows, etc.
+        logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.console").setLevel(logging.CRITICAL)
+        logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
+        # Specifically target the loggers that were appearing in the output
+        logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
+
+        # Configure structlog to suppress output in normal mode
+        _configure_structlog_for_level(logging.CRITICAL)
+    else:
+        # In verbose mode but not debug, set to ERROR level to reduce noise but still show important errors
+        logging.getLogger("acb").setLevel(logging.ERROR)
+        logging.getLogger("crackerjack.core").setLevel(logging.ERROR)
+        # Specifically target the loggers that were appearing in the output
+        logging.getLogger("acb.adapters.logger").setLevel(logging.ERROR)
+        logging.getLogger("acb.workflows.engine").setLevel(logging.ERROR)
+
+        # Configure structlog to show only ERROR and above in verbose mode
+        _configure_structlog_for_level(logging.ERROR)
 
 # NOW safe to import ACB-dependent modules
 import typer
@@ -222,7 +285,7 @@ def main(
     register_services()
 
     # Ensure logging levels are properly set after services are registered
-    _configure_logging_for_execution(debug or ai_debug or ai_fix)
+    _configure_logging_for_execution(debug or ai_debug or ai_fix, verbose)
 
     options = create_options(
         commit,
@@ -517,12 +580,33 @@ def _handle_advanced_features(local_vars: t.Any) -> bool:
     return True
 
 
-def _configure_logging_for_execution(debug_enabled: bool) -> None:
-    """Configure logging levels based on debug flag during execution."""
+def _configure_logging_for_execution(
+    debug_enabled: bool, verbose_enabled: bool = False
+) -> None:
+    """Configure logging levels based on debug and verbose flags during execution."""
     import logging
 
-    if not debug_enabled:
-        # Suppress ACB and crackerjack logging for clean default UX during execution
+    # Determine the appropriate logging level
+    if debug_enabled:
+        # In debug mode, set to DEBUG to show all messages
+        logging.getLogger("acb").setLevel(logging.DEBUG)
+        logging.getLogger("crackerjack").setLevel(logging.DEBUG)
+        # Configure structlog to show all messages in debug mode
+        _configure_structlog_for_level(logging.DEBUG)
+    elif verbose_enabled:
+        # In verbose mode, we still want to suppress ACB logs to avoid noise
+        # Only show ERROR and above for ACB/core components to reduce noise
+        logging.getLogger("acb").setLevel(logging.ERROR)
+        logging.getLogger("crackerjack.core").setLevel(logging.ERROR)
+        # Specifically target the loggers that were appearing in the output
+        logging.getLogger("acb.adapters.logger").setLevel(logging.ERROR)
+        logging.getLogger("acb.workflows.engine").setLevel(logging.ERROR)
+        # Also target the structlog logger adapters specifically
+        logging.getLogger("acb.adapters.logger.structlog").setLevel(logging.ERROR)
+        # Configure structlog to minimize output in verbose mode
+        _configure_structlog_for_level(logging.ERROR)
+    else:
+        # In normal mode, suppress ACB and crackerjack logging for clean default UX during execution
         logging.getLogger("acb").setLevel(logging.CRITICAL)
         logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
         logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
@@ -531,10 +615,10 @@ def _configure_logging_for_execution(debug_enabled: bool) -> None:
         # Specifically target the loggers that were appearing in the output
         logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
         logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
-    else:
-        # In debug mode, set to DEBUG to show all messages
-        logging.getLogger("acb").setLevel(logging.DEBUG)
-        logging.getLogger("crackerjack").setLevel(logging.DEBUG)
+        # Also target the structlog logger adapters specifically
+        logging.getLogger("acb.adapters.logger.structlog").setLevel(logging.CRITICAL)
+        # Configure structlog to suppress output in normal mode
+        _configure_structlog_for_level(logging.CRITICAL)
 
 
 def cli() -> None:
