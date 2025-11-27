@@ -93,12 +93,12 @@ class ZubanLSPSettings(Settings):
     auto_start: bool = True
     port: int = 8677
     mode: str = "stdio"
-    timeout: int = 30
+    timeout: int = 120
 
 
 class GlobalLockSettings(Settings):
     enabled: bool = True
-    timeout_seconds: float = 600.0
+    timeout_seconds: float = 1800.0
     stale_lock_hours: float = 2.0
     lock_directory: Path = Path.home() / ".crackerjack" / "locks"
     session_heartbeat_interval: float = 30.0
@@ -129,7 +129,7 @@ class CrackerjackSettings(Settings):
     cache_ttl: int = 3600
     cache_max_entries: int = 100
     max_parallel_hooks: int = 4
-    default_timeout: int = 600
+    default_timeout: int = 1800
     stop_on_critical_failure: bool = True
     enable_dependency_resolution: bool = True
     log_cache_stats: bool = False

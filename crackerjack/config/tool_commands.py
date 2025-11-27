@@ -83,7 +83,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uv",
             "run",
             "zuban",
-            "check",
+            "mypy",  # Use mypy-compatible command as it's more likely to have expected behavior
             "--config-file",
             "mypy.ini",  # Required: zuban v0.2.2 can't parse [tool.mypy] from pyproject.toml
             "--no-error-summary",  # Suppress summary line (e.g., "Found N errors") to keep issue output clean

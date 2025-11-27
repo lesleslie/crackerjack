@@ -42,7 +42,7 @@ class QABaseSettings(Settings):
     """
 
     enabled: bool = True
-    timeout_seconds: int = Field(60, ge=1, le=3600)
+    timeout_seconds: int = Field(300, ge=1, le=7200)
     file_patterns: list[str] = Field(default_factory=lambda: ["**/*.py"])
     exclude_patterns: list[str] = Field(default_factory=list)
     fail_on_error: bool = True

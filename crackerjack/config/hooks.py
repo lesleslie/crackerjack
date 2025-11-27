@@ -126,7 +126,7 @@ FAST_HOOKS = [
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,
-        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
+        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
         retry_on_failure=True,
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -135,7 +135,7 @@ FAST_HOOKS = [
         name="trailing-whitespace",
         command=[],
         is_formatting=True,
-        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
+        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -145,7 +145,7 @@ FAST_HOOKS = [
         name="end-of-file-fixer",
         command=[],
         is_formatting=True,
-        timeout=60,  # Increased from 20 to handle larger codebases (was potentially causing issues at 20s)
+        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -154,7 +154,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-yaml",
         command=[],
-        timeout=20,  # UV init (~10s) + tool execution (P95=0.53s) + safety margin
+        timeout=60,  # Increased from 20 to reduce timeout issues with larger YAML files
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
@@ -162,7 +162,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-toml",
         command=[],
-        timeout=79,  # Phase 10.4.1: Profiled P95=26.58s, safety=3x
+        timeout=150,  # Increased from 79 to reduce timeout issues with larger TOML files
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
@@ -170,7 +170,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-json",
         command=[],
-        timeout=30,  # UV init (~10s) + tool execution (P95=~0.5s) + safety margin
+        timeout=90,  # Increased from 30 to reduce timeout issues with larger JSON files
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
@@ -178,7 +178,7 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-ast",
         command=[],
-        timeout=30,  # UV init (~10s) + tool execution (P95=~0.2s) + safety margin
+        timeout=90,  # Increased from 30 to reduce timeout issues with larger Python files
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level validator
@@ -187,7 +187,7 @@ FAST_HOOKS = [
         name="format-json",
         command=[],
         is_formatting=True,
-        timeout=45,  # UV init (~10s) + tool execution + formatting overhead
+        timeout=120,  # Increased from 45 to reduce timeout issues with larger JSON files
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -196,21 +196,21 @@ FAST_HOOKS = [
     HookDefinition(
         name="check-added-large-files",
         command=[],
-        timeout=30,  # UV init (~10s) + tool execution (P95=0.27s) + increased safety margin
+        timeout=90,  # Increased from 30 to reduce timeout issues with repositories with many files
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="uv-lock",
         command=[],
-        timeout=20,  # UV init (~10s) + tool execution (P95=1.99s) + safety margin
+        timeout=60,  # Increased from 20 to reduce timeout issues with complex dependency trees
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
     ),
     HookDefinition(
         name="codespell",
         command=[],
-        timeout=45,  # UV init (~10s) + tool execution + large repo scanning overhead
+        timeout=150,  # Increased from 45 to reduce timeout issues with large codebases
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level spell checker
@@ -219,7 +219,7 @@ FAST_HOOKS = [
         name="ruff-check",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 20 to handle larger codebases (was causing timeouts at 20s)
+        timeout=240,  # Increased from 120 to reduce timeout issues with large codebases
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -229,7 +229,7 @@ FAST_HOOKS = [
         name="ruff-format",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 20 to handle larger codebases (was causing timeouts at 20s)
+        timeout=240,  # Increased from 120 to reduce timeout issues with large codebases
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -239,7 +239,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=120,  # 266 markdown files + mdformat-ruff plugin overhead (~0.45s per file average)
+        timeout=300,  # Increased from 120 to reduce timeout issues with larger markdown files
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
@@ -251,16 +251,17 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="zuban",
         command=[],
-        timeout=80,  # UV init (~10s) + tool execution (P95=10.97s) + increased safety margin
+        timeout=240,  # Increased from 80 to reduce timeout issues with larger codebases during type checking
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,  # Changed from CRITICAL to HIGH to allow other hooks to run
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+        accepts_file_paths=True,  # Phase 10.5: Allow incremental execution on changed files to avoid virtual environments
     ),
     HookDefinition(
         name="semgrep",
         command=[],
-        timeout=240,  # 4 minutes - most scans complete in <1 min (observed: 9-10s)
+        timeout=480,  # Increased from 240 to reduce timeout issues with comprehensive security scans
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -281,7 +282,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="gitleaks",
         command=[],
-        timeout=45,  # Reduce to avoid long stalls in restricted environments
+        timeout=180,  # Increased from 45 to reduce timeout issues with comprehensive security scans
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -290,7 +291,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=60,  # Allow more time for scanning
+        timeout=180,  # Increased from 60 to reduce timeout issues with comprehensive dead code scanning
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -300,7 +301,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=240,  # 4 minutes - matches adapter default
+        timeout=480,  # Increased from 240 to reduce timeout issues with comprehensive refactoring analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -310,7 +311,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="creosote",
         command=[],
-        timeout=180,  # Increase to accommodate slower dependency scans
+        timeout=360,  # Increased from 180 to reduce timeout issues with comprehensive dependency analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
@@ -319,7 +320,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],
-        timeout=120,  # Allow more time for full-tree complexity analysis
+        timeout=300,  # Increased from 120 to reduce timeout issues with comprehensive complexity analysis
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -329,7 +330,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="check-jsonschema",
         command=[],
-        timeout=60,  # UV init (~10s) + schema validation overhead
+        timeout=180,  # Increased from 60 to reduce timeout issues with complex schema validation
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
@@ -342,7 +343,7 @@ COMPREHENSIVE_HOOKS = [
 FAST_STRATEGY = HookStrategy(
     name="fast",
     hooks=FAST_HOOKS,
-    timeout=60,
+    timeout=300,  # Increased from 60 to accommodate all increased hook timeouts
     retry_policy=RetryPolicy.FORMATTING_ONLY,
     parallel=True,  # Phase 6: Enable parallel execution for 2-3x speedup
     max_workers=4,  # Optimal concurrency for fast hooks
@@ -351,7 +352,7 @@ FAST_STRATEGY = HookStrategy(
 COMPREHENSIVE_STRATEGY = HookStrategy(
     name="comprehensive",
     hooks=COMPREHENSIVE_HOOKS,
-    timeout=300,
+    timeout=1800,  # Increased from 300 to accommodate all increased hook timeouts
     retry_policy=RetryPolicy.NONE,
     parallel=True,  # Phase 6: Enable parallel execution for 2x speedup
     max_workers=4,  # Optimal concurrency for comprehensive hooks

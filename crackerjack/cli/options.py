@@ -122,7 +122,7 @@ class Options(BaseModel):
     no_zuban_lsp: bool = False
     zuban_lsp_port: int = 8677
     zuban_lsp_mode: str = "tcp"
-    zuban_lsp_timeout: int = 30
+    zuban_lsp_timeout: int = 120
     enable_lsp_hooks: bool = False
     dev: bool = False
     dashboard: bool = False
@@ -136,7 +136,7 @@ class Options(BaseModel):
     no_coverage_ratchet: bool = False
     skip_config_merge: bool = False
     disable_global_locks: bool = False
-    global_lock_timeout: int = 600
+    global_lock_timeout: int = 1800
     global_lock_cleanup: bool = True
     global_lock_dir: str | None = None
     quick: bool = False
@@ -1036,7 +1036,7 @@ def create_options(
     no_zuban_lsp: bool = False,
     zuban_lsp_port: int = 8677,
     zuban_lsp_mode: str = "tcp",
-    zuban_lsp_timeout: int = 30,
+    zuban_lsp_timeout: int = 120,
     enable_lsp_hooks: bool = False,
     no_git_tags: bool = False,
     skip_version_check: bool = False,
@@ -1054,7 +1054,7 @@ def create_options(
     no_coverage_ratchet: bool = False,
     boost_coverage: bool = True,
     disable_global_locks: bool = False,
-    global_lock_timeout: int = 600,
+    global_lock_timeout: int = 1800,
     global_lock_cleanup: bool = True,
     global_lock_dir: str | None = None,
     quick: bool = False,

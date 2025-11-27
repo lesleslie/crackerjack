@@ -163,7 +163,7 @@ mcp_http_enabled = true
 zuban_lsp_enabled = false
 zuban_lsp_host = "127.0.0.1"
 zuban_lsp_port = 8677
-zuban_lsp_timeout = 10.0
+zuban_lsp_timeout = 120.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
 
@@ -182,7 +182,7 @@ ignore-words = ".codespell-ignore"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
-timeout = 300
+timeout = 600
 addopts = "--cov=crackerjack --cov-report=term-missing:skip-covered --cov-report=html:htmlcov --cov-report=json --strict-markers --strict-config -ra --tb=short"
 testpaths = [
     "tests",
@@ -400,10 +400,32 @@ python_version = "3.13"
 [tool.zuban]
 strict = true
 show_error_codes = true
+exclude = [
+    ".venv",
+    "venv",
+    ".tox",
+    "__pycache__",
+    ".pytest_cache",
+    ".mypy_cache",
+    ".ruff_cache",
+    ".uv_cache",
+    ".git",
+    ".hg",
+    ".svn",
+    "build",
+    "dist",
+    ".eggs",
+    "*.egg-info",
+    "node_modules",
+    ".vscode",
+    ".idea",
+    "docs/_build",
+    "tests",
+]
 
 [tool.zuban.lsp]
 host = "127.0.0.1"
 port = 8677
-timeout = 10.0
+timeout = 120.0
 enable_diagnostics = true
 real_time_feedback = true

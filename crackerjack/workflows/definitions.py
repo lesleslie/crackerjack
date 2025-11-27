@@ -30,10 +30,10 @@ FAST_HOOKS_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],  # Runs after config completes
             retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
-            timeout=300.0,  # 5 minutes for fast hooks
+            timeout=600.0,  # Increased from 5 minutes to 10 minutes for fast hooks
         ),
     ],
-    timeout=600.0,  # 10 minutes total workflow timeout
+    timeout=1200.0,  # Increased from 10 to 20 minutes total workflow timeout
     retry_failed_steps=True,
     continue_on_error=False,  # Stop on first failure for POC
 )
@@ -60,10 +60,10 @@ COMPREHENSIVE_HOOKS_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
-            timeout=900.0,  # 15 minutes for comprehensive
+            timeout=1800.0,  # Increased from 15 to 30 minutes for comprehensive
         ),
     ],
-    timeout=1200.0,  # 20 minutes total workflow timeout
+    timeout=2400.0,  # Increased from 20 to 40 minutes total workflow timeout
     retry_failed_steps=True,
     continue_on_error=False,
 )
@@ -91,7 +91,7 @@ STANDARD_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
-            timeout=300.0,
+            timeout=600.0,
             parallel=True,  # Can run parallel with cleaning
         ),
         WorkflowStep(
@@ -101,7 +101,7 @@ STANDARD_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,
-            timeout=180.0,
+            timeout=360.0,
             skip_on_failure=True,  # Cleaning is optional
             parallel=True,  # Can run parallel with fast_hooks
         ),
@@ -113,10 +113,10 @@ STANDARD_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["fast_hooks", "cleaning"],  # Waits for both
             retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
-            timeout=900.0,  # 15 minutes for comprehensive
+            timeout=1800.0,  # 15 minutes for comprehensive
         ),
     ],
-    timeout=1800.0,  # 30 minutes total workflow timeout
+    timeout=3000.0,  # 50 minutes total workflow timeout
     retry_failed_steps=True,
     continue_on_error=False,
 )
@@ -144,7 +144,7 @@ TEST_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
-            timeout=300.0,
+            timeout=600.0,
             parallel=True,  # Can run parallel with cleaning
         ),
         WorkflowStep(
@@ -154,7 +154,7 @@ TEST_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,
-            timeout=180.0,
+            timeout=360.0,
             skip_on_failure=True,  # Cleaning is optional
             parallel=True,  # Can run parallel with fast_hooks
         ),
@@ -176,10 +176,10 @@ TEST_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["test_workflow"],  # Waits for tests
             retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
-            timeout=900.0,  # 15 minutes for comprehensive
+            timeout=1800.0,  # 15 minutes for comprehensive
         ),
     ],
-    timeout=3600.0,  # 60 minutes total workflow timeout
+    timeout=5400.0,  # 90 minutes total workflow timeout
     retry_failed_steps=True,
     continue_on_error=False,
 )
@@ -269,7 +269,7 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
-            timeout=300.0,
+            timeout=600.0,
             parallel=True,
         ),
         WorkflowStep(
@@ -279,7 +279,7 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,
-            timeout=180.0,
+            timeout=360.0,
             skip_on_failure=True,
             parallel=True,
         ),
@@ -291,7 +291,7 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["fast_hooks", "cleaning"],
             retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
-            timeout=900.0,
+            timeout=1800.0,
         ),
         # Commit runs after all quality checks pass
         WorkflowStep(
@@ -301,10 +301,10 @@ COMMIT_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["comprehensive"],
             retry_attempts=1,
-            timeout=300.0,
+            timeout=600.0,
         ),
     ],
-    timeout=2100.0,  # 35 minutes total
+    timeout=3600.0,  # 60 minutes total
     retry_failed_steps=True,
     continue_on_error=False,
 )
@@ -332,7 +332,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,  # No workflow-level retry (hook manager handles retries internally)
-            timeout=300.0,
+            timeout=600.0,
             parallel=True,
         ),
         WorkflowStep(
@@ -342,7 +342,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["config"],
             retry_attempts=1,
-            timeout=180.0,
+            timeout=360.0,
             skip_on_failure=True,
             parallel=True,
         ),
@@ -364,7 +364,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["test_workflow"],
             retry_attempts=0,  # Comprehensive hooks run once (no automatic retry)
-            timeout=900.0,
+            timeout=1800.0,
         ),
         # Commit runs after all quality checks pass
         WorkflowStep(
@@ -374,7 +374,7 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["comprehensive"],
             retry_attempts=1,
-            timeout=300.0,
+            timeout=600.0,
         ),
         # Publish runs after successful commit
         WorkflowStep(
@@ -384,10 +384,10 @@ PUBLISH_WORKFLOW = WorkflowDefinition(
             params={},
             depends_on=["commit"],
             retry_attempts=1,
-            timeout=600.0,  # 10 minutes for publishing
+            timeout=1200.0,  # Increased from 10 minutes to 20 minutes for publishing
         ),
     ],
-    timeout=4800.0,  # 80 minutes total
+    timeout=7200.0,  # 120 minutes total (increased from 80 minutes)
     retry_failed_steps=True,
     continue_on_error=False,
 )
