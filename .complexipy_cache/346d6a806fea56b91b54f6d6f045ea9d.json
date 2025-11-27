@@ -1,0 +1,13 @@
+{
+  "functions": [
+    {
+      "complexity": 105,
+      "file_name": "tmps6nep3bi.py",
+      "function_name": "highly_complex_function",
+      "path": "tmps6nep3bi.py"
+    }
+  ],
+  "targets": [
+    "/private/var/folders/kb/k4k33dq55xg_hms12z4db1vw0000gn/T/tmps6nep3bi.py"
+  ]
+}

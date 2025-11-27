@@ -27,6 +27,9 @@ if not _EARLY_DEBUG_MODE:
     logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
     logging.getLogger("acb.console").setLevel(logging.CRITICAL)
     logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
+    # Specifically target the loggers that were appearing in the output
+    logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
+    logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
 
 # NOW safe to import ACB-dependent modules
 import typer
@@ -217,6 +220,9 @@ def main(
     depends.set(CrackerjackSettings, settings)
 
     register_services()
+
+    # Ensure logging levels are properly set after services are registered
+    _configure_logging_for_execution(debug or ai_debug or ai_fix)
 
     options = create_options(
         commit,
@@ -509,6 +515,26 @@ def _handle_advanced_features(local_vars: t.Any) -> bool:
         return False
 
     return True
+
+
+def _configure_logging_for_execution(debug_enabled: bool) -> None:
+    """Configure logging levels based on debug flag during execution."""
+    import logging
+
+    if not debug_enabled:
+        # Suppress ACB and crackerjack logging for clean default UX during execution
+        logging.getLogger("acb").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.adapters").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.console").setLevel(logging.CRITICAL)
+        logging.getLogger("crackerjack.core").setLevel(logging.CRITICAL)
+        # Specifically target the loggers that were appearing in the output
+        logging.getLogger("acb.adapters.logger").setLevel(logging.CRITICAL)
+        logging.getLogger("acb.workflows.engine").setLevel(logging.CRITICAL)
+    else:
+        # In debug mode, set to DEBUG to show all messages
+        logging.getLogger("acb").setLevel(logging.DEBUG)
+        logging.getLogger("crackerjack").setLevel(logging.DEBUG)
 
 
 def cli() -> None:
