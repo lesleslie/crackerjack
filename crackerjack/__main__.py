@@ -63,7 +63,7 @@ def _configure_structlog_for_level(log_level: int) -> None:
 
             structlog.configure(
                 processors=[dummy_processor],
-                logger_factory=structlog.testing.MemoryLoggerFactory(),
+                logger_factory=structlog.testing.CapturingLoggerFactory(),
                 wrapper_class=structlog.make_filtering_bound_logger(logging.CRITICAL),
                 cache_logger_on_first_use=True,
             )
