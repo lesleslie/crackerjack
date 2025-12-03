@@ -113,8 +113,9 @@ def process_hook_results[T: HookResult, R](
     processed_results: list[R] = []
     for result in results:
         if (
-            hasattr(result, "status")
-            and typing.cast(HookResult, result)["status"] == HookStatus.SUCCESS
+            hasattr(result, "__getitem__")  # Check if it supports dict-style access
+            and typing.cast(dict[str, typing.Any], result).get("status")
+            == HookStatus.SUCCESS
         ):
             processed_results.append(success_handler(result))
         else:
