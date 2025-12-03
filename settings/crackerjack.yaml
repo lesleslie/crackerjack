@@ -113,7 +113,7 @@ enable_adaptive_execution: true  # Use adaptive strategy (dependency-aware)
 max_concurrent_strategies: 2  # Usually 2 (fast + comprehensive)
 
 # Phase 8: Direct tool invocation
-use_precommit_legacy: true  # Use pre-commit wrapper (true) or direct (false)
+use_precommit_legacy: false  # Use pre-commit wrapper (true) or direct (false)
 
 # === QA Framework Settings ===
 
