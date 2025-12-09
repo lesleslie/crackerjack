@@ -11,12 +11,14 @@ ACB Patterns:
 - depends.set() registration after class definition
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
+- Centralized output file management via AdapterOutputPaths
 """
 
 from __future__ import annotations
 
 import json
 import logging
+import shutil
 import typing as t
 from contextlib import suppress
 from pathlib import Path
@@ -24,6 +26,7 @@ from uuid import UUID
 
 from acb.depends import depends
 
+from crackerjack.adapters._output_paths import AdapterOutputPaths
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
     ToolAdapterSettings,
@@ -156,7 +159,8 @@ class ComplexipyAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-        # JSON output (correct flag: --output-json, not --json)
+        # JSON output (complexipy creates timestamped files automatically)
+        # We'll move the file to centralized location after execution
         if self.settings.use_json_output:
             cmd.append("--output-json")
 
@@ -193,8 +197,9 @@ class ComplexipyAdapter(BaseToolAdapter):
     ) -> list[ToolIssue]:
         """Parse Complexipy JSON output into standardized issues.
 
-        Complexipy with --output-json saves JSON to a file and outputs a pretty table
-        to stdout. We need to read the JSON file, not parse stdout.
+        Complexipy with --output-json saves JSON to timestamped files in the current
+        directory. We move these files to .crackerjack/outputs/complexipy/ for
+        centralized management.
 
         Args:
             result: Raw execution result from Complexipy
@@ -202,10 +207,10 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             List of parsed issues
         """
-        # Complexipy saves JSON to complexipy.json in the working directory
-        json_file = Path.cwd() / "complexipy.json"
+        # Move generated complexipy files to centralized location
+        json_file = self._move_complexipy_results_to_output_dir()
 
-        if self.settings.use_json_output and json_file.exists():
+        if self.settings.use_json_output and json_file and json_file.exists():
             try:
                 with json_file.open() as f:
                     data = json.load(f)
@@ -567,6 +572,68 @@ class ComplexipyAdapter(BaseToolAdapter):
         return config.get(
             "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
         )
+
+    def _move_complexipy_results_to_output_dir(self) -> Path | None:
+        """Move complexipy-generated result files to centralized output directory.
+
+        Complexipy creates timestamped files like:
+        complexipy_results_2025_12_09__07:08:33.json
+
+        This method:
+        1. Finds the most recent complexipy_results_*.json file in project root
+        2. Moves it to .crackerjack/outputs/complexipy/
+        3. Returns the new path
+
+        Returns:
+            Path to moved file in centralized location, or None if no file found
+        """
+        # Find all complexipy result files in project root
+        project_root = Path.cwd()
+        result_files = sorted(
+            project_root.glob("complexipy_results_*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+
+        if not result_files:
+            logger.debug("No complexipy result files found in project root")
+            return None
+
+        # Get the most recent file
+        source_file = result_files[0]
+
+        # Determine destination in centralized output directory
+        output_dir = AdapterOutputPaths.get_output_dir("complexipy")
+        dest_file = output_dir / source_file.name
+
+        try:
+            # Move the file to centralized location
+            shutil.move(str(source_file), str(dest_file))
+            logger.info(
+                "Moved complexipy results to centralized location",
+                extra={
+                    "source": str(source_file),
+                    "destination": str(dest_file),
+                },
+            )
+
+            # Clean up old result files (keep only latest 5)
+            AdapterOutputPaths.cleanup_old_outputs(
+                "complexipy", "complexipy_results_*.json", keep_latest=5
+            )
+
+            return dest_file
+        except (OSError, shutil.Error) as e:
+            logger.warning(
+                "Failed to move complexipy results file",
+                extra={
+                    "error": str(e),
+                    "source": str(source_file),
+                    "destination": str(dest_file),
+                },
+            )
+            # Return source file if move fails (fallback)
+            return source_file
 
 
 # ACB Registration (REQUIRED at module level)

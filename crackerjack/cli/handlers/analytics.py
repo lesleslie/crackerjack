@@ -11,6 +11,76 @@ from acb.depends import Inject, depends
 # =============================================================================
 
 
+def _generate_heatmap_by_type(
+    generator: t.Any, heatmap_type: str, project_root: Path, console: t.Any
+) -> t.Any | None:
+    """Generate heatmap data based on the specified type.
+
+    Args:
+        generator: HeatMapGenerator instance
+        heatmap_type: Type of heatmap to generate
+        project_root: Project root directory
+        console: Console for output
+
+    Returns:
+        Heatmap data or None if type is unknown
+    """
+    if heatmap_type == "error_frequency":
+        return generator.generate_error_frequency_heatmap()
+    if heatmap_type == "complexity":
+        return generator.generate_code_complexity_heatmap(project_root)
+    if heatmap_type == "quality_metrics":
+        return generator.generate_quality_metrics_heatmap()
+    if heatmap_type == "test_failures":
+        return generator.generate_test_failure_heatmap()
+
+    console.print(f"[red]❌[/red] Unknown heat map type: {heatmap_type}")
+    return None
+
+
+def _save_heatmap_output(
+    generator: t.Any,
+    heatmap_data: t.Any,
+    heatmap_output: str | None,
+    heatmap_type: str,
+    console: t.Any,
+) -> bool:
+    """Save heatmap output to file.
+
+    Args:
+        generator: HeatMapGenerator instance
+        heatmap_data: Generated heatmap data
+        heatmap_output: Optional output path
+        heatmap_type: Type of heatmap
+        console: Console for output
+
+    Returns:
+        True if saved successfully, False otherwise
+    """
+    if heatmap_output:
+        output_path = Path(heatmap_output)
+        if output_path.suffix.lower() == ".html":
+            html_content = generator.generate_html_visualization(heatmap_data)
+            output_path.write_text(html_content, encoding="utf-8")
+            console.print(f"[green]✅[/green] Heat map HTML saved to: {output_path}")
+            return True
+        if output_path.suffix.lower() in (".json", ".csv"):
+            format_type = output_path.suffix[1:]
+            generator.export_heatmap_data(heatmap_data, output_path, format_type)
+            console.print(f"[green]✅[/green] Heat map data saved to: {output_path}")
+            return True
+
+        console.print(f"[red]❌[/red] Unsupported output format: {output_path.suffix}")
+        return False
+
+    # Default: save as HTML
+    default_filename = f"heatmap_{heatmap_type}.html"
+    html_content = generator.generate_html_visualization(heatmap_data)
+    Path(default_filename).write_text(html_content, encoding="utf-8")
+    console.print(f"[green]✅[/green] Heat map HTML saved to: {default_filename}")
+    return True
+
+
 @depends.inject  # type: ignore[misc]
 def handle_heatmap_generation(
     heatmap: bool,
@@ -29,44 +99,16 @@ def handle_heatmap_generation(
         generator = HeatMapGenerator()
         project_root = Path.cwd()
 
-        if heatmap_type == "error_frequency":
-            heatmap_data = generator.generate_error_frequency_heatmap()
-        elif heatmap_type == "complexity":
-            heatmap_data = generator.generate_code_complexity_heatmap(project_root)
-        elif heatmap_type == "quality_metrics":
-            heatmap_data = generator.generate_quality_metrics_heatmap()
-        elif heatmap_type == "test_failures":
-            heatmap_data = generator.generate_test_failure_heatmap()
-        else:
-            console.print(f"[red]❌[/red] Unknown heat map type: {heatmap_type}")
+        heatmap_data = _generate_heatmap_by_type(
+            generator, heatmap_type, project_root, console
+        )
+        if not heatmap_data:
             return False
 
-        if heatmap_output:
-            output_path = Path(heatmap_output)
-            if output_path.suffix.lower() == ".html":
-                html_content = generator.generate_html_visualization(heatmap_data)
-                output_path.write_text(html_content, encoding="utf-8")
-                console.print(
-                    f"[green]✅[/green] Heat map HTML saved to: {output_path}"
-                )
-            elif output_path.suffix.lower() in (".json", ".csv"):
-                format_type = output_path.suffix[1:]
-                generator.export_heatmap_data(heatmap_data, output_path, format_type)
-                console.print(
-                    f"[green]✅[/green] Heat map data saved to: {output_path}"
-                )
-            else:
-                console.print(
-                    f"[red]❌[/red] Unsupported output format: {output_path.suffix}"
-                )
-                return False
-        else:
-            default_filename = f"heatmap_{heatmap_type}.html"
-            html_content = generator.generate_html_visualization(heatmap_data)
-            Path(default_filename).write_text(html_content, encoding="utf-8")
-            console.print(
-                f"[green]✅[/green] Heat map HTML saved to: {default_filename}"
-            )
+        if not _save_heatmap_output(
+            generator, heatmap_data, heatmap_output, heatmap_type, console
+        ):
+            return False
 
         console.print(
             f"[cyan]📊[/cyan] Heat map '{heatmap_data.title}' generated successfully"

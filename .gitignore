@@ -54,6 +54,10 @@ crackerjack-ai-debug-*.log
 /.benchmarks/
 /tests/.benchmarks/
 
+# Adapter output files (centralized in .crackerjack/outputs/)
+# Note: Individual adapters may create timestamped results
+.crackerjack/outputs/
+
 # Development artifacts (evaluate periodically)
 /feature-implementation-*.md
 /session_handoff_*.md

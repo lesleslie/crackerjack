@@ -138,6 +138,42 @@ class JobDataCollector:
             },
         )
 
+    def _update_status_counters(self, jobs_data: dict[str, Any], status: str) -> None:
+        """Update job status counters based on status."""
+        if status == "running":
+            jobs_data["active"] += 1
+        elif status == "completed":
+            jobs_data["completed"] += 1
+        elif status == "failed":
+            jobs_data["failed"] += 1
+        jobs_data["total"] += 1
+
+    def _create_job_entry(self, job: dict[str, Any]) -> dict[str, Any]:
+        """Create a job entry dictionary from job data."""
+        return {
+            "job_id": job.get("job_id", "unknown"),
+            "status": job.get("status", "unknown"),
+            "iteration": job.get("iteration", 1),
+            "max_iterations": job.get("max_iterations", 10),
+            "current_stage": job.get("current_stage", "unknown"),
+            "message": job.get("message", "Processing..."),
+            "project": job.get("project", "crackerjack"),
+            "total_issues": job.get("total_issues", 0),
+            "errors_fixed": job.get("errors_fixed", 0),
+            "errors_failed": job.get("errors_failed", 0),
+            "current_errors": job.get("current_errors", 0),
+            "overall_progress": job.get("overall_progress", 0.0),
+            "stage_progress": job.get("stage_progress", 0.0),
+        }
+
+    def _accumulate_error_metrics(
+        self, jobs_data: dict[str, Any], job: dict[str, Any]
+    ) -> None:
+        """Accumulate error metrics from job into jobs_data."""
+        jobs_data["total_issues"] += job.get("total_issues", 0)
+        jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
+        jobs_data["errors_failed"] += job.get("errors_failed", 0)
+
     async def _discover_jobs_websocket(self) -> dict[str, Any]:
         jobs_data: dict[str, Any] = {
             "active": 0,
@@ -171,42 +207,16 @@ class JobDataCollector:
                 ):
                     if response.status == 200:
                         data = await response.json()
-
                         active_jobs = data.get("active_jobs_detailed", [])
 
                         for job in active_jobs:
-                            job_id = job.get("job_id", "unknown")
                             status = job.get("status", "unknown")
+                            self._update_status_counters(jobs_data, status)
 
-                            if status == "running":
-                                jobs_data["active"] += 1
-                            elif status == "completed":
-                                jobs_data["completed"] += 1
-                            elif status == "failed":
-                                jobs_data["failed"] += 1
-
-                            jobs_data["total"] += 1
-
-                            job_entry = {
-                                "job_id": job_id,
-                                "status": status,
-                                "iteration": job.get("iteration", 1),
-                                "max_iterations": job.get("max_iterations", 10),
-                                "current_stage": job.get("current_stage", "unknown"),
-                                "message": job.get("message", "Processing..."),
-                                "project": job.get("project", "crackerjack"),
-                                "total_issues": job.get("total_issues", 0),
-                                "errors_fixed": job.get("errors_fixed", 0),
-                                "errors_failed": job.get("errors_failed", 0),
-                                "current_errors": job.get("current_errors", 0),
-                                "overall_progress": job.get("overall_progress", 0.0),
-                                "stage_progress": job.get("stage_progress", 0.0),
-                            }
+                            job_entry = self._create_job_entry(job)
                             jobs_data["individual_jobs"].append(job_entry)
 
-                            jobs_data["total_issues"] += job.get("total_issues", 0)
-                            jobs_data["errors_fixed"] += job.get("errors_fixed", 0)
-                            jobs_data["errors_failed"] += job.get("errors_failed", 0)
+                            self._accumulate_error_metrics(jobs_data, job)
 
         return jobs_data
 

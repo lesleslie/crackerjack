@@ -783,6 +783,50 @@ class UtilityCheckAdapter(QAAdapterBase):
         """
         return QACheckType.FORMAT
 
+    def _get_syntax_validation_patterns(self) -> list[str]:
+        """Get file patterns for syntax validation based on parser type."""
+        if not self.settings:
+            return ["**/*.yaml", "**/*.toml", "**/*.json"]
+
+        parser_patterns = {
+            "yaml": ["**/*.yaml", "**/*.yml"],
+            "toml": ["**/*.toml"],
+            "json": ["**/*.json"],
+        }
+        return parser_patterns.get(
+            self.settings.parser_type,
+            ["**/*.yaml", "**/*.toml", "**/*.json"],
+        )
+
+    def _get_config_for_check_type(
+        self, check_type: UtilityCheckType
+    ) -> tuple[list[str], str, bool]:
+        """Get configuration tuple for a specific check type.
+
+        Args:
+            check_type: The utility check type
+
+        Returns:
+            Tuple of (file_patterns, stage, is_formatter)
+        """
+        if check_type == UtilityCheckType.TEXT_PATTERN:
+            return (
+                ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json", "**/*.md"],
+                "fast",
+                self.settings.auto_fix if self.settings else False,
+            )
+        if check_type == UtilityCheckType.EOF_NEWLINE:
+            return (["**/*"], "fast", True)
+        if check_type == UtilityCheckType.SYNTAX_VALIDATION:
+            return (self._get_syntax_validation_patterns(), "comprehensive", False)
+        if check_type == UtilityCheckType.SIZE_CHECK:
+            return (["**/*"], "fast", False)
+        if check_type == UtilityCheckType.DEPENDENCY_LOCK:
+            return (["uv.lock", "requirements.lock"], "fast", False)
+
+        # Fallback defaults
+        return (["**/*.py"], "fast", False)
+
     def get_default_config(self) -> QACheckConfig:
         """Get default configuration for utility checks.
 
@@ -798,50 +842,11 @@ class UtilityCheckAdapter(QAAdapterBase):
         """
         from crackerjack.models.qa_config import QACheckConfig
 
-        # Determine settings based on configured check type
+        # Get configuration based on check type
         if self.settings and self.settings.check_type:
-            check_type = self.settings.check_type
-
-            # Configure file patterns based on check type
-            if check_type == UtilityCheckType.TEXT_PATTERN:
-                file_patterns = [
-                    "**/*.py",
-                    "**/*.yaml",
-                    "**/*.toml",
-                    "**/*.json",
-                    "**/*.md",
-                ]
-                stage = "fast"
-                is_formatter = self.settings.auto_fix
-            elif check_type == UtilityCheckType.EOF_NEWLINE:
-                file_patterns = ["**/*"]  # All files
-                stage = "fast"
-                is_formatter = True  # Can modify files
-            elif check_type == UtilityCheckType.SYNTAX_VALIDATION:
-                # Parser-specific patterns
-                if self.settings.parser_type == "yaml":
-                    file_patterns = ["**/*.yaml", "**/*.yml"]
-                elif self.settings.parser_type == "toml":
-                    file_patterns = ["**/*.toml"]
-                elif self.settings.parser_type == "json":
-                    file_patterns = ["**/*.json"]
-                else:
-                    file_patterns = ["**/*.yaml", "**/*.toml", "**/*.json"]
-                stage = "comprehensive"
-                is_formatter = False
-            elif check_type == UtilityCheckType.SIZE_CHECK:
-                file_patterns = ["**/*"]  # All files
-                stage = "fast"
-                is_formatter = False
-            elif check_type == UtilityCheckType.DEPENDENCY_LOCK:
-                file_patterns = ["uv.lock", "requirements.lock"]
-                stage = "fast"
-                is_formatter = False
-            else:
-                # Fallback defaults
-                file_patterns = ["**/*.py"]
-                stage = "fast"
-                is_formatter = False
+            file_patterns, stage, is_formatter = self._get_config_for_check_type(
+                self.settings.check_type
+            )
         else:
             # No settings, use generic defaults
             file_patterns = ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json"]
