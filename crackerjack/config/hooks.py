@@ -268,6 +268,16 @@ COMPREHENSIVE_HOOKS = [
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
     ),
+    HookDefinition(
+        name="pyscn",
+        command=[],
+        timeout=300,  # CFG analysis, clone detection, complexity metrics
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.HIGH,  # Security + quality analysis
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=True,  # Can scan specific Python files
+    ),
     # NOTE: Bandit replaced with Semgrep (using uvx for Python 3.13 isolation)
     # HookDefinition(
     #     name="bandit",
@@ -287,6 +297,16 @@ COMPREHENSIVE_HOOKS = [
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
+    ),
+    HookDefinition(
+        name="pip-audit",
+        command=[],
+        timeout=180,  # Network calls to vulnerability databases
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.CRITICAL,  # CVE vulnerabilities are critical
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=False,  # Scans entire environment/requirements
     ),
     HookDefinition(
         name="skylos",

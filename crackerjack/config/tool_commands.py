@@ -225,6 +225,28 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             package_name,
         ],
         "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
+        "pip-audit": [
+            "uv",
+            "run",
+            "pip-audit",
+            "--format",
+            "json",  # JSON output for structured parsing
+            "--desc",  # Include vulnerability descriptions
+            "--skip-editable",  # Skip editable packages in development
+            "--vulnerability-service",
+            "osv",  # Use OSV database for vulnerability data
+        ],
+        "pyscn": [
+            "uv",
+            "run",
+            "pyscn",
+            "check",  # Use check subcommand (fast, CI-friendly analysis)
+            "--max-complexity",
+            "15",  # Match crackerjack's complexity threshold
+            "--select",
+            "complexity,deadcode,deps",  # Run complexity, dead code, and dependency checks
+            package_name,
+        ],
     }
 
 

@@ -46,7 +46,7 @@ from .core import (
 )
 
 # Build the complete SAFE_PATTERNS registry for backward compatibility
-SAFE_PATTERNS: dict[str, ValidatedPattern] = (
+_merged_patterns = (
     formatting.PATTERNS
     | versioning.PATTERNS
     | validation.PATTERNS
@@ -60,6 +60,7 @@ SAFE_PATTERNS: dict[str, ValidatedPattern] = (
     | testing.PATTERNS
     | security.PATTERNS
 )
+SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns  # type: ignore[assignment]
 
 # Import utility functions for backward compatibility
 from .operations import (

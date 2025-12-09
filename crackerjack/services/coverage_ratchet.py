@@ -278,22 +278,6 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 needed = milestone - current
                 return max(0.0, needed)
         return 0.0
-        data = self.get_ratchet_data()
-        if not data:
-            return {"status": "not_initialized"}
-
-        return {
-            "status": "active",
-            "current_coverage": data["baseline"],
-            "target_coverage": data["target"],
-            "next_milestone": data.get("next_milestone"),
-            "milestones_achieved": data.get("milestones_achieved", []),
-            "total_milestones": len(self.MILESTONES),
-            "progress_percent": (data["baseline"] / data["target"]) * 100,
-            "last_updated": data["last_updated"],
-            "history_count": len(data.get("history", [])),
-            "improvement_trend": self._calculate_trend(data),
-        }
 
     def _calculate_trend(self, data: dict[str, t.Any]) -> str:
         history = data.get("history", [])

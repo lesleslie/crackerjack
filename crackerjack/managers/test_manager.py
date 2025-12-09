@@ -18,6 +18,7 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     OptionsProtocol,
 )
+from crackerjack.models.test_models import TestFailure
 from crackerjack.services.lsp_client import LSPClient
 
 from .test_command_builder import TestCommandBuilder
@@ -721,14 +722,15 @@ class TestManager:
             Coverage value if available, None otherwise
         """
         try:
-            current_coverage = self._get_coverage_from_service()
-            if current_coverage is not None:
+            current_coverage = self.coverage_ratchet.get_baseline_coverage()
+            if current_coverage is not None and current_coverage > 0:
                 self.console.print(
                     f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
                 )
-            return current_coverage
-        except AttributeError:
-            # Service method doesn't exist, skip
+                return current_coverage
+            return None
+        except (AttributeError, Exception):
+            # Service method doesn't exist or failed, skip
             return None
 
     def _handle_zero_coverage_fallback(self, current_coverage: float | None) -> None:
@@ -866,7 +868,7 @@ class TestManager:
         sections = []
         lines = output.split("\n")
 
-        current_section = []
+        current_section: list[str] = []
         current_type = "header"
 
         for line in lines:
@@ -1011,6 +1013,91 @@ class TestManager:
         )
         self.console.print(panel)
 
+    def _parse_failure_header(
+        self, line: str, current_failure: "TestFailure | None"
+    ) -> tuple["TestFailure | None", bool]:
+        """Parse failure header line."""
+        import re
+
+        from crackerjack.models.test_models import TestFailure
+
+        failure_match = re.match(r"^(.+?)\s+(FAILED|ERROR)\s*(?:\[(.+?)\])?", line)
+        if failure_match:
+            test_path, status, params = failure_match.groups()
+            new_failure = TestFailure(
+                test_name=test_path + (f"[{params}]" if params else ""),
+                status=status,
+                location=test_path,
+            )
+            return new_failure, True
+        return current_failure, False
+
+    def _parse_location_and_assertion(
+        self, line: str, current_failure: "TestFailure", in_traceback: bool
+    ) -> bool:
+        """Parse location and assertion lines."""
+        import re
+
+        # Detect location: "tests/test_foo.py:42: AssertionError"
+        location_match = re.match(r"^(.+?\.py):(\d+):\s*(.*)$", line)
+        if location_match and in_traceback:
+            file_path, line_num, error_type = location_match.groups()
+            current_failure.location = f"{file_path}:{line_num}"
+            if error_type:
+                current_failure.short_summary = error_type
+            return True
+
+        # Detect assertion errors
+        if "AssertionError:" in line or line.strip().startswith("E       assert "):
+            assertion_text = line.strip().lstrip("E").strip()
+            if current_failure.assertion:
+                current_failure.assertion += "\n" + assertion_text
+            else:
+                current_failure.assertion = assertion_text
+            return True
+
+        return False
+
+    def _parse_captured_section_header(self, line: str) -> tuple[bool, str | None]:
+        """Parse captured output section headers."""
+        if "captured stdout" in line.lower():
+            return True, "stdout"
+        elif "captured stderr" in line.lower():
+            return True, "stderr"
+        return False, None
+
+    def _parse_traceback_line(
+        self, line: str, lines: list[str], i: int, current_failure: "TestFailure"
+    ) -> bool:
+        """Parse traceback lines."""
+        if line.startswith("    ") or line.startswith("\t") or line.startswith("E   "):
+            current_failure.traceback.append(line)
+            return True
+        elif line.strip().startswith("=") or (
+            i < len(lines) - 1 and "FAILED" in lines[i + 1]
+        ):
+            return False
+        return True
+
+    def _parse_captured_output(
+        self, line: str, capture_type: str | None, current_failure: "TestFailure"
+    ) -> bool:
+        """Parse captured output lines."""
+        if line.strip().startswith("=") or line.strip().startswith("_"):
+            return False
+
+        if capture_type == "stdout":
+            if current_failure.captured_stdout:
+                current_failure.captured_stdout += "\n" + line
+            else:
+                current_failure.captured_stdout = line
+        elif capture_type == "stderr":
+            if current_failure.captured_stderr:
+                current_failure.captured_stderr += "\n" + line
+            else:
+                current_failure.captured_stderr = line
+        return True
+
     def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
         """Extract structured failure information from pytest output.
 
@@ -1027,10 +1114,6 @@ class TestManager:
         Returns:
             List of TestFailure objects
         """
-        import re
-
-        from crackerjack.models.test_models import TestFailure
-
         failures = []
         lines = output.split("\n")
 
@@ -1040,20 +1123,14 @@ class TestManager:
         capture_type = None
 
         for i, line in enumerate(lines):
-            # Detect failure headers: "tests/test_foo.py::test_bar FAILED"
-            failure_match = re.match(r"^(.+?)\s+(FAILED|ERROR)\s*(?:\[(.+?)\])?", line)
-            if failure_match:
-                # Save previous failure
+            # Parse failure header
+            new_failure, header_found = self._parse_failure_header(
+                line, current_failure
+            )
+            if header_found:
                 if current_failure:
                     failures.append(current_failure)
-
-                test_path, status, params = failure_match.groups()
-
-                current_failure = TestFailure(
-                    test_name=test_path + (f"[{params}]" if params else ""),
-                    status=status,
-                    location=test_path,  # Will be refined when we see file:line
-                )
+                current_failure = new_failure
                 in_traceback = True
                 in_captured = False
                 continue
@@ -1061,68 +1138,31 @@ class TestManager:
             if not current_failure:
                 continue
 
-            # Detect location: "tests/test_foo.py:42: AssertionError"
-            location_match = re.match(r"^(.+?\.py):(\d+):\s*(.*)$", line)
-            if location_match and in_traceback:
-                file_path, line_num, error_type = location_match.groups()
-                current_failure.location = f"{file_path}:{line_num}"
-                if error_type:
-                    current_failure.short_summary = error_type
+            # Parse location and assertion
+            if self._parse_location_and_assertion(line, current_failure, in_traceback):
                 continue
 
-            # Detect assertion errors
-            if "AssertionError:" in line or line.strip().startswith("E       assert "):
-                assertion_text = line.strip().lstrip("E").strip()
-                if current_failure.assertion:
-                    current_failure.assertion += "\n" + assertion_text
-                else:
-                    current_failure.assertion = assertion_text
-                continue
-
-            # Detect captured output sections
-            if "captured stdout" in line.lower():
+            # Parse captured section headers
+            is_captured, new_capture_type = self._parse_captured_section_header(line)
+            if is_captured:
                 in_captured = True
-                capture_type = "stdout"
-                in_traceback = False
-                continue
-            elif "captured stderr" in line.lower():
-                in_captured = True
-                capture_type = "stderr"
+                capture_type = new_capture_type
                 in_traceback = False
                 continue
 
-            # Collect traceback lines
+            # Parse traceback lines
             if in_traceback:
-                # Traceback lines typically start with spaces or special markers
-                if (
-                    line.startswith("    ")
-                    or line.startswith("\t")
-                    or line.startswith("E   ")
-                ):
-                    current_failure.traceback.append(line)
-                elif line.strip().startswith("=") or (
-                    i < len(lines) - 1 and "FAILED" in lines[i + 1]
-                ):
-                    # End of traceback
-                    in_traceback = False
+                in_traceback = self._parse_traceback_line(
+                    line, lines, i, current_failure
+                )
 
-            # Collect captured output
+            # Parse captured output
             if in_captured and capture_type:
-                if line.strip().startswith("=") or line.strip().startswith("_"):
-                    # End of captured section
-                    in_captured = False
+                in_captured = self._parse_captured_output(
+                    line, capture_type, current_failure
+                )
+                if not in_captured:
                     capture_type = None
-                else:
-                    if capture_type == "stdout":
-                        if current_failure.captured_stdout:
-                            current_failure.captured_stdout += "\n" + line
-                        else:
-                            current_failure.captured_stdout = line
-                    elif capture_type == "stderr":
-                        if current_failure.captured_stderr:
-                            current_failure.captured_stderr += "\n" + line
-                        else:
-                            current_failure.captured_stderr = line
 
         # Save final failure
         if current_failure:
@@ -1191,8 +1231,8 @@ class TestManager:
                 if duration_note:
                     table.add_row("Timing", duration_note)
 
-                # Components for panel
-                components = [table]
+                # Components for panel (mixed list of renderables for Rich Group)
+                components: list[t.Any] = [table]
 
                 # Add assertion details
                 if failure.assertion:

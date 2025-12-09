@@ -40,57 +40,84 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         # Ensure directories exist
         self._ensure_directories()
 
-    def extract_api_documentation(self, source_paths: list[Path]) -> dict[str, t.Any]:
-        """Extract API documentation from source code files."""
-        self.console.print(
-            "[cyan]📖[/cyan] Extracting API documentation from source files..."
-        )
-
-        # Categorize source files
+    def _categorize_source_files(
+        self, source_paths: list[Path]
+    ) -> dict[str, list[Path]]:
+        """Categorize source files by type."""
         python_files = [p for p in source_paths if p.suffix == ".py"]
-        protocol_files = [p for p in python_files if p.name == "protocols.py"]
-        service_files = [p for p in python_files if "/services/" in str(p)]
-        manager_files = [p for p in python_files if "/managers/" in str(p)]
-        cli_files = [p for p in python_files if "/cli/" in str(p)]
-        mcp_files = [
-            p for p in source_paths if "/mcp/" in str(p) or p.suffix in (".py", ".md")
-        ]
 
+        return {
+            "python": python_files,
+            "protocol": [p for p in python_files if p.name == "protocols.py"],
+            "service": [p for p in python_files if "/services/" in str(p)],
+            "manager": [p for p in python_files if "/managers/" in str(p)],
+            "cli": [p for p in python_files if "/cli/" in str(p)],
+            "mcp": [
+                p
+                for p in source_paths
+                if "/mcp/" in str(p) or p.suffix in (".py", ".md")
+            ],
+        }
+
+    def _extract_specialized_apis(
+        self, categorized_files: dict[str, list[Path]]
+    ) -> dict[str, t.Any]:
+        """Extract specialized API documentation."""
         api_data = {}
 
-        # Extract from Python files
-        if python_files:
-            python_data = self.api_extractor.extract_from_python_files(python_files)
-            api_data.update(python_data)
-
         # Extract protocol definitions
-        if protocol_files:
-            for protocol_file in protocol_files:
+        if categorized_files["protocol"]:
+            for protocol_file in categorized_files["protocol"]:
                 protocol_data = self.api_extractor.extract_protocol_definitions(
                     protocol_file
                 )
                 api_data.update(protocol_data)
 
         # Extract service interfaces
-        if service_files:
-            service_data = self.api_extractor.extract_service_interfaces(service_files)
+        if categorized_files["service"]:
+            service_data = self.api_extractor.extract_service_interfaces(
+                categorized_files["service"]
+            )
             api_data.update(service_data)
 
         # Extract manager interfaces
-        if manager_files:
-            manager_data = self.api_extractor.extract_service_interfaces(manager_files)
+        if categorized_files["manager"]:
+            manager_data = self.api_extractor.extract_service_interfaces(
+                categorized_files["manager"]
+            )
             if "services" in manager_data:
                 api_data["managers"] = manager_data["services"]
 
         # Extract CLI commands
-        if cli_files:
-            cli_data = self.api_extractor.extract_cli_commands(cli_files)
+        if categorized_files["cli"]:
+            cli_data = self.api_extractor.extract_cli_commands(categorized_files["cli"])
             api_data.update(cli_data)
 
         # Extract MCP tools
-        if mcp_files:
-            mcp_data = self.api_extractor.extract_mcp_tools(mcp_files)
+        if categorized_files["mcp"]:
+            mcp_data = self.api_extractor.extract_mcp_tools(categorized_files["mcp"])
             api_data.update(mcp_data)
+
+        return api_data
+
+    def extract_api_documentation(self, source_paths: list[Path]) -> dict[str, t.Any]:
+        """Extract API documentation from source code files."""
+        self.console.print(
+            "[cyan]📖[/cyan] Extracting API documentation from source files..."
+        )
+
+        categorized_files = self._categorize_source_files(source_paths)
+        api_data = {}
+
+        # Extract from Python files
+        if categorized_files["python"]:
+            python_data = self.api_extractor.extract_from_python_files(
+                categorized_files["python"]
+            )
+            api_data.update(python_data)
+
+        # Extract specialized APIs
+        api_data.update(self._extract_specialized_apis(categorized_files))
 
         self.console.print(
             f"[green]✅[/green] Extracted documentation from {len(source_paths)} files"

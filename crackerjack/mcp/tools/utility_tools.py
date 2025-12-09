@@ -159,6 +159,58 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
             return _create_error_response(f"Cleanup failed: {e}")
 
 
+def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
+    """Parse cleanup options from kwargs string."""
+    try:
+        extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+        return extra_kwargs, None
+    except json.JSONDecodeError as e:
+        return {}, f"Invalid JSON in kwargs: {e}"
+
+
+def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int]:
+    """Clean temporary files older than cutoff_time."""
+    from acb.config import tmp_path
+
+    cleaned = []
+    total_size = 0
+    tmp_dir = Path(tmp_path)
+
+    if not tmp_dir.exists():
+        return cleaned, total_size
+
+    for file_path in tmp_dir.glob("**/*"):
+        if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+            size = file_path.stat().st_size
+            if not dry_run:
+                file_path.unlink(missing_ok=True)
+            cleaned.append(str(file_path))
+            total_size += size
+
+    return cleaned, total_size
+
+
+def _clean_progress_files(
+    context: t.Any, cutoff_time: float, dry_run: bool
+) -> tuple[list[str], int]:
+    """Clean progress files older than cutoff_time."""
+    cleaned = []
+    total_size = 0
+
+    if not hasattr(context, "progress_dir") or not context.progress_dir.exists():
+        return cleaned, total_size
+
+    for file_path in context.progress_dir.glob("**/*"):
+        if file_path.is_file() and file_path.stat().st_mtime < cutoff_time:
+            size = file_path.stat().st_size
+            if not dry_run:
+                file_path.unlink(missing_ok=True)
+            cleaned.append(str(file_path))
+            total_size += size
+
+    return cleaned, total_size
+
+
 def _parse_clean_configuration(args: str, kwargs: str) -> dict[str, t.Any]:
     extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
     if parse_error:

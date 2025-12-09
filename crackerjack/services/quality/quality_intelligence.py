@@ -662,16 +662,12 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
             return "medium"
         return "low"
 
-    def generate_ml_recommendations(
-        self,
-        anomalies: list[QualityAnomaly],
-        patterns: list[QualityPattern],
-        predictions: list[QualityPrediction],
+    def _generate_anomaly_recommendations(
+        self, anomalies: list[QualityAnomaly]
     ) -> list[str]:
-        """Generate intelligent recommendations based on ML analysis."""
+        """Generate recommendations based on anomalies."""
         recommendations = []
 
-        # Anomaly-based recommendations
         critical_anomalies = [
             a for a in anomalies if a.severity == AlertSeverity.CRITICAL
         ]
@@ -690,7 +686,14 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
                 "📉 Quality score drops detected - review recent commits and implement quality gates"
             )
 
-        # Pattern-based recommendations
+        return recommendations
+
+    def _generate_pattern_recommendations(
+        self, patterns: list[QualityPattern]
+    ) -> list[str]:
+        """Generate recommendations based on patterns."""
+        recommendations = []
+
         declining_correlations = [
             p for p in patterns if p.trend_direction == TrendDirection.DECLINING
         ]
@@ -705,7 +708,14 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
                 "📊 Strong quality patterns detected - leverage insights for predictive quality management"
             )
 
-        # Prediction-based recommendations
+        return recommendations
+
+    def _generate_prediction_recommendations(
+        self, predictions: list[QualityPrediction]
+    ) -> list[str]:
+        """Generate recommendations based on predictions."""
+        recommendations = []
+
         high_risk_predictions = [
             p for p in predictions if p.risk_assessment in ("high", "critical")
         ]
@@ -723,11 +733,34 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
                 "📈 Wide prediction intervals detected - increase data collection frequency for better forecasting"
             )
 
-        # General ML insights
+        return recommendations
+
+    def _generate_general_ml_insights(
+        self, anomalies: list[QualityAnomaly]
+    ) -> list[str]:
+        """Generate general ML insights."""
+        recommendations = []
+
         if len(anomalies) > 5:
             recommendations.append(
                 f"🤖 High anomaly frequency ({len(anomalies)}) suggests systemic quality issues - consider ML-based automated quality monitoring"
             )
+
+        return recommendations
+
+    def generate_ml_recommendations(
+        self,
+        anomalies: list[QualityAnomaly],
+        patterns: list[QualityPattern],
+        predictions: list[QualityPrediction],
+    ) -> list[str]:
+        """Generate intelligent recommendations based on ML analysis."""
+        recommendations = []
+
+        recommendations.extend(self._generate_anomaly_recommendations(anomalies))
+        recommendations.extend(self._generate_pattern_recommendations(patterns))
+        recommendations.extend(self._generate_prediction_recommendations(predictions))
+        recommendations.extend(self._generate_general_ml_insights(anomalies))
 
         if not recommendations:
             recommendations.append(
