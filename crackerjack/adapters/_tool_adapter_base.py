@@ -513,6 +513,76 @@ class BaseToolAdapter(QAAdapterBase):
             "metadata": self.metadata.dict() if self.metadata else None,
         }
 
+    def _count_issues_by_severity(self, issues: list[ToolIssue]) -> tuple[int, int]:
+        """Count errors and warnings in issues list.
+
+        Args:
+            issues: List of tool issues
+
+        Returns:
+            Tuple of (error_count, warning_count)
+        """
+        error_count = sum(1 for i in issues if i.severity == "error")
+        warning_count = sum(1 for i in issues if i.severity == "warning")
+        return error_count, warning_count
+
+    def _determine_qa_status_and_message(
+        self, exec_result: ToolExecutionResult, issues: list[ToolIssue]
+    ) -> tuple[QAResultStatus, str]:
+        """Determine QA status and message based on execution result and issues.
+
+        Args:
+            exec_result: Tool execution result
+            issues: Parsed issues
+
+        Returns:
+            Tuple of (status, message)
+        """
+        if exec_result.error_message:
+            return QAResultStatus.ERROR, exec_result.error_message
+
+        if not exec_result.success and exec_result.exit_code != 1:
+            return (
+                QAResultStatus.ERROR,
+                f"Tool exited with code {exec_result.exit_code}",
+            )
+
+        if not issues:
+            return QAResultStatus.SUCCESS, "No issues found"
+
+        error_count, warning_count = self._count_issues_by_severity(issues)
+
+        if error_count > 0:
+            message = f"Found {error_count} errors"
+            if warning_count > 0:
+                message += f" and {warning_count} warnings"
+            return QAResultStatus.FAILURE, message
+
+        return QAResultStatus.WARNING, f"Found {warning_count} warnings"
+
+    def _build_details_from_issues(self, issues: list[ToolIssue]) -> str:
+        """Build details string from list of issues.
+
+        Args:
+            issues: List of tool issues
+
+        Returns:
+            Formatted details string
+        """
+        details_lines = []
+        for issue in issues[:10]:  # Limit to first 10 for readability
+            loc = str(issue.file_path)
+            if issue.line_number:
+                loc += f":{issue.line_number}"
+            if issue.column_number:
+                loc += f":{issue.column_number}"
+            details_lines.append(f"{loc}: {issue.message}")
+
+        if len(issues) > 10:
+            details_lines.append(f"... and {len(issues) - 10} more issues")
+
+        return "\n".join(details_lines)
+
     def _convert_to_qa_result(
         self,
         exec_result: ToolExecutionResult,
@@ -532,43 +602,8 @@ class BaseToolAdapter(QAAdapterBase):
             QAResult
         """
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-
-        # Determine status based on issues and exit code
-        if exec_result.error_message:
-            status = QAResultStatus.ERROR
-            message = exec_result.error_message
-        elif not exec_result.success and exec_result.exit_code != 1:
-            # Exit code 1 with output is typically "issues found"
-            status = QAResultStatus.ERROR
-            message = f"Tool exited with code {exec_result.exit_code}"
-        elif not issues:
-            status = QAResultStatus.SUCCESS
-            message = "No issues found"
-        else:
-            error_count = sum(1 for i in issues if i.severity == "error")
-            warning_count = sum(1 for i in issues if i.severity == "warning")
-
-            if error_count > 0:
-                status = QAResultStatus.FAILURE
-                message = f"Found {error_count} errors"
-                if warning_count > 0:
-                    message += f" and {warning_count} warnings"
-            else:
-                status = QAResultStatus.WARNING
-                message = f"Found {warning_count} warnings"
-
-        # Build details from issues
-        details_lines = []
-        for issue in issues[:10]:  # Limit to first 10 for readability
-            loc = str(issue.file_path)
-            if issue.line_number:
-                loc += f":{issue.line_number}"
-            if issue.column_number:
-                loc += f":{issue.column_number}"
-            details_lines.append(f"{loc}: {issue.message}")
-
-        if len(issues) > 10:
-            details_lines.append(f"... and {len(issues) - 10} more issues")
+        status, message = self._determine_qa_status_and_message(exec_result, issues)
+        details = self._build_details_from_issues(issues)
 
         return QAResult(
             check_id=self.module_id,
@@ -576,7 +611,7 @@ class BaseToolAdapter(QAAdapterBase):
             check_type=self._get_check_type(),
             status=status,
             message=message,
-            details="\n".join(details_lines),
+            details=details,
             files_checked=target_files,
             files_modified=exec_result.files_modified,
             issues_found=len(issues),

@@ -127,6 +127,92 @@ class InitializationService:
             "example.mcp.json": "special",
         }
 
+    def _apply_merge_strategy(
+        self,
+        merge_strategy: str,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        """Apply the appropriate merge strategy for the config file."""
+        if merge_strategy == "smart_merge":
+            self._smart_merge_config(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "smart_merge_gitignore":
+            self._smart_merge_gitignore(
+                target_file,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "smart_append":
+            self._smart_append_config(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        elif merge_strategy == "replace_if_missing":
+            self._handle_replace_if_missing(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+        else:
+            self._handle_default_strategy(
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
+
+    def _handle_replace_if_missing(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        """Handle replace_if_missing strategy."""
+        if not target_file.exists() or force:
+            content = self._read_and_process_content(source_file, True, project_name)
+            self._write_file_and_track(target_file, content, file_name, results)
+        else:
+            self._skip_existing_file(file_name, results)
+
+    def _handle_default_strategy(
+        self,
+        source_file: Path,
+        target_file: Path,
+        file_name: str,
+        project_name: str,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        """Handle default copy strategy."""
+        if not self._should_copy_file(target_file, force, file_name, results):
+            return
+        content = self._read_and_process_content(source_file, True, project_name)
+        self._write_file_and_track(target_file, content, file_name, results)
+
     def _process_config_file(
         self,
         file_name: str,
@@ -150,51 +236,15 @@ class InitializationService:
             return
 
         try:
-            if merge_strategy == "smart_merge":
-                self._smart_merge_config(
-                    source_file,
-                    target_file,
-                    file_name,
-                    project_name,
-                    force,
-                    results,
-                )
-            elif merge_strategy == "smart_merge_gitignore":
-                self._smart_merge_gitignore(
-                    target_file,
-                    project_name,
-                    force,
-                    results,
-                )
-            elif merge_strategy == "smart_append":
-                self._smart_append_config(
-                    source_file,
-                    target_file,
-                    file_name,
-                    project_name,
-                    force,
-                    results,
-                )
-            elif merge_strategy == "replace_if_missing":
-                if not target_file.exists() or force:
-                    content = self._read_and_process_content(
-                        source_file,
-                        True,
-                        project_name,
-                    )
-                    self._write_file_and_track(target_file, content, file_name, results)
-                else:
-                    self._skip_existing_file(file_name, results)
-            else:
-                if not self._should_copy_file(target_file, force, file_name, results):
-                    return
-                content = self._read_and_process_content(
-                    source_file,
-                    True,
-                    project_name,
-                )
-                self._write_file_and_track(target_file, content, file_name, results)
-
+            self._apply_merge_strategy(
+                merge_strategy,
+                source_file,
+                target_file,
+                file_name,
+                project_name,
+                force,
+                results,
+            )
         except Exception as e:
             self._handle_file_processing_error(file_name, e, results)
 

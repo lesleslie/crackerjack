@@ -149,6 +149,44 @@ class ToolExecutionError(Exception):
 
         return "\n".join(formatted_lines) if formatted_lines else "[dim]  (empty)[/dim]"
 
+    def _get_error_suggestion(self, combined_output: str) -> str | None:
+        """Get specific suggestion based on error patterns in output.
+
+        Args:
+            combined_output: Combined stderr and stdout in lowercase
+
+        Returns:
+            Suggestion string, or None if no pattern matched
+        """
+        error_patterns = {
+            "permission denied": "→ Check file permissions or run with appropriate access",
+            (
+                "command not found",
+                "no such file",
+            ): f"→ Ensure '{self.tool}' is installed and in PATH",
+            (
+                "timeout",
+                "timed out",
+            ): "→ Tool execution timed out - consider increasing timeout",
+            (
+                "syntaxerror",
+                "syntax error",
+            ): "→ Check code syntax in files being analyzed",
+            (
+                "importerror",
+                "modulenotfounderror",
+            ): "→ Check Python dependencies are installed (try: uv sync)",
+            ("typeerror", "type error"): "→ Fix type annotation errors in your code",
+            "out of memory": "→ Reduce batch size or increase available memory",
+        }
+
+        for patterns, suggestion in error_patterns.items():
+            patterns_list = patterns if isinstance(patterns, tuple) else (patterns,)
+            if any(pattern in combined_output for pattern in patterns_list):
+                return suggestion
+
+        return None
+
     def get_actionable_message(self) -> str:
         """Get actionable error message for developers.
 
@@ -158,34 +196,15 @@ class ToolExecutionError(Exception):
         messages = [f"Tool '{self.tool}' failed with exit code {self.exit_code}"]
 
         # Add common error patterns and suggestions
-        # Combine both stderr and stdout for pattern matching
         combined_output = f"{self.stderr} {self.stdout}".lower()
+        suggestion = self._get_error_suggestion(combined_output)
 
-        if "permission denied" in combined_output:
-            messages.append("→ Check file permissions or run with appropriate access")
-        elif (
-            "command not found" in combined_output or "no such file" in combined_output
-        ):
-            messages.append(f"→ Ensure '{self.tool}' is installed and in PATH")
-        elif "timeout" in combined_output or "timed out" in combined_output:
-            messages.append("→ Tool execution timed out - consider increasing timeout")
-        elif "syntaxerror" in combined_output or "syntax error" in combined_output:
-            messages.append("→ Check code syntax in files being analyzed")
-        elif (
-            "importerror" in combined_output or "modulenotfounderror" in combined_output
-        ):
-            messages.append("→ Check Python dependencies are installed (try: uv sync)")
-        elif "typeerror" in combined_output or "type error" in combined_output:
-            messages.append("→ Fix type annotation errors in your code")
-        elif "out of memory" in combined_output:
-            messages.append("→ Reduce batch size or increase available memory")
-
-        # Generic suggestion if no specific match
-        if len(messages) == 1:
-            if self.stderr:
-                messages.append("→ Check error output above for details")
-            else:
-                messages.append(f"→ Run '{self.tool}' manually for more details")
+        if suggestion:
+            messages.append(suggestion)
+        elif self.stderr:
+            messages.append("→ Check error output above for details")
+        else:
+            messages.append(f"→ Run '{self.tool}' manually for more details")
 
         return "\n".join(messages)
 

@@ -89,23 +89,48 @@ class CrackerjackCache:
     """ACB-backed cache adapter with in-memory fallback when adapter missing."""
 
     EXPENSIVE_HOOKS = {
-        "pyright",
-        "bandit",
-        "vulture",
-        "complexipy",
-        "refurb",
-        "gitleaks",
-        "zuban",
+        # Type checking and analysis
+        "pyright",  # Legacy, keep for backward compatibility
+        "zuban",  # Fast Rust-based type checking
+        "skylos",  # Rust-based dead code detection
+        # Security and vulnerability scanning
+        "bandit",  # Python security linter
+        "gitleaks",  # Secret scanning
+        "semgrep",  # SAST scanning
+        "pyscn",  # Security scanning
+        "pip-audit",  # Dependency vulnerability scanning
+        # Code quality and complexity
+        "vulture",  # Dead code detection (Python)
+        "complexipy",  # Complexity analysis
+        "refurb",  # Python code modernization
+        # Schema and data validation
+        "check-jsonschema",  # JSON schema validation (8466+ files)
+        # Text and formatting
+        "codespell",  # Spell checking across entire codebase
+        "ruff-check",  # Comprehensive Python linting
+        "mdformat",  # Markdown formatting
     }
 
     HOOK_DISK_TTLS = {
-        "pyright": 86400,
-        "bandit": 86400 * 3,
-        "vulture": 86400 * 2,
-        "complexipy": 86400,
-        "refurb": 86400,
-        "gitleaks": 86400 * 7,
-        "zuban": 86400,
+        # Type checking - daily updates as code changes
+        "pyright": 86400,  # 1 day
+        "zuban": 86400,  # 1 day
+        "skylos": 86400 * 2,  # 2 days - dead code analysis less volatile
+        # Security - longer TTLs, check periodically for new vulnerabilities
+        "bandit": 86400 * 3,  # 3 days
+        "gitleaks": 86400 * 7,  # 7 days - secrets rarely change once clean
+        "semgrep": 86400 * 3,  # 3 days - security rules change occasionally
+        "pyscn": 86400 * 3,  # 3 days
+        "pip-audit": 86400,  # 1 day - check daily for new CVEs
+        # Code quality
+        "vulture": 86400 * 2,  # 2 days
+        "complexipy": 86400,  # 1 day
+        "refurb": 86400,  # 1 day
+        # Validation and formatting - longest TTLs
+        "check-jsonschema": 86400 * 7,  # 7 days - schemas rarely change
+        "codespell": 86400 * 7,  # 7 days - spelling errors are rare
+        "ruff-check": 86400,  # 1 day - linting rules can change
+        "mdformat": 86400 * 7,  # 7 days - markdown style rarely changes
     }
 
     AGENT_VERSION = "1.0.0"

@@ -126,6 +126,59 @@ def find_safe_pattern_for_text(text: str) -> list[str]:
     return matches
 
 
+def _determine_suggested_name(original_pattern: str) -> str:
+    """Determine a suggested name for the pattern based on its content.
+
+    Args:
+        original_pattern: The regex pattern to analyze
+
+    Returns:
+        Suggested pattern name
+    """
+    if "python.*-.*m" in original_pattern:
+        return "fix_python_command_spacing"
+    if r"\-\s*\-" in original_pattern:
+        return "fix_double_dash_spacing"
+    if "token" in original_pattern.lower():
+        return "fix_token_pattern"
+    if "password" in original_pattern.lower():
+        return "fix_password_pattern"
+
+    keyword_pattern = CompiledPatternCache.get_compiled_pattern(r"[a-zA-Z]+")
+    keywords = keyword_pattern.findall(original_pattern)
+    if keywords:
+        return f"fix_{'_'.join(keywords[:3])}_pattern".lower()
+
+    return "fix_custom_pattern"
+
+
+def _build_test_cases(original_pattern: str, sample_text: str) -> list[tuple[str, str]]:
+    """Build test cases based on pattern and sample text.
+
+    Args:
+        original_pattern: The regex pattern
+        sample_text: Optional sample text to include
+
+    Returns:
+        List of (input, expected_output) test case tuples
+    """
+    test_cases = []
+
+    if sample_text:
+        test_cases.append((sample_text, "Expected output needed"))
+
+    if "-" in original_pattern:
+        test_cases.extend(
+            [
+                ("word - word", "word-word"),
+                ("already-good", "already-good"),
+                ("multiple - word - spacing", "multiple-word - spacing"),
+            ]
+        )
+
+    return test_cases
+
+
 def suggest_migration_for_re_sub(
     original_pattern: str, original_replacement: str, sample_text: str = ""
 ) -> dict[str, t.Any]:
@@ -157,35 +210,8 @@ def suggest_migration_for_re_sub(
         if matches:
             suggestion["needs_new_pattern"] = False
 
-    if "python.*-.*m" in original_pattern:
-        suggestion["suggested_name"] = "fix_python_command_spacing"
-    elif r"\-\s*\-" in original_pattern:
-        suggestion["suggested_name"] = "fix_double_dash_spacing"
-    elif "token" in original_pattern.lower():
-        suggestion["suggested_name"] = "fix_token_pattern"
-    elif "password" in original_pattern.lower():
-        suggestion["suggested_name"] = "fix_password_pattern"
-    else:
-        keyword_pattern = CompiledPatternCache.get_compiled_pattern(r"[a-zA-Z]+")
-        keywords = keyword_pattern.findall(original_pattern)
-        if keywords:
-            suggestion["suggested_name"] = (
-                f"fix_{'_'.join(keywords[:3])}_pattern".lower()
-            )
-        else:
-            suggestion["suggested_name"] = "fix_custom_pattern"
-
-    if sample_text:
-        suggestion["test_cases_needed"].append((sample_text, "Expected output needed"))
-
-    if "-" in original_pattern:
-        suggestion["test_cases_needed"].extend(
-            [
-                ("word - word", "word-word"),
-                ("already-good", "already-good"),
-                ("multiple - word - spacing", "multiple-word - spacing"),
-            ]
-        )
+    suggestion["suggested_name"] = _determine_suggested_name(original_pattern)
+    suggestion["test_cases_needed"] = _build_test_cases(original_pattern, sample_text)
 
     return suggestion
 

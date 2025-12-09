@@ -515,41 +515,49 @@ class DynamicConfigGenerator:
         return filtered_hooks
 
     def _update_hook_for_package(self, hook: HookMetadata) -> HookMetadata:
+        """Update hook configuration for custom package directory."""
+        hook = self._update_hook_args(hook)
+        hook = self._update_hook_paths(hook)
+        hook = self._update_hook_excludes(hook)
+        return hook
+
+    def _update_hook_args(self, hook: HookMetadata) -> HookMetadata:
+        """Update hook arguments for specific tools."""
         if hook["id"] == "skylos" and hook["args"]:
             hook["args"] = [self.package_directory, "--exclude", "tests"]
-
         elif hook["id"] == "zuban" and hook["args"]:
-            updated_args = []
-            for arg in hook["args"]:
-                if arg == "./crackerjack":
-                    updated_args.append(f"./{self.package_directory}")
-                else:
-                    updated_args.append(arg)
-            hook["args"] = updated_args
+            hook["args"] = [
+                f"./{self.package_directory}" if arg == "./crackerjack" else arg
+                for arg in hook["args"]
+            ]
+        return hook
 
-        elif hook["files"] and "crackerjack" in hook["files"]:
+    def _update_hook_paths(self, hook: HookMetadata) -> HookMetadata:
+        """Update file and exclude paths for package directory."""
+        if hook["files"] and "crackerjack" in hook["files"]:
             hook["files"] = hook["files"].replace("crackerjack", self.package_directory)
-
-        elif hook["exclude"] and "crackerjack" in hook["exclude"]:
+        if hook["exclude"] and "crackerjack" in hook["exclude"]:
             hook["exclude"] = hook["exclude"].replace(
                 "crackerjack", self.package_directory
             )
+        return hook
 
+    def _update_hook_excludes(self, hook: HookMetadata) -> HookMetadata:
+        """Update exclude patterns to skip src/ directory."""
         if hook["exclude"]:
             if "src/" not in hook["exclude"]:
                 hook["exclude"] = f"{hook['exclude']}|^src/"
         else:
-            if hook["id"] in (
+            exclude_tests_and_src = {
                 "skylos",
                 "zuban",
                 "bandit",
                 "refurb",
                 "complexipy",
-            ):
-                hook["exclude"] = r"^tests/|^src/"
-            else:
-                hook["exclude"] = "^src/"
-
+            }
+            hook["exclude"] = (
+                r"^tests/|^src/" if hook["id"] in exclude_tests_and_src else "^src/"
+            )
         return hook
 
     def group_hooks_by_repo(

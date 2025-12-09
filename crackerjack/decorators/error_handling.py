@@ -233,6 +233,34 @@ def log_errors(
     """
     _console = console or depends.get_sync(Console)
 
+    def _log_exception(
+        func: t.Callable[..., t.Any],
+        exception: Exception,
+    ) -> None:
+        """Log exception with function context."""
+        context = get_function_context(func)
+        error_chain = format_exception_chain(exception)
+
+        if logger:
+            log_method = getattr(logger, level, logger.error)
+            log_method(
+                f"Error in {context['function_name']}",
+                exc_info=include_traceback,
+                extra={
+                    "function": context["function_name"],
+                    "module": context["module"],
+                    "error_type": type(exception).__name__,
+                    "error_chain": error_chain,
+                },
+            )
+        else:
+            _safe_console_print(
+                _console,
+                f"[red]Error in {context['function_name']}: "
+                f"{type(exception).__name__}: {exception}[/red]",
+                include_traceback=include_traceback,
+            )
+
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
 
@@ -241,30 +269,7 @@ def log_errors(
                 try:
                     return await func(*args, **kwargs)
                 except Exception as e:
-                    context = get_function_context(func)
-                    error_chain = format_exception_chain(e)
-
-                    # Log error with context
-                    if logger:
-                        log_method = getattr(logger, level, logger.error)
-                        log_method(
-                            f"Error in {context['function_name']}",
-                            exc_info=include_traceback,
-                            extra={
-                                "function": context["function_name"],
-                                "module": context["module"],
-                                "error_type": type(e).__name__,
-                                "error_chain": error_chain,
-                            },
-                        )
-                    else:
-                        _safe_console_print(
-                            _console,
-                            f"[red]Error in {context['function_name']}: "
-                            f"{type(e).__name__}: {e}[/red]",
-                            include_traceback=include_traceback,
-                        )
-
+                    _log_exception(func, e)
                     raise
 
             return async_wrapper
@@ -276,29 +281,7 @@ def log_errors(
                 try:
                     return func(*args, **kwargs)
                 except Exception as e:
-                    context = get_function_context(func)
-                    error_chain = format_exception_chain(e)
-
-                    if logger:
-                        log_method = getattr(logger, level, logger.error)
-                        log_method(
-                            f"Error in {context['function_name']}",
-                            exc_info=include_traceback,
-                            extra={
-                                "function": context["function_name"],
-                                "module": context["module"],
-                                "error_type": type(e).__name__,
-                                "error_chain": error_chain,
-                            },
-                        )
-                    else:
-                        _safe_console_print(
-                            _console,
-                            f"[red]Error in {context['function_name']}: "
-                            f"{type(e).__name__}: {e}[/red]",
-                            include_traceback=include_traceback,
-                        )
-
+                    _log_exception(func, e)
                     raise
 
             return sync_wrapper
