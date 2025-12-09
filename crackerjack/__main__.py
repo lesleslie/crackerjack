@@ -300,6 +300,7 @@ def main(
 ) -> None:
     from acb.depends import depends
 
+    from crackerjack import __version__
     from crackerjack.config import register_services
     from crackerjack.config.loader import load_settings
     from crackerjack.config.settings import CrackerjackSettings
@@ -308,6 +309,9 @@ def main(
     depends.set(CrackerjackSettings, settings)
 
     register_services()
+
+    # Print version on startup
+    console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
 
     # Ensure logging levels are properly set after services are registered
     _configure_logging_for_execution(debug or ai_debug or ai_fix, verbose)
