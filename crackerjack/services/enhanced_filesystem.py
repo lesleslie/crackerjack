@@ -329,33 +329,45 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         return self.cache.get(cache_key)
 
     @staticmethod
-    def _read_file_direct(path: Path) -> str:
-        try:
-            if not path.exists():
-                raise FileError(
-                    message=f"File does not exist: {path}",
-                    details=f"Attempted to read file at {path.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
-            return path.read_text(encoding="utf-8")
-        except PermissionError as e:
+    def _validate_file_exists(path: Path) -> None:
+        """Validate that a file exists."""
+        if not path.exists():
+            raise FileError(
+                message=f"File does not exist: {path}",
+                details=f"Attempted to read file at {path.absolute()}",
+                recovery="Check file path and ensure file exists",
+            )
+
+    @staticmethod
+    def _handle_read_error(error: Exception, path: Path) -> None:
+        """Handle file read errors."""
+        if isinstance(error, PermissionError):
             raise FileError(
                 message=f"Permission denied reading file: {path}",
-                details=str(e),
+                details=str(error),
                 recovery="Check file permissions and user access rights",
-            ) from e
-        except UnicodeDecodeError as e:
+            ) from error
+        elif isinstance(error, UnicodeDecodeError):
             raise FileError(
                 message=f"Unable to decode file as UTF-8: {path}",
-                details=str(e),
+                details=str(error),
                 recovery="Ensure file is text - based and UTF-8 encoded",
-            ) from e
-        except OSError as e:
+            ) from error
+        elif isinstance(error, OSError):
             raise FileError(
                 message=f"System error reading file: {path}",
-                details=str(e),
+                details=str(error),
                 recovery="Check disk space and file system integrity",
-            ) from e
+            ) from error
+
+    @staticmethod
+    def _read_file_direct(path: Path) -> str:
+        try:
+            EnhancedFileSystemService._validate_file_exists(path)
+            return path.read_text(encoding="utf-8")
+        except (PermissionError, UnicodeDecodeError, OSError) as e:
+            EnhancedFileSystemService._handle_read_error(e, path)
+            raise  # Ensure type checker knows this doesn't return
 
     @staticmethod
     def _write_file_direct(path: Path, content: str) -> None:

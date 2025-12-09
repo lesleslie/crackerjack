@@ -4,6 +4,8 @@ This module contains the core handler functions that coordinate the main CLI
 workflows and need to be separated from monitoring-specific handlers.
 """
 
+from __future__ import annotations
+
 import asyncio
 import os
 import sys
@@ -373,7 +375,7 @@ def handle_config_updates(options: Options, console: Inject[Console] = None) -> 
 
 @depends.inject  # type: ignore[misc]
 def _handle_check_updates(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
+    config_service: ConfigTemplateService, pkg_path: Path, console: Inject[Console]
 ) -> None:
     """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
@@ -394,7 +396,7 @@ def _handle_check_updates(
 
 @depends.inject  # type: ignore[misc]
 def _handle_apply_updates(
-    config_service: "ConfigTemplateService",
+    config_service: ConfigTemplateService,
     pkg_path: Path,
     interactive: bool,
     console: Inject[Console],
@@ -420,7 +422,7 @@ def _handle_apply_updates(
 
 @depends.inject  # type: ignore[misc]
 def _handle_diff_config(
-    config_service: "ConfigTemplateService",
+    config_service: ConfigTemplateService,
     pkg_path: Path,
     config_type: str,
     console: Inject[Console],
@@ -434,7 +436,7 @@ def _handle_diff_config(
 
 @depends.inject  # type: ignore[misc]
 def _handle_refresh_cache(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
+    config_service: ConfigTemplateService, pkg_path: Path, console: Inject[Console]
 ) -> None:
     """Handle refreshing cache."""
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
@@ -444,7 +446,7 @@ def _handle_refresh_cache(
 
 @depends.inject  # type: ignore[misc]
 def _display_available_updates(
-    updates: dict[str, "ConfigUpdateInfo"], console: Inject[Console]
+    updates: dict[str, ConfigUpdateInfo], console: Inject[Console]
 ) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
@@ -455,7 +457,7 @@ def _display_available_updates(
             )
 
 
-def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[str]:
+def _get_configs_needing_update(updates: dict[str, ConfigUpdateInfo]) -> list[str]:
     """Get list of configurations that need updates."""
     return [
         config_type
@@ -466,7 +468,7 @@ def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[
 
 @depends.inject  # type: ignore[misc]
 def _apply_config_updates_batch(
-    config_service: "ConfigTemplateService",
+    config_service: ConfigTemplateService,
     configs: list[str],
     pkg_path: Path,
     interactive: bool,

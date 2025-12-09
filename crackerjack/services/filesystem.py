@@ -18,37 +18,79 @@ class FileSystemService(FileSystemInterface):
 
         return result
 
+    def _validate_path_exists(self, path_obj: Path, operation: str) -> None:
+        """Validate that a path exists."""
+        if not path_obj.exists():
+            raise FileError(
+                message=f"File does not exist: {path_obj}",
+                details=f"Attempted to {operation} file at {path_obj.absolute()}",
+                recovery="Check file path and ensure file exists",
+            )
+
+    def _handle_permission_error(
+        self, error: PermissionError, path: str | Path, operation: str
+    ) -> None:
+        """Handle permission errors."""
+        raise FileError(
+            message=f"Permission denied {operation}: {path}",
+            error_code=ErrorCode.PERMISSION_ERROR,
+            details=str(error),
+            recovery="Check file permissions and user access rights",
+        ) from error
+
+    def _handle_unicode_error(
+        self, error: UnicodeDecodeError, path: str | Path
+    ) -> None:
+        """Handle unicode decode errors."""
+        raise FileError(
+            message=f"Unable to decode file as UTF-8: {path}",
+            error_code=ErrorCode.FILE_READ_ERROR,
+            details=str(error),
+            recovery="Ensure file is text - based and UTF-8 encoded",
+        ) from error
+
+    def _handle_os_error(
+        self, error: OSError, path: str | Path, operation: str
+    ) -> None:
+        """Handle OS errors."""
+        raise FileError(
+            message=f"System error {operation}: {path}",
+            error_code=ErrorCode.FILE_READ_ERROR,
+            details=str(error),
+            recovery="Check disk space and file system integrity",
+        ) from error
+
+    def _handle_disk_space_error(
+        self, error: OSError, path: str | Path, operation: str
+    ) -> None:
+        """Handle disk space errors."""
+        if "No space left on device" in str(error):
+            raise ResourceError(
+                message=f"Insufficient disk space to {operation}: {path}",
+                details=str(error),
+                recovery="Free up disk space and try again",
+            ) from error
+        raise FileError(
+            message=f"System error {operation}: {path}",
+            error_code=ErrorCode.FILE_WRITE_ERROR,
+            details=str(error),
+            recovery="Check disk space and file system integrity",
+        ) from error
+
     def read_file(self, path: str | Path) -> str:
         try:
             path_obj = Path(path) if isinstance(path, str) else path
-            if not path_obj.exists():
-                raise FileError(
-                    message=f"File does not exist: {path_obj}",
-                    details=f"Attempted to read file at {path_obj.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
+            self._validate_path_exists(path_obj, "read")
             return path_obj.read_text(encoding="utf-8")
         except PermissionError as e:
-            raise FileError(
-                message=f"Permission denied reading file: {path}",
-                error_code=ErrorCode.PERMISSION_ERROR,
-                details=str(e),
-                recovery="Check file permissions and user access rights",
-            ) from e
+            self._handle_permission_error(e, path, "reading file")
+            raise  # Ensure type checker knows this doesn't return
         except UnicodeDecodeError as e:
-            raise FileError(
-                message=f"Unable to decode file as UTF-8: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Ensure file is text - based and UTF-8 encoded",
-            ) from e
+            self._handle_unicode_error(e, path)
+            raise  # Ensure type checker knows this doesn't return
         except OSError as e:
-            raise FileError(
-                message=f"System error reading file: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Check disk space and file system integrity",
-            ) from e
+            self._handle_os_error(e, path, "reading file")
+            raise  # Ensure type checker knows this doesn't return
 
     def write_file(self, path: str | Path, content: str) -> None:
         try:
@@ -100,12 +142,7 @@ class FileSystemService(FileSystemInterface):
             path_obj = Path(path) if isinstance(path, str) else path
             path_obj.mkdir(parents=parents, exist_ok=True)
         except PermissionError as e:
-            raise FileError(
-                message=f"Permission denied creating directory: {path}",
-                error_code=ErrorCode.PERMISSION_ERROR,
-                details=str(e),
-                recovery="Check parent directory permissions",
-            ) from e
+            self._handle_permission_error(e, path, "creating directory")
         except FileExistsError as e:
             if not parents:
                 raise FileError(
@@ -114,18 +151,7 @@ class FileSystemService(FileSystemInterface):
                     recovery="Use exist_ok=True or check if directory exists first",
                 ) from e
         except OSError as e:
-            if "No space left on device" in str(e):
-                raise ResourceError(
-                    message=f"Insufficient disk space to create directory: {path}",
-                    details=str(e),
-                    recovery="Free up disk space and try again",
-                ) from e
-            raise FileError(
-                message=f"System error creating directory: {path}",
-                error_code=ErrorCode.FILE_WRITE_ERROR,
-                details=str(e),
-                recovery="Check disk space and file system integrity",
-            ) from e
+            self._handle_disk_space_error(e, path, "create directory")
 
     def glob(self, pattern: str, path: str | Path | None = None) -> list[Path]:
         base_path = Path(path) if path else Path.cwd()
@@ -221,12 +247,7 @@ class FileSystemService(FileSystemInterface):
         try:
             shutil.copy2(src_path, dst_path)
         except PermissionError as e:
-            raise FileError(
-                message=f"Permission denied copying file: {src} -> {dst}",
-                error_code=ErrorCode.PERMISSION_ERROR,
-                details=str(e),
-                recovery="Check file and directory permissions",
-            ) from e
+            self._handle_permission_error(e, f"{src} -> {dst}", "copying file")
         except shutil.SameFileError as e:
             raise FileError(
                 message=f"Source and destination are the same file: {src}",
@@ -235,18 +256,7 @@ class FileSystemService(FileSystemInterface):
                 recovery="Ensure source and destination paths are different",
             ) from e
         except OSError as e:
-            if "No space left on device" in str(e):
-                raise ResourceError(
-                    message=f"Insufficient disk space to copy file: {src} -> {dst}",
-                    details=str(e),
-                    recovery="Free up disk space and try again",
-                ) from e
-            raise FileError(
-                message=f"System error copying file: {src} -> {dst}",
-                error_code=ErrorCode.FILE_WRITE_ERROR,
-                details=str(e),
-                recovery="Check disk space and file system integrity",
-            ) from e
+            self._handle_disk_space_error(e, f"{src} -> {dst}", "copy file")
 
     def remove_file(self, path: str | Path) -> None:
         try:
@@ -343,69 +353,29 @@ class FileSystemService(FileSystemInterface):
     ) -> Iterator[str]:
         try:
             path_obj = Path(path) if isinstance(path, str) else path
-            if not path_obj.exists():
-                raise FileError(
-                    message=f"File does not exist: {path_obj}",
-                    details=f"Attempted to read file at {path_obj.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
+            self._validate_path_exists(path_obj, "read")
 
             with path_obj.open(encoding="utf-8") as file:
                 while chunk := file.read(chunk_size):
                     yield chunk
 
         except PermissionError as e:
-            raise FileError(
-                message=f"Permission denied reading file: {path}",
-                error_code=ErrorCode.PERMISSION_ERROR,
-                details=str(e),
-                recovery="Check file permissions",
-            ) from e
+            self._handle_permission_error(e, path, "reading file")
         except UnicodeDecodeError as e:
-            raise FileError(
-                message=f"File encoding error: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Ensure file is encoded in UTF-8",
-            ) from e
+            self._handle_unicode_error(e, path)
         except OSError as e:
-            raise FileError(
-                message=f"System error reading file: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Check file system integrity",
-            ) from e
+            self._handle_os_error(e, path, "reading file")
 
     def read_lines_streaming(self, path: str | Path) -> Iterator[str]:
         try:
             path_obj = Path(path) if isinstance(path, str) else path
-            if not path_obj.exists():
-                raise FileError(
-                    message=f"File does not exist: {path_obj}",
-                    details=f"Attempted to read file at {path_obj.absolute()}",
-                    recovery="Check file path and ensure file exists",
-                )
+            self._validate_path_exists(path_obj, "read")
             with path_obj.open(encoding="utf-8") as file:
                 for line in file:
                     yield line.rstrip("\n\r")
         except PermissionError as e:
-            raise FileError(
-                message=f"Permission denied reading file: {path}",
-                error_code=ErrorCode.PERMISSION_ERROR,
-                details=str(e),
-                recovery="Check file permissions",
-            ) from e
+            self._handle_permission_error(e, path, "reading file")
         except UnicodeDecodeError as e:
-            raise FileError(
-                message=f"File encoding error: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Ensure file is encoded in UTF-8",
-            ) from e
+            self._handle_unicode_error(e, path)
         except OSError as e:
-            raise FileError(
-                message=f"System error reading file: {path}",
-                error_code=ErrorCode.FILE_READ_ERROR,
-                details=str(e),
-                recovery="Check file system integrity",
-            ) from e
+            self._handle_os_error(e, path, "reading file")

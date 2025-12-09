@@ -35,7 +35,7 @@ dependencies = [
     "hatchling>=1.27.0",
     "jinja2>=3.1.6",
     "keyring>=25.7.0",
-    "mcp>=1.22.0",
+    "mcp>=1.23.0",
     "nltk>=3.9.2",
     "numpy>=2.3.5",
     "pydantic>=2.12.4",
@@ -88,6 +88,7 @@ dependencies = [
 sast = [
     "bandit>=1.9.2",  # Python security linter
 #     "semgrep>=1.95",  # Disabled: incompatible with rich>=14.1 (requires rich<13.6)
+    "pyscn>=0.1.0",  # Python security static analyzer (CFG analysis, clone detection, complexity metrics)
 ]
 
 # SCA (Software Composition Analysis) - Dependency vulnerability scanning
@@ -389,13 +390,13 @@ exclude_patterns = [
 ]
 max_complexity = 15
 
-[tool.mypy]
+# [tool.mypy]
 # NOTE: Full mypy config in mypy.ini (zuban limitation)
-# Zuban v0.2.2 has a bug parsing [tool.mypy] from pyproject.toml
+# Zuban v0.2.2+ has a bug parsing [tool.mypy] from pyproject.toml
 # Error: "Expected tool.mypy to be simple table in pyproject.toml"
 # Once zuban is fixed, consolidate mypy.ini contents here
 # See: UNIFIED_IMPLEMENTATION_PLAN.md Phase 2 Task 2.1 (BLOCKED)
-python_version = "3.13"
+# python_version = "3.13"
 
 [tool.zuban]
 strict = true
@@ -415,7 +416,7 @@ exclude = [
     "build",
     "dist",
     ".eggs",
-    "*.egg-info",
+    ".*\\.egg-info",
     "node_modules",
     ".vscode",
     ".idea",
