@@ -80,23 +80,12 @@ dependencies = [
     "mdformat-ruff>=0.1.3",
     "bevy>=3.1.0b12",
     "uv-bump>=0.3.2",
+    "pyscn>=1.5.0",
+    "pip-audit>=2.10.0",
+    "bandit>=1.9.2",
 ]
 
 [dependency-groups]
-# SAST (Static Application Security Testing) tools
-# Install with: uv sync --group sast
-sast = [
-    "bandit>=1.9.2",  # Python security linter
-#     "semgrep>=1.95",  # Disabled: incompatible with rich>=14.1 (requires rich<13.6)
-    "pyscn>=1.5.0",  # Python security static analyzer (CFG analysis, clone detection, complexity metrics)
-]
-
-# SCA (Software Composition Analysis) - Dependency vulnerability scanning
-# Install with: uv sync --group dependency
-dependency = [
-    "pip-audit>=2.10.0",  # Dependency vulnerability scanner (CVE detection)
-]
-
 # Development dependencies
 # Install with: uv sync --group dev
 dev = [
