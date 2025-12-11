@@ -220,8 +220,8 @@ ______________________________________________________________________
 
 1. **Link Styles:**
 
-   - Most use relative links like `[Text](<./path>)`
-   - Some use `[Text](./path)` without angle brackets
+   - Most use relative links with angle brackets: `` `[Text](<./path>)` ``
+   - Some use links without angle brackets: `` `[Text](./path)` ``
    - Both work, but consistency is better
 
 **Recommendation:**

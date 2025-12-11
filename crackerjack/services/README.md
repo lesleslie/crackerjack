@@ -284,7 +284,7 @@ Pattern detection and analysis:
 - Code pattern recognition
 - Anti-pattern detection
 - Pattern libraries
-- See [patterns/README.md](./patterns/README.md) (if exists)
+- See `patterns/` directory for pattern modules
 
 ## Configuration
 

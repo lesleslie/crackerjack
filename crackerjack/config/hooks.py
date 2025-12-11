@@ -245,6 +245,15 @@ FAST_HOOKS = [
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level markdown formatter
     ),
+    HookDefinition(
+        name="check-local-links",
+        command=[],
+        timeout=60,  # Fast local-only link checking
+        security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=True,  # Can check specific markdown files
+        description="Fast local link validation (file references and anchors only)",
+    ),
 ]
 
 COMPREHENSIVE_HOOKS = [
@@ -356,6 +365,17 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.HIGH,
         use_precommit_legacy=False,  # Phase 8.4: Direct invocation
         accepts_file_paths=True,  # Phase 10.4.4: File-level schema validator
+    ),
+    HookDefinition(
+        name="linkcheckmd",
+        command=[],
+        timeout=300,  # 5 minutes for comprehensive link checking (includes network calls)
+        stage=HookStage.COMPREHENSIVE,
+        manual_stage=True,
+        security_level=SecurityLevel.LOW,
+        use_precommit_legacy=False,  # Direct invocation
+        accepts_file_paths=False,  # Scans directories, not individual files
+        description="Comprehensive link validation (local + external URLs)",
     ),
 ]
 

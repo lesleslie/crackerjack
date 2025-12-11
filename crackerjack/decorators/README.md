@@ -174,7 +174,6 @@ async def fetch_and_process() -> dict:
 
 ## Related
 
-- [Exceptions](<../exceptions/README.md>) - Custom exception types
-- [Errors](../errors/README.md) - Error handling and error types
+- [Exceptions](<../exceptions/README.md>) - Custom exception types and error handling
 - [MCP Cache](<../mcp/README.md>) - Error pattern caching for AI analysis
 - [Architecture: ACB Patterns](../../docs/guides/CLAUDE.md#critical-architectural-pattern-protocol-based-di) - Dependency injection patterns

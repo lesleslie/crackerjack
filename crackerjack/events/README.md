@@ -8,4 +8,4 @@ Event types, signals, and dispatch-related helpers.
 
 - [Crackerjack Package](<../README.md>) - Parent package
 - [Monitoring](<../monitoring/README.md>) - Observability and metrics
-- [Coordinators](../coordinators/README.md) - Event coordination and orchestration
+- [Core Coordinators](<../core/README.md>) - Event coordination and orchestration (phase_coordinator, autofix_coordinator, session_coordinator)

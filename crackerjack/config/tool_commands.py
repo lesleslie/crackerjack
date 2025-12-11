@@ -206,6 +206,22 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.mdformat_wrapper",
         ],
+        # Fast local-only link checker for fast hooks
+        "check-local-links": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.local_link_checker",
+        ],
+        # Comprehensive link checker (local + external) for comprehensive hooks
+        "linkcheckmd": [
+            "uv",
+            "run",
+            "python",
+            "-m",
+            "crackerjack.tools.linkcheckmd_wrapper",
+        ],
         # Use explicit project path flag; include venv discovery
         "creosote": [
             "uv",
