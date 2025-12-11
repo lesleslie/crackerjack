@@ -342,7 +342,7 @@ class BanditAdapter(BaseToolAdapter):
         """Detect the package directory name from pyproject.toml.
 
         Returns:
-            Package directory name (e.g., 'crackerjack', 'session_mgmt_mcp')
+            Package directory name (e.g., 'crackerjack', 'session_buddy')
         """
         from contextlib import suppress
 

@@ -296,6 +296,5 @@ except ToolExecutionError as e:
 ## Related
 
 - [Decorators](<../decorators/README.md>) - Error handling decorators
-- [Errors](../errors/README.md) - Core error types and CrackerjackError base
 - [MCP](<../mcp/README.md>) - Error caching and pattern analysis
 - [Console Integration](https://github.com/Textualize/rich) - Rich console formatting

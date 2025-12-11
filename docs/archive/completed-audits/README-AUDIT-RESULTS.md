@@ -105,7 +105,7 @@ The following have 1-4 line READMEs that are accurate but minimal:
 
 1. **Navigation breadcrumbs** inconsistent:
 
-   - Adapter READMEs have: `> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [AI](./README.md)`
+   - Adapter READMEs use format: `` `> Crackerjack Docs: [Main](../../../README.md) | [Parent](../README.md) | [Current](README.md)` ``
    - Other READMEs lack this navigation
    - **Recommendation:** Add breadcrumbs to all detailed READMEs
 
