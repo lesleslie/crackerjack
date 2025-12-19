@@ -251,6 +251,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--skip-editable",  # Skip editable packages in development
             "--vulnerability-service",
             "osv",  # Use OSV database for vulnerability data
+            "--ignore-vuln",
+            "CVE-2025-53000",  # Windows-only vulnerability (uncontrolled search path in nbconvert), not applicable on macOS
         ],
         "pyscn": [
             "uv",

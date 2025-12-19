@@ -177,21 +177,21 @@ python -m crackerjack --run-tests
 
 ## Table of Contents
 
-- [Crackerjack vs Pre-commit](<#crackerjack-vs-pre-commit-architecture--features>)
-- [Installation](<#installation>)
-- [Quick Start](<#quick-start>)
-- [AI Auto-Fix Features](<#ai-auto-fix-features>)
-- [Core Workflow](<#core-workflow>)
-- [Core Features](<#core-features>)
-- [ACB Architecture & Performance](<#-acb-architecture--performance>)
-- [Adapters](<#adapters>)
-- [Configuration Management](<#-configuration-management-acb-settings--configuration-templates>)
-- [MCP Server Configuration](<#mcp-server-configuration>)
-- [Quality Hook Modes](<#quality-hook-modes>)
-- [Command Reference](<#command-reference>)
-- [Style Guide](<#style-guide>)
-- [Publishing & Version Management](<#publishing--version-management>)
-- [Troubleshooting](<#-troubleshooting>)
+- [Crackerjack vs Pre-commit](#crackerjack-vs-pre-commit-architecture--features)
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [AI Auto-Fix Features](#ai-auto-fix-features)
+- [Core Workflow](#core-workflow)
+- [Core Features](#core-features)
+- [ACB Architecture & Performance](#-acb-architecture--performance)
+- [Adapters](#adapters)
+- [Configuration Management](#-configuration-management-acb-settings--configuration-templates)
+- [MCP Server Configuration](#mcp-server-configuration)
+- [Quality Hook Modes](#quality-hook-modes)
+- [Command Reference](#command-reference)
+- [Style Guide](#style-guide)
+- [Publishing & Version Management](#publishing--version-management)
+- [Troubleshooting](#-troubleshooting)
 
 ## Installation
 
@@ -919,17 +919,17 @@ This advanced-grade pattern management system has **eliminated all regex-related
 
 Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using ACB patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 
-- AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](<./crackerjack/adapters/ai/README.md>)
-- Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](<./crackerjack/adapters/complexity/README.md>)
-- Format — Python/Markdown formatting (Ruff, Mdformat): [crackerjack/adapters/format/README.md](<./crackerjack/adapters/format/README.md>)
-- Lint — Spelling and simple linters (Codespell): [crackerjack/adapters/lint/README.md](<./crackerjack/adapters/lint/README.md>)
-- LSP — Rust tools with LSP (Zuban, Skylos): [crackerjack/adapters/lsp/README.md](<./crackerjack/adapters/lsp/README.md>)
-- Refactor — Modernization, dead code, unused deps (Refurb, Skylos, Creosote): [crackerjack/adapters/refactor/README.md](<./crackerjack/adapters/refactor/README.md>)
-- Security — Static analysis and secrets (Bandit, Gitleaks, Pyscn): [crackerjack/adapters/security/README.md](<./crackerjack/adapters/security/README.md>)
-- Type — Static type checking (Zuban, Pyrefly, Ty): [crackerjack/adapters/type/README.md](<./crackerjack/adapters/type/README.md>)
-- Utility — Config-driven checks (EOF newline, regex, size, lock): [crackerjack/adapters/utility/README.md](<./crackerjack/adapters/utility/README.md>)
+- AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](./crackerjack/adapters/ai/README.md)
+- Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](./crackerjack/adapters/complexity/README.md)
+- Format — Python/Markdown formatting (Ruff, Mdformat): [crackerjack/adapters/format/README.md](./crackerjack/adapters/format/README.md)
+- Lint — Spelling and simple linters (Codespell): [crackerjack/adapters/lint/README.md](./crackerjack/adapters/lint/README.md)
+- LSP — Rust tools with LSP (Zuban, Skylos): [crackerjack/adapters/lsp/README.md](./crackerjack/adapters/lsp/README.md)
+- Refactor — Modernization, dead code, unused deps (Refurb, Skylos, Creosote): [crackerjack/adapters/refactor/README.md](./crackerjack/adapters/refactor/README.md)
+- Security — Static analysis and secrets (Bandit, Gitleaks, Pyscn): [crackerjack/adapters/security/README.md](./crackerjack/adapters/security/README.md)
+- Type — Static type checking (Zuban, Pyrefly, Ty): [crackerjack/adapters/type/README.md](./crackerjack/adapters/type/README.md)
+- Utility — Config-driven checks (EOF newline, regex, size, lock): [crackerjack/adapters/utility/README.md](./crackerjack/adapters/utility/README.md)
 
-Quick index: [crackerjack/adapters/README.md](<./crackerjack/adapters/README.md>).
+Quick index: [crackerjack/adapters/README.md](./crackerjack/adapters/README.md).
 
 ## MCP Server Configuration
 
@@ -1203,7 +1203,7 @@ python -m crackerjack --ai-fix
 **🔗 Related Documentation**
 
 - **Advanced Features**: See `docs/README.md` - consolidated advanced flags
-- **Developer Guide**: [CLAUDE.md](<./CLAUDE.md>) - AI assistant guidelines and developer commands
+- **Developer Guide**: [CLAUDE.md](./CLAUDE.md) - AI assistant guidelines and developer commands
 
 ______________________________________________________________________
 

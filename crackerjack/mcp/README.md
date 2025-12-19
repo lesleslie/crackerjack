@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [MCP](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [MCP](./README.md)
 
 # MCP
 
@@ -359,10 +359,10 @@ python -m crackerjack --watchdog
 
 ## Related
 
-- [Agents](<../agents/README.md>) — AI agents that MCP coordinates
-- [Orchestration](<../orchestration/README.md>) — Workflow orchestration layer
-- [Slash Commands](<../slash_commands/README.md>) — MCP slash command implementations
-- [Main README](<../../README.md>) — MCP integration overview
+- [Agents](../agents/README.md) — AI agents that MCP coordinates
+- [Orchestration](../orchestration/README.md) — Workflow orchestration layer
+- [Slash Commands](../slash_commands/README.md) — MCP slash command implementations
+- [Main README](../../README.md) — MCP integration overview
 
 ## Future Enhancements
 

@@ -1,6 +1,6 @@
 # Orchestration Cache
 
-> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Orchestration](<../README.md>) | [Cache](<./README.md>)
+> Crackerjack Docs: [Main](../../../README.md) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Orchestration](../README.md) | [Cache](./README.md)
 
 High-performance caching infrastructure for hook execution results with content-based invalidation.
 
@@ -298,9 +298,9 @@ async def execute_with_cache(
 
 ## Related Documentation
 
-- [Orchestration Strategies](<../strategies/README.md>) - Execution strategies using cache
-- [Hook Orchestration](<../README.md>) - Overall orchestration
-- [Models](<../../models/README.md>) - HookResult and cache protocols
+- [Orchestration Strategies](../strategies/README.md) - Execution strategies using cache
+- [Hook Orchestration](../README.md) - Overall orchestration
+- [Models](../../models/README.md) - HookResult and cache protocols
 - [CLAUDE.md](../../../docs/guides/CLAUDE.md) - Architecture patterns
 
 ## Future Enhancements
