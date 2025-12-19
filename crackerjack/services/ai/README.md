@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Services](<../README.md>) | AI Services
+> Crackerjack Docs: [Main](../../../README.md) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Services](../README.md) | AI Services
 
 # AI Services
 
@@ -224,7 +224,7 @@ AI services integrate with crackerjack's 12 specialized agents:
 - **EnhancedProactiveAgent** - Uses predictive analytics for prevention
 - **ArchitectAgent** - Uses AI for architectural recommendations
 
-See [Intelligence](<../../intelligence/README.md>) for agent system details.
+See [Intelligence](../../intelligence/README.md) for agent system details.
 
 ## Security & Privacy
 
@@ -280,9 +280,9 @@ await limiter.acquire()
 
 ## Related
 
-- [Intelligence](<../../intelligence/README.md>) - Agent orchestration and selection
-- [Workflows](<../../workflows/README.md>) - Workflow integration with AI services
-- [Services](<../README.md>) - Parent services documentation
+- [Intelligence](../../intelligence/README.md) - Agent orchestration and selection
+- [Workflows](../../workflows/README.md) - Workflow integration with AI services
+- [Services](../README.md) - Parent services documentation
 - [CLAUDE.md](../../../docs/guides/CLAUDE.md) - AI agent system overview
 
 ## Future Enhancements

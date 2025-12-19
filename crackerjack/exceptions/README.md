@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [Crackerjack Package](<../README.md>) | [Exceptions](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [Crackerjack Package](../README.md) | [Exceptions](./README.md)
 
 # Exceptions
 
@@ -295,6 +295,6 @@ except ToolExecutionError as e:
 
 ## Related
 
-- [Decorators](<../decorators/README.md>) - Error handling decorators
-- [MCP](<../mcp/README.md>) - Error caching and pattern analysis
+- [Decorators](../decorators/README.md) - Error handling decorators
+- [MCP](../mcp/README.md) - Error caching and pattern analysis
 - [Console Integration](https://github.com/Textualize/rich) - Rich console formatting

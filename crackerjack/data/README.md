@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [Crackerjack Package](<../README.md>) | [Data](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [Crackerjack Package](../README.md) | [Data](./README.md)
 
 # Data
 
@@ -6,6 +6,6 @@ Static data and assets used by the package (keep small; large assets belong else
 
 ## Related
 
-- [Crackerjack Package](<../README.md>) - Parent package
-- [Documentation](<../documentation/README.md>) - Documentation helpers
-- [UI Templates](<../ui/templates/README.md>) - UI template files
+- [Crackerjack Package](../README.md) - Parent package
+- [Documentation](../documentation/README.md) - Documentation helpers
+- [UI Templates](../ui/templates/README.md) - UI template files

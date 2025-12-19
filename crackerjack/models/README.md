@@ -1,6 +1,6 @@
 # Models
 
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Models](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Models](./README.md)
 
 Data models, schemas, and protocol definitions for the Crackerjack architecture.
 
@@ -295,10 +295,10 @@ class MyConfig(BaseModel):
 ## Related Documentation
 
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Architecture patterns and DI guidelines
-- [Managers](<../managers/README.md>) - Protocol implementations
-- [Services](<../services/README.md>) - Service layer implementations
-- [Core](<../core/README.md>) - Coordinators and orchestration
-- [COVERAGE_POLICY.md](<../../docs/reference/COVERAGE_POLICY.md>) - Testing requirements
+- [Managers](../managers/README.md) - Protocol implementations
+- [Services](../services/README.md) - Service layer implementations
+- [Core](../core/README.md) - Coordinators and orchestration
+- [COVERAGE_POLICY.md](../../docs/reference/COVERAGE_POLICY.md) - Testing requirements
 
 ## Future Enhancements
 

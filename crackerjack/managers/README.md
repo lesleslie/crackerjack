@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Managers](<./README.md>)
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | [Managers](./README.md)
 
 # Managers
 
@@ -352,11 +352,11 @@ manager.max_concurrent = 1
 
 ## Related
 
-- [Orchestration](<../orchestration/README.md>) — Lower-level orchestration used by managers
-- [Services](<../services/README.md>) — Services used by managers
-- [Adapters](<../adapters/README.md>) — Adapters managed by hook managers
-- [CLI](<../cli/README.md>) — CLI handlers that use managers
-- [Main README](<../../README.md>) — Overall workflow overview
+- [Orchestration](../orchestration/README.md) — Lower-level orchestration used by managers
+- [Services](../services/README.md) — Services used by managers
+- [Adapters](../adapters/README.md) — Adapters managed by hook managers
+- [CLI](../cli/README.md) — CLI handlers that use managers
+- [Main README](../../README.md) — Overall workflow overview
 
 ## Future Enhancements
 

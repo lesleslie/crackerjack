@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Hooks
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Hooks
 
 # Hooks
 
@@ -412,7 +412,7 @@ result = await executor.execute_custom_strategy(custom_strategy)
 
 ## Integration with Executors
 
-Hooks are executed by specialized executors (see [Executors](<../executors/README.md>)):
+Hooks are executed by specialized executors (see [Executors](../executors/README.md)):
 
 - **HookExecutor** - Base executor with sequential execution
 - **AsyncHookExecutor** - Asynchronous hook execution
@@ -470,9 +470,9 @@ print(f"Cache hit rate: {result2.cache_hit_rate:.1%}")
 
 ## Related
 
-- [Executors](<../executors/README.md>) - Hook execution engines
-- [Config](<../config/README.md>) - Hook configuration and definitions
-- [Workflows](<../workflows/README.md>) - Workflow integration
+- [Executors](../executors/README.md) - Hook execution engines
+- [Config](../config/README.md) - Hook configuration and definitions
+- [Workflows](../workflows/README.md) - Workflow integration
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Two-stage quality process documentation
 
 ## Future Enhancements

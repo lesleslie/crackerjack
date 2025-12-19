@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Services](<../README.md>) | Quality Services
+> Crackerjack Docs: [Main](../../../README.md) | [CLAUDE.md](../../../docs/guides/CLAUDE.md) | [Services](../README.md) | Quality Services
 
 # Quality Services
 
@@ -399,10 +399,10 @@ quality_history_max_entries: 100  # Limit history size
 
 ## Related
 
-- [Services](<../README.md>) - Parent services documentation
-- [AI Services](<../ai/README.md>) - AI-powered quality analysis
-- [Workflows](<../../workflows/README.md>) - Quality workflow integration
-- [COVERAGE_POLICY.md](<../../../docs/reference/COVERAGE_POLICY.md>) - Coverage ratchet policy
+- [Services](../README.md) - Parent services documentation
+- [AI Services](../ai/README.md) - AI-powered quality analysis
+- [Workflows](../../workflows/README.md) - Quality workflow integration
+- [COVERAGE_POLICY.md](../../../docs/reference/COVERAGE_POLICY.md) - Coverage ratchet policy
 - [CLAUDE.md](../../../docs/guides/CLAUDE.md) - AI agent integration
 
 ## Future Enhancements

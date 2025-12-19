@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../../README.md>) | [Adapters](<../README.md>) | [Security](<./README.md>)
+> Crackerjack Docs: [Main](../../../README.md) | [Adapters](../README.md) | [Security](./README.md)
 
 # Security Adapters
 
@@ -14,7 +14,7 @@ Security adapters focus on **preventing credential leaks** by detecting hardcode
 | ------ | ----------- | ------ |
 | `gitleaks.py` | Git-aware secrets/credentials detection with redaction | Stable |
 
-**Note:** SAST tools (Bandit, Semgrep, Pyscn) have been moved to [crackerjack.adapters.sast](<../sast/README.md>)
+**Note:** SAST tools (Bandit, Semgrep, Pyscn) have been moved to [crackerjack.adapters.sast](../sast/README.md)
 
 ## Example: Gitleaks
 
@@ -106,6 +106,6 @@ assert adapter._get_check_type() == QACheckType.SECURITY
 
 ## Related
 
-- [SAST](<../sast/README.md>) — Code vulnerability analysis (Semgrep, Bandit)
-- [Type](<../type/README.md>) — Type safety prevents classes of bugs
-- [Lint](<../lint/README.md>) — Code quality supports security
+- [SAST](../sast/README.md) — Code vulnerability analysis (Semgrep, Bandit)
+- [Type](../type/README.md) — Type safety prevents classes of bugs
+- [Lint](../lint/README.md) — Code quality supports security

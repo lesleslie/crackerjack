@@ -1,4 +1,4 @@
-> Crackerjack Docs: [Main](<../../README.md>) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Executors
+> Crackerjack Docs: [Main](../../README.md) | [CLAUDE.md](../../docs/guides/CLAUDE.md) | Executors
 
 # Executors
 
@@ -576,9 +576,9 @@ LSP-aware: ~100MB (shares LSP server memory)
 
 ## Related
 
-- [Hooks](<../hooks/README.md>) - Hook definitions and lifecycle
-- [Workflows](<../workflows/README.md>) - Workflow integration
-- [Config](<../config/README.md>) - Executor configuration
+- [Hooks](../hooks/README.md) - Hook definitions and lifecycle
+- [Workflows](../workflows/README.md) - Workflow integration
+- [Config](../config/README.md) - Executor configuration
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Quality process overview
 
 ## Future Enhancements
