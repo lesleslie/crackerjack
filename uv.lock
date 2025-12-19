@@ -8,7 +8,7 @@ resolution-markers = [
 
 [[package]]
 name = "acb"
-version = "0.31.20"
+version = "0.31.22"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aioconsole" },
@@ -41,9 +41,9 @@ dependencies = [
     { name = "uuid-utils" },
     { name = "uvicorn" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6d/81/673b6098013917c2f7480525fb88c2035cd4adcfff7450ca6d3265539a7c/acb-0.31.20.tar.gz", hash = "sha256:f127d7a9b3c8a3135ad0c7d205b4c909b081e388aebcdaa095a08b60a4b9f302", size = 1457589, upload-time = "2025-12-12T13:36:01.17Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/35/58/cac0f7c7ec2aa8da7f4ffc2eec5ff2a255564eb10f90679065865fe2837e/acb-0.31.22.tar.gz", hash = "sha256:ac683ce6f99bc16714fd3526ac87555d809f035c4e17744bae22cb6913ff6ba1", size = 1458132, upload-time = "2025-12-19T21:23:59.002Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/18/c45748fa668d2c9f365c3a11a6f2b5f6abc615291aa2e4e36a1dcadc8110/acb-0.31.20-py3-none-any.whl", hash = "sha256:67228e4fedb104f95f4cdccc0b056d170080e0fab7824fb3b918ee70f4e32d6e", size = 820896, upload-time = "2025-12-12T13:36:03.46Z" },
+    { url = "https://files.pythonhosted.org/packages/46/d9/58d5a0f469f9cb9fb70c180a48c651657f733b54108d8fb748a61c5fdf55/acb-0.31.22-py3-none-any.whl", hash = "sha256:f3e92eb04281a4e98aa0896a70e0d6104f3301afbcf0d45b18fac29e09987813", size = 820903, upload-time = "2025-12-19T21:23:55.951Z" },
 ]
 
 [[package]]
@@ -683,7 +683,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.46.0"
+version = "0.46.1"
 source = { editable = "." }
 dependencies = [
     { name = "acb" },
@@ -1047,21 +1047,22 @@ wheels = [
 
 [[package]]
 name = "excalidraw-mcp"
-version = "0.34.0"
+version = "0.34.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cryptography" },
     { name = "fastmcp" },
     { name = "httpx", extra = ["http2"] },
+    { name = "mcp-common" },
     { name = "psutil" },
     { name = "pydantic" },
     { name = "pyjwt" },
     { name = "rich" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e9/20/7f5daf9d0818a50fd6af503aab1a07fc2d8da48e869a7ca937868de2bc9f/excalidraw_mcp-0.34.0.tar.gz", hash = "sha256:c7d5ee0788e0099d28cd35cf3cf47441597c21a4186a1bafedd97931697bac16", size = 1030845, upload-time = "2025-09-19T02:06:50.748Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/b6/08/4d2b459f0a76ad47423640cbc2c6471970570dd6f443cd3871a6440960b2/excalidraw_mcp-0.34.2.tar.gz", hash = "sha256:c28c275c06d1dcd88bb51c7046c280ca321b39fcb2ccd441e0e3b614bffcccf3", size = 1136131, upload-time = "2025-12-19T21:35:10.16Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/f7/8a/e4dda474ba2d69b444ba89fbe48f4c31fbea70f73e095f43d7566468850d/excalidraw_mcp-0.34.0-py3-none-any.whl", hash = "sha256:1345bb7f1cba303186345eeaf71c53a59f4e5e20f280010f8a9e7d7f62081fb9", size = 48716, upload-time = "2025-09-19T02:06:48.203Z" },
+    { url = "https://files.pythonhosted.org/packages/96/7b/c61e74448bc0f1049aab7fad4e743559fdbb6640afca9b96ff864b1ed958/excalidraw_mcp-0.34.2-py3-none-any.whl", hash = "sha256:11c443593616aa118c8e5f0fe5b7b556d16f14d08c320b908282d10aa5f92784", size = 50356, upload-time = "2025-12-19T21:35:11.644Z" },
 ]
 
 [[package]]
@@ -3121,7 +3122,7 @@ wheels = [
 
 [[package]]
 name = "pydocket"
-version = "0.16.0"
+version = "0.16.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cloudpickle" },
@@ -3137,9 +3138,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/d3/ff57fb8ba8180c621b17270a272ee8821a64962887c42962c5a342ab82a9/pydocket-0.16.0.tar.gz", hash = "sha256:675e829a7ea6e978fdbbe0ace342f24c8ec7cf8ed5980694215418e59ff86005", size = 286316, upload-time = "2025-12-18T15:14:53.139Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2b/ff/87e931e4abc7efb1e8c16adaa55327452931e8c5f460f2ba089447673226/pydocket-0.16.1.tar.gz", hash = "sha256:8663cb6dc801d8b8d703541fb665f4099c84f4d10d8f3fd441e208b080aa4826", size = 289028, upload-time = "2025-12-19T19:43:48.773Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4e/74/dcf56132e03a24e2591c5f2391902c871e5f1248e0fc175b9f1792e4afaf/pydocket-0.16.0-py3-none-any.whl", hash = "sha256:3d7d0a805bcb68a3a03d96d3c6ba8e607584ed14b0fe3879333a8fff652dda92", size = 61064, upload-time = "2025-12-18T15:14:51.506Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/ab/0da7d0397112546309709f464bdf65de4e1697e3caba07556751fc4d8bcd/pydocket-0.16.1-py3-none-any.whl", hash = "sha256:bc6ccf7e91164761def854b4014101abf23c3cc2fb7d0fa2c4e07ea3bf6a1826", size = 63208, upload-time = "2025-12-19T19:43:47.309Z" },
 ]
 
 [[package]]
@@ -3895,7 +3896,7 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.10.1"
+version = "0.10.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "acb" },
@@ -3922,9 +3923,9 @@ dependencies = [
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/53/a7/503c7913173871edaeae7a601620acdbd0752c1f1c0f4e3fa492b0a1b3a9/session_buddy-0.10.1.tar.gz", hash = "sha256:cde54668ed94f0adc05fe120663718ffae076f394bdf8395af2bc57eecf77f17", size = 1436252, upload-time = "2025-12-11T20:26:21.071Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/80/5c/2ec1cd54e758e581b0330ccf898a2c886d040446ac82c1a03105fff4096e/session_buddy-0.10.3.tar.gz", hash = "sha256:d5d94c83a321ed50ccb01d146bde439c3ac0e6c6c8ab827eb45db8acc358acc9", size = 1447825, upload-time = "2025-12-19T21:29:37.753Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ea/e4/bdf201e341a264c2535af6a0369bea2a9086fbae50bcc1f267e2a0c59428/session_buddy-0.10.1-py3-none-any.whl", hash = "sha256:1ddf49e340617672f67338923389b292f0d97b1c8498b449bdb5ed72b05cc1a6", size = 403506, upload-time = "2025-12-11T20:26:23.009Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/87/a13b08e713d7d1b5d81d46501669fcbb78c12ff479078719ecec146e7944/session_buddy-0.10.3-py3-none-any.whl", hash = "sha256:96eb4a2f32f0bda886885c6ca91d1e00001e0b17e2ea457e04c315e1210576d1", size = 403777, upload-time = "2025-12-19T21:29:34.675Z" },
 ]
 
 [[package]]
