@@ -187,14 +187,19 @@ norecursedirs = [
     "__pycache__",
     "node_modules",
 ]
+# Test execution strategies by marker:
+# - Default (CI/pre-commit): pytest -m "not benchmark and not slow"
+# - Fast (unit only):        pytest -m "unit and not benchmark and not slow"
+# - Nightly (comprehensive): pytest -m "not benchmark"
+# - Weekly (performance):    pytest -m benchmark --benchmark-only
 markers = [
     "unit: marks test as a unit test",
-    "benchmark: mark test as a benchmark",
+    "benchmark: mark test as a benchmark (skipped by default, run with: pytest -m benchmark)",
     "integration: marks test as an integration test",
     "e2e: marks test as end-to-end test",
     "security: marks test as security test",
     "performance: marks test as performance test",
-    "slow: marks test as slow running test",
+    "slow: marks test as slow running test (>2s, skipped in fast runs)",
     "smoke: marks test as smoke test",
     "regression: marks test as regression test",
     "api: marks test as API test",
