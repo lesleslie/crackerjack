@@ -25,8 +25,8 @@ class TestToolCommandsRegistry:
 
     def test_registry_has_expected_count(self):
         """Test that registry contains expected number of tools."""
-        # Current registry: 3 custom + 9 native + 11 third-party = 23 tools
-        assert len(TOOL_COMMANDS) == 23
+        # Current registry: 3 custom + 9 native + 15 third-party = 27 tools
+        assert len(TOOL_COMMANDS) == 27
 
     def test_all_commands_are_lists(self):
         """Test that all commands are lists of strings."""
@@ -83,9 +83,13 @@ class TestToolCommandsRegistry:
             "ruff-check",
             "ruff-format",
             "mdformat",
+            "check-local-links",
+            "linkcheckmd",
             "creosote",
             "complexipy",
             "refurb",
+            "pip-audit",
+            "pyscn",
         ]
         for tool in expected_third_party:
             assert (
@@ -437,7 +441,7 @@ class TestRegistryConsistency:
         # Current registry has:
         # - 3 custom tools (validate-regex-patterns, skylos, zuban)
         # - 9 native implementations (trailing-whitespace, etc.)
-        # - 11 third-party tools (ruff-check, bandit, semgrep, etc.)
+        # - 15 third-party tools (ruff-check, bandit, semgrep, etc.)
 
         custom = ["validate-regex-patterns", "skylos", "zuban"]
         native = [
@@ -460,12 +464,16 @@ class TestRegistryConsistency:
             "ruff-check",
             "ruff-format",
             "mdformat",
+            "check-local-links",
+            "linkcheckmd",
             "creosote",
             "complexipy",
             "refurb",
+            "pip-audit",
+            "pyscn",
         ]
 
         assert len(custom) == 3
         assert len(native) == 9
-        assert len(third_party) == 11
+        assert len(third_party) == 15
         assert len(TOOL_COMMANDS) == len(custom) + len(native) + len(third_party)

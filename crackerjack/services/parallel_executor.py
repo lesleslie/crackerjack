@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from acb.depends import Inject, depends
+from acb.depends import depends
 from acb.logger import Logger
 
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
@@ -20,7 +20,7 @@ from crackerjack.models.protocols import (
 from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
 
 
-class ExecutionStrategy(Enum):
+class ExecutionStrategy(str, Enum):
     SEQUENTIAL = "sequential"
     PARALLEL_SAFE = "parallel_safe"
     PARALLEL_AGGRESSIVE = "parallel_aggressive"
@@ -44,11 +44,10 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
     strategies and handles dependencies between hooks.
     """
 
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
-        cache: Inject[PerformanceCacheProtocol],
+        logger: Logger | None = None,
+        cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 3,
         timeout_seconds: int = 300,
         strategy: ExecutionStrategy = ExecutionStrategy.PARALLEL_SAFE,
@@ -56,8 +55,8 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         self.max_workers = max_workers
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
-        self._logger = logger
-        self._cache = cache
+        self._logger = logger or depends.get_sync(Logger)
+        self._cache = cache or depends.get_sync(PerformanceCacheProtocol)
 
     def initialize(self) -> None:
         pass
@@ -303,18 +302,17 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
     to improve performance and responsiveness.
     """
 
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
-        cache: Inject[PerformanceCacheProtocol],
+        logger: Logger | None = None,
+        cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 4,
         cache_results: bool = True,
     ):
         self.max_workers = max_workers
         self.cache_results = cache_results
-        self._logger = logger
-        self._cache = cache
+        self._logger = logger or depends.get_sync(Logger)
+        self._cache = cache or depends.get_sync(PerformanceCacheProtocol)
         from concurrent.futures import ThreadPoolExecutor
 
         self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)

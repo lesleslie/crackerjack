@@ -6,7 +6,8 @@ from unittest.mock import Mock, patch
 import pytest
 from rich.console import Console
 
-from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+from crackerjack.core.workflow.workflow_phase_executor import WorkflowPhaseExecutor
+from crackerjack.core.workflow.workflow_security_gates import WorkflowSecurityGates
 
 
 class MockOptions:
@@ -65,64 +66,80 @@ class MockPhases:
 class TestSecurityIntegration:
     """Test security integration in workflow orchestrator."""
 
-    def test_security_critical_failure_blocks_publishing_standard_workflow(self):
+    def _build_executor(
+        self, console: Console, pkg_path: Path, session: MockSession, phases: MockPhases
+    ) -> WorkflowPhaseExecutor:
+        logger = Mock()
+        debugger = Mock()
+
+        executor = WorkflowPhaseExecutor.__new__(WorkflowPhaseExecutor)
+        WorkflowPhaseExecutor.__init__.__wrapped__(  # type: ignore[attr-defined]
+            executor, console, logger, pkg_path, debugger
+        )
+        executor.configure(session, phases)
+        return executor
+
+    @pytest.mark.asyncio
+    async def test_security_critical_failure_blocks_publishing_standard_workflow(self):
         """Test that security-critical failures block publishing in standard workflow."""
         console = Console()
         pkg_path = Path.cwd()
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Mock security check to return critical failures
         with patch.object(
-            pipeline, "_check_security_critical_failures", return_value=True
+            WorkflowSecurityGates, "_check_security_critical_failures", return_value=True
         ):
             options = MockOptions(publish="patch")
 
-            result = pipeline._handle_standard_workflow(
+            result = await pipeline._handle_standard_workflow(
                 options, 1, testing_passed=True, comprehensive_passed=True
             )
 
             # Should fail even though tests and hooks passed due to security gate
             assert not result
 
-    def test_security_passes_allows_publishing_with_partial_success(self):
+    @pytest.mark.asyncio
+    async def test_security_passes_allows_publishing_with_partial_success(self):
         """Test that passing security allows publishing with partial success."""
         console = Console()
         pkg_path = Path.cwd()
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Mock security check to return no critical failures
         with patch.object(
-            pipeline, "_check_security_critical_failures", return_value=False
+            WorkflowSecurityGates, "_check_security_critical_failures", return_value=False
         ):
             with patch.object(pipeline, "_show_security_audit_warning"):
                 options = MockOptions(publish="patch")
 
-                result = pipeline._handle_standard_workflow(
+                result = await pipeline._handle_standard_workflow(
                     options, 1, testing_passed=True, comprehensive_passed=False
                 )
 
-                # Should pass because tests passed and no security issues
-                assert result
+                # Publishing still fails if comprehensive hooks fail
+                assert not result
 
-    def test_non_publishing_workflow_unaffected_by_security_gates(self):
+    @pytest.mark.asyncio
+    async def test_non_publishing_workflow_unaffected_by_security_gates(self):
         """Test that non-publishing workflows are not affected by security gates."""
         console = Console()
         pkg_path = Path.cwd()
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Security check should not even be called for non-publishing workflows
         options = MockOptions(publish=False, all=False, commit=False)
 
-        result = pipeline._handle_standard_workflow(
+        result = await pipeline._handle_standard_workflow(
             options, 1, testing_passed=True, comprehensive_passed=False
         )
 
@@ -137,13 +154,13 @@ class TestSecurityIntegration:
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Mock security check to return critical failures
         with patch.object(
-            pipeline, "_check_security_critical_failures", return_value=True
+            WorkflowSecurityGates, "_check_security_critical_failures", return_value=True
         ):
-            with patch.object(pipeline, "_run_ai_agent_fixing_phase") as mock_ai_fix:
+            with patch.object(pipeline, "_execute_ai_fixing_workflow") as mock_ai_fix:
                 mock_ai_fix.return_value = False  # AI fixing fails
 
                 options = MockOptions(publish="patch", ai_agent=True)
@@ -157,24 +174,25 @@ class TestSecurityIntegration:
                 # AI fixing should have been attempted
                 mock_ai_fix.assert_called_once()
 
-    def test_fail_safe_behavior_on_security_check_error(self):
+    @pytest.mark.asyncio
+    async def test_fail_safe_behavior_on_security_check_error(self):
         """Test that security checks fail safely when they encounter errors."""
         console = Console()
         pkg_path = Path.cwd()
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Mock security check to raise an exception
         with patch.object(
-            pipeline,
+            WorkflowSecurityGates,
             "_check_security_critical_failures",
             side_effect=Exception("Security check failed"),
         ):
             options = MockOptions(publish="patch")
 
-            result = pipeline._handle_standard_workflow(
+            result = await pipeline._handle_standard_workflow(
                 options, 1, testing_passed=True, comprehensive_passed=True
             )
 
@@ -188,7 +206,7 @@ class TestSecurityIntegration:
         session = MockSession()
         phases = MockPhases()
 
-        pipeline = WorkflowPipeline(console, pkg_path, session, phases)
+        pipeline = self._build_executor(console, pkg_path, session, phases)
 
         # Mock the security audit report
         from crackerjack.security.audit import SecurityAuditReport

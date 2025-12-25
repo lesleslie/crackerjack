@@ -308,7 +308,7 @@ class InputSanitizer:
                 resolved = path.resolve()
 
             absolute_result = cls._validate_absolute_path(
-                resolved, allow_absolute, base_directory
+                resolved, allow_absolute, base_directory, path.is_absolute()
             )
             if not absolute_result.valid:
                 return absolute_result
@@ -382,9 +382,18 @@ class InputSanitizer:
 
     @classmethod
     def _validate_absolute_path(
-        cls, resolved: Path, allow_absolute: bool, base_directory: Path | None
+        cls,
+        resolved: Path,
+        allow_absolute: bool,
+        base_directory: Path | None,
+        original_is_absolute: bool,
     ) -> ValidationResult:
-        if not allow_absolute and resolved.is_absolute() and base_directory:
+        if (
+            not allow_absolute
+            and original_is_absolute
+            and resolved.is_absolute()
+            and base_directory is None
+        ):
             return ValidationResult(
                 valid=False,
                 error_message="Absolute paths not allowed",

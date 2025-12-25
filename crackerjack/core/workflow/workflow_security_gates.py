@@ -13,17 +13,22 @@ This module handles:
 
 from __future__ import annotations
 
+import inspect
 import typing as t
 
 from acb.console import Console
 from acb.depends import Inject, depends
 
-from crackerjack.models.protocols import LoggerProtocol
+from crackerjack.models.protocols import DebugServiceProtocol, LoggerProtocol
 
 if t.TYPE_CHECKING:
     from crackerjack.core.session_coordinator import SessionCoordinator
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
     from crackerjack.models.protocols import OptionsProtocol
+else:
+    WorkflowPipeline = t.Any
+    SessionCoordinator = t.Any
+    OptionsProtocol = t.Any
 
 
 class WorkflowSecurityGates:
@@ -46,6 +51,8 @@ class WorkflowSecurityGates:
         console: Inject[Console],
         logger: Inject[LoggerProtocol],
         pipeline: WorkflowPipeline | None = None,
+        session: SessionCoordinator | None = None,
+        debugger: DebugServiceProtocol | None = None,
     ) -> None:
         """Initialize security gates with injected dependencies.
 
@@ -57,11 +64,17 @@ class WorkflowSecurityGates:
         self.console = console
         self.logger = logger
         self._pipeline = pipeline
+        self._session = session
+        self._debugger = debugger
         self._last_security_audit: t.Any = None
+        self._phases: t.Any = None
+        self._ai_fix_callback: t.Callable[..., t.Any] | None = None
 
     @property
     def session(self) -> SessionCoordinator:
         """Get session coordinator from pipeline."""
+        if self._session is not None:
+            return self._session
         if self._pipeline is None:
             raise RuntimeError("Pipeline not set - call set_pipeline() first")
         return self._pipeline.session
@@ -75,6 +88,46 @@ class WorkflowSecurityGates:
             pipeline: The workflow orchestrator instance
         """
         self._pipeline = pipeline
+
+    def configure(
+        self, phases: t.Any, ai_fix_callback: t.Callable[..., t.Any] | None
+    ) -> None:
+        """Configure optional dependencies and AI fixing callback."""
+        self._phases = phases
+        self._ai_fix_callback = ai_fix_callback
+
+    def check_security_gates_for_publishing(
+        self, options: OptionsProtocol
+    ) -> tuple[bool, bool]:
+        """Public wrapper for checking publishing gates."""
+        return self._check_security_gates_for_publishing(options)
+
+    async def process_security_gates(
+        self, options: OptionsProtocol, iteration: int | None = None
+    ) -> bool:
+        """Process security gates with optional AI fixing."""
+        publishing_requested, security_blocks = (
+            self.check_security_gates_for_publishing(options)
+        )
+
+        if not (publishing_requested and security_blocks):
+            return True
+
+        allow_ai_fixing = self._ai_fix_callback is not None
+        return await self.handle_security_gate_failure(
+            options, allow_ai_fixing=allow_ai_fixing, iteration=iteration
+        )
+
+    async def handle_security_gate_failure(
+        self,
+        options: OptionsProtocol,
+        allow_ai_fixing: bool = False,
+        iteration: int | None = None,
+    ) -> bool:
+        """Public wrapper for security gate failure handling."""
+        return await self._handle_security_gate_failure(
+            options, allow_ai_fixing=allow_ai_fixing, iteration=iteration
+        )
 
     def _show_partial_success_warning_if_needed(
         self,
@@ -128,7 +181,10 @@ class WorkflowSecurityGates:
             return publishing_requested, True
 
     async def _handle_security_gate_failure(
-        self, options: OptionsProtocol, allow_ai_fixing: bool = False
+        self,
+        options: OptionsProtocol,
+        allow_ai_fixing: bool = False,
+        iteration: int | None = None,
     ) -> bool:
         """Handle security gate failure with optional AI assistance.
 
@@ -142,7 +198,9 @@ class WorkflowSecurityGates:
         self._display_security_gate_failure_message()
 
         if allow_ai_fixing:
-            return await self._attempt_ai_assisted_security_fix(options)
+            return await self._attempt_ai_assisted_security_fix(
+                options, iteration=iteration
+            )
         return self._handle_manual_security_fix()
 
     def _display_security_gate_failure_message(self) -> None:
@@ -151,7 +209,9 @@ class WorkflowSecurityGates:
             "[red]🔒 SECURITY GATE: Critical security checks failed[/red]"
         )
 
-    async def _attempt_ai_assisted_security_fix(self, options: OptionsProtocol) -> bool:
+    async def _attempt_ai_assisted_security_fix(
+        self, options: OptionsProtocol, iteration: int | None = None
+    ) -> bool:
         """Attempt to fix security issues using AI assistance.
 
         Args:
@@ -160,16 +220,32 @@ class WorkflowSecurityGates:
         Returns:
             True if security issues were resolved, False otherwise
         """
-        if self._pipeline is None:
-            raise RuntimeError("Pipeline not set - cannot perform AI fixing")
-
         self._display_ai_fixing_messages()
-
-        ai_fix_success = await self._pipeline._run_ai_agent_fixing_phase(options)
+        ai_fix_success = await self._run_ai_fix_callback(options, iteration=iteration)
         if ai_fix_success:
             return self._verify_security_fix_success()
 
         return False
+
+    async def _run_ai_fix_callback(
+        self, options: OptionsProtocol, iteration: int | None = None
+    ) -> bool:
+        if self._ai_fix_callback is not None:
+            try:
+                result = (
+                    self._ai_fix_callback(options, iteration)
+                    if iteration is not None
+                    else self._ai_fix_callback(options)
+                )
+            except TypeError:
+                result = self._ai_fix_callback(options)
+            return bool(await result) if inspect.isawaitable(result) else bool(result)
+
+        if self._pipeline is None:
+            raise RuntimeError("Pipeline not set - cannot perform AI fixing")
+
+        result = self._pipeline._run_ai_agent_fixing_phase(options)
+        return bool(await result) if inspect.isawaitable(result) else bool(result)
 
     def _display_ai_fixing_messages(self) -> None:
         """Display messages about AI-assisted security fixing."""

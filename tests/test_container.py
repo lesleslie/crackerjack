@@ -1,59 +1,50 @@
+from __future__ import annotations
+
+from crackerjack.core.container import DependencyContainer, create_container
+from crackerjack.models.protocols import FileSystemInterface
+
+
+class DummyInterface:
+    pass
+
+
+class DummyService:
+    pass
+
+
 def test_create_container_basic():
-    """Test basic functionality of create_container."""
-    try:
-        result = create_container()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in create_container: {e}")
+    container = create_container()
+    assert isinstance(container, DependencyContainer)
+
 
 def test_register_singleton_basic():
-    """Test basic functionality of register_singleton."""
-    try:
-        result = register_singleton()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in register_singleton: {e}")
+    container = DependencyContainer()
+    instance = DummyService()
+    container.register_singleton(DummyInterface, instance)
+    assert container.get(DummyInterface) is instance
+
 
 def test_register_transient_basic():
-    """Test basic functionality of register_transient."""
-    try:
-        result = register_transient()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in register_transient: {e}")
+    container = DependencyContainer()
+    container.register_transient(DummyInterface, DummyService)
+    first = container.get(DummyInterface)
+    second = container.get(DummyInterface)
+    assert isinstance(first, DummyService)
+    assert isinstance(second, DummyService)
+    assert first is not second
 
-def test_get_basic():
-    """Test basic functionality of get."""
-    try:
-        result = get()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in get: {e}")
 
-def test_create_default_container_basic():
-    """Test basic functionality of create_default_container."""
+def test_get_raises_for_missing_service():
+    container = DependencyContainer()
     try:
-        result = create_default_container()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in create_default_container: {e}")
+        container.get(DummyInterface)
+    except ValueError as exc:
+        assert "Service DummyInterface not registered" in str(exc)
+    else:
+        raise AssertionError("Expected ValueError for missing service")
+
+
+def test_create_default_container_basic(tmp_path):
+    container = DependencyContainer().create_default_container(pkg_path=tmp_path)
+    filesystem = container.get(FileSystemInterface)
+    assert filesystem is not None

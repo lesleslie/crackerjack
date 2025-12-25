@@ -10,6 +10,9 @@ import structlog
 
 from crackerjack.services.logging import (
     LoggingContext,
+    add_correlation_id,
+    add_timestamp,
+    get_correlation_id,
     get_logger,
     log_performance,
     set_correlation_id,
@@ -29,7 +32,7 @@ class TestStructuredLogging:
         assert "key = value" in captured.out
 
     def test_setup_structured_logging_json_file(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w + ", delete=False, suffix=".log") as f:
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".log") as f:
             log_file = Path(f.name)
 
         try:
@@ -233,7 +236,7 @@ def reset_structlog_config():
 
 class TestLoggingIntegration:
     def test_full_logging_workflow_with_file(self) -> None:
-        with tempfile.NamedTemporaryFile(mode="w + ", delete=False, suffix=".log") as f:
+        with tempfile.NamedTemporaryFile(mode="w+", delete=False, suffix=".log") as f:
             log_file = Path(f.name)
 
         try:

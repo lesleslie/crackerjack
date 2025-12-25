@@ -10,7 +10,12 @@ from acb.depends import Inject, depends
 from acb.logger import Logger
 
 from crackerjack.config import get_console_width
-from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
+from crackerjack.config.hooks import (
+    HookDefinition,
+    HookStage,
+    HookStrategy,
+    RetryPolicy,
+)
 from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext
@@ -278,7 +283,11 @@ class AsyncHookExecutor:
             else:
                 raise
 
-    async def _execute_single_hook(self, hook: HookDefinition) -> HookResult:
+    async def _execute_single_hook(
+        self,
+        hook: HookDefinition,
+        command_override: list[str] | None = None,
+    ) -> HookResult:
         async with self._semaphore:
             if self.hook_lock_manager.requires_lock(hook.name):
                 self.logger.debug(
@@ -299,15 +308,29 @@ class AsyncHookExecutor:
                     )
 
                 async with self.hook_lock_manager.acquire_hook_lock(hook.name):
-                    return await self._run_hook_subprocess(hook)
+                    return await self._run_hook_subprocess(
+                        hook, command_override=command_override
+                    )
             else:
-                return await self._run_hook_subprocess(hook)
+                return await self._run_hook_subprocess(
+                    hook, command_override=command_override
+                )
 
-    async def _run_hook_subprocess(self, hook: HookDefinition) -> HookResult:
+    async def _run_hook_subprocess(
+        self,
+        hook: HookDefinition,
+        command_override: list[str] | None = None,
+    ) -> HookResult:
         start_time = time.time()
 
         try:
-            cmd = hook.get_command() if hasattr(hook, "get_command") else [str(hook)]
+            cmd = (
+                command_override
+                if command_override is not None
+                else hook.get_command()
+                if hasattr(hook, "get_command")
+                else [str(hook)]
+            )
             timeout_val = getattr(hook, "timeout", self.timeout)
 
             self.logger.debug(
@@ -342,6 +365,33 @@ class AsyncHookExecutor:
             return self._handle_runtime_error(e, hook, start_time)
         except Exception as e:
             return self._handle_general_error(e, hook, start_time)
+
+    def _execute_hook_sync(
+        self,
+        hook: HookDefinition,
+        files: list[Path] | None = None,
+        stage: HookStage | None = None,
+        command_override: list[str] | None = None,
+    ) -> HookResult:
+        """Synchronous wrapper for single-hook execution (tests/utilities)."""
+        if stage is not None:
+            hook.stage = stage
+
+        if command_override is None:
+            command_override = (
+                hook.build_command(files) if files else hook.get_command()
+            )
+
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            return asyncio.run(
+                self._execute_single_hook(hook, command_override=command_override)
+            )
+
+        raise RuntimeError(
+            "Use await _execute_single_hook within an active event loop."
+        )
 
     def _get_repo_root(self) -> Path:
         """Determine the repository root directory.

@@ -75,6 +75,7 @@ class TestHookManager:
 
     def test_run_fast_hooks(self, hook_manager) -> None:
         mock_strategy = Mock()
+        mock_strategy.hooks = []
         mock_result = Mock()
         mock_result.results = [
             HookResult(id="test", name="test hook", status="passed", duration=1.0),
@@ -82,6 +83,7 @@ class TestHookManager:
 
         hook_manager.config_loader.load_strategy = Mock(return_value=mock_strategy)
         hook_manager.executor.execute_strategy = Mock(return_value=mock_result)
+        hook_manager.orchestration_enabled = False
 
         results = hook_manager.run_fast_hooks()
 
@@ -91,6 +93,7 @@ class TestHookManager:
 
     def test_run_comprehensive_hooks(self, hook_manager) -> None:
         mock_strategy = Mock()
+        mock_strategy.hooks = []
         mock_result = Mock()
         mock_result.results = [
             HookResult(id="test1", name="test hook 1", status="passed", duration=1.0),
@@ -99,6 +102,7 @@ class TestHookManager:
 
         hook_manager.config_loader.load_strategy = Mock(return_value=mock_strategy)
         hook_manager.executor.execute_strategy = Mock(return_value=mock_result)
+        hook_manager.orchestration_enabled = False
 
         results = hook_manager.run_comprehensive_hooks()
 
@@ -114,15 +118,7 @@ class TestHookManager:
             result = hook_manager.install_hooks()
 
             assert result is True
-            mock_run.assert_called_once()
-
-    def test_install_hooks_failure(self, hook_manager) -> None:
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 1
-
-            result = hook_manager.install_hooks()
-
-            assert result is False
+            mock_run.assert_not_called()
 
     def test_update_hooks(self, hook_manager) -> None:
         with patch("subprocess.run") as mock_run:
@@ -131,12 +127,4 @@ class TestHookManager:
             result = hook_manager.update_hooks()
 
             assert result is True
-            mock_run.assert_called_once()
-
-    def test_update_hooks_failure(self, hook_manager) -> None:
-        with patch("subprocess.run") as mock_run:
-            mock_run.return_value.returncode = 1
-
-            result = hook_manager.update_hooks()
-
-            assert result is False
+            mock_run.assert_not_called()

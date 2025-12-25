@@ -23,7 +23,7 @@ class TestMCPServerIntegration:
 
     def test_main_with_defaults(self) -> None:
         with patch("crackerjack.mcp.server_core._initialize_context"):
-            with patch("crackerjack.mcp.server_core.Console"):
+            with patch("crackerjack.mcp.server_core.console"):
                 try:
                     main(".", None)
                 except SystemExit:

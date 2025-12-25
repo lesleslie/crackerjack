@@ -684,9 +684,9 @@ CLI_OPTIONS = {
         ),
     ),
     "global_lock_timeout": typer.Option(
-        600,
+        1800,
         "--global-lock-timeout",
-        help="Global lock timeout in seconds (default: 600).",
+        help="Global lock timeout in seconds (default: 1800).",
     ),
     "global_lock_cleanup": typer.Option(
         True,

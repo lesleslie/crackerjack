@@ -1,11 +1,11 @@
-def test_main_basic():
-    """Test basic functionality of main."""
-    try:
-        result = main()
-        assert result is not None or result is None
-    except TypeError:
-        pytest.skip(
-            "Function requires specific arguments - manual implementation needed"
-        )
-    except Exception as e:
-        pytest.fail(f"Unexpected error in main: {e}")
+import pytest
+
+from crackerjack.tools import validate_input_validator_patterns as validator
+
+
+def test_main_reports_success(capsys: pytest.CaptureFixture[str]) -> None:
+    code = validator.main()
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert "ALL SECURITY VALIDATION TESTS PASSED" in out

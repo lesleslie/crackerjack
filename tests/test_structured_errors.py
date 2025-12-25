@@ -80,38 +80,51 @@ class TestErrorHandlingIntegration:
 
     def test_error_handling_in_code_cleaner(
         self,
+        tmp_path: Path,
         capsys: "CaptureFixture[str]",
     ) -> None:
         from crackerjack.code_cleaner import CodeCleaner
 
         console = Console(force_terminal=False)
-        cleaner = CodeCleaner(console=console)
-        test_path = Path("/ nonexistent / file.py")
+        cleaner = CodeCleaner(console=console, base_directory=tmp_path)
+        test_path = tmp_path / "file.py"
+        test_path.write_text("print('ok')\n")
         with patch("pathlib.Path.read_text") as mock_read:
             mock_read.side_effect = FileNotFoundError(
                 f"[Errno 2] No such file or directory: '{test_path}'",
             )
             cleaner.clean_file(test_path)
             captured = capsys.readouterr()
-            output = captured.out.strip()
+            output = captured.out.replace("\n", "").strip()
             assert "Failed to read file" in output
             assert str(test_path) in output
 
     def test_error_handling_in_publish_project(self) -> None:
-        from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+        from crackerjack.cli.facade import CrackerjackCLIFacade
 
         console = Console(file=io.StringIO(), force_terminal=False)
-        orchestrator = WorkflowOrchestrator(pkg_path=Path.cwd())
+        mock_orchestrator = MagicMock()
 
-        with patch.object(orchestrator, "run_complete_workflow", return_value=False):
-            from unittest.mock import Mock
+        async def mock_run_complete_workflow(*args, **kwargs):
+            raise RuntimeError("workflow failed")
 
-            mock_options = Mock()
+        mock_orchestrator.run_complete_workflow = mock_run_complete_workflow
+
+        with patch(
+            "crackerjack.cli.facade.WorkflowOrchestrator",
+            return_value=mock_orchestrator,
+        ):
+            facade = CrackerjackCLIFacade(console=console, pkg_path=Path.cwd())
+
+            mock_options = MagicMock()
             mock_options.publish = True
             mock_options.verbose = True
             mock_options.ai_agent = False
             mock_options.async_mode = False
             mock_options.all = None
+            mock_options.start_mcp_server = False
+            mock_options.advanced_batch = False
+            mock_options.monitor_dashboard = False
 
             with pytest.raises(SystemExit) as exc_info:
                 facade.process(mock_options)

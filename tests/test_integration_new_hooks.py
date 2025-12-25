@@ -1,5 +1,6 @@
 """Comprehensive integration tests for all new hooks and executor enhancements."""
 
+import sys
 import tempfile
 from pathlib import Path
 
@@ -113,10 +114,10 @@ def test_check_added_large_files_integration():
         with open(small_file, "w") as f:
             f.write("This is a small file.\n")
 
-        # Create a large file (over 1KB)
+        # Create a large file (over 1MB default limit)
         large_file = test_dir / "large.txt"
         with open(large_file, "w") as f:
-            f.write("A" * 2048)  # 2KB file, exceeds default 1KB limit
+            f.write("A" * (2 * 1024 * 1024))  # 2MB file, exceeds 1MB limit
 
         # Create hook definition
         hook_def = HookDefinition(
@@ -157,7 +158,7 @@ def test_hook_execution_with_timeout():
         hook_def = HookDefinition(
             name="check-ast",
             command=[],
-            timeout=0.1,  # Very short timeout to force timeout
+            timeout=0.05,  # Very short timeout to force timeout
             security_level=SecurityLevel.HIGH,
             use_precommit_legacy=False,
             accepts_file_paths=True,
@@ -175,14 +176,15 @@ def test_hook_execution_with_timeout():
         executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=test_dir)
 
         # Run the hook (this should timeout)
+        command_override = [sys.executable, "-c", "import time; time.sleep(0.2)"]
         result = executor._execute_hook_sync(
             hook=hook_def,
             files=[py_file],
             stage=HookStage.FAST,
+            command_override=command_override,
         )
 
-        # Could be timeout or error depending on implementation
-        assert result.status in ["timeout", "error", "failed"]
+        assert result.status in ["timeout", "error"]
 
 
 if __name__ == "__main__":

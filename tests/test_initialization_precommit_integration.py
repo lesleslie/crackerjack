@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from rich.console import Console
 
+from crackerjack.services.config_merge import ConfigMergeService
 from crackerjack.services.initialization import InitializationService
 from crackerjack.services.filesystem import FileSystemService
 from crackerjack.services.git import GitService
@@ -32,14 +33,52 @@ def git_service(console):
 class TestInitializationPrecommitHandling:
     """Integration tests for pre-commit handling in initialization."""
 
-    def test_precommit_config_not_copied_during_initialization(self, console, filesystem, git_service):
+    def _build_config_merge_service(
+        self, console, filesystem, git_service
+    ) -> ConfigMergeService:
+        class DummyLogger:
+            def info(self, message: str, **kwargs: object) -> None:
+                return None
+
+            def warning(self, message: str, **kwargs: object) -> None:
+                return None
+
+            def error(self, message: str, **kwargs: object) -> None:
+                return None
+
+            def debug(self, message: str, **kwargs: object) -> None:
+                return None
+
+        service = ConfigMergeService.__new__(ConfigMergeService)
+        ConfigMergeService.__init__.__wrapped__(
+            service, console, filesystem, git_service, DummyLogger()
+        )
+        return service
+
+    def _build_initialization_service(
+        self, console, filesystem, git_service, pkg_path: Path
+    ) -> InitializationService:
+        config_merge_service = self._build_config_merge_service(
+            console, filesystem, git_service
+        )
+        init_service = InitializationService.__new__(InitializationService)
+        InitializationService.__init__.__wrapped__(
+            init_service, console, filesystem, git_service, pkg_path, config_merge_service
+        )
+        return init_service
+
+    def test_precommit_config_not_copied_during_initialization(
+        self, console, filesystem, git_service
+    ):
         """Test that .pre-commit-config.yaml is not copied during project initialization."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
             pkg_path = Path(tmp_dir)
 
             # Create initialization service
-            init_service = InitializationService(console, filesystem, git_service, pkg_path)
+            init_service = self._build_initialization_service(
+                console, filesystem, git_service, pkg_path
+            )
 
             # Run initialization
             result = init_service.initialize_project_full(target_path)
@@ -64,11 +103,15 @@ class TestInitializationPrecommitHandling:
                 file_path = target_path / filename
                 assert file_path.exists(), f"{filename} should be created during initialization"
 
-    def test_config_files_dict_excludes_precommit(self, console, filesystem, git_service):
+    def test_config_files_dict_excludes_precommit(
+        self, console, filesystem, git_service
+    ):
         """Test that the config files dictionary excludes pre-commit configuration."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             pkg_path = Path(tmp_dir)
-            init_service = InitializationService(console, filesystem, git_service, pkg_path)
+            init_service = self._build_initialization_service(
+                console, filesystem, git_service, pkg_path
+            )
 
             # Get the config files dictionary
             config_files = init_service._get_config_files()
@@ -88,14 +131,18 @@ class TestInitializationPrecommitHandling:
             assert set(config_files.keys()) == expected_keys, \
                 "Config files dictionary should contain expected keys"
 
-    def test_initialization_with_force_flag_still_skips_precommit(self, console, filesystem, git_service):
+    def test_initialization_with_force_flag_still_skips_precommit(
+        self, console, filesystem, git_service
+    ):
         """Test that even with force flag, pre-commit config is not copied."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
             pkg_path = Path(tmp_dir)
 
             # Create initialization service
-            init_service = InitializationService(console, filesystem, git_service, pkg_path)
+            init_service = self._build_initialization_service(
+                console, filesystem, git_service, pkg_path
+            )
 
             # Run initialization with force flag
             result = init_service.initialize_project_full(target_path, force=True)

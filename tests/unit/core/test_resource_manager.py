@@ -418,7 +418,7 @@ class TestManagedTask:
         """Test initialization with task."""
 
         async def dummy_task():
-            await asyncio.sleep(10)
+            await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
 
@@ -434,7 +434,7 @@ class TestManagedTask:
         """Test initialization with custom timeout."""
 
         async def dummy_task():
-            await asyncio.sleep(10)
+            await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
 
@@ -449,7 +449,7 @@ class TestManagedTask:
         """Test cleanup cancels task."""
 
         async def dummy_task():
-            await asyncio.sleep(10)
+            await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
 
@@ -562,7 +562,7 @@ class TestResourceContext:
         context = ResourceContext()
 
         async def dummy_task():
-            await asyncio.sleep(10)
+            await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
 

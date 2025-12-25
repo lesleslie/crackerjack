@@ -163,7 +163,9 @@ class TestAsyncHookExecutorIntegration:
             name=hook_name,
             command=["bash", "-c", "echo 'slow test' > /dev/null 2>&1 && exit 0"],  # Safe command that doesn't need git and exits cleanly
             description="Slow test hook",
+            use_precommit_legacy=False,
         )
+        slow_hook._direct_cmd_cache = slow_hook.command
 
         strategy1 = HookStrategy(name="strategy1", hooks=[slow_hook])
         strategy2 = HookStrategy(name="strategy2", hooks=[slow_hook])
@@ -342,7 +344,9 @@ class TestHookExecutorLockCoordination:
             name=stats_hook,
             command=["bash", "-c", "echo 'statistics test' > /dev/null 2>&1"],
             description="Hook for statistics testing",
+            use_precommit_legacy=False,
         )
+        test_hook._direct_cmd_cache = test_hook.command
 
         strategy = HookStrategy(name="stats_strategy", hooks=[test_hook])
         result = await executor.execute_strategy(strategy)
@@ -592,7 +596,7 @@ class TestExecutorLockManagerMocking:
     async def test_mock_lock_manager_integration(self, tmp_path):
         """Test using mock lock manager for isolated executor testing."""
         # Create comprehensive mock lock manager
-        mock_lock_manager = unittest.mock.AsyncMock()
+        mock_lock_manager = unittest.mock.Mock()
         mock_lock_manager.requires_lock.return_value = True
         mock_lock_manager.is_global_lock_enabled.return_value = True
 
@@ -603,11 +607,13 @@ class TestExecutorLockManagerMocking:
             async def __aexit__(self, exc_type, exc_val, exc_tb):
                 return False
 
-        # Create an async method that returns the context manager when called
-        async def mock_acquire_hook_lock_method(hook_name):
+        # Create a method that returns the context manager when called
+        def mock_acquire_hook_lock_method(hook_name):
             return AsyncContextManagerMock()
 
-        mock_lock_manager.acquire_hook_lock = mock_acquire_hook_lock_method
+        mock_lock_manager.acquire_hook_lock = unittest.mock.Mock(
+            side_effect=mock_acquire_hook_lock_method
+        )
 
         logger = logging.getLogger(__name__)
         console = Console()
@@ -624,7 +630,9 @@ class TestExecutorLockManagerMocking:
             name="mock_test_hook",
             command=["echo", "mock test"],
             description="Hook for testing with mock lock manager",
+            use_precommit_legacy=False,
         )
+        test_hook._direct_cmd_cache = test_hook.command
 
         strategy = HookStrategy(name="mock_strategy", hooks=[test_hook])
 

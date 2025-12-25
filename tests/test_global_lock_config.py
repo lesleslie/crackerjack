@@ -23,7 +23,7 @@ class TestGlobalLockConfig:
         config = GlobalLockConfig()
 
         assert config.enabled is True
-        assert config.timeout_seconds == 600.0
+        assert config.timeout_seconds == 1800.0
         assert config.stale_lock_hours == 2.0
         assert config.session_heartbeat_interval == 30.0
         assert config.max_retry_attempts == 3

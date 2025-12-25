@@ -59,16 +59,23 @@ class ToolIssue:
 class ToolExecutionResult:
     """Result of tool execution with standardized format."""
 
-    success: bool
+    success: bool | None = None
     issues: list[ToolIssue] = field(default_factory=list)
     error_message: str | None = None
     raw_output: str = ""
     raw_stderr: str = ""
+    error_output: str = ""
     execution_time_ms: float = 0.0
     exit_code: int = 0
     tool_version: str | None = None
     files_processed: list[Path] = field(default_factory=list)
     files_modified: list[Path] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.error_output and not self.raw_stderr:
+            self.raw_stderr = self.error_output
+        if self.success is None:
+            self.success = self.exit_code == 0
 
     @property
     def has_errors(self) -> bool:

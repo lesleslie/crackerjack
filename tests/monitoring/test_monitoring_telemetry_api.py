@@ -45,6 +45,8 @@ class FakeTelemetry:
 
 class FakeBaseline:
     coverage_percent = 82.5
+    hook_duration = 1.2
+    quality_score = 85
     test_count = 120
     test_pass_rate = 0.96
     hook_failures = 1
@@ -52,10 +54,15 @@ class FakeBaseline:
     security_issues = 0
     type_errors = 0
     linting_issues = 3
+    trend_direction = TrendDirection.IMPROVING
+    predictions = {"next_target": "90"}
 
 
 class FakeQualityService:
     async def aget_baseline(self) -> FakeBaseline:
+        return FakeBaseline()
+
+    async def aget_current_baseline(self) -> FakeBaseline:
         return FakeBaseline()
 
     def create_unified_metrics(

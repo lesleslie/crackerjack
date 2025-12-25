@@ -144,7 +144,7 @@ class TestFastHooksIntegration:
 
     def test_fast_hooks_count(self):
         """Test that we have expected number of fast hooks."""
-        assert len(FAST_HOOKS) == 14  # Updated from 10 to 14 with new hooks
+        assert len(FAST_HOOKS) == 15  # Updated from 10 to 15 with new hooks
 
 
 class TestComprehensiveHooksIntegration:
@@ -182,7 +182,7 @@ class TestComprehensiveHooksIntegration:
 
     def test_comprehensive_hooks_count(self):
         """Test that we have expected number of comprehensive hooks."""
-        assert len(COMPREHENSIVE_HOOKS) == 8  # Updated from 7 to 8 with check-jsonschema
+        assert len(COMPREHENSIVE_HOOKS) == 11  # Updated from 7 to 11 with new comprehensive hooks
 
 
 class TestHookExecutionPerformance:

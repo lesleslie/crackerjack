@@ -115,6 +115,14 @@ class OptionsAdapter:
                 mode=getattr(options, "zuban_lsp_mode", "stdio"),
                 timeout=getattr(options, "zuban_lsp_timeout", 30),
             ),
+            clean=getattr(options, "clean", False),
+            test=getattr(options, "test", False),
+            publish=getattr(options, "publish", None),
+            bump=getattr(options, "bump", None),
+            commit=getattr(options, "commit", False),
+            create_pr=getattr(options, "create_pr", False),
+            interactive=getattr(options, "interactive", False),
+            dry_run=getattr(options, "dry_run", False),
         )
 
     @staticmethod
