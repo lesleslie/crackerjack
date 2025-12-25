@@ -16,7 +16,9 @@ from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
 from crackerjack.adapters.format.ruff import RuffAdapter
 from crackerjack.adapters.lint.codespell import CodespellAdapter
 from crackerjack.config.hooks import HookDefinition, HookStage, SecurityLevel
-from crackerjack.models.qa_results import QAResult, QAResultStatus
+from uuid import uuid4
+
+from crackerjack.models.qa_results import QAResult, QAResultStatus, QACheckType
 from crackerjack.models.task import HookResult
 from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
 
@@ -174,6 +176,9 @@ class TestOrchestratorPreservesDetails:
 
         # Mock the adapter to return a QAResult with details
         mock_qa_result = QAResult(
+            check_id=uuid4(),
+            check_name=hook.name,
+            check_type=QACheckType.COMPLEXITY,
             status=QAResultStatus.FAILURE,
             message="Complexity issues found",
             details="crackerjack/foo.py:123: Function 'bar' - Complexity: 25\ncrackerjack/baz.py:456: Function 'qux' - Complexity: 18",
@@ -225,6 +230,9 @@ class TestOrchestratorPreservesDetails:
 
         # Mock adapter returns QAResult with issues but no details
         mock_qa_result = QAResult(
+            check_id=uuid4(),
+            check_name=hook.name,
+            check_type=QACheckType.LINT,
             status=QAResultStatus.FAILURE,
             message="Issues found",
             details="",  # Empty details

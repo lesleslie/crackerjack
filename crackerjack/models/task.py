@@ -1,10 +1,11 @@
 import time
 import typing as t
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
+from pathlib import Path
 
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 from pydantic import BaseModel
 
 
@@ -33,24 +34,41 @@ class Task:
 
 @dataclass
 class HookResult:
-    id: str
-    name: str
-    status: str
-    duration: float
+    id: str = ""
+    name: str = ""
+    status: str = ""
+    duration: float = 0.0
     files_processed: int = 0
+    files_checked: list[str | Path] = field(default_factory=list)
     issues_found: list[str] | None = None
     issues_count: int = (
         0  # Total count of issues (may exceed len(issues_found) if truncated)
     )
-    stage: str = "pre-commit"
+    stage: str = "pre - commit"
     exit_code: int | None = None  # Non-zero exit codes for failed hooks
     error_message: str | None = None  # Error details from stderr or exceptions
     is_timeout: bool = False  # Whether hook failed due to timeout
     is_config_error: bool = (
         False  # Whether failure is due to config/tool error (not code issues)
     )
+    hook_name: str | None = None
+    returncode: int | None = None
+    output: str | None = None
+    error: str | None = None
 
     def __post_init__(self) -> None:
+        if self.hook_name and not self.name:
+            self.name = self.hook_name
+        if self.name and not self.id:
+            self.id = self.name
+        if self.returncode is not None and self.exit_code is None:
+            self.exit_code = self.returncode
+        if self.output and self.error_message is None:
+            self.error_message = self.output
+        if self.error and self.error_message is None:
+            self.error_message = self.error
+        if self.files_checked and not self.files_processed:
+            self.files_processed = len(self.files_checked)
         if self.issues_found is None:
             self.issues_found = []
         # If issues_count not explicitly set, default to length of issues_found list
@@ -89,8 +107,12 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     metadata: dict[str, t.Any] = {}
     console: t.Any = None  # Console instance from DI
 
-    @depends.inject  # type: ignore[misc]
-    def __init__(self, console: Inject[Console], **data: t.Any) -> None:
+    def __init__(self, console: Console | None = None, **data: t.Any) -> None:
+        if console is None:
+            try:
+                console = depends.get_sync(Console)
+            except Exception:
+                console = Console()
         super().__init__(**data)
         self.console = console
         if not self.tasks:

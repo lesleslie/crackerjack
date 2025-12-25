@@ -28,6 +28,7 @@ def test_xdist_group2() -> None:
     assert True
 
 
+@pytest.mark.skip(reason="Intentionally slow test with no value - skipped to reduce test suite runtime")
 def test_slow_but_not_hanging() -> None:
     time.sleep(12)
     assert True

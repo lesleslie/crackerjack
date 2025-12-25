@@ -1909,9 +1909,9 @@ class WorkflowOrchestrator:
     def _setup_acb_services(self) -> None:
         """Setup all services using ACB dependency injection."""
         self._register_filesystem_and_git_services()
-        self._register_manager_services()
         self._register_core_services()
         self._register_quality_services()
+        self._register_manager_services()
         self._register_monitoring_services()
         self._setup_event_system()
 

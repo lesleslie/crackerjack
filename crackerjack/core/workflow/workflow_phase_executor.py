@@ -555,7 +555,9 @@ class WorkflowPhaseExecutor:
         )
         security_gates.configure(self.phases, self._execute_ai_fixing_workflow)
 
-        if not await security_gates.process_security_gates(options):
+        if not await security_gates.process_security_gates(
+            options, iteration=iteration
+        ):
             return False
 
         needs_ai_fixing = self._determine_ai_fixing_needed(
@@ -648,10 +650,9 @@ class WorkflowPhaseExecutor:
         )
         security_gates.configure(self.phases, None)
 
-        (
-            publishing_requested,
-            security_blocks,
-        ) = await security_gates.check_security_gates_for_publishing(options)
+        publishing_requested, security_blocks = (
+            security_gates.check_security_gates_for_publishing(options)
+        )
 
         if publishing_requested and security_blocks:
             return await security_gates.handle_security_gate_failure(options)

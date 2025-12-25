@@ -240,20 +240,20 @@ class TestAsyncTimeoutManagerTimeoutContext:
         manager = AsyncTimeoutManager()
 
         with pytest.raises(TimeoutError) as exc_info:
-            async with manager.timeout_context("test_op", timeout=0.1):
-                await asyncio.sleep(1.0)
+            async with manager.timeout_context("test_op", timeout=0.05):
+                await asyncio.sleep(0.1)
 
         assert exc_info.value.operation == "test_op"
 
     @pytest.mark.asyncio
     async def test_timeout_context_uses_config_timeout(self):
         """Test timeout context uses configured timeout."""
-        config = TimeoutConfig(operation_timeouts={"custom_op": 0.1})
+        config = TimeoutConfig(operation_timeouts={"custom_op": 0.05})
         manager = AsyncTimeoutManager(config)
 
         with pytest.raises(TimeoutError):
             async with manager.timeout_context("custom_op"):
-                await asyncio.sleep(1.0)
+                await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
     async def test_timeout_context_caps_excessive_timeout(self):
@@ -275,9 +275,9 @@ class TestAsyncTimeoutManagerTimeoutContext:
 
         # Should not raise error with graceful degradation
         async with manager.timeout_context(
-            "test_op", timeout=0.1, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
+            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
         ):
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
 
         # Should complete without raising
 
@@ -305,7 +305,7 @@ class TestAsyncTimeoutManagerWithTimeout:
         manager = AsyncTimeoutManager()
 
         async def operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
             return "success"
 
         with pytest.raises(TimeoutError):
@@ -317,7 +317,7 @@ class TestAsyncTimeoutManagerWithTimeout:
         manager = AsyncTimeoutManager()
 
         async def operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
             return "success"
 
         result = await manager.with_timeout(
@@ -337,7 +337,7 @@ class TestAsyncTimeoutManagerWithTimeout:
 
         # First fail to open circuit breaker
         async def failing_operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
 
         try:
             await manager.with_timeout(
@@ -570,9 +570,9 @@ class TestTimeoutAsyncDecorator:
     async def test_decorator_timeout(self):
         """Test decorator with timeout."""
 
-        @timeout_async("test_op", timeout=0.1)
+        @timeout_async("test_op", timeout=0.05)
         async def operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
             return "success"
 
         with pytest.raises(TimeoutError):
@@ -583,10 +583,10 @@ class TestTimeoutAsyncDecorator:
         """Test decorator with timeout strategy."""
 
         @timeout_async(
-            "test_op", timeout=0.1, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
+            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
         )
         async def operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
             return "success"
 
         result = await operation()
@@ -744,7 +744,7 @@ class TestAsyncTimeoutManagerIntegration:
         manager = AsyncTimeoutManager(config)
 
         async def failing_operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.1)
 
         async def successful_operation():
             await asyncio.sleep(0.01)

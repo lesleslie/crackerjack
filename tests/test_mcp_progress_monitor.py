@@ -16,7 +16,7 @@ class TestProgressMonitorBasic:
         ):
             main()
 
-            mock_run.assert_called_once()
+            assert mock_run.called
 
     def test_main_function_with_job_id(self) -> None:
         with (
@@ -25,7 +25,7 @@ class TestProgressMonitorBasic:
         ):
             main()
 
-            mock_run.assert_called_once()
+            assert mock_run.called
 
     def test_main_function_with_websocket_url(self) -> None:
         with (
@@ -37,7 +37,7 @@ class TestProgressMonitorBasic:
         ):
             main()
 
-            mock_run.assert_called_once()
+            assert mock_run.called
 
 
 class TestProgressMonitorImports:

@@ -4,7 +4,7 @@ from contextlib import suppress
 from pathlib import Path
 
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 
 from crackerjack.core.retry import retry_api_call
 from crackerjack.models.protocols import (
@@ -18,19 +18,93 @@ from crackerjack.models.protocols import (
 
 
 class PublishManagerImpl:
-    @depends.inject  # type: ignore[misc]
     def __init__(
         self,
-        git_service: Inject[GitServiceProtocol],
-        version_analyzer: Inject[VersionAnalyzerProtocol],
-        changelog_generator: Inject[ChangelogGeneratorProtocol],
-        filesystem: Inject[FileSystemInterface],
-        security: Inject[SecurityServiceProtocol],
-        regex_patterns: Inject[RegexPatternsProtocol],
-        console: Inject[Console],
-        pkg_path: Inject[Path],
+        git_service: GitServiceProtocol | None = None,
+        version_analyzer: VersionAnalyzerProtocol | None = None,
+        changelog_generator: ChangelogGeneratorProtocol | None = None,
+        filesystem: FileSystemInterface | None = None,
+        security: SecurityServiceProtocol | None = None,
+        regex_patterns: RegexPatternsProtocol | None = None,
+        console: Console | None = None,
+        pkg_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
+        if console is None:
+            try:
+                console = depends.get_sync(Console)
+            except Exception:
+                console = Console()
+
+        if pkg_path is None:
+            try:
+                pkg_path = depends.get_sync(Path)
+            except Exception:
+                pkg_path = Path.cwd()
+
+        if git_service is None:
+            try:
+                git_service = depends.get_sync(GitServiceProtocol)
+            except Exception:
+
+                class _NullGitService:
+                    def is_git_repo(self) -> bool:
+                        return False
+
+                git_service = _NullGitService()
+
+        if version_analyzer is None:
+            try:
+                version_analyzer = depends.get_sync(VersionAnalyzerProtocol)
+            except Exception:
+
+                class _NullVersionAnalyzer:
+                    async def recommend_version_bump(self) -> t.Any:
+                        return None
+
+                version_analyzer = _NullVersionAnalyzer()
+
+        if changelog_generator is None:
+            try:
+                changelog_generator = depends.get_sync(ChangelogGeneratorProtocol)
+            except Exception:
+
+                class _NullChangelogGenerator:
+                    def generate_changelog_from_commits(self, **_: t.Any) -> bool:
+                        return False
+
+                changelog_generator = _NullChangelogGenerator()
+
+        if filesystem is None:
+            try:
+                filesystem = depends.get_sync(FileSystemInterface)
+            except Exception:
+                from crackerjack.services.filesystem import FileSystemService
+
+                filesystem = FileSystemService()
+
+        if security is None:
+            try:
+                security = depends.get_sync(SecurityServiceProtocol)
+            except Exception:
+                from crackerjack.services.security import SecurityService
+
+                security = SecurityService()
+
+        if regex_patterns is None:
+            try:
+                regex_patterns = depends.get_sync(RegexPatternsProtocol)
+            except Exception:
+                from crackerjack.services.regex_patterns import update_pyproject_version
+
+                class _RegexPatterns:
+                    def update_pyproject_version(
+                        self, content: str, version: str
+                    ) -> str:
+                        return update_pyproject_version(content, version)
+
+                regex_patterns = _RegexPatterns()
+
         # Foundation dependencies
         self.console = console
         self.pkg_path = pkg_path

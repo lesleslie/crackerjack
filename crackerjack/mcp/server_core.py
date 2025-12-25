@@ -206,6 +206,13 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     return mcp_app
 
 
+# Export ASGI app for uvicorn (standardized startup pattern)
+# Create a default server instance for uvicorn
+_default_config = {"http_port": 8676, "http_host": "127.0.0.1"}
+_default_mcp_app = create_mcp_server(_default_config)
+http_app = _default_mcp_app.http_app if _default_mcp_app else None
+
+
 def handle_mcp_server_command(
     start: bool = False,
     stop: bool = False,

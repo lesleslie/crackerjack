@@ -316,8 +316,11 @@ class TestSecureInputValidator:
         mock_security_logger = Mock()
         mock_logger.return_value = mock_security_logger
 
+        # Use a validator instance created after patching the logger factory.
+        patched_validator = SecureInputValidator(validator.config)
+
         # Trigger validation failure
-        validator.validate_project_name("invalid@project!")
+        patched_validator.validate_project_name("invalid@project!")
 
         # Verify logging was called
         mock_security_logger.log_validation_failed.assert_called_once()

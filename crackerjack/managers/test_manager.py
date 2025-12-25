@@ -6,7 +6,7 @@ from pathlib import Path
 
 from acb.config import root_path
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
@@ -28,23 +28,45 @@ ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 
 class TestManager:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        coverage_ratchet: Inject[CoverageRatchetProtocol],
-        coverage_badge: Inject[CoverageBadgeServiceProtocol],
-        command_builder: Inject[TestCommandBuilder],
-        lsp_client: Inject[LSPClient] | None = None,
+        console: Console | None = None,
+        pkg_path: Path | None = None,
+        coverage_ratchet: CoverageRatchetProtocol | None = None,
+        coverage_badge: CoverageBadgeServiceProtocol | None = None,
+        command_builder: TestCommandBuilder | None = None,
+        lsp_client: LSPClient | None = None,
     ) -> None:
+        if console is None:
+            try:
+                console = depends.get_sync(Console)
+            except Exception:
+                console = Console()
+
+        if coverage_ratchet is None:
+            try:
+                coverage_ratchet = depends.get_sync(CoverageRatchetProtocol)
+            except Exception:
+                coverage_ratchet = None
+
+        if coverage_badge is None:
+            try:
+                coverage_badge = depends.get_sync(CoverageBadgeServiceProtocol)
+            except Exception:
+                coverage_badge = None
+
+        if command_builder is None:
+            command_builder = TestCommandBuilder()
+
         self.console = console
         # Ensure a concrete pathlib.Path instance to avoid async Path behaviors
         # and to guarantee sync filesystem operations in this manager.
+        resolved_path = pkg_path or root_path
         try:
-            self.pkg_path = Path(str(root_path))
+            self.pkg_path = Path(str(resolved_path))
         except Exception:
             # Fallback in the unlikely event root_path lacks __str__
-            self.pkg_path = Path(root_path)
+            self.pkg_path = Path(resolved_path)
 
         # Ensure downstream components receive a concrete pathlib.Path
         self.executor = TestExecutor(console, self.pkg_path)

@@ -21,17 +21,17 @@ class TestToolProfilerIntegration:
 
         # Simulate fast formatting tools
         def ruff_format():
-            time.sleep(0.05)  # 50ms - typical fast formatter
+            time.sleep(0.01)  # 10ms - typical fast formatter
 
         def ruff_isort():
-            time.sleep(0.03)  # 30ms - typical import sorter
+            time.sleep(0.01)  # 10ms - typical import sorter
 
         # Simulate comprehensive analysis tools
         def zuban():
-            time.sleep(0.5)  # 500ms - type checking
+            time.sleep(0.1)  # 100ms - type checking
 
         def bandit():
-            time.sleep(0.3)  # 300ms - security scanning
+            time.sleep(0.05)  # 50ms - security scanning
 
         # Profile each tool
         profiler.profile_tool("ruff-format", ruff_format, runs=5)
@@ -89,7 +89,7 @@ class TestToolProfilerIntegration:
             time.sleep(0.1)  # Normal execution time
 
         def slow_tool():
-            time.sleep(3.5)  # Triggers time bottleneck (>2s)
+            time.sleep(2.1)  # Triggers time bottleneck (>2s)
 
         # Profile tools
         profiler.profile_tool("normal-tool", normal_tool, runs=2)

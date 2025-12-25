@@ -3,25 +3,43 @@ from pathlib import Path
 
 import psutil
 from acb.console import Console
-from acb.depends import Inject, depends
+from acb.depends import depends
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
 
 
 class TestCommandBuilder:
-    @depends.inject
     def __init__(
         self,
-        pkg_path: Inject[Path],
-        console: Inject[Console],
-        settings: Inject[CrackerjackSettings],
+        pkg_path: Path | None = None,
+        console: Console | None = None,
+        settings: CrackerjackSettings | None = None,
     ) -> None:
         # Normalize to pathlib.Path to avoid async path methods
+        resolved_pkg_path = pkg_path
+        if resolved_pkg_path is None:
+            try:
+                resolved_pkg_path = depends.get_sync(Path)
+            except Exception:
+                resolved_pkg_path = Path.cwd()
+
         try:
-            self.pkg_path = Path(str(pkg_path))
+            self.pkg_path = Path(str(resolved_pkg_path))
         except Exception:
-            self.pkg_path = Path(pkg_path)
+            self.pkg_path = Path(resolved_pkg_path)
+
+        if console is None:
+            try:
+                console = depends.get_sync(Console)
+            except Exception:
+                console = Console()
+
+        if settings is None:
+            try:
+                settings = depends.get_sync(CrackerjackSettings)
+            except Exception:
+                settings = CrackerjackSettings()
 
         self.console = console
         self.settings = settings
@@ -224,7 +242,7 @@ class TestCommandBuilder:
 
         if hasattr(options, "benchmark") and options.benchmark:
             return 900
-        return 300
+        return 900
 
     def _detect_package_name(self) -> str:
         """Detect the main package name for coverage reporting."""

@@ -26,7 +26,7 @@ class SecurityLevel(Enum):
 @dataclass
 class HookDefinition:
     name: str
-    command: list[str]
+    command: list[str] = field(default_factory=list)
     timeout: int = 60
     stage: HookStage = HookStage.FAST
     description: str | None = None

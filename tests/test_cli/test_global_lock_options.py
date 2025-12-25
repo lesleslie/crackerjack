@@ -46,8 +46,8 @@ class TestGlobalLockCLIOptions:
         """Test global_lock_timeout CLI option definition."""
         option = CLI_OPTIONS["global_lock_timeout"]
 
-        # Should have default of 600 seconds (10 minutes)
-        assert option.default == 600
+        # Should have default of 1800 seconds (30 minutes)
+        assert option.default == 1800
         assert "--global-lock-timeout" in option.param_decls
         assert "timeout in seconds" in option.help
 
@@ -83,7 +83,7 @@ class TestOptionsObjectCreation:
         options = Options()
 
         assert options.disable_global_locks is False
-        assert options.global_lock_timeout == 600
+        assert options.global_lock_timeout == 1800
         assert options.global_lock_cleanup is True
         assert options.global_lock_dir is None
 
@@ -221,7 +221,7 @@ class TestOptionsObjectCreation:
             no_coverage_ratchet=False,
             boost_coverage=True,
             disable_global_locks=False,
-            global_lock_timeout=600,
+            global_lock_timeout=1800,
             global_lock_cleanup=True,
             global_lock_dir=None,
             quick=False,
@@ -262,7 +262,7 @@ class TestOptionsObjectCreation:
 
         # Verify default values
         assert options.disable_global_locks is False
-        assert options.global_lock_timeout == 600
+        assert options.global_lock_timeout == 1800
         assert options.global_lock_cleanup is True
         assert options.global_lock_dir is None
 
@@ -450,14 +450,14 @@ class TestCLIIntegrationScenarios:
 
         # Should have sensible defaults
         assert options.disable_global_locks is False  # Global locks enabled
-        assert options.global_lock_timeout == 600  # 10 minutes
+        assert options.global_lock_timeout == 1800  # 30 minutes
         assert options.global_lock_cleanup is True  # Clean stale locks
         assert options.global_lock_dir is None  # Use default directory
 
         # Should configure properly
         config = GlobalLockConfig.from_options(options)
         assert config.enabled is True
-        assert config.timeout_seconds == 600.0
+        assert config.timeout_seconds == 1800.0
         assert config.lock_directory == Path.home() / ".crackerjack" / "locks"
 
     def test_performance_focused_cli_scenario(self):

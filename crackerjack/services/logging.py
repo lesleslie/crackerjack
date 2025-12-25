@@ -7,16 +7,18 @@ for LoggingContext, get_logger(), and other utilities.
 
 from __future__ import annotations
 
+import logging
+import sys
 import time
 import uuid
 from collections.abc import Callable
 from contextvars import ContextVar
+from datetime import UTC, datetime
 from pathlib import Path
 from types import TracebackType
 from typing import Any
 
-# Use ACB's Logger instead of loguru directly
-from acb.logger import Logger
+import structlog
 
 _correlation_id_var: ContextVar[str | None] = ContextVar(
     "crackerjack_correlation_id",
@@ -24,29 +26,54 @@ _correlation_id_var: ContextVar[str | None] = ContextVar(
 )
 
 _logger_cache: dict[str, Any] = {}
+_configured: bool = False
+_processors: list[Callable[..., dict[str, Any]] | Any] = []
 
 
-def _get_acb_logger() -> Logger:
-    """Get ACB logger instance from dependency injection."""
-    # Create a new logger instance directly
-    # ACB's Logger class is already properly initialized
-    try:
-        # Attempt to get logger via ACB's dependency injection
-        logger = Logger()
-        # If Logger is a tuple (dependency injection marker), we need to handle it differently
-        if isinstance(logger, tuple):
-            # For now, fall back to a basic logger configuration
-            # In a proper ACB setup, this would be handled by the dependency system
+def add_correlation_id(
+    _: Any, __: str | None, event_dict: dict[str, Any]
+) -> dict[str, Any]:
+    event_dict.setdefault("correlation_id", get_correlation_id())
+    return event_dict
 
-            from loguru import logger as loguru_logger
 
-            return loguru_logger.opt(depth=1)
-        return logger
-    except Exception:
-        # If there's an issue with ACB logger, fall back to loguru
-        from loguru import logger as loguru_logger
+def add_timestamp(_: Any, __: str | None, event_dict: dict[str, Any]) -> dict[str, Any]:
+    timestamp = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    event_dict.setdefault("timestamp", timestamp)
+    return event_dict
 
-        return loguru_logger.opt(depth=1)
+
+def _configure_structlog(
+    *,
+    level: str,
+    json_output: bool,
+) -> None:
+    def _render_key_values(_: Any, __: str | None, event_dict: dict[str, Any]) -> str:
+        ordered: list[tuple[str, Any]] = []
+        if "event" in event_dict:
+            ordered.append(("event", event_dict["event"]))
+        for key in sorted(k for k in event_dict if k != "event"):
+            ordered.append((key, event_dict[key]))
+        return " ".join(f"{key} = {value}" for key, value in ordered)
+
+    global _processors
+    processors: list[Callable[..., dict[str, Any]] | Any] = [
+        add_timestamp,
+        add_correlation_id,
+    ]
+
+    if json_output:
+        processors.append(structlog.processors.JSONRenderer())
+    else:
+        processors.append(_render_key_values)
+
+    structlog.configure(
+        processors=processors,
+        wrapper_class=structlog.BoundLogger,
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        cache_logger_on_first_use=True,
+    )
+    _processors = processors
 
 
 def _generate_correlation_id() -> str:
@@ -74,58 +101,45 @@ def setup_structured_logging(
     json_output: bool = False,
     log_file: Path | None = None,
 ) -> None:
-    """Setup structured logging using ACB's logger.
+    """Setup structured logging for Crackerjack."""
+    global _configured
 
-    This function is maintained for backward compatibility but now uses
-    ACB's logger configuration system.
-    """
-    # ACB logger is already configured via adapters
-    # This function is kept for API compatibility but delegates to ACB
-    _get_acb_logger()
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers[:]:
+        handler.close()
+        root_logger.removeHandler(handler)
+    root_logger.setLevel(level.upper())
 
-    # ACB's logger is already configured, but we can adjust settings if needed
-    # The actual configuration is handled by ACB's adapter system
-    pass
+    if json_output and log_file is not None:
+        handler: logging.Handler = logging.FileHandler(log_file, mode="a")
+    else:
+        handler = logging.StreamHandler(sys.stdout)
+
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    root_logger.addHandler(handler)
+
+    _configure_structlog(level=level, json_output=json_output)
+    _logger_cache.clear()
+    _configured = True
 
 
 def get_logger(name: str) -> Any:
-    """Get a logger bound to a specific name using ACB's logger.
+    """Get a structlog logger bound to a specific name."""
+    if not _configured or not _processors:
+        setup_structured_logging()
 
-    This function provides backward compatibility with Crackerjack's
-    logging API while using ACB's logger internally.
-    """
-    # Check cache first for performance
     if name in _logger_cache:
         return _logger_cache[name]
 
-    # Get ACB logger and bind with context
-    acb_logger = _get_acb_logger()
+    stdlib_logger = logging.getLogger(name)
+    stdlib_logger.setLevel(logging.getLogger().level)
+    stdlib_logger.propagate = True
 
-    # Check if the logger has a bind method (ACB logger) or if it's a loguru logger
-    if hasattr(acb_logger, "bind"):
-        logger_with_context = acb_logger.bind(logger=name)
-
-        # Add correlation ID if available
-        correlation_id = get_correlation_id()
-        if correlation_id:
-            logger_with_context = logger_with_context.bind(
-                correlation_id=correlation_id
-            )
-    else:
-        # For loguru logger, we can add context via patch or extra
-        logger_with_context = acb_logger
-        # Add logger name to extra so it shows up in logs
-        import loguru
-
-        if isinstance(logger_with_context, loguru.Logger):
-            logger_with_context = acb_logger.patch(
-                lambda record: record["extra"].update({"logger": name})
-            )
-        else:
-            # If it's not even a loguru logger, just return as is
-            logger_with_context = acb_logger
-
-    # Cache the logger for reuse
+    logger_with_context = structlog.BoundLogger(
+        stdlib_logger,
+        processors=_processors,
+        context={"logger": name},
+    )
     _logger_cache[name] = logger_with_context
     return logger_with_context
 

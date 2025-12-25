@@ -98,17 +98,17 @@ def temp_project(tmp_path):
     pyproject_path = tmp_path / "pyproject.toml"
     pyproject_content = """
 [project]
-name = "test - project"
+name = "test-project"
 version = "0.1.0"
 description = "Test project"
-requires - python = ">=    3.8"
+requires-python = ">=3.8"
 
-[build - system]
+[build-system]
 requires = ["hatchling"]
-build - backend = "hatchling.build"
+build-backend = "hatchling.build"
 
 [tool.pytest.ini_options]
-addopts = "- v"
+addopts = "-v"
 """
     pyproject_path.write_text(pyproject_content)
 
@@ -145,14 +145,14 @@ class MockOptions:
 
 class TestHookManagerImpl:
     def test_initialization(self, console, temp_project) -> None:
-        manager = HookManagerImpl(pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
         assert manager.pkg_path == temp_project
 
     @patch("subprocess.run")
     def test_run_fast_hooks_success(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
-        manager = HookManagerImpl(pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
@@ -166,7 +166,7 @@ class TestHookManagerImpl:
     ) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
-        manager = HookManagerImpl(pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
 
         results = manager.run_comprehensive_hooks()
         assert isinstance(results, list)
@@ -175,13 +175,13 @@ class TestHookManagerImpl:
     def test_run_hooks_failure(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=1, stdout="", stderr="Hook failed")
 
-        manager = HookManagerImpl(pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
 
     def test_skip_hooks_option(self, console, temp_project) -> None:
-        manager = HookManagerImpl(pkg_path=temp_project)
+        manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
