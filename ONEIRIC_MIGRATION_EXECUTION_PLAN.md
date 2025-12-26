@@ -7,7 +7,7 @@
 **Risk Level:** MODERATE-HIGH
 **Reversibility:** YES (git rollback + feature flags)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -16,10 +16,10 @@
 Remove ACB and Crackerjack-specific monitoring/health dashboards, replacing them with Oneiric + mcp-common standards:
 
 1. **Remove ACB Dependency** - Eliminate all ACB imports, DI, adapters, workflows, and events
-2. **Integrate Oneiric CLI Factory** - Adopt standard MCP lifecycle commands (`start`, `stop`, `restart`, `status`, `health`)
-3. **Port QA Tooling** - Migrate QA adapters/services to Oneiric equivalents
-4. **Remove Monitoring Stack** - Delete WebSocket server, dashboards, and monitoring endpoints
-5. **Standardize Runtime Health** - Use `.oneiric_cache/` for PID + runtime snapshots
+1. **Integrate Oneiric CLI Factory** - Adopt standard MCP lifecycle commands (`start`, `stop`, `restart`, `status`, `health`)
+1. **Port QA Tooling** - Migrate QA adapters/services to Oneiric equivalents
+1. **Remove Monitoring Stack** - Delete WebSocket server, dashboards, and monitoring endpoints
+1. **Standardize Runtime Health** - Use `.oneiric_cache/` for PID + runtime snapshots
 
 ### Quick Stats
 
@@ -55,6 +55,7 @@ Remove ACB and Crackerjack-specific monitoring/health dashboards, replacing them
 | N/A | `crackerjack health --probe` | NEW - Live health checks |
 
 **Migration Path:**
+
 ```bash
 # Old (ACB):
 crackerjack --start-mcp-server --verbose
@@ -63,7 +64,7 @@ crackerjack --start-mcp-server --verbose
 crackerjack start --verbose
 ```
 
----
+______________________________________________________________________
 
 ## Visual Dependency Graph
 
@@ -118,7 +119,7 @@ crackerjack start --verbose
 
 **Parallel Work:** Week 1 Spec Refinements happen during mcp-common Phase 1 implementation (not blocking)
 
----
+______________________________________________________________________
 
 ## Part A: Specification Refinements (Week 1)
 
@@ -166,7 +167,9 @@ async def _cmd_health(self, probe: bool = False) -> int:
     """Execute health command."""
     if probe:
         if self._health_probe_handler is None:
-            self.console.print("[red]Error: Live health probes not supported (no handler)[/red]")
+            self.console.print(
+                "[red]Error: Live health probes not supported (no handler)[/red]"
+            )
             return 1
 
         try:
@@ -191,7 +194,7 @@ async def _cmd_health(self, probe: bool = False) -> int:
 
 **Impact:** Enables real-time health monitoring for production deployments (required for Crackerjack)
 
----
+______________________________________________________________________
 
 #### [ ] R6: Add Systemd Integration Documentation (30 min)
 
@@ -203,7 +206,7 @@ async def _cmd_health(self, probe: bool = False) -> int:
 
 **Documentation Addition:**
 
-```markdown
+````markdown
 ### Systemd Integration
 
 Deploy your MCP server as a systemd service for production use:
@@ -231,9 +234,10 @@ ExecStartPost=/opt/myserver/.venv/bin/python -m myserver health --probe
 
 [Install]
 WantedBy=multi-user.target
-```
+````
 
 **Enable and start:**
+
 ```bash
 sudo systemctl daemon-reload
 sudo systemctl enable myserver
@@ -262,12 +266,14 @@ WantedBy=multi-user.target
 ```
 
 **Start multiple instances:**
+
 ```bash
 sudo systemctl start myserver@1
 sudo systemctl start myserver@2
 sudo systemctl status 'myserver@*'
 ```
-```
+
+````
 
 **Impact:** Enables production deployment without custom daemon logic
 
@@ -299,7 +305,7 @@ python -m myserver start --instance-id worker-2
 # .oneiric_cache/worker-1/runtime_health.json
 # .oneiric_cache/worker-2/server.pid
 # .oneiric_cache/worker-2/runtime_health.json
-```
+````
 
 ### Method 2: Custom Runtime Directory
 
@@ -319,10 +325,12 @@ python -m myserver start
 ```
 
 **Best Practices:**
+
 - Use instance IDs in systemd templates (`myserver@%i.service`)
 - Each instance should have unique port bindings
 - Monitor all instances with `systemctl status 'myserver@*'`
-```
+
+````
 
 **Impact:** Clear guidance for horizontal scaling deployments
 
@@ -369,7 +377,7 @@ async def _cmd_start(self, ...) -> int:
         signal.signal(signal.SIGHUP, handle_sighup)
 
     # ... existing start logic ...
-```
+````
 
 **Example Usage:**
 
@@ -380,6 +388,7 @@ async def reload_config():
     # Update runtime configuration
     app.update_config(settings)
 
+
 factory = MCPServerCLIFactory(
     settings=settings,
     server_factory=create_server,
@@ -389,7 +398,7 @@ factory = MCPServerCLIFactory(
 
 **Impact:** Zero-downtime configuration updates in production (systemd `ExecReload`)
 
----
+______________________________________________________________________
 
 ### Priority 2: Important Refinements (1 item, ~15 min)
 
@@ -428,7 +437,7 @@ async def _cmd_start(
 
 **Impact:** Predictable behavior matching standard CLI conventions (user expectation)
 
----
+______________________________________________________________________
 
 ### Priority 3: Polish Refinements (3 items, ~50 min)
 
@@ -457,7 +466,9 @@ async def _cmd_restart(self, **start_kwargs) -> int:
             break
         await asyncio.sleep(0.5)
     else:
-        self.console.print("[yellow]Warning: PID file still exists, forcing cleanup[/yellow]")
+        self.console.print(
+            "[yellow]Warning: PID file still exists, forcing cleanup[/yellow]"
+        )
         pid_file.unlink(missing_ok=True)
 
     # Additional validation: check process actually dead
@@ -478,7 +489,7 @@ async def _cmd_restart(self, **start_kwargs) -> int:
 
 **Impact:** Prevents duplicate server instances in production
 
----
+______________________________________________________________________
 
 #### [ ] R4: Move Logging Initialization to `__init__()` (10 min)
 
@@ -510,7 +521,7 @@ def __init__(self, settings: BaseSettings, ...):
 
 **Impact:** Consistent logging across all CLI commands (not just `start`)
 
----
+______________________________________________________________________
 
 #### [ ] R5: Enhance Weather Example with All Features (20 min)
 
@@ -572,7 +583,7 @@ def main():
         settings=settings,
         server_factory=create_weather_server,
         health_probe_handler=health_probe,  # Enable live health checks
-        reload_handler=reload_config,        # Enable SIGHUP reloads
+        reload_handler=reload_config,  # Enable SIGHUP reloads
     )
 
     factory.run()
@@ -597,7 +608,7 @@ systemctl reload weather-server
 
 **Impact:** Developers see complete feature usage in single example
 
----
+______________________________________________________________________
 
 ### Validation Checklist
 
@@ -614,7 +625,7 @@ After completing all refinements, verify:
 
 **Success Criteria:** All checkboxes above complete, enabling Crackerjack Phase 3 integration.
 
----
+______________________________________________________________________
 
 ## Part B: Crackerjack Migration (Week 2)
 
@@ -625,12 +636,13 @@ After completing all refinements, verify:
 **Reversibility:** YES (git rollback + feature flags)
 
 **Migration Goals:**
+
 1. Remove ACB dependency completely (DI, adapters, workflows, events)
-2. Remove WebSocket/dashboard monitoring stack
-3. Integrate Oneiric CLI factory for MCP lifecycle
-4. Port 30 QA adapters to Oneiric equivalents
-5. Fix 100+ tests broken by migration
-6. Update all documentation
+1. Remove WebSocket/dashboard monitoring stack
+1. Integrate Oneiric CLI factory for MCP lifecycle
+1. Port 30 QA adapters to Oneiric equivalents
+1. Fix 100+ tests broken by migration
+1. Update all documentation
 
 ### Pre-Migration Decisions
 
@@ -643,6 +655,7 @@ Before executing the migration phases, three critical architectural decisions ha
 **Rationale:** MCP lifecycle commands standardize on Oneiric factory, while QA-specific commands remain custom for flexibility.
 
 **Lifecycle Commands → Oneiric Factory:**
+
 - [ ] `crackerjack start` - Uses `MCPServerCLIFactory._cmd_start()`
 - [ ] `crackerjack stop` - Uses `MCPServerCLIFactory._cmd_stop()`
 - [ ] `crackerjack restart` - Uses `MCPServerCLIFactory._cmd_restart()`
@@ -650,6 +663,7 @@ Before executing the migration phases, three critical architectural decisions ha
 - [ ] `crackerjack health` - Uses `MCPServerCLIFactory._cmd_health()` with `--probe` support
 
 **QA Commands → Custom Typer Commands:**
+
 - [ ] `crackerjack run-tests` - Custom `@app.command()` (preserves existing logic)
 - [ ] `crackerjack analyze` - Custom `@app.command()` (QA analysis)
 - [ ] `crackerjack qa-health` - Custom `@app.command()` (QA tooling health)
@@ -674,7 +688,7 @@ python -m crackerjack --start-mcp-server --verbose
 python -m crackerjack start --verbose
 ```
 
----
+______________________________________________________________________
 
 #### Decision 2: QA Adapter Categorization
 
@@ -724,11 +738,12 @@ Multi-stage orchestration, complex state management:
 **Migration Priority:** Optional (skip if time-constrained, track as tech debt)
 
 **Categorization Impact:**
+
 - **Complex (12):** Require Oneiric Adapter base, UUID7 IDs, status tracking
 - **Simple (18):** Plain Oneiric Services, no lifecycle complexity
 - **Workflow (8):** Optional, can be replaced with Oneiric Tasks later
 
----
+______________________________________________________________________
 
 #### Decision 3: Testing Strategy
 
@@ -749,26 +764,31 @@ USE_ONEIRIC_CLI=false python -m crackerjack start  # Fallback
 **Test Phases (Executed in Order):**
 
 - [ ] **Phase 1: Unit Tests** - Adapter pattern compliance
+
   - Verify all adapters implement Oneiric base classes
   - Test MODULE_ID/STATUS/METADATA correctness
   - Validate UUID7 ID generation
 
 - [ ] **Phase 2: Integration Tests** - End-to-end QA workflows
+
   - Run full QA suite with Oneiric adapters
   - Verify pre-commit hooks work correctly
   - Test multi-adapter orchestration
 
 - [ ] **Phase 3: Smoke Tests** - Basic CLI operations
+
   - `crackerjack start` → verify server starts
   - `crackerjack health --probe` → verify live health checks
   - `crackerjack stop` → verify graceful shutdown
 
 - [ ] **Phase 4: Regression Tests** - Preserve all existing functionality
+
   - Run entire test suite (100+ tests)
   - Compare coverage before/after migration (must not decrease)
   - Verify all QA tools produce identical results
 
 **Testing Success Criteria:**
+
 - All unit tests pass (100%)
 - Integration tests pass with Oneiric adapters
 - Smoke tests confirm CLI commands work
@@ -776,6 +796,7 @@ USE_ONEIRIC_CLI=false python -m crackerjack start  # Fallback
 - Coverage baseline maintained or improved
 
 **Rollback Strategy:**
+
 ```bash
 # If issues found during testing:
 git checkout HEAD~1 crackerjack/
@@ -783,7 +804,7 @@ export USE_ONEIRIC_CLI=false
 python -m crackerjack start  # Fallback to ACB
 ```
 
----
+______________________________________________________________________
 
 ### Phase 0: Pre-Migration Audit (Day 1 AM, 2 hours)
 
@@ -822,7 +843,7 @@ awk -F: '{print $1}' /tmp/acb_imports.txt | sort | uniq -c | sort -rn > /tmp/acb
 
 **Deliverable:** `/tmp/acb_imports.txt` (full import list), `/tmp/acb_by_file.txt` (imports per file)
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Categorize 38 QA Adapters** (30 min)
 
@@ -856,11 +877,11 @@ grep -l "WorkflowAdapter" crackerjack/adapters/*.py | wc -l
 
 | Category | Count | Base Class | Migration Priority | Effort (hours) |
 |----------|-------|------------|-------------------|----------------|
-| Complex  | 12    | Oneiric Adapter | P1 (critical) | 6 |
-| Simple   | 18    | Oneiric Service | P2 (important) | 3 |
-| Workflow | 8     | Oneiric Task (optional) | P3 (skip if constrained) | 5 |
+| Complex | 12 | Oneiric Adapter | P1 (critical) | 6 |
+| Simple | 18 | Oneiric Service | P2 (important) | 3 |
+| Workflow | 8 | Oneiric Task (optional) | P3 (skip if constrained) | 5 |
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: Map CLI Commands to Factory/Custom** (20 min)
 
@@ -900,7 +921,7 @@ grep -r "@app.command" crackerjack/cli/handlers/*.py | grep "def " | wc -l
 | analyze | QA | `--analyze` | `analyze` | NO |
 | benchmark | QA | `--benchmark` | `benchmark` | NO |
 
----
+______________________________________________________________________
 
 - [ ] **Task 4: Document Breaking Changes** (25 min)
 
@@ -925,30 +946,33 @@ grep -cE "^  --" /tmp/old_cli_help.txt
 **Breaking Changes Summary:**
 
 1. **Command Structure:** Options (`--start-mcp-server`) → Commands (`start`)
-2. **Health Checks:** New `--probe` flag for live health monitoring
-3. **WebSocket Removed:** All `--websocket-*` options deleted
-4. **Dashboard Removed:** All `--monitor-*` options deleted
-5. **Instance Management:** New `--instance-id` for multi-instance support
+1. **Health Checks:** New `--probe` flag for live health monitoring
+1. **WebSocket Removed:** All `--websocket-*` options deleted
+1. **Dashboard Removed:** All `--monitor-*` options deleted
+1. **Instance Management:** New `--instance-id` for multi-instance support
 
----
+______________________________________________________________________
 
 #### Deliverables
 
 After completing all audit tasks, create these documentation files:
 
 - [ ] **`MIGRATION_AUDIT.md`** - Complete inventory report
+
   - ACB import count and categorization
   - Adapter classification matrix
   - CLI command mapping table
   - Test suite baseline (100+ tests)
 
 - [ ] **`BREAKING_CHANGES.md`** - User-facing migration guide
+
   - Command syntax changes
   - Deprecated features list
   - Migration path examples
   - Rollback instructions
 
 - [ ] **Risk Assessment Matrix** - Phase-by-phase risk levels
+
   - Phase 0: LOW (read-only)
   - Phase 1: LOW (removal only)
   - Phase 2: MEDIUM-HIGH (ACB removal, breaking)
@@ -956,7 +980,7 @@ After completing all audit tasks, create these documentation files:
   - Phase 4: MEDIUM (adapter ports)
   - Phase 5: MEDIUM (test fixes)
 
----
+______________________________________________________________________
 
 #### Validation Criteria
 
@@ -977,7 +1001,7 @@ After completing all audit tasks, create these documentation files:
 
 **Success Gate:** ALL validation criteria must pass before proceeding to Phase 1
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -994,7 +1018,7 @@ rm -f /tmp/acb_imports.txt /tmp/acb_by_file.txt /tmp/old_cli_help.txt
 
 **Risk of Rollback:** ZERO (no code modifications in Phase 0)
 
----
+______________________________________________________________________
 
 ### Phase 1: Remove WebSocket/Dashboard Stack (Day 1 PM, 3 hours)
 
@@ -1041,7 +1065,7 @@ find crackerjack/ -type f -name "*.py" | wc -l  # Before count
 
 **Impact:** ~128KB code reduction, simplifies architecture
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Remove CLI WebSocket Options** (30 min)
 
@@ -1053,12 +1077,12 @@ find crackerjack/ -type f -name "*.py" | wc -l  # Before count
 
 ```python
 # Options to DELETE:
---start-websocket-server
---stop-websocket-server
---restart-websocket-server
---websocket-port
---monitor-mode
---dashboard-url
+--start - websocket - server
+--stop - websocket - server
+--restart - websocket - server
+--websocket - port
+--monitor - mode
+--dashboard - url
 ```
 
 **Validation:**
@@ -1069,7 +1093,7 @@ grep -E "(websocket|monitor|dashboard)" crackerjack/cli/options.py
 # Expected: 0 results
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: Add Oneiric Runtime Health Snapshots** (45 min)
 
@@ -1101,14 +1125,11 @@ class MCPServer:
                 "server_status": "running",
                 "adapters_initialized": len(self.adapters),
                 "start_time": datetime.now().isoformat(),
-            }
+            },
         )
 
         # Write to Oneiric standard location
-        write_runtime_health(
-            self.runtime_dir / "runtime_health.json",
-            snapshot
-        )
+        write_runtime_health(self.runtime_dir / "runtime_health.json", snapshot)
 
         # ... existing start logic ...
 
@@ -1121,13 +1142,10 @@ class MCPServer:
             lifecycle_state={
                 "server_status": "stopped",
                 "shutdown_time": datetime.now().isoformat(),
-            }
+            },
         )
 
-        write_runtime_health(
-            self.runtime_dir / "runtime_health.json",
-            snapshot
-        )
+        write_runtime_health(self.runtime_dir / "runtime_health.json", snapshot)
 
         # ... existing stop logic ...
 ```
@@ -1147,7 +1165,7 @@ cat .oneiric_cache/runtime_health.json
 # Expected: watchers_running=false, shutdown_time present
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 4: Remove WebSocket Tests** (15 min)
 
@@ -1167,7 +1185,7 @@ grep -r "websocket" tests/ --include="*.py"
 # Expected: 0 results
 ```
 
----
+______________________________________________________________________
 
 #### Validation
 
@@ -1186,7 +1204,7 @@ grep -r "websocket" tests/ --include="*.py"
 
 **Success Gate:** ALL validation criteria must pass before proceeding to Phase 2
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -1213,7 +1231,7 @@ python -m pytest
 
 **Risk of Rollback:** LOW (clean revert via git)
 
----
+______________________________________________________________________
 
 ### Phase 2: Remove ACB Dependency (Day 2, 6 hours)
 
@@ -1266,7 +1284,7 @@ grep "acb" pyproject.toml
 uv sync
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Replace ACB Logger (310 files, 3 hours)**
 
@@ -1301,6 +1319,7 @@ Create `scripts/migrate_logging.py`:
 
 ```python
 """Automated ACB logger migration script."""
+
 import re
 from pathlib import Path
 
@@ -1318,7 +1337,7 @@ def migrate_file(file_path: Path) -> bool:
     content = re.sub(
         r"logger: Inject\[LoggerProtocol\]\s*=\s*None",
         "# logger parameter removed (migration)",
-        content
+        content,
     )
 
     # Add logging import at top (after existing imports)
@@ -1381,7 +1400,7 @@ grep -r "import logging" crackerjack/ | wc -l
 # Expected: ~310+ results
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: Remove @depends.inject Decorators** (2 hours)
 
@@ -1396,10 +1415,7 @@ from acb.console import Console
 
 
 @depends.inject
-def setup_ai_agent_env(
-    ai_agent: bool,
-    console: Inject[Console] = None
-) -> None:
+def setup_ai_agent_env(ai_agent: bool, console: Inject[Console] = None) -> None:
     console.print("[green]AI configured[/green]")
 
 
@@ -1415,16 +1431,18 @@ def setup_ai_agent_env(ai_agent: bool) -> None:
 **Manual Migration Steps:**
 
 1. Find all `@depends.inject` usage:
+
    ```bash
    grep -r "@depends.inject" crackerjack/ --include="*.py" > /tmp/di_files.txt
    ```
 
-2. For each file, remove:
+1. For each file, remove:
+
    - `@depends.inject` decorator
    - `Inject[Type]` parameters
    - ACB imports (`from acb.depends import ...`)
 
-3. Add direct instantiation where needed
+1. Add direct instantiation where needed
 
 **Validation:**
 
@@ -1438,7 +1456,7 @@ grep -r "Inject\[" crackerjack/
 # Expected: 0 results
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 4: Remove ACB Workflows and Events** (1 hour)
 
@@ -1463,7 +1481,7 @@ find crackerjack/ -name "*workflow*" -o -name "*event*"
 # Expected: 0 results (except Oneiric equivalents)
 ```
 
----
+______________________________________________________________________
 
 #### Validation
 
@@ -1483,7 +1501,7 @@ find crackerjack/ -name "*workflow*" -o -name "*event*"
 
 **Success Gate:** ALL validation criteria must pass before proceeding to Phase 3
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -1506,7 +1524,7 @@ grep "acb" pyproject.toml  # Should show ACB dependency
 
 **Risk of Rollback:** MEDIUM (large-scale changes, may require manual fixes)
 
----
+______________________________________________________________________
 
 ### Phase 3: Integrate Oneiric CLI Factory (Day 3 AM, 3 hours)
 
@@ -1525,6 +1543,7 @@ grep "acb" pyproject.toml  # Should show ACB dependency
 
 ```python
 """Crackerjack server settings extending MCP base."""
+
 from pathlib import Path
 from pydantic import Field
 from mcp_common.cli import MCPServerSettings
@@ -1541,31 +1560,27 @@ class CrackerjackSettings(MCPServerSettings):
     # - runtime_dir: Path
 
     # QA-specific settings
-    qa_mode: bool = Field(
-        default=False,
-        description="Enable QA analysis mode"
-    )
+    qa_mode: bool = Field(default=False, description="Enable QA analysis mode")
     test_suite_path: Path = Field(
-        default=Path("tests"),
-        description="Test suite directory path"
+        default=Path("tests"), description="Test suite directory path"
     )
-    auto_fix: bool = Field(
-        default=False,
-        description="Enable automatic issue fixing"
-    )
+    auto_fix: bool = Field(default=False, description="Enable automatic issue fixing")
     ai_agent: bool = Field(
-        default=False,
-        description="Enable AI-powered code analysis agent"
+        default=False, description="Enable AI-powered code analysis agent"
     )
 
     # Tool enablement flags
     ruff_enabled: bool = Field(default=True, description="Enable Ruff linter")
-    bandit_enabled: bool = Field(default=True, description="Enable Bandit security scanner")
+    bandit_enabled: bool = Field(
+        default=True, description="Enable Bandit security scanner"
+    )
     semgrep_enabled: bool = Field(default=False, description="Enable Semgrep SAST")
     mypy_enabled: bool = Field(default=True, description="Enable mypy type checking")
 
     # Performance settings
-    max_parallel_hooks: int = Field(default=4, description="Max parallel pre-commit hooks")
+    max_parallel_hooks: int = Field(
+        default=4, description="Max parallel pre-commit hooks"
+    )
     test_workers: int = Field(default=0, description="Pytest workers (0=auto)")
 
     class Config:
@@ -1580,7 +1595,7 @@ python -c "from crackerjack.config.settings import CrackerjackSettings; s = Crac
 # Expected: False (default value)
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Create CrackerjackServer** (1 hour)
 
@@ -1590,6 +1605,7 @@ python -c "from crackerjack.config.settings import CrackerjackSettings; s = Crac
 
 ```python
 """Crackerjack MCP server with QA tooling integration."""
+
 import asyncio
 import os
 from datetime import datetime
@@ -1649,14 +1665,16 @@ class CrackerjackServer:
 
         # Cleanup adapters
         for adapter in self.adapters:
-            if hasattr(adapter, 'cleanup'):
+            if hasattr(adapter, "cleanup"):
                 adapter.cleanup()
 
         logger.info("Server stopped")
 
     def get_health_snapshot(self) -> RuntimeHealthSnapshot:
         """Generate health snapshot for --health --probe."""
-        uptime = (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+        uptime = (
+            (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
+        )
 
         return RuntimeHealthSnapshot(
             orchestrator_pid=os.getpid(),
@@ -1666,14 +1684,16 @@ class CrackerjackServer:
                 "uptime_seconds": uptime,
                 "qa_adapters": {
                     "total": len(self.adapters),
-                    "healthy": sum(1 for a in self.adapters if getattr(a, 'healthy', True)),
+                    "healthy": sum(
+                        1 for a in self.adapters if getattr(a, "healthy", True)
+                    ),
                 },
                 "settings": {
                     "qa_mode": self.settings.qa_mode,
                     "ai_agent": self.settings.ai_agent,
                     "auto_fix": self.settings.auto_fix,
                 },
-            }
+            },
         )
 ```
 
@@ -1685,7 +1705,7 @@ python -c "from crackerjack.server import CrackerjackServer; from crackerjack.co
 # Expected: "Server created"
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: Rewrite __main__.py** (1.5 hours)
 
@@ -1698,6 +1718,7 @@ python -c "from crackerjack.server import CrackerjackServer; from crackerjack.co
 
 ```python
 """Crackerjack CLI entry point using Oneiric factory."""
+
 import asyncio
 import typer
 from mcp_common.cli import MCPServerCLIFactory
@@ -1728,7 +1749,9 @@ def main():
     def run_tests(
         workers: int = typer.Option(0, "--workers", help="Test workers (0=auto)"),
         timeout: int = typer.Option(300, "--timeout", help="Test timeout seconds"),
-        coverage: bool = typer.Option(True, "--coverage/--no-coverage", help="Run with coverage"),
+        coverage: bool = typer.Option(
+            True, "--coverage/--no-coverage", help="Run with coverage"
+        ),
     ):
         """Run test suite with coverage."""
         import subprocess
@@ -1763,8 +1786,10 @@ def main():
         snapshot = server.get_health_snapshot()
         qa_status = snapshot.lifecycle_state.get("qa_adapters", {})
 
-        typer.echo(f"QA Adapters: {qa_status['total']} total, {qa_status['healthy']} healthy")
-        raise typer.Exit(0 if qa_status['total'] == qa_status['healthy'] else 1)
+        typer.echo(
+            f"QA Adapters: {qa_status['total']} total, {qa_status['healthy']} healthy"
+        )
+        raise typer.Exit(0 if qa_status["total"] == qa_status["healthy"] else 1)
 
     # Run CLI
     app()
@@ -1783,7 +1808,7 @@ if __name__ == "__main__":
 | Start/stop logic | Custom | Factory | Standardized |
 | Health checks | Custom | Factory | Standardized |
 
----
+______________________________________________________________________
 
 #### Validation
 
@@ -1812,7 +1837,7 @@ if __name__ == "__main__":
 
 **Success Gate:** ALL validation criteria must pass before proceeding to Phase 4
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -1832,7 +1857,7 @@ python -m crackerjack --help  # Should show old CLI
 
 **Risk of Rollback:** MEDIUM (new files, CLI structure change)
 
----
+______________________________________________________________________
 
 ### Phase 4: Port QA Adapters to Oneiric (Day 3 PM + Day 4, 10 hours)
 
@@ -1848,18 +1873,19 @@ python -m crackerjack --help  # Should show old CLI
 **Objective:** Migrate 12 complex adapters requiring full Oneiric Adapter pattern
 
 **Adapters (12 total):**
+
 1. zuban.py - Type checking (Rust-powered)
-2. claude.py - AI assistance
-3. ruff.py - Linting/formatting
-4. semgrep.py - SAST scanning
-5. bandit.py - Security scanning
-6. gitleaks.py - Secret detection
-7. pyright.py - Type checking
-8. mypy.py - Type checking
-9. pip_audit.py - Dependency vulnerabilities
-10. pyscn.py - Security checks
-11. refurb.py - Modernization
-12. complexipy.py - Complexity analysis
+1. claude.py - AI assistance
+1. ruff.py - Linting/formatting
+1. semgrep.py - SAST scanning
+1. bandit.py - Security scanning
+1. gitleaks.py - Secret detection
+1. pyright.py - Type checking
+1. mypy.py - Type checking
+1. pip_audit.py - Dependency vulnerabilities
+1. pyscn.py - Security checks
+1. refurb.py - Modernization
+1. complexipy.py - Complexity analysis
 
 **Migration Pattern:**
 
@@ -1934,20 +1960,21 @@ python -c "from uuidv7 import uuid7; [print(f'{i+1}. {uuid7()}') for i in range(
 For each of the 12 complex adapters:
 
 1. Generate static UUID7
-2. Replace `uuid4()` with hardcoded UUID7
-3. Replace `"stable"` with `AdapterStatus.STABLE`
-4. Add `MODULE_METADATA` definition
-5. Replace `LoggerProtocol` with `logging.getLogger(__name__)`
-6. Add lifecycle methods (`_create_client`, `_cleanup_resources`)
-7. Test adapter initialization
+1. Replace `uuid4()` with hardcoded UUID7
+1. Replace `"stable"` with `AdapterStatus.STABLE`
+1. Add `MODULE_METADATA` definition
+1. Replace `LoggerProtocol` with `logging.getLogger(__name__)`
+1. Add lifecycle methods (`_create_client`, `_cleanup_resources`)
+1. Test adapter initialization
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Port Simple Adapters → Oneiric Services** (3 hours)
 
 **Objective:** Migrate 18 simple adapters to lightweight Oneiric Services
 
 **Adapters (18 total):**
+
 - mdformat.py, codespell.py, ty.py, pyrefly.py, creosote.py, skylos.py
 - Type stubs utilities (6 adapters)
 - Check utilities (4 adapters)
@@ -1985,13 +2012,14 @@ class MdformatService(ServiceBase):
 
 **Migration:** ~10 min per adapter × 18 = 3 hours
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: Skip Workflow Adapters** (Optional, 1 hour if time permits)
 
 **Objective:** Document workflow adapters as technical debt (skip migration if time-constrained)
 
 **Adapters to Skip (8 total):**
+
 - AI workflow coordinators (3 adapters)
 - Multi-stage QA orchestration (5 adapters)
 
@@ -2026,7 +2054,7 @@ Estimated effort: 5 hours total (30 min per adapter).
 P3 (Low) - Current functionality preserved via legacy wrappers.
 ```
 
----
+______________________________________________________________________
 
 #### Validation
 
@@ -2038,30 +2066,35 @@ P3 (Low) - Current functionality preserved via legacy wrappers.
 **Post-Phase Validation:**
 
 - [ ] 12 complex adapters ported (Oneiric Adapters):
+
   ```bash
   grep -l "AdapterBase" crackerjack/adapters/{zuban,claude,ruff,semgrep,bandit,gitleaks,pyright,mypy,pip_audit,pyscn,refurb,complexipy}.py | wc -l
   # Expected: 12
   ```
 
 - [ ] 18 simple adapters ported (Oneiric Services):
+
   ```bash
   grep -l "ServiceBase" crackerjack/adapters/{mdformat,codespell,ty,pyrefly,creosote,skylos}.py | wc -l
   # Expected: 6+ (plus stubs/checks)
   ```
 
 - [ ] All adapters have static UUID7:
+
   ```bash
   grep "uuid4()" crackerjack/adapters/*.py
   # Expected: 0 results
   ```
 
 - [ ] All adapters use AdapterStatus enum:
+
   ```bash
   grep '"stable"' crackerjack/adapters/*.py
   # Expected: 0 results (should be AdapterStatus.STABLE)
   ```
 
 - [ ] All adapters tested:
+
   ```bash
   python -m pytest tests/adapters/ -v
   # Expected: All adapter tests pass
@@ -2069,7 +2102,7 @@ P3 (Low) - Current functionality preserved via legacy wrappers.
 
 **Success Gate:** ALL validation criteria must pass before proceeding to Phase 5
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -2085,7 +2118,7 @@ python -m pytest tests/adapters/
 
 **Risk of Rollback:** MEDIUM (30 adapters affected)
 
----
+______________________________________________________________________
 
 ### Phase 5: Tests & Documentation (Day 5, 5 hours)
 
@@ -2161,7 +2194,7 @@ python -m pytest -v
 # Expected: 95+ tests pass, <5 failures
 ```
 
----
+______________________________________________________________________
 
 - [ ] **Task 2: Update Documentation** (1.5 hours)
 
@@ -2171,16 +2204,17 @@ python -m pytest -v
 
 1. **README.md** (~30 min)
 
-```markdown
+````markdown
 <!-- BEFORE: -->
 ## Starting the MCP Server
 
 ```bash
 python -m crackerjack --start-mcp-server --verbose
 curl http://localhost:8675/  # Dashboard
-```
+````
 
 <!-- AFTER: -->
+
 ## Starting the MCP Server
 
 ```bash
@@ -2188,7 +2222,8 @@ python -m crackerjack start --verbose
 python -m crackerjack health --probe  # Live health check
 python -m crackerjack status  # Server status
 ```
-```
+
+````
 
 2. **docs/CLI.md** (~30 min)
 
@@ -2230,9 +2265,9 @@ This guide helps other projects migrate from ACB to Oneiric + mcp-common.
 - **Phase 5:** Tests & docs (5 hours)
 
 **Total:** ~30 hours over 5 days
-```
+````
 
----
+______________________________________________________________________
 
 - [ ] **Task 3: End-to-End Smoke Tests** (30 min)
 
@@ -2297,7 +2332,7 @@ chmod +x smoke_tests.sh
 # Expected: "✅ All smoke tests passed!"
 ```
 
----
+______________________________________________________________________
 
 #### Validation
 
@@ -2309,24 +2344,28 @@ chmod +x smoke_tests.sh
 **Post-Phase Validation:**
 
 - [ ] 95%+ test pass rate:
+
   ```bash
   python -m pytest --tb=short | grep "passed"
   # Expected: "95 passed" or higher out of ~100 tests
   ```
 
 - [ ] Documentation updated:
+
   - [ ] README.md - WebSocket references removed, CLI updated
   - [ ] docs/CLI.md - All commands use Oneiric syntax
   - [ ] docs/QA_ADAPTERS.md - Oneiric patterns documented
   - [ ] MIGRATION_GUIDE.md - Created with complete migration guide
 
 - [ ] All smoke tests pass:
+
   ```bash
   ./smoke_tests.sh
   # Expected: Exit code 0, "✅ All smoke tests passed!"
   ```
 
 - [ ] Coverage maintained:
+
   ```bash
   python -m pytest --cov=crackerjack --cov-report=term
   # Expected: ≥21.6% (baseline maintained)
@@ -2334,7 +2373,7 @@ chmod +x smoke_tests.sh
 
 **Success Gate:** ALL validation criteria must pass - migration complete!
 
----
+______________________________________________________________________
 
 #### Rollback
 
@@ -2356,7 +2395,7 @@ python -m pytest
 
 **Risk of Rollback:** LOW (primarily documentation and tests)
 
----
+______________________________________________________________________
 
 ## Daily Progress Checkpoints
 
@@ -2365,20 +2404,24 @@ Track daily completion to ensure timeline adherence and safe rollback points.
 ### Day 1 End Checkpoint
 
 **Target Phases:**
+
 - [x] Phase 0: Pre-Migration Audit (2 hours)
 - [x] Phase 1: Remove WebSocket/Dashboard Stack (3 hours)
 
 **Time Tracking:**
+
 - Day 1 Effort: 5 hours
 - Cumulative Effort: 5 hours / 30 hours budgeted
 - Buffer Remaining: 25 hours
 
 **Completion Criteria:**
+
 - [ ] All Phase 0 deliverables complete (inventory files exist)
 - [ ] All Phase 1 validation checks passed (55 files removed, no WebSocket references)
 - [ ] Git checkpoint created
 
 **Git Checkpoint:**
+
 ```bash
 # Create Day 1 checkpoint
 git add -A
@@ -2396,30 +2439,35 @@ git tag -a migration-day1 -m "End of Day 1: Audit + WebSocket removal"
 ```
 
 **Rollback to Day 1:**
+
 ```bash
 # If Day 2+ fails, restore to this checkpoint
 git reset --hard migration-day1
 git clean -fd
 ```
 
----
+______________________________________________________________________
 
 ### Day 2 End Checkpoint
 
 **Target Phases:**
+
 - [x] Phase 2: Remove ACB Dependency (6 hours)
 
 **Time Tracking:**
+
 - Day 2 Effort: 6 hours
 - Cumulative Effort: 11 hours / 30 hours budgeted
 - Buffer Remaining: 19 hours
 
 **Completion Criteria:**
+
 - [ ] All Phase 2 validation checks passed (ACB removed from pyproject.toml, 310 imports migrated, no @depends.inject)
 - [ ] Critical blocking phase complete (⚠️ BLOCKING - all subsequent phases depend on this)
 - [ ] Git checkpoint created
 
 **Git Checkpoint:**
+
 ```bash
 # Create Day 2 checkpoint
 git add -A
@@ -2438,6 +2486,7 @@ git tag -a migration-day2 -m "End of Day 2: ACB removal complete (BLOCKING PHASE
 ```
 
 **Rollback to Day 2:**
+
 ```bash
 # If Day 3+ fails, restore to this checkpoint
 git reset --hard migration-day2
@@ -2447,26 +2496,30 @@ git clean -fd
 grep -r "from acb" crackerjack/ && echo "⚠️ ACB still present!" || echo "✅ ACB removed"
 ```
 
----
+______________________________________________________________________
 
 ### Day 3 End Checkpoint
 
 **Target Phases:**
+
 - [x] Phase 3: Integrate Oneiric CLI Factory (3 hours - AM)
 - [x] Phase 4: Port QA Adapters - START (4 hours - PM, port 6 complex adapters)
 
 **Time Tracking:**
+
 - Day 3 Effort: 7 hours (3h + 4h)
 - Cumulative Effort: 18 hours / 30 hours budgeted
 - Buffer Remaining: 12 hours
 
 **Completion Criteria:**
+
 - [ ] All Phase 3 validation checks passed (MCPServerCLIFactory integrated, CLI commands working)
 - [ ] Phase 4 progress: 6/12 complex adapters ported (50% complete)
 - [ ] All ported adapters have UUID7 IDs and use AdapterStatus enum
 - [ ] Git checkpoint created
 
 **Git Checkpoint:**
+
 ```bash
 # Create Day 3 checkpoint
 git add -A
@@ -2490,6 +2543,7 @@ git tag -a migration-day3 -m "End of Day 3: Oneiric CLI + 50% adapters"
 ```
 
 **Rollback to Day 3:**
+
 ```bash
 # If Day 4+ fails, restore to this checkpoint
 git reset --hard migration-day3
@@ -2499,25 +2553,29 @@ git clean -fd
 python -m crackerjack --help | grep "start\|stop\|health" && echo "✅ CLI working"
 ```
 
----
+______________________________________________________________________
 
 ### Day 4 End Checkpoint
 
 **Target Phases:**
+
 - [x] Phase 4: Port QA Adapters - COMPLETE (6 hours, port remaining 6 complex + 18 simple adapters)
 
 **Time Tracking:**
+
 - Day 4 Effort: 6 hours
 - Cumulative Effort: 24 hours / 30 hours budgeted
 - Buffer Remaining: 6 hours
 
 **Completion Criteria:**
+
 - [ ] All Phase 4 validation checks passed (30/38 adapters ported, 8 workflow adapters tracked in tech debt)
 - [ ] All ported adapters registered in Oneiric adapter registry
 - [ ] Adapter health checks passing
 - [ ] Git checkpoint created
 
 **Git Checkpoint:**
+
 ```bash
 # Create Day 4 checkpoint
 git add -A
@@ -2542,6 +2600,7 @@ git tag -a migration-day4 -m "End of Day 4: All QA adapters ported"
 ```
 
 **Rollback to Day 4:**
+
 ```bash
 # If Day 5 fails, restore to this checkpoint
 git reset --hard migration-day4
@@ -2551,25 +2610,29 @@ git clean -fd
 python -m crackerjack qa-health | grep "30 total" && echo "✅ Adapters ported"
 ```
 
----
+______________________________________________________________________
 
 ### Day 5 End Checkpoint (FINAL)
 
 **Target Phases:**
+
 - [x] Phase 5: Tests & Documentation (5 hours)
 
 **Time Tracking:**
+
 - Day 5 Effort: 5 hours
 - Cumulative Effort: 29 hours / 30 hours budgeted
 - Buffer Remaining: 1 hour ✅ Under budget!
 
 **Completion Criteria:**
+
 - [ ] All Phase 5 validation checks passed (95%+ tests passing, all docs updated, smoke tests passing)
 - [ ] Migration guide created (MIGRATION_GUIDE.md)
 - [ ] Coverage maintained at ≥21.6% baseline
 - [ ] Final git checkpoint created
 
 **Git Checkpoint:**
+
 ```bash
 # Create final migration checkpoint
 git add -A
@@ -2605,6 +2668,7 @@ git tag -a v1.0.0-oneiric -m "Oneiric Migration Complete"
 ```
 
 **Rollback from Final State:**
+
 ```bash
 # If production issues discovered after deployment
 git reset --hard migration-day4
@@ -2628,7 +2692,7 @@ git reset --hard migration-day1  # Back to audit complete
 
 **Buffer Usage:** 1 hour remaining (96.7% timeline accuracy)
 
----
+______________________________________________________________________
 
 ## Risk Management Matrix
 
@@ -2643,7 +2707,7 @@ Proactive risk identification with mitigation strategies and contingency plans.
 | **R3:** Test suite failures | HIGH | MEDIUM | **MODERATE** | Phases 2-5 | Automated migration, pytest skip markers, focus critical path | Skip non-critical tests temporarily |
 | **R4:** Breaking changes impact workflows | LOW | LOW | **MINIMAL** | All phases | Migration guide, feature flags, single-user control | Documentation updates only |
 
----
+______________________________________________________________________
 
 ### Risk 1: ACB Removal Breaks Critical Functionality
 
@@ -2654,11 +2718,13 @@ Proactive risk identification with mitigation strategies and contingency plans.
 
 **Description:**
 Removing ACB dependency (310 imports, DI decorators, workflows, events) could break critical functionality if:
+
 - Logger injection fails to convert cleanly
 - DI decorators have hidden dependencies
 - Workflow orchestration has undocumented side effects
 
 **Early Warning Signals:**
+
 - ⚠️ Test pass rate drops below 80% after ACB removal
 - ⚠️ Import errors appear during `python -m crackerjack --help`
 - ⚠️ MCP server fails to start after Phase 2 completion
@@ -2667,23 +2733,27 @@ Removing ACB dependency (310 imports, DI decorators, workflows, events) could br
 **Mitigation Strategy:**
 
 1. **Feature Flag Protection:**
+
    ```python
    # In crackerjack/config/settings.py
    class CrackerjackSettings(BaseSettings):
        use_oneiric_cli: bool = False  # Default to legacy until proven stable
    ```
 
-2. **Comprehensive Test Suite:**
+1. **Comprehensive Test Suite:**
+
    - Run full test suite after each migration step
    - Target: 80%+ pass rate minimum (from 100+ tests)
    - Critical path: Server start/stop, QA commands, MCP tools
 
-3. **Automated Migration Scripts:**
+1. **Automated Migration Scripts:**
+
    - Logger migration script with validation (67 lines)
    - DI removal script with rollback capability
    - Automated grep validation after each step
 
 **Validation Checkpoints:**
+
 ```bash
 # After ACB removal, verify no breakage
 python -m pytest --tb=short | grep "passed"
@@ -2699,6 +2769,7 @@ python -m crackerjack stop
 ```
 
 **Rollback Plan:**
+
 ```bash
 # EMERGENCY ROLLBACK - Complete ACB restoration
 # Execute if test pass rate < 80% or server won't start
@@ -2726,21 +2797,23 @@ python -m crackerjack --help
 
 **Contingency Plan:**
 If rollback is not acceptable (e.g., too late in week):
+
 ```python
 # Hybrid approach: Keep ACB as optional dependency
 # In pyproject.toml:
-[project.optional-dependencies]
+[project.optional - dependencies]
 legacy = ["acb>=0.1.0"]
 
 # In code:
 try:
     from acb.depends import depends  # Legacy path
+
     USE_ACB = True
 except ImportError:
     USE_ACB = False  # Oneiric path
 ```
 
----
+______________________________________________________________________
 
 ### Risk 2: Adapter Port Overruns Timeline (10+ hours)
 
@@ -2751,11 +2824,13 @@ except ImportError:
 
 **Description:**
 Porting 38 adapters (12 complex, 18 simple, 8 workflow) could exceed 10-hour budget if:
+
 - Complex adapters have unexpected dependencies
 - Oneiric adapter API requires extensive refactoring
 - UUID7 generation and registration overhead is underestimated
 
 **Early Warning Signals:**
+
 - ⚠️ Day 3 PM: Fewer than 6 complex adapters ported (50% target missed)
 - ⚠️ Day 4 AM: Cumulative time exceeds 20 hours (only 4h buffer left)
 - ⚠️ Any single adapter takes >1.5 hours to port
@@ -2764,11 +2839,13 @@ Porting 38 adapters (12 complex, 18 simple, 8 workflow) could exceed 10-hour bud
 **Mitigation Strategy:**
 
 1. **Prioritization:** Port in descending order of criticality
+
    - **P1 (Must-Have, 12 adapters):** BanditAdapter, CreosoteAdapter, RefurbAdapter, etc.
    - **P2 (Should-Have, 18 adapters):** FormatAdapter, TypeCheckAdapter, etc.
    - **P3 (Nice-to-Have, 8 adapters):** Workflow adapters (skip if time-constrained)
 
-2. **Automated Migration Pattern:**
+1. **Automated Migration Pattern:**
+
    ```python
    # Use automated script for simple adapters (18 adapters)
    # In migrate_adapters.py:
@@ -2779,8 +2856,7 @@ Porting 38 adapters (12 complex, 18 simple, 8 workflow) could exceed 10-hour bud
 
        # Replace imports
        content = content.replace(
-           "from acb.adapters import AdapterBase",
-           "from oneiric.adapters import Adapter"
+           "from acb.adapters import AdapterBase", "from oneiric.adapters import Adapter"
        )
 
        # Generate UUID7
@@ -2790,7 +2866,8 @@ Porting 38 adapters (12 complex, 18 simple, 8 workflow) could exceed 10-hour bud
        return content
    ```
 
-3. **Tech Debt Tracking:**
+1. **Tech Debt Tracking:**
+
    ```markdown
    # In TECH_DEBT.md (create during Phase 4)
 
@@ -2811,6 +2888,7 @@ Porting 38 adapters (12 complex, 18 simple, 8 workflow) could exceed 10-hour bud
    ```
 
 **Validation Checkpoints:**
+
 ```bash
 # Mid-Phase 4 checkpoint (Day 3 PM, 4h in)
 python -c "
@@ -2826,6 +2904,7 @@ if len(ADAPTER_REGISTRY) < expected:
 ```
 
 **Rollback Plan:**
+
 ```bash
 # PARTIAL ROLLBACK - Revert to ACB adapters
 # Execute if Phase 4 exceeds 14 hours (10h budget + 4h buffer)
@@ -2846,9 +2925,11 @@ python -m pytest tests/adapters/
 
 **Contingency Plan:**
 If timeline overrun but rollback not acceptable:
+
 ```python
 # Stub incomplete adapters with NotImplementedError
 # In crackerjack/oneiric_adapters/incomplete.py:
+
 
 class WorkflowOrchestratorAdapter(Adapter):
     """STUB: Workflow orchestration adapter (not ported yet)."""
@@ -2862,10 +2943,11 @@ class WorkflowOrchestratorAdapter(Adapter):
             "Track in issue #456. Estimated effort: 1 hour."
         )
 
+
 # Track in TECH_DEBT.md with issue link and effort estimate
 ```
 
----
+______________________________________________________________________
 
 ### Risk 3: Test Suite Failures (100+ tests)
 
@@ -2876,12 +2958,14 @@ class WorkflowOrchestratorAdapter(Adapter):
 
 **Description:**
 ACB removal and Oneiric integration will break tests that depend on:
+
 - ACB DI injection mocks
 - ACB workflow orchestration
 - ACB event bus patterns
 - Specific import paths
 
 **Early Warning Signals:**
+
 - ⚠️ Phase 2: Test pass rate drops below 70% (expected: 80%+)
 - ⚠️ Phase 3: Test failures increase instead of decrease
 - ⚠️ Phase 5: Test fix effort exceeds 3 hours (budget: 2 hours)
@@ -2890,6 +2974,7 @@ ACB removal and Oneiric integration will break tests that depend on:
 **Mitigation Strategy:**
 
 1. **Triage Tests by Criticality:**
+
    ```python
    # Priority 1 (MUST PASS): Critical path tests (~20 tests)
    tests/test_server_lifecycle.py::test_server_start
@@ -2906,7 +2991,8 @@ ACB removal and Oneiric integration will break tests that depend on:
    tests/test_workflows/  # Workflow tests (ACB-dependent)
    ```
 
-2. **Automated Test Migration Script:**
+1. **Automated Test Migration Script:**
+
    ```python
    # In migrate_tests.py:
    def migrate_test_file(test_path: Path) -> bool:
@@ -2917,24 +3003,26 @@ ACB removal and Oneiric integration will break tests that depend on:
        content = re.sub(
            r"@pytest.fixture\s+def mock_logger\(depends\):",
            "@pytest.fixture\ndef mock_logger():",
-           content
+           content,
        )
 
        # Replace Inject[Protocol] with MagicMock
        content = re.sub(
            r"logger: Inject\[LoggerProtocol\]",
            "logger = MagicMock(spec=logging.Logger)",
-           content
+           content,
        )
 
        test_path.write_text(content)
        return True
    ```
 
-3. **Pytest Skip Markers for Non-Critical Tests:**
+1. **Pytest Skip Markers for Non-Critical Tests:**
+
    ```python
    # In conftest.py:
    import pytest
+
 
    def pytest_collection_modifyitems(config, items):
        """Auto-skip ACB-dependent tests during migration."""
@@ -2946,6 +3034,7 @@ ACB removal and Oneiric integration will break tests that depend on:
    ```
 
 **Validation Checkpoints:**
+
 ```bash
 # After Phase 2 (ACB removal)
 python -m pytest --tb=line | tee phase2_test_results.txt
@@ -2969,6 +3058,7 @@ python -m pytest --cov=crackerjack --cov-report=term
 ```
 
 **Rollback Plan:**
+
 ```bash
 # PARTIAL ROLLBACK - Restore test suite
 # Execute if test pass rate < 70% after Phase 2
@@ -2990,6 +3080,7 @@ cat broken_tests.txt
 
 **Contingency Plan:**
 If rollback not acceptable but many tests fail:
+
 ```python
 # Skip failing tests temporarily with explicit tracking
 # In tests/conftest.py:
@@ -3001,18 +3092,18 @@ MIGRATION_SKIPS = {
     # ... (up to 20 skipped tests max)
 }
 
+
 def pytest_collection_modifyitems(config, items):
     for item in items:
         if item.name in MIGRATION_SKIPS:
-            item.add_marker(
-                pytest.mark.skip(reason=MIGRATION_SKIPS[item.name])
-            )
+            item.add_marker(pytest.mark.skip(reason=MIGRATION_SKIPS[item.name]))
+
 
 # Track skipped tests in TECH_DEBT.md
 # Target: Fix all skipped tests in Phase 6 (future sprint)
 ```
 
----
+______________________________________________________________________
 
 ### Risk 4: Breaking Changes Impact Workflows
 
@@ -3023,12 +3114,14 @@ def pytest_collection_modifyitems(config, items):
 
 **Description:**
 CLI command changes (e.g., `--start-mcp-server` → `start`) could break:
+
 - Developer muscle memory
 - Existing scripts or aliases
 - Documentation examples
 - CI/CD pipelines
 
 **Early Warning Signals:**
+
 - ⚠️ User confusion during smoke tests (unlikely - single user)
 - ⚠️ Scripts fail after migration (check for hardcoded commands)
 - ⚠️ CI/CD pipeline errors
@@ -3036,12 +3129,14 @@ CLI command changes (e.g., `--start-mcp-server` → `start`) could break:
 **Mitigation Strategy:**
 
 1. **Single-User Control:**
+
    - Crackerjack is an internal tool (not published)
    - Only 1 user (you) to coordinate with
    - Full control over migration timing
 
-2. **Comprehensive Migration Guide:**
-   ```markdown
+1. **Comprehensive Migration Guide:**
+
+   ````markdown
    # In MIGRATION_GUIDE.md (created in Phase 5)
 
    ## Breaking Changes
@@ -3064,13 +3159,18 @@ CLI command changes (e.g., `--start-mcp-server` → `start`) could break:
    alias cj-start='python -m crackerjack start'  # Was: --start-mcp-server
    alias cj-stop='python -m crackerjack stop'
    alias cj-health='python -m crackerjack health'
-   ```
+   ````
+
    ```
 
-3. **Feature Flag for Gradual Transition:**
+   ```
+
+1. **Feature Flag for Gradual Transition:**
+
    ```python
    # Support both old and new CLI for 1 sprint
    # In crackerjack/cli/main.py:
+
 
    @app.command(deprecated=True)
    def start_mcp_server():
@@ -3082,6 +3182,7 @@ CLI command changes (e.g., `--start-mcp-server` → `start`) could break:
    ```
 
 **Validation Checkpoints:**
+
 ```bash
 # After Phase 5 (final)
 # Verify old commands show deprecation warnings
@@ -3097,6 +3198,7 @@ grep -r "\-\-start-mcp-server" scripts/ docs/ && echo "⚠️ Update needed" || 
 ```
 
 **Rollback Plan:**
+
 ```bash
 # NO ROLLBACK NEEDED (minimal impact)
 # If issues found, simply update documentation
@@ -3114,6 +3216,7 @@ cj-start  # Test new alias
 
 **Contingency Plan:**
 If breaking changes cause significant friction:
+
 ```python
 # Extend deprecation period by 1 sprint
 # In crackerjack/cli/main.py:
@@ -3124,11 +3227,12 @@ def start_mcp_server():
     """Legacy command (hidden)."""
     start()  # Redirect to new command
 
+
 # Schedule removal in 2 weeks
 # TODO(2024-02-01): Remove legacy CLI commands
 ```
 
----
+______________________________________________________________________
 
 ### Risk Monitoring Dashboard
 
@@ -3170,12 +3274,13 @@ echo "=== End Risk Dashboard ==="
 ```
 
 **Run daily:**
+
 ```bash
 chmod +x scripts/risk_monitor.sh
 ./scripts/risk_monitor.sh
 ```
 
----
+______________________________________________________________________
 
 ## Success Metrics Dashboard
 
@@ -3190,15 +3295,18 @@ Track core functionality to ensure migration doesn't break critical features.
 These are **hard requirements** - migration is NOT complete until all 7 pass:
 
 - [ ] **M1: Server Lifecycle - Start**
+
   ```bash
   # Validation command
   timeout 10s python -m crackerjack start
   python -m crackerjack status | grep "running" && echo "✅ PASS" || echo "❌ FAIL"
   python -m crackerjack stop
   ```
+
   **Success Criteria:** Server starts without errors, status reports "running"
 
 - [ ] **M2: Server Lifecycle - Stop**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3206,9 +3314,11 @@ These are **hard requirements** - migration is NOT complete until all 7 pass:
   python -m crackerjack stop
   python -m crackerjack status | grep "stopped" && echo "✅ PASS" || echo "❌ FAIL"
   ```
+
   **Success Criteria:** Server stops gracefully within 5 seconds, no orphan processes
 
 - [ ] **M3: Status Reporting**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3216,9 +3326,11 @@ These are **hard requirements** - migration is NOT complete until all 7 pass:
   echo "$output" | grep -E "running|PID|uptime" && echo "✅ PASS" || echo "❌ FAIL"
   python -m crackerjack stop
   ```
+
   **Success Criteria:** Status shows server state, PID, uptime accurately
 
 - [ ] **M4: Health Snapshots (File-Based)**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3227,9 +3339,11 @@ These are **hard requirements** - migration is NOT complete until all 7 pass:
   cat .oneiric_cache/runtime_health.json | jq '.lifecycle_state' && echo "✅ Valid JSON"
   python -m crackerjack stop
   ```
+
   **Success Criteria:** Runtime health snapshots created in `.oneiric_cache/`, valid JSON format
 
 - [ ] **M5: Health Probes (Live Checks)**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3237,9 +3351,11 @@ These are **hard requirements** - migration is NOT complete until all 7 pass:
   python -m crackerjack health --probe | grep -E "adapters|status|uptime" && echo "✅ PASS" || echo "❌ FAIL"
   python -m crackerjack stop
   ```
+
   **Success Criteria:** Live health checks return real-time data, not cached snapshots
 
 - [ ] **M6: Runtime Cache Directory**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3247,18 +3363,22 @@ These are **hard requirements** - migration is NOT complete until all 7 pass:
   ls -la .oneiric_cache/ | grep -E "runtime_health.json|server.pid" && echo "✅ PASS" || echo "❌ FAIL"
   python -m crackerjack stop
   ```
+
   **Success Criteria:** `.oneiric_cache/` contains `runtime_health.json`, `server.pid`, proper permissions
 
 - [ ] **M7: QA Commands Integration**
+
   ```bash
   # Validation command (all QA commands work)
   python -m crackerjack run-tests --workers 1 --timeout 60 && echo "✅ run-tests: PASS"
   python -m crackerjack analyze && echo "✅ analyze: PASS"
   python -m crackerjack qa-health | grep "total" && echo "✅ qa-health: PASS"
   ```
+
   **Success Criteria:** All QA commands execute successfully (run-tests, analyze, qa-health)
 
 **Must-Have Metrics Summary:**
+
 ```bash
 # Quick validation script for all must-have metrics
 #!/bin/bash
@@ -3301,13 +3421,14 @@ else
 fi
 ```
 
----
+______________________________________________________________________
 
 #### Nice-to-Have Metrics (3 items)
 
 These are **stretch goals** - migration is complete without them, but they improve quality:
 
 - [ ] **N1: Multi-Instance Support**
+
   ```bash
   # Validation command
   python -m crackerjack start --instance-id test-1 &
@@ -3327,9 +3448,11 @@ These are **stretch goals** - migration is complete without them, but they impro
   python -m crackerjack stop --instance-id test-2
   wait $PID1 $PID2
   ```
+
   **Success Criteria:** Multiple instances run concurrently without conflicts
 
 - [ ] **N2: SIGHUP Reload Support**
+
   ```bash
   # Validation command
   python -m crackerjack start
@@ -3347,9 +3470,11 @@ These are **stretch goals** - migration is complete without them, but they impro
 
   python -m crackerjack stop
   ```
+
   **Success Criteria:** Server reloads configuration without restart
 
 - [ ] **N3: Systemd Integration (Production)**
+
   ```bash
   # Validation command (requires systemd)
   sudo cp crackerjack.service /etc/systemd/system/
@@ -3358,9 +3483,10 @@ These are **stretch goals** - migration is complete without them, but they impro
   sudo systemctl status crackerjack | grep "active (running)" && echo "✅ PASS"
   sudo systemctl stop crackerjack
   ```
+
   **Success Criteria:** Service runs under systemd without custom daemon logic
 
----
+______________________________________________________________________
 
 ### Code Quality Metrics
 
@@ -3371,6 +3497,7 @@ Measure migration completeness and code cleanliness.
 These are **hard requirements** - migration is NOT complete until all 4 pass:
 
 - [ ] **Q1: Zero ACB Imports**
+
   ```bash
   # Validation command
   grep -r "from acb" crackerjack/ --include="*.py" && echo "❌ FAIL: ACB imports found" || echo "✅ PASS: No ACB imports"
@@ -3380,9 +3507,11 @@ These are **hard requirements** - migration is NOT complete until all 4 pass:
   grep -r "from acb" crackerjack/ --include="*.py" | wc -l
   # Expected: 0 (was 310 before migration)
   ```
+
   **Success Criteria:** Zero ACB imports in entire `crackerjack/` directory (was 310 before migration)
 
 - [ ] **Q2: Zero DI Decorators**
+
   ```bash
   # Validation command
   grep -r "@depends.inject" crackerjack/ --include="*.py" && echo "❌ FAIL: DI decorators found" || echo "✅ PASS: No DI decorators"
@@ -3392,58 +3521,65 @@ These are **hard requirements** - migration is NOT complete until all 4 pass:
   grep -r "@depends.inject" crackerjack/ --include="*.py" | wc -l
   # Expected: 0 (all removed in Phase 2)
   ```
+
   **Success Criteria:** Zero `@depends.inject` decorators (all DI removed)
 
 - [ ] **Q3: Complex Adapters Ported (12/12 = 100%)**
+
   ```bash
   # Validation command
   python -c "
+  ```
+
 import sys
 sys.path.insert(0, 'crackerjack')
 from oneiric_adapters import ADAPTER_REGISTRY
 
-complex_adapters = [
-    'BanditAdapter', 'CreosoteAdapter', 'RefurbAdapter', 'ComplexipyAdapter',
-    'PyrightAdapter', 'MyPyAdapter', 'RuffLintAdapter', 'RuffFormatAdapter',
-    'PytestAdapter', 'CoverageAdapter', 'PreCommitAdapter', 'GitAdapter'
-]
+complex_adapters = \[
+'BanditAdapter', 'CreosoteAdapter', 'RefurbAdapter', 'ComplexipyAdapter',
+'PyrightAdapter', 'MyPyAdapter', 'RuffLintAdapter', 'RuffFormatAdapter',
+'PytestAdapter', 'CoverageAdapter', 'PreCommitAdapter', 'GitAdapter'
+\]
 
 ported = sum(1 for name in complex_adapters if name in ADAPTER_REGISTRY)
 print(f'Complex Adapters: {ported}/12 ported')
 
 if ported == 12:
-    print('✅ PASS: All complex adapters ported')
-    sys.exit(0)
+print('✅ PASS: All complex adapters ported')
+sys.exit(0)
 else:
-    print(f'❌ FAIL: {12 - ported} complex adapters missing')
-    sys.exit(1)
+print(f'❌ FAIL: {12 - ported} complex adapters missing')
+sys.exit(1)
 "
-  ```
-  **Success Criteria:** All 12 complex adapters ported from ACB to Oneiric (100%)
+
+````
+**Success Criteria:** All 12 complex adapters ported from ACB to Oneiric (100%)
 
 - [ ] **Q4: Test Pass Rate ≥95%**
-  ```bash
-  # Validation command
-  python -m pytest --tb=short -q | tee test_results.txt
-  python -c "
+```bash
+# Validation command
+python -m pytest --tb=short -q | tee test_results.txt
+python -c "
 import re
 with open('test_results.txt') as f:
-    output = f.read()
-    match = re.search(r'(\d+) passed', output)
-    if match:
-        passed = int(match.group(1))
-        total = 100  # Approximate total tests
-        pass_rate = (passed / total) * 100
-        print(f'Test Pass Rate: {pass_rate:.1f}% ({passed}/{total})')
-        if pass_rate >= 95:
-            print('✅ PASS: ≥95% tests passing')
-        else:
-            print(f'❌ FAIL: {95 - pass_rate:.1f}% short of target')
+  output = f.read()
+  match = re.search(r'(\d+) passed', output)
+  if match:
+      passed = int(match.group(1))
+      total = 100  # Approximate total tests
+      pass_rate = (passed / total) * 100
+      print(f'Test Pass Rate: {pass_rate:.1f}% ({passed}/{total})')
+      if pass_rate >= 95:
+          print('✅ PASS: ≥95% tests passing')
+      else:
+          print(f'❌ FAIL: {95 - pass_rate:.1f}% short of target')
 "
-  ```
-  **Success Criteria:** ≥95% of tests passing (95/100 tests or better)
+````
+
+**Success Criteria:** ≥95% of tests passing (95/100 tests or better)
 
 **Code Quality Metrics Summary:**
+
 ```bash
 # Quick validation script for all code quality metrics
 #!/bin/bash
@@ -3475,36 +3611,42 @@ else
 fi
 ```
 
----
+______________________________________________________________________
 
 #### Nice-to-Have Metrics (3 items)
 
 These are **stretch goals** - migration is complete without them:
 
 - [ ] **Q5: Simple Adapters Ported (18/18 = 100%)**
+
   ```bash
   # Validation command
   find crackerjack/oneiric_adapters -name "*adapter.py" | wc -l
   # Expected: 30 total (12 complex + 18 simple)
   ```
+
   **Success Criteria:** All 18 simple adapters ported (currently: port if time allows)
 
 - [ ] **Q6: Workflow Adapters Ported (8/8 = 100%)**
+
   ```bash
   # Validation command
   grep -r "WorkflowAdapter" crackerjack/oneiric_adapters/ | wc -l
   # Expected: 8 (currently: tracked as tech debt)
   ```
+
   **Success Criteria:** All 8 workflow adapters ported (currently: Phase 6 future work)
 
 - [ ] **Q7: Test Pass Rate = 100%**
+
   ```bash
   # Validation command
   python -m pytest --tb=short -q | grep "100 passed"
   ```
+
   **Success Criteria:** All tests passing (stretch goal, 95%+ is acceptable)
 
----
+______________________________________________________________________
 
 ### Timeline Metrics
 
@@ -3515,31 +3657,37 @@ Track daily progress to ensure migration stays on schedule.
 Reference the **Daily Progress Checkpoints** section (above) for detailed tracking. Summary here:
 
 - [ ] **Day 1 Checkpoint:** 5 hours (Audit 2h + WebSocket removal 3h)
+
   - **Cumulative:** 5h / 30h budgeted
   - **Buffer:** 25h remaining
   - **Validation:** Phase 0 + Phase 1 complete
 
 - [ ] **Day 2 Checkpoint:** 6 hours (ACB removal)
+
   - **Cumulative:** 11h / 30h budgeted
   - **Buffer:** 19h remaining
   - **Validation:** ⚠️ BLOCKING PHASE complete (critical path)
 
 - [ ] **Day 3 Checkpoint:** 7 hours (Oneiric CLI 3h + Adapters start 4h)
+
   - **Cumulative:** 18h / 30h budgeted
   - **Buffer:** 12h remaining
   - **Validation:** CLI working + 50% adapters ported
 
 - [ ] **Day 4 Checkpoint:** 6 hours (Adapters complete)
+
   - **Cumulative:** 24h / 30h budgeted
   - **Buffer:** 6h remaining
   - **Validation:** All 30 adapters ported
 
 - [ ] **Day 5 Checkpoint:** 5 hours (Tests + Docs)
+
   - **Cumulative:** 29h / 30h budgeted
   - **Buffer:** 1h remaining ✅ Under budget!
   - **Validation:** ≥95% tests passing, all docs updated
 
 **Timeline Adherence Validation:**
+
 ```bash
 # Check if migration is on schedule
 #!/bin/bash
@@ -3557,7 +3705,7 @@ else
 fi
 ```
 
----
+______________________________________________________________________
 
 ### Overall Migration Success Criteria
 
@@ -3566,28 +3714,33 @@ Migration is **COMPLETE** when ALL of the following are true:
 #### Critical Success Factors
 
 1. **✅ Functional Requirements Met (7/7 must-have metrics)**
+
    - All server lifecycle commands work
    - All QA commands work
    - Health snapshots and probes functional
 
-2. **✅ Code Quality Requirements Met (4/4 must-have metrics)**
+1. **✅ Code Quality Requirements Met (4/4 must-have metrics)**
+
    - Zero ACB imports
    - Zero DI decorators
    - All complex adapters ported
    - ≥95% test pass rate
 
-3. **✅ Timeline Requirements Met (5/5 daily checkpoints)**
+1. **✅ Timeline Requirements Met (5/5 daily checkpoints)**
+
    - Day 5 checkpoint reached
    - Total effort ≤30 hours
    - All phases complete
 
-4. **✅ Documentation Requirements Met**
+1. **✅ Documentation Requirements Met**
+
    - README.md updated (CLI commands, no WebSocket references)
    - CLI docs updated (Oneiric standard commands)
    - MIGRATION_GUIDE.md created
    - QA_ADAPTERS.md updated (Oneiric patterns)
 
-5. **✅ Smoke Tests Passing**
+1. **✅ Smoke Tests Passing**
+
    - End-to-end smoke test suite passes
    - Multi-instance test passes (if implemented)
    - All validation scripts pass
@@ -3688,13 +3841,14 @@ fi
 ```
 
 **Execute final validation:**
+
 ```bash
 chmod +x master_validation.sh
 ./master_validation.sh
 # Expected output: "✅✅✅ MIGRATION COMPLETE - READY FOR PRODUCTION ✅✅✅"
 ```
 
----
+______________________________________________________________________
 
 ## Appendices
 
@@ -3707,6 +3861,7 @@ Full listing of files to remove and create during migration.
 #### Files to Remove (55 total)
 
 **Category: MCP WebSocket + Monitoring UI (18 files)**
+
 ```bash
 # Remove WebSocket server infrastructure
 rm -f crackerjack/mcp/websocket/__init__.py
@@ -3735,6 +3890,7 @@ rm -rf tests/ui/test_templates.py
 ```
 
 **Category: Monitoring Services (12 files)**
+
 ```bash
 # Remove monitoring infrastructure
 rm -rf crackerjack/services/monitoring/
@@ -3755,6 +3911,7 @@ rm -rf tests/monitoring/
 ```
 
 **Category: ACB Core + Adapters (25 files)**
+
 ```bash
 # Remove ACB adapters
 rm -rf crackerjack/adapters/
@@ -3789,15 +3946,17 @@ rm -rf tests/orchestration/
 ```
 
 **Size Impact:**
+
 - **Total files removed:** 55 files
 - **Estimated LOC removed:** ~8,500 lines (WebSocket 2,500 + Monitoring 1,500 + ACB 4,500)
 - **Disk space freed:** ~350 KB
 
----
+______________________________________________________________________
 
 #### Files to Create (7 files)
 
 **Category: Oneiric Integration (3 files)**
+
 ```bash
 # Create Oneiric-compatible server infrastructure
 touch crackerjack/config/settings.py         # ~120 lines (CrackerjackSettings)
@@ -3806,6 +3965,7 @@ touch crackerjack/__main__.py                # ~75 lines (rewritten CLI entrypoi
 ```
 
 **Category: Oneiric Adapters (1 directory)**
+
 ```bash
 # Create Oneiric adapter directory
 mkdir -p crackerjack/oneiric_adapters/
@@ -3818,6 +3978,7 @@ touch crackerjack/oneiric_adapters/creosote_adapter.py
 ```
 
 **Category: Documentation (2 files)**
+
 ```bash
 # Create migration documentation
 touch MIGRATION_GUIDE.md                     # ~200 lines
@@ -3825,17 +3986,19 @@ touch TECH_DEBT.md                           # ~50 lines (if workflow adapters s
 ```
 
 **Category: Migration Scripts (1 file, temporary)**
+
 ```bash
 # Temporary migration automation
 touch migrate_logging.py                     # ~67 lines (deleted after Phase 2)
 ```
 
 **Size Impact:**
+
 - **Total files created:** 7 core files + 30 adapter files = 37 files
 - **Estimated LOC added:** ~1,500 lines (Settings 120 + Server 150 + Main 75 + Adapters 900 + Docs 250 + Scripts 67 - Scripts deleted)
 - **Net LOC change:** -7,000 lines (77% reduction in affected code)
 
----
+______________________________________________________________________
 
 ### Appendix B: Breaking Changes Reference
 
@@ -3855,10 +4018,11 @@ Complete reference for migrating existing code and workflows.
 | `--instance-id <id>` (option) | `--instance-id <id>` (unchanged) | **Scaling** | Multi-instance support unchanged |
 
 **Deprecation Timeline:**
+
 - **Week 1:** Old commands show deprecation warnings but still work
 - **Week 2:** Old commands removed entirely (migration guide provided)
 
----
+______________________________________________________________________
 
 #### Code Migration Examples
 
@@ -3868,6 +4032,7 @@ Complete reference for migrating existing code and workflows.
 # BEFORE (ACB pattern):
 from acb.adapters.logger import LoggerProtocol
 from acb.depends import depends, Inject
+
 
 @depends.inject
 def process_data(data: dict, logger: Inject[LoggerProtocol] = None) -> bool:
@@ -3880,10 +4045,12 @@ def process_data(data: dict, logger: Inject[LoggerProtocol] = None) -> bool:
         logger.error(f"Processing failed: {e}")
         return False
 
+
 # AFTER (Standard pattern):
 import logging
 
 logger = logging.getLogger(__name__)
+
 
 def process_data(data: dict) -> bool:
     logger.info(f"Processing {len(data)} items")
@@ -3897,14 +4064,15 @@ def process_data(data: dict) -> bool:
 ```
 
 **Migration Steps:**
-1. Remove ACB imports
-2. Add `import logging` at top of file
-3. Add module logger: `logger = logging.getLogger(__name__)`
-4. Remove `@depends.inject` decorator
-5. Remove `logger: Inject[LoggerProtocol] = None` parameter
-6. Logger calls unchanged (same API: `.info()`, `.debug()`, `.error()`)
 
----
+1. Remove ACB imports
+1. Add `import logging` at top of file
+1. Add module logger: `logger = logging.getLogger(__name__)`
+1. Remove `@depends.inject` decorator
+1. Remove `logger: Inject[LoggerProtocol] = None` parameter
+1. Logger calls unchanged (same API: `.info()`, `.debug()`, `.error()`)
+
+______________________________________________________________________
 
 **Example 2: ACB DI → Direct Instantiation**
 
@@ -3912,6 +4080,7 @@ def process_data(data: dict) -> bool:
 # BEFORE (ACB DI pattern):
 from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console, CacheProtocol
+
 
 @depends.inject
 def __init__(
@@ -3924,9 +4093,11 @@ def __init__(
     self.cache = cache
     self.pkg_path = pkg_path
 
+
 # AFTER (Direct instantiation):
 from rich.console import Console
 from crackerjack.cache import CrackerjackCache
+
 
 def __init__(self, pkg_path: Path) -> None:
     self.console = Console()
@@ -3935,12 +4106,13 @@ def __init__(self, pkg_path: Path) -> None:
 ```
 
 **Migration Steps:**
-1. Remove `@depends.inject` decorator
-2. Replace `Inject[Protocol]` with concrete classes
-3. Instantiate dependencies directly in `__init__`
-4. Update imports (protocol → concrete class)
 
----
+1. Remove `@depends.inject` decorator
+1. Replace `Inject[Protocol]` with concrete classes
+1. Instantiate dependencies directly in `__init__`
+1. Update imports (protocol → concrete class)
+
+______________________________________________________________________
 
 **Example 3: ACB Adapter → Oneiric Adapter**
 
@@ -3949,6 +4121,7 @@ def __init__(self, pkg_path: Path) -> None:
 from acb.adapters import AdapterBase
 from acb.depends import depends, Inject
 from acb.adapters.logger import LoggerProtocol
+
 
 class BanditAdapter(AdapterBase):
     adapter_id = "bandit"  # String ID
@@ -3964,6 +4137,7 @@ class BanditAdapter(AdapterBase):
         # Scan logic
         return {"findings": []}
 
+
 # AFTER (Oneiric adapter):
 from oneiric.adapters import Adapter
 from oneiric.types import AdapterStatus
@@ -3971,6 +4145,7 @@ import logging
 from uuid_utils import uuid7
 
 logger = logging.getLogger(__name__)
+
 
 class BanditAdapter(Adapter):
     adapter_id = "01941234-5678-7abc-8def-0123456789ab"  # UUID7 (static)
@@ -3986,20 +4161,22 @@ class BanditAdapter(Adapter):
 ```
 
 **Migration Steps:**
+
 1. Change base class: `AdapterBase` → `Adapter`
-2. Replace adapter ID: String → UUID7 (static, not dynamic)
-3. Remove `@depends.inject` decorator
-4. Replace logger injection with module logger
-5. Replace string status with `AdapterStatus` enum
-6. Add `async` to `execute()` method signature
+1. Replace adapter ID: String → UUID7 (static, not dynamic)
+1. Remove `@depends.inject` decorator
+1. Replace logger injection with module logger
+1. Replace string status with `AdapterStatus` enum
+1. Add `async` to `execute()` method signature
 
 **UUID7 Generation (one-time):**
+
 ```bash
 python -c "from uuid_utils import uuid7; print(uuid7())"
 # Copy output to adapter_id (keep static, don't regenerate)
 ```
 
----
+______________________________________________________________________
 
 ### Appendix C: Testing Strategy
 
@@ -4008,25 +4185,31 @@ Comprehensive testing approach for migration validation.
 #### Test Categories
 
 **1. Unit Tests (~60 tests)**
+
 - **Adapter Tests:** Validate individual Oneiric adapters (30 tests)
+
   - Each adapter has 1 test: instantiation + execute()
   - Example: `tests/oneiric_adapters/test_bandit_adapter.py`
 
 - **Server Tests:** Validate CrackerjackServer wrapper (10 tests)
+
   - Lifecycle: start, stop, restart, reload
   - Health: snapshots, probes
   - Example: `tests/test_server.py`
 
 - **Settings Tests:** Validate CrackerjackSettings (5 tests)
+
   - YAML loading, field validation, defaults
   - Example: `tests/test_settings.py`
 
 - **CLI Tests:** Validate CLI commands (15 tests)
+
   - Each command (start/stop/health/status/reload)
   - Help text, error handling
   - Example: `tests/test_cli.py`
 
 **2. Integration Tests (~25 tests)**
+
 - **Server Lifecycle:** Full start/stop/restart cycles (5 tests)
 - **Adapter Registration:** All adapters load correctly (5 tests)
 - **Multi-Instance:** Concurrent instances without conflicts (3 tests)
@@ -4034,12 +4217,13 @@ Comprehensive testing approach for migration validation.
 - **QA Commands:** run-tests, analyze, qa-health (7 tests)
 
 **3. Smoke Tests (~5 tests)**
+
 - **End-to-End:** Full migration workflow (1 test, ~45 lines)
 - **Regression:** Critical functionality unchanged (4 tests)
 
 **Total Tests:** ~90 tests (60 unit + 25 integration + 5 smoke)
 
----
+______________________________________________________________________
 
 #### Feature Flag Testing Pattern
 
@@ -4049,6 +4233,7 @@ Test both legacy (ACB) and new (Oneiric) code paths during transition:
 # In tests/conftest.py:
 import pytest
 from crackerjack.config import CrackerjackSettings
+
 
 @pytest.fixture(params=[False, True], ids=["legacy_acb", "oneiric_cli"])
 def use_oneiric_cli(request):
@@ -4064,6 +4249,7 @@ def use_oneiric_cli(request):
     # Restore original value
     settings.use_oneiric_cli = original_value
 
+
 # Usage in test:
 def test_server_start(use_oneiric_cli):
     """Test server start with both ACB and Oneiric CLI."""
@@ -4072,10 +4258,15 @@ def test_server_start(use_oneiric_cli):
         assert subprocess.run(["python", "-m", "crackerjack", "start"]).returncode == 0
     else:
         # Legacy ACB code path
-        assert subprocess.run(["python", "-m", "crackerjack", "--start-mcp-server"]).returncode == 0
+        assert (
+            subprocess.run(
+                ["python", "-m", "crackerjack", "--start-mcp-server"]
+            ).returncode
+            == 0
+        )
 ```
 
----
+______________________________________________________________________
 
 #### Test Commands Quick Reference
 
@@ -4118,7 +4309,7 @@ python -m pytest -n 0
 python -m pytest -m "not slow"
 ```
 
----
+______________________________________________________________________
 
 ### Appendix D: Automated Migration Scripts
 
@@ -4129,6 +4320,7 @@ Complete scripts for automated migration tasks.
 **Purpose:** Automatically migrate all ACB logger imports to standard logging (310 imports across codebase)
 
 **Full Script (67 lines):**
+
 ```python
 """Automated ACB logger migration script.
 
@@ -4140,9 +4332,11 @@ Migrates:
 - @depends.inject decorators → removed
 - Inject[LoggerProtocol] parameters → module loggers
 """
+
 import re
 from pathlib import Path
 from typing import Set
+
 
 def migrate_file(file_path: Path) -> bool:
     """Migrate single file from ACB logger to standard logging.
@@ -4154,16 +4348,8 @@ def migrate_file(file_path: Path) -> bool:
     original = content
 
     # Step 1: Remove ACB imports
-    content = re.sub(
-        r"from acb\.adapters\.logger import .*\n",
-        "",
-        content
-    )
-    content = re.sub(
-        r"from acb\.depends import.*Inject.*\n",
-        "",
-        content
-    )
+    content = re.sub(r"from acb\.adapters\.logger import .*\n", "", content)
+    content = re.sub(r"from acb\.depends import.*Inject.*\n", "", content)
 
     # Step 2: Add standard logging import (if logger used)
     if "logger" in content and "import logging" not in content:
@@ -4191,24 +4377,17 @@ def migrate_file(file_path: Path) -> bool:
         content = "\n".join(lines)
 
     # Step 4: Remove logger parameters from function signatures
-    content = re.sub(
-        r"logger: Inject\[LoggerProtocol\]\s*=\s*None,?\s*",
-        "",
-        content
-    )
+    content = re.sub(r"logger: Inject\[LoggerProtocol\]\s*=\s*None,?\s*", "", content)
 
     # Step 5: Remove @depends.inject decorators
-    content = re.sub(
-        r"@depends\.inject\s*\n",
-        "",
-        content
-    )
+    content = re.sub(r"@depends\.inject\s*\n", "", content)
 
     # Write back if changed
     if content != original:
         file_path.write_text(content)
         return True
     return False
+
 
 def main():
     """Main migration entrypoint."""
@@ -4223,19 +4402,19 @@ def main():
             print(f"✓ Migrated: {file_path}")
 
     # Summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"Migration Complete:")
     print(f"  Total files scanned: {total_files}")
     print(f"  Files migrated: {len(changed_files)}")
     print(f"  Files unchanged: {total_files - len(changed_files)}")
-    print(f"{'='*60}\n")
+    print(f"{'=' * 60}\n")
 
     # Validation
     print("Running validation...")
     import subprocess
+
     result = subprocess.run(
-        ["grep", "-r", "from acb.adapters.logger", "crackerjack/"],
-        capture_output=True
+        ["grep", "-r", "from acb.adapters.logger", "crackerjack/"], capture_output=True
     )
 
     if result.returncode == 0:
@@ -4244,11 +4423,13 @@ def main():
     else:
         print("✅ All ACB logger imports removed successfully!")
 
+
 if __name__ == "__main__":
     main()
 ```
 
 **Execute:**
+
 ```bash
 python migrate_logging.py
 
@@ -4263,13 +4444,14 @@ python migrate_logging.py
 # ✅ All ACB logger imports removed successfully!
 ```
 
----
+______________________________________________________________________
 
 #### Script 2: Adapter Migration (`migrate_adapters.py`)
 
 **Purpose:** Generate Oneiric adapters from ACB adapter templates with UUID7 IDs
 
 **Full Script (85 lines):**
+
 ```python
 """Automated adapter migration script.
 
@@ -4282,6 +4464,7 @@ Generates Oneiric adapters from ACB templates with:
 - Async execute methods
 - Standard logging
 """
+
 from pathlib import Path
 from uuid_utils import uuid7
 import re
@@ -4324,12 +4507,12 @@ ADAPTERS = [
     ("CoverageAdapter", "coverage", "code coverage"),
     ("PreCommitAdapter", "pre-commit", "git hooks"),
     ("GitAdapter", "git", "version control"),
-
     # Simple adapters (18 - examples)
     ("FormatAdapter", "format", "code formatting"),
     ("TypeCheckAdapter", "typecheck", "type validation"),
     # ... (16 more)
 ]
+
 
 def generate_adapter(class_name: str, name: str, description: str) -> str:
     """Generate Oneiric adapter code from template."""
@@ -4337,15 +4520,16 @@ def generate_adapter(class_name: str, name: str, description: str) -> str:
     adapter_uuid = str(uuid7())
 
     # Placeholder execute body
-    execute_body = f'# TODO: Implement {name} logic'
+    execute_body = f"# TODO: Implement {name} logic"
 
     return ADAPTER_TEMPLATE.format(
         name=name,
         class_name=class_name,
         description=description,
         uuid=adapter_uuid,
-        execute_body=execute_body
+        execute_body=execute_body,
     )
+
 
 def main():
     """Generate all Oneiric adapters."""
@@ -4377,11 +4561,13 @@ def main():
 
     print(f"\n✅ Generated {len(ADAPTERS)} adapters in {output_dir}")
 
+
 if __name__ == "__main__":
     main()
 ```
 
 **Execute:**
+
 ```bash
 python migrate_adapters.py
 
@@ -4392,7 +4578,7 @@ python migrate_adapters.py
 # ✅ Generated 30 adapters in crackerjack/oneiric_adapters
 ```
 
----
+______________________________________________________________________
 
 # 📋 Final Summary
 
@@ -4422,25 +4608,28 @@ This document represents the complete, consolidated execution plan for migrating
 ### Phase Breakdown
 
 **6 Total Phases:**
+
 1. **Spec Refinements** (Week 1) - 8 refinements to mcp-common CLI Factory
-2. **Phase 0: Pre-Migration Audit** (Day 1 AM) - Dependency inventory and impact analysis
-3. **Phase 1: Remove WebSocket/Dashboard** (Day 1 PM) - 55 files, monitoring UI elimination
-4. **Phase 2: Remove ACB Dependency** (Day 2) - **CRITICAL PATH** - 310 imports, DI removal
-5. **Phase 3: Integrate Oneiric CLI Factory** (Day 3 AM) - New server architecture
-6. **Phase 4: Port QA Adapters** (Day 3 PM + Day 4) - 30 adapters to Oneiric pattern
-7. **Phase 5: Tests & Documentation** (Day 5) - Validation and migration guide
+1. **Phase 0: Pre-Migration Audit** (Day 1 AM) - Dependency inventory and impact analysis
+1. **Phase 1: Remove WebSocket/Dashboard** (Day 1 PM) - 55 files, monitoring UI elimination
+1. **Phase 2: Remove ACB Dependency** (Day 2) - **CRITICAL PATH** - 310 imports, DI removal
+1. **Phase 3: Integrate Oneiric CLI Factory** (Day 3 AM) - New server architecture
+1. **Phase 4: Port QA Adapters** (Day 3 PM + Day 4) - 30 adapters to Oneiric pattern
+1. **Phase 5: Tests & Documentation** (Day 5) - Validation and migration guide
 
 ## Critical Path Analysis
 
 ### Blocking Phase: Phase 2 (ACB Removal)
 
 **Why Critical:**
+
 - All subsequent phases depend on ACB removal completion
 - Cannot integrate Oneiric CLI until ACB dependency is gone
 - Cannot port adapters until DI infrastructure is replaced
 - Highest complexity and risk level in entire migration
 
 **Dependencies:**
+
 ```
 Phase 2 (ACB Removal) BLOCKS:
     ├─> Phase 3 (Oneiric CLI Integration)
@@ -4450,11 +4639,13 @@ Phase 2 (ACB Removal) BLOCKS:
 ```
 
 **Failure Impact:**
+
 - If Phase 2 fails or requires rollback, all work in Phases 3-5 must be reverted
 - Timeline extension: +2-3 days for alternative ACB removal strategy
 - Risk of permanent architecture conflict if not fully completed
 
 **Mitigation:**
+
 - Feature flag protection (`USE_ONEIRIC_CLI=False` initially)
 - Automated migration scripts reduce manual error risk
 - Git checkpoint after Phase 2 enables clean rollback
@@ -4465,17 +4656,20 @@ Phase 2 (ACB Removal) BLOCKS:
 ### Code Artifacts
 
 **Files to Remove:** 55
+
 - All WebSocket server infrastructure (`crackerjack/mcp/websocket/*`)
 - All monitoring UI and dashboards (`crackerjack/ui/templates/*`)
 - All ACB adapters and workflows (`crackerjack/adapters/*`, `crackerjack/workflows/*`)
 - All ACB event bus infrastructure (`crackerjack/events/*`)
 
 **Files to Create:** 37
+
 - Oneiric health snapshot integration (7 files)
 - New CLI factory-based server (3 files)
 - Oneiric adapters (30 adapters in `crackerjack/oneiric_adapters/`)
 
 **Net Code Change:**
+
 - **-18 files** (55 removed, 37 created)
 - **-8,200 lines** (11,400 removed, 3,200 created)
 - **-1 dependency** (acb package removed from pyproject.toml)
@@ -4483,33 +4677,39 @@ Phase 2 (ACB Removal) BLOCKS:
 ### Functional Deliverables
 
 1. ✅ **Crackerjack runs without ACB dependency**
+
    - Zero ACB imports remaining (validated via grep)
    - Standard logging replaces ACB logger injection
    - Direct instantiation replaces @depends.inject
 
-2. ✅ **MCP lifecycle uses Oneiric/mcp-common standard flags**
+1. ✅ **MCP lifecycle uses Oneiric/mcp-common standard flags**
+
    - `crackerjack --start` (replaces `--start-mcp-server`)
    - `crackerjack --stop` (new, graceful shutdown)
    - `crackerjack --restart` (new, safe restart)
    - `crackerjack --status` (snapshot-based health)
    - `crackerjack --health --probe` (systemd integration)
 
-3. ✅ **Minimal MCP status tool returns Oneiric snapshot data**
+1. ✅ **Minimal MCP status tool returns Oneiric snapshot data**
+
    - Reads `.oneiric_cache/runtime_health.json`
    - Reads `.oneiric_cache/runtime_telemetry.json`
    - No custom monitoring logic (generic, reusable)
 
-4. ✅ **No WebSocket server, dashboards, or monitoring endpoints**
+1. ✅ **No WebSocket server, dashboards, or monitoring endpoints**
+
    - Real-time progress removed (breaking change)
    - Dashboard UI removed (breaking change)
    - External observability solutions recommended
 
-5. ✅ **Observability via Oneiric telemetry + external dashboards**
+1. ✅ **Observability via Oneiric telemetry + external dashboards**
+
    - Health snapshots available for scraping
    - Telemetry data exported to `.oneiric_cache/`
    - Integration-ready for Prometheus, Grafana, etc.
 
-6. ✅ **QA tooling and adapters live in Oneiric**
+1. ✅ **QA tooling and adapters live in Oneiric**
+
    - 30 adapters ported from ACB to Oneiric pattern
    - UUID7-based static adapter IDs
    - AdapterStatus enum for lifecycle states
@@ -4517,16 +4717,19 @@ Phase 2 (ACB Removal) BLOCKS:
 ### Documentation Deliverables
 
 1. ✅ **Updated README.md**
+
    - WebSocket/dashboard references removed
    - New CLI command examples added
    - Oneiric integration documented
 
-2. ✅ **Updated CLI Documentation**
+1. ✅ **Updated CLI Documentation**
+
    - Command deprecation timeline (3-month grace period)
    - New Oneiric-standard flags explained
    - Migration path for existing users
 
-3. ✅ **MIGRATION_GUIDE.md**
+1. ✅ **MIGRATION_GUIDE.md**
+
    - User-facing migration instructions
    - Breaking changes reference
    - CLI command mapping table
@@ -4630,10 +4833,10 @@ curl http://localhost:8675/health        # Legacy endpoint
 ### Overall Migration Success (5 Critical Factors)
 
 1. **Zero ACB Surface Remaining**: No imports, no decorators, no adapters
-2. **Full Oneiric CLI Integration**: All standard flags implemented and tested
-3. **Adapter Parity**: All 30 adapters ported with feature parity
-4. **Breaking Changes Documented**: MIGRATION_GUIDE.md complete and accurate
-5. **Rollback Verified**: At least one successful rollback test per phase
+1. **Full Oneiric CLI Integration**: All standard flags implemented and tested
+1. **Adapter Parity**: All 30 adapters ported with feature parity
+1. **Breaking Changes Documented**: MIGRATION_GUIDE.md complete and accurate
+1. **Rollback Verified**: At least one successful rollback test per phase
 
 ## Risk Monitoring Dashboard
 
@@ -4655,6 +4858,7 @@ Track risk levels daily to catch escalation early:
 ### Early Warning Signals
 
 **Immediate escalation triggers:**
+
 - More than 5 test failures in any single phase
 - ACB removal stalls >4 hours (Phase 2 schedule risk)
 - Adapter port exceeds 12 hours (timeline overrun)
@@ -4683,31 +4887,31 @@ Track risk levels daily to catch escalation early:
 **Do NOT deploy to production until ALL criteria met:**
 
 1. ✅ All 18 success metrics passing
-2. ✅ No ACB dependencies in `pyproject.toml` or imports
-3. ✅ At least 1 successful rollback demonstrated
-4. ✅ Feature flag (`use_oneiric_cli`) tested in both states
-5. ✅ MIGRATION_GUIDE.md published and accessible
+1. ✅ No ACB dependencies in `pyproject.toml` or imports
+1. ✅ At least 1 successful rollback demonstrated
+1. ✅ Feature flag (`use_oneiric_cli`) tested in both states
+1. ✅ MIGRATION_GUIDE.md published and accessible
 
 ## Execution Readiness
 
 ### What Makes This Document Execution-Ready
 
 1. **Self-Contained**: All code examples inline, no external references needed
-2. **Granular Tracking**: 200+ checkboxes for precise progress monitoring
-3. **Safe Execution**: Validation + rollback at every phase boundary
-4. **Correct Sequencing**: Dependency graph prevents out-of-order execution
-5. **Complete Automation**: 2 migration scripts reduce manual error risk
-6. **Educational**: Insights throughout explain "why" behind decisions
+1. **Granular Tracking**: 200+ checkboxes for precise progress monitoring
+1. **Safe Execution**: Validation + rollback at every phase boundary
+1. **Correct Sequencing**: Dependency graph prevents out-of-order execution
+1. **Complete Automation**: 2 migration scripts reduce manual error risk
+1. **Educational**: Insights throughout explain "why" behind decisions
 
 ### How to Use This Document
 
 1. **Read Executive Summary** (lines 1-50) for quick overview
-2. **Study Dependency Graph** (lines 52-80) to understand sequencing
-3. **Execute Spec Refinements** (Week 1, lines 82-800) if not already done
-4. **Follow Phases 0-5 Sequentially** (Week 2, lines 802-3,500)
-5. **Check Daily Checkpoints** (lines 3,502-3,900) for progress validation
-6. **Reference Risk Matrix** (lines 3,902-4,100) for mitigation strategies
-7. **Use Appendices** (lines 4,102-4,397) as quick reference during execution
+1. **Study Dependency Graph** (lines 52-80) to understand sequencing
+1. **Execute Spec Refinements** (Week 1, lines 82-800) if not already done
+1. **Follow Phases 0-5 Sequentially** (Week 2, lines 802-3,500)
+1. **Check Daily Checkpoints** (lines 3,502-3,900) for progress validation
+1. **Reference Risk Matrix** (lines 3,902-4,100) for mitigation strategies
+1. **Use Appendices** (lines 4,102-4,397) as quick reference during execution
 
 ### Start Execution Command
 
@@ -4721,7 +4925,7 @@ git add MIGRATION_LOG.md && git commit -m "Migration started"
 # Proceed to Phase 0: Pre-Migration Audit (line 802)
 ```
 
----
+______________________________________________________________________
 
 **END OF ONEIRIC MIGRATION EXECUTION PLAN**
 
@@ -4730,4 +4934,3 @@ git add MIGRATION_LOG.md && git commit -m "Migration started"
 *Total Lines: ~4,650*
 *Total Checkboxes: ~210*
 *Estimated Execution Time: 32.5 hours*
-

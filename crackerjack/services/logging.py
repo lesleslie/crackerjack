@@ -105,9 +105,9 @@ def setup_structured_logging(
     global _configured
 
     root_logger = logging.getLogger()
-    for handler in root_logger.handlers[:]:
-        handler.close()
-        root_logger.removeHandler(handler)
+    for h in root_logger.handlers.copy():
+        h.close()
+        root_logger.removeHandler(h)
     root_logger.setLevel(level.upper())
 
     if json_output and log_file is not None:
