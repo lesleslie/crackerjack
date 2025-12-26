@@ -17,6 +17,37 @@ from crackerjack.models.protocols import (
 )
 
 
+# Null Object Pattern implementations for optional dependencies
+class _NullGitService:
+    """Null object for GitServiceProtocol when git is not available."""
+
+    def is_git_repo(self) -> bool:
+        return False
+
+
+class _NullVersionAnalyzer:
+    """Null object for VersionAnalyzerProtocol when version analysis is unavailable."""
+
+    async def recommend_version_bump(self) -> t.Any:
+        return None
+
+
+class _NullChangelogGenerator:
+    """Null object for ChangelogGeneratorProtocol when changelog generation is unavailable."""
+
+    def generate_changelog_from_commits(self, **_: t.Any) -> bool:
+        return False
+
+
+class _RegexPatterns:
+    """Fallback regex patterns implementation."""
+
+    def update_pyproject_version(self, content: str, version: str) -> str:
+        from crackerjack.services.regex_patterns import update_pyproject_version
+
+        return update_pyproject_version(content, version)
+
+
 class PublishManagerImpl:
     def __init__(
         self,
@@ -30,93 +61,108 @@ class PublishManagerImpl:
         pkg_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
-        if console is None:
-            try:
-                console = depends.get_sync(Console)
-            except Exception:
-                console = Console()
-
-        if pkg_path is None:
-            try:
-                pkg_path = depends.get_sync(Path)
-            except Exception:
-                pkg_path = Path.cwd()
-
-        if git_service is None:
-            try:
-                git_service = depends.get_sync(GitServiceProtocol)
-            except Exception:
-
-                class _NullGitService:
-                    def is_git_repo(self) -> bool:
-                        return False
-
-                git_service = _NullGitService()
-
-        if version_analyzer is None:
-            try:
-                version_analyzer = depends.get_sync(VersionAnalyzerProtocol)
-            except Exception:
-
-                class _NullVersionAnalyzer:
-                    async def recommend_version_bump(self) -> t.Any:
-                        return None
-
-                version_analyzer = _NullVersionAnalyzer()
-
-        if changelog_generator is None:
-            try:
-                changelog_generator = depends.get_sync(ChangelogGeneratorProtocol)
-            except Exception:
-
-                class _NullChangelogGenerator:
-                    def generate_changelog_from_commits(self, **_: t.Any) -> bool:
-                        return False
-
-                changelog_generator = _NullChangelogGenerator()
-
-        if filesystem is None:
-            try:
-                filesystem = depends.get_sync(FileSystemInterface)
-            except Exception:
-                from crackerjack.services.filesystem import FileSystemService
-
-                filesystem = FileSystemService()
-
-        if security is None:
-            try:
-                security = depends.get_sync(SecurityServiceProtocol)
-            except Exception:
-                from crackerjack.services.security import SecurityService
-
-                security = SecurityService()
-
-        if regex_patterns is None:
-            try:
-                regex_patterns = depends.get_sync(RegexPatternsProtocol)
-            except Exception:
-                from crackerjack.services.regex_patterns import update_pyproject_version
-
-                class _RegexPatterns:
-                    def update_pyproject_version(
-                        self, content: str, version: str
-                    ) -> str:
-                        return update_pyproject_version(content, version)
-
-                regex_patterns = _RegexPatterns()
-
         # Foundation dependencies
-        self.console = console
-        self.pkg_path = pkg_path
+        self.console = self._resolve_console(console)
+        self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
 
         # Services injected via ACB DI
-        self._git_service = git_service
-        self._version_analyzer = version_analyzer
-        self._changelog_generator = changelog_generator
-        self._regex_patterns = regex_patterns
-        self.filesystem = filesystem
-        self.security = security
+        self._git_service = self._resolve_git_service(git_service)
+        self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
+        self._changelog_generator = self._resolve_changelog_generator(
+            changelog_generator
+        )
+        self._regex_patterns = self._resolve_regex_patterns(regex_patterns)
+        self.filesystem = self._resolve_filesystem(filesystem)
+        self.security = self._resolve_security(security)
+
+    def _resolve_console(self, console: Console | None) -> Console:
+        """Resolve console dependency with fallback."""
+        if console is not None:
+            return console
+        try:
+            return depends.get_sync(Console)
+        except Exception:
+            return Console()
+
+    def _resolve_pkg_path(self, pkg_path: Path | None) -> Path:
+        """Resolve package path dependency with fallback."""
+        if pkg_path is not None:
+            return pkg_path
+        try:
+            return depends.get_sync(Path)
+        except Exception:
+            return Path.cwd()
+
+    def _resolve_git_service(
+        self, git_service: GitServiceProtocol | None
+    ) -> GitServiceProtocol:
+        """Resolve git service dependency with null object fallback."""
+        if git_service is not None:
+            return git_service
+        try:
+            return depends.get_sync(GitServiceProtocol)
+        except Exception:
+            return _NullGitService()  # type: ignore[return-value]
+
+    def _resolve_version_analyzer(
+        self, version_analyzer: VersionAnalyzerProtocol | None
+    ) -> VersionAnalyzerProtocol:
+        """Resolve version analyzer dependency with null object fallback."""
+        if version_analyzer is not None:
+            return version_analyzer
+        try:
+            return depends.get_sync(VersionAnalyzerProtocol)
+        except Exception:
+            return _NullVersionAnalyzer()  # type: ignore[return-value]
+
+    def _resolve_changelog_generator(
+        self, changelog_generator: ChangelogGeneratorProtocol | None
+    ) -> ChangelogGeneratorProtocol:
+        """Resolve changelog generator dependency with null object fallback."""
+        if changelog_generator is not None:
+            return changelog_generator
+        try:
+            return depends.get_sync(ChangelogGeneratorProtocol)
+        except Exception:
+            return _NullChangelogGenerator()  # type: ignore[return-value]
+
+    def _resolve_regex_patterns(
+        self, regex_patterns: RegexPatternsProtocol | None
+    ) -> RegexPatternsProtocol:
+        """Resolve regex patterns dependency with fallback implementation."""
+        if regex_patterns is not None:
+            return regex_patterns
+        try:
+            return depends.get_sync(RegexPatternsProtocol)
+        except Exception:
+            return _RegexPatterns()  # type: ignore[return-value]
+
+    def _resolve_filesystem(
+        self, filesystem: FileSystemInterface | None
+    ) -> FileSystemInterface:
+        """Resolve filesystem dependency with concrete fallback."""
+        if filesystem is not None:
+            return filesystem
+        try:
+            return depends.get_sync(FileSystemInterface)
+        except Exception:
+            from crackerjack.services.filesystem import FileSystemService
+
+            return FileSystemService()
+
+    def _resolve_security(
+        self, security: SecurityServiceProtocol | None
+    ) -> SecurityServiceProtocol:
+        """Resolve security dependency with concrete fallback."""
+        if security is not None:
+            return security
+        try:
+            return depends.get_sync(SecurityServiceProtocol)
+        except Exception:
+            from crackerjack.services.security import SecurityService
+
+            return SecurityService()
 
     def _run_command(
         self,

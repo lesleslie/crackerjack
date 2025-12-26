@@ -1194,6 +1194,10 @@ class VersionAnalyzerProtocol(t.Protocol):
 
     def get_version_bump_type(self, changes: dict[str, t.Any]) -> str: ...
 
+    async def recommend_version_bump(
+        self, since_version: str | None = None
+    ) -> t.Any: ...  # Returns VersionBumpRecommendation
+
 
 @t.runtime_checkable
 class HealthMetricsServiceProtocol(ServiceProtocol, t.Protocol):
@@ -1222,6 +1226,10 @@ class ChangelogGeneratorProtocol(t.Protocol):
 
     def update_changelog_with_version(
         self, changelog_file: str | Path, version: str
+    ) -> bool: ...
+
+    def generate_changelog_from_commits(
+        self, changelog_path: Path, version: str, since_version: str | None = None
     ) -> bool: ...
 
 
