@@ -202,28 +202,21 @@ async def _setup_orchestrator(
 async def _create_advanced_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any], context: t.Any
 ) -> t.Any:
-    from pathlib import Path
-
-    from crackerjack.core.async_workflow_orchestrator import AsyncWorkflowOrchestrator
-
-    # AsyncWorkflowOrchestrator now uses ACB DI internally
-    orchestrator = AsyncWorkflowOrchestrator(
-        pkg_path=Path(working_dir),
-        verbose=kwargs.get("verbose", False),
-        debug=kwargs.get("debug", False),
+    # TODO(Phase 3): Replace with Oneiric workflow integration
+    raise NotImplementedError(
+        "AsyncWorkflowOrchestrator removed in Phase 2 (ACB removal). "
+        "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
-
-    return orchestrator
 
 
 def _create_standard_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any]
 ) -> t.Any:
-    from pathlib import Path
-
-    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
-
-    return WorkflowOrchestrator(pkg_path=Path(working_dir))
+    # TODO(Phase 3): Replace with Oneiric workflow integration
+    raise NotImplementedError(
+        "WorkflowOrchestrator removed in Phase 2 (ACB removal). "
+        "Will be reimplemented in Phase 3 (Oneiric integration)."
+    )
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:

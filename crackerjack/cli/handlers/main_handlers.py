@@ -92,169 +92,25 @@ def handle_standard_mode(
     if orchestrated:
         handle_orchestrated_mode(options, job_id)
 
-    # Default path: Legacy orchestrator (Phase 4.0 status)
+    # TODO(Phase 3): Replace with Oneiric workflow execution
     if not orchestrated:
-        from crackerjack.core.async_workflow_orchestrator import (
-            AsyncWorkflowOrchestrator,
+        raise NotImplementedError(
+            "Legacy workflow orchestration removed in Phase 2 (ACB removal). "
+            "Will be reimplemented in Phase 3 (Oneiric integration)."
         )
-        from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
-
-        pkg_path = Path.cwd()
-
-        if async_mode:
-            async_orchestrator = AsyncWorkflowOrchestrator(
-                console=console,
-                pkg_path=pkg_path,
-                dry_run=getattr(options, "dry_run", False),
-                web_job_id=job_id,
-                verbose=options.verbose,
-                debug=getattr(options, "debug", False),
-                changed_only=getattr(options, "changed_only", False),
-            )
-            success = asyncio.run(
-                async_orchestrator.run_complete_workflow_async(options)
-            )
-        else:
-            sync_orchestrator = WorkflowOrchestrator(
-                pkg_path=pkg_path,
-                dry_run=getattr(options, "dry_run", False),
-                web_job_id=job_id,
-                verbose=options.verbose,
-                debug=getattr(options, "debug", False),
-                changed_only=getattr(options, "changed_only", False),
-            )
-            success = sync_orchestrator.run_complete_workflow_sync(options)
-
-        if not success:
-            raise SystemExit(1)
 def handle_acb_workflow_mode(
     options: Options,
     job_id: str | None = None,
 ) -> None:
     """Execute workflow using ACB workflow engine (Phase 3 Production).
 
-    This handler routes execution to the CrackerjackWorkflowEngine using
-    the WorkflowContainerBuilder to set up the full DI container with all
-    28 services across 7 levels. Action handlers use WorkflowPipeline from
-    the container for production-quality workflow execution.
-
-    Args:
-        options: CLI options with use_acb_workflows=True
-        job_id: Optional WebSocket job ID for progress tracking
-        console: Rich console for output
+    TODO(Phase 3): This function is disabled pending Oneiric integration.
+    ACB workflow infrastructure was removed in Phase 2.
     """
-
-    from acb.depends import depends
-
-    from crackerjack.events.workflow_bus import WorkflowEventBus
-    from crackerjack.workflows import (
-        CrackerjackWorkflowEngine,
-        EventBridgeAdapter,
-        WorkflowContainerBuilder,
-        register_actions,
-        select_workflow_for_options,
+    raise NotImplementedError(
+        "ACB workflow engine removed in Phase 2 (ACB removal). "
+        "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
-
-    console.print("[bold cyan]🚀 Crackerjack Workflow Engine (ACB-Powered)[/bold cyan]")
-
-    try:
-        # Phase 4: ACB workflows are now the default!
-        console.print(
-            "[dim]Building DI container (28 services across 7 levels)...[/dim]"
-        )
-        builder = WorkflowContainerBuilder(options, console=console)
-        builder.build()
-
-        # Validate all services are available
-        health = builder.health_check()
-        if not health["all_available"]:
-            missing = ", ".join(health["missing"])
-            console.print(f"[yellow]⚠️  Missing services: {missing}[/yellow]")
-            console.print(
-                "[yellow]Container health check failed, continuing with available services[/yellow]"
-            )
-
-        console.print("[dim]✓ DI container ready with WorkflowPipeline[/dim]")
-
-        # Register ACB Logger explicitly (needed for BasicWorkflowEngine)
-        
-        try:
-            # logger = logger  # Migrated from ACB
-        except Exception:
-            # ACB Logger not available, this shouldn't happen but handle gracefully
-            import logging
-
-            logger = logging.getLogger("crackerjack")
-            depends.set(Logger, logger)
-
-        # Register WorkflowEventBus with DI container
-        event_bus = WorkflowEventBus()
-        depends.set(WorkflowEventBus, event_bus)
-
-        # Register EventBridgeAdapter BEFORE creating engine (engine needs it for DI!)
-        event_bridge = EventBridgeAdapter()
-        depends.set(EventBridgeAdapter, event_bridge)
-
-        # Initialize engine (EventBridgeAdapter will be injected)
-        engine = CrackerjackWorkflowEngine()
-
-        # Register action handlers with engine
-        register_actions(engine)
-
-        # Select workflow based on options (fast/comp/test/standard)
-        workflow = select_workflow_for_options(options)
-
-        console.print(f"[dim]Selected workflow: {workflow.name}[/dim]")
-
-        # Show orchestration status
-        from crackerjack.config import CrackerjackSettings
-
-        settings = depends.get_sync(CrackerjackSettings)
-        if settings.enable_orchestration:
-            mode_info = f" ({settings.orchestration_mode} mode)"
-            console.print(
-                f"[dim]Orchestration: [cyan]⚡ enabled[/cyan]{mode_info} - async hooks with caching[/dim]"
-            )
-
-        # Phase 4.1: Retrieve WorkflowPipeline from DI container (synchronous context)
-        # and pass it explicitly in workflow context to avoid async DI scope issues
-        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
-
-        pipeline = depends.get_sync(WorkflowPipeline)
-
-        # Phase 4.2: All dependencies now use Inject[] instead of deprecated depends()
-        # This ensures they are properly resolved when retrieved from DI container
-
-        # Execute workflow with options and pipeline in context
-        result = asyncio.run(
-            engine.execute(
-                workflow,
-                context={
-                    "options": options,
-                    "pipeline": pipeline,  # Pass pipeline with all dependencies properly resolved
-                },
-            )
-        )
-
-        # Check result and exit with appropriate code
-        from acb.workflows import WorkflowState
-
-        if result.state != WorkflowState.COMPLETED:
-            console.print(f"[red]Workflow failed: {result.error}[/red]")
-            raise SystemExit(1)
-
-        console.print("[bold green]✓ Workflow completed successfully[/bold green]")
-
-    except Exception as e:
-        import traceback
-
-        console.print(f"[red]ACB workflow execution failed: {e}[/red]")
-        console.print(f"[dim]{traceback.format_exc()}[/dim]")
-        console.print("[yellow]Falling back to legacy orchestrator[/yellow]")
-        # Enable legacy orchestrator flag and retry
-        options.use_legacy_orchestrator = True
-        options.use_acb_workflows = False
-        handle_standard_mode(options, False, job_id, False, console)
 def handle_orchestrated_mode(
     options: Options, job_id: str | None = None) -> None:
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")

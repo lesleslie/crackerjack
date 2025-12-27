@@ -12,7 +12,6 @@ from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
 
-from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.errors import CrackerjackError, ErrorCode, handle_error
 from crackerjack.models.protocols import OptionsProtocol
 
@@ -76,8 +75,9 @@ class InteractiveTask:
 
 
 class InteractiveWorkflowManager:
-    def __init__(self, console: Console, orchestrator: WorkflowOrchestrator) -> None:
+    def __init__(self, console: Console, orchestrator: object | None = None) -> None:
         self.console = console
+        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.orchestrator = orchestrator
         self.tasks: dict[str, InteractiveTask] = {}
         self.current_task: InteractiveTask | None = None
@@ -193,6 +193,12 @@ class InteractiveWorkflowManager:
         self.current_task = task
         task.start()
         try:
+            # TODO(Phase 3): Replace with Oneiric workflow execution
+            if self.orchestrator is None:
+                raise NotImplementedError(
+                    "Workflow orchestration removed in Phase 2 (ACB removal). "
+                    "Will be reimplemented in Phase 3 (Oneiric integration)."
+                )
             phase_method = getattr(self.orchestrator, task.phase_method)
             success_result = phase_method(options)
             success_bool = bool(success_result)
@@ -401,7 +407,8 @@ class InteractiveCLI:
     def __init__(self, pkg_version: str, console: Console | None = None) -> None:
         self.pkg_version = pkg_version
         self.console = console or Console()
-        self.orchestrator = WorkflowOrchestrator()
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        self.orchestrator = None
         self.workflow_manager = InteractiveWorkflowManager(
             self.console,
             self.orchestrator,

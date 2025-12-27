@@ -112,30 +112,27 @@ def get_console_width() -> int:
 settings_instance = load_settings(CrackerjackSettings)
 depends.set(CrackerjackSettings, settings_instance)
 
-# Register ACB Logger (auto-registers itself, but set explicitly for clarity)
-# But first, ensure we don't have an empty tuple registered for Logger
-from crackerjack.utils.dependency_guard import (
-    ensure_logger_dependency,
-    validate_dependency_registration,
-)
-
-ensure_logger_dependency()
-
-# Explicitly set logger instances if not already set properly
-try:
-    # current_logger = logger  # Migrated from ACB
-    if isinstance(current_logger, tuple) and len(current_logger) == 0:
-        logger_instance = Logger()
-        depends.set(Logger, logger_instance)
-        depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
-    else:
-        # Logger is already properly registered, just ensure LoggerProtocol is too
-        depends.set(LoggerProtocol, current_logger)
-except Exception:
-    # Logger not registered at all, so register it
-    logger_instance = Logger()
-    depends.set(Logger, logger_instance)
-    depends.set(LoggerProtocol, logger_instance)  # Also register as LoggerProtocol
+# TODO(Phase 3): ACB Logger registration removed in Phase 2
+# Will be replaced with Oneiric dependency management in Phase 3
+# from crackerjack.utils.dependency_guard import (
+#     ensure_logger_dependency,
+#     validate_dependency_registration,
+# )
+#
+# ensure_logger_dependency()
+#
+# # Explicitly set logger instances if not already set properly
+# try:
+#     if isinstance(current_logger, tuple) and len(current_logger) == 0:
+#         logger_instance = Logger()
+#         depends.set(Logger, logger_instance)
+#         depends.set(LoggerProtocol, logger_instance)
+#     else:
+#         depends.set(LoggerProtocol, current_logger)
+# except Exception:
+#     logger_instance = Logger()
+#     depends.set(Logger, logger_instance)
+#     depends.set(LoggerProtocol, logger_instance)
 
 
 def register_services() -> None:

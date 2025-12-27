@@ -6,7 +6,8 @@ from pathlib import Path
 from rich.console import Console
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
-from .core.workflow_orchestrator import WorkflowOrchestrator
+# TODO(Phase 3): Replace with Oneiric workflow integration
+# from .core.workflow_orchestrator import WorkflowOrchestrator
 from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI, InteractiveWorkflowOptions
 from .models.config import WorkflowOptions
@@ -52,12 +53,9 @@ class CrackerjackAPI:
         self.console = console or Console()
         self.verbose = verbose
 
-        self.orchestrator = WorkflowOrchestrator(
-            pkg_path=self.project_path,
-            verbose=self.verbose,
-        )
-
-        self.container = t.cast(t.Any, getattr(self.orchestrator, "container", None))
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        self.orchestrator: object | None = None
+        self.container: t.Any = None
 
         self._code_cleaner: CodeCleaner | None = None
         self._interactive_cli: InteractiveCLI | None = None
@@ -85,43 +83,11 @@ class CrackerjackAPI:
         fast_only: bool = False,
         autofix: bool = True,
     ) -> QualityCheckResult:
-        import asyncio
-        import time
-
-        start_time = time.time()
-
-        try:
-            self.logger.info("Starting quality checks")
-
-            options = self._create_options(autofix=autofix, skip_hooks=False)
-
-            success = asyncio.run(
-                self.orchestrator.pipeline.run_complete_workflow(options),
-            )
-
-            duration = time.time() - start_time
-
-            return QualityCheckResult(
-                success=success,
-                fast_hooks_passed=success,
-                comprehensive_hooks_passed=success if not fast_only else True,
-                errors=[] if success else ["Quality checks failed"],
-                warnings=[],
-                duration=duration,
-            )
-
-        except Exception as e:
-            duration = time.time() - start_time
-            self.logger.exception(f"Quality checks failed: {e}")
-
-            return QualityCheckResult(
-                success=False,
-                fast_hooks_passed=False,
-                comprehensive_hooks_passed=False,
-                errors=[str(e)],
-                warnings=[],
-                duration=duration,
-            )
+        # TODO(Phase 3): Replace with Oneiric workflow execution
+        raise NotImplementedError(
+            "Workflow orchestration removed in Phase 2 (ACB removal). "
+            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        )
 
     def clean_code(
         self,
@@ -254,82 +220,22 @@ class CrackerjackAPI:
         workers: int | None = None,
         timeout: int | None = None,
     ) -> TestResult:
-        import time
-
-        start_time = time.time()
-
-        try:
-            self.logger.info("Running tests")
-
-            options = self._create_options(
-                test=True,
-                test_workers=workers or 0,
-                test_timeout=timeout or 0,
-            )
-
-            success = asyncio.run(
-                self.orchestrator.pipeline.run_complete_workflow(options),
-            )
-
-            duration = time.time() - start_time
-
-            return TestResult(
-                success=success,
-                passed_count=self._extract_test_passed_count(),
-                failed_count=self._extract_test_failed_count(),
-                coverage_percentage=self._extract_coverage_percentage(),
-                duration=duration,
-                errors=[] if success else ["Test execution failed"],
-            )
-
-        except Exception as e:
-            duration = time.time() - start_time
-            self.logger.exception(f"Test execution failed: {e}")
-
-            return TestResult(
-                success=False,
-                passed_count=0,
-                failed_count=0,
-                coverage_percentage=0.0,
-                duration=duration,
-                errors=[str(e)],
-            )
+        # TODO(Phase 3): Replace with Oneiric workflow execution
+        raise NotImplementedError(
+            "Workflow orchestration removed in Phase 2 (ACB removal). "
+            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        )
 
     def publish_package(
         self,
         version_bump: str | None = None,
         dry_run: bool = False,
     ) -> PublishResult:
-        try:
-            self.logger.info(
-                f"Publishing package (version_bump={version_bump}, dry_run={dry_run})",
-            )
-
-            options = self._create_options(
-                bump=version_bump,
-                publish="pypi" if not dry_run else None,
-            )
-
-            success = asyncio.run(
-                self.orchestrator.pipeline.run_complete_workflow(options),
-            )
-
-            return PublishResult(
-                success=success,
-                version=self._extract_current_version(),
-                published_to=["pypi"] if success and not dry_run else [],
-                errors=[] if success else ["Publishing failed"],
-            )
-
-        except Exception as e:
-            self.logger.exception(f"Package publishing failed: {e}")
-
-            return PublishResult(
-                success=False,
-                version="",
-                published_to=[],
-                errors=[str(e)],
-            )
+        # TODO(Phase 3): Replace with Oneiric workflow execution
+        raise NotImplementedError(
+            "Workflow orchestration removed in Phase 2 (ACB removal). "
+            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        )
 
     def run_interactive_workflow(
         self,
@@ -438,34 +344,16 @@ class CrackerjackAPI:
         return Options(**kwargs)
 
     def _extract_test_passed_count(self) -> int:
-        try:
-            test_manager = self.orchestrator.phases.test_manager
-            if hasattr(test_manager, "get_test_results"):
-                results = t.cast(t.Any, test_manager).get_test_results()
-                return getattr(results, "passed_count", 0)
-            return 0
-        except Exception:
-            return 0
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        return 0
 
     def _extract_test_failed_count(self) -> int:
-        try:
-            test_manager = self.orchestrator.phases.test_manager
-            if hasattr(test_manager, "get_test_results"):
-                results = t.cast(t.Any, test_manager).get_test_results()
-                return getattr(results, "failed_count", 0)
-            return 0
-        except Exception:
-            return 0
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        return 0
 
     def _extract_coverage_percentage(self) -> float:
-        try:
-            test_manager = self.orchestrator.phases.test_manager
-            if hasattr(test_manager, "get_test_results"):
-                results = t.cast(t.Any, test_manager).get_test_results()
-                return getattr(results, "coverage_percentage", 0.0)
-            return 0.0
-        except Exception:
-            return 0.0
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        return 0.0
 
     def _extract_current_version(self) -> str:
         try:

@@ -11,7 +11,8 @@ from crackerjack.services.input_validator import (
 )
 
 if t.TYPE_CHECKING:
-    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+    # TODO(Phase 3): Re-add workflow type hints with Oneiric integration
+    pass
 
 
 async def create_task_with_subagent(
@@ -370,29 +371,8 @@ def register_core_tools(mcp_app: t.Any) -> None:
         if validation_error:
             return validation_error
 
-        try:
-            from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
-
-            parse_result = _parse_stage_args(args, kwargs)
-            if isinstance(parse_result, str):
-                return parse_result
-
-            stage, extra_kwargs = parse_result
-
-            orchestrator = WorkflowOrchestrator(
-                console=context.console,
-                pkg_path=context.config.project_path,
-                dry_run=extra_kwargs.get("dry_run", False),
-            )
-
-            options = _configure_stage_options(stage)
-            success = _execute_stage(orchestrator, stage, options)
-
-            return f'{{"success": {str(success).lower()}, "stage": "{stage}"}}'
-
-        except Exception as e:
-            context.safe_print(f"Error executing stage {args}: {e}")
-            return f'{{"error": "Stage execution failed: {e}", "success": false}}'
+        # TODO(Phase 3): Replace with Oneiric workflow execution
+        return '{"error": "Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'
 
 
 def _get_error_patterns() -> list[tuple[str, str]]:
