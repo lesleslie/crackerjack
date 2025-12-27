@@ -19,6 +19,9 @@ from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext
 
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
+
 
 @dataclass
 class AsyncHookExecutionResult:

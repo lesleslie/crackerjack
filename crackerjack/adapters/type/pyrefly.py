@@ -1,4 +1,4 @@
-"""Pyrefly adapter for ACB QA framework - Python type checking tool.
+"""Pyrefly adapter for Crackerjack QA framework - Python type checking tool.
 
 Pyrefly is a Python type checking tool that provides static type analysis
 for Python code. It offers:
@@ -7,9 +7,9 @@ for Python code. It offers:
 - Generic type validation
 - Protocol compliance checking
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -19,11 +19,8 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
-
-from acb.depends import depends
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -31,16 +28,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a2"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "experimental"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("25e1e5cf-d1f8-485e-85ab-01c8b540734a")
+MODULE_STATUS = AdapterStatus.BETA  # Note: Was "experimental", now standardized
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -377,7 +373,7 @@ class PyreflyAdapter(BaseToolAdapter):
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.TYPE,
-            enabled=False,  # Disabled by default as experimental
+            enabled=False,  # Disabled by default as beta
             file_patterns=["**/*.py"],
             exclude_patterns=[
                 "**/.venv/**",
@@ -395,8 +391,3 @@ class PyreflyAdapter(BaseToolAdapter):
                 "warn_unused_ignores": True,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(PyreflyAdapter)

@@ -1,4 +1,4 @@
-"""Pyscn adapter for ACB QA framework - Python security static analysis.
+"""Pyscn adapter for Crackerjack QA framework - Python security static analysis.
 
 Pyscn is a Python static code analyzer for security that detects:
 - Security vulnerabilities in Python code
@@ -7,9 +7,9 @@ Pyscn is a Python static code analyzer for security that detects:
 - Insecure cryptography usage
 - Authentication and authorization issues
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -19,11 +19,9 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -32,16 +30,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a3"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "experimental"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("658dfd25-e475-4e28-9945-23ff31c30b0a")
+MODULE_STATUS = AdapterStatus.STABLE  # Note: Was "experimental", now standardized
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -398,8 +395,3 @@ class PyscnAdapter(BaseToolAdapter):
                 "recursive": True,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(PyscnAdapter)

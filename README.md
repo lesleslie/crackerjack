@@ -299,10 +299,12 @@ python -m crackerjack --dry-run --run-tests --verbose
 python -m crackerjack --ai-fix --max-iterations 15
 
 # MCP server with WebSocket support (localhost:8675)
-python -m crackerjack --start-mcp-server
+python -m crackerjack start
 
 # Progress monitoring via WebSocket
 python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
+
+# Note: stop/restart/status/health commands available but with Phase 4 TODOs
 ```
 
 #### MCP Integration
@@ -949,7 +951,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 
    ```bash
    # Starts WebSocket server on localhost:8675 with MCP protocol support
-   python -m crackerjack --start-mcp-server
+   python -m crackerjack start
    ```
 
 1. **Configure your MCP client (e.g., Claude Desktop):**
@@ -965,7 +967,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
          "command": "uvx",
          "args": [
            "crackerjack",
-           "--start-mcp-server"
+           "start"
          ],
          "env": {
            "UV_KEYRING_PROVIDER": "subprocess",
@@ -987,7 +989,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
            "--from",
            "/path/to/crackerjack",
            "crackerjack",
-           "--start-mcp-server"
+           "start"
          ],
          "env": {
            "UV_KEYRING_PROVIDER": "subprocess",
@@ -1038,7 +1040,7 @@ keyring set https://upload.pypi.org/legacy/ __token__
         "--from",
         "/path/to/crackerjack",
         "crackerjack",
-        "--start-mcp-server"
+        "start"
       ],
       "env": {
         "UV_KEYRING_PROVIDER": "subprocess",
@@ -1154,8 +1156,7 @@ python -m crackerjack --ai-fix
 | **AI Auto-Fix** | `python -m crackerjack --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
 | **Full Release** | `python -m crackerjack --all patch` | Version bump, quality checks, publish |
 | **Quick Publish** | `python -m crackerjack --publish patch` | Version bump + publish only |
-| **Start MCP Server** | `python -m crackerjack --start-mcp-server` | Launch MCP agent integration |
-| **Monitoring Dashboard** | `python -m crackerjack --dashboard` | Comprehensive monitoring view |
+| **Start MCP Server** | `python -m crackerjack start` | Launch MCP agent integration |
 | **AI Debugging** | `python -m crackerjack --ai-debug --run-tests` | Verbose AI debugging mode |
 | **Coverage Status** | `python -m crackerjack --coverage-status` | Show coverage ratchet progress |
 | **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
@@ -1189,11 +1190,8 @@ python -m crackerjack --ai-fix
 | `--orchestrated` | - | Advanced orchestrated workflow mode |
 | `--publish` | `-p` | Bump version and publish to PyPI |
 | `--quick` | - | Quick mode (3 iterations, for CI/CD) |
-| `--restart-mcp-server` | - | Restart MCP server |
 | `--run-tests` | `-t` | Execute test suite |
 | `--skip-hooks` | `-s` | Skip pre-commit hooks |
-| `--start-mcp-server` | - | Start MCP server |
-| `--stop-mcp-server` | - | Stop MCP server |
 | `--strip-code` | `-x` | Remove docstrings/comments |
 | `--thorough` | - | Thorough mode (8 iterations) |
 | `--unified-dashboard` | - | Unified real-time dashboard |
@@ -1243,13 +1241,19 @@ python -m crackerjack --enhanced-monitor    # Enhanced monitoring with patterns
 python -m crackerjack --watchdog            # Service watchdog (auto-restart)
 ```
 
-**MCP Server Management:**
+**MCP Server Lifecycle Commands (Phase 3 Modernization):**
 
 ```bash
-python -m crackerjack --start-mcp-server    # Start MCP server
-python -m crackerjack --stop-mcp-server     # Stop MCP server
-python -m crackerjack --restart-mcp-server  # Restart MCP server
-python -m crackerjack --start-websocket-server # Start WebSocket server
+# New Typer-based commands (Phase 3)
+python -m crackerjack start      # Start MCP server (fully functional)
+python -m crackerjack stop       # Stop server (Phase 4 TODO)
+python -m crackerjack restart    # Restart server (Phase 4 TODO)
+python -m crackerjack status     # Server status (Phase 4 TODO)
+python -m crackerjack health     # Health check (Phase 4 TODO)
+python -m crackerjack health --probe  # Liveness probe (Phase 4 TODO)
+
+# Migration note: Old flags --start-mcp-server, --stop-mcp-server,
+# --restart-mcp-server have been removed in favor of these commands.
 ```
 
 **Performance & Caching:**
@@ -1397,7 +1401,7 @@ Crackerjack provides a WebSocket-enabled MCP server for AI agent integration:
 
 ```bash
 # Start WebSocket MCP server on localhost:8675
-python -m crackerjack --start-mcp-server
+python -m crackerjack start
 
 # Monitor job progress via WebSocket
 python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
@@ -1414,7 +1418,7 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
         "--from",
         "/path/to/crackerjack",
         "crackerjack",
-        "--start-mcp-server"
+        "start"
       ]
     }
   }
@@ -1460,7 +1464,7 @@ For enhanced AI-assisted development with conversation memory and context persis
   "mcpServers": {
     "crackerjack": {
       "command": "python",
-      "args": ["-m", "crackerjack", "--start-mcp-server"]
+      "args": ["-m", "crackerjack", "start"]
     },
     "session-mgmt": {
       "command": "python",
@@ -1537,7 +1541,7 @@ python -m crackerjack               # Run quality checks
 
 ```bash
 # Server won't start
-python -m crackerjack --start-mcp-server --verbose
+python -m crackerjack start --verbose
 
 # WebSocket connection issues
 # Check if server is running on localhost:8675
@@ -1568,7 +1572,7 @@ python -m crackerjack --verbose
 ls ~/.cache/crackerjack/logs/debug/
 
 # MCP debugging
-python -m crackerjack --start-mcp-server --verbose
+python -m crackerjack start --verbose
 ```
 
 ### Getting Help

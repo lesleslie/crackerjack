@@ -1,4 +1,4 @@
-"""Codespell adapter for ACB QA framework - spelling error detection.
+"""Codespell adapter for Crackerjack QA framework - spelling error detection.
 
 Codespell checks for common spelling errors in code, comments, and documentation.
 It helps maintain professional quality by catching:
@@ -7,9 +7,9 @@ It helps maintain professional quality by catching:
 - Documentation errors
 - Common spelling mistakes
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -17,11 +17,9 @@ ACB Patterns:
 from __future__ import annotations
 
 import typing as t
-from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -30,14 +28,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("b42b5648-52e1-4a89-866f-3f9821087b0b")
+MODULE_STATUS = AdapterStatus.STABLE
 
 
 class CodespellSettings(ToolAdapterSettings):
@@ -266,8 +265,3 @@ class CodespellAdapter(BaseToolAdapter):
                 "check_filenames": False,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(CodespellAdapter)

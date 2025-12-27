@@ -11,10 +11,8 @@ from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 
 def test_async_hook_executor_initialization():
     """Test that AsyncHookExecutor initializes with empty process tracking."""
-    logger = logging.getLogger(__name__)
     console = Console()
     executor = AsyncHookExecutor(
-        logger=logger,
         console=console,
         pkg_path=Path(".")
     )
@@ -23,10 +21,8 @@ def test_async_hook_executor_initialization():
 
 async def test_async_hook_executor_process_tracking():
     """Test that AsyncHookExecutor tracks running processes."""
-    logger = logging.getLogger(__name__)
     console = Console()
     executor = AsyncHookExecutor(
-        logger=logger,
         console=console,
         pkg_path=Path(".")
     )
@@ -57,10 +53,8 @@ async def test_async_hook_executor_process_tracking():
 
 async def test_async_hook_executor_cleanup():
     """Test that AsyncHookExecutor cleanup terminates running processes."""
-    logger = logging.getLogger(__name__)
     console = Console()
     executor = AsyncHookExecutor(
-        logger=logger,
         console=console,
         pkg_path=Path(".")
     )

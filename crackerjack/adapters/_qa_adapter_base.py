@@ -1,15 +1,16 @@
-"""Base adapter for ACB Quality Assurance framework.
+"""Base adapter for Quality Assurance framework.
 
 This module provides the foundational classes and protocols for implementing
-QA checks as ACB adapters following ACB 0.19.0+ patterns.
+QA checks as adapters with standard Python patterns.
 
-Key ACB Patterns:
+Key Patterns:
 - MODULE_ID and MODULE_STATUS are module-level constants in concrete adapters
-- Dependency injection via module-level depends.set() after class definition
+- Static UUID7s for stable adapter identification
 - Runtime-checkable protocols for type safety
 - Concrete base class for shared implementation
-- Settings extend acb.config.Settings with validators
+- Settings extend Pydantic BaseModel with validators
 - Async init() method for lazy initialization
+- Standard Python logging instead of injected loggers
 
 CRITICAL: Imports protocols from models.protocols, not local definitions.
 """
@@ -17,15 +18,16 @@ CRITICAL: Imports protocols from models.protocols, not local definitions.
 from __future__ import annotations
 
 import asyncio
+import logging
 import typing as t
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from acb.config import Settings
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 # Import protocol from models.protocols per crackerjack pattern
 from crackerjack.models.protocols import QAAdapterProtocol
+from crackerjack.models.adapter_metadata import AdapterMetadata
 
 if t.TYPE_CHECKING:
     from uuid import UUID
@@ -34,7 +36,7 @@ if t.TYPE_CHECKING:
     from crackerjack.models.qa_results import QAResult
 
 
-class QABaseSettings(Settings):
+class QABaseSettings(BaseModel):
     """Base settings for quality assurance adapters.
 
     All QA adapter settings should inherit from this class to ensure
@@ -72,33 +74,31 @@ class QABaseSettings(Settings):
 # See crackerjack/models/protocols.py for protocol definition
 
 
-from acb.adapters import AdapterMetadata
-
-
 class QAAdapterBase:
     """Concrete base class for quality assurance adapters.
 
-    Provides shared implementation for all QA adapters following ACB patterns.
+    Provides shared implementation for all QA adapters using standard Python patterns.
     Unlike traditional abstract base classes, this is concrete and provides
     default implementations where sensible.
 
-    IMPORTANT ACB Patterns:
-    - MODULE_ID must be defined at module level in concrete adapters (not here)
-    - depends.set() registration happens at module level after class definition
+    IMPORTANT Patterns:
+    - MODULE_ID must be defined at module level (static UUID7)
+    - MODULE_STATUS should use AdapterStatus enum
     - Use async init() for lazy initialization, not __init__
     - Subclasses override specific methods as needed
+    - Use standard logging.getLogger(__name__) for logging
 
     Example:
         ```python
         # In concrete adapter file (e.g., ruff_lint.py)
-        import uuid
-        from contextlib import suppress
-        from acb.depends import depends
-        from crackerjack.adapters.qa.base import QAAdapterBase, QABaseSettings
+        import logging
+        from uuid import UUID
+        from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
+        from crackerjack.models.adapter_metadata import AdapterStatus
 
-        # MODULE_ID at module level (REQUIRED by ACB)
-        MODULE_ID = uuid.UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f7")
-        MODULE_STATUS = "stable"
+        # MODULE_ID at module level (REQUIRED - static UUID7)
+        MODULE_ID = UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f7")
+        MODULE_STATUS = AdapterStatus.STABLE
 
 
         class RuffLintSettings(QABaseSettings):
@@ -109,6 +109,7 @@ class QAAdapterBase:
 
         class RuffLintAdapter(QAAdapterBase):
             settings: RuffLintSettings | None = None
+            logger = logging.getLogger(__name__)
 
             async def init(self) -> None:
                 if not self.settings:
@@ -120,17 +121,12 @@ class QAAdapterBase:
                 return "Ruff Linter"
 
             @property
-            def module_id(self) -> uuid.UUID:
+            def module_id(self) -> UUID:
                 return MODULE_ID
 
             async def check(self, files=None, config=None):
                 # Implementation here
                 return QAResult(...)
-
-
-        # Register at module level (REQUIRED by ACB)
-        with suppress(Exception):
-            depends.set(RuffLintAdapter)
         ```
     """
 

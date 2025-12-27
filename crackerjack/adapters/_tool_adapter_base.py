@@ -1,14 +1,15 @@
-"""Base adapter for external tool integration in ACB QA framework.
+"""Base adapter for external tool integration in QA framework.
 
 Provides shared functionality for adapters that wrap external CLI tools
 like Ruff, Zuban, Bandit, Gitleaks, etc.
 
-ACB Patterns:
-- Extends QAAdapterBase for ACB compliance
+Key Patterns:
+- Extends QAAdapterBase for consistent adapter interface
 - Async subprocess execution with timeout/cancellation
 - Standardized output parsing and error handling
 - Tool availability validation
 - Version detection and caching
+- Standard Python logging
 """
 
 from __future__ import annotations
@@ -122,9 +123,6 @@ class ToolAdapterSettings(QABaseSettings):
     include_warnings: bool = True
 
 
-from acb.adapters import AdapterMetadata
-
-
 class BaseToolAdapter(QAAdapterBase):
     """Base adapter for external CLI tools in QA framework.
 
@@ -133,19 +131,20 @@ class BaseToolAdapter(QAAdapterBase):
 
     Example:
         ```python
-        import uuid
-        from contextlib import suppress
-        from acb.depends import depends
+        import logging
+        from uuid import UUID
+        from crackerjack.models.adapter_metadata import AdapterStatus
 
-        MODULE_ID = uuid.uuid7()
-        MODULE_STATUS = "stable"
+        MODULE_ID = UUID("01937d86-5f2a-7b3c-9d1e-a2b3c4d5e6f7")  # Static UUID7
+        MODULE_STATUS = AdapterStatus.STABLE
 
 
         class RuffAdapter(BaseToolAdapter):
             settings: RuffSettings | None = None
+            logger = logging.getLogger(__name__)
 
             @property
-            def module_id(self) -> uuid.UUID:
+            def module_id(self) -> UUID:
                 return MODULE_ID
 
             @property

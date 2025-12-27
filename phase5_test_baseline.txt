@@ -1,0 +1,591 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- /Users/les/Projects/crackerjack/.venv/bin/python
+cachedir: .pytest_cache
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+hypothesis profile 'default'
+rootdir: /Users/les/Projects/crackerjack
+configfile: pyproject.toml
+plugins: benchmark-5.2.3, mock-3.15.1, anyio-4.12.0, xdist-3.8.0, devtools-0.12.2, timeout-2.4.0, asyncio-1.3.0, pyleak-0.1.14, hypothesis-6.148.8, cov-7.0.0
+timeout: 600.0s
+timeout method: signal
+timeout func_only: False
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3635 items / 35 errors
+
+==================================== ERRORS ====================================
+________ ERROR collecting tests/events/test_workflow_event_telemetry.py ________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/events/test_workflow_event_telemetry.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/events/test_workflow_event_telemetry.py:11: in <module>
+    from crackerjack.events.telemetry import WorkflowEventTelemetry
+E   ModuleNotFoundError: No module named 'crackerjack.events'
+________ ERROR collecting tests/integration/test_hook_reporting_e2e.py _________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/integration/test_hook_reporting_e2e.py:20: in <module>
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+E     File "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+______ ERROR collecting tests/managers/test_hook_manager_orchestration.py ______
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/managers/test_hook_manager_orchestration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/managers/test_hook_manager_orchestration.py:22: in <module>
+    from crackerjack.orchestration.config import OrchestrationConfig
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+_____ ERROR collecting tests/managers/test_hook_manager_triple_parallel.py _____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/managers/test_hook_manager_triple_parallel.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/managers/test_hook_manager_triple_parallel.py:25: in <module>
+    from crackerjack.orchestration.config import OrchestrationConfig
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+________ ERROR collecting tests/orchestration/test_adaptive_strategy.py ________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_adaptive_strategy.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_adaptive_strategy.py:16: in <module>
+    from crackerjack.orchestration.strategies.adaptive_strategy import AdaptiveExecutionStrategy
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+_________ ERROR collecting tests/orchestration/test_cache_adapters.py __________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_cache_adapters.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_cache_adapters.py:21: in <module>
+    from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter, MemoryCacheSettings
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+_____________ ERROR collecting tests/orchestration/test_config.py ______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_config.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_config.py:19: in <module>
+    from crackerjack.orchestration.config import OrchestrationConfig
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+________ ERROR collecting tests/orchestration/test_hook_orchestrator.py ________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_hook_orchestrator.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_hook_orchestrator.py:21: in <module>
+    from crackerjack.orchestration.cache.memory_cache import MemoryCacheAdapter
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+____ ERROR collecting tests/orchestration/test_hook_orchestrator_events.py _____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_hook_orchestrator_events.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_hook_orchestrator_events.py:8: in <module>
+    from crackerjack.events import WorkflowEvent, WorkflowEventBus
+E   ModuleNotFoundError: No module named 'crackerjack.events'
+_ ERROR collecting tests/orchestration/test_workflow_pipeline_event_driven.py __
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/orchestration/test_workflow_pipeline_event_driven.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/orchestration/test_workflow_pipeline_event_driven.py:12: in <module>
+    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+___ ERROR collecting tests/performance/test_triple_parallelism_benchmarks.py ___
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/performance/test_triple_parallelism_benchmarks.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/performance/test_triple_parallelism_benchmarks.py:29: in <module>
+    from crackerjack.orchestration.config import OrchestrationConfig
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+____ ERROR collecting tests/services/test_dependency_monitor_repository.py _____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/services/test_dependency_monitor_repository.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/services/test_dependency_monitor_repository.py:8: in <module>
+    from crackerjack.services.monitoring.dependency_monitor import DependencyMonitorService
+E   ModuleNotFoundError: No module named 'crackerjack.services.monitoring'
+______ ERROR collecting tests/services/test_health_metrics_repository.py _______
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/services/test_health_metrics_repository.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/services/test_health_metrics_repository.py:9: in <module>
+    from crackerjack.services.monitoring.health_metrics import HealthMetricsService, ProjectHealth
+E   ModuleNotFoundError: No module named 'crackerjack.services.monitoring'
+___________ ERROR collecting tests/test_acb_settings_integration.py ____________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_acb_settings_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_acb_settings_integration.py:15: in <module>
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+______________ ERROR collecting tests/test_core_comprehensive.py _______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_core_comprehensive.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_core_comprehensive.py:12: in <module>
+    from crackerjack.core.workflow_orchestrator import (
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+_________________ ERROR collecting tests/test_core_coverage.py _________________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_core_coverage.py:9: in <module>
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+E     File "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+_________________ ERROR collecting tests/test_core_modules.py __________________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_core_modules.py:10: in <module>
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+E     File "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+______________ ERROR collecting tests/test_enhanced_filesystem.py ______________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_enhanced_filesystem.py:8: in <module>
+    from crackerjack.services.enhanced_filesystem import (
+E     File "/Users/les/Projects/crackerjack/crackerjack/services/enhanced_filesystem.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+_______ ERROR collecting tests/test_enhanced_filesystem_comprehensive.py _______
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_enhanced_filesystem_comprehensive.py:10: in <module>
+    from crackerjack.services.enhanced_filesystem import (
+E     File "/Users/les/Projects/crackerjack/crackerjack/services/enhanced_filesystem.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+_________ ERROR collecting tests/test_enhanced_filesystem_coverage.py __________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_enhanced_filesystem_coverage.py:5: in <module>
+    from crackerjack.services.enhanced_filesystem import (
+E     File "/Users/les/Projects/crackerjack/crackerjack/services/enhanced_filesystem.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+__________________ ERROR collecting tests/test_mcp_server.py ___________________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_mcp_server.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_mcp_server.py:3: in <module>
+    from crackerjack.mcp.server import MCPOptions, main
+crackerjack/mcp/server.py:1: in <module>
+    from .server_core import (
+crackerjack/mcp/server_core.py:14: in <module>
+    from crackerjack.runtime import RuntimeHealthSnapshot, write_pid_file, write_runtime_health
+E   ImportError: cannot import name 'write_pid_file' from 'crackerjack.runtime' (/Users/les/Projects/crackerjack/crackerjack/runtime/__init__.py)
+___________ ERROR collecting tests/test_phase_coordinator_simple.py ____________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_phase_coordinator_simple.py:6: in <module>
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+E     File "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+_____________ ERROR collecting tests/test_security_integration.py ______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_security_integration.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_security_integration.py:9: in <module>
+    from crackerjack.core.workflow.workflow_phase_executor import WorkflowPhaseExecutor
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow'
+_______________ ERROR collecting tests/test_services_coverage.py _______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_services_coverage.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_services_coverage.py:40: in <module>
+    class TestMetricsService:
+tests/test_services_coverage.py:41: in TestMetricsService
+    from crackerjack.services.monitoring.metrics import MetricsCollector
+E   ModuleNotFoundError: No module named 'crackerjack.services.monitoring'
+________ ERROR collecting tests/test_stage_workflow_execution_order.py _________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_stage_workflow_execution_order.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_stage_workflow_execution_order.py:16: in <module>
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+______________ ERROR collecting tests/test_workflow_event_bus.py _______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_workflow_event_bus.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_workflow_event_bus.py:9: in <module>
+    from crackerjack.events import (
+E   ModuleNotFoundError: No module named 'crackerjack.events'
+_____________ ERROR collecting tests/test_workflow_orchestrator.py _____________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_workflow_orchestrator.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_workflow_orchestrator.py:5: in <module>
+    from crackerjack.core.workflow_orchestrator import (
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+_______ ERROR collecting tests/test_workflow_orchestrator_ai_routing.py ________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/test_workflow_orchestrator_ai_routing.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/test_workflow_orchestrator_ai_routing.py:6: in <module>
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+E   ModuleNotFoundError: No module named 'crackerjack.core.workflow_orchestrator'
+_______________ ERROR collecting tests/test_workflow_pipeline.py _______________
+.venv/lib/python3.13/site-packages/_pytest/python.py:507: in importtestmodule
+    mod = import_path(
+.venv/lib/python3.13/site-packages/_pytest/pathlib.py:587: in import_path
+    importlib.import_module(module_name)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+<frozen importlib._bootstrap>:1387: in _gcd_import
+    ???
+<frozen importlib._bootstrap>:1360: in _find_and_load
+    ???
+<frozen importlib._bootstrap>:1331: in _find_and_load_unlocked
+    ???
+<frozen importlib._bootstrap>:935: in _load_unlocked
+    ???
+.venv/lib/python3.13/site-packages/_pytest/assertion/rewrite.py:197: in exec_module
+    exec(co, module.__dict__)
+tests/test_workflow_pipeline.py:10: in <module>
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+E     File "/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py", line 2
+E       from __future__ import annotations
+E       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   SyntaxError: from __future__ imports must occur at the beginning of the file
+_______________ ERROR collecting tests/unit/cli/test_handlers.py _______________
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/cli/test_handlers.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/cli/test_handlers.py:13: in <module>
+    from crackerjack.cli.handlers import (
+E   ImportError: cannot import name 'handle_dashboard_mode' from 'crackerjack.cli.handlers' (/Users/les/Projects/crackerjack/crackerjack/cli/handlers/__init__.py)
+___ ERROR collecting tests/unit/orchestration/test_advanced_orchestrator.py ____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/orchestration/test_advanced_orchestrator.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/orchestration/test_advanced_orchestrator.py:14: in <module>
+    from crackerjack.orchestration.advanced_orchestrator import (
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+____ ERROR collecting tests/unit/orchestration/test_execution_strategies.py ____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/orchestration/test_execution_strategies.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/orchestration/test_execution_strategies.py:12: in <module>
+    from crackerjack.orchestration.execution_strategies import (
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+_____ ERROR collecting tests/unit/orchestration/test_hook_orchestrator.py ______
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/orchestration/test_hook_orchestrator.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/orchestration/test_hook_orchestrator.py:15: in <module>
+    from crackerjack.orchestration.hook_orchestrator import (
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+____ ERROR collecting tests/unit/orchestration/test_hook_result_details.py _____
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/orchestration/test_hook_result_details.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/orchestration/test_hook_result_details.py:23: in <module>
+    from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+______ ERROR collecting tests/unit/orchestration/test_issue_count_fix.py _______
+ImportError while importing test module '/Users/les/Projects/crackerjack/tests/unit/orchestration/test_issue_count_fix.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/importlib/__init__.py:88: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/orchestration/test_issue_count_fix.py:14: in <module>
+    from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
+E   ModuleNotFoundError: No module named 'crackerjack.orchestration'
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469
+  /Users/les/Projects/crackerjack/.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469: UserWarning: Skipping collection of '.hypothesis' directory - this usually means you've explicitly set the `norecursedirs` pytest config option, replacing rather than extending the default ignores.
+    warnings.warn(
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_api_comprehensive.py)
+    @dataclass
+
+tests/test_config_service.py:12
+  /Users/les/Projects/crackerjack/tests/test_config_service.py:12: PytestCollectionWarning: cannot collect test class 'TestConfigModel' because it has a __init__ constructor (from: tests/test_config_service.py)
+    class TestConfigModel(BaseModel):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestCommandBuilder:
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestManager:
+
+crackerjack/models/config.py:70
+  /Users/les/Projects/crackerjack/crackerjack/models/config.py:70: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_models_comprehensive.py)
+    @dataclass
+
+crackerjack/models/protocols.py:271
+  /Users/les/Projects/crackerjack/crackerjack/models/protocols.py:271: PytestCollectionWarning: cannot collect test class 'TestManagerProtocol' because it has a __init__ constructor (from: tests/test_protocol_compliance.py)
+    @t.runtime_checkable
+
+crackerjack/models/pydantic_models.py:50
+  /Users/les/Projects/crackerjack/crackerjack/models/pydantic_models.py:50: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_pydantic_models.py)
+    class TestConfig(BaseModel):
+
+crackerjack/errors.py:102
+  /Users/les/Projects/crackerjack/crackerjack/errors.py:102: PytestCollectionWarning: cannot collect test class 'TestExecutionError' because it has a __init__ constructor (from: tests/test_structured_errors.py)
+    class TestExecutionError(CrackerjackError):
+
+crackerjack/config/settings.py:23
+  /Users/les/Projects/crackerjack/crackerjack/config/settings.py:23: PytestCollectionWarning: cannot collect test class 'TestSettings' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestSettings(Settings):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestCommandBuilder:
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_unified_api.py)
+    @dataclass
+
+tests/unit/agents/test_base.py:362
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_base.py:362: PytestCollectionWarning: cannot collect test class 'TestAgent' because it has a __init__ constructor (from: tests/unit/agents/test_base.py::TestSubAgentBase)
+    class TestAgent(SubAgent):
+
+tests/unit/agents/test_enhanced_proactive_agent.py:20
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_enhanced_proactive_agent.py:20: PytestCollectionWarning: cannot collect test class 'TestEnhancedProactiveAgentImpl' because it has a __init__ constructor (from: tests/unit/agents/test_enhanced_proactive_agent.py)
+    class TestEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
+
+crackerjack/agents/test_creation_agent.py:17
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_creation_agent.py:17: PytestCollectionWarning: cannot collect test class 'TestCreationAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_creation_agent.py)
+    class TestCreationAgent(SubAgent):
+
+crackerjack/agents/test_specialist_agent.py:14
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_specialist_agent.py:14: PytestCollectionWarning: cannot collect test class 'TestSpecialistAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_specialist_agent.py)
+    class TestSpecialistAgent(SubAgent):
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/unit/managers/test_test_manager.py)
+    class TestManager:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/events/test_workflow_event_telemetry.py
+ERROR tests/integration/test_hook_reporting_e2e.py
+ERROR tests/managers/test_hook_manager_orchestration.py
+ERROR tests/managers/test_hook_manager_triple_parallel.py
+ERROR tests/orchestration/test_adaptive_strategy.py
+ERROR tests/orchestration/test_cache_adapters.py
+ERROR tests/orchestration/test_config.py
+ERROR tests/orchestration/test_hook_orchestrator.py
+ERROR tests/orchestration/test_hook_orchestrator_events.py
+ERROR tests/orchestration/test_workflow_pipeline_event_driven.py
+ERROR tests/performance/test_triple_parallelism_benchmarks.py
+ERROR tests/services/test_dependency_monitor_repository.py
+ERROR tests/services/test_health_metrics_repository.py
+ERROR tests/test_acb_settings_integration.py
+ERROR tests/test_core_comprehensive.py
+ERROR tests/test_core_coverage.py
+ERROR tests/test_core_modules.py
+ERROR tests/test_enhanced_filesystem.py
+ERROR tests/test_enhanced_filesystem_comprehensive.py
+ERROR tests/test_enhanced_filesystem_coverage.py
+ERROR tests/test_mcp_server.py
+ERROR tests/test_phase_coordinator_simple.py
+ERROR tests/test_security_integration.py
+ERROR tests/test_services_coverage.py
+ERROR tests/test_stage_workflow_execution_order.py
+ERROR tests/test_workflow_event_bus.py
+ERROR tests/test_workflow_orchestrator.py
+ERROR tests/test_workflow_orchestrator_ai_routing.py
+ERROR tests/test_workflow_pipeline.py
+ERROR tests/unit/cli/test_handlers.py
+ERROR tests/unit/orchestration/test_advanced_orchestrator.py
+ERROR tests/unit/orchestration/test_execution_strategies.py
+ERROR tests/unit/orchestration/test_hook_orchestrator.py
+ERROR tests/unit/orchestration/test_hook_result_details.py
+ERROR tests/unit/orchestration/test_issue_count_fix.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 35 errors during collection !!!!!!!!!!!!!!!!!!!
+======================= 17 warnings, 35 errors in 57.17s =======================

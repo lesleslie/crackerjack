@@ -59,8 +59,6 @@ class TestMainModuleImports:
     def test_handler_imports_available(self) -> None:
         try:
             from crackerjack.cli.handlers import (
-                handle_dashboard_mode,
-                handle_enhanced_monitor_mode,
                 handle_mcp_server,
                 handle_monitor_mode,
                 handle_restart_mcp_server,
@@ -68,15 +66,15 @@ class TestMainModuleImports:
                 handle_watchdog_mode,
             )
             # Phase 1: WebSocket handler imports removed (WebSocket stack deleted)
+            # Phase 5: Dashboard/enhanced monitor handler imports removed (monitoring stack deleted)
 
-            assert callable(handle_dashboard_mode)
-            assert callable(handle_enhanced_monitor_mode)
             assert callable(handle_mcp_server)
             assert callable(handle_monitor_mode)
             assert callable(handle_restart_mcp_server)
             assert callable(handle_stop_mcp_server)
             assert callable(handle_watchdog_mode)
             # Phase 1: WebSocket handler assertions removed (WebSocket stack deleted)
+            # Phase 5: Dashboard/enhanced monitor handler assertions removed (monitoring stack deleted)
         except ImportError:
             pytest.skip("Handler imports not available")
 

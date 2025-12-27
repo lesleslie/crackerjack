@@ -10,11 +10,12 @@ from uuid import UUID, uuid4
 
 from acb.depends import depends
 from mcp_common.ui import ServerPanels
+from rich.console import Console
 
 from crackerjack.runtime import RuntimeHealthSnapshot, write_pid_file, write_runtime_health
 
-# Get the actual Console instance
-console = acb_console.console
+# Get Rich Console instance
+console = Console()
 
 try:
     import tomli

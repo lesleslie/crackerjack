@@ -1,6 +1,6 @@
-import logging
 from __future__ import annotations
 
+import logging
 import re
 import typing as t
 from pathlib import Path

@@ -1,4 +1,4 @@
-"""PipAudit adapter for ACB QA framework - Python dependency vulnerability scanner.
+"""PipAudit adapter for Crackerjack QA framework - Python dependency vulnerability scanner.
 
 pip-audit is a tool from the Python Packaging Authority (PyPA) that scans Python
 dependencies for known security vulnerabilities using the OSV database. It provides:
@@ -7,9 +7,9 @@ dependencies for known security vulnerabilities using the OSV database. It provi
 - PyPI vulnerability database integration
 - Fix version recommendations
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -19,11 +19,8 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
-
-from acb.depends import depends
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -31,16 +28,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-7a2b-7c3d-8e4f-b5c6d7e8f9a0"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("c0e53073-ee73-42c2-b42f-7a693708fd0c")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -411,8 +407,3 @@ class PipAuditAdapter(BaseToolAdapter):
                 "fix": False,  # Don't auto-fix by default
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(PipAuditAdapter)

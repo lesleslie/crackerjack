@@ -1,4 +1,4 @@
-"""Creosote adapter for ACB QA framework - unused dependency detection.
+"""Creosote adapter for Crackerjack QA framework - unused dependency detection.
 
 Creosote identifies dependencies listed in project configuration (pyproject.toml,
 requirements.txt) that are not actually used in the codebase, helping to:
@@ -7,9 +7,9 @@ requirements.txt) that are not actually used in the codebase, helping to:
 - Speed up installations
 - Maintain clean dependency trees
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -18,11 +18,9 @@ from __future__ import annotations
 
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -31,16 +29,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-8d4e-9f5a-b6c7-d8e9f0a1b2c3"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("c4c0c9fc-43d8-4b17-afb5-4febacec2e90")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -311,8 +308,3 @@ class CreosoteAdapter(BaseToolAdapter):
                 "paths": ["src", "tests"],
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(CreosoteAdapter)

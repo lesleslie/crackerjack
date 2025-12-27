@@ -1,11 +1,11 @@
-"""Semgrep adapter for ACB QA framework - Modern security scanning.
+"""Semgrep adapter for Crackerjack QA framework - Modern security scanning.
 
 Semgrep is a fast, open-source, static analysis tool for finding bugs,
 enforcing code standards, and finding security vulnerabilities.
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -15,11 +15,8 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
-
-from acb.depends import depends
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -27,16 +24,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-4f2a-7b3c-8d9e-f3b4d3c2b1a1"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("bff2e3e9-9b3c-49b7-a8c0-526fe56b0c37")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -234,8 +230,3 @@ class SemgrepAdapter(BaseToolAdapter):
                 "exclude_tests": True,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(SemgrepAdapter)
