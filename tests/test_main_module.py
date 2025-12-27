@@ -64,23 +64,19 @@ class TestMainModuleImports:
                 handle_mcp_server,
                 handle_monitor_mode,
                 handle_restart_mcp_server,
-                handle_restart_websocket_server,
-                handle_start_websocket_server,
                 handle_stop_mcp_server,
-                handle_stop_websocket_server,
                 handle_watchdog_mode,
             )
+            # Phase 1: WebSocket handler imports removed (WebSocket stack deleted)
 
             assert callable(handle_dashboard_mode)
             assert callable(handle_enhanced_monitor_mode)
             assert callable(handle_mcp_server)
             assert callable(handle_monitor_mode)
             assert callable(handle_restart_mcp_server)
-            assert callable(handle_restart_websocket_server)
-            assert callable(handle_start_websocket_server)
             assert callable(handle_stop_mcp_server)
-            assert callable(handle_stop_websocket_server)
             assert callable(handle_watchdog_mode)
+            # Phase 1: WebSocket handler assertions removed (WebSocket stack deleted)
         except ImportError:
             pytest.skip("Handler imports not available")
 

@@ -1,7 +1,9 @@
+import os
 import subprocess
 import time
 import typing as t
 from contextlib import suppress
+from datetime import datetime
 from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
@@ -9,6 +11,8 @@ from uuid import UUID, uuid4
 from acb import console as acb_console
 from acb.depends import depends
 from mcp_common.ui import ServerPanels
+
+from crackerjack.runtime import RuntimeHealthSnapshot, write_pid_file, write_runtime_health
 
 # Get the actual Console instance
 console = acb_console.console
@@ -374,6 +378,9 @@ def main(
     if not MCP_AVAILABLE:
         return
 
+    # Define runtime directory for Oneiric snapshots
+    runtime_dir = Path(".oneiric_cache")
+
     try:
         project_path, mcp_config = _initialize_project_and_config(
             project_path_arg, http_port, http_mode
@@ -387,6 +394,21 @@ def main(
 
         _show_server_startup_info(project_path, mcp_config, http_mode)
 
+        # Write Oneiric runtime health snapshots before starting server
+        pid = os.getpid()
+        snapshot = RuntimeHealthSnapshot(
+            orchestrator_pid=pid,
+            watchers_running=True,
+            lifecycle_state={
+                "server_status": "running",
+                "start_time": datetime.now().isoformat(),
+                "http_mode": http_mode,
+                "http_port": mcp_config.get("http_port") if http_mode else None,
+            },
+        )
+        write_runtime_health(runtime_dir / "runtime_health.json", snapshot)
+        write_pid_file(runtime_dir / "server.pid", pid)
+
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 
     except KeyboardInterrupt:
@@ -397,6 +419,21 @@ def main(
 
         traceback.print_exc()
     finally:
+        # Update health snapshot on shutdown
+        try:
+            snapshot = RuntimeHealthSnapshot(
+                orchestrator_pid=os.getpid(),
+                watchers_running=False,
+                lifecycle_state={
+                    "server_status": "stopped",
+                    "shutdown_time": datetime.now().isoformat(),
+                },
+            )
+            write_runtime_health(runtime_dir / "runtime_health.json", snapshot)
+        except Exception:
+            # Silently ignore snapshot write failures during shutdown
+            pass
+
         clear_context()
 
 

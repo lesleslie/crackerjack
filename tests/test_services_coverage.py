@@ -181,10 +181,7 @@ class TestMCPModulesBasic:
 
         assert dashboard_module is not None
 
-    def test_mcp_progress_monitor_import(self) -> None:
-        import crackerjack.mcp.progress_monitor as progress_module
-
-        assert progress_module is not None
+    # Phase 1: test_mcp_progress_monitor_import removed (progress_monitor module deleted with WebSocket stack)
 
     def test_mcp_service_watchdog_import(self) -> None:
         import crackerjack.mcp.service_watchdog as watchdog_module

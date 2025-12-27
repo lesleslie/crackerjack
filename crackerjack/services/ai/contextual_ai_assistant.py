@@ -533,7 +533,8 @@ class ContextualAIAssistant:
             ),
             (
                 ["dashboard", "monitor"],
-                "Start monitoring dashboard: python -m crackerjack --dashboard\nStart WebSocket server: python -m crackerjack --start-websocket-server",
+                # Phase 1: WebSocket server command removed from help text (WebSocket stack deleted)
+                "Start monitoring dashboard: python -m crackerjack --dashboard",
             ),
         ]
 

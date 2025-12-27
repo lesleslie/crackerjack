@@ -112,10 +112,6 @@ class Options(BaseModel):
     monitor: bool = False
     enhanced_monitor: bool = False
     watchdog: bool = False
-    start_websocket_server: bool = False
-    stop_websocket_server: bool = False
-    restart_websocket_server: bool = False
-    websocket_port: int | None = None
     start_zuban_lsp: bool = False
     stop_zuban_lsp: bool = False
     restart_zuban_lsp: bool = False
@@ -500,26 +496,6 @@ CLI_OPTIONS = {
         help=(
             "Skip version consistency verification between pyproject.toml and git tags."
         ),
-    ),
-    "start_websocket_server": typer.Option(
-        False,
-        "--start-websocket-server",
-        help="Start WebSocket progress server on port 8675.",
-    ),
-    "stop_websocket_server": typer.Option(
-        False,
-        "--stop-websocket-server",
-        help="Stop all running WebSocket servers.",
-    ),
-    "restart_websocket_server": typer.Option(
-        False,
-        "--restart-websocket-server",
-        help="Restart WebSocket server (stop and start again).",
-    ),
-    "websocket_port": typer.Option(
-        None,
-        "--websocket-port",
-        help="Port for WebSocket server when using --start-mcp-server (e.g., 8675).",
     ),
     "start_zuban_lsp": typer.Option(
         False,

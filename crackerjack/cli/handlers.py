@@ -62,15 +62,11 @@ def setup_ai_agent_env(
         setup_structured_logging(level="DEBUG", json_output=True)
 
 
-def handle_mcp_server(websocket_port: int | None = None) -> None:
+def handle_mcp_server() -> None:
     from crackerjack.mcp.server import main as start_mcp_main
 
     project_path = str(Path.cwd())
-
-    if websocket_port:
-        start_mcp_main(project_path, websocket_port)
-    else:
-        start_mcp_main(project_path)
+    start_mcp_main(project_path)
 
 
 @depends.inject  # type: ignore[misc]
@@ -102,12 +98,10 @@ def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
 
 
 @depends.inject  # type: ignore[misc]
-def handle_restart_mcp_server(
-    websocket_port: int | None = None, console: Inject[Console] = None
-) -> None:
+def handle_restart_mcp_server(console: Inject[Console] = None) -> None:
     from crackerjack.services.server_manager import restart_mcp_server
 
-    if restart_mcp_server(websocket_port, console):
+    if restart_mcp_server(console):
         console.print("\n[bold green]✅ MCP server restart completed[/ bold green]")
     else:
         console.print("\n[bold red]❌ MCP server restart failed[/ bold red]")

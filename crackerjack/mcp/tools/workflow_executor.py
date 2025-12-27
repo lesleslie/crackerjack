@@ -128,7 +128,7 @@ async def _initialize_execution(
         context,
     )
 
-    await _ensure_websocket_server_running(job_id, context)
+    # Phase 1: _ensure_websocket_server_running() call removed (WebSocket stack deleted)
 
     working_dir = kwargs.get("working_directory", ".")
     from pathlib import Path
@@ -671,29 +671,4 @@ def _create_failure_result(
     }
 
 
-async def _ensure_websocket_server_running(job_id: str, context: t.Any) -> None:
-    try:
-        from crackerjack.mcp.progress_components import ServiceManager
-
-        service_manager = ServiceManager()
-        await service_manager.ensure_services_running()
-
-        _update_progress(
-            job_id,
-            {
-                "type": "service_check",
-                "status": "websocket_ready",
-                "message": "WebSocket server ensured running for progress tracking",
-            },
-            context,
-        )
-    except Exception as e:
-        _update_progress(
-            job_id,
-            {
-                "type": "service_check",
-                "status": "websocket_warning",
-                "message": f"WebSocket server auto-start failed: {e}. Progress tracking may be limited.",
-            },
-            context,
-        )
+# Phase 1: _ensure_websocket_server_running() function removed (WebSocket stack deleted)

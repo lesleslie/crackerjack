@@ -128,12 +128,10 @@ async def _determine_next_action(state_manager: t.Any) -> dict[str, t.Any]:
 
 
 async def _build_server_stats(context: t.Any) -> dict[str, t.Any]:
+    # Phase 1: WebSocket server info removed (WebSocket stack deleted)
     return {
         "server_info": {
             "project_path": str(context.config.project_path),
-            "websocket_port": getattr(context, "websocket_server_port", None),
-            "websocket_active": getattr(context, "websocket_server_process", None)
-            is not None,
         },
         "rate_limiting": {
             "enabled": context.rate_limiter is not None,
@@ -443,7 +441,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "Up to 10 iterations of quality improvement",
-                        "Real-time WebSocket progress streaming",
+                        # Phase 1: WebSocket progress streaming removed (WebSocket stack deleted)
                         "Advanced orchestrator with adaptive strategies",
                         "Automatic service management",
                         "Debug mode support",
@@ -454,7 +452,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "MCP server health monitoring",
-                        "WebSocket server status",
+                        # Phase 1: WebSocket server status removed (WebSocket stack deleted)
                         "Active job tracking",
                         "Resource usage metrics",
                         "Error counts and progress data",
@@ -507,22 +505,17 @@ def _validate_status_components(components: str) -> tuple[set[str], str | None]:
 
 
 def _get_services_status() -> dict[str, t.Any]:
+    # Phase 1: find_websocket_server_processes import and usage removed (WebSocket stack deleted)
     from crackerjack.services.server_manager import (
         find_mcp_server_processes,
-        find_websocket_server_processes,
     )
 
     mcp_processes = find_mcp_server_processes()
-    websocket_processes = find_websocket_server_processes()
 
     return {
         "mcp_server": {
             "running": len(mcp_processes) > 0,
             "processes": mcp_processes,
-        },
-        "websocket_server": {
-            "running": len(websocket_processes) > 0,
-            "processes": websocket_processes,
         },
     }
 

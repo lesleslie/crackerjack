@@ -16,14 +16,12 @@ from crackerjack.cli.handlers import (
     handle_mcp_server,
     handle_monitor_mode,
     handle_restart_mcp_server,
-    handle_restart_websocket_server,
-    handle_start_websocket_server,
     handle_stop_mcp_server,
-    handle_stop_websocket_server,
     handle_unified_dashboard_mode,
     handle_watchdog_mode,
     setup_ai_agent_env,
 )
+# Phase 1: WebSocket handler imports removed (WebSocket stack deleted)
 
 
 @pytest.mark.unit
@@ -305,54 +303,7 @@ class TestHandleWatchdogMode:
             assert mock_console.print.called
 
 
-@pytest.mark.unit
-class TestHandleWebSocketServer:
-    """Test WebSocket server handlers."""
-
-    def test_handle_start_websocket_server_default(self):
-        """Test starting WebSocket server with default port."""
-        with patch(
-            "crackerjack.cli.handlers.handle_websocket_server_command"
-        ) as mock_command:
-            handle_start_websocket_server()
-
-            mock_command.assert_called_once_with(start=True, port=8675)
-
-    def test_handle_start_websocket_server_custom_port(self):
-        """Test starting WebSocket server with custom port."""
-        with patch(
-            "crackerjack.cli.handlers.handle_websocket_server_command"
-        ) as mock_command:
-            handle_start_websocket_server(port=9000)
-
-            mock_command.assert_called_once_with(start=True, port=9000)
-
-    def test_handle_stop_websocket_server(self):
-        """Test stopping WebSocket server."""
-        with patch(
-            "crackerjack.cli.handlers.handle_websocket_server_command"
-        ) as mock_command:
-            handle_stop_websocket_server()
-
-            mock_command.assert_called_once_with(stop=True)
-
-    def test_handle_restart_websocket_server_default(self):
-        """Test restarting WebSocket server with default port."""
-        with patch(
-            "crackerjack.cli.handlers.handle_websocket_server_command"
-        ) as mock_command:
-            handle_restart_websocket_server()
-
-            mock_command.assert_called_once_with(restart=True, port=8675)
-
-    def test_handle_restart_websocket_server_custom_port(self):
-        """Test restarting WebSocket server with custom port."""
-        with patch(
-            "crackerjack.cli.handlers.handle_websocket_server_command"
-        ) as mock_command:
-            handle_restart_websocket_server(port=9000)
-
-            mock_command.assert_called_once_with(restart=True, port=9000)
+# Phase 1: TestHandleWebSocketServer class removed (WebSocket stack deleted)
 
 
 @pytest.mark.unit
@@ -464,20 +415,7 @@ class TestHandlersIntegration:
             with patch("crackerjack.cli.handlers.run_dashboard"):
                 handle_dashboard_mode(console=mock_console)
 
-    def test_websocket_server_lifecycle(self):
-        """Test WebSocket server start/stop/restart lifecycle."""
-        with patch("crackerjack.cli.handlers.handle_websocket_server_command") as mock:
-            # Start
-            handle_start_websocket_server()
-            assert mock.call_args[1]["start"] is True
-
-            # Stop
-            handle_stop_websocket_server()
-            assert mock.call_args[1]["stop"] is True
-
-            # Restart
-            handle_restart_websocket_server()
-            assert mock.call_args[1]["restart"] is True
+    # Phase 1: test_websocket_server_lifecycle removed (WebSocket stack deleted)
 
     def test_mcp_server_lifecycle(self, mock_console):
         """Test MCP server start/stop/restart lifecycle."""

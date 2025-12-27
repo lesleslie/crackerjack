@@ -218,10 +218,7 @@ def main(
     enable_ty: bool = CLI_OPTIONS["enable_ty"],
     no_git_tags: bool = CLI_OPTIONS["no_git_tags"],
     skip_version_check: bool = CLI_OPTIONS["skip_version_check"],
-    start_websocket_server: bool = CLI_OPTIONS["start_websocket_server"],
-    stop_websocket_server: bool = CLI_OPTIONS["stop_websocket_server"],
-    restart_websocket_server: bool = CLI_OPTIONS["restart_websocket_server"],
-    websocket_port: int | None = CLI_OPTIONS["websocket_port"],
+    # Phase 1: WebSocket server options removed (WebSocket stack deleted)
     start_zuban_lsp: bool = CLI_OPTIONS["start_zuban_lsp"],
     stop_zuban_lsp: bool = CLI_OPTIONS["stop_zuban_lsp"],
     restart_zuban_lsp: bool = CLI_OPTIONS["restart_zuban_lsp"],
@@ -452,6 +449,7 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
+    # Phase 1: WebSocket server parameters removed from handle_server_commands (WebSocket stack deleted)
     if handle_server_commands(
         local_vars["monitor"],
         local_vars["enhanced_monitor"],
@@ -459,13 +457,9 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
         local_vars["unified_dashboard"],
         local_vars["unified_dashboard_port"],
         local_vars["watchdog"],
-        local_vars["start_websocket_server"],
-        local_vars["stop_websocket_server"],
-        local_vars["restart_websocket_server"],
         local_vars["start_mcp_server"],
         local_vars["stop_mcp_server"],
         local_vars["restart_mcp_server"],
-        local_vars["websocket_port"],
         local_vars["start_zuban_lsp"],
         local_vars["stop_zuban_lsp"],
         local_vars["restart_zuban_lsp"],
