@@ -302,7 +302,6 @@ python -m crackerjack --unified-dashboard  # Real-time monitoring
 ### Advanced Features
 
 - **AI Agent Integration**: 9 specialized agents for automated issue resolution
-- **Real-time Monitoring**: WebSocket-based dashboard with system metrics
 - **Dual Documentation**: AI-optimized and human-readable formats
 - **Progressive Enhancement**: Coverage ratchet system targeting 100%
 
@@ -358,12 +357,6 @@ Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
                     "purpose": "Start MCP server",
                     "when_to_use": "AI agent integration needed",
                     "expected_outcome": "Server running, tools available",
-                },
-                {
-                    "command": "--unified-dashboard",
-                    "purpose": "Start monitoring dashboard",
-                    "when_to_use": "Real-time monitoring needed",
-                    "expected_outcome": "WebSocket server on port 8675",
                 },
             ],
             "development": [

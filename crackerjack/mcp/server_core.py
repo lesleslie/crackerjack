@@ -69,7 +69,6 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         return {
             "http_port": 8676,
             "http_host": "127.0.0.1",
-            "websocket_port": 8675,
             "http_enabled": False,
         }
 
@@ -82,7 +81,6 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         return {
             "http_port": crackerjack_config.get("mcp_http_port", 8676),
             "http_host": crackerjack_config.get("mcp_http_host", "127.0.0.1"),
-            "websocket_port": crackerjack_config.get("mcp_websocket_port", 8675),
             "http_enabled": crackerjack_config.get("mcp_http_enabled", False),
         }
     except Exception as e:
@@ -92,7 +90,6 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         return {
             "http_port": 8676,
             "http_host": "127.0.0.1",
-            "websocket_port": 8675,
             "http_enabled": False,
         }
 
@@ -128,13 +125,6 @@ def _validate_job_id(job_id: str) -> bool:
     from crackerjack.services.regex_patterns import is_valid_job_id
 
     return is_valid_job_id(job_id)
-
-
-async def _start_websocket_server() -> bool:
-    context = get_context()
-    if context:
-        return await context.start_websocket_server()
-    return False
 
 
 def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
@@ -217,7 +207,6 @@ def handle_mcp_server_command(
     start: bool = False,
     stop: bool = False,
     restart: bool = False,
-    websocket_port: int | None = None,
     http_mode: bool = False,
     http_port: int | None = None,
 ) -> None:
@@ -249,7 +238,7 @@ def handle_mcp_server_command(
     if start or restart:
         console.print("[green]Starting MCP server...[/ green]")
         try:
-            main(".", websocket_port, http_mode, http_port)
+            main(".", http_mode, http_port)
         except Exception as e:
             console.print(f"[red]Failed to start MCP server: {e}[/ red]")
 
@@ -258,15 +247,6 @@ def _initialize_context(context: MCPServerContext) -> None:
     set_context(context)
 
     context.safe_print("MCP Server context initialized")
-
-
-def _stop_websocket_server() -> None:
-    from contextlib import suppress
-
-    with suppress(RuntimeError):
-        context = get_context()
-        if context and hasattr(context, "_stop_websocket_server"):
-            pass
 
 
 def _merge_config_with_args(
@@ -283,7 +263,6 @@ def _merge_config_with_args(
 
 def _setup_server_context(
     project_path: Path,
-    websocket_port: int | None,
 ) -> MCPServerContext:
     config = MCPServerConfig(
         project_path=project_path,
@@ -293,9 +272,6 @@ def _setup_server_context(
     context = MCPServerContext(config)
     context.console = console
 
-    if websocket_port:
-        context.websocket_server_port = websocket_port
-
     _initialize_context(context)
     return context
 
@@ -303,7 +279,6 @@ def _setup_server_context(
 def _print_server_info(
     project_path: Path,
     mcp_config: dict[str, t.Any],
-    websocket_port: int | None,
     http_mode: bool,
 ) -> None:
     if mcp_config.get("http_enabled", False) or http_mode:
@@ -321,8 +296,6 @@ def _print_server_info(
     }
     if http_endpoint:
         items["HTTP"] = http_endpoint
-    if websocket_port:
-        items["WebSocket Port"] = str(websocket_port)
     ServerPanels.info(
         title="Server Configuration",
         message="Starting Crackerjack MCP Server...",
@@ -370,28 +343,13 @@ def _create_and_validate_server(mcp_config: dict[str, t.Any]) -> t.Any | None:
     return mcp_app
 
 
-def _start_websocket_if_needed(websocket_port: int | None) -> None:
-    """Start WebSocket server if needed."""
-    if websocket_port:
-        import asyncio
-
-        try:
-            asyncio.run(_start_websocket_server())
-            console.print(
-                f"[green]✅ WebSocket server auto-started on port {websocket_port}[/green]"
-            )
-        except Exception as e:
-            console.print(f"[yellow]⚠️ WebSocket server auto-start failed: {e}[/yellow]")
-
-
 def _show_server_startup_info(
     project_path: Path,
     mcp_config: dict[str, t.Any],
-    websocket_port: int | None,
     http_mode: bool,
 ) -> None:
     """Show server startup information."""
-    _print_server_info(project_path, mcp_config, websocket_port, http_mode)
+    _print_server_info(project_path, mcp_config, http_mode)
 
     # Show final success panel before starting the server
     if mcp_config.get("http_enabled", False) or http_mode:
@@ -401,25 +359,15 @@ def _show_server_startup_info(
     else:
         http_endpoint = None
 
-    websocket_monitor = f"ws://127.0.0.1:{websocket_port}" if websocket_port else None
-
     # Final startup success panel via mcp-common
-    if websocket_monitor:
-        ServerPanels.startup_success(
-            server_name="Crackerjack MCP",
-            endpoint=http_endpoint,
-            websocket_monitor=websocket_monitor,  # type: ignore[arg-type]
-        )
-    else:
-        ServerPanels.startup_success(
-            server_name="Crackerjack MCP",
-            endpoint=http_endpoint,
-        )
+    ServerPanels.startup_success(
+        server_name="Crackerjack MCP",
+        endpoint=http_endpoint,
+    )
 
 
 def main(
     project_path_arg: str = ".",
-    websocket_port: int | None = None,
     http_mode: bool = False,
     http_port: int | None = None,
 ) -> None:
@@ -431,15 +379,13 @@ def main(
             project_path_arg, http_port, http_mode
         )
 
-        _setup_server_context(project_path, websocket_port)
+        _setup_server_context(project_path)
 
         mcp_app = _create_and_validate_server(mcp_config)
         if not mcp_app:
             return
 
-        _show_server_startup_info(project_path, mcp_config, websocket_port, http_mode)
-
-        _start_websocket_if_needed(websocket_port)
+        _show_server_startup_info(project_path, mcp_config, http_mode)
 
         _run_mcp_server(mcp_app, mcp_config, http_mode)
 
@@ -451,7 +397,6 @@ def main(
 
         traceback.print_exc()
     finally:
-        _stop_websocket_server()
         clear_context()
 
 
@@ -459,22 +404,19 @@ if __name__ == "__main__":
     import sys
 
     project_path = "."
-    websocket_port = None
     http_mode = "--http" in sys.argv
     http_port = None
 
     non_flag_args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
     if non_flag_args:
         project_path = non_flag_args[0]
-        if len(non_flag_args) > 1 and non_flag_args[1].isdigit():
-            websocket_port = int(non_flag_args[1])
 
     if "--http-port" in sys.argv:
         port_idx = sys.argv.index("--http-port")
         if port_idx + 1 < len(sys.argv):
             http_port = int(sys.argv[port_idx + 1])
 
-    main(project_path, websocket_port, http_mode, http_port)
+    main(project_path, http_mode, http_port)
 
 
 # Phase 9.1: ACB Integration - Service wrapper for dependency injection
@@ -504,7 +446,6 @@ class MCPServerService:
     def start_server(
         self,
         project_path: str = ".",
-        websocket_port: int | None = None,
         http_mode: bool = False,
         http_port: int | None = None,
     ) -> None:
@@ -512,11 +453,10 @@ class MCPServerService:
 
         Args:
             project_path: Path to project directory
-            websocket_port: Optional WebSocket server port
             http_mode: Enable HTTP mode instead of STDIO
             http_port: Optional HTTP server port
         """
-        main(project_path, websocket_port, http_mode, http_port)
+        main(project_path, http_mode, http_port)
 
     @property
     def is_available(self) -> bool:

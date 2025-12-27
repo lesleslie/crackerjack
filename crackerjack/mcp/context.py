@@ -17,7 +17,6 @@ from crackerjack.core.resource_manager import (
     ResourceManager,
     register_global_resource_manager,
 )
-from crackerjack.core.websocket_lifecycle import NetworkResourceManager
 from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.services.secure_path_utils import SecurePathValidator
 
@@ -150,7 +149,6 @@ class MCPServerContext:
         self.config = config
 
         self.resource_manager = ResourceManager()
-        self.network_manager = NetworkResourceManager()
         register_global_resource_manager(self.resource_manager)
 
         self.console: Console | None = None
@@ -166,14 +164,6 @@ class MCPServerContext:
         self.progress_queue: asyncio.Queue[dict[str, t.Any]] = asyncio.Queue(
             maxsize=1000,
         )
-
-        self.websocket_server_process: subprocess.Popen[bytes] | None = None
-        self.websocket_server_port: int = int(
-            os.environ.get("CRACKERJACK_WEBSOCKET_PORT", "8675"),
-        )
-        self._websocket_process_lock = asyncio.Lock()
-        self._websocket_cleanup_registered = False
-        self._websocket_health_check_task: asyncio.Task[None] | None = None
 
         self._initialized = False
         self._startup_tasks: list[t.Callable[[], t.Awaitable[None]]] = []
@@ -345,26 +335,10 @@ class MCPServerContext:
                 if self.console:
                     self.console.print(f"[red]Error during shutdown: {e}[/red]")
 
-        if self._websocket_health_check_task:
-            self._websocket_health_check_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await self._websocket_health_check_task
-            self._websocket_health_check_task = None
-
-        await self._stop_websocket_server()
-
         if self.rate_limiter:
             await self.rate_limiter.stop()
 
         await self.batched_saver.stop()
-
-        try:
-            await self.network_manager.cleanup_all()
-        except Exception as e:
-            if self.console:
-                self.console.print(
-                    f"[yellow]Warning: Network resource cleanup error: {e}[/yellow]"
-                )
 
         try:
             await self.resource_manager.cleanup_all()
@@ -405,284 +379,6 @@ class MCPServerContext:
 
         return os.path.basename(job_id) == job_id
 
-    async def check_websocket_server_running(self) -> bool:
-        import socket
-
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(1.0)
-            result = sock.connect_ex(("localhost", self.websocket_server_port))
-            return result == 0
-
-    async def start_websocket_server(self) -> bool:
-        async with self._websocket_process_lock:
-            if await self._check_existing_websocket_server():
-                return True
-
-            self._print_websocket_startup_message()
-            return await self._attempt_websocket_startup()
-
-    def _print_websocket_startup_message(self) -> None:
-        """Print websocket server startup message."""
-        if self.console:
-            self.console.print(
-                f"🚀 Starting WebSocket server on localhost: {self.websocket_server_port}",
-            )
-
-    async def _attempt_websocket_startup(self) -> bool:
-        """Attempt to start the websocket server with error handling."""
-        try:
-            await self._spawn_websocket_process()
-            await self._register_websocket_cleanup()
-            return await self._wait_for_websocket_startup()
-        except Exception as e:
-            await self._handle_websocket_startup_failure(e)
-            return False
-
-    async def _handle_websocket_startup_failure(self, error: Exception) -> None:
-        """Handle websocket server startup failure."""
-        if self.console:
-            self.console.print(f"❌ Failed to start WebSocket server: {error}")
-        await self._cleanup_dead_websocket_process()
-
-    async def _check_existing_websocket_server(self) -> bool:
-        if (
-            self.websocket_server_process
-            and self.websocket_server_process.poll() is None
-        ):
-            if await self.check_websocket_server_running():
-                if self.console:
-                    self.console.print(
-                        f"✅ WebSocket server already running on port {self.websocket_server_port}",
-                    )
-                return True
-            await self._cleanup_dead_websocket_process()
-
-        if await self.check_websocket_server_running():
-            if self.console:
-                self.console.print(
-                    f"⚠️ Port {self.websocket_server_port} already in use by another process",
-                )
-            return True
-
-        return False
-
-    async def _spawn_websocket_process(self) -> None:
-        import sys
-
-        self.websocket_server_process = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "crackerjack",
-                "--start-websocket-server",
-                "--websocket-port",
-                str(self.websocket_server_port),
-            ],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
-
-        if self.websocket_server_process:
-            managed_process = self.network_manager.create_subprocess(
-                self.websocket_server_process, timeout=30.0
-            )
-            await managed_process.start_monitoring()
-
-    async def _register_websocket_cleanup(self) -> None:
-        if not self._websocket_cleanup_registered:
-            self.add_shutdown_task(self._stop_websocket_server)
-            self._websocket_cleanup_registered = True
-
-        if not self._websocket_health_check_task:
-            self._websocket_health_check_task = asyncio.create_task(
-                self._websocket_health_monitor(),
-            )
-
-    async def _wait_for_websocket_startup(self) -> bool:
-        max_attempts = 10
-        for _attempt in range(max_attempts):
-            await asyncio.sleep(0.5)
-
-            if (
-                self.websocket_server_process is not None
-                and self.websocket_server_process.poll() is not None
-            ):
-                return_code = self.websocket_server_process.returncode
-                if self.console:
-                    self.console.print(
-                        f"❌ WebSocket server process died during startup (exit code: {return_code})",
-                    )
-                self.websocket_server_process = None
-                return False
-
-            if await self.check_websocket_server_running():
-                if self.console:
-                    self.console.print(
-                        f"✅ WebSocket server started successfully on port {self.websocket_server_port}",
-                    )
-                    self.console.print(
-                        f"📊 Progress available at: ws: / / localhost: {self.websocket_server_port}/ ws / progress /{{job_id}}",
-                    )
-                return True
-
-        if self.console:
-            self.console.print(
-                f"❌ WebSocket server failed to start within {max_attempts * 0.5}s",
-            )
-        await self._cleanup_dead_websocket_process()
-        return False
-
-    async def _cleanup_dead_websocket_process(self) -> None:
-        if self.websocket_server_process:
-            try:
-                if (
-                    self.websocket_server_process is not None
-                    and self.websocket_server_process.poll() is None
-                ):
-                    self.websocket_server_process.terminate()
-                    try:
-                        self.websocket_server_process.wait(timeout=2)
-                    except subprocess.TimeoutExpired:
-                        self.websocket_server_process.kill()
-                        self.websocket_server_process.wait(timeout=1)
-
-                if self.console:
-                    self.console.print("🧹 Cleaned up dead WebSocket server process")
-            except Exception as e:
-                if self.console:
-                    self.console.print(f"⚠️ Error cleaning up WebSocket process: {e}")
-            finally:
-                self.websocket_server_process = None
-
-    async def _stop_websocket_server(self) -> None:
-        async with self._websocket_process_lock:
-            if not self.websocket_server_process:
-                return
-
-            try:
-                if self.websocket_server_process.poll() is None:
-                    await self._terminate_live_websocket_process()
-                else:
-                    await self._handle_dead_websocket_process_cleanup()
-
-            except Exception as e:
-                if self.console:
-                    self.console.print(f"⚠️ Error stopping WebSocket server: {e}")
-            finally:
-                self.websocket_server_process = None
-
-    async def _terminate_live_websocket_process(self) -> None:
-        if self.console:
-            self.console.print("🛑 Stopping WebSocket server")
-
-        if self.websocket_server_process is not None:
-            self.websocket_server_process.terminate()
-
-        if await self._wait_for_graceful_termination():
-            return
-
-        await self._force_kill_websocket_process()
-
-    async def _wait_for_graceful_termination(self) -> bool:
-        try:
-            if self.websocket_server_process is not None:
-                self.websocket_server_process.wait(timeout=5)
-            if self.console:
-                self.console.print("✅ WebSocket server stopped gracefully")
-            return True
-        except subprocess.TimeoutExpired:
-            return False
-
-    async def _force_kill_websocket_process(self) -> None:
-        if self.console:
-            self.console.print("⚡ Force killing unresponsive WebSocket server")
-
-        if self.websocket_server_process is not None:
-            self.websocket_server_process.kill()
-
-        try:
-            if self.websocket_server_process is not None:
-                self.websocket_server_process.wait(timeout=2)
-            if self.console:
-                self.console.print("💀 WebSocket server force killed")
-        except subprocess.TimeoutExpired:
-            if self.console:
-                self.console.print("⚠️ WebSocket server process may be zombified")
-
-    async def _handle_dead_websocket_process_cleanup(self) -> None:
-        if self.console:
-            self.console.print("💀 WebSocket server process was already dead")
-
-    async def get_websocket_server_status(self) -> dict[str, t.Any]:
-        async with self._websocket_process_lock:
-            status = {
-                "port": self.websocket_server_port,
-                "process_exists": self.websocket_server_process is not None,
-                "process_alive": False,
-                "server_responding": False,
-                "process_id": None,
-                "return_code": None,
-            }
-
-            if self.websocket_server_process:
-                status["process_id"] = self.websocket_server_process.pid
-                poll_result = self.websocket_server_process.poll()
-                status["process_alive"] = poll_result is None
-                if poll_result is not None:
-                    status["return_code"] = poll_result
-
-            status["server_responding"] = await self.check_websocket_server_running()
-
-            return status
-
-    async def _websocket_health_monitor(self) -> None:
-        while True:
-            try:
-                await asyncio.sleep(30)
-                await self._check_and_restart_websocket()
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                if self.console:
-                    self.console.print(f"⚠️ Error in WebSocket health monitor: {e}")
-                await asyncio.sleep(60)
-
-    async def _check_and_restart_websocket(self) -> None:
-        async with self._websocket_process_lock:
-            if not self.websocket_server_process:
-                return
-
-            if self.websocket_server_process.poll() is not None:
-                await self._handle_dead_websocket_process()
-                return
-
-            if not await self.check_websocket_server_running():
-                await self._handle_unresponsive_websocket_server()
-
-    async def _handle_dead_websocket_process(self) -> None:
-        if self.websocket_server_process is not None:
-            return_code = self.websocket_server_process.returncode
-        if self.console:
-            self.console.print(
-                f"⚠️ WebSocket server process died (exit code: {return_code}), attempting restart...",
-            )
-        self.websocket_server_process = None
-        await self._restart_websocket_server()
-
-    async def _handle_unresponsive_websocket_server(self) -> None:
-        if self.console:
-            self.console.print("⚠️ WebSocket server not responding, restarting...")
-        await self._cleanup_dead_websocket_process()
-        await self._restart_websocket_server()
-
-    async def _restart_websocket_server(self) -> None:
-        if await self.start_websocket_server():
-            if self.console:
-                self.console.print("✅ WebSocket server restarted successfully")
-        elif self.console:
-            self.console.print("❌ Failed to restart WebSocket server")
-
     def safe_print(self, *args: t.Any, **kwargs: t.Any) -> None:
         if not self.config.stdio_mode and self.console:
             self.console.print(*args, **kwargs)
@@ -720,13 +416,6 @@ class MCPServerContext:
                 "error_cache": self.error_cache is not None,
                 "rate_limiter": self.rate_limiter is not None,
                 "batched_saver": self.batched_saver is not None,
-            },
-            "websocket_server": {
-                "port": self.websocket_server_port,
-                "process_exists": self.websocket_server_process is not None,
-                "health_monitor_running": self._websocket_health_check_task is not None
-                and not self._websocket_health_check_task.done(),
-                "cleanup_registered": self._websocket_cleanup_registered,
             },
             "progress_queue": {
                 "maxsize": self.progress_queue.maxsize,

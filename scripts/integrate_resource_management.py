@@ -27,7 +27,7 @@ def update_import_statements(file_path: Path) -> bool:
         original_content = content
 
         # Skip if already has resource management imports
-        if "resource_manager" in content or "websocket_lifecycle" in content:
+        if "resource_manager" in content:
             return False
 
         # Determine which patterns to add based on file content
@@ -62,7 +62,7 @@ def _determine_import_patterns(content: str) -> list[str]:
     # For files using subprocess
     if SAFE_PATTERNS["detect_subprocess_usage"].test(content):
         patterns_to_add.append(
-            "from crackerjack.core.websocket_lifecycle import NetworkResourceManager, with_managed_subprocess"
+            "from crackerjack.core.resource_manager import ResourceContext"
         )
 
     # For files using asyncio tasks
@@ -414,7 +414,7 @@ def process_file(file_path: Path) -> int:
     # Skip files that are already resource management modules
     if any(
         name in str(file_path)
-        for name in ("resource_manager", "websocket_lifecycle", "file_lifecycle")
+        for name in ("resource_manager", "file_lifecycle")
     ):
         logger.info(f"Skipping resource management module {file_path}")
         return 0

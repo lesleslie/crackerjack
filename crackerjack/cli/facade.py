@@ -120,8 +120,6 @@ class CrackerjackCLIFacade:
             self._start_mcp_server()
         elif getattr(options, "advanced_batch", False):
             self._handle_advanced_batch(options)
-        elif getattr(options, "monitor_dashboard", False):
-            self._handle_monitor_dashboard(options)
 
     def _start_mcp_server(self) -> None:
         try:
@@ -145,10 +143,6 @@ class CrackerjackCLIFacade:
         self.console.print(
             "[red]❌ Advanced batch processing is not yet implemented[/ red]"
         )
-        raise SystemExit(1)
-
-    def _handle_monitor_dashboard(self, options: OptionsProtocol) -> None:
-        self.console.print("[red]❌ Monitoring dashboard is not yet implemented[/ red]")
         raise SystemExit(1)
 
 

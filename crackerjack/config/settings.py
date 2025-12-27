@@ -84,7 +84,6 @@ class ConsoleSettings(Settings):
 class MCPServerSettings(Settings):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
-    websocket_port: int = 8675
     http_enabled: bool = False
 
 

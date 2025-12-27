@@ -74,77 +74,6 @@ def handle_mcp_server(websocket_port: int | None = None) -> None:
 
 
 @depends.inject  # type: ignore[misc]
-def handle_monitor_mode(
-    dev_mode: bool = False, console: Inject[Console] = None
-) -> None:
-    from crackerjack.mcp.progress_monitor import run_progress_monitor
-
-    console.print("[bold cyan]🌟 Starting Multi-Project Progress Monitor[/ bold cyan]")
-    console.print(
-        "[bold yellow]🐕 With integrated Service Watchdog and WebSocket polling[/ bold yellow]",
-    )
-
-    try:
-        asyncio.run(run_progress_monitor(dev_mode=dev_mode))
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Monitor stopped[/ yellow]")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_enhanced_monitor_mode(
-    dev_mode: bool = False, console: Inject[Console] = None
-) -> None:
-    from crackerjack.mcp.enhanced_progress_monitor import run_enhanced_progress_monitor
-
-    console.print("[bold magenta]✨ Starting Enhanced Progress Monitor[/ bold magenta]")
-    console.print(
-        "[bold cyan]📊 With advanced MetricCard widgets and modern web UI patterns[/ bold cyan]",
-    )
-
-    try:
-        asyncio.run(run_enhanced_progress_monitor(dev_mode=dev_mode))
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Enhanced Monitor stopped[/ yellow]")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_dashboard_mode(
-    dev_mode: bool = False, console: Inject[Console] = None
-) -> None:
-    from crackerjack.mcp.dashboard import run_dashboard
-
-    console.print("[bold green]🎯 Starting Comprehensive Dashboard[/ bold green]")
-    console.print(
-        "[bold cyan]📈 With system metrics, job tracking, and performance monitoring[/ bold cyan]",
-    )
-
-    try:
-        run_dashboard()
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Dashboard stopped[/ yellow]")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_unified_dashboard_mode(
-    port: int = 8675, dev_mode: bool = False, console: Inject[Console] = None
-) -> None:
-    from crackerjack.monitoring.websocket_server import CrackerjackMonitoringServer
-
-    console.print("[bold green]🚀 Starting Unified Monitoring Dashboard[/bold green]")
-    console.print(
-        f"[bold cyan]🌐 WebSocket server on port {port} with real-time streaming and web UI[/bold cyan]",
-    )
-
-    try:
-        server = CrackerjackMonitoringServer()
-        asyncio.run(server.start_monitoring(port))
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Unified Dashboard stopped[/yellow]")
-    except Exception as e:
-        console.print(f"\n[red]❌ Unified Dashboard failed: {e}[/red]")
-
-
-@depends.inject  # type: ignore[misc]
 def handle_watchdog_mode(console: Inject[Console] = None) -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 
@@ -152,24 +81,6 @@ def handle_watchdog_mode(console: Inject[Console] = None) -> None:
         asyncio.run(start_watchdog())
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
-
-
-def handle_start_websocket_server(port: int = 8675) -> None:
-    from crackerjack.mcp.websocket.server import handle_websocket_server_command
-
-    handle_websocket_server_command(start=True, port=port)
-
-
-def handle_stop_websocket_server() -> None:
-    from crackerjack.mcp.websocket.server import handle_websocket_server_command
-
-    handle_websocket_server_command(stop=True)
-
-
-def handle_restart_websocket_server(port: int = 8675) -> None:
-    from crackerjack.mcp.websocket.server import handle_websocket_server_command
-
-    handle_websocket_server_command(restart=True, port=port)
 
 
 @depends.inject  # type: ignore[misc]
