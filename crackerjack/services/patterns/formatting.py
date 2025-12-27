@@ -24,7 +24,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("- - help", "--help"),
             ("- - ai-fix", "--ai-fix"),
             ("--help", "--help"),
-            ("- - start-websocket-server", "--start-websocket-server"),
+            # Phase 1: Removed test case for --start-websocket-server (WebSocket stack deleted)
         ],
     ),
     "fix_short_flag_spacing": ValidatedPattern(

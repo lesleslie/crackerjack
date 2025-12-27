@@ -74,7 +74,7 @@ class TestTimeoutConfig:
         assert config.operation_timeouts["ai_agent_processing"] == 180.0
         assert config.operation_timeouts["file_operations"] == 10.0
         assert config.operation_timeouts["network_operations"] == 15.0
-        assert config.operation_timeouts["websocket_broadcast"] == 5.0
+        # Phase 1: websocket_broadcast timeout removed (WebSocket stack deleted)
         assert config.operation_timeouts["workflow_iteration"] == 900.0
         assert config.operation_timeouts["complete_workflow"] == 3600.0
 

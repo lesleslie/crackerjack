@@ -95,47 +95,7 @@ def _find_command_start_index(parts: list[str]) -> int:
     return command_start_index
 
 
-def find_websocket_server_processes() -> list[dict[str, t.Any]]:
-    security_logger = get_security_logger()
-
-    try:
-        result = execute_secure_subprocess(
-            command=["ps", "aux"],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=10.0,
-        )
-
-        processes: list[dict[str, t.Any]] = []
-
-        for line in result.stdout.splitlines():
-            if "crackerjack" in line and "- - start - websocket-server" in line:
-                parts = line.split()
-                if len(parts) >= 11:
-                    try:
-                        pid = int(parts[1])
-                        processes.append(
-                            {
-                                "pid": pid,
-                                "command": " ".join(parts[10:]),
-                                "user": parts[0],
-                                "cpu": parts[2],
-                                "mem": parts[3],
-                            },
-                        )
-                    except (ValueError, IndexError):
-                        continue
-
-        return processes
-
-    except Exception as e:
-        security_logger.log_subprocess_failure(
-            command=["ps", "aux"],
-            exit_code=-1,
-            error_output=str(e),
-        )
-        return []
+# Phase 1: find_websocket_server_processes() removed (WebSocket stack deleted)
 
 
 def find_zuban_lsp_processes() -> list[dict[str, t.Any]]:
@@ -229,24 +189,7 @@ def stop_mcp_server(console: Inject[Console]) -> bool:
     return success
 
 
-@depends.inject
-def stop_websocket_server(console: Inject[Console]) -> bool:
-    processes = find_websocket_server_processes()
-
-    if not processes:
-        console.print("[yellow]⚠️ No WebSocket server processes found[/ yellow]")
-        return True
-
-    success = True
-    for proc in processes:
-        console.print(f"🛑 Stopping WebSocket server process {proc['pid']}")
-        if stop_process(proc["pid"]):
-            console.print(f"✅ Stopped process {proc['pid']}")
-        else:
-            console.print(f"❌ Failed to stop process {proc['pid']}")
-            success = False
-
-    return success
+# Phase 1: stop_websocket_server() removed (WebSocket stack deleted)
 
 
 @depends.inject
@@ -272,16 +215,15 @@ def stop_zuban_lsp(console: Inject[Console]) -> bool:
 
 @depends.inject
 def stop_all_servers(console: Inject[Console]) -> bool:
+    # Phase 1: stop_websocket_server() call removed (WebSocket stack deleted)
     mcp_success = stop_mcp_server()
-    websocket_success = stop_websocket_server()
     zuban_lsp_success = stop_zuban_lsp()
 
-    return mcp_success and websocket_success and zuban_lsp_success
+    return mcp_success and zuban_lsp_success
 
 
 @depends.inject
 def restart_mcp_server(
-    websocket_port: int | None = None,
     console: Inject[Console] = None,
 ) -> bool:
     ServerPanels.info(
@@ -296,8 +238,6 @@ def restart_mcp_server(
     ServerPanels.simple_message("🚀 Starting new server instance...", style="green")
     try:
         cmd = [sys.executable, "-m", "crackerjack", "--start-mcp-server"]
-        if websocket_port:
-            cmd.extend(["--websocket-port", str(websocket_port)])
 
         import subprocess
 
@@ -374,7 +314,7 @@ def list_server_status(console: Inject[Console]) -> None:
     console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
 
     mcp_processes = find_mcp_server_processes()
-    websocket_processes = find_websocket_server_processes()
+    # Phase 1: find_websocket_server_processes() call removed (WebSocket stack deleted)
     zuban_lsp_processes = find_zuban_lsp_processes()
 
     if mcp_processes:
@@ -387,15 +327,7 @@ def list_server_status(console: Inject[Console]) -> None:
     else:
         console.print("\n[yellow]MCP Servers: None running[/ yellow]")
 
-    if websocket_processes:
-        console.print("\n[bold green]WebSocket Servers: [/ bold green]")
-        for proc in websocket_processes:
-            console.print(
-                f" • PID {proc['pid']} - CPU: {proc['cpu']}%-Memory: {proc['mem']}%",
-            )
-            console.print(f" Command: {proc['command']}")
-    else:
-        console.print("\n[yellow]WebSocket Servers: None running[/ yellow]")
+    # Phase 1: WebSocket server status display removed (WebSocket stack deleted)
 
     if zuban_lsp_processes:
         console.print("\n[bold green]Zuban LSP Servers: [/ bold green]")
@@ -407,5 +339,6 @@ def list_server_status(console: Inject[Console]) -> None:
     else:
         console.print("\n[yellow]Zuban LSP Servers: None running[/ yellow]")
 
-    if not mcp_processes and not websocket_processes and not zuban_lsp_processes:
+    # Phase 1: Removed websocket_processes from empty server check (WebSocket stack deleted)
+    if not mcp_processes and not zuban_lsp_processes:
         console.print("\n[dim]No crackerjack servers currently running[/ dim]")

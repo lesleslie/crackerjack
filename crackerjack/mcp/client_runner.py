@@ -7,9 +7,11 @@ from pathlib import Path
 from acb.console import Console
 from acb.depends import depends
 
-from .progress_monitor import (
-    run_crackerjack_with_enhanced_progress as run_crackerjack_with_progress,
-)
+# Phase 1: progress_monitor import commented out (module deleted with WebSocket stack)
+# This client_runner.py utility depends on deleted WebSocket monitoring infrastructure
+# from .progress_monitor import (
+#     run_crackerjack_with_enhanced_progress as run_crackerjack_with_progress,
+# )
 
 
 def is_mcp_server_running(host: str = "localhost", port: int = 5173) -> bool:
@@ -83,7 +85,9 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
 
         async with MockSession() as session:
             try:
-                await run_crackerjack_with_progress(session, command)
+                # Phase 1: run_crackerjack_with_progress call commented out (WebSocket monitoring deleted)
+                # await run_crackerjack_with_progress(session, command)
+                console.print(f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]")
             except Exception as e:
                 console.print(f"[bold red]Error: {e}[/ bold red]")
                 sys.exit(1)

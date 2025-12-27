@@ -30,17 +30,20 @@ from crackerjack.services.debug import get_ai_agent_debugger
 from crackerjack.services.git import GitService
 from crackerjack.services.lsp_client import LSPClient
 from crackerjack.services.memory_optimizer import MemoryOptimizer
-from crackerjack.services.monitoring.performance_benchmarks import (
-    PerformanceBenchmarkService,
-)
-from crackerjack.services.monitoring.performance_cache import (
-    FileSystemCache,
-    GitOperationCache,
-    get_filesystem_cache,
-    get_git_cache,
-    get_performance_cache,
-)
-from crackerjack.services.monitoring.performance_monitor import get_performance_monitor
+
+# Phase 1: Commented out - monitoring services removed with WebSocket stack
+# These will be fully removed in Phase 2 when workflow orchestrator is removed
+# from crackerjack.services.monitoring.performance_benchmarks import (
+#     PerformanceBenchmarkService,
+# )
+# from crackerjack.services.monitoring.performance_cache import (
+#     FileSystemCache,
+#     GitOperationCache,
+#     get_filesystem_cache,
+#     get_git_cache,
+#     get_performance_cache,
+# )
+from crackerjack.core.performance_monitor import get_performance_monitor
 from crackerjack.services.parallel_executor import (
     AsyncCommandExecutor,
     ParallelHookExecutor,
@@ -162,35 +165,36 @@ def register_services() -> None:
     memory_optimizer = MemoryOptimizer.get_instance()
     depends.set(MemoryOptimizerProtocol, memory_optimizer)
 
-    # 4. Register Performance Cache
-    # Caching layer for performance optimization
-    performance_cache = get_performance_cache()
-    depends.set(PerformanceCacheProtocol, performance_cache)
-
-    # 5. Register Performance Benchmark Service
-    # The service should be registered automatically via @depends.inject
-    # in the service implementation, but if not let's create and register it manually
-    try:
-        # First, try to get the already registered instance
-        try:
-            performance_benchmarks = depends.get_sync(PerformanceBenchmarkProtocol)
-        except Exception:
-            # If not registered, create it using proper DI
-            console = depends.get_sync(Console)
-            logger = depends.get_sync(
-                Logger
-            )  # Get the logger instead of LoggerProtocol
-            pkg_path = Path.cwd()  # Use current directory as fallback
-            performance_benchmarks = PerformanceBenchmarkService(
-                console=console, logger=logger, pkg_path=pkg_path
-            )
-            # Register the newly created instance
-            depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
-    except Exception as e:
-        # Log the error to help with debugging
-        print(f"WARNING: Failed to register PerformanceBenchmarkService: {e}")
-        # Performance benchmarking will be disabled
-        pass
+    # Phase 1: Commented out - monitoring services removed with WebSocket stack
+    # # 4. Register Performance Cache
+    # # Caching layer for performance optimization
+    # performance_cache = get_performance_cache()
+    # depends.set(PerformanceCacheProtocol, performance_cache)
+    #
+    # # 5. Register Performance Benchmark Service
+    # # The service should be registered automatically via @depends.inject
+    # # in the service implementation, but if not let's create and register it manually
+    # try:
+    #     # First, try to get the already registered instance
+    #     try:
+    #         performance_benchmarks = depends.get_sync(PerformanceBenchmarkProtocol)
+    #     except Exception:
+    #         # If not registered, create it using proper DI
+    #         console = depends.get_sync(Console)
+    #         logger = depends.get_sync(
+    #             Logger
+    #         )  # Get the logger instead of LoggerProtocol
+    #         pkg_path = Path.cwd()  # Use current directory as fallback
+    #         performance_benchmarks = PerformanceBenchmarkService(
+    #             console=console, logger=logger, pkg_path=pkg_path
+    #         )
+    #         # Register the newly created instance
+    #         depends.set(PerformanceBenchmarkProtocol, performance_benchmarks)
+    # except Exception as e:
+    #     # Log the error to help with debugging
+    #     print(f"WARNING: Failed to register PerformanceBenchmarkService: {e}")
+    #     # Performance benchmarking will be disabled
+    #     pass
 
     # 6. Register Parallel Executor Services
     # For parallel and async hook execution
@@ -200,13 +204,14 @@ def register_services() -> None:
     async_executor = get_async_executor()
     depends.set(AsyncCommandExecutor, async_executor)
 
-    # 7. Register Specialized Cache Services
-    # Git and filesystem caching
-    git_cache = get_git_cache()
-    depends.set(GitOperationCache, git_cache)
-
-    filesystem_cache = get_filesystem_cache()
-    depends.set(FileSystemCache, filesystem_cache)
+    # Phase 1: Commented out - cache services removed with WebSocket stack
+    # # 7. Register Specialized Cache Services
+    # # Git and filesystem caching
+    # git_cache = get_git_cache()
+    # depends.set(GitOperationCache, git_cache)
+    #
+    # filesystem_cache = get_filesystem_cache()
+    # depends.set(FileSystemCache, filesystem_cache)
 
     # 8. Register Quality Baseline Service
     # Foundation for quality tracking and intelligence

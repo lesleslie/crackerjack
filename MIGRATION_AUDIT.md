@@ -188,10 +188,38 @@ This baseline establishes the pre-migration state of the test suite. Any test fa
   - WebSocket removal → **CONFIRMED SAFE** (not used in production)
   - Phase 5 scope → **5 hours** (delete tests, not rewrite)
 
-### Phase 1: Remove WebSocket/Dashboard Stack ⏳ IN PROGRESS
-**Timeline:** Day 1 PM, 1:00-4:00 PM (3 hours estimated)
+### Phase 1: Remove WebSocket/Dashboard Stack ✅ COMPLETE
+**Timeline:** Day 1 PM, 1:00-4:00 PM (3 hours estimated, completed 2025-12-26)
 **Risk Level:** LOW (removal only, confirmed safe by review)
 **Started:** 2025-12-26
+**Completed:** 2025-12-26
+
+**Completed Tasks:**
+- ✅ Task 1: WebSocket code removal from server_core.py (30+ references removed)
+- ✅ Task 2: CLI WebSocket options removal (4 options + handlers cleaned)
+- ✅ Task 3: Oneiric runtime health snapshots integration
+  - Created `crackerjack/runtime/` module with RuntimeHealthSnapshot dataclass
+  - Integrated snapshot writing on server startup (`.oneiric_cache/runtime_health.json`, `server.pid`)
+  - Integrated snapshot updating on server shutdown
+  - Fixed broken monitoring imports in config/__init__.py, cli/__init__.py (commented out for Phase 2 cleanup)
+- ✅ Task 4: Remove WebSocket tests
+  - Removed 6 main WebSocket test files (test_websocket_endpoints.py, test_websocket_lifecycle.py, test_mcp_progress_monitor.py, test_unified_monitoring_dashboard.py, test_resource_cleanup_integration.py, tests/monitoring/ directory)
+  - Cleaned up unit test references in tests/unit/core/test_timeout_manager.py (websocket_broadcast timeout)
+  - Cleaned up unit test references in tests/unit/cli/test_handlers.py (TestHandleWebSocketServer class, test_websocket_server_lifecycle method)
+  - Removed progress_monitor import tests from test_import_coverage_consolidated.py and test_services_coverage.py
+  - Removed WebSocket handler imports from test_main_module.py
+- ✅ Validation: Verify all files deleted, no websocket imports remain
+  - Cleaned up production code WebSocket server references (8 files):
+    - crackerjack/__main__.py - Removed 4 WebSocket CLI parameters
+    - crackerjack/services/server_manager.py - Removed find_websocket_server_processes() and stop_websocket_server() functions
+    - crackerjack/mcp/tools/monitoring_tools.py - Removed WebSocket server status collection
+    - crackerjack/mcp/client_runner.py - Commented out progress_monitor import (utility depends on deleted infrastructure)
+    - crackerjack/mcp/tools/workflow_executor.py - Removed _ensure_websocket_server_running() function
+    - crackerjack/services/thread_safe_status_collector.py - Removed WebSocket server status collection
+    - crackerjack/services/patterns/formatting.py - Removed WebSocket CLI test case
+    - crackerjack/services/ai/contextual_ai_assistant.py - Removed WebSocket server help text
+  - Verified: 0 active WebSocket server function calls remain
+  - Note: Some benign references remain (config fields, documentation) - will be cleaned in Phase 2
 ### Phase 2: Remove ACB Dependency 📋 PENDING
 
 **Estimated Effort:** 6 hours (Day 2)

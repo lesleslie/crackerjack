@@ -212,17 +212,7 @@ class TestMCPImports:
         except ImportError as e:
             pytest.skip(f"MCP execution tools imports failed: {e}")
 
-    def test_mcp_progress_monitor(self) -> None:
-        try:
-            from crackerjack.mcp.progress_monitor import (
-                CrackerjackDashboard,
-                ProgressMonitor,
-            )
-
-            assert CrackerjackDashboard is not None
-            assert ProgressMonitor is not None
-        except ImportError as e:
-            pytest.skip(f"MCP progress monitor imports failed: {e}")
+    # Phase 1: test_mcp_progress_monitor removed (progress_monitor module deleted with WebSocket stack)
 
     def test_mcp_context(self) -> None:
         try:

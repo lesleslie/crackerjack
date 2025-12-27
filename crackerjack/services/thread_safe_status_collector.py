@@ -181,30 +181,24 @@ class ThreadSafeStatusCollector:
                     snapshot.services = cached_data
                 return
 
-            from crackerjack.services.server_manager import (
-                find_mcp_server_processes,
-                find_websocket_server_processes,
-            )
+            # Phase 1: find_websocket_server_processes import removed (WebSocket stack deleted)
+            from crackerjack.services.server_manager import find_mcp_server_processes
 
             mcp_task = asyncio.create_task(asyncio.to_thread(find_mcp_server_processes))
-            websocket_task = asyncio.create_task(
-                asyncio.to_thread(find_websocket_server_processes)
-            )
 
-            mcp_processes, websocket_processes = await asyncio.wait_for(
-                asyncio.gather(mcp_task, websocket_task),
+            mcp_processes = await asyncio.wait_for(
+                asyncio.gather(mcp_task),
                 timeout=10.0,
             )
+            # Unpack single result from gather
+            mcp_processes = mcp_processes[0]
 
             services_data = {
                 "mcp_server": {
                     "running": len(mcp_processes) > 0,
                     "processes": mcp_processes,
                 },
-                "websocket_server": {
-                    "running": len(websocket_processes) > 0,
-                    "processes": websocket_processes,
-                },
+                # Phase 1: websocket_server status removed (WebSocket stack deleted)
             }
 
             with self._data_lock:
@@ -346,11 +340,7 @@ class ThreadSafeStatusCollector:
             stats = {
                 "server_info": {
                     "project_path": str(context.config.project_path),
-                    "websocket_port": getattr(context, "websocket_server_port", None),
-                    "websocket_active": getattr(
-                        context, "websocket_server_process", None
-                    )
-                    is not None,
+                    # Phase 1: websocket_port and websocket_active removed (WebSocket stack deleted)
                 },
                 "rate_limiting": {
                     "enabled": context.rate_limiter is not None,
