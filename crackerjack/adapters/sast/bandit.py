@@ -1,4 +1,4 @@
-"""Bandit adapter for ACB QA framework - Python security linting.
+"""Bandit adapter for Crackerjack QA framework - Python security linting.
 
 Bandit is a security linter designed to find common security issues in Python code.
 It performs static analysis to identify potential vulnerabilities like:
@@ -8,9 +8,9 @@ It performs static analysis to identify potential vulnerabilities like:
 - Weak cryptography
 - And many more security anti-patterns
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -20,11 +20,9 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -33,16 +31,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-4f2a-7b3c-8d9e-f3b4d3c2b1a0"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("1a6108e1-275a-4539-9536-aa66abfe7cd6")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -416,8 +413,3 @@ class BanditAdapter(BaseToolAdapter):
                 "skip_rules": [],  # Handled in command builder with more aggressive set
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(BanditAdapter)

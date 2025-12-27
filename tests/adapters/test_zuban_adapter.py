@@ -17,6 +17,7 @@ from crackerjack.adapters.type.zuban import (
     ZubanAdapter,
     ZubanSettings,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 
@@ -24,9 +25,10 @@ class TestZubanAdapterInitialization:
     """Test Zuban adapter initialization and configuration."""
 
     def test_module_registration(self) -> None:
-        """Test ACB module registration constants."""
-        assert MODULE_ID == UUID("01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0")
-        assert MODULE_STATUS == "stable"
+        """Test adapter module registration constants (static UUID from registry)."""
+        # UUID from ADAPTER_UUID_REGISTRY.md: zuban_type
+        assert MODULE_ID == UUID("e42fd557-ed29-4104-8edd-46607ab807e2")
+        assert MODULE_STATUS == AdapterStatus.STABLE
 
     def test_adapter_initialization_with_defaults(self) -> None:
         """Test adapter initializes with default settings."""

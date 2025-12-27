@@ -44,7 +44,7 @@ class DependencyContainer:
         verbose: bool = False,
     ) -> "DependencyContainer":
         if console is None:
-            console = acb_console
+            console = Console()
 
         if pkg_path is None:
             pkg_path = Path.cwd()
@@ -89,13 +89,13 @@ class DependencyContainer:
 
 
 def create_container(
-    console: Console | None = None,  # defaults to acb_console if None
+    console: Console | None = None,
     pkg_path: Path | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> DependencyContainer:
     if console is None:
-        console = acb_console
+        console = Console()
     return DependencyContainer().create_default_container(
         console=console,
         pkg_path=pkg_path,

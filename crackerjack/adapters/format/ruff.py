@@ -1,13 +1,13 @@
-"""Ruff adapter for ACB QA framework - unified lint and format checking.
+"""Ruff adapter for Crackerjack QA framework - unified lint and format checking.
 
 Ruff is a fast Python linter and formatter that combines the functionality
 of multiple tools (Flake8, isort, Black, etc.) into a single executable.
 
 This adapter handles both lint checking and formatting.
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -16,12 +16,10 @@ from __future__ import annotations
 
 import json
 import typing as t
-from contextlib import suppress
 from enum import StrEnum
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -30,14 +28,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("c38609f7-f4a4-43ac-a7af-c55ef522c615")
+MODULE_STATUS = AdapterStatus.STABLE
 
 
 class RuffMode(StrEnum):
@@ -509,8 +508,3 @@ class RuffAdapter(BaseToolAdapter):
                 "preview": False,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(RuffAdapter)

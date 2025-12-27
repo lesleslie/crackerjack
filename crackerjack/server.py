@@ -67,42 +67,117 @@ class CrackerjackServer:
     async def _init_qa_adapters(self):
         """Initialize enabled QA adapters.
 
-        TODO(Phase 4): Actual adapter initialization will be implemented in Phase 4
-        when QA adapters are ported to Oneiric pattern.
-
-        For Phase 3, this method logs which adapters would be enabled based on
-        the settings flags, but does not actually instantiate adapter objects.
+        Phase 4 Implementation: Instantiates QA adapters based on settings flags.
+        All adapters are ACB-free and use standard Python patterns with async init().
         """
-        enabled_adapters = []
+        self.adapters = []
 
-        # Check all tool enablement flags from settings
+        # Import adapter classes (all adapters are now ACB-free)
+        from crackerjack.adapters.format.ruff import RuffAdapter
+        from crackerjack.adapters.sast.bandit import BanditAdapter
+        from crackerjack.adapters.sast.semgrep import SemgrepAdapter
+        from crackerjack.adapters.type.zuban import ZubanAdapter
+        from crackerjack.adapters.refactor.refurb import RefurbAdapter
+        from crackerjack.adapters.refactor.skylos import SkylosAdapter
+        from crackerjack.adapters.ai.claude import ClaudeCodeFixer
+
+        # Track enabled adapters for logging
+        enabled_names = []
+
+        # Format/Lint: Ruff (enabled by default)
         if getattr(self.settings, "ruff_enabled", True):
-            enabled_adapters.append("Ruff")
+            try:
+                ruff = RuffAdapter()
+                await ruff.init()
+                self.adapters.append(ruff)
+                enabled_names.append("Ruff")
+                logger.debug("Ruff adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Ruff adapter: {e}")
 
+        # Security: Bandit (enabled by default)
         if getattr(self.settings, "bandit_enabled", True):
-            enabled_adapters.append("Bandit")
+            try:
+                bandit = BanditAdapter()
+                await bandit.init()
+                self.adapters.append(bandit)
+                enabled_names.append("Bandit")
+                logger.debug("Bandit adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Bandit adapter: {e}")
 
+        # SAST: Semgrep (disabled by default - requires API key)
         if getattr(self.settings, "semgrep_enabled", False):
-            enabled_adapters.append("Semgrep")
+            try:
+                semgrep = SemgrepAdapter()
+                await semgrep.init()
+                self.adapters.append(semgrep)
+                enabled_names.append("Semgrep")
+                logger.debug("Semgrep adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Semgrep adapter: {e}")
 
-        if getattr(self.settings, "mypy_enabled", True):
-            enabled_adapters.append("Mypy")
-
-        # Rust-powered tools
+        # Type Check: Zuban (Rust-powered, enabled by default)
         zuban_enabled = getattr(
             getattr(self.settings, "zuban_lsp", None), "enabled", True
         )
         if zuban_enabled:
-            enabled_adapters.append("Zuban")
+            try:
+                zuban = ZubanAdapter()
+                await zuban.init()
+                self.adapters.append(zuban)
+                enabled_names.append("Zuban")
+                logger.debug("Zuban adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Zuban adapter: {e}")
 
-        # Check for other adapters that may exist in settings
-        if hasattr(self.settings, "testing"):
-            enabled_adapters.append("Pytest")
+        # Refactor: Refurb (enabled by default)
+        if getattr(self.settings, "refurb_enabled", True):
+            try:
+                refurb = RefurbAdapter()
+                await refurb.init()
+                self.adapters.append(refurb)
+                enabled_names.append("Refurb")
+                logger.debug("Refurb adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Refurb adapter: {e}")
 
-        logger.info(f"QA adapters enabled (Phase 3 - not yet instantiated): {', '.join(enabled_adapters)}")
-        logger.info("TODO(Phase 4): Implement actual adapter instantiation")
+        # Refactor: Skylos (dead code detection, enabled by default)
+        if getattr(self.settings, "skylos_enabled", True):
+            try:
+                skylos = SkylosAdapter()
+                await skylos.init()
+                self.adapters.append(skylos)
+                enabled_names.append("Skylos")
+                logger.debug("Skylos adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Skylos adapter: {e}")
 
-        # Phase 4 will populate self.adapters with actual adapter instances
+        # AI: Claude (requires API key, disabled by default)
+        ai_settings = getattr(self.settings, "ai", None)
+        if ai_settings and getattr(ai_settings, "ai_agent", False):
+            try:
+                # Claude adapter requires settings passed to constructor
+                from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
+                from pydantic import SecretStr
+
+                # Extract API key from settings
+                api_key = getattr(ai_settings, "anthropic_api_key", None)
+                if api_key:
+                    claude_settings = ClaudeCodeFixerSettings(
+                        anthropic_api_key=SecretStr(api_key)
+                    )
+                    claude = ClaudeCodeFixer(settings=claude_settings)
+                    await claude.init()
+                    self.adapters.append(claude)
+                    enabled_names.append("Claude AI")
+                    logger.debug("Claude AI adapter initialized")
+                else:
+                    logger.warning("Claude AI enabled but no API key configured")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Claude AI adapter: {e}")
+
+        logger.info(f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}")
 
     def stop(self):
         """Stop server gracefully.

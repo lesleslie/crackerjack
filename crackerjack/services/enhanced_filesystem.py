@@ -1,7 +1,7 @@
-import logging
 from __future__ import annotations
 
 import asyncio
+import logging
 import hashlib
 import time
 from collections.abc import Iterator
@@ -16,6 +16,9 @@ from crackerjack.models.protocols import (
     ServiceProtocol,
 )
 from crackerjack.services.logging import LoggingContext
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class FileCache:

@@ -13,7 +13,7 @@ def test_parse_hook_output_check_added_large_files_with_large_files():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Mock output when large files are found
     output = "Large files detected:\n  file1.py: 2.5 MB (exceeds 1.0 MB)\n\n1 large file(s) found."
@@ -27,7 +27,7 @@ def test_parse_hook_output_check_added_large_files_no_large_files():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Mock output when no large files are found
     output = "All 10 file(s) are under size limit"
@@ -41,7 +41,7 @@ def test_parse_hook_output_check_added_large_files_with_nonzero_exit():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Mock output when large files are found but we miss the pattern
     output = "Some error occurred"
@@ -56,7 +56,7 @@ def test_parse_hook_output_check_added_large_files_different_patterns():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Test various patterns based on the actual regex patterns in the implementation:
     # r"large file(?:s)? found:?\s*(\d+)" - matches "large file found: 2"
@@ -93,7 +93,7 @@ def test_parse_hook_output_other_hooks_unchanged():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Test a standard hook with file count pattern
     output = "Found issues in 3 files"
@@ -115,7 +115,7 @@ def test_parse_hook_output_check_added_large_files_exact_output():
     import logging
     console = Console()
     logger = logging.getLogger(__name__)
-    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+    executor = AsyncHookExecutor(console=console, pkg_path=Path("."))
 
     # Exact output from real tool when no large files are found
     output = "All 686 file(s) are under size limit"

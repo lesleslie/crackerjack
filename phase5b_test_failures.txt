@@ -1,0 +1,1514 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- /Users/les/Projects/crackerjack/.venv/bin/python
+cachedir: .pytest_cache
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+hypothesis profile 'default'
+rootdir: /Users/les/Projects/crackerjack
+configfile: pyproject.toml
+plugins: benchmark-5.2.3, mock-3.15.1, anyio-4.12.0, xdist-3.8.0, devtools-0.12.2, timeout-2.4.0, asyncio-1.3.0, pyleak-0.1.14, hypothesis-6.148.8, cov-7.0.0
+timeout: 600.0s
+timeout method: signal
+timeout func_only: False
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3734 items
+
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_with_requirements PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_json_output_no_vulnerabilities PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_text_output_fallback PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_vulnerability_message PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_count_affected_packages PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_module_registration FAILED [  0%]
+
+=================================== FAILURES ===================================
+___________ TestZubanAdapterInitialization.test_module_registration ____________
+tests/adapters/test_zuban_adapter.py:28: in test_module_registration
+    assert MODULE_ID == UUID("01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0")
+E   AssertionError: assert UUID('e42fd557-ed29-4104-8edd-46607ab807e2') == UUID('01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0')
+E    +  where UUID('01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0') = UUID('01937d86-6b2c-7d3e-8f4a-b5c6d7e8f9a0')
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469
+  /Users/les/Projects/crackerjack/.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469: UserWarning: Skipping collection of '.hypothesis' directory - this usually means you've explicitly set the `norecursedirs` pytest config option, replacing rather than extending the default ignores.
+    warnings.warn(
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_api_comprehensive.py)
+    @dataclass
+
+tests/test_config_service.py:12
+  /Users/les/Projects/crackerjack/tests/test_config_service.py:12: PytestCollectionWarning: cannot collect test class 'TestConfigModel' because it has a __init__ constructor (from: tests/test_config_service.py)
+    class TestConfigModel(BaseModel):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestCommandBuilder:
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestManager:
+
+.venv/lib/python3.13/site-packages/fastmcp/server/server.py:302
+  /Users/les/Projects/crackerjack/.venv/lib/python3.13/site-packages/fastmcp/server/server.py:302: DeprecationWarning: Providing `streamable_http_path` when creating a server is deprecated. Provide it when calling `run` or as a global setting instead.
+    self._handle_deprecated_settings(
+
+crackerjack/models/config.py:70
+  /Users/les/Projects/crackerjack/crackerjack/models/config.py:70: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_models_comprehensive.py)
+    @dataclass
+
+crackerjack/models/protocols.py:271
+  /Users/les/Projects/crackerjack/crackerjack/models/protocols.py:271: PytestCollectionWarning: cannot collect test class 'TestManagerProtocol' because it has a __init__ constructor (from: tests/test_protocol_compliance.py)
+    @t.runtime_checkable
+
+crackerjack/models/pydantic_models.py:50
+  /Users/les/Projects/crackerjack/crackerjack/models/pydantic_models.py:50: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_pydantic_models.py)
+    class TestConfig(BaseModel):
+
+crackerjack/errors.py:102
+  /Users/les/Projects/crackerjack/crackerjack/errors.py:102: PytestCollectionWarning: cannot collect test class 'TestExecutionError' because it has a __init__ constructor (from: tests/test_structured_errors.py)
+    class TestExecutionError(CrackerjackError):
+
+crackerjack/config/settings.py:23
+  /Users/les/Projects/crackerjack/crackerjack/config/settings.py:23: PytestCollectionWarning: cannot collect test class 'TestSettings' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestSettings(Settings):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestCommandBuilder:
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_unified_api.py)
+    @dataclass
+
+tests/unit/agents/test_base.py:362
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_base.py:362: PytestCollectionWarning: cannot collect test class 'TestAgent' because it has a __init__ constructor (from: tests/unit/agents/test_base.py::TestSubAgentBase)
+    class TestAgent(SubAgent):
+
+tests/unit/agents/test_enhanced_proactive_agent.py:20
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_enhanced_proactive_agent.py:20: PytestCollectionWarning: cannot collect test class 'TestEnhancedProactiveAgentImpl' because it has a __init__ constructor (from: tests/unit/agents/test_enhanced_proactive_agent.py)
+    class TestEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
+
+crackerjack/agents/test_creation_agent.py:17
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_creation_agent.py:17: PytestCollectionWarning: cannot collect test class 'TestCreationAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_creation_agent.py)
+    class TestCreationAgent(SubAgent):
+
+crackerjack/agents/test_specialist_agent.py:14
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_specialist_agent.py:14: PytestCollectionWarning: cannot collect test class 'TestSpecialistAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_specialist_agent.py)
+    class TestSpecialistAgent(SubAgent):
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/unit/managers/test_test_manager.py)
+    class TestManager:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_module_registration
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+================== 1 failed, 32 passed, 18 warnings in 52.29s ==================
+============================= test session starts ==============================
+platform darwin -- Python 3.13.11, pytest-9.0.2, pluggy-1.6.0 -- /Users/les/Projects/crackerjack/.venv/bin/python
+cachedir: .pytest_cache
+benchmark: 5.2.3 (defaults: timer=time.perf_counter disable_gc=False min_rounds=5 min_time=0.000005 max_time=1.0 calibration_precision=10 warmup=False warmup_iterations=100000)
+hypothesis profile 'default'
+rootdir: /Users/les/Projects/crackerjack
+configfile: pyproject.toml
+plugins: benchmark-5.2.3, mock-3.15.1, anyio-4.12.0, xdist-3.8.0, devtools-0.12.2, timeout-2.4.0, asyncio-1.3.0, pyleak-0.1.14, hypothesis-6.148.8, cov-7.0.0
+timeout: 600.0s
+timeout method: signal
+timeout func_only: False
+asyncio: mode=Mode.AUTO, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 3734 items
+
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_with_requirements PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_json_output_no_vulnerabilities PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_text_output_fallback PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_build_vulnerability_message PASSED [  0%]
+tests/adapters/test_pip_audit_adapter.py::TestPipAuditAdapter::test_count_affected_packages PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_pyscn_adapter.py::TestPyscnAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestTyAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_initialization PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_build_command_basic PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_build_command_with_options PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_json_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_text_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_parse_empty_output PASSED [  0%]
+tests/adapters/test_type_adapters.py::TestPyreflyAdapter::test_get_default_config PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_module_registration PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_adapter_initialization_with_defaults PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_adapter_initialization_with_custom_settings PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_adapter_init_creates_default_settings PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_adapter_name_property PASSED [  0%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_module_id_property PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanAdapterInitialization::test_tool_name_property PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanSettings::test_default_settings PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanSettings::test_custom_settings PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanCommandBuilding::test_build_command_with_defaults PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanCommandBuilding::test_build_command_with_strict_mode PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanCommandBuilding::test_build_command_with_cache_dir PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanCommandBuilding::test_build_command_with_ignore_missing_imports PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanCommandBuilding::test_build_command_raises_without_init PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanOutputParsing::test_parse_json_output_success PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanOutputParsing::test_parse_empty_json_output PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanOutputParsing::test_parse_text_output_fallback PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanOutputParsing::test_parse_output_no_output PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanDefaultConfiguration::test_get_default_config PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanDefaultConfiguration::test_get_default_config_settings PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanDefaultConfiguration::test_check_type_is_type PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanEdgeCases::test_parse_malformed_json PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanEdgeCases::test_parse_text_with_invalid_line_numbers PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanEdgeCases::test_multiple_files_in_command PASSED [  1%]
+tests/adapters/test_zuban_adapter.py::TestZubanIntegration::test_real_type_check SKIPPED [  1%]
+tests/agents/test_error_middleware.py::test_agent_error_boundary_returns_fallback PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_valid_command_no_args PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_valid_command_with_args PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_valid_command_multiple_args PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[test] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[lint] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[check] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[format] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[security] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[complexity] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_all_valid_commands[all] PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_invalid_command_double_dash PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_invalid_command_single_dash PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_unknown_command PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_ai_fix_in_args_rejected PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_ai_fix_in_args_with_other_args PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_empty_command_rejected PASSED [  1%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_case_sensitive_commands PASSED [  2%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_whitespace_handling PASSED [  2%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_args_none_handled PASSED [  2%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_command_none_rejected PASSED [  2%]
+tests/cli/test_command_validation.py::TestCommandValidation::test_shell_quoted_arguments PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationEdgeCases::test_numeric_command PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationEdgeCases::test_special_chars_in_command PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationEdgeCases::test_very_long_args PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationEdgeCases::test_ai_fix_case_sensitivity PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationReturnTypes::test_return_type_is_tuple PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationReturnTypes::test_command_is_string PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationReturnTypes::test_args_is_list PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationDocstring::test_docstring_example_1 PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationDocstring::test_docstring_example_2 PASSED [  2%]
+tests/cli/test_command_validation.py::TestValidationDocstring::test_docstring_example_3_raises PASSED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_direct_mode_returns_tool_command SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_legacy_mode_returns_precommit_wrapper SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_direct_mode_native_tool SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_direct_mode_custom_tool SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_direct_mode_rust_tool SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_legacy_mode_with_config_path SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_legacy_mode_with_manual_stage SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_direct_mode_fallback_to_legacy SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_legacy_mode_prefers_venv_precommit SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestHookDefinitionGetCommand::test_legacy_mode_falls_back_to_system_precommit SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestFastHooksConfiguration::test_all_fast_hooks_use_direct_mode SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestFastHooksConfiguration::test_fast_hooks_can_get_commands SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestFastHooksConfiguration::test_fast_hooks_have_expected_count SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestFastHooksConfiguration::test_fast_formatting_hooks_marked_correctly SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestComprehensiveHooksConfiguration::test_all_comprehensive_hooks_use_direct_mode SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestComprehensiveHooksConfiguration::test_comprehensive_hooks_can_get_commands SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestComprehensiveHooksConfiguration::test_comprehensive_hooks_have_expected_count SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestComprehensiveHooksConfiguration::test_all_comprehensive_hooks_are_manual_stage SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestComprehensiveHooksConfiguration::test_comprehensive_hooks_have_comprehensive_stage SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestMigrationPath::test_can_override_legacy_flag_for_testing SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestMigrationPath::test_both_modes_execute_same_tool SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestMigrationPath::test_security_levels_preserved_across_modes SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestBackwardCompatibilityEdgeCases::test_empty_command_list_with_direct_mode SKIPPED [  2%]
+tests/config/test_hooks_backward_compatibility.py::TestBackwardCompatibilityEdgeCases::test_empty_command_list_with_legacy_mode SKIPPED [  3%]
+tests/config/test_hooks_backward_compatibility.py::TestBackwardCompatibilityEdgeCases::test_direct_mode_command_is_copy SKIPPED [  3%]
+tests/config/test_hooks_backward_compatibility.py::TestBackwardCompatibilityEdgeCases::test_legacy_mode_command_is_fresh SKIPPED [  3%]
+tests/config/test_hooks_backward_compatibility.py::TestBackwardCompatibilityEdgeCases::test_all_18_tools_work_in_direct_mode SKIPPED [  3%]
+tests/config/test_loader.py::test_load_settings_merges_and_filters PASSED [  3%]
+tests/config/test_loader.py::test_load_settings_async_handles_invalid_yaml_and_continues PASSED [  3%]
+tests/config/test_loader.py::test_load_settings_ignores_non_mapping_yaml PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_registry_exists PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_registry_has_expected_count PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_all_commands_are_lists PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_all_commands_use_uv PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_custom_tools_present PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_native_tools_present PASSED [  3%]
+tests/config/test_tool_commands.py::TestToolCommandsRegistry::test_third_party_tools_present PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_get_known_tool_command PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_get_native_tool_command PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_get_unknown_tool_raises_error PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_returns_copy_not_reference PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_all_registered_tools_retrievable PASSED [  3%]
+tests/config/test_tool_commands.py::TestGetToolCommand::test_retrieved_commands_match_registry PASSED [  3%]
+tests/config/test_tool_commands.py::TestListAvailableTools::test_returns_list PASSED [  3%]
+tests/config/test_tool_commands.py::TestListAvailableTools::test_returns_all_tools PASSED [  3%]
+tests/config/test_tool_commands.py::TestListAvailableTools::test_returns_sorted_list PASSED [  3%]
+tests/config/test_tool_commands.py::TestListAvailableTools::test_no_duplicates PASSED [  3%]
+tests/config/test_tool_commands.py::TestListAvailableTools::test_all_strings PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_native_tools_identified PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_third_party_tools_not_native PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_custom_tools_not_native PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_validate_regex_patterns_is_native PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_unknown_tool_returns_false PASSED [  3%]
+tests/config/test_tool_commands.py::TestIsNativeTool::test_all_tools_have_consistent_classification PASSED [  3%]
+tests/config/test_tool_commands.py::TestCommandStructureValidation::test_uv_run_pattern_for_python_tools PASSED [  3%]
+tests/config/test_tool_commands.py::TestCommandStructureValidation::test_uv_run_pattern_for_rust_tools PASSED [  3%]
+tests/config/test_tool_commands.py::TestCommandStructureValidation::test_config_paths_for_tools_with_configs PASSED [  3%]
+tests/config/test_tool_commands.py::TestCommandStructureValidation::test_target_directories_specified PASSED [  3%]
+tests/config/test_tool_commands.py::TestCommandStructureValidation::test_special_flags_for_specific_tools PASSED [  3%]
+tests/config/test_tool_commands.py::TestIntegrationWithHooks::test_all_fast_hooks_have_commands PASSED [  3%]
+tests/config/test_tool_commands.py::TestIntegrationWithHooks::test_all_comprehensive_hooks_have_commands PASSED [  4%]
+tests/config/test_tool_commands.py::TestIntegrationWithHooks::test_no_shell_metacharacters_in_commands PASSED [  4%]
+tests/config/test_tool_commands.py::TestIntegrationWithHooks::test_commands_are_executable_format PASSED [  4%]
+tests/config/test_tool_commands.py::TestRegistryConsistency::test_no_duplicate_commands PASSED [  4%]
+tests/config/test_tool_commands.py::TestRegistryConsistency::test_hook_names_are_kebab_case PASSED [  4%]
+tests/config/test_tool_commands.py::TestRegistryConsistency::test_module_names_match_hook_names PASSED [  4%]
+tests/config/test_tool_commands.py::TestRegistryConsistency::test_all_tools_documented_in_phase_8 PASSED [  4%]
+tests/core/test_session_controller.py::test_session_controller_initializes_pipeline_components PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestToolExecutionErrorInit::test_init_minimal PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestToolExecutionErrorInit::test_init_full PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestToolExecutionErrorInit::test_init_strips_whitespace PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestToolExecutionErrorInit::test_exception_message_without_duration PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestToolExecutionErrorInit::test_exception_message_with_duration PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_basic PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_with_all_fields PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_truncates_long_output PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_truncates_long_command PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_shows_stdout_when_stderr_empty PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestRichFormatting::test_format_rich_shows_message_when_no_output PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_permission_denied PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_command_not_found PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_timeout PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_syntax_error PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_import_error PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_type_error PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestActionableMessages::test_actionable_message_generic PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestOutputFormatting::test_format_output_empty_lines PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestOutputFormatting::test_format_output_strips_ansi_codes PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestOutputFormatting::test_format_output_indents_lines PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestStringRepresentations::test_str_representation PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestStringRepresentations::test_repr_representation PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestStringRepresentations::test_str_with_long_stderr PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestExceptionInheritance::test_is_exception PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestExceptionInheritance::test_can_be_raised_and_caught PASSED [  4%]
+tests/exceptions/test_tool_execution_error.py::TestExceptionInheritance::test_can_be_caught_as_exception PASSED [  4%]
+tests/executors/test_progress_hook_executor.py::TestProgressHookExecutorInit::test_init_with_progress_enabled PASSED [  4%]
+tests/executors/test_progress_hook_executor.py::TestProgressHookExecutorInit::test_init_with_progress_disabled PASSED [  4%]
+tests/executors/test_progress_hook_executor.py::TestProgressHookExecutorInit::test_init_quiet_mode_disables_progress PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestProgressHookExecutorInit::test_init_with_verbose PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestProgressBarCreation::test_create_progress_bar PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestProgressBarCreation::test_progress_bar_configuration PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestSequentialExecutionWithProgress::test_execute_sequential_with_progress PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestSequentialExecutionWithProgress::test_sequential_execution_shows_current_hook PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestParallelExecutionWithProgress::test_execute_parallel_with_progress PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestParallelExecutionWithProgress::test_parallel_formatting_hooks_run_first PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestProgressFallback::test_fallback_when_progress_disabled PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestProgressFallback::test_fallback_in_quiet_mode PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestRetryWithProgress::test_retry_shows_message PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestErrorHandlingWithProgress::test_parallel_execution_handles_errors PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestDisplayHookResultOverride::test_display_hook_result_suppressed_with_progress PASSED [  5%]
+tests/executors/test_progress_hook_executor.py::TestDisplayHookResultOverride::test_display_hook_result_shown_without_progress PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationExecution::test_native_tool_executes_successfully PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationExecution::test_rust_tool_executes_successfully PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationExecution::test_third_party_tool_executes_successfully PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationExecution::test_command_uses_uv_isolation PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[validate-regex-patterns] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[trailing-whitespace] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[end-of-file-fixer] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[check-yaml] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[check-toml] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[check-added-large-files] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[uv-lock] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[codespell] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[ruff-check] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hook_can_execute[ruff-format] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_all_fast_hooks_have_direct_mode PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestFastHooksIntegration::test_fast_hooks_count PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[zuban] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[gitleaks] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[skylos] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[refurb] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[creosote] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hook_can_execute[complexipy] PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_all_comprehensive_hooks_have_direct_mode PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestComprehensiveHooksIntegration::test_comprehensive_hooks_count PASSED [  5%]
+tests/integration/test_phase8_direct_invocation.py::TestHookExecutionPerformance::test_command_generation_is_fast PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestHookExecutionPerformance::test_direct_invocation_has_minimal_overhead PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestHookFailureHandling::test_hook_failure_returns_nonzero_exit_code PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestHookFailureHandling::test_hook_timeout_can_be_enforced PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestHookFailureHandling::test_invalid_tool_gracefully_falls_back PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestEndToEndWorkflow::test_can_execute_formatting_hook_chain PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestEndToEndWorkflow::test_native_tools_dont_require_pre_commit PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestToolRegistryIntegration::test_all_registered_tools_have_valid_commands PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestToolRegistryIntegration::test_registry_commands_match_hook_commands PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationBenefits::test_direct_mode_reduces_subprocess_overhead PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationBenefits::test_direct_mode_uses_uv_dependency_isolation PASSED [  6%]
+tests/integration/test_phase8_direct_invocation.py::TestDirectInvocationBenefits::test_native_tools_have_no_external_dependencies PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_basic PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_with_timing PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_alternative_formats PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_plural_singular PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_no_false_positives PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_collection_completion_pattern_edge_cases PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionRegexPatterns::test_broken_pattern_does_not_match PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionIntegration::test_parse_real_pytest_collection_output PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestCollectionIntegration::test_collection_progress_updates PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestRegexSafety::test_pattern_does_not_cause_catastrophic_backtracking PASSED [  6%]
+tests/managers/test_test_executor_regex.py::TestRegexSafety::test_pattern_handles_malformed_input_safely PASSED [  6%]
+tests/managers/test_test_executor_regex.py::test_collection_pattern_parametrized[collected 1 item-1] PASSED [  6%]
+tests/managers/test_test_executor_regex.py::test_collection_pattern_parametrized[collected 10 items-10] PASSED [  6%]
+tests/managers/test_test_executor_regex.py::test_collection_pattern_parametrized[collected 100 tests-100] PASSED [  6%]
+tests/managers/test_test_executor_regex.py::test_collection_pattern_parametrized[collected 1000 items in 5s-1000] PASSED [  6%]
+tests/managers/test_test_executor_regex.py::test_collection_pattern_parametrized[=== 5000 tests collected ===-5000] PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_config_integrity_no_drift PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_config_integrity_drift_detected PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_config_integrity_missing_sections PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_file_drift_no_drift PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_file_drift_with_drift PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_check_file_drift_os_error PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_has_required_config_sections_success PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_has_required_config_sections_missing_file PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_has_required_config_sections_missing_section PASSED [  6%]
+tests/services/test_config_integrity.py::TestConfigIntegrityService::test_has_required_config_sections_parsing_error PASSED [  7%]
+tests/services/test_file_filter.py::TestSmartFileFilterInit::test_init_with_explicit_root PASSED [  7%]
+tests/services/test_file_filter.py::TestSmartFileFilterInit::test_init_defaults_to_cwd PASSED [  7%]
+tests/services/test_file_filter.py::TestGetChangedFiles::test_get_changed_files_since_head PASSED [  7%]
+tests/services/test_file_filter.py::TestGetChangedFiles::test_get_changed_files_handles_git_error PASSED [  7%]
+tests/services/test_file_filter.py::TestGetStagedFiles::test_get_staged_files PASSED [  7%]
+tests/services/test_file_filter.py::TestGetUnstagedFiles::test_get_unstaged_files PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByPattern::test_filter_by_pattern_simple PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByPattern::test_filter_by_pattern_wildcard PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByPattern::test_filter_by_pattern_complex PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_python PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_markdown PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_yaml PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_all_files PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_unknown_tool PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByTool::test_filter_by_tool_removes_duplicates PASSED [  7%]
+tests/services/test_file_filter.py::TestGetAllModifiedFiles::test_get_all_modified_combines_staged_and_unstaged PASSED [  7%]
+tests/services/test_file_filter.py::TestGetAllModifiedFiles::test_get_all_modified_removes_duplicates PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByExtensions::test_filter_by_extensions_with_dot PASSED [  7%]
+tests/services/test_file_filter.py::TestFilterByExtensions::test_filter_by_extensions_without_dot PASSED [  7%]
+tests/services/test_file_filter.py::TestConvenienceMethods::test_get_python_files PASSED [  7%]
+tests/services/test_file_filter.py::TestConvenienceMethods::test_get_markdown_files PASSED [  7%]
+tests/services/test_regex_patterns.py::TestCompiledPatternCache::test_get_compiled_pattern PASSED [  7%]
+tests/services/test_regex_patterns.py::TestCompiledPatternCache::test_get_compiled_pattern_with_flags PASSED [  7%]
+tests/services/test_regex_patterns.py::TestCompiledPatternCache::test_get_compiled_pattern_invalid_pattern PASSED [  7%]
+tests/services/test_regex_patterns.py::TestCompiledPatternCache::test_clear_cache PASSED [  7%]
+tests/services/test_regex_patterns.py::TestCompiledPatternCache::test_get_cache_stats PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_basic_pattern_application PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_pattern_with_global_replace PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_pattern_with_flags PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_apply_iteratively PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_apply_iteratively_max_iterations PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_search_method PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_findall_method PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_test_method PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_large_input_size PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_invalid_regex_in_constructor PASSED [  7%]
+tests/services/test_regex_patterns.py::TestValidatedPattern::test_bad_replacement_syntax PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_all_patterns_valid PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_find_pattern_for_text PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_safe_replacement PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_safe_replacement_unknown_pattern PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_get_pattern_description PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_fix_multi_word_hyphenation PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_update_pyproject_version PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_formatting_fixes PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_security_fixes PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_test_fixes PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_is_valid_job_id PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_remove_coverage_fail_under PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_update_coverage_requirement PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_sanitize_internal_urls PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_pattern_iteratively PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_apply_pattern_iteratively_unknown_pattern PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_get_all_pattern_stats PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_clear_all_caches PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_get_cache_info PASSED [  8%]
+tests/services/test_regex_patterns.py::TestSafePatterns::test_validate_path_security PASSED [  8%]
+tests/test___main__.py::test_main_basic PASSED                           [  8%]
+tests/test___main__.py::test_cli_basic SKIPPED (Function requires sp...) [  8%]
+tests/test___main__.py::test_read_file_basic SKIPPED (Function requi...) [  8%]
+tests/test___main__.py::test_write_file_basic SKIPPED (Function requ...) [  8%]
+tests/test___main__.py::test_exists_basic SKIPPED (Function requires...) [  8%]
+tests/test___main__.py::test_mkdir_basic SKIPPED (Function requires ...) [  8%]
+tests/test___main__.py::test_ensure_directory_basic SKIPPED (Functio...) [  8%]
+tests/test___main__.py::test_get_basic SKIPPED (Function requires sp...) [  8%]
+tests/test___main__.py::test_set_basic SKIPPED (Function requires sp...) [  8%]
+tests/test___main__.py::test_save_basic SKIPPED (Function requires s...) [  8%]
+tests/test___main__.py::test_load_basic SKIPPED (Function requires s...) [  8%]
+tests/test___main__.py::test_debug_basic PASSED                          [  8%]
+tests/test___main__.py::test_info_basic SKIPPED (Symbol not exported...) [  8%]
+tests/test___main__.py::test_warning_basic SKIPPED (Symbol not expor...) [  8%]
+tests/test___main__.py::test_error_basic SKIPPED (Symbol not exporte...) [  8%]
+tests/test_actual_semgrep.py::test_actual_semgrep_output PASSED          [  8%]
+tests/test_actual_semgrep.py::test_semgrep_with_issues PASSED            [  8%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_dual_output_generation PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_agent_capabilities_json_generation PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_error_patterns_yaml_generation PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_mkdocs_integration PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_documentation_validation_system PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_automated_reference_generation PASSED [  9%]
+tests/test_ai_optimized_documentation.py::TestAIOptimizedDocumentation::test_documentation_deployment PASSED [  9%]
+tests/test_ai_templates.py::test_get_variable_basic SKIPPED (Symbol ...) [  9%]
+tests/test_ai_templates.py::test_set_variable_basic SKIPPED (Symbol ...) [  9%]
+tests/test_ai_templates.py::test_get_section_basic SKIPPED (Symbol n...) [  9%]
+tests/test_ai_templates.py::test_set_section_basic SKIPPED (Symbol n...) [  9%]
+tests/test_ai_templates.py::test_extract_placeholders_basic SKIPPED      [  9%]
+tests/test_ai_templates.py::test_render_template_basic SKIPPED (Symb...) [  9%]
+tests/test_ai_templates.py::test_register_template_basic SKIPPED (Sy...) [  9%]
+tests/test_ai_templates.py::test_create_ai_reference_template_basic SKIPPED [  9%]
+tests/test_ai_templates.py::test_create_user_guide_template_basic SKIPPED [  9%]
+tests/test_ai_templates.py::test_replace_section_basic SKIPPED (Symb...) [  9%]
+tests/test_ai_templates.py::test_enhance_command_block_basic SKIPPED     [  9%]
+tests/test_ai_templates.py::test_enhance_step_basic SKIPPED (Symbol ...) [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_init PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_init_custom_parameters PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_add_metric_creates_history PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_add_metric_with_timestamp PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_add_metric_with_metadata PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_update_baseline_creates_model PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_detect_normal_values_no_anomalies PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_detect_anomaly_creates_detection PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_get_anomalies_returns_filtered_results PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_get_baseline_summary_returns_summary PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_export_model_creates_file PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_detect_seasonal_patterns_identifies_patterns PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_calculate_severity_handles_edge_cases PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_threshold_breach_detection_works PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_anomaly_description_generation PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_get_anomalies_sorts_by_timestamp PASSED [  9%]
+tests/test_anomaly_detector_service.py::TestAnomalyDetector::test_get_anomalies_respects_limit PASSED [  9%]
+tests/test_api.py::test_run_quality_checks_basic SKIPPED (run_qualit...) [  9%]
+tests/test_api.py::test_clean_code_basic SKIPPED (clean_code require...) [ 10%]
+tests/test_api.py::test_run_tests_basic SKIPPED (run_tests requires ...) [ 10%]
+tests/test_api.py::test_publish_package_basic SKIPPED (publish_packa...) [ 10%]
+tests/test_api.py::test_code_cleaner_basic SKIPPED (code_cleaner req...) [ 10%]
+tests/test_api.py::test_interactive_cli_basic SKIPPED (interactive_c...) [ 10%]
+tests/test_api.py::test_run_interactive_workflow_basic SKIPPED (run_...) [ 10%]
+tests/test_api.py::test_create_workflow_options_basic SKIPPED (creat...) [ 10%]
+tests/test_api.py::test_get_project_info_basic SKIPPED (get_project_...) [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_init SKIPPED   [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_code_cleaner_property SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_interactive_cli_property SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_run_quality_checks_success SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_run_quality_checks_failure SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_run_quality_checks_exception SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_clean_code_safe_mode SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_clean_code_legacy_mode SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_clean_code_with_target_dir SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_get_project_info_with_pyproject SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_get_project_info_without_project_files SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_run_tests_success SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_run_tests_failure SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_publish_package_success SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_publish_package_dry_run SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_create_workflow_options SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_extract_current_version_from_pyproject SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_extract_current_version_from_importlib SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestCrackerjackAPI::test_extract_current_version_unknown SKIPPED [ 10%]
+tests/test_api_comprehensive.py::TestStandaloneAPIFunctions::test_run_quality_checks_function PASSED [ 10%]
+tests/test_api_comprehensive.py::TestStandaloneAPIFunctions::test_clean_code_function PASSED [ 10%]
+tests/test_api_comprehensive.py::TestStandaloneAPIFunctions::test_run_tests_function PASSED [ 10%]
+tests/test_api_comprehensive.py::TestStandaloneAPIFunctions::test_publish_package_function PASSED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_strategy_success SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_strategy_failure SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_sequential_strategy SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_single_hook_success SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_single_hook_timeout SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_execute_single_hook_exception SKIPPED [ 10%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_parallel_execution_with_formatting_hooks SKIPPED [ 11%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_retry_formatting_hooks SKIPPED [ 11%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutor::test_performance_metrics SKIPPED [ 11%]
+tests/test_async_hook_executor.py::TestAsyncHookExecutionResult::test_result_properties PASSED [ 11%]
+tests/test_async_hook_executor.py::test_semaphore_concurrency_limiting SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_init SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_strategy_sequential SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_strategy_parallel SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_get_lock_statistics SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_get_comprehensive_status SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_sequential SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_parallel SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_single_hook_success SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_execute_single_hook_with_retry SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_run_hook_subprocess_success SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_run_hook_subprocess_failure SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_parse_hook_output SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_display_hook_result_success SKIPPED [ 11%]
+tests/test_async_hook_executor_comprehensive.py::TestAsyncHookExecutor::test_display_hook_result_failure SKIPPED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_with_large_files FAILED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_no_large_files FAILED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_with_nonzero_exit FAILED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_different_patterns FAILED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_other_hooks_unchanged FAILED [ 11%]
+tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_exact_output FAILED [ 11%]
+tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_initialization FAILED [ 11%]
+tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_process_tracking FAILED [ 11%]
+tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_cleanup FAILED [ 11%]
+tests/test_async_semgrep.py::test_async_semgrep_parsing FAILED           [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_complete_workflow_async_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_cleaning_phase_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_fast_hooks_only_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_comprehensive_hooks_only_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_hooks_phase_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_testing_phase_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_publishing_phase_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_commit_phase_basic SKIPPED [ 11%]
+tests/test_async_workflow_orchestrator.py::test_run_configuration_phase_basic SKIPPED [ 11%]
+tests/test_changelog_generation.py::TestChangelogGeneration::test_conventional_commit_parsing PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogGeneration::test_changelog_entry_generation PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogGeneration::test_changelog_file_integration PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogGeneration::test_empty_commit_handling PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogGeneration::test_changelog_formatting_consistency PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogPublishIntegration::test_publish_manager_changelog_integration PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogPublishIntegration::test_changelog_failure_handling PASSED [ 12%]
+tests/test_changelog_generation.py::TestChangelogPublishIntegration::test_dry_run_changelog_preview PASSED [ 12%]
+tests/test_check_ast.py::test_validate_ast_file_valid_syntax PASSED      [ 12%]
+tests/test_check_ast.py::test_validate_ast_file_invalid_syntax PASSED    [ 12%]
+tests/test_check_ast.py::test_main_with_valid_file PASSED                [ 12%]
+tests/test_check_ast.py::test_main_with_invalid_file PASSED              [ 12%]
+tests/test_check_ast.py::test_main_with_multiple_files PASSED            [ 12%]
+tests/test_check_ast.py::test_main_with_nonexistent_file PASSED          [ 12%]
+tests/test_cli/test_global_lock_options.py::TestGlobalLockCLIOptions::test_global_lock_cli_options_exist PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestGlobalLockCLIOptions::test_disable_global_locks_option_definition PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestGlobalLockCLIOptions::test_global_lock_timeout_option_definition PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestGlobalLockCLIOptions::test_global_lock_cleanup_option_definition PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestGlobalLockCLIOptions::test_global_lock_dir_option_definition PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestOptionsObjectCreation::test_options_default_values PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestOptionsObjectCreation::test_options_with_custom_values PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestOptionsObjectCreation::test_create_options_function_with_global_locks PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestOptionsObjectCreation::test_create_options_function_with_defaults PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestConfigurationFlow::test_cli_to_global_lock_config_flow PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestConfigurationFlow::test_cli_to_lock_manager_configuration_flow PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestConfigurationFlow::test_disabled_global_locks_configuration_flow PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestConfigurationFlow::test_custom_timeout_configuration_flow PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestConfigurationFlow::test_custom_directory_configuration_flow PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIArgumentValidation::test_global_lock_timeout_validation PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIArgumentValidation::test_global_lock_timeout_edge_cases PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIArgumentValidation::test_global_lock_directory_validation PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIArgumentValidation::test_boolean_option_validation PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIArgumentValidation::test_none_values_handling PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIIntegrationScenarios::test_default_cli_scenario PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIIntegrationScenarios::test_performance_focused_cli_scenario PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIIntegrationScenarios::test_safety_focused_cli_scenario PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIIntegrationScenarios::test_development_cli_scenario PASSED [ 12%]
+tests/test_cli/test_global_lock_options.py::TestCLIIntegrationScenarios::test_ci_cd_cli_scenario PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIOptionCompletion::test_options_model_has_all_cli_fields PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIOptionCompletion::test_cli_options_dict_completeness PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIOptionCompletion::test_create_options_function_signature PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIOptionCompletion::test_options_model_protocol_compliance PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIErrorHandling::test_invalid_timeout_handling PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIErrorHandling::test_invalid_directory_path_handling PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIErrorHandling::test_none_and_empty_value_handling PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIErrorHandling::test_type_consistency PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIMockingSupport::test_options_object_mocking PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIMockingSupport::test_partial_options_mocking PASSED [ 13%]
+tests/test_cli/test_global_lock_options.py::TestCLIMockingSupport::test_cli_options_testability PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_field_mapping PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_field_defaults PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_legacy_flag_deprecation_warnings PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_command_parsing[semantic_command0-expected_options0] PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_command_parsing[semantic_command1-expected_options1] PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_command_parsing[semantic_command2-expected_options2] PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_semantic_command_parsing[semantic_command3-expected_options3] PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestCLISemanticNaming::test_help_text_semantic_clarity PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestSemanticCLIWorkflowIntegration::test_semantic_options_workflow_compatibility PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestSemanticCLIWorkflowIntegration::test_ai_fix_semantic_integration PASSED [ 13%]
+tests/test_cli_semantic_naming.py::TestSemanticCLIWorkflowIntegration::test_command_construction_with_semantic_options PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestSafePatternApplicator::test_apply_docstring_patterns PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestSafePatternApplicator::test_apply_formatting_patterns PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestSafePatternApplicator::test_has_preserved_comment PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestSafePatternApplicator::test_inline_nosec_preservation PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestCodeCleaner::test_init PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestCodeCleaner::test_prepare_package_directory_with_valid_path PASSED [ 13%]
+tests/test_code_cleaner_comprehensive.py::TestCodeCleaner::test_prepare_package_directory_with_none PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_success PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_with_string PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_failure PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_timeout PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_sync_success PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_sync_failure PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_sync_timeout PASSED [ 13%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_multiple_commands_sequential PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_multiple_commands_parallel PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_command_exists_true PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_command_exists_false PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_with_retries_success PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_with_retries_failure PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_in_directory PASSED [ 14%]
+tests/test_command_execution_service.py::TestCommandExecutionService::test_run_command_with_environment PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_load_json_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_load_yaml_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_load_toml_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_validate_config_success PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_validate_config_failure PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_save_json_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_save_yaml_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_save_toml_config PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_save_config_with_format_override PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_merge_configs_simple PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_merge_configs_nested PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_unsupported_format PASSED [ 14%]
+tests/test_config_service.py::TestConfigService::test_load_config_async PASSED [ 14%]
+tests/test_container.py::test_create_container_basic FAILED              [ 14%]
+tests/test_container.py::test_register_singleton_basic PASSED            [ 14%]
+tests/test_container.py::test_register_transient_basic PASSED            [ 14%]
+tests/test_container.py::test_get_raises_for_missing_service PASSED      [ 14%]
+tests/test_container.py::test_create_default_container_basic FAILED      [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_coordinator_initialization PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_fast_mode PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_comprehensive_mode PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_skip_when_should_skip PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_unknown_mode PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_exception_handling FAILED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_public_interface_methods PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_execute_fast_fixes PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_execute_fast_fixes_no_fixes_applied PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_comprehensive_stage_fixes PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_extract_failed_hooks PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_extract_failed_hooks_invalid_results PASSED [ 14%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_get_hook_specific_fixes PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_get_hook_specific_fixes_no_matches PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_run_fix_command_success PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_run_fix_command_invalid PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_run_fix_command_exception FAILED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_handle_command_result_success PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_handle_command_result_successful_fix PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_handle_command_result_failure FAILED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_is_successful_fix PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_check_tool_success_patterns PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_validate_fix_command PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_validate_hook_result PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_should_skip_autofix PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinatorIntegration::test_full_fast_workflow PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinatorIntegration::test_full_comprehensive_workflow PASSED [ 15%]
+tests/test_core_autofix_coordinator.py::TestAutofixCoordinatorIntegration::test_error_recovery FAILED [ 15%]
+tests/test_core_performance.py::TestFileCache::test_init PASSED          [ 15%]
+tests/test_core_performance.py::TestFileCache::test_init_with_custom_ttl PASSED [ 15%]
+tests/test_core_performance.py::TestFileCache::test_set_and_get PASSED   [ 15%]
+tests/test_core_performance.py::TestFileCache::test_get_nonexistent_key PASSED [ 15%]
+tests/test_core_performance.py::TestFileCache::test_ttl_expiration PASSED [ 15%]
+tests/test_core_performance.py::TestFileCache::test_clear PASSED         [ 15%]
+tests/test_core_performance.py::TestFileCache::test_overwrite_key PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_init PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_init_with_console PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_time_operation_decorator PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_time_operation_multiple_calls PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_time_operation_preserves_function_attributes PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_time_operation_with_exception PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_record_metric PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_get_stats_with_data PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_get_stats_empty PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_print_stats_without_console PASSED [ 15%]
+tests/test_core_performance.py::TestPerformanceMonitor::test_print_stats_with_console PASSED [ 15%]
+tests/test_core_performance.py::TestMemoizeWithTTL::test_memoize_basic_functionality PASSED [ 15%]
+tests/test_core_performance.py::TestMemoizeWithTTL::test_memoize_ttl_expiration PASSED [ 15%]
+tests/test_core_performance.py::TestMemoizeWithTTL::test_memoize_cache_clear PASSED [ 15%]
+tests/test_core_performance.py::TestMemoizeWithTTL::test_memoize_cache_info PASSED [ 16%]
+tests/test_core_performance.py::TestMemoizeWithTTL::test_memoize_with_kwargs PASSED [ 16%]
+tests/test_core_performance.py::TestBatchFileOperations::test_batch_operations_basic PASSED [ 16%]
+tests/test_core_performance.py::TestBatchFileOperations::test_batch_operations_with_exceptions PASSED [ 16%]
+tests/test_core_performance.py::TestBatchFileOperations::test_batch_operations_empty_list PASSED [ 16%]
+tests/test_core_performance.py::TestBatchFileOperations::test_batch_operations_large_batch_size PASSED [ 16%]
+tests/test_core_performance.py::TestBatchFileOperations::test_batch_operations_single_item_batches PASSED [ 16%]
+tests/test_decorators.py::TestRetryDecorator::test_retry_success_on_first_attempt PASSED [ 16%]
+tests/test_decorators.py::TestRetryDecorator::test_retry_with_eventual_success PASSED [ 16%]
+tests/test_decorators.py::TestRetryDecorator::test_retry_exhausts_attempts PASSED [ 16%]
+tests/test_decorators.py::TestRetryDecorator::test_retry_specific_exceptions PASSED [ 16%]
+tests/test_decorators.py::TestRetryDecorator::test_async_retry PASSED    [ 16%]
+tests/test_decorators.py::TestTimeoutDecorator::test_async_timeout_success PASSED [ 16%]
+tests/test_decorators.py::TestTimeoutDecorator::test_async_timeout_exceeded PASSED [ 16%]
+tests/test_decorators.py::TestTimeoutDecorator::test_timeout_custom_message PASSED [ 16%]
+tests/test_decorators.py::TestHandleErrors::test_handle_errors_with_fallback_value PASSED [ 16%]
+tests/test_decorators.py::TestHandleErrors::test_handle_errors_with_fallback_callable PASSED [ 16%]
+tests/test_decorators.py::TestHandleErrors::test_handle_errors_suppress PASSED [ 16%]
+tests/test_decorators.py::TestHandleErrors::test_handle_errors_transform PASSED [ 16%]
+tests/test_decorators.py::TestHandleErrors::test_async_handle_errors PASSED [ 16%]
+tests/test_decorators.py::TestGracefulDegradation::test_graceful_degradation_with_error PASSED [ 16%]
+tests/test_decorators.py::TestGracefulDegradation::test_graceful_degradation_success PASSED [ 16%]
+tests/test_decorators.py::TestGracefulDegradation::test_async_graceful_degradation PASSED [ 16%]
+tests/test_decorators.py::TestLogErrors::test_log_errors_reraises PASSED [ 16%]
+tests/test_decorators.py::TestLogErrors::test_async_log_errors PASSED    [ 16%]
+tests/test_decorators.py::TestValidateArgs::test_validate_args_success PASSED [ 16%]
+tests/test_decorators.py::TestValidateArgs::test_validate_args_failure PASSED [ 16%]
+tests/test_decorators.py::TestValidateArgs::test_validate_args_multiple_validators PASSED [ 16%]
+tests/test_decorators.py::TestValidateArgs::test_validate_args_type_checking PASSED [ 16%]
+tests/test_decorators.py::TestValidateArgs::test_async_validate_args PASSED [ 16%]
+tests/test_decorators.py::TestDecoratorComposition::test_retry_with_timeout PASSED [ 16%]
+tests/test_decorators.py::TestDecoratorComposition::test_validate_with_handle_errors PASSED [ 16%]
+tests/test_decorators.py::TestDecoratorComposition::test_full_stack PASSED [ 16%]
+tests/test_documentation_agent_simple.py::TestDocumentationAgentSimple::test_get_supported_types PASSED [ 16%]
+tests/test_documentation_agent_simple.py::TestDocumentationAgentSimple::test_can_handle_documentation_issue PASSED [ 16%]
+tests/test_documentation_agent_simple.py::TestDocumentationAgentSimple::test_cannot_handle_other_issue_types PASSED [ 16%]
+tests/test_documentation_agent_simple.py::TestDocumentationAgentSimple::test_analyze_and_fix_with_nonexistent_file PASSED [ 16%]
+tests/test_documentation_agent_simple.py::TestDocumentationAgentSimple::test_analyze_and_fix_general_update PASSED [ 17%]
+tests/test_dual_output_generator.py::test_to_dict_basic PASSED           [ 17%]
+tests/test_dual_output_generator.py::test_generate_documentation_short_circuit PASSED [ 17%]
+tests/test_dynamic_config.py::TestDynamicConfigGenerator::test_should_include_hook_experimental_disabled PASSED [ 17%]
+tests/test_dynamic_config.py::TestDynamicConfigGenerator::test_should_include_hook_experimental_selective PASSED [ 17%]
+tests/test_dynamic_config.py::TestDynamicConfigGenerator::test_should_include_hook_time_limit_exceeded PASSED [ 17%]
+tests/test_dynamic_config.py::TestDynamicConfigGenerator::test_get_repo_comment_local_tools PASSED [ 17%]
+tests/test_dynamic_config.py::TestDynamicConfigGenerator::test_get_repo_comment_unknown PASSED [ 17%]
+tests/test_dynamic_config.py::test_get_available_modes PASSED            [ 17%]
+tests/test_dynamic_config.py::test_add_experimental_hook PASSED          [ 17%]
+tests/test_dynamic_config.py::test_remove_experimental_hook PASSED       [ 17%]
+tests/test_dynamic_config.py::test_generate_config_for_mode_basic SKIPPED [ 17%]
+tests/test_dynamic_config.py::test_filter_hooks_for_mode_basic PASSED    [ 17%]
+tests/test_dynamic_config.py::test_group_hooks_by_repo_basic PASSED      [ 17%]
+tests/test_dynamic_config.py::test_generate_config_basic SKIPPED (Me...) [ 17%]
+tests/test_dynamic_config.py::test_create_temp_config_basic SKIPPED      [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_init PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_should_include_hook_tier_not_in_config PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_should_include_hook_experimental_disabled PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_should_include_hook_experimental_selective PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_should_include_hook_time_exceeded PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_filter_hooks_for_mode PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_filter_hooks_for_mode_with_experimental PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_group_hooks_by_repo PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_get_repo_comment_known_repos PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_get_repo_comment_security_keywords PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_get_repo_comment_formatting_keywords PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_get_repo_comment_unknown PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_merge_configs PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_generate_config PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestDynamicConfigGenerator::test_create_temp_config PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestModuleFunctions::test_generate_config_for_mode PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestModuleFunctions::test_get_available_modes PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestModuleFunctions::test_add_experimental_hook PASSED [ 17%]
+tests/test_dynamic_config_coverage.py::TestModuleFunctions::test_remove_experimental_hook PASSED [ 17%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_complete_workflow_with_all_features PASSED [ 17%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_semantic_cli_end_to_end PASSED [ 17%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_intelligent_automation_integration PASSED [ 17%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_performance_optimization_integration PASSED [ 18%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_monitoring_dashboard_integration PASSED [ 18%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_documentation_generation_integration PASSED [ 18%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_regression_prevention PASSED [ 18%]
+tests/test_end_to_end_integration.py::TestEndToEndIntegration::test_backward_compatibility PASSED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_initialization FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_put_and_get FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_miss FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_ttl_expiration FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_custom_ttl FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_lru_eviction FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_clear FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestFileCache::test_cache_stats FAILED [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_service_initialization ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_read_file_with_caching ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_write_file_invalidates_cache ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_cache_invalidation_on_file_modification ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_file_operations_sync_fallback ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_error_handling_nonexistent_file ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_error_handling_invalid_content_type ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_file_exists ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_create_directory ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_delete_file ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_list_files ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_get_cache_stats ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_clear_cache ERROR [ 18%]
+tests/test_enhanced_filesystem.py::TestPerformanceAndIntegration::test_cache_memory_efficiency FAILED [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_initialization ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_put_and_get ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_miss ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_ttl_expiration ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_lru_eviction ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_clear ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_evict_method ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_size_tracking ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_ops_initialization ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_read_queue_structure ERROR [ 18%]
+tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_write_queue_structure ERROR [ 19%]
+tests/test_enhanced_filesystem_comprehensive.py::TestEnhancedFileSystemService::test_enhanced_fs_initialization ERROR [ 19%]
+
+==================================== ERRORS ====================================
+_ ERROR at setup of TestEnhancedFileSystemService.test_service_initialization __
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_read_file_with_caching __
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_write_file_invalidates_cache _
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_cache_invalidation_on_file_modification _
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_file_operations_sync_fallback _
+tests/test_enhanced_filesystem.py:116: in sync_fs_service
+    return EnhancedFileSystemService(enable_async=False)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_error_handling_nonexistent_file _
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_error_handling_invalid_content_type _
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______ ERROR at setup of TestEnhancedFileSystemService.test_file_exists _______
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+____ ERROR at setup of TestEnhancedFileSystemService.test_create_directory _____
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______ ERROR at setup of TestEnhancedFileSystemService.test_delete_file _______
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______ ERROR at setup of TestEnhancedFileSystemService.test_list_files ________
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_____ ERROR at setup of TestEnhancedFileSystemService.test_get_cache_stats _____
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______ ERROR at setup of TestEnhancedFileSystemService.test_clear_cache _______
+tests/test_enhanced_filesystem.py:107: in fs_service
+    return EnhancedFileSystemService(
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+__________ ERROR at setup of TestFileCache.test_cache_initialization ___________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+____________ ERROR at setup of TestFileCache.test_cache_put_and_get ____________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______________ ERROR at setup of TestFileCache.test_cache_miss ________________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+__________ ERROR at setup of TestFileCache.test_cache_ttl_expiration ___________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+___________ ERROR at setup of TestFileCache.test_cache_lru_eviction ____________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_______________ ERROR at setup of TestFileCache.test_cache_clear _______________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+___________ ERROR at setup of TestFileCache.test_cache_evict_method ____________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+___________ ERROR at setup of TestFileCache.test_cache_size_tracking ___________
+tests/test_enhanced_filesystem_comprehensive.py:22: in cache
+    return FileCache(max_size=3, default_ttl=1.0)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+___ ERROR at setup of TestBatchFileOperations.test_batch_ops_initialization ____
+tests/test_enhanced_filesystem_comprehensive.py:91: in batch_ops
+    return BatchFileOperations(batch_size=2)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:98: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+__ ERROR at setup of TestBatchFileOperations.test_batch_read_queue_structure ___
+tests/test_enhanced_filesystem_comprehensive.py:91: in batch_ops
+    return BatchFileOperations(batch_size=2)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:98: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+__ ERROR at setup of TestBatchFileOperations.test_batch_write_queue_structure __
+tests/test_enhanced_filesystem_comprehensive.py:91: in batch_ops
+    return BatchFileOperations(batch_size=2)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:98: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_ ERROR at setup of TestEnhancedFileSystemService.test_enhanced_fs_initialization _
+tests/test_enhanced_filesystem_comprehensive.py:128: in enhanced_fs
+    return EnhancedFileSystemService(cache_size=10, cache_ttl=1.0, batch_size=2)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+=================================== FAILURES ===================================
+_______ test_parse_hook_output_check_added_large_files_with_large_files ________
+tests/test_async_hook_executor_parsing.py:16: in test_parse_hook_output_check_added_large_files_with_large_files
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+________ test_parse_hook_output_check_added_large_files_no_large_files _________
+tests/test_async_hook_executor_parsing.py:30: in test_parse_hook_output_check_added_large_files_no_large_files
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+_______ test_parse_hook_output_check_added_large_files_with_nonzero_exit _______
+tests/test_async_hook_executor_parsing.py:44: in test_parse_hook_output_check_added_large_files_with_nonzero_exit
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+______ test_parse_hook_output_check_added_large_files_different_patterns _______
+tests/test_async_hook_executor_parsing.py:59: in test_parse_hook_output_check_added_large_files_different_patterns
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+_________________ test_parse_hook_output_other_hooks_unchanged _________________
+tests/test_async_hook_executor_parsing.py:96: in test_parse_hook_output_other_hooks_unchanged
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+_________ test_parse_hook_output_check_added_large_files_exact_output __________
+tests/test_async_hook_executor_parsing.py:118: in test_parse_hook_output_check_added_large_files_exact_output
+    executor = AsyncHookExecutor(logger=logger, console=console, pkg_path=Path("."))
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+___________________ test_async_hook_executor_initialization ____________________
+tests/test_async_hook_executor_process_tracking.py:16: in test_async_hook_executor_initialization
+    executor = AsyncHookExecutor(
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+__________________ test_async_hook_executor_process_tracking ___________________
+tests/test_async_hook_executor_process_tracking.py:28: in test_async_hook_executor_process_tracking
+    executor = AsyncHookExecutor(
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+_______________________ test_async_hook_executor_cleanup _______________________
+tests/test_async_hook_executor_process_tracking.py:62: in test_async_hook_executor_cleanup
+    executor = AsyncHookExecutor(
+E   TypeError: AsyncHookExecutor.__init__() got an unexpected keyword argument 'logger'
+__________________________ test_async_semgrep_parsing __________________________
+tests/test_async_semgrep.py:16: in test_async_semgrep_parsing
+    executor = AsyncHookExecutor(logger, console, pkg_path)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/executors/async_hook_executor.py:77: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_________________________ test_create_container_basic __________________________
+tests/test_container.py:16: in test_create_container_basic
+    container = create_container()
+                ^^^^^^^^^^^^^^^^^^
+crackerjack/core/container.py:98: in create_container
+    console = acb_console
+              ^^^^^^^^^^^
+E   NameError: name 'acb_console' is not defined
+_____________________ test_create_default_container_basic ______________________
+tests/test_container.py:48: in test_create_default_container_basic
+    container = DependencyContainer().create_default_container(pkg_path=tmp_path)
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/container.py:47: in create_default_container
+    console = acb_console
+              ^^^^^^^^^^^
+E   NameError: name 'acb_console' is not defined
+____ TestAutofixCoordinator.test_apply_autofix_for_hooks_exception_handling ____
+crackerjack/core/autofix_coordinator.py:27: in apply_autofix_for_hooks
+    if self._should_skip_autofix(hook_results):
+       ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   Exception: Test error
+
+During handling of the above exception, another exception occurred:
+tests/test_core_autofix_coordinator.py:78: in test_apply_autofix_for_hooks_exception_handling
+    result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:38: in apply_autofix_for_hooks
+    self.logger.exception("Error applying autofix", error=str(e))
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1555: in exception
+    self.error(msg, *args, exc_info=exc_info, **kwargs)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1549: in error
+    self._log(ERROR, msg, args, **kwargs)
+E   TypeError: Logger._log() got an unexpected keyword argument 'error'
+____________ TestAutofixCoordinator.test_run_fix_command_exception _____________
+crackerjack/core/autofix_coordinator.py:122: in _run_fix_command
+    result = subprocess.run(
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   Exception: Test error
+
+During handling of the above exception, another exception occurred:
+tests/test_core_autofix_coordinator.py:245: in test_run_fix_command_exception
+    result = coordinator._run_fix_command(cmd, "test")
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:131: in _run_fix_command
+    self.logger.exception(
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1555: in exception
+    self.error(msg, *args, exc_info=exc_info, **kwargs)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1549: in error
+    self._log(ERROR, msg, args, **kwargs)
+E   TypeError: Logger._log() got an unexpected keyword argument 'error'
+__________ TestAutofixCoordinator.test_handle_command_result_failure ___________
+tests/test_core_autofix_coordinator.py:268: in test_handle_command_result_failure
+    handled = coordinator._handle_command_result(result, "test")
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:147: in _handle_command_result
+    self.logger.warning(
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1532: in warning
+    self._log(WARNING, msg, args, **kwargs)
+E   TypeError: Logger._log() got an unexpected keyword argument 'returncode'
+____________ TestAutofixCoordinatorIntegration.test_error_recovery _____________
+crackerjack/core/autofix_coordinator.py:31: in apply_autofix_for_hooks
+    return self._apply_fast_stage_fixes()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:63: in _apply_fast_stage_fixes
+    return self._execute_fast_fixes()
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:110: in _execute_fast_fixes
+    if not self._run_fix_command(cmd, description):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/unittest/mock.py:1228: in _execute_mock_call
+    raise effect
+E   Exception: Test error
+
+During handling of the above exception, another exception occurred:
+tests/test_core_autofix_coordinator.py:405: in test_error_recovery
+    result = coordinator.apply_autofix_for_hooks("fast", hook_results)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/core/autofix_coordinator.py:38: in apply_autofix_for_hooks
+    self.logger.exception("Error applying autofix", error=str(e))
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1555: in exception
+    self.error(msg, *args, exc_info=exc_info, **kwargs)
+../../.local/share/uv/python/cpython-3.13.11-macos-x86_64-none/lib/python3.13/logging/__init__.py:1549: in error
+    self._log(ERROR, msg, args, **kwargs)
+E   TypeError: Logger._log() got an unexpected keyword argument 'error'
+___________________ TestFileCache.test_cache_initialization ____________________
+tests/test_enhanced_filesystem.py:16: in test_cache_initialization
+    cache = FileCache(max_size=100, default_ttl=60.0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_____________________ TestFileCache.test_cache_put_and_get _____________________
+tests/test_enhanced_filesystem.py:22: in test_cache_put_and_get
+    cache = FileCache()
+            ^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+________________________ TestFileCache.test_cache_miss _________________________
+tests/test_enhanced_filesystem.py:31: in test_cache_miss
+    cache = FileCache()
+            ^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+___________________ TestFileCache.test_cache_ttl_expiration ____________________
+tests/test_enhanced_filesystem.py:35: in test_cache_ttl_expiration
+    cache = FileCache(default_ttl=0.1)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+_____________________ TestFileCache.test_cache_custom_ttl ______________________
+tests/test_enhanced_filesystem.py:45: in test_cache_custom_ttl
+    cache = FileCache(default_ttl=1.0)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+____________________ TestFileCache.test_cache_lru_eviction _____________________
+tests/test_enhanced_filesystem.py:55: in test_cache_lru_eviction
+    cache = FileCache(max_size=2)
+            ^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+________________________ TestFileCache.test_cache_clear ________________________
+tests/test_enhanced_filesystem.py:69: in test_cache_clear
+    cache = FileCache()
+            ^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+________________________ TestFileCache.test_cache_stats ________________________
+tests/test_enhanced_filesystem.py:80: in test_cache_stats
+    cache = FileCache(max_size=100)
+            ^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+__________ TestPerformanceAndIntegration.test_cache_memory_efficiency __________
+tests/test_enhanced_filesystem.py:265: in test_cache_memory_efficiency
+    fs_service = EnhancedFileSystemService(cache_size=100, cache_ttl=3600)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:186: in __init__
+    self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+crackerjack/services/enhanced_filesystem.py:31: in __init__
+    self.logger = logger
+                  ^^^^^^
+E   NameError: name 'logger' is not defined
+=============================== warnings summary ===============================
+.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469
+  /Users/les/Projects/crackerjack/.venv/lib/python3.13/site-packages/_hypothesis_pytestplugin.py:469: UserWarning: Skipping collection of '.hypothesis' directory - this usually means you've explicitly set the `norecursedirs` pytest config option, replacing rather than extending the default ignores.
+    warnings.warn(
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_api_comprehensive.py)
+    @dataclass
+
+tests/test_config_service.py:12
+  /Users/les/Projects/crackerjack/tests/test_config_service.py:12: PytestCollectionWarning: cannot collect test class 'TestConfigModel' because it has a __init__ constructor (from: tests/test_config_service.py)
+    class TestConfigModel(BaseModel):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestCommandBuilder:
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/test_managers_consolidated.py)
+    class TestManager:
+
+.venv/lib/python3.13/site-packages/fastmcp/server/server.py:302
+  /Users/les/Projects/crackerjack/.venv/lib/python3.13/site-packages/fastmcp/server/server.py:302: DeprecationWarning: Providing `streamable_http_path` when creating a server is deprecated. Provide it when calling `run` or as a global setting instead.
+    self._handle_deprecated_settings(
+
+crackerjack/models/config.py:70
+  /Users/les/Projects/crackerjack/crackerjack/models/config.py:70: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_models_comprehensive.py)
+    @dataclass
+
+crackerjack/models/protocols.py:271
+  /Users/les/Projects/crackerjack/crackerjack/models/protocols.py:271: PytestCollectionWarning: cannot collect test class 'TestManagerProtocol' because it has a __init__ constructor (from: tests/test_protocol_compliance.py)
+    @t.runtime_checkable
+
+crackerjack/models/pydantic_models.py:50
+  /Users/les/Projects/crackerjack/crackerjack/models/pydantic_models.py:50: PytestCollectionWarning: cannot collect test class 'TestConfig' because it has a __init__ constructor (from: tests/test_pydantic_models.py)
+    class TestConfig(BaseModel):
+
+crackerjack/errors.py:102
+  /Users/les/Projects/crackerjack/crackerjack/errors.py:102: PytestCollectionWarning: cannot collect test class 'TestExecutionError' because it has a __init__ constructor (from: tests/test_structured_errors.py)
+    class TestExecutionError(CrackerjackError):
+
+crackerjack/config/settings.py:23
+  /Users/les/Projects/crackerjack/crackerjack/config/settings.py:23: PytestCollectionWarning: cannot collect test class 'TestSettings' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestSettings(Settings):
+
+crackerjack/managers/test_command_builder.py:12
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_command_builder.py:12: PytestCollectionWarning: cannot collect test class 'TestCommandBuilder' because it has a __init__ constructor (from: tests/test_test_command_builder_workers.py)
+    class TestCommandBuilder:
+
+crackerjack/api.py:27
+  /Users/les/Projects/crackerjack/crackerjack/api.py:27: PytestCollectionWarning: cannot collect test class 'TestResult' because it has a __init__ constructor (from: tests/test_unified_api.py)
+    @dataclass
+
+tests/unit/agents/test_base.py:362
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_base.py:362: PytestCollectionWarning: cannot collect test class 'TestAgent' because it has a __init__ constructor (from: tests/unit/agents/test_base.py::TestSubAgentBase)
+    class TestAgent(SubAgent):
+
+tests/unit/agents/test_enhanced_proactive_agent.py:20
+  /Users/les/Projects/crackerjack/tests/unit/agents/test_enhanced_proactive_agent.py:20: PytestCollectionWarning: cannot collect test class 'TestEnhancedProactiveAgentImpl' because it has a __init__ constructor (from: tests/unit/agents/test_enhanced_proactive_agent.py)
+    class TestEnhancedProactiveAgentImpl(EnhancedProactiveAgent):
+
+crackerjack/agents/test_creation_agent.py:17
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_creation_agent.py:17: PytestCollectionWarning: cannot collect test class 'TestCreationAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_creation_agent.py)
+    class TestCreationAgent(SubAgent):
+
+crackerjack/agents/test_specialist_agent.py:14
+  /Users/les/Projects/crackerjack/crackerjack/agents/test_specialist_agent.py:14: PytestCollectionWarning: cannot collect test class 'TestSpecialistAgent' because it has a __init__ constructor (from: tests/unit/agents/test_test_specialist_agent.py)
+    class TestSpecialistAgent(SubAgent):
+
+crackerjack/managers/test_manager.py:30
+  /Users/les/Projects/crackerjack/crackerjack/managers/test_manager.py:30: PytestCollectionWarning: cannot collect test class 'TestManager' because it has a __init__ constructor (from: tests/unit/managers/test_test_manager.py)
+    class TestManager:
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/adapters/test_zuban_adapter.py:375: Requires Zuban installation - enable for integration testing
+SKIPPED [27] tests/config/test_hooks_backward_compatibility.py: Backward compatibility tests deprecated; direct invocation is canonical
+SKIPPED [1] tests/test___main__.py:21: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:26: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:31: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:36: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:41: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:46: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:51: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:56: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:61: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:66: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test___main__.py:94: Symbol not exported from __main__ - manual implementation needed
+SKIPPED [1] tests/test___main__.py:110: Symbol not exported from __main__ - manual implementation needed
+SKIPPED [1] tests/test___main__.py:126: Symbol not exported from __main__ - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:14: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:30: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:46: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:62: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:78: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:94: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:110: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:126: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:142: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:158: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:174: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_ai_templates.py:190: Symbol not exported or requires context - manual implementation needed
+SKIPPED [1] tests/test_api.py:20: run_quality_checks requires full DI context: Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration).
+SKIPPED [1] tests/test_api.py:33: clean_code requires full DI context: Found 89 TODO(s) in codebase. Resolve them before cleaning.
+SKIPPED [1] tests/test_api.py:46: run_tests requires full DI context: Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration).
+SKIPPED [1] tests/test_api.py:59: publish_package requires full DI context: Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration).
+SKIPPED [1] tests/test_api.py:71: code_cleaner requires full DI context: name 'code_cleaner' is not defined
+SKIPPED [1] tests/test_api.py:83: interactive_cli requires full DI context: name 'interactive_cli' is not defined
+SKIPPED [1] tests/test_api.py:95: run_interactive_workflow requires full DI context: name 'run_interactive_workflow' is not defined
+SKIPPED [1] tests/test_api.py:107: create_workflow_options requires full DI context: name 'create_workflow_options' is not defined
+SKIPPED [1] tests/test_api.py:119: get_project_info requires full DI context: name 'get_project_info' is not defined
+SKIPPED [12] tests/test_api_comprehensive.py: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:81: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:97: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:113: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:218: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:240: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:261: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_api_comprehensive.py:276: CrackerjackAPI instantiation requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:57: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:88: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:116: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:145: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:159: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:175: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:191: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:229: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:272: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor.py:355: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [6] tests/test_async_hook_executor_comprehensive.py: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:30: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:74: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:136: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:173: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:211: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:231: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:260: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [1] tests/test_async_hook_executor_comprehensive.py:288: AsyncHookExecutor requires complex nested ACB DI setup - integration test, not unit test
+SKIPPED [9] tests/test_async_workflow_orchestrator.py: Async workflow orchestrator requires complex DI context; skip trivial wrappers
+SKIPPED [1] tests/test_dynamic_config.py:166: Function requires specific arguments - manual implementation needed
+SKIPPED [1] tests/test_dynamic_config.py:201: Method requires specific implementation - skipped: DynamicConfigGenerator.generate_config() got an unexpected keyword argument 'tiers'
+SKIPPED [1] tests/test_dynamic_config.py:219: Method requires specific implementation - skipped: DynamicConfigGenerator.create_temp_config() got an unexpected keyword argument 'tiers'
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_service_initialization
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_read_file_with_caching
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_write_file_invalidates_cache
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_cache_invalidation_on_file_modification
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_file_operations_sync_fallback
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_error_handling_nonexistent_file
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_error_handling_invalid_content_type
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_file_exists
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_create_directory
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_delete_file
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_list_files
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_get_cache_stats
+ERROR tests/test_enhanced_filesystem.py::TestEnhancedFileSystemService::test_clear_cache
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_initialization
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_put_and_get
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_miss
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_ttl_expiration
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_lru_eviction
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_clear
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_evict_method
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestFileCache::test_cache_size_tracking
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_ops_initialization
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_read_queue_structure
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestBatchFileOperations::test_batch_write_queue_structure
+ERROR tests/test_enhanced_filesystem_comprehensive.py::TestEnhancedFileSystemService::test_enhanced_fs_initialization
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_with_large_files
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_no_large_files
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_with_nonzero_exit
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_different_patterns
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_other_hooks_unchanged
+FAILED tests/test_async_hook_executor_parsing.py::test_parse_hook_output_check_added_large_files_exact_output
+FAILED tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_initialization
+FAILED tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_process_tracking
+FAILED tests/test_async_hook_executor_process_tracking.py::test_async_hook_executor_cleanup
+FAILED tests/test_async_semgrep.py::test_async_semgrep_parsing - NameError: n...
+FAILED tests/test_container.py::test_create_container_basic - NameError: name...
+FAILED tests/test_container.py::test_create_default_container_basic - NameErr...
+FAILED tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_apply_autofix_for_hooks_exception_handling
+FAILED tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_run_fix_command_exception
+FAILED tests/test_core_autofix_coordinator.py::TestAutofixCoordinator::test_handle_command_result_failure
+FAILED tests/test_core_autofix_coordinator.py::TestAutofixCoordinatorIntegration::test_error_recovery
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_initialization
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_put_and_get
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_miss - Na...
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_ttl_expiration
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_custom_ttl
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_lru_eviction
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_clear - N...
+FAILED tests/test_enhanced_filesystem.py::TestFileCache::test_cache_stats - N...
+FAILED tests/test_enhanced_filesystem.py::TestPerformanceAndIntegration::test_cache_memory_efficiency
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 50 failures !!!!!!!!!!!!!!!!!!!!!!!!!!
+= 25 failed, 544 passed, 117 skipped, 18 warnings, 25 errors in 92.43s (0:01:32) =

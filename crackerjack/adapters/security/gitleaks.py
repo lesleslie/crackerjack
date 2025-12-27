@@ -1,4 +1,4 @@
-"""Gitleaks adapter for ACB QA framework - secrets and credentials detection.
+"""Gitleaks adapter for Crackerjack QA framework - secrets and credentials detection.
 
 Gitleaks is a SAST tool for detecting hardcoded secrets like passwords, API keys,
 and tokens in git repositories. It scans for:
@@ -8,9 +8,9 @@ and tokens in git repositories. It scans for:
 - OAuth tokens
 - Generic secrets patterns
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """
@@ -20,11 +20,8 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
-
-from acb.depends import depends
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -32,16 +29,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-5a1b-7c2d-9e3f-a4b5c6d7e8f9"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("6deed37d-f943-44f5-a188-f2b287f7a17d")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -332,8 +328,3 @@ class GitleaksAdapter(BaseToolAdapter):
                 "no_git": False,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(GitleaksAdapter)

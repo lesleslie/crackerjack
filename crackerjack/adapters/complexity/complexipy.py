@@ -1,4 +1,4 @@
-"""Complexipy adapter for ACB QA framework - code complexity analysis.
+"""Complexipy adapter for Crackerjack QA framework - code complexity analysis.
 
 Complexipy analyzes Python code complexity using multiple metrics:
 - Cyclomatic complexity (McCabe)
@@ -6,9 +6,9 @@ Complexipy analyzes Python code complexity using multiple metrics:
 - Maintainability index
 - Lines of code metrics
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 - Centralized output file management via AdapterOutputPaths
@@ -20,11 +20,8 @@ import json
 import logging
 import shutil
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
-
-from acb.depends import depends
 
 from crackerjack.adapters._output_paths import AdapterOutputPaths
 from crackerjack.adapters._tool_adapter_base import (
@@ -33,16 +30,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-9e5f-a6b7-c8d9-e0f1a2b3c4d5"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("33a3f9ff-5fd2-43f5-a6c9-a43917618a17")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -634,8 +630,3 @@ class ComplexipyAdapter(BaseToolAdapter):
             )
             # Return source file if move fails (fallback)
             return source_file
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(ComplexipyAdapter)

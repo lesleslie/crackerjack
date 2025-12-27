@@ -37,15 +37,7 @@ class TestUnifiedConfigService:
             assert service is not None
 
 
-class TestMetricsService:
-        from crackerjack.services.monitoring.metrics import MetricsCollector
-
-        assert MetricsCollector is not None
-
-        def test_metrics_basic(self) -> None:        from crackerjack.services.metrics import MetricsCollector
-
-        collector = MetricsCollector()
-        assert collector is not None
+# Phase 5: TestMetricsService removed (monitoring infrastructure deleted)
 
 
 class TestServerManagerService:
@@ -62,25 +54,11 @@ class TestToolVersionService:
         assert tool_version_module is not None
 
 
-class TestPerformanceBenchmarks:
-    def test_performance_benchmarks_import(self) -> None:
-        import crackerjack.services.monitoring.performance_benchmarks as perf_module
-
-        assert perf_module is not None
+# Phase 5: TestPerformanceBenchmarks removed (monitoring infrastructure deleted)
+# Phase 5: TestHealthMetrics removed (monitoring infrastructure deleted)
 
 
-class TestHealthMetrics:
-    def test_health_metrics_import(self) -> None:
-        import crackerjack.services.monitoring.health_metrics as health_module
-
-        assert health_module is not None
-
-
-class TestDependencyMonitor:
-    def test_dependency_monitor_import(self) -> None:
-        import crackerjack.services.monitoring.dependency_monitor as dep_module
-
-        assert dep_module is not None
+# Phase 5: TestDependencyMonitor removed (monitoring infrastructure deleted)
 
 
 class TestContextualAIAssistant:

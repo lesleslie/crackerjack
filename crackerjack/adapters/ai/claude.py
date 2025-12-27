@@ -1,7 +1,7 @@
 """Claude AI adapter for code fixing with comprehensive security validation.
 
 This adapter provides AI-powered code fixing using the Anthropic Claude API,
-following ACB adapter patterns and implementing comprehensive security measures.
+following Crackerjack adapter patterns and implementing comprehensive security measures.
 
 Security Features:
 - AI-generated code validation (regex + AST scanning)
@@ -10,57 +10,37 @@ Security Features:
 - File size limits
 - API key format validation
 
-ACB Compliance:
-- Static UUID7 for stable adapter identification
-- Public/private method delegation
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
 - Lazy client initialization via _ensure_client()
-- Resource cleanup via CleanupMixin
 - Async initialization via init()
+- Direct settings configuration
 """
 
 import ast
 import asyncio
 import json
+import logging
 import random
 import re
 import typing as t
 from uuid import UUID
 
-from acb.adapters import AdapterCapability, AdapterMetadata, AdapterStatus
-from acb.cleanup import CleanupMixin
-from acb.config import Config
-from acb.depends import depends
-from loguru import logger
+from crackerjack.models.adapter_metadata import AdapterStatus
 from pydantic import BaseModel, Field, SecretStr, field_validator
 
-# Static UUID7 for stable adapter identification (ACB requirement)
-MODULE_METADATA = AdapterMetadata(
-    module_id=UUID("01937d86-5f2a-7b3c-9d1e-a4b3c2d1e0f9"),  # Static UUID7
-    name="Claude AI Code Fixer",
-    category="ai",
-    provider="anthropic",
-    version="1.0.0",
-    acb_min_version="0.19.0",
-    author="Crackerjack Team",
-    created_date="2025-01-01",
-    last_modified="2025-01-09",
-    status=AdapterStatus.STABLE,
-    capabilities=[
-        AdapterCapability.ASYNC_OPERATIONS,
-        AdapterCapability.ENCRYPTION,  # API key encryption support
-    ],
-    required_packages=["anthropic>=0.25.0"],
-    optional_packages={},
-    description="Claude AI integration for code fixing with retry logic and confidence scoring",
-    settings_class="crackerjack.adapters.ai.claude.ClaudeCodeFixerSettings",
-    custom={},
-)
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("514c99ad-4f9a-4493-acca-542b0c43f95a")
+MODULE_STATUS = AdapterStatus.STABLE
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 class ClaudeCodeFixerSettings(BaseModel):
     """Configuration settings for Claude Code Fixer adapter.
 
-    Follows ACB patterns for adapter configuration with proper validation.
+    Uses Pydantic for configuration validation.
     All settings are validated using Pydantic validators.
 
     Attributes:
@@ -145,14 +125,13 @@ class ClaudeCodeFixerSettings(BaseModel):
         return v
 
 
-class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
+class ClaudeCodeFixer:
     """Real AI-powered code fixing using Claude API.
 
-    Follows ACB adapter patterns:
+    Standard adapter patterns:
     - Lazy client initialization via _ensure_client()
     - Public/private method delegation
-    - Resource cleanup via CleanupMixin
-    - Configuration via depends.get(Config)
+    - Direct settings configuration
     - Async initialization via init() method
 
     Security features:
@@ -164,7 +143,10 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
 
     Example:
         ```python
-        fixer = ClaudeCodeFixer()
+        settings = ClaudeCodeFixerSettings(
+            anthropic_api_key=SecretStr("sk-ant-..."),
+        )
+        fixer = ClaudeCodeFixer(settings=settings)
         await fixer.init()
 
         result = await fixer.fix_code_issue(
@@ -180,44 +162,35 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
         ```
     """
 
-    def __init__(self) -> None:
+    def __init__(self, settings: ClaudeCodeFixerSettings | None = None) -> None:
         """Initialize the adapter without async operations.
+
+        Args:
+            settings: Optional settings override
 
         Async initialization happens in init() method.
         """
-        super().__init__()
         self._client = None
-        self._settings: ClaudeCodeFixerSettings | None = None
+        self._settings = settings
         self._client_lock = None
         self._initialized = False
 
     async def init(self) -> None:
-        """Initialize adapter asynchronously (ACB pattern).
+        """Initialize adapter asynchronously.
 
-        Required by ACB adapter pattern for async setup.
-        Loads configuration and validates API key.
-
+        Validates settings and prepares for API calls.
         This method is idempotent - calling it multiple times is safe.
 
         Raises:
-            RuntimeError: If configuration is missing or invalid
+            RuntimeError: If settings not provided or invalid
         """
         if self._initialized:
             return
 
-        # Load configuration from depends
-        config: Config = await depends.get(Config)
-
-        # Build settings from config with validation
-        self._settings = ClaudeCodeFixerSettings(
-            anthropic_api_key=SecretStr(config.anthropic_api_key),
-            model=getattr(config, "anthropic_model", "claude-sonnet-4-5-20250929"),
-            max_tokens=getattr(config, "ai_max_tokens", 4096),
-            temperature=getattr(config, "ai_temperature", 0.1),
-            confidence_threshold=getattr(config, "ai_confidence_threshold", 0.7),
-            max_retries=getattr(config, "ai_max_retries", 3),
-            max_file_size_bytes=getattr(config, "ai_max_file_size_bytes", 10_485_760),
-        )
+        if not self._settings:
+            raise RuntimeError(
+                "Settings not provided - pass ClaudeCodeFixerSettings to constructor"
+            )
 
         self._initialized = True
         logger.debug("Claude AI adapter initialized successfully")
@@ -324,7 +297,14 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
         return {"success": False, "error": "Max retries exceeded", "confidence": 0.0}
 
     async def _initialize_client(self) -> t.Any:
-        """Initialize and return the Anthropic client."""
+        """Initialize and return the Anthropic client.
+
+        Returns:
+            AsyncAnthropic client instance
+
+        Raises:
+            RuntimeError: If adapter not initialized via init()
+        """
         # Ensure initialized
         if not self._initialized:
             await self.init()
@@ -343,14 +323,11 @@ class ClaudeCodeFixer(CleanupMixin):  # type: ignore[misc]
             max_retries=0,  # We handle retries ourselves
         )
 
-        # Register for cleanup
-        self.register_resource(client)
-
         logger.debug("Claude API client initialized")
         return client
 
     async def _ensure_client(self) -> t.Any:
-        """Lazy client initialization with thread safety (ACB pattern).
+        """Lazy client initialization with thread safety.
 
         Creates and caches the Anthropic client instance.
         Uses asyncio.Lock to ensure thread-safe initialization.

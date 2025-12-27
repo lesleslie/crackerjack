@@ -1,4 +1,4 @@
-"""Mdformat adapter for ACB QA framework - Markdown formatting.
+"""Mdformat adapter for Crackerjack QA framework - Markdown formatting.
 
 Mdformat is an opinionated Markdown formatter that enforces consistent styling:
 - Consistent heading styles
@@ -7,9 +7,9 @@ Mdformat is an opinionated Markdown formatter that enforces consistent styling:
 - Link and image formatting
 - Table alignment
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -17,11 +17,8 @@ ACB Patterns:
 from __future__ import annotations
 
 import typing as t
-from contextlib import suppress
 from pathlib import Path
-from uuid import UUID, uuid4
-
-from acb.depends import depends
+from uuid import UUID
 
 from crackerjack.adapters._tool_adapter_base import (
     BaseToolAdapter,
@@ -29,14 +26,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("d6db665f-1aa2-43d7-954f-3d13a055bdbd")
+MODULE_STATUS = AdapterStatus.STABLE
 
 
 class MdformatSettings(ToolAdapterSettings):
@@ -306,8 +304,3 @@ class MdformatAdapter(BaseToolAdapter):
                 "wrap_mode": "keep",
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(MdformatAdapter)

@@ -1,4 +1,4 @@
-"""Refurb adapter for ACB QA framework - Python refactoring suggestions.
+"""Refurb adapter for Crackerjack QA framework - Python refactoring suggestions.
 
 Refurb is a tool for refactoring Python code, suggesting modern Python idioms
 and best practices. It identifies:
@@ -7,9 +7,9 @@ and best practices. It identifies:
 - Opportunities to use modern Python features
 - Code that can be simplified
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -18,11 +18,9 @@ from __future__ import annotations
 
 import logging
 import typing as t
-from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
-from acb.depends import depends
 from pydantic import Field
 
 from crackerjack.adapters._tool_adapter_base import (
@@ -31,16 +29,15 @@ from crackerjack.adapters._tool_adapter_base import (
     ToolExecutionResult,
     ToolIssue,
 )
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = UUID(
-    "01937d86-7c3d-8e4f-9a5b-c6d7e8f9a0b1"
-)  # Static UUID7 for reproducible module identity
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("0f3546f6-4e29-4d9d-98f8-43c6f3c21a4e")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -399,8 +396,3 @@ class RefurbAdapter(BaseToolAdapter):
                 "explain": False,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(RefurbAdapter)

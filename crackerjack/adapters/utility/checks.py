@@ -1,11 +1,11 @@
-"""Generic utility check adapter for simple ACB Quality Assurance checks.
+"""Generic utility check adapter for simple Quality Assurance checks.
 
 This adapter handles simple, configuration-driven checks like whitespace,
 EOF newlines, YAML/TOML validation, file size limits, and dependency locks.
 
-ACB Patterns:
-- MODULE_ID and MODULE_STATUS at module level
-- depends.set() registration after class definition
+Standard Python Patterns:
+- MODULE_ID and MODULE_STATUS at module level (static UUID)
+- No ACB dependency injection
 - Configuration-driven validators and fixers
 - Async execution with semaphore control
 """
@@ -16,26 +16,25 @@ import asyncio
 import logging
 import subprocess
 import typing as t
-from contextlib import suppress
 from enum import Enum
 from pathlib import Path
-from uuid import UUID, uuid4
+from uuid import UUID
 
 import tomli
 import yaml
-from acb.depends import depends
 from pydantic import Field, field_validator
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
+from crackerjack.models.adapter_metadata import AdapterStatus
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 from crackerjack.services.regex_patterns import CompiledPatternCache
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# ACB Module Registration (REQUIRED)
-MODULE_ID = uuid4()
-MODULE_STATUS = "stable"
+# Static UUID from registry (NEVER change once set)
+MODULE_ID = UUID("ed516d6d-b273-458a-a2fc-c656046897cd")
+MODULE_STATUS = AdapterStatus.STABLE
 
 # Module-level logger for structured logging
 logger = logging.getLogger(__name__)
@@ -877,8 +876,3 @@ class UtilityCheckAdapter(QAAdapterBase):
                 "auto_fix": self.settings.auto_fix if self.settings else False,
             },
         )
-
-
-# ACB Registration (REQUIRED at module level)
-with suppress(Exception):
-    depends.set(UtilityCheckAdapter)
