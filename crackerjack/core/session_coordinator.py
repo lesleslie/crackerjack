@@ -10,7 +10,7 @@ from rich.console import Console
 from crackerjack.models.task import SessionTracker
 
 if t.TYPE_CHECKING:
-    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+    # TODO(Phase 3): Re-add workflow type hints with Oneiric integration
     from crackerjack.models.protocols import OptionsProtocol
 
 

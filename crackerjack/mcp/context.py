@@ -16,7 +16,6 @@ from crackerjack.core.resource_manager import (
     ResourceManager,
     register_global_resource_manager,
 )
-from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.services.secure_path_utils import SecurePathValidator
 
 from .cache import ErrorCache
@@ -151,7 +150,8 @@ class MCPServerContext:
         register_global_resource_manager(self.resource_manager)
 
         self.console: Console | None = None
-        self.cli_runner: WorkflowOrchestrator | None = None
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        self.cli_runner: object | None = None
         self.state_manager: StateManager | None = None
         self.error_cache: ErrorCache | None = None
         self.rate_limiter: RateLimitMiddleware | None = None
@@ -292,9 +292,8 @@ class MCPServerContext:
 
     async def _initialize_components(self) -> None:
         """Initialize all service components."""
-        self.cli_runner = WorkflowOrchestrator(
-            pkg_path=self.config.project_path,
-        )
+        # TODO(Phase 3): Replace with Oneiric workflow integration
+        self.cli_runner = None
 
         self.state_manager = StateManager(
             self.config.state_dir or Path.home() / ".cache" / "crackerjack-mcp",

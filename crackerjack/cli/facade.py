@@ -4,7 +4,6 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 from crackerjack.models.protocols import OptionsProtocol
 
 # Valid semantic commands for crackerjack operations
@@ -77,22 +76,18 @@ class CrackerjackCLIFacade:
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
-        self.orchestrator = WorkflowOrchestrator(
-            pkg_path=self.pkg_path,
-        )
+        # TODO(Phase 3): Replace with Oneiric CLI Factory integration
 
     def process(self, options: OptionsProtocol) -> None:
         try:
             if self._should_handle_special_mode(options):
                 self._handle_special_modes(options)
                 return
-            success = asyncio.run(self.orchestrator.run_complete_workflow(options))
-            if not success:
-                self.console.print("[red]❌ Workflow completed with errors[/ red]")
-            else:
-                self.console.print(
-                    "[green]🎉 Workflow completed successfully ![/ green]"
-                )
+            # TODO(Phase 3): Replace with Oneiric workflow execution
+            raise NotImplementedError(
+                "Workflow orchestration removed in Phase 2 (ACB removal). "
+                "Will be reimplemented in Phase 3 (Oneiric integration)."
+            )
         except KeyboardInterrupt:
             self.console.print("\n[yellow]⏹️ Operation cancelled by user[/ yellow]")
             raise SystemExit(130)

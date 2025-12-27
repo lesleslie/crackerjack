@@ -33,7 +33,7 @@ class LazyLoader:
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: Logger,
+        logger: object,
         name: str = "unnamed",
         auto_dispose: bool = True,
     ):
@@ -108,7 +108,7 @@ class ResourcePool:
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: Logger,
+        logger: object,
         max_size: int = 5,
         name: str = "unnamed",
     ):
@@ -184,7 +184,7 @@ class ResourcePool:
 
 
 class MemoryProfiler:
-    def __init__(self, logger: Logger) -> None:
+    def __init__(self, logger: object) -> None:
         self._start_memory = 0.0
         self._peak_memory = 0.0
         self._measurements: list[tuple[float, float]] = []
