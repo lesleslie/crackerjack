@@ -70,7 +70,6 @@ class TimeoutConfig:
             "ai_agent_processing": 180.0,
             "file_operations": 10.0,
             "network_operations": 15.0,
-            "websocket_broadcast": 5.0,
             "workflow_iteration": 900.0,
             "complete_workflow": 3600.0,
         }

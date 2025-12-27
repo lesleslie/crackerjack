@@ -100,9 +100,6 @@ class ServiceWatchdog:
 
     async def _start_service(self, service: ServiceConfig) -> bool:
         try:
-            if await self._check_websocket_server_running(service):
-                return True
-
             if not await self._launch_service_process(service):
                 return False
 
@@ -110,18 +107,6 @@ class ServiceWatchdog:
 
         except Exception as e:
             return await self._handle_service_start_error(service, e)
-
-    async def _check_websocket_server_running(self, service: ServiceConfig) -> bool:
-        if "websocket-server" in " ".join(service.command):
-            if self._is_port_in_use(8675):
-                await self._emit_event(
-                    "port_in_use",
-                    service.name,
-                    "Port 8675 already in use (server already running)",
-                )
-                service.is_healthy = True
-                return True
-        return False
 
     async def _launch_service_process(self, service: ServiceConfig) -> bool:
         service.process = subprocess.Popen[str](
@@ -182,43 +167,6 @@ class ServiceWatchdog:
         )
         return False
 
-    async def _handle_websocket_server_monitoring(self, service: ServiceConfig) -> bool:
-        if "websocket-server" not in " ".join(service.command):
-            return False
-
-        if self._is_port_in_use(8675):
-            if await self._verify_websocket_server_health():
-                service.is_healthy = True
-                if (
-                    not hasattr(service, "_port_acknowledged")
-                    or not service._port_acknowledged
-                ):
-                    service._port_acknowledged = True
-                    await self._emit_event(
-                        "port_healthy",
-                        service.name,
-                        "WebSocket server verified healthy",
-                    )
-                await asyncio.sleep(30)
-                return True
-            service.is_healthy = False
-            await self._emit_event(
-                "port_hijacked",
-                service.name,
-                "Port 8675 occupied by different service",
-            )
-            await self._restart_service(service)
-            return False
-        service._port_acknowledged = False
-        if service.process and service.process.poll() is None:
-            await self._emit_event(
-                "port_unavailable",
-                service.name,
-                "Process running but port 8675 not available",
-            )
-            await self._restart_service(service)
-        return False
-
     async def _check_process_health(self, service: ServiceConfig) -> bool:
         process_running = service.process and service.process.poll() is None
         if not process_running:
@@ -266,9 +214,6 @@ class ServiceWatchdog:
                 await self._handle_monitoring_error(service, e)
 
     async def _execute_monitoring_cycle(self, service: ServiceConfig) -> bool:
-        if await self._handle_websocket_server_monitoring(service):
-            return True
-
         if not await self._check_process_health(service):
             return False
 
@@ -292,22 +237,6 @@ class ServiceWatchdog:
                 return response.status == 200
         except Exception:
             return False
-
-    async def _verify_websocket_server_health(self) -> bool:
-        if not self.session:
-            return False
-
-        with suppress(Exception):
-            async with self.session.get("http: / / localhost: 8675 / ") as response:
-                if response.status == 200:
-                    data = await response.json()
-
-                    return (
-                        "message" in data
-                        and "Crackerjack" in data.get("message", "")
-                        and "progress_dir" in data
-                    )
-        return False
 
     async def _restart_service(self, service: ServiceConfig) -> None:
         current_time = time.time()
@@ -474,16 +403,6 @@ async def create_default_watchdog(
                 "crackerjack",
                 "--start-mcp-server",
             ],
-        ),
-        ServiceConfig(
-            name="WebSocket Server",
-            command=[
-                python_path,
-                "-m",
-                "crackerjack",
-                " - - websocket-server",
-            ],
-            health_check_url="http: / / localhost: 8675 / ",
         ),
     ]
 

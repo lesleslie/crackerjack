@@ -233,13 +233,6 @@ class WorkflowContainerBuilder:
         depends.set(WorkflowEventBus, event_bus)
         self._registered.add("WorkflowEventBus")
 
-        # EventBusWebSocketBridge - WebSocket streaming for real-time updates (Phase 7.3)
-        from crackerjack.mcp.websocket.event_bridge import EventBusWebSocketBridge
-
-        ws_bridge = EventBusWebSocketBridge()
-        depends.set(EventBusWebSocketBridge, ws_bridge)
-        self._registered.add("EventBusWebSocketBridge")
-
     def _register_level3_filesystem_git(self) -> None:
         """Register Level 3 filesystem and git services.
 

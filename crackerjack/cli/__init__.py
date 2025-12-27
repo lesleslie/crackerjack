@@ -1,6 +1,5 @@
 from .handlers import (
     handle_interactive_mode,
-    handle_monitor_mode,
     handle_orchestrated_mode,
     handle_standard_mode,
     handle_watchdog_mode,
@@ -16,7 +15,6 @@ __all__ = [
     "create_options",
     "get_package_version",
     "handle_interactive_mode",
-    "handle_monitor_mode",
     "handle_orchestrated_mode",
     "handle_standard_mode",
     "handle_watchdog_mode",

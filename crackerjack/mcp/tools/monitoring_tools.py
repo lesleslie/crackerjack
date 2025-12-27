@@ -24,9 +24,6 @@ from crackerjack.services.status_security_manager import (
 from crackerjack.services.thread_safe_status_collector import (
     get_thread_safe_status_collector,
 )
-from crackerjack.services.websocket_resource_limiter import (
-    get_websocket_resource_limiter,
-)
 
 
 def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
@@ -397,10 +394,6 @@ async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
 
     security_manager = get_status_security_manager()
     stats["security_status"] = security_manager.get_security_status()
-
-    with suppress(Exception):
-        resource_limiter = get_websocket_resource_limiter()
-        stats["websocket_resources"] = resource_limiter.get_resource_status()
 
     return stats
 

@@ -181,9 +181,47 @@ This baseline establishes the pre-migration state of the test suite. Any test fa
 - ✅ Adapter categorization complete (19 adapters identified, 12 complex + 7 simple)
 - ✅ CLI command mapping complete (6 lifecycle commands, 4 WebSocket removals)
 - ✅ Breaking changes documented (BREAKING_CHANGES.md created)
+- ✅ **Review complete with decisions:**
+  - 216 skipped ACB tests → **DELETE** (won't apply to Oneiric)
+  - Adapter classification → **APPROVED** (12 complex + 7 simple)
+  - Timeline estimate → **ACCEPTED** (30.5h vs 32.5h original)
+  - WebSocket removal → **CONFIRMED SAFE** (not used in production)
+  - Phase 5 scope → **5 hours** (delete tests, not rewrite)
 
-### Phase 1: Remove WebSocket/Dashboard Stack 📋 PENDING
+### Phase 1: Remove WebSocket/Dashboard Stack ⏳ IN PROGRESS
+**Timeline:** Day 1 PM, 1:00-4:00 PM (3 hours estimated)
+**Risk Level:** LOW (removal only, confirmed safe by review)
+**Started:** 2025-12-26
 ### Phase 2: Remove ACB Dependency 📋 PENDING
+
+**Estimated Effort:** 6 hours (Day 2)
+**Risk Level:** MEDIUM-HIGH
+**Blocking:** Phases 3-5 cannot start until complete
+
+**Tasks:**
+1. Replace ACB DI system (310 imports across ~150 files)
+2. **Remove legacy orchestrator** (workflow_orchestrator.py, async_workflow_orchestrator.py)
+3. Remove ACB workflows directory (rm -rf crackerjack/workflows/)
+4. Remove ACB event bus (rm -rf crackerjack/events/)
+5. Remove ACB orchestration infrastructure (rm -rf crackerjack/orchestration/)
+6. Replace ACB console with standard logging (93 imports)
+7. Replace ACB logger with standard logging (29 imports)
+8. Remove ACB adapters infrastructure
+
+**Critical Files to Remove:**
+- `core/workflow_orchestrator.py` (12 ACB imports - highest in codebase)
+- `core/async_workflow_orchestrator.py`
+- `workflows/` directory (entire)
+- `events/` directory (entire)
+- `orchestration/` directory (entire)
+
+**Validation Criteria:**
+- [ ] 0 ACB imports remain: `grep -r "from acb" crackerjack/ | wc -l` → 0
+- [ ] 0 @depends.inject decorators: `grep -r "@depends.inject" crackerjack/ | wc -l` → 0
+- [ ] Workflows/events removed: `find crackerjack/ -name "*workflow*" | wc -l` → 0
+- [ ] ACB removed from pyproject.toml
+- [ ] Dependencies sync: `uv sync` completes without errors
+
 ### Phase 3: Integrate Oneiric CLI Factory 📋 PENDING
 ### Phase 4: Port QA Adapters 📋 PENDING
 ### Phase 5: Tests & Documentation 📋 PENDING

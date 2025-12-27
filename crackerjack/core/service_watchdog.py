@@ -84,14 +84,6 @@ class ServiceWatchdog:
                 startup_timeout=30.0,
                 shutdown_timeout=15.0,
             ),
-            "websocket_server": ServiceConfig(
-                name="WebSocket Server",
-                command=["python", "-m", "crackerjack", "--start-websocket-server"],
-                health_check_url="http: //localhost: 8675/",
-                health_check_timeout=3.0,
-                startup_timeout=20.0,
-                shutdown_timeout=10.0,
-            ),
             "zuban_lsp": ServiceConfig(
                 name="Zuban LSP Server",
                 command=["uv", "run", "zuban", "server"],
