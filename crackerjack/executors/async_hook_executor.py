@@ -1,3 +1,4 @@
+import logging
 import asyncio
 import time
 import typing as t
@@ -5,9 +6,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
-from acb.logger import Logger
+from rich.console import Console
 
 from crackerjack.config import get_console_width
 from crackerjack.config.hooks import (
@@ -61,10 +60,8 @@ class AsyncHookExecutionResult:
 
 
 class AsyncHookExecutor:
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
         console: Console,
         pkg_path: Path,
         max_concurrent: int = 4,

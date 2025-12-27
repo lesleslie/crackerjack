@@ -1,4 +1,7 @@
 """
+
+logger = logging.getLogger(__name__)
+
 Dependency Guard module to ensure proper dependency injection.
 
 This module provides utilities to ensure that dependencies are properly
@@ -7,12 +10,12 @@ where dependencies might be registered as empty tuples or other invalid
 values.
 """
 
+import logging
 import sys
 import typing
 from typing import Any
 
 from acb.depends import depends
-from acb.logger import Logger
 
 
 def _should_log_debug() -> bool:
@@ -47,15 +50,14 @@ def ensure_logger_dependency() -> None:
     """
     # Check if Logger is registered and has a valid instance
     try:
-        logger_instance = depends.get_sync(Logger)
+        # logger_instance = logger  # Migrated from ACB
         # If we get an empty tuple, string, or other invalid value, replace it
         if isinstance(logger_instance, tuple) and len(logger_instance) == 0:
             _log_dependency_issue(
                 "Logger dependency was registered as empty tuple, replacing with fresh instance"
             )
             # Create a new logger instance to replace the invalid one
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
         elif isinstance(logger_instance, str):
@@ -63,14 +65,12 @@ def ensure_logger_dependency() -> None:
                 f"Logger dependency was registered as string ({logger_instance!r}), replacing with fresh instance"
             )
             # Create a new logger instance to replace the invalid one
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
     except Exception:
         # If there's no logger registered at all, create one
-        from acb.logger import Logger as ACBLogger
-
+        
         fresh_logger = ACBLogger()
         depends.set(Logger, fresh_logger)
 
@@ -84,16 +84,14 @@ def ensure_logger_dependency() -> None:
             _log_dependency_issue(
                 "LoggerProtocol dependency was registered as empty tuple, replacing with fresh instance"
             )
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(_LoggerProtocol, fresh_logger)
         elif isinstance(logger_proto_instance, str):
             _log_dependency_issue(
                 f"LoggerProtocol dependency was registered as string ({logger_proto_instance!r}), replacing with fresh instance"
             )
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(_LoggerProtocol, fresh_logger)
     except ImportError:
@@ -102,8 +100,7 @@ def ensure_logger_dependency() -> None:
     except Exception:
         # If there's no LoggerProtocol registered, create one
         try:
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             _log_dependency_issue(
                 "Registering LoggerProtocol with fresh logger instance", level="INFO"
@@ -175,14 +172,13 @@ def safe_get_logger() -> Logger:
         A valid logger instance
     """
     try:
-        logger_instance = depends.get_sync(Logger)
+        # logger_instance = logger  # Migrated from ACB
         if isinstance(logger_instance, tuple) and len(logger_instance) == 0:
             _log_dependency_issue(
                 "Logger dependency was an empty tuple in safe_get_logger, replacing with fresh instance"
             )
             # Create and register a fresh logger
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
             return fresh_logger
@@ -191,16 +187,14 @@ def safe_get_logger() -> Logger:
                 f"Logger dependency was a string ({logger_instance!r}) in safe_get_logger, replacing with fresh instance"
             )
             # Create and register a fresh logger
-            from acb.logger import Logger as ACBLogger
-
+            
             fresh_logger = ACBLogger()
             depends.set(Logger, fresh_logger)
             return fresh_logger
         return logger_instance
     except Exception:
         # If no logger is registered, create one
-        from acb.logger import Logger as ACBLogger
-
+        
         _log_dependency_issue(
             "No logger registered, creating and registering a fresh logger instance",
             level="INFO",

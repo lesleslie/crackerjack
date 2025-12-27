@@ -3,7 +3,7 @@ import time
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.models.task import HookResult

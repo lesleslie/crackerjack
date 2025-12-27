@@ -3,8 +3,7 @@
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from ..models.protocols import (
     APIExtractorProtocol,
@@ -17,11 +16,8 @@ from .documentation_generator import DocumentationGeneratorImpl
 
 class DocumentationServiceImpl(DocumentationServiceProtocol):
     """Main service for automated documentation generation and maintenance."""
-
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
         pkg_path: Path,
         api_extractor: APIExtractorProtocol | None = None,
         doc_generator: DocumentationGeneratorProtocol | None = None,

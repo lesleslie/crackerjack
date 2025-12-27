@@ -7,8 +7,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from acb import console as acb_console
-from acb.console import Console
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 

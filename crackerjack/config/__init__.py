@@ -1,9 +1,9 @@
+import logging
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
-from acb.logger import Logger
 
 # Import protocols for service registration
 from crackerjack.models.protocols import (
@@ -70,6 +70,8 @@ from .hooks import (
 from .loader import load_settings, load_settings_async
 from .settings import CrackerjackSettings
 
+logger = logging.getLogger(__name__)
+
 
 def get_console_width() -> int:
     """Return the preferred console width from settings or pyproject.
@@ -121,7 +123,7 @@ ensure_logger_dependency()
 
 # Explicitly set logger instances if not already set properly
 try:
-    current_logger = depends.get_sync(Logger)
+    # current_logger = logger  # Migrated from ACB
     if isinstance(current_logger, tuple) and len(current_logger) == 0:
         logger_instance = Logger()
         depends.set(Logger, logger_instance)
@@ -180,7 +182,7 @@ def register_services() -> None:
     #         performance_benchmarks = depends.get_sync(PerformanceBenchmarkProtocol)
     #     except Exception:
     #         # If not registered, create it using proper DI
-    #         console = depends.get_sync(Console)
+    #         console = Console()
     #         logger = depends.get_sync(
     #             Logger
     #         )  # Get the logger instead of LoggerProtocol
@@ -229,7 +231,7 @@ def register_services() -> None:
 
     # Get console and pkg_path for service initialization
     with suppress(Exception):
-        console = depends.get_sync(Console)
+        console = Console()
         pkg_path = depends.get_sync(Path)
 
         # 10a. Coverage Ratchet Service (protocol-based)

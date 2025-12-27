@@ -1,8 +1,7 @@
 import typing as t
 from pathlib import Path
 
-from acb import console as acb_console
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.models.protocols import (
     FileSystemInterface,

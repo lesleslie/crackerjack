@@ -5,8 +5,7 @@ import typing as t
 from pathlib import Path
 from typing import Protocol
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 from rich.progress import (
     BarColumn,
     Progress,
@@ -37,9 +36,7 @@ class ProgressCallback(Protocol):
 
 class RealTimeTypingFeedback:
     """Provides real-time feedback during type checking operations."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console]) -> None:
+    def __init__(self) -> None:
         self.console = console
         self._total_errors = 0
         self._files_checked = 0
@@ -145,9 +142,7 @@ class JSONRPCClient:
 
 class LSPClient:
     """Client for communicating with Zuban LSP server."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console]) -> None:
+    def __init__(self) -> None:
         self.console = console
         self._server_port: int | None = None
         self._server_host: str = "127.0.0.1"

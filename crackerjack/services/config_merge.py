@@ -1,3 +1,4 @@
+import logging
 import copy
 import io
 import typing as t
@@ -6,9 +7,7 @@ from pathlib import Path
 import tomli
 import tomli_w
 import yaml
-from acb.console import Console
-from acb.depends import Inject, depends
-from acb.logger import Logger
+from rich.console import Console
 
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
@@ -18,13 +17,8 @@ from crackerjack.models.protocols import (
 
 
 class ConfigMergeService(ConfigMergeServiceProtocol):
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        filesystem: Inject[FileSystemInterface],
-        git_service: Inject[GitInterface],
-        logger: Inject[Logger],
     ) -> None:
         self.console = console
         self.filesystem = filesystem

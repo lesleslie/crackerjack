@@ -121,7 +121,7 @@ if not _EARLY_DEBUG_MODE:
 
 # NOW safe to import ACB-dependent modules
 import typer
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject, depends
 
 # Suppress asyncio subprocess cleanup warnings when event loop closes
@@ -522,16 +522,12 @@ def _handle_specialized_analytics(local_vars: t.Any) -> bool:
         return False
 
     return _handle_advanced_features(local_vars)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_semantic_commands(
     index: str | None,
     search: str | None,
     semantic_stats: bool,
     remove_from_index: str | None,
     options: t.Any,
-    console: Inject[Console],
 ) -> bool:
     if not _has_semantic_operations(index, search, semantic_stats, remove_from_index):
         return True

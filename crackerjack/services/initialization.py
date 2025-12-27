@@ -5,8 +5,7 @@ from pathlib import Path
 
 import tomli
 import yaml
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.models.protocols import ConfigMergeServiceProtocol
 
@@ -17,10 +16,8 @@ from .input_validator import get_input_validator, validate_and_sanitize_path
 
 
 class InitializationService:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
         filesystem: FileSystemService,
         git_service: GitService,
         pkg_path: Path,

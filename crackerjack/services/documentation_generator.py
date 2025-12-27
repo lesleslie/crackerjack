@@ -4,8 +4,7 @@ import typing as t
 from pathlib import Path
 from string import Template
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from ..models.protocols import DocumentationGeneratorProtocol
 
@@ -125,9 +124,7 @@ $functions
 
 class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     """Implementation of documentation generation from extracted API data."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console]) -> None:
+    def __init__(self) -> None:
         self.console = console
         self.renderer = MarkdownTemplateRenderer()
 

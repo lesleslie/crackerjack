@@ -3,8 +3,7 @@
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 # =============================================================================
 # Heatmap Generation
@@ -79,14 +78,10 @@ def _save_heatmap_output(
     Path(default_filename).write_text(html_content, encoding="utf-8")
     console.print(f"[green]✅[/green] Heat map HTML saved to: {default_filename}")
     return True
-
-
-@depends.inject  # type: ignore[misc]
 def handle_heatmap_generation(
     heatmap: bool,
     heatmap_type: str,
     heatmap_output: str | None,
-    console: Inject[Console],
 ) -> bool:
     if not heatmap:
         return True
@@ -127,10 +122,7 @@ def handle_heatmap_generation(
 # =============================================================================
 # Anomaly Detection
 # =============================================================================
-
-
-@depends.inject  # type: ignore[misc]
-def generate_anomaly_sample_data(detector: t.Any, console: Inject[Console]) -> None:
+def generate_anomaly_sample_data(detector: t.Any) -> None:
     from datetime import datetime, timedelta
 
     base_time = datetime.now() - timedelta(hours=24)
@@ -178,11 +170,8 @@ def get_sample_metric_value(metric_type: str) -> float:
         return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
 
     return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
-
-
-@depends.inject  # type: ignore[misc]
 def display_anomaly_results(
-    anomalies: list[t.Any], baselines: dict[str, t.Any], console: Inject[Console]
+    anomalies: list[t.Any], baselines: dict[str, t.Any]
 ) -> None:
     console.print("[cyan]📊[/cyan] Analysis complete:")
 
@@ -205,15 +194,11 @@ def display_anomaly_results(
                 f" • [{severity_color}]{anomaly.severity.upper()}[/{severity_color}] "
                 f"{anomaly.metric_type}: {anomaly.description}"
             )
-
-
-@depends.inject  # type: ignore[misc]
 def save_anomaly_report(
     anomalies: list[t.Any],
     baselines: dict[str, t.Any],
     anomaly_sensitivity: float,
     anomaly_report: str,
-    console: Inject[Console],
 ) -> None:
     import json
     from datetime import datetime
@@ -245,14 +230,10 @@ def save_anomaly_report(
     report_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
 
     console.print(f"[green]✅[/green] Anomaly detection report saved to: {report_path}")
-
-
-@depends.inject  # type: ignore[misc]
 def handle_anomaly_detection(
     anomaly_detection: bool,
     anomaly_sensitivity: float,
     anomaly_report: str | None,
-    console: Inject[Console],
 ) -> bool:
     if not anomaly_detection:
         return True
@@ -363,11 +344,8 @@ def generate_predictions_summary(
             }
 
     return predictions_summary
-
-
-@depends.inject  # type: ignore[misc]
 def display_trend_analysis(
-    predictions_summary: dict[str, t.Any], console: Inject[Console]
+    predictions_summary: dict[str, t.Any]
 ) -> None:
     console.print("\n[green]📈[/green] Trend Analysis Summary:")
 
@@ -397,16 +375,12 @@ def display_trend_analysis(
                 f" Next prediction: {next_pred['predicted_value']} "
                 f"(confidence: {next_pred['model_accuracy']:.2f})"
             )
-
-
-@depends.inject  # type: ignore[misc]
 def save_analytics_dashboard(
     predictions_summary: dict[str, t.Any],
     trend_summary: dict[str, t.Any],
     metric_types: list[str],
     prediction_periods: int,
     analytics_dashboard: str,
-    console: Inject[Console],
 ) -> None:
     import json
     from datetime import datetime
@@ -429,14 +403,10 @@ def save_analytics_dashboard(
     dashboard_path.write_text(json.dumps(dashboard_data, indent=2), encoding="utf-8")
 
     console.print(f"[green]✅[/green] Analytics dashboard saved to: {dashboard_path}")
-
-
-@depends.inject  # type: ignore[misc]
 def handle_predictive_analytics(
     predictive_analytics: bool,
     prediction_periods: int,
     analytics_dashboard: str | None,
-    console: Inject[Console],
 ) -> bool:
     if not predictive_analytics:
         return True

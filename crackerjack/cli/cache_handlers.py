@@ -1,16 +1,12 @@
 import typing as t
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from crackerjack.services.cache import CrackerjackCache
-
-
-@depends.inject  # type: ignore[misc]
-def handle_clear_cache(console: Inject[Console]) -> None:
+def handle_clear_cache() -> None:
     """Clear all caches and display results."""
     try:
         cache = CrackerjackCache()
@@ -42,10 +38,7 @@ def handle_clear_cache(console: Inject[Console]) -> None:
 
     except Exception as e:
         console.print(f"\n❌ Error clearing cache: {e}", style="bold red")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_cache_stats(console: Inject[Console]) -> None:
+def handle_cache_stats() -> None:
     """Display detailed cache statistics."""
     try:
         cache = CrackerjackCache()
@@ -133,11 +126,8 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
         f"{totals['size']:.2f}",
         style="bold",
     )
-
-
-@depends.inject  # type: ignore[misc]
 def _display_performance_insights(
-    totals: dict[str, t.Any], console: Inject[Console]
+    totals: dict[str, t.Any]
 ) -> None:
     """Display performance insights panel based on cache statistics."""
     overall_hit_rate = (
@@ -177,11 +167,8 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
         insights.append(f"💾 Large cache size ({total_size:.1f}MB) - consider cleanup")
 
     return insights
-
-
-@depends.inject  # type: ignore[misc]
 def _display_cache_directory_info(
-    cache: CrackerjackCache, console: Inject[Console]
+    cache: CrackerjackCache
 ) -> None:
     """Display cache directory information."""
     if not (cache.enable_disk_cache and cache.cache_dir):

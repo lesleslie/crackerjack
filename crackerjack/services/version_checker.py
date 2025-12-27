@@ -3,8 +3,7 @@ import typing as t
 from dataclasses import dataclass
 
 import aiohttp
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.core.retry import retry_api_call
 
@@ -19,8 +18,7 @@ class VersionInfo:
 
 
 class VersionChecker:
-    @depends.inject
-    def __init__(self, console: Inject[Console]) -> None:
+    def __init__(self) -> None:
         self.console = console
         self.tools_to_check = {
             "ruff": self._get_ruff_version,

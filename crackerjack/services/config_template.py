@@ -7,7 +7,7 @@ from pathlib import Path
 
 import tomli
 import yaml
-from acb.console import Console
+from rich.console import Console
 
 
 @dataclass

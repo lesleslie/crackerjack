@@ -5,7 +5,6 @@ from datetime import datetime
 from pathlib import Path
 
 from acb.config import Config
-from acb.depends import Inject, depends
 
 from crackerjack.mcp.context import get_context
 
@@ -272,10 +271,7 @@ def _create_cleanup_response(
         },
         indent=2,
     )
-
-
-@depends.inject
-def _register_config_tool(mcp_app: t.Any, config: Inject[Config]) -> None:
+def _register_config_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         context = get_context()

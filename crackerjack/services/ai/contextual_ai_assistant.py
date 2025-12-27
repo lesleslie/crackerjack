@@ -6,8 +6,7 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.models.protocols import FileSystemInterface
 
@@ -39,11 +38,9 @@ class ProjectContext:
 
 
 class ContextualAIAssistant:
-    @depends.inject
     def __init__(
         self,
         filesystem: FileSystemInterface,
-        console: Inject[Console],
     ) -> None:
         self.filesystem = filesystem
         self.console = console

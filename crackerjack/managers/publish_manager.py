@@ -3,7 +3,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
 
 from crackerjack.core.retry import retry_api_call
@@ -81,7 +81,7 @@ class PublishManagerImpl:
         if console is not None:
             return console
         try:
-            return depends.get_sync(Console)
+            return Console()
         except Exception:
             return Console()
 

@@ -3,8 +3,7 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 from .core.workflow_orchestrator import WorkflowOrchestrator
@@ -50,7 +49,7 @@ class CrackerjackAPI:
         verbose: bool = False,
     ) -> None:
         self.project_path = project_path or Path.cwd()
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
         self.verbose = verbose
 
         self.orchestrator = WorkflowOrchestrator(

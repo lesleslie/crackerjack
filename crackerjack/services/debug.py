@@ -8,8 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -21,7 +20,7 @@ class AIAgentDebugger:
     def __init__(self, enabled: bool = False, verbose: bool = False) -> None:
         self.enabled = enabled
         self.verbose = verbose
-        self.console = depends.get_sync(Console)
+        self.console = Console()
         self.logger = get_logger("crackerjack.ai_agent.debug")
         self.session_id = f"debug_{int(time.time())}"
 

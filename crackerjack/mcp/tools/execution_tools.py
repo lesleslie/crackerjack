@@ -207,16 +207,13 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 
 
 def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
-    from acb.console import Console
-    from acb.depends import Inject, depends
-
+    from rich.console import Console
+    
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
-
-    @depends.inject
     def _execute_initialization(
-        target_path: t.Any, force: bool, console: Inject[Console]
+        target_path: t.Any, force: bool
     ) -> dict[str, t.Any]:
         filesystem = FileSystemService()
         git_service = GitService(target_path)

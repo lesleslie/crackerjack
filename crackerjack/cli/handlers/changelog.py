@@ -10,8 +10,7 @@ This module contains handlers for:
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
@@ -32,14 +31,10 @@ def setup_changelog_services() -> dict[str, t.Any]:
         "git_service": git_service,
         "generator": changelog_generator,
     }
-
-
-@depends.inject  # type: ignore[misc]
 def handle_changelog_dry_run(
     generator: "ChangelogGenerator",
     changelog_since: str | None,
     options: t.Any,
-    console: Inject[Console],
 ) -> bool:
     """Handle changelog dry-run (preview without writing)."""
     console.print("🔍 [bold blue]Previewing changelog generation...[/bold blue]")
@@ -51,16 +46,12 @@ def handle_changelog_dry_run(
         console.print("⚠️ No new changelog entries to generate")
 
     return should_continue_after_changelog(options)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_changelog_generation(
     services: dict[str, t.Any],
     changelog_path: Path,
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,
-    console: Inject[Console],
 ) -> bool:
     """Handle changelog generation and write to file."""
     console.print("📝 [bold blue]Generating changelog...[/bold blue]")
@@ -82,15 +73,11 @@ def handle_changelog_generation(
         return should_continue_after_changelog(options)
     console.print("❌ [bold red]Changelog generation failed![/bold red]")
     return False
-
-
-@depends.inject  # type: ignore[misc]
 def determine_changelog_version(
     git_service: "GitService",
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,
-    console: Inject[Console],
 ) -> str:
     """Determine changelog version (auto-detect via AI or use provided version)."""
     if getattr(options, "auto_version", False) and not changelog_version:
@@ -167,15 +154,11 @@ def handle_changelog_commands(
 
 
 # === Version Analysis Handler ===
-
-
-@depends.inject  # type: ignore[misc]
 def handle_version_analysis(
     auto_version: bool,
     version_since: str | None,
     accept_version: bool,
     options: t.Any,
-    console: Inject[Console],
 ) -> bool:
     """Handle automated version analysis and recommendations.
 

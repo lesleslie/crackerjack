@@ -1,17 +1,14 @@
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from .regex_patterns import SAFE_PATTERNS
 
 
 class CoverageBadgeService:
     """Service for managing coverage badges in README.md files."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console], project_root: Path) -> None:
+    def __init__(self, project_root: Path) -> None:
         self.console = console
         self.project_root = project_root
         self.readme_path = project_root / "README.md"

@@ -3,8 +3,7 @@ import typing as t
 from datetime import datetime
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from crackerjack.models.protocols import CoverageRatchetProtocol
@@ -16,9 +15,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
     MILESTONES = [15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 95, 100]
 
     TOLERANCE_MARGIN = 2.0
-
-    @depends.inject
-    def __init__(self, pkg_path: Path, console: Inject[Console]) -> None:
+    def __init__(self, pkg_path: Path) -> None:
         # Normalize to pathlib.Path to avoid async path behaviors
         try:
             self.pkg_path = Path(str(pkg_path))

@@ -2,7 +2,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
 
 from crackerjack.config import CrackerjackSettings
@@ -176,7 +176,7 @@ class HookManagerImpl:
         self.debug = debug
 
         # Use provided console or get from DI
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
 
         # Get GitService for incremental execution
         git_service = self._setup_git_service(use_incremental, pkg_path)

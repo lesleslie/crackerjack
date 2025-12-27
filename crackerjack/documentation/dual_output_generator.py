@@ -8,8 +8,7 @@ from datetime import datetime
 from pathlib import Path
 
 import yaml
-from acb import console as acb_console
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.services.cache import CrackerjackCache

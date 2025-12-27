@@ -6,7 +6,7 @@ Part of Phase 10.2.3: Development Velocity Improvements.
 
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from rich.panel import Panel
 
 

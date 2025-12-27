@@ -4,8 +4,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 from pydantic import BaseModel
 
 
@@ -110,7 +109,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     def __init__(self, console: Console | None = None, **data: t.Any) -> None:
         if console is None:
             try:
-                console = depends.get_sync(Console)
+                console = Console()
             except Exception:
                 console = Console()
         super().__init__(**data)

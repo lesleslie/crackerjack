@@ -1,3 +1,4 @@
+import logging
 from __future__ import annotations
 
 import asyncio
@@ -8,8 +9,6 @@ from pathlib import Path
 from typing import Any
 
 import aiofiles
-from acb.depends import Inject, depends
-from acb.logger import Logger
 
 from crackerjack.errors import FileError
 from crackerjack.models.protocols import (
@@ -20,10 +19,8 @@ from crackerjack.services.logging import LoggingContext
 
 
 class FileCache:
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
         max_size: int = 1000,
         default_ttl: float = 300.0,
     ) -> None:
@@ -91,10 +88,8 @@ class FileCache:
 
 
 class BatchFileOperations:
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
         batch_size: int = 10,
     ) -> None:
         self.batch_size = batch_size
@@ -180,10 +175,8 @@ class BatchFileOperations:
 
 
 class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtocol):
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
         cache_size: int = 1000,
         cache_ttl: float = 300.0,
         batch_size: int = 10,

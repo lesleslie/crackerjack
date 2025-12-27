@@ -4,22 +4,21 @@ import sys
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject, depends
 
 from .options import Options
+
+
+logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from crackerjack.services.quality.config_template import (
         ConfigTemplateService,
         ConfigUpdateInfo,
     )
-
-
-@depends.inject  # type: ignore[misc]
 def setup_ai_agent_env(
-    ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
-) -> None:
+    ai_agent: bool, debug_mode: bool = False) -> None:
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -67,20 +66,14 @@ def handle_mcp_server() -> None:
 
     project_path = str(Path.cwd())
     start_mcp_main(project_path)
-
-
-@depends.inject  # type: ignore[misc]
-def handle_watchdog_mode(console: Inject[Console] = None) -> None:
+def handle_watchdog_mode() -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 
     try:
         asyncio.run(start_watchdog())
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
+def handle_stop_mcp_server() -> None:
     from crackerjack.services.server_manager import (
         list_server_status,
         stop_all_servers,
@@ -95,10 +88,7 @@ def handle_stop_mcp_server(console: Inject[Console] = None) -> None:
     else:
         console.print("\n[bold red]❌ Some servers failed to stop[/ bold red]")
         raise SystemExit(1)
-
-
-@depends.inject  # type: ignore[misc]
-def handle_restart_mcp_server(console: Inject[Console] = None) -> None:
+def handle_restart_mcp_server() -> None:
     from crackerjack.services.server_manager import restart_mcp_server
 
     if restart_mcp_server(console):
@@ -106,12 +96,8 @@ def handle_restart_mcp_server(console: Inject[Console] = None) -> None:
     else:
         console.print("\n[bold red]❌ MCP server restart failed[/ bold red]")
         raise SystemExit(1)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_start_zuban_lsp(
-    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
-) -> None:
+    port: int = 8677, mode: str = "tcp") -> None:
     """Start Zuban LSP server."""
     from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
@@ -135,10 +121,7 @@ def handle_start_zuban_lsp(
         asyncio.run(_start())
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
-
-
-@depends.inject  # type: ignore[misc]
-def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
+def handle_stop_zuban_lsp() -> None:
     """Stop Zuban LSP server."""
     from crackerjack.services.server_manager import stop_zuban_lsp
 
@@ -151,12 +134,8 @@ def handle_stop_zuban_lsp(console: Inject[Console] = None) -> None:
     else:
         console.print("\n[bold red]❌ Failed to stop Zuban LSP server[/bold red]")
         raise SystemExit(1)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_restart_zuban_lsp(
-    port: int = 8677, mode: str = "tcp", console: Inject[Console] = None
-) -> None:
+    port: int = 8677, mode: str = "tcp") -> None:
     """Restart Zuban LSP server."""
     from crackerjack.services.server_manager import restart_zuban_lsp
 
@@ -176,15 +155,11 @@ def handle_interactive_mode(options: Options) -> None:
 
     pkg_version = get_package_version()
     launch_interactive_cli(pkg_version, options)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_standard_mode(
     options: Options,
     async_mode: bool,
     job_id: str | None = None,
     orchestrated: bool = False,
-    console: Inject[Console] = None,
 ) -> None:
     # Run the async configure method in an isolated event loop
     import asyncio
@@ -241,13 +216,9 @@ def handle_standard_mode(
 
         if not success:
             raise SystemExit(1)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_acb_workflow_mode(
     options: Options,
     job_id: str | None = None,
-    console: Inject[Console] = None,
 ) -> None:
     """Execute workflow using ACB workflow engine (Phase 3 Production).
 
@@ -294,18 +265,6 @@ def handle_acb_workflow_mode(
             )
 
         console.print("[dim]✓ DI container ready with WorkflowPipeline[/dim]")
-
-        # Register ACB Logger explicitly (needed for BasicWorkflowEngine)
-        from acb.logger import Logger
-
-        try:
-            logger = depends.get_sync(Logger)
-        except Exception:
-            # ACB Logger not available, this shouldn't happen but handle gracefully
-            import logging
-
-            logger = logging.getLogger("crackerjack")
-            depends.set(Logger, logger)
 
         # Register WorkflowEventBus with DI container
         event_bus = WorkflowEventBus()
@@ -375,12 +334,8 @@ def handle_acb_workflow_mode(
         options.use_legacy_orchestrator = True
         options.use_acb_workflows = False
         handle_standard_mode(options, False, job_id, False, console)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_orchestrated_mode(
-    options: Options, job_id: str | None = None, console: Inject[Console] = None
-) -> None:
+    options: Options, job_id: str | None = None) -> None:
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
     # Run the async configure method in an isolated event loop
@@ -459,10 +414,7 @@ def handle_orchestrated_mode(
     except Exception as e:
         console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/ red]")
         sys.exit(1)
-
-
-@depends.inject  # type: ignore[misc]
-def handle_config_updates(options: Options, console: Inject[Console] = None) -> None:
+def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService
 
@@ -479,11 +431,8 @@ def handle_config_updates(options: Options, console: Inject[Console] = None) -> 
         _handle_diff_config(config_service, pkg_path, options.diff_config, console)
     elif options.refresh_cache:
         _handle_refresh_cache(config_service, pkg_path, console)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_check_updates(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
+    config_service: "ConfigTemplateService", pkg_path: Path
 ) -> None:
     """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
@@ -500,14 +449,10 @@ def _handle_check_updates(
 
     _display_available_updates(updates, console)
     console.print("\nUse --apply-config-updates to apply these updates")
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_apply_updates(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
     interactive: bool,
-    console: Inject[Console],
 ) -> None:
     """Handle applying configuration updates."""
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
@@ -526,35 +471,25 @@ def _handle_apply_updates(
         config_service, configs_to_update, pkg_path, interactive, console
     )
     _report_update_results(success_count, len(configs_to_update), console)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_diff_config(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
     config_type: str,
-    console: Inject[Console],
 ) -> None:
     """Handle showing configuration diff."""
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
     diff_preview = config_service._generate_diff_preview(config_type, pkg_path)
     console.print(f"\nChanges for {config_type}:")
     console.print(diff_preview)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_refresh_cache(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Inject[Console]
+    config_service: "ConfigTemplateService", pkg_path: Path
 ) -> None:
     """Handle refreshing cache."""
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
     console.print("[green]✅ Cache refreshed[/green]")
-
-
-@depends.inject  # type: ignore[misc]
 def _display_available_updates(
-    updates: dict[str, "ConfigUpdateInfo"], console: Inject[Console]
+    updates: dict[str, "ConfigUpdateInfo"]
 ) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
@@ -572,15 +507,11 @@ def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[
         for config_type, update_info in updates.items()
         if update_info.needs_update
     ]
-
-
-@depends.inject  # type: ignore[misc]
 def _apply_config_updates_batch(
     config_service: "ConfigTemplateService",
     configs: list[str],
     pkg_path: Path,
     interactive: bool,
-    console: Inject[Console],
 ) -> int:
     """Apply configuration updates in batch and return success count."""
     success_count = 0
@@ -588,11 +519,8 @@ def _apply_config_updates_batch(
         if config_service.apply_update(config_type, pkg_path, interactive=interactive):
             success_count += 1
     return success_count
-
-
-@depends.inject  # type: ignore[misc]
 def _report_update_results(
-    success_count: int, total_count: int, console: Inject[Console]
+    success_count: int, total_count: int
 ) -> None:
     """Report the results of configuration updates."""
     if success_count == total_count:
