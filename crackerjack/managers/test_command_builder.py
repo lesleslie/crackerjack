@@ -2,7 +2,7 @@ import os
 from pathlib import Path
 
 import psutil
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
 
 from crackerjack.config.settings import CrackerjackSettings
@@ -31,7 +31,7 @@ class TestCommandBuilder:
 
         if console is None:
             try:
-                console = depends.get_sync(Console)
+                console = Console()
             except Exception:
                 console = Console()
 

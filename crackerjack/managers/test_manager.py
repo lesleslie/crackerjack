@@ -5,7 +5,7 @@ import typing as t
 from pathlib import Path
 
 from acb.config import root_path
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
 from rich import box
 from rich.panel import Panel
@@ -39,7 +39,7 @@ class TestManager:
     ) -> None:
         if console is None:
             try:
-                console = depends.get_sync(Console)
+                console = Console()
             except Exception:
                 console = Console()
 

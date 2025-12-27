@@ -1,7 +1,6 @@
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from .config_integrity import ConfigIntegrityService
 from .smart_scheduling import SmartSchedulingService
@@ -16,9 +15,8 @@ __all__ = [
 
 
 class ToolVersionService:
-    @depends.inject
     def __init__(
-        self, console: Inject[Console], project_path: Path | None = None
+        self, project_path: Path | None = None
     ) -> None:
         self.console = console
         self.project_path = project_path or Path.cwd()

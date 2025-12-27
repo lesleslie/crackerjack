@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
-from acb import console as acb_console
 from acb.depends import depends
 from mcp_common.ui import ServerPanels
 

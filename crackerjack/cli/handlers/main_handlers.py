@@ -1,5 +1,8 @@
 """Main CLI handlers that were originally in the monolithic handlers.py file.
 
+
+logger = logging.getLogger(__name__)
+
 This module contains the core handler functions that coordinate the main CLI
 workflows and need to be separated from monitoring-specific handlers.
 """
@@ -11,16 +14,12 @@ import os
 import sys
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject, depends
 
 from ..options import Options
-
-
-@depends.inject  # type: ignore[misc]
 def setup_ai_agent_env(
-    ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
-) -> None:
+    ai_agent: bool, debug_mode: bool = False) -> None:
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -61,25 +60,18 @@ def setup_ai_agent_env(
         from crackerjack.services.logging import setup_structured_logging
 
         setup_structured_logging(level="DEBUG", json_output=True)
-
-
-@depends.inject  # type: ignore[misc]
-def handle_interactive_mode(options: Options, console: Inject[Console] = None) -> None:
+def handle_interactive_mode(options: Options) -> None:
     from crackerjack.cli.version import get_package_version
 
     from ..interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
     launch_interactive_cli(pkg_version, options)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_standard_mode(
     options: Options,
     async_mode: bool,
     job_id: str | None = None,
     orchestrated: bool = False,
-    console: Inject[Console] = None,
 ) -> None:
     # Run the async configure method in an isolated event loop
 
@@ -135,13 +127,9 @@ def handle_standard_mode(
 
         if not success:
             raise SystemExit(1)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_acb_workflow_mode(
     options: Options,
     job_id: str | None = None,
-    console: Inject[Console] = None,
 ) -> None:
     """Execute workflow using ACB workflow engine (Phase 3 Production).
 
@@ -189,10 +177,9 @@ def handle_acb_workflow_mode(
         console.print("[dim]✓ DI container ready with WorkflowPipeline[/dim]")
 
         # Register ACB Logger explicitly (needed for BasicWorkflowEngine)
-        from acb.logger import Logger
-
+        
         try:
-            logger = depends.get_sync(Logger)
+            # logger = logger  # Migrated from ACB
         except Exception:
             # ACB Logger not available, this shouldn't happen but handle gracefully
             import logging
@@ -268,12 +255,8 @@ def handle_acb_workflow_mode(
         options.use_legacy_orchestrator = True
         options.use_acb_workflows = False
         handle_standard_mode(options, False, job_id, False, console)
-
-
-@depends.inject  # type: ignore[misc]
 def handle_orchestrated_mode(
-    options: Options, job_id: str | None = None, console: Inject[Console] = None
-) -> None:
+    options: Options, job_id: str | None = None) -> None:
     console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
     # Run the async configure method in an isolated event loop
@@ -351,10 +334,7 @@ def handle_orchestrated_mode(
     except Exception as e:
         console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/ red]")
         sys.exit(1)
-
-
-@depends.inject  # type: ignore[misc]
-def handle_config_updates(options: Options, console: Inject[Console] = None) -> None:
+def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService
 
@@ -371,11 +351,8 @@ def handle_config_updates(options: Options, console: Inject[Console] = None) -> 
         _handle_diff_config(config_service, pkg_path, options.diff_config, console)
     elif options.refresh_cache:
         _handle_refresh_cache(config_service, pkg_path, console)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_check_updates(
-    config_service: ConfigTemplateService, pkg_path: Path, console: Inject[Console]
+    config_service: ConfigTemplateService, pkg_path: Path
 ) -> None:
     """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
@@ -392,14 +369,10 @@ def _handle_check_updates(
 
     _display_available_updates(updates, console)
     console.print("\nUse --apply-config-updates to apply these updates")
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_apply_updates(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     interactive: bool,
-    console: Inject[Console],
 ) -> None:
     """Handle applying configuration updates."""
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
@@ -418,35 +391,25 @@ def _handle_apply_updates(
         config_service, configs_to_update, pkg_path, interactive, console
     )
     _report_update_results(success_count, len(configs_to_update), console)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_diff_config(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     config_type: str,
-    console: Inject[Console],
 ) -> None:
     """Handle showing configuration diff."""
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
     diff_preview = config_service._generate_diff_preview(config_type, pkg_path)
     console.print(f"\nChanges for {config_type}:")
     console.print(diff_preview)
-
-
-@depends.inject  # type: ignore[misc]
 def _handle_refresh_cache(
-    config_service: ConfigTemplateService, pkg_path: Path, console: Inject[Console]
+    config_service: ConfigTemplateService, pkg_path: Path
 ) -> None:
     """Handle refreshing cache."""
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
     console.print("[green]✅ Cache refreshed[/green]")
-
-
-@depends.inject  # type: ignore[misc]
 def _display_available_updates(
-    updates: dict[str, ConfigUpdateInfo], console: Inject[Console]
+    updates: dict[str, ConfigUpdateInfo]
 ) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
@@ -464,15 +427,11 @@ def _get_configs_needing_update(updates: dict[str, ConfigUpdateInfo]) -> list[st
         for config_type, update_info in updates.items()
         if update_info.needs_update
     ]
-
-
-@depends.inject  # type: ignore[misc]
 def _apply_config_updates_batch(
     config_service: ConfigTemplateService,
     configs: list[str],
     pkg_path: Path,
     interactive: bool,
-    console: Inject[Console],
 ) -> int:
     """Apply configuration updates in batch and return success count."""
     success_count = 0
@@ -480,11 +439,8 @@ def _apply_config_updates_batch(
         if config_service.apply_update(config_type, pkg_path, interactive=interactive):
             success_count += 1
     return success_count
-
-
-@depends.inject  # type: ignore[misc]
 def _report_update_results(
-    success_count: int, total_count: int, console: Inject[Console]
+    success_count: int, total_count: int
 ) -> None:
     """Report the results of configuration updates."""
     if success_count == total_count:

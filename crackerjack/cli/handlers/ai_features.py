@@ -3,16 +3,11 @@
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
-
-
-@depends.inject  # type: ignore[misc]
+from rich.console import Console
 def handle_contextual_ai(
     contextual_ai: bool,
     ai_recommendations: int,
     ai_help_query: str | None,
-    console: Inject[Console],
 ) -> bool:
     if not contextual_ai and not ai_help_query:
         return True

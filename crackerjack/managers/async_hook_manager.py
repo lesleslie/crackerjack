@@ -2,7 +2,7 @@ import asyncio
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor

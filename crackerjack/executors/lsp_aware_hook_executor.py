@@ -3,8 +3,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
@@ -20,11 +19,8 @@ except ImportError:
 
 class LSPAwareHookExecutor(HookExecutor):
     """Hook executor that can leverage LSP server for enhanced performance."""
-
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,

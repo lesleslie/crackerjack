@@ -1,11 +1,13 @@
+import logging
 import subprocess
 from contextlib import suppress
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import depends
-from acb.logger import Logger
+from rich.console import Console
 
+
+
+logger = logging.getLogger(__name__)
 
 class AutofixCoordinator:
     def __init__(
@@ -14,18 +16,11 @@ class AutofixCoordinator:
         pkg_path: Path | None = None,
         logger: object | None = None,
     ) -> None:
-        # Allow explicit injection from tests; fall back to DI when not provided
-        self.console = console or depends.get_sync(Console)
+        # Allow explicit injection from tests; fall back to standard logging
+        self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
-        # Bind logger context with name for tracing
-        _logger = logger or depends.get_sync(Logger)
-        if hasattr(_logger, "bind"):
-            self.logger = _logger.bind(logger="crackerjack.autofix")
-        else:
-            self.logger = _logger
-        if not hasattr(self.logger, "name"):
-            with suppress(Exception):
-                setattr(self.logger, "name", "crackerjack.autofix")
+        # Use module logger or provided logger for tests
+        self.logger = logger or logging.getLogger("crackerjack.autofix")
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:

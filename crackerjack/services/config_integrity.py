@@ -2,16 +2,14 @@ import tomllib
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.exceptions.config import ConfigIntegrityError
 from crackerjack.models.protocols import ConfigIntegrityServiceProtocol, ServiceProtocol
 
 
 class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
-    @depends.inject
-    def __init__(self, console: Inject[Console], project_path: Path) -> None:
+    def __init__(self, project_path: Path) -> None:
         self.console = console
         self.project_path = project_path
         self.cache_dir = Path.home() / ".cache" / "crackerjack"

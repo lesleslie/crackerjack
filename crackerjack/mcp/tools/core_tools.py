@@ -328,7 +328,7 @@ class _AdaptedOptions:
         return False
 
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject
 
 from crackerjack.services.filesystem import FileSystemService
@@ -337,7 +337,7 @@ from crackerjack.services.initialization import InitializationService
 
 
 def _execute_init_stage(
-    orchestrator: "WorkflowOrchestrator", console: Inject[Console]
+    orchestrator: "WorkflowOrchestrator"
 ) -> bool:
     try:
         from pathlib import Path

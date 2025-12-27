@@ -10,7 +10,7 @@ type checking during pre-commit hooks.
 import sys
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.services.lsp_client import LSPClient
 

@@ -1,12 +1,12 @@
+import logging
 from __future__ import annotations
 
 import re
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject, depends
-from acb.logger import Logger
 from rich import box
 from rich.panel import Panel
 from rich.progress import (
@@ -51,24 +51,8 @@ if t.TYPE_CHECKING:
 
 
 class PhaseCoordinator:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        logger: Inject[Logger],
-        memory_optimizer: Inject[MemoryOptimizerProtocol],
-        parallel_executor: Inject[ParallelHookExecutor],
-        async_executor: Inject[AsyncCommandExecutor],
-        git_cache: Inject[GitOperationCache],
-        filesystem_cache: Inject[FileSystemCache],
-        pkg_path: Inject[Path],
-        session: Inject[SessionCoordinator],
-        filesystem: Inject[FileSystemInterface],
-        git_service: Inject[GitInterface],
-        hook_manager: Inject[HookManager],
-        test_manager: Inject[TestManagerProtocol],
-        publish_manager: Inject[PublishManager],
-        config_merge_service: Inject[ConfigMergeServiceProtocol],
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -100,8 +84,7 @@ class PhaseCoordinator:
                 "WARNING: PhaseCoordinator received empty tuple for logger dependency, creating fallback"
             )
             # Import and create a fallback logger if we got an empty tuple
-            from acb.logger import Logger as ACBLogger
-
+            
             self._logger = ACBLogger()
         elif isinstance(logger, str):
             # Log this issue for debugging
@@ -109,8 +92,7 @@ class PhaseCoordinator:
                 f"WARNING: PhaseCoordinator received string for logger dependency: {logger!r}, creating fallback"
             )
             # Import and create a fallback logger if we got a string
-            from acb.logger import Logger as ACBLogger
-
+            
             self._logger = ACBLogger()
         else:
             self._logger = logger
@@ -141,8 +123,7 @@ class PhaseCoordinator:
             (isinstance(self._logger, tuple) and len(self._logger) == 0)
             or isinstance(self._logger, str)
         ):
-            from acb.logger import Logger as ACBLogger
-
+            
             print(
                 f"WARNING: PhaseCoordinator logger was invalid type ({type(self._logger).__name__}: {self._logger!r}), creating fresh logger instance"
             )

@@ -5,8 +5,7 @@ from enum import Enum, auto
 from functools import partial
 from typing import Protocol
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.table import Table
@@ -414,7 +413,7 @@ class WorkflowManager:
 
 class InteractiveCLI:
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
         self.workflow = WorkflowManager(self.console)
         import logging
 
@@ -692,7 +691,7 @@ class InteractiveCLI:
 
 
 def launch_interactive_cli(version: str, options: t.Any = None) -> None:
-    console = depends.get_sync(Console)
+    console = Console()
     cli = InteractiveCLI(console)
 
     title = Text("Crackerjack", style="bold cyan")

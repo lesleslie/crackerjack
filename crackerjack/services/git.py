@@ -2,8 +2,7 @@ import subprocess  # nosec B404
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.models.protocols import GitInterface
 
@@ -36,8 +35,7 @@ class FailedGitResult:
 
 
 class GitService(GitInterface):
-    @depends.inject
-    def __init__(self, console: Inject[Console], pkg_path: Path | None = None) -> None:
+    def __init__(self, pkg_path: Path | None = None) -> None:
         self.console = console
         self.pkg_path = pkg_path or Path.cwd()
 

@@ -2,8 +2,7 @@ import time
 import typing as t
 from enum import Enum, auto
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 from rich.box import ROUNDED
 from rich.layout import Layout
 from rich.live import Live
@@ -401,7 +400,7 @@ class InteractiveWorkflowManager:
 class InteractiveCLI:
     def __init__(self, pkg_version: str, console: Console | None = None) -> None:
         self.pkg_version = pkg_version
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
         self.orchestrator = WorkflowOrchestrator()
         self.workflow_manager = InteractiveWorkflowManager(
             self.console,

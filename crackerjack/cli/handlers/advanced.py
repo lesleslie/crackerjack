@@ -3,16 +3,11 @@
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
-
-
-@depends.inject  # type: ignore[misc]
+from rich.console import Console
 def handle_advanced_optimizer(
     advanced_optimizer: bool,
     advanced_profile: str | None,
     advanced_report: str | None,
-    console: Inject[Console] = None,
 ) -> bool:
     if not advanced_optimizer:
         return True
@@ -42,19 +37,13 @@ def setup_advanced_optimizer(advanced_profile: str | None) -> t.Any:
         optimizer.performance_profile.optimization_strategy = advanced_profile
 
     return optimizer
-
-
-@depends.inject  # type: ignore[misc]
-def run_advanced_optimization(optimizer: t.Any, console: Inject[Console]) -> t.Any:
+def run_advanced_optimization(optimizer: t.Any) -> t.Any:
     import asyncio
 
     console.print("[blue]📊[/blue] Analyzing system resources and performance...")
     return asyncio.run(optimizer.run_optimization_cycle())
-
-
-@depends.inject  # type: ignore[misc]
 def display_advanced_results(
-    result: t.Any, advanced_report: str | None, console: Inject[Console]
+    result: t.Any, advanced_report: str | None
 ) -> None:
     if result["status"] == "success":
         console.print("[green]✅[/green] Advanced optimization completed successfully")
@@ -65,18 +54,12 @@ def display_advanced_results(
         console.print(
             f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}"
         )
-
-
-@depends.inject  # type: ignore[misc]
-def display_advanced_metrics(metrics: t.Any, console: Inject[Console]) -> None:
+def display_advanced_metrics(metrics: t.Any) -> None:
     console.print(f"[blue]CPU Usage:[/blue] {metrics['cpu_percent']:.1f}%")
     console.print(f"[blue]Memory Usage:[/blue] {metrics['memory_percent']:.1f}%")
     console.print(f"[blue]Storage Usage:[/blue] {metrics['disk_usage_percent']:.1f}%")
-
-
-@depends.inject  # type: ignore[misc]
 def display_advanced_recommendations(
-    recommendations: t.Any, console: Inject[Console]
+    recommendations: t.Any
 ) -> None:
     if recommendations:
         console.print(
@@ -89,11 +72,8 @@ def display_advanced_recommendations(
             console.print(
                 f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}"
             )
-
-
-@depends.inject  # type: ignore[misc]
 def save_advanced_report(
-    result: t.Any, advanced_report: str | None, console: Inject[Console]
+    result: t.Any, advanced_report: str | None
 ) -> None:
     if advanced_report:
         import json

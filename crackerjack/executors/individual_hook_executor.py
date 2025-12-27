@@ -5,7 +5,7 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.config import get_console_width

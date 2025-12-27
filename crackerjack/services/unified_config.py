@@ -1,9 +1,9 @@
+import logging
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import Inject, depends
-from acb.logger import Logger
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.errors import ValidationError
@@ -11,11 +11,8 @@ from crackerjack.models.protocols import OptionsProtocol
 
 
 class UnifiedConfigurationService:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        logger: Inject[Logger],
         pkg_path: Path,
         options: OptionsProtocol | None = None,
     ) -> None:

@@ -7,8 +7,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from threading import Lock
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -287,7 +286,7 @@ class AsyncPerformanceMonitor:
 
     def print_performance_report(self, console: Console | None = None) -> None:
         if console is None:
-            console = depends.get_sync(Console)
+            console = Console()
 
         console.print("\n[bold blue]🔍 Async Performance Monitor Report[/bold blue]")
         console.print("=" * 60)

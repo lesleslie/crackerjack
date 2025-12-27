@@ -8,7 +8,7 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy

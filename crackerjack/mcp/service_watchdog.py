@@ -7,7 +7,6 @@ from contextlib import suppress
 from typing import Any
 
 import aiohttp
-from acb import console
 from rich.panel import Panel
 from rich.table import Table
 

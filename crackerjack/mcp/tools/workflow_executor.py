@@ -227,7 +227,7 @@ def _create_standard_orchestrator(
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
-    from acb.console import Console
+    from rich.console import Console
 
     from crackerjack.managers.hook_manager import AsyncHookManager
     from crackerjack.managers.publish_manager import PublishManagerImpl
@@ -240,7 +240,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
     )
     from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
-    console = depends.get_sync(Console)
+    console = Console()
 
     container.register_singleton(
         HookManager,

@@ -8,7 +8,7 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from acb.console import Console
+from rich.console import Console
 from acb.depends import depends
 
 
@@ -64,7 +64,7 @@ class ToolProxy:
     """Proxy that routes tool calls through adapters with health checks."""
 
     def __init__(self, console: Console | None = None):
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
         self.health_status: dict[str, ToolHealthStatus] = {}
         self.circuit_breakers: dict[str, CircuitBreakerState] = {}
 

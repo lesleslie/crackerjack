@@ -9,12 +9,8 @@ This module contains handlers for:
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
-
-
-@depends.inject  # type: ignore[misc]
-def generate_documentation(doc_service: t.Any, console: Inject[Console]) -> bool:
+from rich.console import Console
+def generate_documentation(doc_service: t.Any) -> bool:
     """Generate API documentation using documentation service."""
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
     success = doc_service.generate_full_api_documentation()
@@ -25,10 +21,7 @@ def generate_documentation(doc_service: t.Any, console: Inject[Console]) -> bool
         return True
     console.print("❌ [bold red]Documentation generation failed![/bold red]")
     return False
-
-
-@depends.inject  # type: ignore[misc]
-def validate_documentation_files(doc_service: t.Any, console: Inject[Console]) -> None:
+def validate_documentation_files(doc_service: t.Any) -> None:
     """Validate existing documentation files for consistency."""
     console.print("🔍 [bold blue]Validating documentation...[/bold blue]")
     doc_paths = [Path("docs"), Path("README.md"), Path("CHANGELOG.md")]
@@ -210,12 +203,8 @@ def build_mkdocs_site(
             serve=serve,
         )
     )
-
-
-@depends.inject  # type: ignore[misc]
 def handle_mkdocs_build_result(
-    site: t.Any, mkdocs_serve: bool, console: Inject[Console] = None
-) -> None:
+    site: t.Any, mkdocs_serve: bool) -> None:
     """Display MkDocs build results to console."""
     if site:
         console.print(
@@ -232,15 +221,11 @@ def handle_mkdocs_build_result(
             console.print("[yellow]Press Ctrl+C to stop the server[/yellow]")
     else:
         console.print("[red]❌[/red] Failed to generate MkDocs site")
-
-
-@depends.inject  # type: ignore[misc]
 def handle_mkdocs_integration(
     mkdocs_integration: bool,
     mkdocs_serve: bool,
     mkdocs_theme: str,
     mkdocs_output: str | None,
-    console: Inject[Console],
 ) -> bool:
     """Handle MkDocs integration command for documentation site generation.
 

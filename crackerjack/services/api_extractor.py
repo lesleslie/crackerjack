@@ -6,8 +6,7 @@ import re
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from ..models.protocols import APIExtractorProtocol
 from .regex_patterns import SAFE_PATTERNS
@@ -120,9 +119,7 @@ class PythonDocstringParser:
 
 class APIExtractorImpl(APIExtractorProtocol):
     """Implementation of API documentation extraction from source code."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console]) -> None:
+    def __init__(self) -> None:
         self.console = console
         self.docstring_parser = PythonDocstringParser()
 

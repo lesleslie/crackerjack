@@ -4,8 +4,7 @@ import re
 import typing as t
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.models.protocols import GitInterface
 from crackerjack.services.regex_patterns import CompiledPatternCache
@@ -13,9 +12,7 @@ from crackerjack.services.regex_patterns import CompiledPatternCache
 
 class CommitMessageGenerator:
     """Generate intelligent commit messages based on changes and context."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console], git_service: GitInterface) -> None:
+    def __init__(self, git_service: GitInterface) -> None:
         """Initialize commit message generator."""
         self.console = console
         self.git = git_service

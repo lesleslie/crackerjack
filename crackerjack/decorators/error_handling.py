@@ -13,8 +13,7 @@ from concurrent.futures import TimeoutError as FutureTimeoutError
 from contextlib import suppress
 from functools import wraps
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 
 from ..errors import (
     CrackerjackError,
@@ -162,7 +161,7 @@ def handle_errors(
         - With suppress=True, errors are logged but not raised
         - Integrates with Rich console for beautiful output
     """
-    _console = console or depends.get_sync(Console)
+    _console = console or Console()
     _error_types = tuple(error_types) if error_types else (Exception,)
 
     def decorator(inner_func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
@@ -231,7 +230,7 @@ def log_errors(
         - Includes function context in logs
         - Supports structured logging if logger supports it
     """
-    _console = console or depends.get_sync(Console)
+    _console = console or Console()
 
     def _log_exception(
         func: t.Callable[..., t.Any],
@@ -637,7 +636,7 @@ def graceful_degradation(
         - Logs/warns about failures if warn=True
         - Useful for optional features that shouldn't break the app
     """
-    _console = console or depends.get_sync(Console)
+    _console = console or Console()
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):

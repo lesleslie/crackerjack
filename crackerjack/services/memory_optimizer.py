@@ -1,3 +1,4 @@
+import logging
 import gc
 import os
 import sys
@@ -12,9 +13,10 @@ from typing import Any
 from weakref import WeakSet
 
 import psutil
-from acb.depends import Inject, depends
-from acb.logger import Logger
 
+
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class MemoryStats:
@@ -237,11 +239,8 @@ class MemoryProfiler:
 class MemoryOptimizer:
     _instance: t.Optional["MemoryOptimizer"] = None
     _lock = Lock()
-
-    @depends.inject
     def __init__(
         self,
-        logger: Inject[Logger],
     ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
@@ -360,7 +359,7 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
 
         if not hasattr(self, attr_name):
             # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-            logger = depends.get_sync(Logger)
+            # logger = logger  # Migrated from ACB
             loader = LazyLoader(factory, logger=logger, name=factory.__name__)
             setattr(self, attr_name, loader)
 
@@ -398,7 +397,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
     # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-    logger = depends.get_sync(Logger)
+    # logger = logger  # Migrated from ACB
     return LazyLoader(factory, logger=logger, name=name)
 
 
@@ -408,7 +407,7 @@ def create_resource_pool(
     name: str = "unnamed",
 ) -> ResourcePool:
     # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-    logger = depends.get_sync(Logger)
+    # logger = logger  # Migrated from ACB
     pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool

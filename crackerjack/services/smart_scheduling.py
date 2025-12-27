@@ -5,15 +5,13 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from crackerjack.models.protocols import ServiceProtocol, SmartSchedulingServiceProtocol
 
 
 class SmartSchedulingService(SmartSchedulingServiceProtocol, ServiceProtocol):
-    @depends.inject
-    def __init__(self, console: Inject[Console], project_path: Path) -> None:
+    def __init__(self, project_path: Path) -> None:
         self.console = console
         self.project_path = project_path
         self.cache_dir = Path.home() / ".cache" / "crackerjack"

@@ -6,8 +6,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-from acb.console import Console
-from acb.depends import Inject, depends
+from rich.console import Console
 
 from .changelog_automation import ChangelogEntry, ChangelogGenerator
 from .git import GitService
@@ -194,9 +193,7 @@ class ConventionalCommitAnalyzer:
 
 class VersionAnalyzer:
     """Main service for analyzing changes and recommending version bumps."""
-
-    @depends.inject
-    def __init__(self, console: Inject[Console], git_service: GitService) -> None:
+    def __init__(self, git_service: GitService) -> None:
         self.console = console
         self.git = git_service
 

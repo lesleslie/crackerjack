@@ -5,8 +5,7 @@ import typing as t
 import uuid
 from pathlib import Path
 
-from acb.console import Console
-from acb.depends import depends
+from rich.console import Console
 
 from crackerjack.models.task import SessionTracker
 
@@ -24,7 +23,7 @@ class SessionCoordinator:
         pkg_path: Path | None = None,
         web_job_id: str | None = None,
     ) -> None:
-        self.console = console or depends.get_sync(Console)
+        self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
         self.web_job_id = web_job_id
         self.session_id = web_job_id or uuid.uuid4().hex[:8]
