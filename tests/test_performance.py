@@ -1,3 +1,6 @@
+import pytest
+
+
 def test_memoize_with_ttl_basic():
     """Test basic functionality of memoize_with_ttl."""
     try:
