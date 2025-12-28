@@ -67,32 +67,55 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 ## Essential Commands
 
+**IMPORTANT**: Crackerjack has a two-level CLI structure:
+- `python -m crackerjack --help` shows **command list** (start, stop, run, etc.)
+- `python -m crackerjack run --help` shows **all 100+ quality options** (-t, -x, -c, --ai-fix, etc.)
+
+All quality-checking flags live under the `run` subcommand!
+
 ```bash
+# Help commands
+python -m crackerjack --help        # Shows command list
+python -m crackerjack run --help    # Shows ALL options (640 lines!)
+
 # Daily workflow
-python -m crackerjack                       # Quality checks
-python -m crackerjack --run-tests            # With tests
-python -m crackerjack --ai-fix --run-tests   # AI auto-fixing (recommended)
+python -m crackerjack run                       # Quality checks
+python -m crackerjack run --run-tests           # With tests
+python -m crackerjack run -t                    # Short form
+python -m crackerjack run --ai-fix --run-tests  # AI auto-fixing (recommended)
+python -m crackerjack run --ai-fix -t           # Short form
 
 # Development
-python -m crackerjack --ai-debug --run-tests # Debug AI issues
-python -m crackerjack --skip-hooks           # Skip hooks during iteration
-python -m crackerjack --strip-code           # Code cleaning mode
+python -m crackerjack run --ai-debug --run-tests # Debug AI issues
+python -m crackerjack run --skip-hooks           # Skip hooks during iteration
+python -m crackerjack run --strip-code           # Code cleaning mode
+python -m crackerjack run -x                     # Short form
+python -m crackerjack run -x -t --ai-fix         # Combined shortcuts
 
-# Server management
-python -m crackerjack --start-mcp-server     # MCP server
-python -m crackerjack --restart-mcp-server   # Restart MCP server
-python -m crackerjack --watchdog             # Monitor/restart services
+# MCP Server management
+python -m crackerjack start          # Start MCP server
+python -m crackerjack stop           # Stop MCP server
+python -m crackerjack restart        # Restart MCP server
+python -m crackerjack status         # Check server status
+python -m crackerjack health         # Server health check
 
-# Release
-python -m crackerjack --all patch  # Full release workflow
+# Additional server options (via run command)
+python -m crackerjack run --watchdog             # Monitor/restart services
 
-# Testing
+# Release workflow
+python -m crackerjack run --all patch  # Full release workflow
+
+# Testing options
 python -m pytest tests/test_file.py::TestClass::test_method -v  # Specific test
 python -m pytest --cov=crackerjack --cov-report=html             # Coverage
-python -m crackerjack --run-tests                                # Auto-detect workers (default)
-python -m crackerjack --run-tests --test-workers 4               # Explicit workers
-python -m crackerjack --run-tests --test-workers 1               # Sequential execution
-python -m crackerjack --run-tests --test-workers -2              # Fractional (half cores)
+python -m crackerjack run --run-tests                            # Auto-detect workers (default)
+python -m crackerjack run --run-tests --test-workers 4           # Explicit workers
+python -m crackerjack run --run-tests --test-workers 1           # Sequential execution
+python -m crackerjack run --run-tests --test-workers -2          # Fractional (half cores)
+
+# Standalone test command (simpler, no quality checks)
+python -m crackerjack run-tests              # Just run pytest
+python -m crackerjack run-tests --workers 4  # With explicit workers
 ```
 
 ## Architecture
