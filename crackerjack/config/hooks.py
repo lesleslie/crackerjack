@@ -320,7 +320,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=180,  # Increased from 60 to reduce timeout issues with comprehensive dead code scanning
+        timeout=600,  # Increased from 180 to reduce timeout issues with comprehensive dead code scanning
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,

@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from crackerjack.config.settings import CrackerjackSettings
+from crackerjack.runtime import RuntimeHealthSnapshot
 
 logger = logging.getLogger(__name__)
 
@@ -197,7 +198,7 @@ class CrackerjackServer:
 
         logger.info("Server stopped")
 
-    def get_health_snapshot(self) -> dict:
+    def get_health_snapshot(self) -> RuntimeHealthSnapshot:
         """Generate health snapshot for monitoring.
 
         Returns health data compatible with Oneiric runtime health format.
@@ -205,7 +206,7 @@ class CrackerjackServer:
         command for liveness/readiness checks.
 
         Returns:
-            dict: Health snapshot with server status, uptime, and adapter health
+            RuntimeHealthSnapshot: Oneiric-compatible health snapshot
         """
         uptime = (
             (datetime.now(UTC) - self.start_time).total_seconds()
@@ -213,29 +214,32 @@ class CrackerjackServer:
             else 0.0
         )
 
-        return {
-            "server_status": "running" if self.running else "stopped",
-            "uptime_seconds": uptime,
-            "process_id": os.getpid(),
-            "qa_adapters": {
-                "total": len(self.adapters),
-                "healthy": sum(
-                    1 for a in self.adapters if getattr(a, "healthy", True)
-                ),
-                "enabled_flags": self._get_enabled_adapter_flags(),
+        return RuntimeHealthSnapshot(
+            orchestrator_pid=os.getpid(),
+            watchers_running=self.running,
+            lifecycle_state={
+                "server_status": "running" if self.running else "stopped",
+                "uptime_seconds": uptime,
+                "qa_adapters": {
+                    "total": len(self.adapters),
+                    "healthy": sum(
+                        1 for a in self.adapters if getattr(a, "healthy", True)
+                    ),
+                    "enabled_flags": self._get_enabled_adapter_flags(),
+                },
+                "settings": {
+                    "qa_mode": getattr(self.settings, "qa_mode", False),
+                    "ai_agent": getattr(getattr(self.settings, "ai", None), "ai_agent", False),
+                    "auto_fix": getattr(getattr(self.settings, "ai", None), "autofix", False),
+                    "test_workers": getattr(
+                        getattr(self.settings, "testing", None), "test_workers", 0
+                    ),
+                    "verbose": getattr(
+                        getattr(self.settings, "execution", None), "verbose", False
+                    ),
+                },
             },
-            "settings": {
-                "qa_mode": getattr(self.settings, "qa_mode", False),
-                "ai_agent": getattr(getattr(self.settings, "ai", None), "ai_agent", False),
-                "auto_fix": getattr(getattr(self.settings, "ai", None), "autofix", False),
-                "test_workers": getattr(
-                    getattr(self.settings, "testing", None), "test_workers", 0
-                ),
-                "verbose": getattr(
-                    getattr(self.settings, "execution", None), "verbose", False
-                ),
-            },
-        }
+        )
 
     def _get_enabled_adapter_flags(self) -> dict[str, bool]:
         """Get dict of adapter enablement flags from settings.

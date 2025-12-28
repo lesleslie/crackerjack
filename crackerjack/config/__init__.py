@@ -68,6 +68,7 @@ from .hooks import (
     RetryPolicy,
 )
 from .loader import load_settings, load_settings_async
+from .mcp_settings_adapter import CrackerjackMCPSettings
 from .settings import CrackerjackSettings
 
 logger = logging.getLogger(__name__)
@@ -272,6 +273,7 @@ __all__ = [
     "HookStrategy",
     "RetryPolicy",
     "CrackerjackSettings",
+    "CrackerjackMCPSettings",
     "load_settings",
     "load_settings_async",
     "register_services",

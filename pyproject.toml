@@ -79,11 +79,11 @@ dependencies = [
     "mdformat>=1.0.0",
     "mdformat-ruff>=0.1.3",
     "linkcheckmd>=1.4.0",
-    "bevy>=3.1.0b12",
     "uv-bump>=0.3.2",
     "pyscn==1.5.0",
     "pip-audit>=2.10.0",
     "bandit>=1.9.2",
+    "bevy>=3.1.0b12",
 ]
 
 [dependency-groups]

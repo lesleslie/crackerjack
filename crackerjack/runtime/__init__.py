@@ -9,6 +9,7 @@ from .health_snapshot import (
     write_runtime_health,
     read_runtime_health,
     write_pid_file,
+    read_pid_file,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "write_runtime_health",
     "read_runtime_health",
     "write_pid_file",
+    "read_pid_file",
 ]
