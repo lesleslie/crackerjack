@@ -9,9 +9,7 @@ workflows and need to be separated from monitoring-specific handlers.
 
 from __future__ import annotations
 
-import asyncio
 import os
-import sys
 from pathlib import Path
 
 from rich.console import Console
@@ -69,127 +67,19 @@ def handle_interactive_mode(options: Options) -> None:
     launch_interactive_cli(pkg_version, options)
 def handle_standard_mode(
     options: Options,
-    async_mode: bool,
-    job_id: str | None = None,
-    orchestrated: bool = False,
-) -> None:
-    # Run the async configure method in an isolated event loop
-
-    from crackerjack.executors.hook_lock_manager import hook_lock_manager
-
-    # Call the synchronous method directly
-    hook_lock_manager.configure_from_options(options)
-
-    # Phase 4.2 COMPLETE: ACB workflows are now the default
-    # Use --use-legacy-orchestrator to opt out and use the old orchestration system
-    if not getattr(options, "use_legacy_orchestrator", False):
-        # Default path: ACB workflow engine (Phase 4.2 complete)
-        # Only skip if user explicitly opted out with --use-legacy-orchestrator
-        handle_acb_workflow_mode(options, job_id, console)
-        return
-
-    # Legacy orchestrator path (only if use_legacy_orchestrator=True)
-    if orchestrated:
-        handle_orchestrated_mode(options, job_id)
-
-    # TODO(Phase 3): Replace with Oneiric workflow execution
-    if not orchestrated:
-        raise NotImplementedError(
-            "Legacy workflow orchestration removed in Phase 2 (ACB removal). "
-            "Will be reimplemented in Phase 3 (Oneiric integration)."
-        )
-def handle_acb_workflow_mode(
-    options: Options,
     job_id: str | None = None,
 ) -> None:
-    """Execute workflow using ACB workflow engine (Phase 3 Production).
+    """Execute standard quality workflow.
 
-    TODO(Phase 3): This function is disabled pending Oneiric integration.
-    ACB workflow infrastructure was removed in Phase 2.
+    TODO(Phase 3): Workflow orchestration infrastructure removed in Phase 2.
+    Will be reimplemented with Oneiric integration.
     """
     raise NotImplementedError(
-        "ACB workflow engine removed in Phase 2 (ACB removal). "
+        "Workflow orchestration removed in Phase 2 (ACB removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
-def handle_orchestrated_mode(
-    options: Options, job_id: str | None = None) -> None:
-    console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
-    # Run the async configure method in an isolated event loop
 
-    from crackerjack.executors.hook_lock_manager import hook_lock_manager
-
-    # Call the synchronous method directly
-    hook_lock_manager.configure_from_options(options)
-
-    try:
-        from crackerjack.core.session_coordinator import SessionCoordinator
-        from crackerjack.orchestration.advanced_orchestrator import (
-            AdvancedWorkflowOrchestrator,
-        )
-        from crackerjack.orchestration.execution_strategies import (
-            AICoordinationMode,
-            ExecutionStrategy,
-            OrchestrationConfig,
-            ProgressLevel,
-        )
-    except ImportError as e:
-        console.print(f"[red]Orchestrated mode not available: {e}[/ red]")
-        console.print("[yellow]Falling back to standard mode[/ yellow]")
-        handle_standard_mode(options, False, job_id)
-        return
-
-    try:
-        strategy = ExecutionStrategy(options.orchestration_strategy)
-    except ValueError:
-        console.print(
-            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/ red]",
-        )
-        strategy = ExecutionStrategy.ADAPTIVE
-
-    try:
-        progress = ProgressLevel(options.orchestration_progress)
-    except ValueError:
-        console.print(
-            f"[red]Invalid progress level: {options.orchestration_progress}[/ red]",
-        )
-        progress = ProgressLevel.GRANULAR
-
-    try:
-        ai_mode = AICoordinationMode(options.orchestration_ai_mode)
-    except ValueError:
-        console.print(f"[red]Invalid AI mode: {options.orchestration_ai_mode}[/ red]")
-        ai_mode = AICoordinationMode.SINGLE_AGENT
-
-    config = OrchestrationConfig(
-        execution_strategy=strategy,
-        progress_level=progress,
-        ai_coordination_mode=ai_mode,
-    )
-
-    console.print(f"[cyan]Execution Strategy: [/ cyan] {strategy.value}")
-    console.print(f"[cyan]Progress Level: [/ cyan] {progress.value}")
-    console.print(f"[cyan]AI Coordination: [/ cyan] {ai_mode.value}")
-
-    pkg_path = Path.cwd()
-    session = SessionCoordinator(console, pkg_path, web_job_id=job_id)
-    orchestrator = AdvancedWorkflowOrchestrator(console, pkg_path, session, config)
-
-    try:
-        success = asyncio.run(orchestrator.execute_orchestrated_workflow(options))
-        if success:
-            console.print(
-                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY ![/ bold green]",
-            )
-        else:
-            console.print("\n[bold red]❌ ORCHESTRATED WORKFLOW FAILED[/ bold red]")
-            sys.exit(1)
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Orchestrated workflow interrupted[/ yellow]")
-        sys.exit(130)
-    except Exception as e:
-        console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/ red]")
-        sys.exit(1)
 def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService

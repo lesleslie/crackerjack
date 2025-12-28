@@ -93,7 +93,6 @@ class Options(BaseModel):
     tool: str | None = None  # Phase 10.2.4: Run only specific tool
     changed_only: bool = False  # Phase 10.2.4: Run on changed files only
     all_files: bool = False  # Run hooks on all files (not just changed)
-    async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
@@ -103,12 +102,8 @@ class Options(BaseModel):
     cleanup_pypi: bool = False
     keep_releases: int = 10
     track_progress: bool = False
-    orchestrated: bool = False
     boost_coverage: bool = True
     coverage: bool = False
-    orchestration_strategy: str = "adaptive"
-    orchestration_progress: str = "granular"
-    orchestration_ai_mode: str = "single-agent"
     monitor: bool = False
     enhanced_monitor: bool = False
     watchdog: bool = False
@@ -121,9 +116,6 @@ class Options(BaseModel):
     zuban_lsp_timeout: int = 120
     enable_lsp_hooks: bool = False
     dev: bool = False
-    dashboard: bool = False
-    unified_dashboard: bool = False
-    unified_dashboard_port: int | None = None
     max_iterations: int = 5
     advanced_batch: str | None = None
     monitor_dashboard: str | None = None
@@ -146,10 +138,6 @@ class Options(BaseModel):
     remove_from_index: str | None = None
     cache_stats: bool = False
 
-    # ACB workflow integration (Phase 4.2 COMPLETE: ACB is now the default)
-    # Use --use-legacy-orchestrator to revert to the old orchestration system
-    use_acb_workflows: bool = True  # ACB workflow engine is now the default
-    use_legacy_orchestrator: bool = False  # Opt-in to legacy orchestrator
     refresh_cache: bool = False
 
     # Semantic field names (new primary interface)
@@ -455,12 +443,6 @@ CLI_OPTIONS = {
         "--restart-mcp-server",
         help="Restart MCP server (stop and start again).",
     ),
-    "async_mode": typer.Option(
-        False,
-        "--async",
-        help="Enable async mode for faster file operations (experimental).",
-        hidden=True,
-    ),
     "experimental_hooks": typer.Option(
         False,
         "--experimental-hooks",
@@ -569,27 +551,6 @@ CLI_OPTIONS = {
             "(enables textual --dev mode)."
         ),
     ),
-    "dashboard": typer.Option(
-        False,
-        "--dashboard",
-        help=(
-            "Start the comprehensive dashboard with system metrics, "
-            "job tracking, and performance monitoring."
-        ),
-    ),
-    "unified_dashboard": typer.Option(
-        False,
-        "--unified-dashboard",
-        help=(
-            "Start the unified monitoring dashboard with real-time WebSocket streaming, "
-            "web UI, and comprehensive system metrics aggregation."
-        ),
-    ),
-    "unified_dashboard_port": typer.Option(
-        None,
-        "--unified-dashboard-port",
-        help="Port for unified dashboard server (default: 8675).",
-    ),
     "max_iterations": typer.Option(
         10,
         "--max-iterations",
@@ -605,29 +566,6 @@ CLI_OPTIONS = {
         "--job-id",
         help="Job ID for WebSocket progress tracking (internal use).",
         hidden=True,
-    ),
-    "orchestrated": typer.Option(
-        False,
-        "--orchestrated",
-        help="Enable advanced orchestrated workflow mode with intelligent execution strategies, granular progress tracking, and multi-agent AI coordination.",
-    ),
-    "orchestration_strategy": typer.Option(
-        "adaptive",
-        "--orchestration-strategy",
-        help="Execution strategy for orchestrated mode: batch, individual, adaptive, selective (default: adaptive).",
-    ),
-    "orchestration_progress": typer.Option(
-        "granular",
-        "--orchestration-progress",
-        help="Progress tracking level: basic, detailed, granular, streaming (default: granular).",
-    ),
-    "orchestration_ai_mode": typer.Option(
-        "single-agent",
-        "--orchestration-ai-mode",
-        help=(
-            "AI coordination mode: single-agent, multi-agent, coordinator "
-            "(default: single-agent)."
-        ),
     ),
     "coverage_status": typer.Option(
         False,
@@ -945,19 +883,6 @@ CLI_OPTIONS = {
         "--refresh-cache",
         help="Refresh cache to ensure fresh environment.",
     ),
-    # ACB workflow integration (Phase 4.2 COMPLETE - ACB is now the default)
-    "use_acb_workflows": typer.Option(
-        True,  # ACB workflows are now the default
-        "--use-acb-workflows",
-        help="[DEFAULT - REDUNDANT] ACB is now always used (kept for compatibility).",
-        hidden=True,  # Hidden since it's redundant (ACB is always the default)
-    ),
-    "use_legacy_orchestrator": typer.Option(
-        False,
-        "--use-legacy-orchestrator/--no-use-legacy-orchestrator",
-        help="Opt out of ACB workflows and use legacy orchestrator (for compatibility).",
-        hidden=False,
-    ),
     # Semantic search options
     "index": typer.Option(
         None,
@@ -1002,7 +927,6 @@ def create_options(
     changed_only: bool = False,
     all_files: bool = False,
     create_pr: bool = False,
-    async_mode: bool = False,
     experimental_hooks: bool = False,
     enable_pyrefly: bool = False,
     enable_ty: bool = False,
@@ -1016,14 +940,7 @@ def create_options(
     enable_lsp_hooks: bool = False,
     no_git_tags: bool = False,
     skip_version_check: bool = False,
-    orchestrated: bool = False,
-    orchestration_strategy: str = "adaptive",
-    orchestration_progress: str = "granular",
-    orchestration_ai_mode: str = "single-agent",
     dev: bool = False,
-    dashboard: bool = False,
-    unified_dashboard: bool = False,
-    unified_dashboard_port: int | None = None,
     max_iterations: int = 10,
     coverage_status: bool = False,
     coverage_goal: float | None = None,
@@ -1073,8 +990,6 @@ def create_options(
     diff_config: str | None = None,
     config_interactive: bool = False,
     refresh_cache: bool = False,
-    use_acb_workflows: bool = True,
-    use_legacy_orchestrator: bool = False,
     # New semantic parameters
     strip_code: bool | None = None,
     run_tests: bool = False,
@@ -1106,7 +1021,6 @@ def create_options(
         changed_only=changed_only,
         all_files=all_files,
         create_pr=create_pr,
-        async_mode=async_mode,
         experimental_hooks=experimental_hooks,
         enable_pyrefly=enable_pyrefly,
         enable_ty=enable_ty,
@@ -1120,14 +1034,7 @@ def create_options(
         enable_lsp_hooks=enable_lsp_hooks,
         no_git_tags=no_git_tags,
         skip_version_check=skip_version_check,
-        orchestrated=orchestrated,
-        orchestration_strategy=orchestration_strategy,
-        orchestration_progress=orchestration_progress,
-        orchestration_ai_mode=orchestration_ai_mode,
         dev=dev,
-        dashboard=dashboard,
-        unified_dashboard=unified_dashboard,
-        unified_dashboard_port=unified_dashboard_port,
         max_iterations=max_iterations,
         coverage_status=coverage_status,
         coverage_goal=coverage_goal,
@@ -1177,8 +1084,6 @@ def create_options(
         diff_config=diff_config,
         config_interactive=config_interactive,
         refresh_cache=refresh_cache,
-        use_acb_workflows=use_acb_workflows,
-        use_legacy_orchestrator=use_legacy_orchestrator,
         # New semantic parameters
         strip_code=strip_code,
         run_tests=run_tests,
