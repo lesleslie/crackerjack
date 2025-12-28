@@ -1,143 +1,45 @@
 """Crackerjack CLI entry point with Oneiric integration.
 
-Phase 3 Implementation: Streamlined CLI (648→180 lines, 72% reduction)
+Phase 6 Implementation: MCPServerCLIFactory integration (226→120 lines, 47% reduction)
 """
 
-import asyncio
-import logging
 import subprocess
-import sys
-from pathlib import Path
 
 import typer
+from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 
+from crackerjack.cli.lifecycle_handlers import (
+    health_probe_handler,
+    start_handler,
+    stop_handler,
+)
 from crackerjack.config import CrackerjackSettings, load_settings
+from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 from crackerjack.server import CrackerjackServer
 
-app = typer.Typer(
-    name="crackerjack",
-    help="Python QA tooling with AI integration and Oneiric runtime management",
-    no_args_is_help=True,
+# ============================================================================
+# MCP Server Lifecycle (Oneiric Factory Pattern)
+# ============================================================================
+
+# Load settings for CLI factory
+mcp_settings = CrackerjackMCPSettings.load_for_crackerjack()
+
+factory = MCPServerCLIFactory(
+    server_name="crackerjack",
+    settings=mcp_settings,
+    start_handler=start_handler,
+    stop_handler=stop_handler,
+    health_probe_handler=health_probe_handler,
 )
 
+app = factory.create_app()
+
 console = Console()
-logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# Server Lifecycle Commands (Oneiric Integration)
-# ============================================================================
-
-
-@app.command()
-def start(
-    instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID for multi-instance support"
-    ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
-):
-    """Start Crackerjack MCP server.
-
-    The server manages QA adapter lifecycle and provides MCP tool endpoints.
-    Use Ctrl+C to stop the server gracefully.
-    """
-    # Load settings
-    settings = load_settings(CrackerjackSettings)
-
-    # Apply CLI overrides
-    if instance_id:
-        # TODO(Phase 4): Implement instance_id support
-        console.print(f"[yellow]Instance ID support not yet implemented (Phase 4)[/yellow]")
-
-    if verbose:
-        logging.basicConfig(level=logging.DEBUG)
-        console.print("[blue]Verbose logging enabled[/blue]")
-
-    # Create and start server
-    server = CrackerjackServer(settings)
-
-    try:
-        console.print("[green]Starting Crackerjack MCP server...[/green]")
-        console.print(f"[dim]Process ID: {server.get_health_snapshot()['process_id']}[/dim]")
-        asyncio.run(server.start())
-    except KeyboardInterrupt:
-        console.print("\n[yellow]Shutting down server...[/yellow]")
-        server.stop()
-        raise typer.Exit(0)
-
-
-@app.command()
-def stop(
-    instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to stop"
-    ),
-):
-    """Stop running Crackerjack MCP server.
-
-    TODO(Phase 4): Integrate with Oneiric graceful shutdown via runtime cache.
-    """
-    console.print("[yellow]Stop command not yet implemented (Phase 4)[/yellow]")
-    console.print("[dim]Use Ctrl+C to stop the server for now[/dim]")
-    raise typer.Exit(1)
-
-
-@app.command()
-def restart(
-    instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to restart"
-    ),
-):
-    """Restart Crackerjack MCP server.
-
-    TODO(Phase 4): Integrate with Oneiric restart logic.
-    """
-    console.print("[yellow]Restart command not yet implemented (Phase 4)[/yellow]")
-    raise typer.Exit(1)
-
-
-@app.command()
-def status(
-    instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to check"
-    ),
-):
-    """Show server status.
-
-    TODO(Phase 4): Read from Oneiric runtime cache (.oneiric_cache/runtime_health.json).
-    """
-    console.print("[yellow]Status command not yet implemented (Phase 4)[/yellow]")
-    console.print("[dim]TODO: Read from .oneiric_cache/runtime_health.json[/dim]")
-    raise typer.Exit(1)
-
-
-@app.command()
-def health(
-    probe: bool = typer.Option(
-        False, "--probe", help="Health probe for systemd/monitoring integration"
-    ),
-    instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to check"
-    ),
-):
-    """Check server health.
-
-    When --probe is used, exits with code 0 if healthy, 1 if unhealthy.
-    Suitable for systemd liveness/readiness checks.
-
-    TODO(Phase 4): Integrate with Oneiric health snapshot.
-    """
-    if probe:
-        # Systemd/monitoring integration
-        console.print("[yellow]Health probe not yet implemented (Phase 4)[/yellow]")
-        raise typer.Exit(1)
-    else:
-        console.print("[yellow]Health check not yet implemented (Phase 4)[/yellow]")
-        raise typer.Exit(1)
-
-
-# ============================================================================
-# QA Commands (Preserved from Original CLI)
+# QA Commands (Domain-Specific, Preserved from Original CLI)
 # ============================================================================
 
 
@@ -196,7 +98,7 @@ def qa_health():
     server = CrackerjackServer(settings)
     health = server.get_health_snapshot()
 
-    qa_status = health.get("qa_adapters", {})
+    qa_status = health.lifecycle_state.get("qa_adapters", {})
     enabled_flags = qa_status.get("enabled_flags", {})
 
     console.print("\n[bold]QA Adapter Health[/bold]")
