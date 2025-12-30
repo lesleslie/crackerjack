@@ -159,7 +159,7 @@ Both tools can be handled by crackerjack's AI agent system:
 **Refurb Fixes**:
 
 ```bash
-python -m crackerjack --ai-fix --comp
+python -m crackerjack run --ai-fix --comp
 ```
 
 - RefactoringAgent (confidence: 0.9) handles FURB codes
@@ -169,7 +169,7 @@ python -m crackerjack --ai-fix --comp
 **Creosote Fixes**:
 
 ```bash
-python -m crackerjack --ai-fix --comp
+python -m crackerjack run --ai-fix --comp
 ```
 
 - DRYAgent (confidence: 0.8) or RefactoringAgent

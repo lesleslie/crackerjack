@@ -46,7 +46,6 @@ class SecurityAgent(SubAgent):
             keyword in message_lower
             for keyword in (
                 "bandit",
-                "security",
                 "vulnerability",
                 "hardcoded",
                 "shell=true",
@@ -66,7 +65,6 @@ class SecurityAgent(SubAgent):
             return 0.9
 
         enhanced_patterns = [
-            "detect_security_keywords",
             "detect_crypto_weak_algorithms",
             "detect_hardcoded_credentials_advanced",
             "detect_subprocess_shell_injection",

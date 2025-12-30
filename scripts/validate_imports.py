@@ -25,6 +25,7 @@ CRITICAL_MODULES = [
     "crackerjack.core.autofix_coordinator",
 ]
 
+
 def validate_imports():
     """Validate that all critical modules can be imported."""
     failed = []
@@ -41,7 +42,9 @@ def validate_imports():
             failed.append((module_name, str(e)))
             print(f"❌ {module_name}: {e}")
 
-    print(f"\n📊 Results: {len(succeeded)}/{len(CRITICAL_MODULES)} modules imported successfully")
+    print(
+        f"\n📊 Results: {len(succeeded)}/{len(CRITICAL_MODULES)} modules imported successfully"
+    )
 
     if failed:
         print(f"\n🔴 {len(failed)} Import Errors:")
@@ -51,6 +54,7 @@ def validate_imports():
 
     print("\n✅ All critical modules imported successfully!")
     return True
+
 
 if __name__ == "__main__":
     success = validate_imports()

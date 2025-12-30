@@ -235,7 +235,7 @@ ______________________________________________________________________
 1. **Run comprehensive hooks**:
 
    ```bash
-   python -m crackerjack --comp
+   python -m crackerjack run --comp
    ```
 
    Expected: complexipy shows `issues=24` (not `issues=1`)
@@ -244,7 +244,7 @@ ______________________________________________________________________
 
    ```bash
    # Make changes to high-complexity file
-   python -m crackerjack --comp --changed-only
+   python -m crackerjack run --comp --changed-only
    ```
 
    Expected: Only modified files' issues reported
@@ -255,7 +255,7 @@ ______________________________________________________________________
    # In settings/local.yaml:
    # complexity:
    #   max_complexity: 20
-   python -m crackerjack --comp
+   python -m crackerjack run --comp
    ```
 
    Expected: Fewer issues (only functions > 20 complexity)

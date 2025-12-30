@@ -53,7 +53,6 @@ class OptionsAdapter:
             ),
             hooks=HookConfig(
                 skip_hooks=getattr(options, "skip_hooks", False),
-                update_precommit=getattr(options, "update_precommit", False),
                 experimental_hooks=getattr(options, "experimental_hooks", False),
                 enable_pyrefly=getattr(options, "enable_pyrefly", False),
                 enable_ty=getattr(options, "enable_ty", False),
@@ -62,6 +61,12 @@ class OptionsAdapter:
             testing=TestConfig(
                 test=getattr(options, "test", False),
                 benchmark=getattr(options, "benchmark", False),
+                benchmark_regression=getattr(options, "benchmark_regression", False),
+                benchmark_regression_threshold=getattr(
+                    options,
+                    "benchmark_regression_threshold",
+                    0.1,
+                ),
                 test_workers=getattr(options, "test_workers", 0),
                 test_timeout=getattr(options, "test_timeout", 0),
             ),
@@ -69,6 +74,8 @@ class OptionsAdapter:
                 publish=getattr(options, "publish", None),
                 bump=getattr(options, "bump", None),
                 all=getattr(options, "all", None),
+                cleanup_pypi=getattr(options, "cleanup_pypi", False),
+                keep_releases=getattr(options, "keep_releases", 10),
                 no_git_tags=getattr(options, "no_git_tags", False),
                 skip_version_check=getattr(options, "skip_version_check", False),
             ),
@@ -91,6 +98,8 @@ class OptionsAdapter:
             ),
             progress=ProgressConfig(
                 track_progress=getattr(options, "track_progress", False),
+                resume_from=getattr(options, "resume_from", None),
+                progress_file=getattr(options, "progress_file", None),
             ),
             cleanup=CleanupConfig(
                 auto_cleanup=getattr(options, "auto_cleanup", True),
@@ -115,14 +124,6 @@ class OptionsAdapter:
                 mode=getattr(options, "zuban_lsp_mode", "stdio"),
                 timeout=getattr(options, "zuban_lsp_timeout", 30),
             ),
-            clean=getattr(options, "clean", False),
-            test=getattr(options, "test", False),
-            publish=getattr(options, "publish", None),
-            bump=getattr(options, "bump", None),
-            commit=getattr(options, "commit", False),
-            create_pr=getattr(options, "create_pr", False),
-            interactive=getattr(options, "interactive", False),
-            dry_run=getattr(options, "dry_run", False),
         )
 
     @staticmethod
@@ -189,6 +190,14 @@ class LegacyOptionsWrapper:
         return self._options.testing.test_timeout
 
     @property
+    def benchmark_regression(self) -> bool:
+        return self._options.testing.benchmark_regression
+
+    @property
+    def benchmark_regression_threshold(self) -> float:
+        return self._options.testing.benchmark_regression_threshold
+
+    @property
     def publish(self) -> t.Any | None:
         return self._options.publishing.publish
 
@@ -229,16 +238,20 @@ class LegacyOptionsWrapper:
         return self._options.hooks.skip_hooks
 
     @property
-    def update_precommit(self) -> bool:
-        return self._options.hooks.update_precommit
-
-    @property
     def async_mode(self) -> bool:
         return self._options.execution.async_mode
 
     @property
     def track_progress(self) -> bool:
         return self._options.progress.track_progress
+
+    @property
+    def resume_from(self) -> str | None:
+        return self._options.progress.resume_from
+
+    @property
+    def progress_file(self) -> str | None:
+        return self._options.progress.progress_file
 
     @property
     def experimental_hooks(self) -> bool:
@@ -263,6 +276,14 @@ class LegacyOptionsWrapper:
     @property
     def skip_version_check(self) -> bool:
         return self._options.publishing.skip_version_check
+
+    @property
+    def cleanup_pypi(self) -> bool:
+        return self._options.publishing.cleanup_pypi
+
+    @property
+    def keep_releases(self) -> int:
+        return self._options.publishing.keep_releases
 
     @property
     def advanced_batch(self) -> str | None:

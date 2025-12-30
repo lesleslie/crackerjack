@@ -67,9 +67,17 @@ class TestConfigService:
             "settings": {"debug": True}
         }
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.toml', delete=False) as tmp:
-            import toml
-            toml.dump(test_data, tmp)
+        toml_content = (
+            "name = \"test_app\"\n"
+            "version = \"1.0.0\"\n"
+            "enabled = true\n"
+            "\n"
+            "[settings]\n"
+            "debug = true\n"
+        )
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".toml", delete=False) as tmp:
+            tmp.write(toml_content)
             tmp_path = Path(tmp.name)
 
         try:
@@ -163,9 +171,9 @@ class TestConfigService:
             ConfigService.save_config(config_data, tmp_path)
 
             # Verify the saved file
-            import toml
-            with open(tmp_path, "r", encoding="utf-8") as f:
-                saved_data = toml.load(f)
+            import tomllib
+            with open(tmp_path, "rb") as f:
+                saved_data = tomllib.load(f)
             assert saved_data == config_data
         finally:
             tmp_path.unlink()

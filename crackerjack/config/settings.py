@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from acb.config import Settings
+from pydantic_settings import BaseSettings as Settings
 
 
 class CleaningSettings(Settings):
@@ -13,7 +13,6 @@ class CleaningSettings(Settings):
 
 class HookSettings(Settings):
     skip_hooks: bool = False
-    update_precommit: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
@@ -122,7 +121,7 @@ class CrackerjackSettings(Settings):
     zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()
     enable_orchestration: bool = True
-    orchestration_mode: str = "acb"
+    orchestration_mode: str = "oneiric"
     enable_caching: bool = True
     cache_backend: str = "memory"
     cache_ttl: int = 3600
@@ -137,4 +136,3 @@ class CrackerjackSettings(Settings):
     enable_adaptive_execution: bool = True
     max_concurrent_strategies: int = 2
     enable_tool_proxy: bool = True
-    use_precommit_legacy: bool = True

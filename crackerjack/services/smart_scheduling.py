@@ -5,8 +5,6 @@ from contextlib import suppress
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.models.protocols import ServiceProtocol, SmartSchedulingServiceProtocol
 
 

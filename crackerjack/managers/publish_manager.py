@@ -4,7 +4,6 @@ from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console
-from acb.depends import depends
 
 from crackerjack.core.retry import retry_api_call
 from crackerjack.models.protocols import (
@@ -89,10 +88,7 @@ class PublishManagerImpl:
         """Resolve package path dependency with fallback."""
         if pkg_path is not None:
             return pkg_path
-        try:
-            return depends.get_sync(Path)
-        except Exception:
-            return Path.cwd()
+        return Path.cwd()
 
     def _resolve_git_service(
         self, git_service: GitServiceProtocol | None
@@ -101,7 +97,9 @@ class PublishManagerImpl:
         if git_service is not None:
             return git_service
         try:
-            return depends.get_sync(GitServiceProtocol)
+            from crackerjack.services.git import GitService
+
+            return GitService(console=self.console, pkg_path=self.pkg_path)
         except Exception:
             return _NullGitService()  # type: ignore[return-value]
 
@@ -112,7 +110,9 @@ class PublishManagerImpl:
         if version_analyzer is not None:
             return version_analyzer
         try:
-            return depends.get_sync(VersionAnalyzerProtocol)
+            from crackerjack.services.version_analyzer import VersionAnalyzer
+
+            return VersionAnalyzer(self._git_service)
         except Exception:
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 
@@ -123,7 +123,9 @@ class PublishManagerImpl:
         if changelog_generator is not None:
             return changelog_generator
         try:
-            return depends.get_sync(ChangelogGeneratorProtocol)
+            from crackerjack.services.changelog_automation import ChangelogGenerator
+
+            return ChangelogGenerator(self._git_service, self.pkg_path)
         except Exception:
             return _NullChangelogGenerator()  # type: ignore[return-value]
 
@@ -133,10 +135,7 @@ class PublishManagerImpl:
         """Resolve regex patterns dependency with fallback implementation."""
         if regex_patterns is not None:
             return regex_patterns
-        try:
-            return depends.get_sync(RegexPatternsProtocol)
-        except Exception:
-            return _RegexPatterns()  # type: ignore[return-value]
+        return _RegexPatterns()  # type: ignore[return-value]
 
     def _resolve_filesystem(
         self, filesystem: FileSystemInterface | None
@@ -144,12 +143,9 @@ class PublishManagerImpl:
         """Resolve filesystem dependency with concrete fallback."""
         if filesystem is not None:
             return filesystem
-        try:
-            return depends.get_sync(FileSystemInterface)
-        except Exception:
-            from crackerjack.services.filesystem import FileSystemService
+        from crackerjack.services.filesystem import FileSystemService
 
-            return FileSystemService()
+        return FileSystemService()
 
     def _resolve_security(
         self, security: SecurityServiceProtocol | None
@@ -157,12 +153,9 @@ class PublishManagerImpl:
         """Resolve security dependency with concrete fallback."""
         if security is not None:
             return security
-        try:
-            return depends.get_sync(SecurityServiceProtocol)
-        except Exception:
-            from crackerjack.services.security import SecurityService
+        from crackerjack.services.security import SecurityService
 
-            return SecurityService()
+        return SecurityService()
 
     def _run_command(
         self,
@@ -214,11 +207,9 @@ class PublishManagerImpl:
                     self._regex_patterns.update_pyproject_version
                 )
             else:
-                from acb.depends import depends
-
-                update_pyproject_version_func = depends.get_sync(
-                    RegexPatternsProtocol
-                ).update_pyproject_version
+                update_pyproject_version_func = (
+                    _RegexPatterns().update_pyproject_version
+                )
 
             new_content = update_pyproject_version_func(content, new_version)
             if content != new_content:
@@ -391,7 +382,7 @@ class PublishManagerImpl:
 
         env_auth = self._check_env_token_auth()
         if env_auth:
-            auth_methods.append(env_auth)
+            return [env_auth]
 
         keyring_auth = self._check_keyring_auth()
         if keyring_auth:

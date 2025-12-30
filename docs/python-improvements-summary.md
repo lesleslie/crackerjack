@@ -261,10 +261,10 @@ ______________________________________________________________________
 
 ### Testing Requirements
 
-- [ ] Test with `python -m crackerjack` (default, clean output)
-- [ ] Test with `python -m crackerjack --verbose` (no low-level logs)
-- [ ] Test with `python -m crackerjack --debug` (full logging + stderr JSON)
-- [ ] Test with `python -m crackerjack -d` (short form debug flag)
+- [ ] Test with `python -m crackerjack run` (default, clean output)
+- [ ] Test with `python -m crackerjack run --verbose` (no low-level logs)
+- [ ] Test with `python -m crackerjack run --debug` (full logging + stderr JSON)
+- [ ] Test with `python -m crackerjack run -d` (short form debug flag)
 - [ ] Test progress bar behavior across all flag combinations
 - [ ] Verify thread safety with concurrent test execution
 

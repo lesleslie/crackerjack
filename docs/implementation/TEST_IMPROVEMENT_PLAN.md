@@ -564,7 +564,7 @@ def complex_function(x):
 
 ```bash
 # Run with coverage report
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Check coverage by module
 coverage report --include="crackerjack/services/*"

@@ -32,6 +32,13 @@ class PerformanceAgent(SubAgent):
         self.semantic_enhancer = create_semantic_enhancer(context.project_path)
         self.semantic_insights: dict[str, SemanticInsight] = {}
         self.performance_metrics: dict[str, t.Any] = {}
+        self.optimization_stats = {
+            "nested_loops_optimized": 0,
+            "list_ops_optimized": 0,
+            "string_concat_optimized": 0,
+            "repeated_ops_cached": 0,
+            "comprehensions_applied": 0,
+        }
 
         # Initialize helper modules
         self._pattern_detector = PerformancePatternDetector(context)
@@ -53,9 +60,7 @@ class PerformanceAgent(SubAgent):
             for pattern in (
                 "nested loop",
                 "o(n²)",
-                "string concatenation",
-                "list[t.Any] concatenation",
-                "inefficient",
+                "o(n^2)",
                 "complexity",
             )
         ):
@@ -86,7 +91,7 @@ class PerformanceAgent(SubAgent):
             analysis_time = time.time() - start_time
             self.performance_metrics[str(file_path)] = {
                 "analysis_duration": analysis_time,
-                "optimizations_applied": result.fixes_applied,
+                "optimizations_applied": len(result.fixes_applied),
                 "timestamp": time.time(),
             }
 
@@ -126,16 +131,7 @@ class PerformanceAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-        # Detect traditional performance issues using helper
-        performance_issues = self._pattern_detector.detect_performance_issues(
-            content, file_path
-        )
-
-        # Enhance with semantic performance pattern detection
-        semantic_issues = await self._detect_semantic_performance_issues(
-            content, file_path
-        )
-        performance_issues.extend(semantic_issues)
+        performance_issues = await self._detect_performance_issues(content, file_path)
 
         if not performance_issues:
             return FixResult(
@@ -157,9 +153,7 @@ class PerformanceAgent(SubAgent):
         issues: list[dict[str, t.Any]],
     ) -> FixResult:
         # Delegate to recommender helper
-        optimized_content = self._recommender.apply_performance_optimizations(
-            content, issues
-        )
+        optimized_content = self._apply_performance_optimizations(content, issues)
 
         if optimized_content == content:
             return self._create_no_optimization_result()
@@ -174,6 +168,7 @@ class PerformanceAgent(SubAgent):
 
         # Get summary from recommender
         stats_summary = self._recommender.generate_optimization_summary()
+        self.optimization_stats = self._recommender.optimization_stats.copy()
 
         return FixResult(
             success=True,
@@ -208,6 +203,23 @@ class PerformanceAgent(SubAgent):
             confidence=0.0,
             remaining_issues=[f"Error processing file: {error}"],
         )
+
+    async def _detect_performance_issues(
+        self, content: str, file_path: Path
+    ) -> list[dict[str, t.Any]]:
+        performance_issues = self._pattern_detector.detect_performance_issues(
+            content, file_path
+        )
+        semantic_issues = await self._detect_semantic_performance_issues(
+            content, file_path
+        )
+        performance_issues.extend(semantic_issues)
+        return performance_issues
+
+    def _apply_performance_optimizations(
+        self, content: str, issues: list[dict[str, t.Any]]
+    ) -> str:
+        return self._recommender.apply_performance_optimizations(content, issues)
 
     async def _detect_semantic_performance_issues(
         self, content: str, file_path: Path
@@ -272,9 +284,12 @@ class PerformanceAgent(SubAgent):
             for metrics in self.performance_metrics.values()
         )
 
+        if total_files == total_optimizations == 0:
+            return "No optimizations applied in this session"
+
         return (
-            f"Performance optimization summary: "
-            f"{total_optimizations} optimizations applied across {total_files} files "
+            "Performance optimization summary: "
+            f"Total: {total_optimizations} optimizations applied across {total_files} files "
             f"in {total_time:.2f}s total"
         )
 
@@ -283,6 +298,10 @@ class PerformanceAgent(SubAgent):
     ) -> list[str]:
         """Generate enhanced recommendations including semantic insights."""
         recommendations = ["Test performance improvements with benchmarks"]
+        for issue in issues:
+            suggestion = issue.get("suggestion")
+            if suggestion:
+                recommendations.append(str(suggestion))
 
         # Add semantic insights
         semantic_issues = [

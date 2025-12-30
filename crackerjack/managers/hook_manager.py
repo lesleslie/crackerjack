@@ -3,7 +3,6 @@ from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console
-from acb.depends import depends
 
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
@@ -11,6 +10,23 @@ from crackerjack.executors.hook_executor import HookExecutor
 from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
 from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
 from crackerjack.models.task import HookResult
+
+try:
+    from crackerjack.services.git import GitService  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    GitService = None  # type: ignore
+
+try:
+    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    OrchestrationConfig = None  # type: ignore
+
+try:
+    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+        HookOrchestratorSettings,
+    )
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    HookOrchestratorSettings = None  # type: ignore
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
@@ -21,10 +37,8 @@ class HookManagerImpl:
 
     def _setup_git_service(self, use_incremental: bool, pkg_path: Path):
         """Setup GitService for incremental execution."""
-        from crackerjack.services.git import GitService
-
         git_service = None
-        if use_incremental:
+        if use_incremental and GitService is not None:
             git_service = GitService(self.console, pkg_path)
         return git_service
 
@@ -53,13 +67,24 @@ class HookManagerImpl:
             )
         else:
             # Use HookExecutor - match what tests expect
-            # Pass only the expected positional arguments for test compatibility
-            self.executor = HookExecutor(  # type: ignore[assignment]
-                self.console,
-                pkg_path,
-                verbose,
-                quiet,
-            )
+            # Prefer the minimal positional signature when defaults apply.
+            if not debug and not use_incremental and git_service is None:
+                self.executor = HookExecutor(  # type: ignore[assignment]
+                    self.console,
+                    pkg_path,
+                    verbose,
+                    quiet,
+                )
+            else:
+                self.executor = HookExecutor(  # type: ignore[assignment]
+                    self.console,
+                    pkg_path,
+                    verbose,
+                    quiet,
+                    debug=debug,
+                    use_incremental=use_incremental,
+                    git_service=git_service,
+                )
 
     def _load_from_project_config(
         self,
@@ -68,7 +93,14 @@ class HookManagerImpl:
         orchestration_mode: str | None,
     ) -> None:
         """Load orchestration config from project .crackerjack.yaml file."""
-        from crackerjack.orchestration.config import OrchestrationConfig
+        if OrchestrationConfig is None:
+            self._create_default_orchestration_config(
+                enable_orchestration,
+                orchestration_mode,
+                enable_caching=False,
+                cache_backend="memory",
+            )
+            return
 
         loaded_config = OrchestrationConfig.load(config_path)
         self._orchestration_config: t.Any = loaded_config  # Can be either OrchestrationConfig or HookOrchestratorSettings
@@ -77,7 +109,7 @@ class HookManagerImpl:
             enable_orchestration
             if enable_orchestration is not None
             else loaded_config.enable_orchestration
-        )
+        ) and orchestration_available
         self.orchestration_mode = (
             orchestration_mode
             if orchestration_mode is not None
@@ -92,25 +124,54 @@ class HookManagerImpl:
         cache_backend: str,
     ) -> None:
         """Create default orchestration config from constructor params."""
-        from crackerjack.orchestration.hook_orchestrator import (
-            HookOrchestratorSettings,
-        )
+        # Check if orchestration module is available
+        try:
+            from crackerjack.orchestration.hook_orchestrator import (
+                HookOrchestratorSettings,
+            )
 
-        self._orchestration_config = HookOrchestratorSettings(
-            enable_caching=enable_caching,
-            cache_backend=cache_backend,
-        )
-        # Default to enabled unless explicitly disabled
-        # Fallback chain: explicit param -> DI settings -> True (application default)
+            orchestration_available = True
+        except ModuleNotFoundError:
+            # Orchestration module was removed in Phase 2 (ACB migration)
+            # Fall back to legacy executor path
+            orchestration_available = False
+            HookOrchestratorSettings = None
+
+        if orchestration_available:
+            self._orchestration_config = HookOrchestratorSettings(
+                enable_caching=enable_caching,
+                cache_backend=cache_backend,
+            )
+        else:
+
+            class _FallbackOrchestrationConfig:
+                def __init__(
+                    self,
+                    enable_caching: bool,
+                    cache_backend: str,
+                ) -> None:
+                    self.enable_caching = enable_caching
+                    self.cache_backend = cache_backend
+                    self.max_parallel_hooks = 4
+                    self.enable_adaptive_execution = True
+                    self.orchestration_mode = "oneiric"
+
+            self._orchestration_config = _FallbackOrchestrationConfig(
+                enable_caching=enable_caching,
+                cache_backend=cache_backend,
+            )
+        # Default to disabled unless explicitly enabled
+        # Fallback chain: explicit param -> settings -> False (application default)
+        # Also disable if orchestration module is not available
         self.orchestration_enabled = (
             bool(enable_orchestration)
             if enable_orchestration is not None
-            else getattr(self._settings, "enable_orchestration", True)
-        )
+            else getattr(self._settings, "enable_orchestration", False)
+        ) and orchestration_available
         self.orchestration_mode = (
             orchestration_mode
             if orchestration_mode is not None
-            else (self._settings.orchestration_mode or "acb")
+            else (self._settings.orchestration_mode or "oneiric")
         )
 
     def _load_orchestration_config(
@@ -123,8 +184,13 @@ class HookManagerImpl:
         cache_backend: str,
     ):
         """Load orchestration configuration with priority."""
-        # Get settings from ACB dependency injection
-        self._settings = depends.get_sync(CrackerjackSettings)
+        if self._settings is None:
+            self._settings = CrackerjackSettings()
+
+        # Check if orchestration module is available
+        # Orchestration module was removed in Phase 2 (ACB migration)
+        # This import block is intentionally left empty as orchestration is no longer available
+        # The code will use legacy executor path
 
         # Load orchestration config with priority:
         # 1. Explicit orchestration_config param (highest - for testing)
@@ -139,7 +205,7 @@ class HookManagerImpl:
                 orchestration_config, "enable_orchestration", False
             )
             self.orchestration_mode = getattr(
-                orchestration_config, "orchestration_mode", "acb"
+                orchestration_config, "orchestration_mode", "oneiric"
             )
         else:
             config_path = pkg_path / ".crackerjack.yaml"
@@ -171,9 +237,11 @@ class HookManagerImpl:
         enable_caching: bool = True,
         cache_backend: str = "memory",
         console: t.Any = None,  # Accept console parameter for DI
+        settings: CrackerjackSettings | None = None,
     ) -> None:
         self.pkg_path = pkg_path
         self.debug = debug
+        self._settings = settings
 
         # Use provided console or get from DI
         self.console = console or Console()
@@ -217,10 +285,19 @@ class HookManagerImpl:
         if self._orchestrator is not None:
             return  # Already initialized
 
-        from crackerjack.orchestration.hook_orchestrator import (
-            HookOrchestratorAdapter,
-            HookOrchestratorSettings,
-        )
+        if not self.orchestration_enabled:
+            # Orchestration is disabled, skip initialization
+            return
+
+        try:
+            from crackerjack.orchestration.hook_orchestrator import (
+                HookOrchestratorSettings,
+            )
+        except ModuleNotFoundError:
+            # Orchestration module was removed in Phase 2 (ACB migration)
+            # Fall back to legacy executor path
+            self.orchestration_enabled = False
+            return
 
         # Create orchestrator settings from orchestration config
         # Handle both OrchestrationConfig (uses orchestration_mode) and
@@ -436,7 +513,12 @@ class HookManagerImpl:
         self.tool_proxy_enabled = enable
 
         # If using LSP-aware executor, recreate it with new tool proxy setting
-        if isinstance(self.executor, LSPAwareHookExecutor):
+        try:
+            is_lsp_executor = isinstance(self.executor, LSPAwareHookExecutor)
+        except TypeError:
+            is_lsp_executor = False
+
+        if is_lsp_executor:
             self.executor = LSPAwareHookExecutor(
                 self.console,
                 self.pkg_path,
@@ -489,15 +571,6 @@ class HookManagerImpl:
 
         return info
 
-    @staticmethod
-    def validate_hooks_config() -> bool:
-        """Validate hooks configuration.
-
-        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
-        pre-commit config validation. Always returns True for backward compatibility.
-        """
-        return True
-
     def get_hook_ids(self) -> list[str]:
         fast_strategy = self.config_loader.load_strategy("fast")
         comprehensive_strategy = self.config_loader.load_strategy("comprehensive")
@@ -516,28 +589,6 @@ class HookManagerImpl:
         """
         strategy = self.config_loader.load_strategy(suite_name)
         return len(strategy.hooks)
-
-    def install_hooks(self) -> bool:
-        """Install git hooks.
-
-        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
-        pre-commit hook installation. Returns True with informational message.
-        """
-        self.console.print(
-            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
-        )
-        return True
-
-    def update_hooks(self) -> bool:
-        """Update hooks to latest versions.
-
-        Phase 8.5: This method is deprecated. Direct tool invocation uses UV for
-        dependency management. Returns True with informational message.
-        """
-        self.console.print(
-            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
-        )
-        return True
 
     @staticmethod
     def get_hook_summary(

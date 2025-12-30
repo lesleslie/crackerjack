@@ -10,6 +10,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from crackerjack.managers.hook_manager import HookManagerImpl
+from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.task import HookResult
 
 
@@ -20,15 +21,13 @@ class TestHookManagerInitialization:
     @pytest.fixture
     def mock_dependencies(self):
         """Create mock dependencies for HookManager."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                yield mock_console
+        mock_console = Mock()
+        with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+            yield mock_console
 
     def test_initialization_with_defaults(self, mock_dependencies, tmp_path):
         """Test HookManager initializes with default settings."""
-        with patch("crackerjack.managers.hook_manager.ProgressHookExecutor") as mock_executor:
+        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
             manager = HookManagerImpl(pkg_path=tmp_path)
 
             assert manager.pkg_path == tmp_path
@@ -51,9 +50,9 @@ class TestHookManagerInitialization:
 
     def test_initialization_with_incremental_mode(self, mock_dependencies, tmp_path):
         """Test HookManager initializes with incremental execution."""
-        with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.GitService") as mock_git:
-                manager = HookManagerImpl(
+                HookManagerImpl(
                     pkg_path=tmp_path,
                     use_incremental=True,
                 )
@@ -63,7 +62,7 @@ class TestHookManagerInitialization:
 
     def test_initialization_with_verbose_and_debug(self, mock_dependencies, tmp_path):
         """Test HookManager initializes with verbose and debug flags."""
-        with patch("crackerjack.managers.hook_manager.ProgressHookExecutor") as mock_executor:
+        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
             manager = HookManagerImpl(
                 pkg_path=tmp_path,
                 verbose=True,
@@ -77,17 +76,14 @@ class TestHookManagerInitialization:
 
     def test_initialization_loads_orchestration_config(self, mock_dependencies, tmp_path):
         """Test HookManager loads orchestration configuration."""
-        with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-            with patch("crackerjack.managers.hook_manager.depends.get_sync") as mock_get:
-                mock_settings = Mock()
-                mock_settings.enable_orchestration = True
-                mock_settings.orchestration_mode = "acb"
-                mock_get.return_value = mock_settings
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            settings = CrackerjackSettings()
+            settings.enable_orchestration = True
+            settings.orchestration_mode = "oneiric"
+            manager = HookManagerImpl(pkg_path=tmp_path, settings=settings)
 
-                manager = HookManagerImpl(pkg_path=tmp_path)
-
-                assert hasattr(manager, "_orchestration_config")
-                assert hasattr(manager, "orchestration_enabled")
+            assert hasattr(manager, "_orchestration_config")
+            assert hasattr(manager, "orchestration_enabled")
 
 
 @pytest.mark.unit
@@ -97,10 +93,9 @@ class TestHookManagerConfiguration:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance for testing."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync"):
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    return HookManagerImpl(pkg_path=tmp_path)
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                return HookManagerImpl(pkg_path=tmp_path)
 
     def test_set_config_path(self, manager, tmp_path):
         """Test setting configuration path."""
@@ -175,18 +170,17 @@ class TestHookManagerExecution:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager with mocked dependencies."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync"):
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor") as mock_exec_cls:
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader") as mock_loader_cls:
-                    mock_executor = Mock()
-                    mock_exec_cls.return_value = mock_executor
+        with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_exec_cls:
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader") as mock_loader_cls:
+                mock_executor = Mock()
+                mock_exec_cls.return_value = mock_executor
 
-                    mock_loader = Mock()
-                    mock_loader_cls.return_value = mock_loader
+                mock_loader = Mock()
+                mock_loader_cls.return_value = mock_loader
 
-                    manager = HookManagerImpl(pkg_path=tmp_path)
-                    manager.orchestration_enabled = False  # Use legacy path for simplicity
-                    return manager
+                manager = HookManagerImpl(pkg_path=tmp_path)
+                manager.orchestration_enabled = False  # Use legacy path for simplicity
+                return manager
 
     def test_run_fast_hooks_success(self, manager):
         """Test successful fast hooks execution."""
@@ -279,19 +273,19 @@ class TestHookManagerExecution:
 
 @pytest.mark.unit
 @pytest.mark.asyncio
+@pytest.mark.skip(reason="ACB orchestration removed; Oneiric handles workflows")
 class TestHookManagerOrchestration:
     """Test orchestrated hook execution."""
 
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager with orchestration enabled."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync"):
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    manager = HookManagerImpl(pkg_path=tmp_path)
-                    manager.orchestration_enabled = True
-                    manager._orchestrator = None
-                    return manager
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                manager = HookManagerImpl(pkg_path=tmp_path)
+                manager.orchestration_enabled = True
+                manager._orchestrator = None
+                return manager
 
     async def test_init_orchestrator(self, manager):
         """Test orchestrator initialization."""
@@ -418,10 +412,9 @@ class TestHookManagerInformation:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync"):
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    return HookManagerImpl(pkg_path=tmp_path)
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                return HookManagerImpl(pkg_path=tmp_path)
 
     def test_get_execution_info_basic(self, manager):
         """Test getting basic execution information."""
@@ -439,7 +432,7 @@ class TestHookManagerInformation:
     def test_get_execution_info_with_orchestration(self, manager):
         """Test getting execution info with orchestration enabled."""
         manager.orchestration_enabled = True
-        manager.orchestration_mode = "acb"
+        manager.orchestration_mode = "oneiric"
         manager._orchestration_config = Mock()
         manager._orchestration_config.enable_caching = True
         manager._orchestration_config.cache_backend = "memory"
@@ -447,7 +440,7 @@ class TestHookManagerInformation:
         info = manager.get_execution_info()
 
         assert info["orchestration_enabled"] is True
-        assert info["orchestration_mode"] == "acb"
+        assert info["orchestration_mode"] == "oneiric"
         assert info["caching_enabled"] is True
         assert info["cache_backend"] == "memory"
 
@@ -575,12 +568,11 @@ class TestHookManagerDeprecatedMethods:
     @pytest.fixture
     def manager(self, tmp_path):
         """Create HookManager instance."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync"):
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    manager = HookManagerImpl(pkg_path=tmp_path)
-                    manager.console = Mock()
-                    return manager
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                manager = HookManagerImpl(pkg_path=tmp_path)
+                manager.console = Mock()
+                return manager
 
     def test_validate_hooks_config(self):
         """Test validate_hooks_config always returns True."""
@@ -612,61 +604,57 @@ class TestHookManagerOrchestrationConfig:
         """Create mock settings."""
         settings = Mock()
         settings.enable_orchestration = True
-        settings.orchestration_mode = "acb"
+        settings.orchestration_mode = "oneiric"
         return settings
 
     def test_load_config_from_explicit_param(self, tmp_path, mock_settings):
         """Test loading config from explicit parameter."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync") as mock_get:
-            mock_get.return_value = mock_settings
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    explicit_config = Mock()
-                    explicit_config.orchestration_mode = "custom"
-                    explicit_config.enable_caching = True
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                explicit_config = Mock()
+                explicit_config.orchestration_mode = "custom"
+                explicit_config.enable_caching = True
 
-                    manager = HookManagerImpl(
-                        pkg_path=tmp_path,
-                        orchestration_config=explicit_config,
-                    )
+                manager = HookManagerImpl(
+                    pkg_path=tmp_path,
+                    orchestration_config=explicit_config,
+                    settings=mock_settings,
+                )
 
-                    assert manager._orchestration_config == explicit_config
+                assert manager._orchestration_config == explicit_config
 
     def test_load_config_from_project_file(self, tmp_path, mock_settings):
         """Test loading config from project .crackerjack.yaml."""
         # Create project config file
         config_path = tmp_path / ".crackerjack.yaml"
-        config_path.write_text("enable_orchestration: true\norchestration_mode: acb\n")
+        config_path.write_text("enable_orchestration: true\norchestration_mode: oneiric\n")
 
-        with patch("crackerjack.managers.hook_manager.depends.get_sync") as mock_get:
-            mock_get.return_value = mock_settings
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    with patch("crackerjack.managers.hook_manager.OrchestrationConfig") as mock_config:
-                        mock_loaded = Mock()
-                        mock_loaded.enable_orchestration = True
-                        mock_loaded.orchestration_mode = "acb"
-                        mock_config.load.return_value = mock_loaded
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                with patch("crackerjack.managers.hook_manager.OrchestrationConfig") as mock_config:
+                    mock_loaded = Mock()
+                    mock_loaded.enable_orchestration = True
+                    mock_loaded.orchestration_mode = "oneiric"
+                    mock_config.load.return_value = mock_loaded
 
-                        manager = HookManagerImpl(pkg_path=tmp_path)
+                    manager = HookManagerImpl(pkg_path=tmp_path, settings=mock_settings)
 
-                        assert manager._orchestration_config == mock_loaded
+                    assert manager._orchestration_config == mock_loaded
 
     def test_load_config_creates_default(self, tmp_path, mock_settings):
         """Test creating default config when no project file exists."""
-        with patch("crackerjack.managers.hook_manager.depends.get_sync") as mock_get:
-            mock_get.return_value = mock_settings
-            with patch("crackerjack.managers.hook_manager.ProgressHookExecutor"):
-                with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                    with patch("crackerjack.managers.hook_manager.HookOrchestratorSettings") as mock_settings_cls:
-                        mock_default = Mock()
-                        mock_settings_cls.return_value = mock_default
+        with patch("crackerjack.managers.hook_manager.HookExecutor"):
+            with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
+                with patch("crackerjack.managers.hook_manager.HookOrchestratorSettings") as mock_settings_cls:
+                    mock_default = Mock()
+                    mock_settings_cls.return_value = mock_default
 
-                        manager = HookManagerImpl(
-                            pkg_path=tmp_path,
-                            enable_caching=True,
-                            cache_backend="redis",
-                        )
+                    manager = HookManagerImpl(
+                        pkg_path=tmp_path,
+                        enable_caching=True,
+                        cache_backend="redis",
+                        settings=mock_settings,
+                    )
 
-                        mock_settings_cls.assert_called_once()
-                        assert manager._orchestration_config == mock_default
+                    mock_settings_cls.assert_called_once()
+                    assert manager._orchestration_config == mock_default

@@ -395,10 +395,6 @@ class HealthMetricsService:
         score += pyproject_score
         total_checks += pyproject_checks
 
-        precommit_score, precommit_checks = self._assess_precommit_config()
-        score += precommit_score
-        total_checks += precommit_checks
-
         ci_score, ci_checks = self._assess_ci_config()
         score += ci_score
         total_checks += ci_checks
@@ -462,14 +458,6 @@ class HealthMetricsService:
                 score += 0.05
 
         return score, len(tool_configs)
-
-    def _assess_precommit_config(self) -> tuple[float, int]:
-        precommit_files = [
-            self.project_root / ".pre-commit-config.yaml",
-            self.project_root / ".pre - commit-config.yml",
-        ]
-        score = 0.1 if any(f.exists() for f in precommit_files) else 0.0
-        return score, 1
 
     def _assess_ci_config(self) -> tuple[float, int]:
         ci_files = [

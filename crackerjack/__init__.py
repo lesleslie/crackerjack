@@ -4,30 +4,32 @@ import logging
 import sys
 import typing as t
 
-# CRITICAL: Suppress ACB logger startup messages BEFORE any ACB imports
-# This must be the FIRST thing we do, even before acb.register_pkg()
-# ACB's logger initializes at import time and emits "Application started" messages.
+# CRITICAL: Suppress logger startup messages for clean UX
+# This must be the FIRST thing we do to prevent verbose logging
 _EARLY_DEBUG_MODE = any(
     arg in ("--debug", "-d", "--ai-debug") or arg.startswith("--debug=")
     for arg in sys.argv[1:]
 )
 
 if not _EARLY_DEBUG_MODE:
-    # Suppress ACB startup logging for clean default UX
-    acb_logger = logging.getLogger("acb")
-    acb_logger.setLevel(logging.CRITICAL)
-    acb_logger.propagate = False
-
-    # Suppress crackerjack orchestration INFO logging (show only warnings/errors)
-    # This prevents "Executing hook strategy", "Wave X complete", etc. from
-    # appearing during progress bar updates
+    # Suppress verbose logging for clean default UX
     crackerjack_logger = logging.getLogger("crackerjack")
     crackerjack_logger.setLevel(logging.WARNING)
 
-# NOW safe to import ACB
-from acb import register_pkg
-
-register_pkg("crackerjack")
+    # Suppress other framework loggers that might be verbose
+    for logger_name in (
+        "uvicorn",
+        "fastapi",
+        "httpx",
+        "httpcore",
+        "oneiric",
+        "Oneiric",
+        "oneiric.core",
+        "oneiric.runtime",
+    ):
+        logger = logging.getLogger(logger_name)
+        logger.setLevel(logging.WARNING)
+        logger.propagate = False
 
 from .api import (
     CrackerjackAPI,

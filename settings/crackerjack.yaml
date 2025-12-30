@@ -87,9 +87,11 @@ zuban_timeout: 30
 # === Orchestration Settings ===
 
 # Core orchestration
-enable_orchestration: true
-orchestration_mode: "acb"  # 'legacy' or 'acb'
-execution_mode: "acb"  # Hook execution mode: 'legacy' (pre-commit subprocess) or 'acb' (direct adapters)
+# NOTE: Orchestration module was removed in Phase 2 (ACB migration)
+# Legacy executor path is now the default
+enable_orchestration: false
+orchestration_mode: "legacy"  # 'legacy' or 'acb'
+execution_mode: "legacy"  # Hook execution mode: 'legacy' (pre-commit subprocess) or 'acb' (direct adapters)
 
 # Cache settings
 enable_caching: true

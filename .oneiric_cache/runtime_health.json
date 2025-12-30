@@ -1,0 +1,8 @@
+{
+  "orchestrator_pid": 59292,
+  "watchers_running": false,
+  "lifecycle_state": {
+    "server_status": "stopped",
+    "shutdown_time": "2025-12-30T07:19:43.097997"
+  }
+}

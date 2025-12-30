@@ -6,7 +6,7 @@ from unittest.mock import Mock
 import pytest
 from rich.console import Console
 
-from crackerjack.models.task import HookResult, SessionTracker, TaskStatus
+from crackerjack.models.task import HookResult, SessionTracker, TaskStatusData
 
 
 class TestHookResult:
@@ -24,7 +24,7 @@ class TestHookResult:
         assert result.duration == 1.5
         assert result.files_processed == 0
         assert result.issues_found == []
-        assert result.stage == "pre - commit"
+        assert result.stage == "fast"
 
     def test_hook_result_creation_full(self) -> None:
         result = HookResult(
@@ -72,7 +72,7 @@ class TestHookResult:
 
 class TestTaskStatus:
     def test_task_status_creation_minimal(self) -> None:
-        status = TaskStatus(id="task - 1", name="Test Task", status="pending")
+        status = TaskStatusData(id="task - 1", name="Test Task", status="pending")
 
         assert status.id == "task - 1"
         assert status.name == "Test Task"
@@ -89,7 +89,7 @@ class TestTaskStatus:
         end_time = start_time + 5.0
         files = ["file1.py", "file2.py"]
 
-        status = TaskStatus(
+        status = TaskStatusData(
             id="full - task",
             name="Full Task",
             status="completed",
@@ -112,7 +112,7 @@ class TestTaskStatus:
         assert status.files_changed == files
 
     def test_task_status_post_init_none_files_changed(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="pending",
@@ -123,7 +123,7 @@ class TestTaskStatus:
 
     def test_task_status_post_init_existing_files_changed(self) -> None:
         files = ["file1.py", "file2.py"]
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="pending",
@@ -137,7 +137,7 @@ class TestTaskStatus:
         start_time = 1000.0
         end_time = 1005.5
 
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="completed",
@@ -148,7 +148,7 @@ class TestTaskStatus:
         assert status.duration == 5.5
 
     def test_task_status_post_init_no_duration_calculation(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="pending",
@@ -158,7 +158,7 @@ class TestTaskStatus:
 
         assert status.duration is None
 
-        status2 = TaskStatus(
+        status2 = TaskStatusData(
             id="test2",
             name="Test2",
             status="in_progress",
@@ -168,7 +168,7 @@ class TestTaskStatus:
 
         assert status2.duration is None
 
-        status3 = TaskStatus(
+        status3 = TaskStatusData(
             id="test3",
             name="Test3",
             status="completed",
@@ -218,7 +218,7 @@ class TestSessionTracker:
         assert tracker.metadata == {}
 
     def test_session_tracker_init_with_existing_data(self, console, temp_dir) -> None:
-        existing_tasks = {"task1": TaskStatus("task1", "Task 1", "completed")}
+        existing_tasks = {"task1": TaskStatusData("task1", "Task 1", "completed")}
         existing_metadata = {"key": "value"}
 
         tracker = SessionTracker(
@@ -385,7 +385,7 @@ class TestSessionTracker:
 
 class TestTaskStatusEdgeCases:
     def test_task_status_duration_calculation_zero_start_time(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="completed",
@@ -396,7 +396,7 @@ class TestTaskStatusEdgeCases:
         assert status.duration == 5.0
 
     def test_task_status_negative_duration(self) -> None:
-        status = TaskStatus(
+        status = TaskStatusData(
             id="test",
             name="Test",
             status="completed",

@@ -1,15 +1,13 @@
-import asyncio
+import logging
 import os
-import sys
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
-from acb.depends import Inject, depends
 
 from .options import Options
 
-
+console = Console()
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
@@ -17,8 +15,9 @@ if t.TYPE_CHECKING:
         ConfigTemplateService,
         ConfigUpdateInfo,
     )
-def setup_ai_agent_env(
-    ai_agent: bool, debug_mode: bool = False) -> None:
+
+
+def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -66,6 +65,8 @@ def handle_mcp_server() -> None:
 
     project_path = str(Path.cwd())
     start_mcp_main(project_path)
+
+
 def handle_watchdog_mode() -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
 
@@ -73,6 +74,8 @@ def handle_watchdog_mode() -> None:
         asyncio.run(start_watchdog())
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
+
+
 def handle_stop_mcp_server() -> None:
     from crackerjack.services.server_manager import (
         list_server_status,
@@ -88,6 +91,8 @@ def handle_stop_mcp_server() -> None:
     else:
         console.print("\n[bold red]❌ Some servers failed to stop[/ bold red]")
         raise SystemExit(1)
+
+
 def handle_restart_mcp_server() -> None:
     from crackerjack.services.server_manager import restart_mcp_server
 
@@ -96,8 +101,9 @@ def handle_restart_mcp_server() -> None:
     else:
         console.print("\n[bold red]❌ MCP server restart failed[/ bold red]")
         raise SystemExit(1)
-def handle_start_zuban_lsp(
-    port: int = 8677, mode: str = "tcp") -> None:
+
+
+def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
     """Start Zuban LSP server."""
     from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
@@ -121,6 +127,8 @@ def handle_start_zuban_lsp(
         asyncio.run(_start())
     except KeyboardInterrupt:
         console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
+
+
 def handle_stop_zuban_lsp() -> None:
     """Stop Zuban LSP server."""
     from crackerjack.services.server_manager import stop_zuban_lsp
@@ -134,8 +142,9 @@ def handle_stop_zuban_lsp() -> None:
     else:
         console.print("\n[bold red]❌ Failed to stop Zuban LSP server[/bold red]")
         raise SystemExit(1)
-def handle_restart_zuban_lsp(
-    port: int = 8677, mode: str = "tcp") -> None:
+
+
+def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
     """Restart Zuban LSP server."""
     from crackerjack.services.server_manager import restart_zuban_lsp
 
@@ -155,131 +164,23 @@ def handle_interactive_mode(options: Options) -> None:
 
     pkg_version = get_package_version()
     launch_interactive_cli(pkg_version, options)
+
+
 def handle_standard_mode(
     options: Options,
-    async_mode: bool,
-    job_id: str | None = None,
-    orchestrated: bool = False,
-) -> None:
-    # Run the async configure method in an isolated event loop
-    import asyncio
-
-    from crackerjack.executors.hook_lock_manager import hook_lock_manager
-
-    # Call the synchronous method directly
-    hook_lock_manager.configure_from_options(options)
-
-    # Phase 4.2 COMPLETE: ACB workflows are now the default
-    # Use --use-legacy-orchestrator to opt out and use the old orchestration system
-    if not getattr(options, "use_legacy_orchestrator", False):
-        # Default path: ACB workflow engine (Phase 4.2 complete)
-        # Only skip if user explicitly opted out with --use-legacy-orchestrator
-        handle_acb_workflow_mode(options, job_id, console)
-        return
-
-    # Legacy orchestrator path (only if use_legacy_orchestrator=True)
-    if orchestrated:
-        handle_orchestrated_mode(options, job_id)
-
-    # TODO(Phase 3): Replace with Oneiric workflow execution
-    if not orchestrated:
-        raise NotImplementedError(
-            "Legacy workflow orchestration removed in Phase 2 (ACB removal). "
-            "Will be reimplemented in Phase 3 (Oneiric integration)."
-        )
-def handle_acb_workflow_mode(
-    options: Options,
     job_id: str | None = None,
 ) -> None:
-    """Execute workflow using ACB workflow engine (Phase 3 Production).
+    """Execute standard quality workflow.
 
-    TODO(Phase 3): This function is disabled pending Oneiric integration.
-    ACB workflow infrastructure was removed in Phase 2.
+    TODO(Phase 3): Workflow orchestration infrastructure removed in Phase 2.
+    Will be reimplemented with Oneiric integration.
     """
     raise NotImplementedError(
-        "ACB workflow engine removed in Phase 2 (ACB removal). "
+        "Workflow orchestration removed in Phase 2 (ACB removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
-def handle_orchestrated_mode(
-    options: Options, job_id: str | None = None) -> None:
-    console.print("[bold bright_blue]🚀 ORCHESTRATED MODE ENABLED[/ bold bright_blue]")
 
-    # Run the async configure method in an isolated event loop
-    import asyncio
 
-    from crackerjack.executors.hook_lock_manager import hook_lock_manager
-
-    # Call the synchronous method directly
-    hook_lock_manager.configure_from_options(options)
-
-    try:
-        from crackerjack.core.session_coordinator import SessionCoordinator
-        from crackerjack.orchestration.advanced_orchestrator import (
-            AdvancedWorkflowOrchestrator,
-        )
-        from crackerjack.orchestration.execution_strategies import (
-            AICoordinationMode,
-            ExecutionStrategy,
-            OrchestrationConfig,
-            ProgressLevel,
-        )
-    except ImportError as e:
-        console.print(f"[red]Orchestrated mode not available: {e}[/ red]")
-        console.print("[yellow]Falling back to standard mode[/ yellow]")
-        handle_standard_mode(options, False, job_id)
-        return
-
-    try:
-        strategy = ExecutionStrategy(options.orchestration_strategy)
-    except ValueError:
-        console.print(
-            f"[red]Invalid orchestration strategy: {options.orchestration_strategy}[/ red]",
-        )
-        strategy = ExecutionStrategy.ADAPTIVE
-
-    try:
-        progress = ProgressLevel(options.orchestration_progress)
-    except ValueError:
-        console.print(
-            f"[red]Invalid progress level: {options.orchestration_progress}[/ red]",
-        )
-        progress = ProgressLevel.GRANULAR
-
-    try:
-        ai_mode = AICoordinationMode(options.orchestration_ai_mode)
-    except ValueError:
-        console.print(f"[red]Invalid AI mode: {options.orchestration_ai_mode}[/ red]")
-        ai_mode = AICoordinationMode.SINGLE_AGENT
-
-    config = OrchestrationConfig(
-        execution_strategy=strategy,
-        progress_level=progress,
-        ai_coordination_mode=ai_mode,
-    )
-
-    console.print(f"[cyan]Execution Strategy: [/ cyan] {strategy.value}")
-    console.print(f"[cyan]Progress Level: [/ cyan] {progress.value}")
-    console.print(f"[cyan]AI Coordination: [/ cyan] {ai_mode.value}")
-
-    pkg_path = Path.cwd()
-    session = SessionCoordinator(console, pkg_path, web_job_id=job_id)
-    orchestrator = AdvancedWorkflowOrchestrator(console, pkg_path, session, config)
-
-    try:
-        success = asyncio.run(orchestrator.execute_orchestrated_workflow(options))
-        if success:
-            console.print(
-                "\n[bold green]🎉 ORCHESTRATED WORKFLOW COMPLETED SUCCESSFULLY ![/ bold green]",
-            )
-        else:
-            console.print("\n[bold red]❌ ORCHESTRATED WORKFLOW FAILED[/ bold red]")
-            sys.exit(1)
-    except KeyboardInterrupt:
-        console.print("\n[yellow]🛑 Orchestrated workflow interrupted[/ yellow]")
-        sys.exit(130)
-    except Exception as e:
-        console.print(f"\n[red]💥 Orchestrated workflow error: {e}[/ red]")
-        sys.exit(1)
 def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
     from crackerjack.services.quality.config_template import ConfigTemplateService
@@ -297,6 +198,8 @@ def handle_config_updates(options: Options) -> None:
         _handle_diff_config(config_service, pkg_path, options.diff_config, console)
     elif options.refresh_cache:
         _handle_refresh_cache(config_service, pkg_path, console)
+
+
 def _handle_check_updates(
     config_service: "ConfigTemplateService", pkg_path: Path
 ) -> None:
@@ -315,6 +218,8 @@ def _handle_check_updates(
 
     _display_available_updates(updates, console)
     console.print("\nUse --apply-config-updates to apply these updates")
+
+
 def _handle_apply_updates(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
@@ -337,6 +242,8 @@ def _handle_apply_updates(
         config_service, configs_to_update, pkg_path, interactive, console
     )
     _report_update_results(success_count, len(configs_to_update), console)
+
+
 def _handle_diff_config(
     config_service: "ConfigTemplateService",
     pkg_path: Path,
@@ -347,6 +254,8 @@ def _handle_diff_config(
     diff_preview = config_service._generate_diff_preview(config_type, pkg_path)
     console.print(f"\nChanges for {config_type}:")
     console.print(diff_preview)
+
+
 def _handle_refresh_cache(
     config_service: "ConfigTemplateService", pkg_path: Path
 ) -> None:
@@ -354,9 +263,9 @@ def _handle_refresh_cache(
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
     console.print("[green]✅ Cache refreshed[/green]")
-def _display_available_updates(
-    updates: dict[str, "ConfigUpdateInfo"]
-) -> None:
+
+
+def _display_available_updates(updates: dict[str, "ConfigUpdateInfo"]) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
@@ -373,6 +282,8 @@ def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[
         for config_type, update_info in updates.items()
         if update_info.needs_update
     ]
+
+
 def _apply_config_updates_batch(
     config_service: "ConfigTemplateService",
     configs: list[str],
@@ -385,9 +296,9 @@ def _apply_config_updates_batch(
         if config_service.apply_update(config_type, pkg_path, interactive=interactive):
             success_count += 1
     return success_count
-def _report_update_results(
-    success_count: int, total_count: int
-) -> None:
+
+
+def _report_update_results(success_count: int, total_count: int) -> None:
     """Report the results of configuration updates."""
     if success_count == total_count:
         console.print(

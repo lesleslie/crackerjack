@@ -1,6 +1,6 @@
-"""Settings loader for ACB configuration with YAML support.
+"""Settings loader for Pydantic configuration with YAML support.
 
-This module provides utilities for loading ACB Settings from YAML files
+This module provides utilities for loading Pydantic Settings from YAML files
 with support for configuration layering and environment-specific overrides.
 
 Configuration Priority (highest to lowest):
@@ -14,7 +14,7 @@ Example:
     >>> settings.verbose
     False
 
-    >>> # Async loading with full ACB initialization
+    >>> # Async loading with full initialization
     >>> settings = await CrackerjackSettings.load_async()
 """
 
@@ -26,11 +26,11 @@ from pathlib import Path
 from typing import TypeVar
 
 import yaml
-from acb.config import Settings
+from pydantic_settings import BaseSettings
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar("T", bound=Settings)
+T = TypeVar("T", bound=BaseSettings)
 
 
 def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
@@ -121,7 +121,7 @@ def load_settings[T: Settings](
             f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}"
         )
 
-    logger.info(
+    logger.debug(
         f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}"
     )
 
@@ -234,6 +234,6 @@ def _log_load_info[T: Settings](
     settings_class: type[T], relevant_data: dict[str, t.Any]
 ) -> None:
     """Log information about the loaded configuration."""
-    logger.info(
+    logger.debug(
         f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)"
     )

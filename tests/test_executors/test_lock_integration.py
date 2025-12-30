@@ -163,7 +163,6 @@ class TestAsyncHookExecutorIntegration:
             name=hook_name,
             command=["bash", "-c", "echo 'slow test' > /dev/null 2>&1 && exit 0"],  # Safe command that doesn't need git and exits cleanly
             description="Slow test hook",
-            use_precommit_legacy=False,
         )
         slow_hook._direct_cmd_cache = slow_hook.command
 
@@ -344,7 +343,6 @@ class TestHookExecutorLockCoordination:
             name=stats_hook,
             command=["bash", "-c", "echo 'statistics test' > /dev/null 2>&1"],
             description="Hook for statistics testing",
-            use_precommit_legacy=False,
         )
         test_hook._direct_cmd_cache = test_hook.command
 
@@ -630,7 +628,6 @@ class TestExecutorLockManagerMocking:
             name="mock_test_hook",
             command=["echo", "mock test"],
             description="Hook for testing with mock lock manager",
-            use_precommit_legacy=False,
         )
         test_hook._direct_cmd_cache = test_hook.command
 

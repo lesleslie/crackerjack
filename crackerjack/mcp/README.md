@@ -360,8 +360,9 @@ python -m crackerjack --watchdog
 ## Related
 
 - [Agents](../agents/README.md) — AI agents that MCP coordinates
-- [Orchestration](../orchestration/README.md) — Workflow orchestration layer
+
 - [Slash Commands](../slash_commands/README.md) — MCP slash command implementations
+
 - [Main README](../../README.md) — MCP integration overview
 
 ## Future Enhancements

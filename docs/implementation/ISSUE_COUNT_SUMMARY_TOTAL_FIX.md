@@ -214,7 +214,7 @@ Run in a project with config errors (like ../acb):
 
 ```bash
 cd /Users/les/Projects/acb
-python -m crackerjack
+python -m crackerjack run
 ```
 
 Expected results:

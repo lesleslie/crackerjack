@@ -4,8 +4,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from acb.depends import depends
-
 from crackerjack.config.settings import (
     AdvancedSettings,
     AISettings,
@@ -49,7 +47,6 @@ class CleaningConfig:
 @dataclass
 class HookConfig:
     skip_hooks: bool = False
-    update_precommit: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
@@ -59,7 +56,6 @@ class HookConfig:
     def from_settings(cls, settings: HookSettings) -> HookConfig:
         return cls(
             skip_hooks=settings.skip_hooks,
-            update_precommit=settings.update_precommit,
             experimental_hooks=settings.experimental_hooks,
             enable_pyrefly=settings.enable_pyrefly,
             enable_ty=settings.enable_ty,
@@ -335,6 +331,16 @@ class WorkflowOptions:
         }
 
         for attr, value in self._DEFAULT_OVERRIDES.items():
+            if attr in {"commit", "create_pr"} and "git" in kwargs:
+                continue
+            if attr == "clean" and "cleaning" in kwargs:
+                continue
+            if attr == "test" and "testing" in kwargs:
+                continue
+            if attr in {"publish", "bump"} and "publishing" in kwargs:
+                continue
+            if attr in {"interactive", "dry_run"} and "execution" in kwargs:
+                continue
             if attr not in kwargs:
                 setattr(self, attr, value)
 
@@ -377,7 +383,18 @@ class WorkflowOptions:
             mcp_server,
             zuban_lsp,
         )
-        self._set_default_overrides(kwargs)
+        override_context = kwargs.copy()
+        if git is not None:
+            override_context["git"] = git
+        if cleaning is not None:
+            override_context["cleaning"] = cleaning
+        if testing is not None:
+            override_context["testing"] = testing
+        if publishing is not None:
+            override_context["publishing"] = publishing
+        if execution is not None:
+            override_context["execution"] = execution
+        self._set_default_overrides(override_context)
         self._set_kwargs_attributes(kwargs)
 
     # Convenience property mappings
@@ -574,13 +591,6 @@ class WorkflowOptions:
         self.hooks.skip_hooks = value
 
     @property
-    def update_precommit(self) -> bool:
-        return self.hooks.update_precommit
-
-    @update_precommit.setter
-    def update_precommit(self, value: bool) -> None:
-        self.hooks.update_precommit = value
-
     @property
     def experimental_hooks(self) -> bool:
         return self.hooks.experimental_hooks
@@ -679,6 +689,7 @@ class WorkflowOptions:
             "bump",
             "commit",
             "create_pr",
+            "interactive",
             "dry_run",
         ]
         kwargs = {
@@ -705,11 +716,10 @@ class WorkflowOptions:
         }
 
 
-from typing import cast
-
-
 def get_workflow_options() -> CrackerjackSettings:
-    return cast(CrackerjackSettings, depends.get_sync(CrackerjackSettings))
+    from crackerjack.config import load_settings
+
+    return load_settings(CrackerjackSettings)
 
 
 __all__ = [

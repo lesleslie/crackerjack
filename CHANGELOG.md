@@ -9,6 +9,7 @@ This release completes the migration from ACB (Architecture Component Base) to O
 ### ⚠️ BREAKING CHANGES
 
 **CLI Commands (Phase 3):**
+
 - **REMOVED:** `--start-mcp-server`, `--stop-mcp-server`, `--restart-mcp-server` flags
 - **NEW:** Typer-based lifecycle commands:
   - `crackerjack start` - Start MCP server (replaces `--start-mcp-server`)
@@ -21,6 +22,7 @@ This release completes the migration from ACB (Architecture Component Base) to O
 **Migration Required:** Update your MCP client configurations (Claude Desktop, etc.) to use `crackerjack start` instead of `--start-mcp-server`.
 
 **Adapter API (Phase 4):**
+
 - **REMOVED:** ACB dependency injection from all 19 adapters
 - **NEW:** Constructor-based dependency injection
 - **NEW:** Static UUID registry - all adapters now have permanent UUIDs (see `ADAPTER_UUID_REGISTRY.md`)
@@ -29,18 +31,21 @@ This release completes the migration from ACB (Architecture Component Base) to O
 ### ✨ Added
 
 **Phase 3: Oneiric CLI Factory Integration**
+
 - New `CrackerjackServer` class (196 lines) for lifecycle management
 - Streamlined `__main__.py` (65% code reduction: 648→225 lines)
 - Lifecycle commands with instance ID support for multi-instance deployments
 - Oneiric-compatible health snapshot generation
 
 **Phase 4: QA Adapter Modernization**
+
 - Static UUID registry for all 19 adapters (permanent identifiers)
 - `AdapterStatus` enum for type-safe status tracking
 - Production-ready adapter instantiation in `CrackerjackServer`
 - Graceful degradation pattern (server continues if individual adapters fail)
 
 **Phase 5: Quality Validation**
+
 - 100% test pass rate (3,734/3,734 tests passing)
 - Comprehensive test suite validation
 - Zero ACB remnants in codebase
@@ -48,12 +53,14 @@ This release completes the migration from ACB (Architecture Component Base) to O
 ### 🗑️ Removed
 
 **Phase 1: WebSocket/Dashboard Stack**
+
 - 55 files removed (~128KB)
 - WebSocket server and handlers
 - Progress monitoring dashboard
 - Real-time event streaming infrastructure
 
 **Phase 2: ACB Dependency**
+
 - 309 ACB imports removed across ~150 files
 - 133 `@depends.inject` decorators replaced with constructor injection
 - ACB console replaced with Rich console
@@ -62,16 +69,19 @@ This release completes the migration from ACB (Architecture Component Base) to O
 ### 🔧 Changed
 
 **Architecture:**
+
 - Migrated from `@depends.inject` to constructor-based dependency injection
 - Replaced ACB Settings with standard YAML-based configuration
 - Simplified orchestration layer (removed ACB workflow dependencies)
 
 **Test Suite:**
+
 - Test baseline improved: 84% → 100% pass rate
 - Collection errors: 35 → 0
 - All ACB-related test remnants fixed
 
 **Performance:**
+
 - Reduced CLI overhead (65% code reduction in main entry point)
 - Zero wrapper overhead from ACB removal
 - Maintained 70% cache hit rate and 50% faster workflows
@@ -87,15 +97,17 @@ This release completes the migration from ACB (Architecture Component Base) to O
 ### 🎯 Migration Guide
 
 **For Users:**
+
 1. Update MCP client configurations to use `crackerjack start`
-2. Remove any ACB-specific environment variables
-3. Review adapter initialization if you have custom integrations
+1. Remove any ACB-specific environment variables
+1. Review adapter initialization if you have custom integrations
 
 **For Developers:**
+
 1. Adapters now use constructor injection instead of ACB DI
-2. Use static UUIDs from `ADAPTER_UUID_REGISTRY.md` (never change)
-3. Import from `models/protocols.py` for protocol-based dependencies
-4. Replace `MODULE_STATUS` strings with `AdapterStatus` enum
+1. Use static UUIDs from `ADAPTER_UUID_REGISTRY.md` (never change)
+1. Import from `models/protocols.py` for protocol-based dependencies
+1. Replace `MODULE_STATUS` strings with `AdapterStatus` enum
 
 See `ONEIRIC_MIGRATION_STATUS.md` for complete migration details.
 

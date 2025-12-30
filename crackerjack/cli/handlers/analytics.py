@@ -3,8 +3,6 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
 # =============================================================================
 # Heatmap Generation
 # =============================================================================
@@ -78,6 +76,8 @@ def _save_heatmap_output(
     Path(default_filename).write_text(html_content, encoding="utf-8")
     console.print(f"[green]✅[/green] Heat map HTML saved to: {default_filename}")
     return True
+
+
 def handle_heatmap_generation(
     heatmap: bool,
     heatmap_type: str,
@@ -170,6 +170,8 @@ def get_sample_metric_value(metric_type: str) -> float:
         return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
 
     return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
+
+
 def display_anomaly_results(
     anomalies: list[t.Any], baselines: dict[str, t.Any]
 ) -> None:
@@ -194,6 +196,8 @@ def display_anomaly_results(
                 f" • [{severity_color}]{anomaly.severity.upper()}[/{severity_color}] "
                 f"{anomaly.metric_type}: {anomaly.description}"
             )
+
+
 def save_anomaly_report(
     anomalies: list[t.Any],
     baselines: dict[str, t.Any],
@@ -230,6 +234,8 @@ def save_anomaly_report(
     report_path.write_text(json.dumps(report_data, indent=2), encoding="utf-8")
 
     console.print(f"[green]✅[/green] Anomaly detection report saved to: {report_path}")
+
+
 def handle_anomaly_detection(
     anomaly_detection: bool,
     anomaly_sensitivity: float,
@@ -344,9 +350,9 @@ def generate_predictions_summary(
             }
 
     return predictions_summary
-def display_trend_analysis(
-    predictions_summary: dict[str, t.Any]
-) -> None:
+
+
+def display_trend_analysis(predictions_summary: dict[str, t.Any]) -> None:
     console.print("\n[green]📈[/green] Trend Analysis Summary:")
 
     for metric_type, data in predictions_summary.items():
@@ -375,6 +381,8 @@ def display_trend_analysis(
                 f" Next prediction: {next_pred['predicted_value']} "
                 f"(confidence: {next_pred['model_accuracy']:.2f})"
             )
+
+
 def save_analytics_dashboard(
     predictions_summary: dict[str, t.Any],
     trend_summary: dict[str, t.Any],
@@ -403,6 +411,8 @@ def save_analytics_dashboard(
     dashboard_path.write_text(json.dumps(dashboard_data, indent=2), encoding="utf-8")
 
     console.print(f"[green]✅[/green] Analytics dashboard saved to: {dashboard_path}")
+
+
 def handle_predictive_analytics(
     predictive_analytics: bool,
     prediction_periods: int,

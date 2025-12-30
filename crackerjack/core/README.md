@@ -379,9 +379,11 @@ Based on Phase 2-4 refactoring audit:
 ## Related Documentation
 
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Architecture overview and patterns
+
 - [Models](../models/README.md) - Protocol definitions
+
 - [Managers](../managers/README.md) - Service implementations
-- [Orchestration](../orchestration/README.md) - Execution strategies
+
 - [Agents](../agents/README.md) - AI agent system
 
 ## Future Enhancements

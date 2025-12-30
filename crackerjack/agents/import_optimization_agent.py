@@ -37,12 +37,8 @@ class ImportOptimizationAgent(SubAgent):
         return {IssueType.IMPORT_ERROR, IssueType.DEAD_CODE}
 
     async def can_handle(self, issue: Issue) -> float:
-        if issue.type in self.get_supported_types():
-            return 0.85
-
         description_lower = issue.message.lower()
         import_keywords = [
-            "import",
             "unused import",
             "redundant import",
             "import style",
@@ -58,6 +54,9 @@ class ImportOptimizationAgent(SubAgent):
 
         pattern_obj = SAFE_PATTERNS["match_error_code_patterns"]
         if pattern_obj.test(issue.message):
+            return 0.85
+
+        if issue.type in self.get_supported_types():
             return 0.85
 
         return 0.0
@@ -296,7 +295,7 @@ class ImportOptimizationAgent(SubAgent):
             }
             all_imports.append(import_info)
             base_module = alias.name.split(".")[0]
-            module_imports[base_module].append(import_info)
+            module_imports.setdefault(base_module, []).append(import_info)
 
     def _process_from_import(
         self,
@@ -325,7 +324,7 @@ class ImportOptimizationAgent(SubAgent):
             }
             all_imports.append(import_info)
             base_module = node.module.split(".")[0]
-            module_imports[base_module].append(import_info)
+            module_imports.setdefault(base_module, []).append(import_info)
 
     def _find_mixed_imports(
         self,

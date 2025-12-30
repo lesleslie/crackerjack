@@ -3,8 +3,8 @@ import typing as t
 from pathlib import Path
 
 from rich.console import Console
-from acb.depends import Inject, depends
 
+from crackerjack.config import load_settings
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.errors import ValidationError
 from crackerjack.models.protocols import OptionsProtocol
@@ -16,9 +16,9 @@ class UnifiedConfigurationService:
         pkg_path: Path,
         options: OptionsProtocol | None = None,
     ) -> None:
-        self.console = console
+        self.console = Console()
         self.pkg_path = pkg_path
-        self.logger = logger
+        self.logger = logging.getLogger(__name__)
         self._config: CrackerjackSettings | None = None
 
     def get_config(self, reload: bool = False) -> CrackerjackSettings:
@@ -29,8 +29,8 @@ class UnifiedConfigurationService:
 
     def _load_unified_config(self) -> CrackerjackSettings:
         try:
-            settings = depends.get_sync(CrackerjackSettings)
-            self.logger.info("Unified configuration loaded from acb")
+            settings = load_settings(CrackerjackSettings)
+            self.logger.info("Unified configuration loaded")
             return settings
         except Exception as e:
             self.logger.exception("Configuration validation failed", error=str(e))
@@ -39,15 +39,6 @@ class UnifiedConfigurationService:
                 details=str(e),
                 recovery="Check configuration files and environment variables",
             ) from e
-
-    def get_precommit_config_mode(self) -> str:
-        config = self.get_config()
-
-        if config.hooks.experimental_hooks:
-            return "experimental"
-        if hasattr(config.testing, "test") and getattr(config.testing, "test", False):
-            return "comprehensive"
-        return "comprehensive"
 
     def get_logging_config(self) -> dict[str, t.Any]:
         self.get_config()

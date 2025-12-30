@@ -117,20 +117,20 @@ result = HookResult(
 ```bash
 # Test 1: Default behavior (changed files only)
 echo "# test" >> crackerjack/__init__.py
-python -m crackerjack
+python -m crackerjack run
 # Expected: Hooks run on 1 file (crackerjack/__init__.py)
 
 # Test 2: All files mode
-python -m crackerjack --all-files
+python -m crackerjack run --all-files
 # Expected: Hooks run on all 512 Python files
 
 # Test 3: Clean repo (no changes)
 git restore crackerjack/__init__.py
-python -m crackerjack
+python -m crackerjack run
 # Expected: Hooks run on 0 files (nothing to check)
 
 # Test 4: All files on clean repo
-python -m crackerjack --all-files
+python -m crackerjack run --all-files
 # Expected: Hooks run on all 512 Python files
 ```
 

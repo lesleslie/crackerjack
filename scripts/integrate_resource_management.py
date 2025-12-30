@@ -412,10 +412,7 @@ def process_file(file_path: Path) -> int:
     logger.info(f"Processing {file_path}")
 
     # Skip files that are already resource management modules
-    if any(
-        name in str(file_path)
-        for name in ("resource_manager", "file_lifecycle")
-    ):
+    if any(name in str(file_path) for name in ("resource_manager", "file_lifecycle")):
         logger.info(f"Skipping resource management module {file_path}")
         return 0
 

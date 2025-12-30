@@ -1,11 +1,12 @@
 import typing as t
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from crackerjack.services.cache import CrackerjackCache
+
+
 def handle_clear_cache() -> None:
     """Clear all caches and display results."""
     try:
@@ -38,6 +39,8 @@ def handle_clear_cache() -> None:
 
     except Exception as e:
         console.print(f"\n❌ Error clearing cache: {e}", style="bold red")
+
+
 def handle_cache_stats() -> None:
     """Display detailed cache statistics."""
     try:
@@ -126,9 +129,9 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
         f"{totals['size']:.2f}",
         style="bold",
     )
-def _display_performance_insights(
-    totals: dict[str, t.Any]
-) -> None:
+
+
+def _display_performance_insights(totals: dict[str, t.Any]) -> None:
     """Display performance insights panel based on cache statistics."""
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
@@ -167,9 +170,9 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
         insights.append(f"💾 Large cache size ({total_size:.1f}MB) - consider cleanup")
 
     return insights
-def _display_cache_directory_info(
-    cache: CrackerjackCache
-) -> None:
+
+
+def _display_cache_directory_info(cache: CrackerjackCache) -> None:
     """Display cache directory information."""
     if not (cache.enable_disk_cache and cache.cache_dir):
         return

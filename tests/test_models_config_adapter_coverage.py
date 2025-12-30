@@ -19,7 +19,6 @@ class TestOptionsAdapter:
         options.auto_compress_docs = True
 
         options.skip_hooks = False
-        options.update_precommit = True
         options.experimental_hooks = False
         options.enable_pyrefly = True
         options.enable_ty = False
@@ -76,7 +75,6 @@ class TestOptionsAdapter:
         assert workflow_options.cleaning.auto_compress_docs is True
 
         assert workflow_options.hooks.skip_hooks is False
-        assert workflow_options.hooks.update_precommit is True
         assert workflow_options.hooks.experimental_hooks is False
         assert workflow_options.hooks.enable_pyrefly is True
         assert workflow_options.hooks.enable_ty is False
@@ -154,7 +152,6 @@ class TestLegacyOptionsWrapper:
             ),
             hooks=Mock(
                 skip_hooks=True,
-                update_precommit=False,
                 experimental_hooks=True,
                 enable_pyrefly=False,
                 enable_ty=True,
@@ -239,7 +236,6 @@ class TestLegacyOptionsWrapper:
 
     def test_hooks_properties(self, wrapper) -> None:
         assert wrapper.skip_hooks is True
-        assert wrapper.update_precommit is False
         assert wrapper.experimental_hooks is True
         assert wrapper.enable_pyrefly is False
         assert wrapper.enable_ty is True

@@ -131,10 +131,10 @@ To test the progress bar:
 
 ```bash
 # Fast hooks only
-python -m crackerjack
+python -m crackerjack run
 
 # Full workflow with progress
-python -m crackerjack -c -t -p minor
+python -m crackerjack run -c -t -p minor
 ```
 
 **Expected behavior:**

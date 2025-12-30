@@ -30,10 +30,10 @@ class TestTimeoutStrategyEnum:
 
     def test_timeout_strategy_values(self):
         """Test TimeoutStrategy enum values."""
-        assert TimeoutStrategy.FAIL_FAST == "fail_fast"
-        assert TimeoutStrategy.RETRY_WITH_BACKOFF == "retry_with_backoff"
-        assert TimeoutStrategy.CIRCUIT_BREAKER == "circuit_breaker"
-        assert TimeoutStrategy.GRACEFUL_DEGRADATION == "graceful_degradation"
+        assert TimeoutStrategy.FAIL_FAST.value == "fail_fast"
+        assert TimeoutStrategy.RETRY_WITH_BACKOFF.value == "retry_with_backoff"
+        assert TimeoutStrategy.CIRCUIT_BREAKER.value == "circuit_breaker"
+        assert TimeoutStrategy.GRACEFUL_DEGRADATION.value == "graceful_degradation"
 
 
 @pytest.mark.unit
@@ -42,9 +42,9 @@ class TestCircuitBreakerStateEnum:
 
     def test_circuit_breaker_state_values(self):
         """Test CircuitBreakerState enum values."""
-        assert CircuitBreakerState.CLOSED == "closed"
-        assert CircuitBreakerState.OPEN == "open"
-        assert CircuitBreakerState.HALF_OPEN == "half_open"
+        assert CircuitBreakerState.CLOSED.value == "closed"
+        assert CircuitBreakerState.OPEN.value == "open"
+        assert CircuitBreakerState.HALF_OPEN.value == "half_open"
 
 
 @pytest.mark.unit
@@ -273,13 +273,13 @@ class TestAsyncTimeoutManagerTimeoutContext:
         """Test timeout context with graceful degradation."""
         manager = AsyncTimeoutManager()
 
-        # Should not raise error with graceful degradation
+        # With graceful degradation, the timeout should be handled gracefully
+        # The context manager should exit without raising an exception
+        # The operation will be interrupted, but no exception should propagate
         async with manager.timeout_context(
             "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
         ):
             await asyncio.sleep(0.1)
-
-        # Should complete without raising
 
 
 @pytest.mark.unit

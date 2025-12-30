@@ -166,11 +166,10 @@ class BaseToolAdapter(QAAdapterBase):
                     return []
                 data = json.loads(result.raw_output)
                 return [self._parse_ruff_issue(issue) for issue in data]
-
-
-        with suppress(Exception):
-            depends.set(RuffAdapter)
         ```
+
+    Note: Adapters are registered via constructor injection in server initialization,
+    not through dependency injection patterns. See `server.py:_init_qa_adapters()`.
     """
 
     settings: ToolAdapterSettings | None = None

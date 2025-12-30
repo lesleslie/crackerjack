@@ -1,7 +1,6 @@
 """Pattern detection for performance anti-patterns in Python code."""
 
 import ast
-import operator
 import typing as t
 from contextlib import suppress
 
@@ -634,7 +633,11 @@ class PerformancePatternDetector:
 
         for ctx_line in context_lines:
             pattern_obj = SAFE_PATTERNS["match_loop_patterns"]
-            if pattern_obj.test(ctx_line):
+            candidate = ctx_line.split("#", 1)[0]
+            if pattern_obj.test(candidate):
+                return True
+            stripped = candidate.strip()
+            if stripped.startswith(("for ", "while ")) and stripped.endswith(":"):
                 return True
 
         return False
@@ -819,11 +822,13 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
         """Visit for loop node."""
         self._handle_loop_node(node, "for")
         self.generic_visit(node)
+        self._loop_stack.pop()
 
     def visit_While(self, node: ast.While) -> None:
         """Visit while loop node."""
         self._handle_loop_node(node, "while")
         self.generic_visit(node)
+        self._loop_stack.pop()
 
     def _handle_loop_node(self, node: ast.For | ast.While, loop_type: str) -> None:
         """Handle loop node detection."""
@@ -844,8 +849,6 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
                 }
             )
 
-        self._loop_stack.pop()
-
     @staticmethod
     def _calculate_loop_complexity(depth: int) -> str:
         """Calculate complexity string from depth."""
@@ -863,6 +866,8 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
         if depth >= 4:
             return "critical"
         elif depth == 3:
+            return "high"
+        elif depth == 2:
             return "high"
         return "medium"
 
@@ -891,7 +896,7 @@ class ListOpAnalyzer(ast.NodeVisitor):
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
         """Visit augmented assignment."""
-        if self._in_loop and isinstance(node.op, operator.Add):
+        if self._in_loop and isinstance(node.op, ast.Add):
             if isinstance(node.value, ast.List):
                 impact = len(node.value.elts) if node.value.elts else 1
                 self.list_ops.append(

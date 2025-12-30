@@ -232,7 +232,7 @@ Run crackerjack in the ../acb project to verify:
 
 ```bash
 cd /Users/les/Projects/acb
-python -m crackerjack
+python -m crackerjack run
 ```
 
 ### 3. If Still Showing "1", Debug Further

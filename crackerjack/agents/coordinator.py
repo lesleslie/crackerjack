@@ -1,5 +1,6 @@
 import asyncio
 import hashlib
+import inspect
 import typing as t
 from collections import defaultdict
 from itertools import starmap
@@ -275,11 +276,13 @@ class AgentCoordinator:
         issue_hash = self._create_issue_hash(issue)
 
         # Check cache for previous agent decision
-        cached_decision = self.cache.get_agent_decision(agent.name, issue_hash)
+        cached_decision = self._coerce_cached_decision(
+            self.cache.get_agent_decision(agent.name, issue_hash)
+        )
         if cached_decision:
             self.logger.debug(f"Using cached decision for {agent.name}")
             self.tracker.track_agent_complete(agent.name, cached_decision)
-            return cached_decision  # type: ignore[no-any-return]
+            return cached_decision
 
         confidence = await agent.can_handle(issue)
         self.tracker.track_agent_processing(agent.name, issue, confidence)
@@ -350,14 +353,14 @@ class AgentCoordinator:
             return self._issue_cache[cache_key]
 
         # Check persistent cache
-        cached_result = self.cache.get_agent_decision(
-            agent.name, self._create_issue_hash(issue)
+        cached_result = self._coerce_cached_decision(
+            self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue))
         )
         if cached_result:
             self.logger.debug(f"Using persistent cache for {agent.name}")
             # Store in memory cache for even faster future access
             self._issue_cache[cache_key] = cached_result
-            return cached_result  # type: ignore[no-any-return]
+            return cached_result
 
         # No cache hit - perform actual analysis
         result = await agent.analyze_and_fix(issue)
@@ -370,6 +373,17 @@ class AgentCoordinator:
             )
 
         return result
+
+    @staticmethod
+    def _coerce_cached_decision(value: t.Any) -> FixResult | None:
+        if isinstance(value, FixResult):
+            return value
+        if isinstance(value, dict):
+            try:
+                return FixResult(**value)
+            except (TypeError, ValueError):
+                return None
+        return None
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
         if not self.agents:
@@ -568,7 +582,13 @@ class AgentCoordinator:
                 group_result = FixResult(success=True, confidence=1.0)
 
                 for issue in issues:
-                    issue_result = await architect.analyze_and_fix(issue)
+                    maybe_result = architect.analyze_and_fix(issue)
+                    if inspect.isawaitable(maybe_result):
+                        issue_result = await maybe_result
+                    elif isinstance(maybe_result, FixResult):
+                        issue_result = maybe_result
+                    else:
+                        issue_result = FixResult(success=True, confidence=0.0)
                     group_result = group_result.merge_with(issue_result)
 
                 return group_result

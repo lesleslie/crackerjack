@@ -202,21 +202,17 @@ async def _setup_orchestrator(
 async def _create_advanced_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any], context: t.Any
 ) -> t.Any:
-    # TODO(Phase 3): Replace with Oneiric workflow integration
-    raise NotImplementedError(
-        "AsyncWorkflowOrchestrator removed in Phase 2 (ACB removal). "
-        "Will be reimplemented in Phase 3 (Oneiric integration)."
-    )
+    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+    return WorkflowPipeline(pkg_path=working_dir)
 
 
 def _create_standard_orchestrator(
     working_dir: t.Any, kwargs: dict[str, t.Any]
 ) -> t.Any:
-    # TODO(Phase 3): Replace with Oneiric workflow integration
-    raise NotImplementedError(
-        "WorkflowOrchestrator removed in Phase 2 (ACB removal). "
-        "Will be reimplemented in Phase 3 (Oneiric integration)."
-    )
+    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+    return WorkflowPipeline(pkg_path=working_dir)
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
@@ -382,8 +378,8 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
     options.interactive = kwargs.get("interactive", False)
     options.no_config_updates = kwargs.get("no_config_updates", False)
     options.verbose = kwargs.get("verbose", True)
-    options.clean = kwargs.get("clean", False)
-    options.test = kwargs.get("test_mode", True)
+    options.strip_code = kwargs.get("clean", False)
+    options.run_tests = kwargs.get("test_mode", True)
     options.benchmark = kwargs.get("benchmark", False)
     options.skip_hooks = kwargs.get("skip_hooks", False)
     options.ai_agent = kwargs.get("ai_agent", True)
@@ -403,7 +399,6 @@ def _create_workflow_options(kwargs: dict[str, t.Any]) -> t.Any:
 
     options.start_mcp_server = kwargs.get("start_mcp_server", False)
 
-    options.update_precommit = kwargs.get("update_precommit", False)
     options.experimental_hooks = kwargs.get("experimental_hooks", False)
     options.enable_pyrefly = kwargs.get("enable_pyrefly", False)
     options.enable_ty = kwargs.get("enable_ty", False)
@@ -567,9 +562,15 @@ async def _attempt_coverage_improvement(
         if not project_path:
             return {"status": "skipped", "reason": "No project path available"}
 
-        from crackerjack.orchestration.coverage_improvement import (
-            create_coverage_improvement_orchestrator,
-        )
+        try:
+            from crackerjack.orchestration.coverage_improvement import (
+                create_coverage_improvement_orchestrator,
+            )
+        except ModuleNotFoundError:
+            return {
+                "status": "skipped",
+                "reason": "Coverage improvement module not available (removed in Phase 2)",
+            }
 
         coverage_orchestrator = await create_coverage_improvement_orchestrator(
             project_path,

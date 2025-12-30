@@ -78,6 +78,8 @@ class OptionsProtocol(t.Protocol):
     clean: bool
     test: bool
     benchmark: bool
+    benchmark_regression: bool = False
+    benchmark_regression_threshold: float = 0.1
     test_workers: int = 0
     test_timeout: int = 0
     publish: t.Any | None
@@ -87,7 +89,6 @@ class OptionsProtocol(t.Protocol):
     start_mcp_server: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
-    update_precommit: bool = False
     async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
@@ -246,8 +247,6 @@ class SmartSchedulingServiceProtocol(ServiceProtocol, t.Protocol):
 @t.runtime_checkable
 class UnifiedConfigurationServiceProtocol(ServiceProtocol, t.Protocol):
     def get_config(self, reload: bool = False) -> CrackerjackSettings: ...
-
-    def get_precommit_config_mode(self) -> str: ...
 
     def get_logging_config(self) -> dict[str, t.Any]: ...
 
@@ -775,7 +774,7 @@ class HookOrchestratorProtocol(t.Protocol):
 
         Args:
             strategy: HookStrategy (fast or comprehensive)
-            execution_mode: "legacy" (pre-commit CLI) or "acb" (direct adapters)
+            execution_mode: Optional execution mode label.
             execution_context: Context containing options and execution environment
 
         Returns:

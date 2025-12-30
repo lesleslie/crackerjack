@@ -107,17 +107,6 @@ class TestFileSystemServiceWriteOperations:
         assert test_file.exists()
         assert test_file.read_text() == content
 
-    def test_write_file_cleans_trailing_whitespace_precommit(self, service, tmp_path):
-        """Test writing .pre-commit-config.yaml cleans trailing whitespace."""
-        test_file = tmp_path / ".pre-commit-config.yaml"
-        content = "line1  \nline2\t\nline3"  # Has trailing spaces/tabs
-
-        service.write_file(test_file, content)
-
-        result = test_file.read_text()
-        assert result == "line1\nline2\nline3\n"
-        assert not any(line.endswith((" ", "\t")) for line in result.splitlines())
-
     def test_write_file_cleans_trailing_whitespace_pyproject(self, service, tmp_path):
         """Test writing pyproject.toml cleans trailing whitespace."""
         test_file = tmp_path / "pyproject.toml"
@@ -131,7 +120,7 @@ class TestFileSystemServiceWriteOperations:
 
     def test_write_file_adds_final_newline(self, service, tmp_path):
         """Test writing file adds final newline."""
-        test_file = tmp_path / ".pre-commit-config.yaml"
+        test_file = tmp_path / "pyproject.toml"
         content = "line1\nline2"  # No final newline
 
         service.write_file(test_file, content)

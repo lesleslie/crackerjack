@@ -67,7 +67,6 @@ class TestOptions:
             commit=True,
             interactive=True,
             no_config_updates=True,
-            update_precommit=True,
             verbose=True,
             update_docs=True,
             clean=True,
@@ -82,7 +81,6 @@ class TestOptions:
         assert options.commit is True
         assert options.interactive is True
         assert options.no_config_updates is True
-        assert options.update_precommit is True
         assert options.verbose is True
         assert options.test_workers == 4
         assert options.test_timeout == 300

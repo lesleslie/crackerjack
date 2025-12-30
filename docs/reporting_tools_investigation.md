@@ -186,7 +186,7 @@ def _parse_creosote_issues(self, output: str) -> list[str]:
 
 ### Test 4: Crackerjack Cache
 
-⏳ Running `python -m crackerjack --clear-cache && python -m crackerjack --comp`
+⏳ Running `python -m crackerjack run --clear-cache && python -m crackerjack run --comp`
 
 ## Caching Issue Discovered
 
@@ -352,8 +352,8 @@ Fast Hook Results:
 
 ## Next Steps
 
-1. ✅ Clear crackerjack cache: `python -m crackerjack --clear-cache`
-1. ✅ Run comprehensive hooks: `python -m crackerjack --comp`
+1. ✅ Clear crackerjack cache: `python -m crackerjack run --clear-cache`
+1. ✅ Run comprehensive hooks: `python -m crackerjack run --comp`
 1. ✅ Verify FAILED status when issues exist (WORKING!)
 1. ✅ Verify issue count accuracy (29 vs 28 expected - acceptable ±1 variance)
 1. ✅ Fix ruff-format showing PASSED with issues (FIXED!)
@@ -365,10 +365,10 @@ Fast Hook Results:
 
 ```bash
 # Clear all caches
-python -m crackerjack --clear-cache
+python -m crackerjack run --clear-cache
 
 # Run with debug output
-python -m crackerjack --comp --debug
+python -m crackerjack run --comp --debug
 
 # Manual tool testing
 uv run complexipy --max-complexity-allowed 15 crackerjack

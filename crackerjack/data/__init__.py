@@ -1,8 +1,9 @@
-"""Data access layer utilities backed by ACB infrastructure."""
+"""Data access layer utilities - in-memory repository pattern."""
 
 from __future__ import annotations
 
-from crackerjack.data.models import QualityBaselineRecord
-from crackerjack.data.repository import QualityBaselineRepository
+# Repository pattern uses in-memory storage (no external dependencies)
+# Quality baseline and metrics storage handled via cache system
+# See: crackerjack.services.cache.CrackerjackCache
 
-__all__ = ["QualityBaselineRecord", "QualityBaselineRepository"]
+__all__: list[str] = []  # type: ignore[misc]

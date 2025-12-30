@@ -10,7 +10,7 @@ ______________________________________________________________________
 
 ### Issue 1: Unwanted Logging Output
 
-Logging messages appear when running `python -m crackerjack` without `--debug` flag:
+Logging messages appear when running `python -m crackerjack run` without `--debug` flag:
 
 ```
 2025-11-26 02:29:41 [info] Application started [acb.adapters.logger.structlog]
@@ -380,10 +380,10 @@ refresh_per_second = (10,)  # Smooth single-line updates
 Run comprehensive tests:
 
 ```bash
-python -m crackerjack --run-tests
-python -m crackerjack
-python -m crackerjack --verbose
-python -m crackerjack --debug
+python -m crackerjack run --run-tests
+python -m crackerjack run
+python -m crackerjack run --verbose
+python -m crackerjack run --debug
 ```
 
 ______________________________________________________________________
@@ -393,7 +393,7 @@ ______________________________________________________________________
 ### Test Case 1: Default Run (No Flags)
 
 ```bash
-python -m crackerjack
+python -m crackerjack run
 ```
 
 **Expected**:
@@ -408,7 +408,7 @@ python -m crackerjack
 ### Test Case 2: Verbose Mode
 
 ```bash
-python -m crackerjack --verbose
+python -m crackerjack run --verbose
 ```
 
 **Expected**:
@@ -423,7 +423,7 @@ python -m crackerjack --verbose
 ### Test Case 3: Debug Mode
 
 ```bash
-python -m crackerjack --debug
+python -m crackerjack run --debug
 ```
 
 **Expected**:
@@ -440,7 +440,7 @@ python -m crackerjack --debug
 ### Test Case 4: AI Debug Mode
 
 ```bash
-python -m crackerjack --ai-debug --run-tests
+python -m crackerjack run --ai-debug --run-tests
 ```
 
 **Expected**:
@@ -455,7 +455,7 @@ python -m crackerjack --ai-debug --run-tests
 ### Test Case 5: With Tests
 
 ```bash
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 ```
 
 **Expected**:
@@ -497,7 +497,7 @@ ______________________________________________________________________
 
 **Mitigation**:
 
-- Test in multiple terminal environments (iTerm, Terminal.app, VSCode)
+- Test in multiple terminal environments (term, Terminal.app, VSCode)
 - Verify CI/CD pipeline output remains readable
 - Keep fallback behavior for non-TTY environments
 - Error messages print AFTER progress clears (still visible)
@@ -533,12 +533,12 @@ ______________________________________________________________________
 
 ## Success Criteria
 
-1. ✅ Running `python -m crackerjack` shows NO ACB logger startup messages on stdout
-1. ✅ Running `python -m crackerjack` produces NO output to stderr (silent)
-1. ✅ Running `python -m crackerjack --verbose` shows NO low-level logs (user detail only on stdout)
-1. ✅ Running `python -m crackerjack --verbose` produces NO output to stderr (silent)
-1. ✅ Running `python -m crackerjack --debug` shows ALL logging output on stdout
-1. ✅ Running `python -m crackerjack --debug` produces structured JSON logs to stderr ONLY
+1. ✅ Running `python -m crackerjack run` shows NO ACB logger startup messages on stdout
+1. ✅ Running `python -m crackerjack run` produces NO output to stderr (silent)
+1. ✅ Running `python -m crackerjack run --verbose` shows NO low-level logs (user detail only on stdout)
+1. ✅ Running `python -m crackerjack run --verbose` produces NO output to stderr (silent)
+1. ✅ Running `python -m crackerjack run --debug` shows ALL logging output on stdout
+1. ✅ Running `python -m crackerjack run --debug` produces structured JSON logs to stderr ONLY
 1. ✅ Progress bars update on single line (no repetition)
 1. ✅ Progress bars clear after completion (transient behavior)
 1. ✅ All existing tests pass
@@ -566,7 +566,7 @@ ______________________________________________________________________
 1. **Test logging behavior** across all flag combinations
 1. **Implement Phase 2** (progress bar fixes)
 1. **Test progress bar behavior** across workflows
-1. **Run full quality workflow** (`python -m crackerjack --run-tests`)
+1. **Run full quality workflow** (`python -m crackerjack run --run-tests`)
 1. **Update changelog and documentation**
 
 ______________________________________________________________________

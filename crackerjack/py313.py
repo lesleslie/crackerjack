@@ -95,10 +95,7 @@ def categorize_file(file_path: Path) -> str:
             return "Python Source File"
         case s if name.suffix in {".md", ".rst", ".txt"}:
             return "Documentation File"
-        case s if name.stem.startswith(".") or name.name in {
-            ".gitignore",
-            ".pre-commit-config.yaml",
-        }:
+        case s if name.stem.startswith(".") or name.name == ".gitignore":
             return "Configuration File"
         case _:
             pass

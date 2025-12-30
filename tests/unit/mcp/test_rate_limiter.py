@@ -595,9 +595,13 @@ class TestRateLimitMiddlewareCleanupLoop:
 
         middleware.resource_monitor.cleanup_stale_jobs = failing_cleanup
 
-        with patch("asyncio.sleep", side_effect=[RuntimeError("Test error"), asyncio.CancelledError()]):
+        original_sleep = asyncio.sleep
+        with patch(
+            "asyncio.sleep",
+            side_effect=[RuntimeError("Test error"), asyncio.CancelledError()],
+        ):
             await middleware.start()
-            await asyncio.sleep(0.01)
+            await original_sleep(0.01)
             await middleware.stop()
 
         # Restore original

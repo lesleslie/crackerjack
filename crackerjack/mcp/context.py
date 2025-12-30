@@ -191,7 +191,6 @@ class MCPServerContext:
 
     def _is_git_repository(self, current_dir: Path) -> bool:
         """Check if the current directory is within a git repository."""
-        import subprocess
 
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
@@ -203,7 +202,6 @@ class MCPServerContext:
 
     def _get_git_root_directory(self, current_dir: Path) -> Path | None:
         """Get the git repository root directory."""
-        import subprocess
 
         git_root_result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -372,8 +370,6 @@ class MCPServerContext:
 
         if ".." in job_id or "/" in job_id or "\\" in job_id:
             return False
-
-        import os
 
         return os.path.basename(job_id) == job_id
 

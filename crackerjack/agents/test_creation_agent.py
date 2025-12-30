@@ -1,3 +1,4 @@
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -56,16 +57,16 @@ class TestCreationAgent(SubAgent):
         if perfect_score > 0:
             return perfect_score
 
-        good_score = self._check_good_test_creation_matches(message_lower)
-        if good_score > 0:
-            return good_score
-
         file_path_score = self._check_file_path_test_indicators(issue.file_path)
         if file_path_score > 0:
             return file_path_score
 
         if self._indicates_untested_functions(message_lower):
             return 0.85
+
+        good_score = self._check_good_test_creation_matches(message_lower)
+        if good_score > 0:
+            return good_score
 
         return 0.0
 
@@ -565,6 +566,188 @@ class TestCreationAgent(SubAgent):
         return await self._template_generator.generate_test_content(
             module_file, functions, classes
         )
+
+    async def _run_coverage_command(self) -> tuple[int, str, str]:
+        return await self._coverage_analyzer._run_coverage_command()
+
+    def _parse_coverage_json(self, coverage_json: dict[str, Any]) -> dict[str, Any]:
+        return self._coverage_analyzer._parse_coverage_json(coverage_json)
+
+    async def _estimate_current_coverage(self) -> float:
+        return await self._coverage_analyzer._estimate_current_coverage()
+
+    async def _find_uncovered_modules_enhanced(self) -> list[dict[str, Any]]:
+        return await self._coverage_analyzer._find_uncovered_modules_enhanced()
+
+    async def _analyze_module_priority(self, module_file: Path) -> dict[str, Any]:
+        module_info = await self._coverage_analyzer._analyze_module_priority(
+            module_file, self._ast_analyzer
+        )
+
+        # Normalize public function count to top-level only for legacy expectations
+        with suppress(Exception):
+            import ast
+
+            content = self.context.get_file_content(module_file) or ""
+            tree = ast.parse(content)
+            public_top_level = [
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.FunctionDef | ast.AsyncFunctionDef)
+                and node.col_offset == 0
+                and not node.name.startswith("_")
+            ]
+            module_info["public_function_count"] = len(public_top_level)
+
+        return module_info
+
+    def _categorize_module(self, relative_path: str) -> str:
+        return self._coverage_analyzer._categorize_module(relative_path)
+
+    async def _analyze_function_testability(
+        self, func_info: dict[str, Any], test_file: Path
+    ) -> dict[str, Any]:
+        return await self._coverage_analyzer._analyze_function_testability(
+            func_info, test_file
+        )
+
+    async def _find_untested_functions_in_file(
+        self, test_file: Path
+    ) -> list[dict[str, Any]]:
+        functions = await self._extract_functions_from_file(test_file)
+        return [
+            {
+                "name": func["name"],
+                "file": str(test_file),
+                "line": func.get("line", 1),
+                "signature": func.get("signature", ""),
+            }
+            for func in functions
+            if not await self._function_has_test(func, test_file)
+        ]
+
+    async def _identify_coverage_gaps(self) -> list[dict[str, Any]]:
+        gaps: list[dict[str, Any]] = []
+
+        package_dir = self.context.project_path / "crackerjack"
+        if not package_dir.exists():
+            return gaps
+
+        for py_file in package_dir.rglob("*.py"):
+            if self._should_skip_module_for_coverage(py_file):
+                continue
+
+            coverage_info = await self._analyze_existing_test_coverage(py_file)
+            if coverage_info.get("has_gaps"):
+                gaps.append(coverage_info)
+
+        return gaps[:10]
+
+    async def _analyze_existing_test_coverage(
+        self, module_file: Path
+    ) -> dict[str, Any]:
+        test_file_path = await self._generate_test_file_path(module_file)
+
+        coverage_info: dict[str, Any] = {
+            "source_file": str(module_file.relative_to(self.context.project_path)),
+            "test_file": str(test_file_path) if test_file_path.exists() else None,
+            "has_gaps": True,
+            "missing_test_types": [],
+            "coverage_score": 0,
+        }
+
+        if not test_file_path.exists():
+            coverage_info["missing_test_types"] = [
+                "basic",
+                "edge_cases",
+                "error_handling",
+            ]
+            return coverage_info
+
+        test_content = self.context.get_file_content(test_file_path) or ""
+
+        missing_types: list[str] = []
+        if "def test_" not in test_content:
+            missing_types.append("basic")
+        if "@pytest.mark.parametrize" not in test_content:
+            missing_types.append("parametrized")
+        if "with pytest.raises" not in test_content:
+            missing_types.append("error_handling")
+        if "mock" not in test_content.lower():
+            missing_types.append("mocking")
+
+        coverage_info["missing_test_types"] = missing_types
+        coverage_info["has_gaps"] = len(missing_types) > 0
+        coverage_info["coverage_score"] = max(0, 100 - len(missing_types) * 25)
+
+        return coverage_info
+
+    def _calculate_improvement_potential(
+        self, missing_tests: int, total_functions: int
+    ) -> dict[str, Any]:
+        return self._coverage_analyzer._calculate_improvement_potential(
+            missing_tests, total_functions
+        )
+
+    def _parse_function_nodes(self, tree: Any) -> list[dict[str, Any]]:
+        return self._ast_analyzer._parse_function_nodes(tree)
+
+    def _is_valid_function_node(self, node: Any) -> bool:
+        return self._ast_analyzer._is_valid_function_node(node)
+
+    def _create_function_info(self, node: Any) -> dict[str, Any]:
+        return self._ast_analyzer._create_function_info(node)
+
+    def _get_function_signature(self, node: Any) -> str:
+        return self._ast_analyzer._get_function_signature(node)
+
+    def _should_skip_module_for_coverage(self, py_file: Path) -> bool:
+        return self._ast_analyzer.should_skip_module_for_coverage(py_file)
+
+    def _should_skip_file_for_testing(self, py_file: Path) -> bool:
+        return self._ast_analyzer.should_skip_file_for_testing(py_file)
+
+    def _get_module_import_path(self, module_file: Path) -> str:
+        return self._template_generator._get_module_import_path(module_file)
+
+    def _generate_smart_default_args(self, args: list[str]) -> str:
+        return self._template_generator._generate_smart_default_args(args)
+
+    def _generate_invalid_args(self, args: list[str]) -> str:
+        return self._template_generator._generate_invalid_args(args)
+
+    def _generate_edge_case_args(self, args: list[str], case_type: str) -> str:
+        return self._template_generator._generate_edge_case_args(args, case_type)
+
+    def _is_path_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_path_arg(arg_lower)
+
+    def _is_url_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_url_arg(arg_lower)
+
+    def _is_email_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_email_arg(arg_lower)
+
+    def _is_id_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_id_arg(arg_lower)
+
+    def _is_name_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_name_arg(arg_lower)
+
+    def _is_numeric_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_numeric_arg(arg_lower)
+
+    def _is_boolean_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_boolean_arg(arg_lower)
+
+    def _is_text_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_text_arg(arg_lower)
+
+    def _is_list_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_list_arg(arg_lower)
+
+    def _is_dict_arg(self, arg_lower: str) -> bool:
+        return self._template_generator._is_dict_arg(arg_lower)
 
 
 agent_registry.register(TestCreationAgent)

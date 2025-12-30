@@ -255,10 +255,6 @@ cache_enabled = false
         assert config1.cache_enabled is True
         assert config2.cache_enabled is False
 
-    def test_precommit_config_mode(self, basic_service) -> None:
-        mode = basic_service.get_precommit_config_mode()
-        assert mode in ("comprehensive", "fast", "experimental")
-
 
 class TestConfigIntegration:
     def test_full_config_integration(self, monkeypatch) -> None:

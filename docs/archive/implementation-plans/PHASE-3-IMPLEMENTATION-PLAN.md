@@ -5,37 +5,44 @@
 **Objective**: Replace custom CLI with Oneiric-integrated lifecycle management
 **Timeline**: 3 hours (adapted from original migration plan)
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 Phase 3 integrates Crackerjack with Oneiric runtime management, replacing the custom 659-line CLI with a streamlined ~150-line implementation using Oneiric patterns.
 
 **Key Differences from Original Plan:**
+
 - Original plan referenced `MCPServerSettings` and `MCPServerCLIFactory` from `mcp_common.cli` - **these don't exist in mcp-common 2.0.0**
 - Adapted approach: Use `mcp_common.MCPBaseSettings` as base + integrate with Oneiric's `RuntimeOrchestrator` directly
 - Same goals, different implementation path
 
 **Dependencies Verified:**
+
 - ✅ `mcp-common==2.0.0` installed
 - ✅ `oneiric==0.3.2` installed
 - ✅ Phase 2 complete (ACB removed, all imports validated)
 
----
+______________________________________________________________________
 
 ## Task 1: Rewrite CrackerjackSettings (30 min)
 
 ### Objective
+
 Replace ACB Settings-based CrackerjackSettings with simpler Pydantic BaseSettings that removes ACB dependency.
 
 ### Current State
+
 **File**: `crackerjack/config/settings.py` (141 lines)
+
 - Uses `acb.config.Settings` as base class
 - Has 13 sub-settings classes (CleaningSettings, HookSettings, etc.)
 - Complex nested structure
 
 ### Target State
+
 **File**: `crackerjack/config/settings.py` (NEW - ~80 lines)
+
 - Remove `acb.config.Settings` dependency
 - Use Pydantic `BaseSettings` directly
 - Flatten structure while preserving all necessary configuration fields
@@ -54,34 +61,55 @@ class CrackerjackSettings(BaseSettings):
     """Crackerjack configuration for Oneiric-integrated QA server."""
 
     # Server settings
-    server_name: str = Field(default="Crackerjack QA Server", description="Server display name")
-    server_description: str = Field(default="Python QA tooling with AI integration", description="Server description")
-    instance_id: str | None = Field(default=None, description="Unique server instance ID")
-    runtime_dir: Path = Field(default=Path.home() / ".crackerjack", description="Runtime cache directory")
+    server_name: str = Field(
+        default="Crackerjack QA Server", description="Server display name"
+    )
+    server_description: str = Field(
+        default="Python QA tooling with AI integration",
+        description="Server description",
+    )
+    instance_id: str | None = Field(
+        default=None, description="Unique server instance ID"
+    )
+    runtime_dir: Path = Field(
+        default=Path.home() / ".crackerjack", description="Runtime cache directory"
+    )
 
     # QA-specific settings
     qa_mode: bool = Field(default=False, description="Enable QA analysis mode")
-    test_suite_path: Path = Field(default=Path("tests"), description="Test suite directory")
+    test_suite_path: Path = Field(
+        default=Path("tests"), description="Test suite directory"
+    )
     auto_fix: bool = Field(default=False, description="Enable automatic issue fixing")
     ai_agent: bool = Field(default=False, description="Enable AI-powered code analysis")
 
     # Tool enablement flags
     ruff_enabled: bool = Field(default=True, description="Enable Ruff linter/formatter")
-    bandit_enabled: bool = Field(default=True, description="Enable Bandit security scanner")
+    bandit_enabled: bool = Field(
+        default=True, description="Enable Bandit security scanner"
+    )
     semgrep_enabled: bool = Field(default=False, description="Enable Semgrep SAST")
     mypy_enabled: bool = Field(default=True, description="Enable mypy type checking")
-    zuban_enabled: bool = Field(default=True, description="Enable Zuban ultra-fast type checker")
-    skylos_enabled: bool = Field(default=True, description="Enable Skylos dead code detection")
+    zuban_enabled: bool = Field(
+        default=True, description="Enable Zuban ultra-fast type checker"
+    )
+    skylos_enabled: bool = Field(
+        default=True, description="Enable Skylos dead code detection"
+    )
 
     # Performance settings
-    max_parallel_hooks: int = Field(default=4, description="Max parallel pre-commit hooks")
+    max_parallel_hooks: int = Field(
+        default=4, description="Max parallel pre-commit hooks"
+    )
     test_workers: int = Field(default=0, description="Pytest workers (0=auto)")
     test_timeout: int = Field(default=300, description="Test timeout in seconds")
 
     # Execution settings
     verbose: bool = Field(default=False, description="Enable verbose logging")
     interactive: bool = Field(default=False, description="Enable interactive mode")
-    async_mode: bool = Field(default=False, description="Enable async workflow execution")
+    async_mode: bool = Field(
+        default=False, description="Enable async workflow execution"
+    )
 
     # MCP server settings (for backward compatibility)
     http_port: int = Field(default=8676, description="MCP HTTP server port")
@@ -101,27 +129,31 @@ class CrackerjackSettings(BaseSettings):
 ```
 
 ### Migration Strategy
+
 1. Create new `crackerjack/config/settings_new.py` with Pydantic BaseSettings
-2. Test loading: `python -c "from crackerjack.config.settings_new import CrackerjackSettings; s = CrackerjackSettings.load('crackerjack'); print(s.qa_mode)"`
-3. Backup old: `mv crackerjack/config/settings.py crackerjack/config/settings_acb_backup.py`
-4. Replace: `mv crackerjack/config/settings_new.py crackerjack/config/settings.py`
-5. Update all imports to use new settings structure
+1. Test loading: `python -c "from crackerjack.config.settings_new import CrackerjackSettings; s = CrackerjackSettings.load('crackerjack'); print(s.qa_mode)"`
+1. Backup old: `mv crackerjack/config/settings.py crackerjack/config/settings_acb_backup.py`
+1. Replace: `mv crackerjack/config/settings_new.py crackerjack/config/settings.py`
+1. Update all imports to use new settings structure
 
 ### Validation
+
 ```bash
 # Test settings loading
 python -c "from crackerjack.config.settings import CrackerjackSettings; s = CrackerjackSettings.load('crackerjack'); print(f'QA Mode: {s.qa_mode}, AI Agent: {s.ai_agent}')"
 # Expected: "QA Mode: False, AI Agent: False"
 ```
 
----
+______________________________________________________________________
 
 ## Task 2: Create CrackerjackServer (1 hour)
 
 ### Objective
+
 Create server class that manages QA adapter lifecycle and integrates with Oneiric runtime.
 
 ### Target State
+
 **File**: `crackerjack/server.py` (NEW - ~120 lines)
 
 ### Implementation
@@ -229,9 +261,7 @@ class CrackerjackServer:
             "process_id": os.getpid(),
             "qa_adapters": {
                 "total": len(self.adapters),
-                "healthy": sum(
-                    1 for a in self.adapters if getattr(a, "healthy", True)
-                ),
+                "healthy": sum(1 for a in self.adapters if getattr(a, "healthy", True)),
             },
             "settings": {
                 "qa_mode": self.settings.qa_mode,
@@ -258,6 +288,7 @@ class CrackerjackServer:
 ```
 
 ### Validation
+
 ```bash
 # Test server creation and health snapshot
 python -c "
@@ -272,21 +303,25 @@ print(f'Server created. Health: {health}')
 # Expected: Server created with health snapshot showing stopped status
 ```
 
----
+______________________________________________________________________
 
 ## Task 3: Rewrite __main__.py (1.5 hours)
 
 ### Objective
+
 Replace 659-line custom CLI with ~150-line Oneiric-integrated implementation.
 
 ### Current State
+
 **File**: `crackerjack/__main__.py` (659 lines)
+
 - 100+ Typer options
 - Custom start/stop logic
 - Complex orchestration patterns
 - ACB-dependent workflows
 
 ### Target State
+
 **File**: `crackerjack/__main__.py` (NEW - ~150 lines, 77% reduction)
 
 ### Implementation
@@ -321,8 +356,12 @@ logger = logging.getLogger(__name__)
 
 @app.command()
 def start(
-    instance_id: str | None = typer.Option(None, "--instance-id", help="Server instance ID"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    instance_id: str | None = typer.Option(
+        None, "--instance-id", help="Server instance ID"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
 ):
     """Start Crackerjack MCP server."""
     # TODO(Phase 3): Integrate with Oneiric runtime orchestrator
@@ -338,7 +377,9 @@ def start(
     server = CrackerjackServer(settings)
 
     try:
-        typer.echo(f"Starting Crackerjack server (instance: {settings.instance_id or 'default'})...")
+        typer.echo(
+            f"Starting Crackerjack server (instance: {settings.instance_id or 'default'})..."
+        )
         asyncio.run(server.start())
     except KeyboardInterrupt:
         typer.echo("\nShutting down server...")
@@ -348,7 +389,9 @@ def start(
 
 @app.command()
 def stop(
-    instance_id: str | None = typer.Option(None, "--instance-id", help="Server instance ID"),
+    instance_id: str | None = typer.Option(
+        None, "--instance-id", help="Server instance ID"
+    ),
 ):
     """Stop Crackerjack MCP server."""
     # TODO(Phase 3): Integrate with Oneiric graceful shutdown
@@ -359,7 +402,9 @@ def stop(
 
 @app.command()
 def restart(
-    instance_id: str | None = typer.Option(None, "--instance-id", help="Server instance ID"),
+    instance_id: str | None = typer.Option(
+        None, "--instance-id", help="Server instance ID"
+    ),
 ):
     """Restart Crackerjack MCP server."""
     # TODO(Phase 3): Integrate with Oneiric restart logic
@@ -369,7 +414,9 @@ def restart(
 
 @app.command()
 def status(
-    instance_id: str | None = typer.Option(None, "--instance-id", help="Server instance ID"),
+    instance_id: str | None = typer.Option(
+        None, "--instance-id", help="Server instance ID"
+    ),
 ):
     """Show server status."""
     # TODO(Phase 3): Read from Oneiric runtime cache
@@ -381,7 +428,9 @@ def status(
 @app.command()
 def health(
     probe: bool = typer.Option(False, "--probe", help="Health probe for monitoring"),
-    instance_id: str | None = typer.Option(None, "--instance-id", help="Server instance ID"),
+    instance_id: str | None = typer.Option(
+        None, "--instance-id", help="Server instance ID"
+    ),
 ):
     """Check server health."""
     # TODO(Phase 3): Integrate with Oneiric health snapshot
@@ -403,7 +452,9 @@ def health(
 def run_tests(
     workers: int = typer.Option(0, "--workers", "-n", help="Test workers (0=auto)"),
     timeout: int = typer.Option(300, "--timeout", help="Test timeout seconds"),
-    coverage: bool = typer.Option(True, "--coverage/--no-coverage", help="Run with coverage"),
+    coverage: bool = typer.Option(
+        True, "--coverage/--no-coverage", help="Run with coverage"
+    ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
 ):
     """Run test suite with coverage."""
@@ -450,7 +501,9 @@ def qa_health():
     health = server.get_health_snapshot()
 
     qa_status = health.get("qa_adapters", {})
-    typer.echo(f"QA Adapters: {qa_status.get('total', 0)} total, {qa_status.get('healthy', 0)} healthy")
+    typer.echo(
+        f"QA Adapters: {qa_status.get('total', 0)} total, {qa_status.get('healthy', 0)} healthy"
+    )
 
     if qa_status.get("total", 0) == qa_status.get("healthy", 0):
         typer.echo("✅ All adapters healthy")
@@ -480,6 +533,7 @@ if __name__ == "__main__":
 | Dependencies | ACB workflows | Oneiric runtime | Modern |
 
 ### Validation
+
 ```bash
 # Test CLI commands are callable
 python -m crackerjack --help
@@ -493,33 +547,38 @@ python -m crackerjack qa-health --help
 # Expected: All commands show help text without errors
 ```
 
----
+______________________________________________________________________
 
 ## Phase 3 Validation Checklist
 
 ### Pre-Phase Validation
+
 - [x] Phase 2 complete (ACB removed, all imports validated)
 - [ ] Git backup: `git add -A && git commit -m "Pre-Phase 3 checkpoint"`
 
 ### Post-Phase Validation
 
 **Settings:**
+
 - [ ] CrackerjackSettings loads without ACB dependency
 - [ ] Settings has all required QA fields (qa_mode, test_workers, etc.)
 - [ ] Environment variable override works (`CRACKERJACK_QA_MODE=true`)
 
 **Server:**
+
 - [ ] CrackerjackServer instantiates without errors
 - [ ] Health snapshot returns valid dict
 - [ ] Server lifecycle methods (start/stop) callable
 
 **CLI:**
+
 - [ ] All commands show help: `--help` works for each command
 - [ ] Lifecycle commands callable (start/stop/status/health)
 - [ ] QA commands preserved (run-tests, analyze, qa-health)
 - [ ] Line count ~150 lines (77% reduction from 659)
 
 **Import Validation:**
+
 - [ ] All 12 critical modules still import successfully:
   ```bash
   python scripts/validate_imports.py
@@ -531,14 +590,14 @@ python -m crackerjack qa-health --help
 ALL of the following must pass:
 
 1. ✅ Settings class removes ACB dependency
-2. ✅ Server class created with health snapshot
-3. ✅ __main__.py reduced to ~150 lines
-4. ✅ All CLI commands callable (show help without errors)
-5. ✅ No import regressions (12/12 modules pass)
+1. ✅ Server class created with health snapshot
+1. ✅ __main__.py reduced to ~150 lines
+1. ✅ All CLI commands callable (show help without errors)
+1. ✅ No import regressions (12/12 modules pass)
 
 **Success Gate:** ALL criteria must pass before proceeding to Phase 4
 
----
+______________________________________________________________________
 
 ## Rollback Strategy
 
@@ -557,7 +616,7 @@ python scripts/validate_imports.py  # Should pass 12/12
 
 **Risk Level:** MEDIUM (major CLI refactoring, new server class)
 
----
+______________________________________________________________________
 
 ## Phase 3 Timeline
 
@@ -568,34 +627,37 @@ python scripts/validate_imports.py  # Should pass 12/12
 | Task 3: Rewrite __main__.py | 90 min | 180 min |
 | **Total** | **3 hours** | **3 hours** |
 
----
+______________________________________________________________________
 
 ## Next Steps (Phase 4)
 
 After Phase 3 completion:
+
 - Port 30 QA adapters to Oneiric pattern (Day 3 PM + Day 4)
-- Implement proper adapter lifecycle in CrackerjackServer._init_qa_adapters()
+- Implement proper adapter lifecycle in CrackerjackServer.\_init_qa_adapters()
 - Integrate with Oneiric runtime orchestration for lifecycle commands
 - Complete Oneiric telemetry integration
 
----
+______________________________________________________________________
 
 ## Notes & Observations
 
 **Key Adaptations from Original Plan:**
+
 1. Original plan referenced non-existent `mcp_common.cli.MCPServerSettings` and `MCPServerCLIFactory`
-2. Adapted to use Pydantic BaseSettings directly + Oneiric runtime patterns
-3. Phase 3 focuses on structural changes; full Oneiric integration deferred to Phase 4
+1. Adapted to use Pydantic BaseSettings directly + Oneiric runtime patterns
+1. Phase 3 focuses on structural changes; full Oneiric integration deferred to Phase 4
 
 **Technical Debt Created:**
+
 - TODO markers for full Oneiric runtime integration (start/stop/status/health commands)
 - Server lifecycle currently basic; needs Oneiric RuntimeOrchestrator integration
 - Adapter initialization stubs (Phase 4 will implement actual adapters)
 
 **Benefits Achieved:**
+
 - ✅ Removed ACB Settings dependency
 - ✅ Simplified settings structure
 - ✅ Created server abstraction for adapter lifecycle
 - ✅ Reduced CLI from 659→150 lines (77% code reduction)
 - ✅ Standardized lifecycle command structure
-

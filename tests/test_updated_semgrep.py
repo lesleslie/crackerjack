@@ -5,7 +5,7 @@ Test script to verify the updated hook output parsing with hook name parameter.
 
 from pathlib import Path
 from crackerjack.executors.hook_executor import HookExecutor
-from acb.console import Console
+from rich.console import Console
 from subprocess import CompletedProcess
 
 

@@ -43,9 +43,9 @@ pip install black isort flake8 mypy pytest
 
 ```bash
 pip install crackerjack
-python -m crackerjack        # Setup + quality checks
-python -m crackerjack --run-tests        # Add testing
-python -m crackerjack --all patch # Full release workflow
+python -m crackerjack run        # Setup + quality checks
+python -m crackerjack run --run-tests        # Add testing
+python -m crackerjack run --all patch # Full release workflow
 ```
 
 **Key differentiators:**
@@ -119,7 +119,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 | **Dependency Injection** | ❌ Not applicable | ✅ ACB framework with protocol-based DI |
 | **Caching** | ✅ Per-file hash caching | ✅ Content-based caching (70% hit rate) |
 | **MCP Server** | ❌ Not included | ✅ Built-in MCP server for Claude integration |
-| **Monitoring Dashboard** | ❌ Not included | ✅ Real-time WebSocket dashboard |
+| **Monitoring** | ❌ Not included | ✅ MCP status + progress monitors |
 | **Configuration Management** | ✅ YAML + `--config` flag | ✅ ACB Settings with YAML + local overrides |
 | **Auto-Update** | ✅ `pre-commit autoupdate` | ⚠️ Manual UV dependency updates |
 | **Language Support** | ✅ 15+ languages (Python, Go, Rust, Docker, etc.) | ✅ Python + external tools (gitleaks, etc.) |
@@ -128,7 +128,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 
 | Feature | Pre-commit | Crackerjack |
 |---------|-----------|-------------|
-| **Setup Complexity** | Medium (YAML config + `pre-commit install`) | Low (single `python -m crackerjack`) |
+| **Setup Complexity** | Medium (YAML config + `pre-commit install`) | Low (single `python -m crackerjack run`) |
 | **Configuration Format** | YAML with repo URLs and hook IDs | Python settings with intelligent defaults |
 | **Hook Discovery** | Manual (add repos to `.pre-commit-config.yaml`) | Automatic (17 tools pre-configured) |
 | **Tool Installation** | Auto (pre-commit manages environments) | UV-based (one virtual environment) |
@@ -152,7 +152,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 - ✅ Desire AI-powered auto-fixing and recommendations
 - ✅ Want unified workflow (quality + tests + publishing in one command)
 - ✅ Prefer Python-based configuration over YAML
-- ✅ Need advanced features (coverage ratchet, MCP integration, dashboards)
+- ✅ Need advanced features (coverage ratchet, MCP integration, monitoring)
 
 ### Migration from Pre-commit
 
@@ -167,10 +167,10 @@ rm .pre-commit-config.yaml
 uv tool install crackerjack
 
 # Run quality checks (replaces pre-commit run --all-files)
-python -m crackerjack
+python -m crackerjack run
 
 # With tests (comprehensive workflow)
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 ```
 
 **Note**: Crackerjack Phase 8 successfully migrated from pre-commit framework to direct tool invocation, achieving 50% performance improvement while maintaining full compatibility with existing quality standards.
@@ -235,10 +235,10 @@ uv add crackerjack
 cd your-project
 
 # Initialize with Crackerjack
-python -m crackerjack
+python -m crackerjack run
 
 # Or use interactive mode
-python -m crackerjack -i
+python -m crackerjack run -i
 ```
 
 ## AI Auto-Fix Features
@@ -290,13 +290,13 @@ The AI agent intelligently fixes:
 
 ```bash
 # Standard AI agent mode (recommended)
-python -m crackerjack --ai-fix --run-tests --verbose
+python -m crackerjack run --ai-fix --run-tests --verbose
 
 # Preview fixes without applying (dry-run mode)
-python -m crackerjack --dry-run --run-tests --verbose
+python -m crackerjack run --dry-run --run-tests --verbose
 
 # Custom iteration limit
-python -m crackerjack --ai-fix --max-iterations 15
+python -m crackerjack run --ai-fix --max-iterations 15
 
 # MCP server with WebSocket support (localhost:8675)
 python -m crackerjack start
@@ -304,7 +304,7 @@ python -m crackerjack start
 # Progress monitoring via WebSocket
 python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
-# Note: stop/restart/status/health commands available but with Phase 4 TODOs
+# Lifecycle commands (start/stop/restart/status/health) are available via MCPServerCLIFactory.
 ```
 
 #### MCP Integration
@@ -410,9 +410,9 @@ Auto-fix requires:
 
 ```bash
 # These commands now benefit from Rust tool speed improvements:
-python -m crackerjack                    # Dead code detection 20x faster
-python -m crackerjack --run-tests        # Type checking 20-200x faster
-python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
+python -m crackerjack run                    # Dead code detection 20x faster
+python -m crackerjack run --run-tests        # Type checking 20-200x faster
+python -m crackerjack run --ai-fix --run-tests # Complete workflow optimized
 ```
 
 **Benchmark Results**: Real-world performance measurements show consistent **6,000+ operations/second** throughput with **600KB+/second** data processing capabilities during comprehensive quality checks.
@@ -477,10 +477,10 @@ python -m crackerjack --ai-fix --run-tests # Complete workflow optimized
 
 ```bash
 # Show coverage progress
-python -m crackerjack --coverage-report
+python -m crackerjack run --coverage-report
 
 # Run tests with ratchet system
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Example output:
 # 🎉 Coverage improved from 10.11% to 15.50%!
@@ -661,7 +661,7 @@ pre-commit run ruff --all-files  # Subprocess overhead
 **New Approach (ACB):**
 
 ```bash
-python -m crackerjack --fast  # Direct Python API, 70% faster
+python -m crackerjack run --fast  # Direct Python API, 70% faster
 ```
 
 **Migration Guide:** See `docs/README.md` (Migration Notes)
@@ -706,16 +706,16 @@ settings = depends.get(CrackerjackSettings)
 
 ```bash
 # Check for available configuration updates
-python -m crackerjack --check-config-updates
+python -m crackerjack run --check-config-updates
 
 # Show diff for specific configuration type
-python -m crackerjack --diff-config pre-commit
+python -m crackerjack run --diff-config pre-commit
 
 # Apply configuration updates interactively
-python -m crackerjack --apply-config-updates --config-interactive
+python -m crackerjack run --apply-config-updates --config-interactive
 
 # Refresh configuration cache
-python -m crackerjack --refresh-cache
+python -m crackerjack run --refresh-cache
 ```
 
 **ConfigTemplateService Benefits:**
@@ -912,7 +912,7 @@ yaml.load(file)  # → yaml.safe_load(file)
 
 ```bash
 # Validates all .py files for regex pattern compliance
-python -m crackerjack.tools.validate_regex_usage
+python -m crackerjack run.tools.validate_regex_usage
 ```
 
 This advanced-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
@@ -1123,26 +1123,26 @@ Crackerjack runs quality checks in a two-stage process for optimal development w
 
 ```bash
 # Default behavior runs comprehensive hooks
-python -m crackerjack
+python -m crackerjack run
 
 # Skip hooks if you only want setup/cleaning
-python -m crackerjack --skip-hooks
+python -m crackerjack run --skip-hooks
 ```
 
 ### Common Commands
 
 ```bash
 # Quality checks only
-python -m crackerjack
+python -m crackerjack run
 
 # With testing
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Full release workflow
-python -m crackerjack --all patch
+python -m crackerjack run --all patch
 
 # AI agent mode
-python -m crackerjack --ai-fix
+python -m crackerjack run --ai-fix
 ```
 
 ## Quick Reference Index
@@ -1151,17 +1151,17 @@ python -m crackerjack --ai-fix
 
 | Use Case | Command | Description |
 |----------|---------|-------------|
-| **Basic Quality Check** | `python -m crackerjack` | Run quality checks only |
-| **Quality + Tests** | `python -m crackerjack --run-tests` | Quality checks with test suite |
-| **AI Auto-Fix** | `python -m crackerjack --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
-| **Full Release** | `python -m crackerjack --all patch` | Version bump, quality checks, publish |
-| **Quick Publish** | `python -m crackerjack --publish patch` | Version bump + publish only |
+| **Basic Quality Check** | `python -m crackerjack run` | Run quality checks only |
+| **Quality + Tests** | `python -m crackerjack run --run-tests` | Quality checks with test suite |
+| **AI Auto-Fix** | `python -m crackerjack run --ai-fix --run-tests` | AI-powered fixing + tests (recommended) |
+| **Full Release** | `python -m crackerjack run --all patch` | Version bump, quality checks, publish |
+| **Quick Publish** | `python -m crackerjack run --publish patch` | Version bump + publish only |
 | **Start MCP Server** | `python -m crackerjack start` | Launch MCP agent integration |
-| **AI Debugging** | `python -m crackerjack --ai-debug --run-tests` | Verbose AI debugging mode |
-| **Coverage Status** | `python -m crackerjack --coverage-status` | Show coverage ratchet progress |
-| **Clear Caches** | `python -m crackerjack --clear-cache` | Reset all cache data |
-| **Fast Iteration** | `python -m crackerjack --skip-hooks` | Skip quality checks during dev |
-| **Documentation** | `python -m crackerjack --generate-docs` | Generate API documentation |
+| **AI Debugging** | `python -m crackerjack run --ai-debug --run-tests` | Verbose AI debugging mode |
+| **Coverage Status** | `python -m crackerjack run --coverage-status` | Show coverage ratchet progress |
+| **Clear Caches** | `python -m crackerjack run --clear-cache` | Reset all cache data |
+| **Fast Iteration** | `python -m crackerjack run --skip-hooks` | Skip quality checks during dev |
+| **Documentation** | `python -m crackerjack run --generate-docs` | Generate API documentation |
 | **Advanced Features** | See `docs/README.md` | Advanced flags and workflows |
 
 **📑 Alphabetical Flag Reference**
@@ -1179,7 +1179,6 @@ python -m crackerjack --ai-fix
 | `--commit` | `-c` | Commit and push changes to Git |
 | `--comp` | - | Run only comprehensive hooks |
 | `--coverage-status` | - | Show coverage ratchet status |
-| `--dashboard` | - | Start comprehensive monitoring dashboard |
 | `--debug` | - | Enable debug output |
 | `--dev` | - | Enable development mode for monitors |
 | `--enhanced-monitor` | - | Advanced monitoring with patterns |
@@ -1194,7 +1193,6 @@ python -m crackerjack --ai-fix
 | `--skip-hooks` | `-s` | Skip pre-commit hooks |
 | `--strip-code` | `-x` | Remove docstrings/comments |
 | `--thorough` | - | Thorough mode (8 iterations) |
-| `--unified-dashboard` | - | Unified real-time dashboard |
 | `--verbose` | `-v` | Enable verbose output |
 | `--watchdog` | - | Service watchdog with auto-restart |
 
@@ -1211,34 +1209,32 @@ ______________________________________________________________________
 
 ```bash
 # Quality checks and development
-python -m crackerjack                    # Quality checks only
-python -m crackerjack --run-tests        # Quality checks + tests
-python -m crackerjack --ai-fix --run-tests  # AI auto-fixing + tests (recommended)
+python -m crackerjack run                    # Quality checks only
+python -m crackerjack run --run-tests        # Quality checks + tests
+python -m crackerjack run --ai-fix --run-tests  # AI auto-fixing + tests (recommended)
 
 # Release workflow
-python -m crackerjack --all patch # Full release workflow
-python -m crackerjack --publish patch      # Version bump + publish
+python -m crackerjack run --all patch # Full release workflow
+python -m crackerjack run --publish patch      # Version bump + publish
 ```
 
 **AI-Powered Development:**
 
 ```bash
-python -m crackerjack --ai-fix              # AI auto-fixing mode
-python -m crackerjack --ai-debug --run-tests # AI debugging with verbose output
-python -m crackerjack --ai-fix --run-tests --verbose # Full AI workflow
-python -m crackerjack --orchestrated        # Advanced orchestrated workflow
-python -m crackerjack --quick               # Quick mode (3 iterations max)
-python -m crackerjack --thorough            # Thorough mode (8 iterations max)
+python -m crackerjack run --ai-fix              # AI auto-fixing mode
+python -m crackerjack run --ai-debug --run-tests # AI debugging with verbose output
+python -m crackerjack run --ai-fix --run-tests --verbose # Full AI workflow
+python -m crackerjack run --orchestrated        # Advanced orchestrated workflow
+python -m crackerjack run --quick               # Quick mode (3 iterations max)
+python -m crackerjack run --thorough            # Thorough mode (8 iterations max)
 ```
 
 **Monitoring & Observability:**
 
 ```bash
-python -m crackerjack --dashboard           # Comprehensive monitoring dashboard
-python -m crackerjack --unified-dashboard   # Unified real-time dashboard
-python -m crackerjack --monitor             # Multi-project progress monitor
-python -m crackerjack --enhanced-monitor    # Enhanced monitoring with patterns
-python -m crackerjack --watchdog            # Service watchdog (auto-restart)
+python -m crackerjack run --monitor             # Multi-project progress monitor
+python -m crackerjack run --enhanced-monitor    # Enhanced monitoring with patterns
+python -m crackerjack run --watchdog            # Service watchdog (auto-restart)
 ```
 
 **MCP Server Lifecycle Commands (Phase 3 Modernization):**
@@ -1246,78 +1242,79 @@ python -m crackerjack --watchdog            # Service watchdog (auto-restart)
 ```bash
 # New Typer-based commands (Phase 3)
 python -m crackerjack start      # Start MCP server (fully functional)
-python -m crackerjack stop       # Stop server (Phase 4 TODO)
-python -m crackerjack restart    # Restart server (Phase 4 TODO)
-python -m crackerjack status     # Server status (Phase 4 TODO)
-python -m crackerjack health     # Health check (Phase 4 TODO)
-python -m crackerjack health --probe  # Liveness probe (Phase 4 TODO)
+python -m crackerjack stop       # Stop server
+python -m crackerjack restart    # Restart server
+python -m crackerjack status     # Server status
+python -m crackerjack health     # Health check
+python -m crackerjack health --probe  # Liveness probe
 
-# Migration note: Old flags --start-mcp-server, --stop-mcp-server,
-# --restart-mcp-server have been removed in favor of these commands.
+# Migration note: Legacy flags --start-mcp-server, --stop-mcp-server,
+# --restart-mcp-server are still available under `crackerjack run`,
+# but prefer these commands.
 ```
 
 **Performance & Caching:**
 
 ```bash
-python -m crackerjack --cache-stats         # Display cache statistics
-python -m crackerjack --clear-cache         # Clear all caches
-python -m crackerjack --benchmark           # Run in benchmark mode
+python -m crackerjack run --cache-stats         # Display cache statistics
+python -m crackerjack run --clear-cache         # Clear all caches
+python -m crackerjack run --benchmark           # Run in benchmark mode
 ```
 
 **Coverage Management:**
 
 ```bash
-python -m crackerjack --coverage-status     # Show coverage ratchet status
-python -m crackerjack --coverage-goal 85.0  # Set explicit coverage target
-python -m crackerjack --no-coverage-ratchet # Disable coverage ratchet temporarily
-python -m crackerjack --boost-coverage      # Auto-improve test coverage (default)
-python -m crackerjack --no-boost-coverage   # Disable coverage improvements
+python -m crackerjack run --coverage-status     # Show coverage ratchet status
+python -m crackerjack run --coverage-goal 85.0  # Set explicit coverage target
+python -m crackerjack run --no-coverage-ratchet # Disable coverage ratchet temporarily
+python -m crackerjack run --boost-coverage      # Auto-improve test coverage (default)
+python -m crackerjack run --no-boost-coverage   # Disable coverage improvements
 ```
 
 **Zuban LSP Server Management:**
 
 ```bash
-python -m crackerjack --start-zuban-lsp     # Start Zuban LSP server
-python -m crackerjack --stop-zuban-lsp      # Stop Zuban LSP server
-python -m crackerjack --restart-zuban-lsp   # Restart Zuban LSP server
-python -m crackerjack --no-zuban-lsp        # Disable automatic LSP startup
-python -m crackerjack --zuban-lsp-port 8677 # Custom LSP port
-python -m crackerjack --zuban-lsp-mode tcp  # Transport mode (tcp/stdio)
-python -m crackerjack --zuban-lsp-timeout 30 # LSP operation timeout
-python -m crackerjack --enable-lsp-hooks    # Enable LSP-optimized hooks
+python -m crackerjack run --start-zuban-lsp     # Start Zuban LSP server
+python -m crackerjack run --stop-zuban-lsp      # Stop Zuban LSP server
+python -m crackerjack run --restart-zuban-lsp   # Restart Zuban LSP server
+python -m crackerjack run --no-zuban-lsp        # Disable automatic LSP startup
+python -m crackerjack run --zuban-lsp-port 8677 # Custom LSP port
+python -m crackerjack run --zuban-lsp-mode tcp  # Transport mode (tcp/stdio)
+python -m crackerjack run --zuban-lsp-timeout 30 # LSP operation timeout
+python -m crackerjack run --enable-lsp-hooks    # Enable LSP-optimized hooks
 ```
 
 **Documentation Generation:**
 
 ```bash
-python -m crackerjack --generate-docs       # Generate comprehensive API docs
-python -m crackerjack --docs-format markdown # Documentation format (markdown/rst/html)
-python -m crackerjack --validate-docs       # Validate existing documentation
+python -m crackerjack run --generate-docs       # Generate comprehensive API docs
+python -m crackerjack run --docs-format markdown # Documentation format (markdown/rst/html)
+python -m crackerjack run --validate-docs       # Validate existing documentation
 ```
 
 **Global Locking & Concurrency:**
 
 ```bash
-python -m crackerjack --disable-global-locking # Allow concurrent execution
-python -m crackerjack --global-lock-timeout 600 # Lock timeout in seconds
-python -m crackerjack --cleanup-stale-locks # Clean stale lock files (default)
-python -m crackerjack --no-cleanup-stale-locks # Don't clean stale locks
-python -m crackerjack --global-lock-dir ~/.crackerjack/locks # Custom lock directory
+python -m crackerjack run --disable-global-locking # Allow concurrent execution
+python -m crackerjack run --global-lock-timeout 600 # Lock timeout in seconds
+python -m crackerjack run --cleanup-stale-locks # Clean stale lock files (default)
+python -m crackerjack run --no-cleanup-stale-locks # Don't clean stale locks
+python -m crackerjack run --global-lock-dir ~/.crackerjack/locks # Custom lock directory
 ```
 
 **Git & Version Control:**
 
 ```bash
-python -m crackerjack --no-git-tags         # Skip creating git tags
-python -m crackerjack --skip-version-check  # Skip version consistency verification
+python -m crackerjack run --no-git-tags         # Skip creating git tags
+python -m crackerjack run --skip-version-check  # Skip version consistency verification
 ```
 
 **Experimental Features:**
 
 ```bash
-python -m crackerjack --experimental-hooks  # Enable experimental pre-commit hooks
-python -m crackerjack --enable-pyrefly      # Enable pyrefly type checking (experimental)
-python -m crackerjack --enable-ty           # Enable ty type verification (experimental)
+python -m crackerjack run --experimental-hooks  # Enable experimental pre-commit hooks
+python -m crackerjack run --enable-pyrefly      # Enable pyrefly type checking (experimental)
+python -m crackerjack run --enable-ty           # Enable ty type verification (experimental)
 ```
 
 **Common Options:**
@@ -1382,9 +1379,9 @@ echo ".env" >> .gitignore
 ### Version Management
 
 ```bash
-python -m crackerjack --publish patch  # 1.0.0 -> 1.0.1
-python -m crackerjack --publish minor  # 1.0.0 -> 1.1.0
-python -m crackerjack --publish major  # 1.0.0 -> 2.0.0
+python -m crackerjack run --publish patch  # 1.0.0 -> 1.0.1
+python -m crackerjack run --publish minor  # 1.0.0 -> 1.1.0
+python -m crackerjack run --publish major  # 1.0.0 -> 2.0.0
 ```
 
 ### 🛡️ Security Considerations
@@ -1446,7 +1443,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 - Session management starts automatically
 - No manual `/start` or `/end` needed
 - Checkpoints auto-compact when necessary
-- Works seamlessly with `python -m crackerjack`
+- Works seamlessly with `python -m crackerjack run`
 
 **Benefits of Combined Usage:**
 
@@ -1478,7 +1475,7 @@ For enhanced AI-assisted development with conversation memory and context persis
 
 ```bash
 # Just start working - session auto-initializes!
-python -m crackerjack --ai-fix --run-tests
+python -m crackerjack run --ai-fix --run-tests
 
 # Checkpoint periodically (auto-compacts if needed)
 /checkpoint
@@ -1526,15 +1523,15 @@ chmod +x ~/.local/bin/uv
 
 ```bash
 # Pre-commit hooks failing
-python -m crackerjack --skip-hooks  # Skip hooks temporarily
+python -m crackerjack run --skip-hooks  # Skip hooks temporarily
 pre-commit clean                     # Clear hook cache
 pre-commit install --force          # Reinstall hooks
 
 # Update hooks
-python -m crackerjack --update-precommit
+python -m crackerjack run --update-precommit
 
 # Type checking errors
-python -m crackerjack               # Run quality checks
+python -m crackerjack run               # Run quality checks
 ```
 
 #### MCP Server Issues
@@ -1555,8 +1552,8 @@ curl -s "http://localhost:8675/" || echo "Server not responding"
 
 ```bash
 # Slow execution
-python -m crackerjack --test-workers 1    # Reduce parallelism
-python -m crackerjack --skip-hooks        # Skip time-consuming checks
+python -m crackerjack run --test-workers 1    # Reduce parallelism
+python -m crackerjack run --skip-hooks        # Skip time-consuming checks
 
 # Memory issues
 export UV_CACHE_DIR=/tmp/uv-cache         # Use different cache location
@@ -1566,7 +1563,7 @@ export UV_CACHE_DIR=/tmp/uv-cache         # Use different cache location
 
 ```bash
 # Enable verbose output
-python -m crackerjack --verbose
+python -m crackerjack run --verbose
 
 # Check debug logs (in XDG cache directory)
 ls ~/.cache/crackerjack/logs/debug/
@@ -1578,14 +1575,14 @@ python -m crackerjack start --verbose
 ### Getting Help
 
 - **GitHub Issues**: [Report bugs](https://github.com/lesleslie/crackerjack/issues)
-- **Command Help**: `python -m crackerjack --help`
+- **Command Help**: `python -m crackerjack run --help`
 - **MCP Tools**: Use `get_next_action` tool for guidance
 
 ## Contributing
 
 1. Fork and clone the repository
 1. Run `uv sync --group dev` to install dependencies
-1. Ensure `python -m crackerjack` passes all checks
+1. Ensure `python -m crackerjack run` passes all checks
 1. Submit pull request
 
 **Requirements:** Python 3.13+, UV package manager, all quality checks must pass

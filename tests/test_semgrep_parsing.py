@@ -6,7 +6,7 @@ Test script to verify semgrep output parsing logic.
 import tempfile
 from pathlib import Path
 from crackerjack.executors.hook_executor import HookExecutor
-from acb.console import Console
+from rich.console import Console
 from subprocess import CompletedProcess
 
 

@@ -203,7 +203,7 @@ class TestGitServiceCommit:
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
     def test_commit_hook_modification(self, mock_execute, service):
-        """Test commit with pre-commit hook modification and retry."""
+        """Test commit with hook modification and retry."""
         # First commit fails due to hook modification
         mock_execute.side_effect = [
             subprocess.CompletedProcess(
@@ -229,7 +229,7 @@ class TestGitServiceCommit:
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
     def test_commit_hook_blocked(self, mock_execute, service):
-        """Test commit blocked by pre-commit hooks."""
+        """Test commit blocked by hooks."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
             returncode=1,

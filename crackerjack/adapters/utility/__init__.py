@@ -4,7 +4,7 @@ Adapters:
 - checks: Configuration-driven utility checks (text patterns, EOF newlines, syntax validation, size checks, dependency locks)
 """
 
-# ACB will auto-discover these adapters via depends.set() in module files
+# Adapters are registered via constructor injection in server initialization
 # No explicit imports needed here
 
 __all__ = []

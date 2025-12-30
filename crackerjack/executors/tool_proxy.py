@@ -9,7 +9,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from rich.console import Console
-from acb.depends import depends
 
 
 @dataclass
@@ -345,14 +344,11 @@ class ToolProxy:
     def _create_zuban_adapter(self) -> t.Any | None:
         """Create Zuban adapter instance."""
         try:
-            from acb.depends import depends
-
             from crackerjack.adapters.zuban_adapter import ZubanAdapter
-            from crackerjack.config import CrackerjackSettings
+            from crackerjack.config import CrackerjackSettings, load_settings
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
-            # Create minimal context for adapter using ACB settings
-            settings = depends.get_sync(CrackerjackSettings)
+            settings = load_settings(CrackerjackSettings)
 
             # Import adapter from core_tools that converts settings to OptionsProtocol
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
@@ -366,14 +362,11 @@ class ToolProxy:
     def _create_skylos_adapter(self) -> t.Any | None:
         """Create Skylos adapter instance."""
         try:
-            from acb.depends import depends
-
             from crackerjack.adapters.skylos_adapter import SkylosAdapter
-            from crackerjack.config import CrackerjackSettings
+            from crackerjack.config import CrackerjackSettings, load_settings
             from crackerjack.orchestration.execution_strategies import ExecutionContext
 
-            # Create minimal context for adapter using ACB settings
-            settings = depends.get_sync(CrackerjackSettings)
+            settings = load_settings(CrackerjackSettings)
 
             # Import adapter from core_tools that converts settings to OptionsProtocol
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol

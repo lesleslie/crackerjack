@@ -43,9 +43,7 @@ class CrackerjackSettings(BaseSettings):
     test_suite_path: Path = Field(
         default=Path("tests"), description="Test suite directory path"
     )
-    auto_fix: bool = Field(
-        default=False, description="Enable automatic issue fixing"
-    )
+    auto_fix: bool = Field(default=False, description="Enable automatic issue fixing")
     ai_agent: bool = Field(
         default=False, description="Enable AI-powered code analysis agent"
     )
@@ -54,9 +52,7 @@ class CrackerjackSettings(BaseSettings):
     # Tool Enablement Flags
     # ========================================================================
 
-    ruff_enabled: bool = Field(
-        default=True, description="Enable Ruff linter/formatter"
-    )
+    ruff_enabled: bool = Field(default=True, description="Enable Ruff linter/formatter")
     bandit_enabled: bool = Field(
         default=True, description="Enable Bandit security scanner"
     )
@@ -85,21 +81,13 @@ class CrackerjackSettings(BaseSettings):
     max_parallel_hooks: int = Field(
         default=4, description="Maximum parallel pre-commit hooks"
     )
-    test_workers: int = Field(
-        default=0, description="Pytest workers (0=auto-detect)"
-    )
-    test_timeout: int = Field(
-        default=300, description="Test timeout in seconds"
-    )
+    test_workers: int = Field(default=0, description="Pytest workers (0=auto-detect)")
+    test_timeout: int = Field(default=300, description="Test timeout in seconds")
     auto_detect_workers: bool = Field(
         default=True, description="Automatically detect optimal worker count"
     )
-    max_workers: int = Field(
-        default=8, description="Maximum number of test workers"
-    )
-    min_workers: int = Field(
-        default=2, description="Minimum number of test workers"
-    )
+    max_workers: int = Field(default=8, description="Maximum number of test workers")
+    min_workers: int = Field(default=2, description="Minimum number of test workers")
     memory_per_worker_gb: float = Field(
         default=2.0, description="Memory per worker in GB for worker calculation"
     )
@@ -121,15 +109,9 @@ class CrackerjackSettings(BaseSettings):
     # Hook Settings
     # ========================================================================
 
-    skip_hooks: bool = Field(default=False, description="Skip pre-commit hooks")
-    update_precommit: bool = Field(
-        default=False, description="Update pre-commit hooks"
-    )
+    skip_hooks: bool = Field(default=False, description="Skip hook execution")
     experimental_hooks: bool = Field(
         default=False, description="Enable experimental hooks"
-    )
-    use_precommit_legacy: bool = Field(
-        default=True, description="Use legacy pre-commit integration"
     )
 
     # ========================================================================

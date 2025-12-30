@@ -13,6 +13,13 @@ from crackerjack.services.quality.anomaly_detector import (
     MetricPoint,
 )
 
+# Check if scipy is available
+try:
+    from crackerjack.services.quality.quality_intelligence import SCIPY_AVAILABLE
+except ImportError:
+    # If there's an import error, assume scipy is not available
+    SCIPY_AVAILABLE = False
+
 
 class TestAnomalyDetector:
     """Test cases for the AnomalyDetector class."""
@@ -218,6 +225,10 @@ class TestAnomalyDetector:
             assert "mean" in baseline_data
             assert "std_dev" in baseline_data
 
+    @pytest.mark.skipif(
+        not SCIPY_AVAILABLE,
+        reason="Test requires scipy which is not available"
+    )
     def test_detect_seasonal_patterns_identifies_patterns(self):
         """Test that seasonal patterns are detected correctly."""
         detector = AnomalyDetector(min_samples=5)

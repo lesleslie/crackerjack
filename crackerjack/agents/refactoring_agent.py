@@ -31,6 +31,36 @@ class RefactoringAgent(SubAgent):
         self._code_transformer = CodeTransformer(context)
         self._dead_code_detector = DeadCodeDetector(context)
 
+    def _estimate_function_complexity(self, function_body: str) -> int:
+        return self._complexity_analyzer._estimate_function_complexity(function_body)
+
+    def _is_semantic_function_definition(self, line: str) -> bool:
+        return self._complexity_analyzer._is_function_definition(line.strip())
+
+    def _should_skip_semantic_line(
+        self,
+        stripped: str,
+        current_function: dict[str, t.Any] | None,
+        line: str,
+    ) -> bool:
+        return self._complexity_analyzer._should_skip_line(
+            stripped, current_function, line
+        )
+
+    def _should_remove_import_line(
+        self, line: str, unused_import: dict[str, str]
+    ) -> bool:
+        return self._dead_code_detector._should_remove_import_line(line, unused_import)
+
+    def _extract_nested_conditions(self, content: str) -> str:
+        return self._code_transformer._extract_nested_conditions(content)
+
+    def _simplify_boolean_expressions(self, content: str) -> str:
+        return self._code_transformer._simplify_boolean_expressions(content)
+
+    def _is_empty_except_block(self, lines: list[str], line_idx: int) -> bool:
+        return self._dead_code_detector._is_empty_except_block(lines, line_idx)
+
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.COMPLEXITY, IssueType.DEAD_CODE}
 

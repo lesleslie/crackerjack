@@ -317,7 +317,7 @@ Comprehensive Hook Results:
 
 ```bash
 cd /Users/les/Projects/acb
-python -m crackerjack
+python -m crackerjack run
 ```
 
 **Expected Results**:

@@ -6,8 +6,6 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.models.protocols import FileSystemInterface
 
 

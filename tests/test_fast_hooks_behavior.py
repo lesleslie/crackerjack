@@ -110,7 +110,7 @@ def test_fast_hooks_failure_stops_workflow():
     subprocess.run(["git", "commit", "-m", "initial"], capture_output=True)
 
     # Run crackerjack with tests - should stop at fast hooks
-    result = run_command("python -m crackerjack -t", timeout=30)
+    result = run_command("python -m crackerjack run -t", timeout=30)
 
     if result is None:
         print("❌ Command failed to run or timed out")
@@ -177,7 +177,7 @@ def test_fast_hooks_success_continues_workflow():
     test_file.write_text(fixed_content)
 
     # Now run crackerjack with tests - should pass fast hooks and continue
-    result = run_command("python -m crackerjack -t", timeout=60)
+    result = run_command("python -m crackerjack run -t", timeout=60)
 
     if result is None:
         print("❌ Command failed to run or timed out")
@@ -250,7 +250,7 @@ def test_workflow_order():
         py_file.write_text(fixed_content)
 
     # Run crackerjack and capture the order of operations
-    result = run_command("python -m crackerjack -t", timeout=90)
+    result = run_command("python -m crackerjack run -t", timeout=90)
 
     if result is None:
         print("❌ Command failed to run or timed out")

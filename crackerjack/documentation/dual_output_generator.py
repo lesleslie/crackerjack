@@ -60,7 +60,7 @@ class DualOutputGenerator:
         cache: CrackerjackCache | None = None,
     ):
         self.project_path = project_path or Path.cwd()
-        self.console = console or acb_console
+        self.console = console or Console()
         self.cache = cache or CrackerjackCache()
 
         # Documentation paths

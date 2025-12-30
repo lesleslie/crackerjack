@@ -3,8 +3,6 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
 from crackerjack.models.task import HookResult
@@ -19,6 +17,7 @@ except ImportError:
 
 class LSPAwareHookExecutor(HookExecutor):
     """Hook executor that can leverage LSP server for enhanced performance."""
+
     def __init__(
         self,
         pkg_path: Path,

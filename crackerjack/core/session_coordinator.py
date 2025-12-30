@@ -10,7 +10,6 @@ from rich.console import Console
 from crackerjack.models.task import SessionTracker
 
 if t.TYPE_CHECKING:
-    # TODO(Phase 3): Re-add workflow type hints with Oneiric integration
     from crackerjack.models.protocols import OptionsProtocol
 
 
@@ -32,6 +31,9 @@ class SessionCoordinator:
         self.cleanup_handlers: list[t.Callable[[], None]] = []
         self.lock_files: set[Path] = set()
         self.current_task: str | None = None
+        self._cleanup_handlers = self.cleanup_handlers
+        self._lock_files = self.lock_files
+        self._thread_pool = None
 
         self.session_tracker: SessionTracker | None = None
         self.tasks: dict[str, t.Any] = {}

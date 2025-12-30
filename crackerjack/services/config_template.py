@@ -39,17 +39,8 @@ class ConfigTemplateService:
     def _load_config_templates(self) -> dict[str, ConfigVersion]:
         """Load configuration templates as structured data."""
         return {
-            "pre-commit": self._create_precommit_template(),
             "pyproject": self._create_pyproject_template(),
         }
-
-    def _create_precommit_template(self) -> ConfigVersion:
-        """Create pre-commit configuration template."""
-        return ConfigVersion(
-            version="3.0.0",
-            description="Pre-commit hooks configuration with modern tools",
-            config_data={"repos": self._build_precommit_repos()},
-        )
 
     def _create_pyproject_template(self) -> ConfigVersion:
         """Create pyproject.toml configuration template."""
@@ -58,75 +49,6 @@ class ConfigTemplateService:
             description="Modern Python project configuration with Ruff and pytest",
             config_data={"tool": self._build_pyproject_tools()},
         )
-
-    def _build_precommit_repos(self) -> list[dict[str, t.Any]]:
-        """Build pre-commit repository configurations."""
-        return [
-            {
-                "repo": "local",
-                "hooks": self._build_local_precommit_hooks(),
-            },
-            {
-                "repo": "https://github.com/pre-commit/pre-commit-hooks",
-                "rev": "v6.0.0",
-                "hooks": self._build_standard_precommit_hooks(),
-            },
-        ]
-
-    def _build_local_precommit_hooks(self) -> list[dict[str, t.Any]]:
-        """Build local pre-commit hook configurations."""
-        return [
-            {
-                "id": "validate-regex-patterns",
-                "name": "validate-regex-patterns",
-                "entry": "uv run python -m crackerjack.tools.validate_regex_patterns",
-                "language": "system",
-                "files": r"\.py$",
-                "exclude": r"^\.venv/",
-            },
-            {
-                "id": "skylos",
-                "name": "skylos-dead-code-detection",
-                "entry": "skylos",
-                "language": "system",
-                "args": ["crackerjack"],
-                "pass_filenames": False,
-                "stages": ["pre-push", "manual"],
-            },
-            {
-                "id": "zuban",
-                "name": "zuban-type-checking",
-                "entry": "uv run zuban check",
-                "language": "system",
-                "args": ["--config-file", "mypy.ini", "./crackerjack"],
-                "pass_filenames": False,
-                "exclude": r"^tests/|^src/",
-                "stages": ["pre-push", "manual"],
-            },
-        ]
-
-    def _build_standard_precommit_hooks(self) -> list[dict[str, t.Any]]:
-        """Build standard pre-commit hook configurations."""
-        exclude_pattern = r"^\.venv/"
-        return [
-            {
-                "id": "trailing-whitespace",
-                "name": "trailing-whitespace",
-                "exclude": exclude_pattern,
-            },
-            {
-                "id": "end-of-file-fixer",
-                "name": "end-of-file-fixer",
-                "exclude": exclude_pattern,
-            },
-            {"id": "check-yaml", "name": "check-yaml", "exclude": exclude_pattern},
-            {"id": "check-toml", "name": "check-toml", "exclude": exclude_pattern},
-            {
-                "id": "check-added-large-files",
-                "name": "check-added-large-files",
-                "exclude": exclude_pattern,
-            },
-        ]
 
     def _build_pyproject_tools(self) -> dict[str, t.Any]:
         """Build pyproject.toml tool configurations."""
@@ -246,9 +168,7 @@ class ConfigTemplateService:
 
     def _generate_diff_preview(self, config_type: str, project_path: Path) -> str:
         """Generate a preview of changes that would be made."""
-        if config_type == "pre-commit":
-            config_file = project_path / ".pre-commit-config.yaml"
-        elif config_type == "pyproject":
+        if config_type == "pyproject":
             config_file = project_path / "pyproject.toml"
         else:
             return "Diff preview not available for this config type"
@@ -258,11 +178,8 @@ class ConfigTemplateService:
 
         try:
             with config_file.open() as f:
-                if config_type == "pre-commit":
-                    current_config = yaml.safe_load(f)
-                else:
-                    content = f.read()
-                    current_config = tomli.loads(content)
+                content = f.read()
+                current_config = tomli.loads(content)
 
             template = self.get_template(config_type)
             if not template:
@@ -343,9 +260,7 @@ class ConfigTemplateService:
             return False
 
         try:
-            if config_type == "pre-commit":
-                return self._apply_precommit_update(template, project_path, interactive)
-            elif config_type == "pyproject":
+            if config_type == "pyproject":
                 return self._apply_pyproject_update(template, project_path, interactive)
             else:
                 self.console.print(
@@ -354,37 +269,6 @@ class ConfigTemplateService:
                 return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Failed to apply update: {e}")
-            return False
-
-    def _apply_precommit_update(
-        self, template: ConfigVersion, project_path: Path, interactive: bool
-    ) -> bool:
-        """Apply pre-commit configuration update."""
-        config_file = project_path / ".pre-commit-config.yaml"
-
-        if interactive and config_file.exists():
-            self.console.print(f"\n[bold cyan]Updating {config_file.name}[/bold cyan]")
-            diff = self._generate_diff_preview("pre-commit", project_path)
-            self.console.print(f"Changes:\n{diff}")
-
-            if not self._confirm_update():
-                return False
-
-        try:
-            with config_file.open("w") as f:
-                yaml.dump(
-                    template.config_data, f, default_flow_style=False, sort_keys=False
-                )
-
-            self._update_version_tracking(project_path, "pre-commit", template.version)
-            self._invalidate_cache(project_path)
-
-            self.console.print(
-                f"[green]✅[/green] Updated {config_file.name} to version {template.version}"
-            )
-            return True
-        except Exception as e:
-            self.console.print(f"[red]❌[/red] Failed to write config: {e}")
             return False
 
     def _apply_pyproject_update(

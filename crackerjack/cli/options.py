@@ -1,10 +1,9 @@
 import typing as t
-import warnings
 from enum import Enum
 
 import click
 import typer
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, field_validator
 
 
 def parse_bump_option_with_flag_support(
@@ -28,8 +27,6 @@ def parse_bump_option_with_flag_support(
             "--interactive": "interactive",
             "-n": "no_config_updates",
             "--no-config-updates": "no_config_updates",
-            "-u": "update_precommit",
-            "--update-precommit": "update_precommit",
             "-t": "run_tests",
             "--run-tests": "run_tests",
             "-x": "strip_code",
@@ -72,7 +69,6 @@ class Options(BaseModel):
     commit: bool = False
     interactive: bool = False
     no_config_updates: bool = False
-    update_precommit: bool = False
     publish: BumpOption | None = None
     all: BumpOption | None = None
     bump: BumpOption | None = None
@@ -80,6 +76,8 @@ class Options(BaseModel):
     debug: bool = False
     ai_debug: bool = False  # Enable verbose debugging for AI auto-fixing mode
     benchmark: bool = False
+    benchmark_regression: bool = False
+    benchmark_regression_threshold: float = 0.1
     test_workers: int = 0
     test_timeout: int = 0
     start_mcp_server: bool = False
@@ -87,6 +85,7 @@ class Options(BaseModel):
     restart_mcp_server: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
+    async_mode: bool = False
     fast: bool = False
     comp: bool = False
     fast_iteration: bool = False  # Phase 10.2.4: Skip comprehensive hooks
@@ -194,72 +193,6 @@ class Options(BaseModel):
     ai_recommendations: int = 5
     ai_help_query: str | None = None
 
-    def _map_legacy_flag(
-        self, old_attr: str, new_attr: str, deprecation_msg: str | None = None
-    ) -> None:
-        """Helper to map legacy flag to new flag with optional deprecation warning."""
-        old_value = getattr(self, old_attr)
-        new_value = getattr(self, new_attr)
-
-        if old_value and new_value is None:
-            setattr(self, new_attr, old_value)
-            if deprecation_msg:
-                warnings.warn(deprecation_msg, DeprecationWarning, stacklevel=4)
-        elif new_value is not None:
-            setattr(self, old_attr, new_value)
-
-    @model_validator(mode="after")
-    def handle_legacy_mappings(self) -> "Options":
-        """Handle backward compatibility for deprecated flags."""
-        # Map flags without deprecation warnings
-        self._map_legacy_flag("all", "full_release")
-        self._map_legacy_flag("track_progress", "show_progress")
-        self._map_legacy_flag("enhanced_monitor", "advanced_monitor")
-        self._map_legacy_flag("coverage_status", "coverage_report")
-        self._map_legacy_flag("cleanup_pypi", "clean_releases")
-
-        return self
-
-    @property
-    def test(self) -> bool:
-        """Compatibility property for run_tests field."""
-        return self.run_tests
-
-    @test.setter
-    def test(self, value: bool) -> None:
-        """Setter for test property."""
-        self.run_tests = value
-
-    @property
-    def ai_agent(self) -> bool:
-        """Compatibility property for ai_fix field."""
-        return bool(self.ai_fix)
-
-    @ai_agent.setter
-    def ai_agent(self, value: bool) -> None:
-        """Setter for ai_agent property."""
-        self.ai_fix = value if self.ai_fix is not None else value
-
-    @property
-    def clean(self) -> bool:
-        """Compatibility property for strip_code field."""
-        return bool(self.strip_code)
-
-    @clean.setter
-    def clean(self, value: bool) -> None:
-        """Setter for clean property."""
-        self.strip_code = value
-
-    @property
-    def update_docs_index(self) -> bool:
-        """Compatibility property for generate_docs field."""
-        return self.generate_docs
-
-    @update_docs_index.setter
-    def update_docs_index(self, value: bool) -> None:
-        """Setter for update_docs_index property."""
-        self.generate_docs = value
-
     @property
     def effective_max_iterations(self) -> int:
         if self.quick:
@@ -319,12 +252,6 @@ CLI_OPTIONS = {
         "-n",
         "--no-config-updates",
         help="Do not update configuration files.",
-    ),
-    "update_precommit": typer.Option(
-        False,
-        "-u",
-        "--update-hooks",
-        help="Update hooks configuration.",
     ),
     "verbose": typer.Option(False, "-v", "--verbose", help="Enable verbose output."),
     "debug": typer.Option(False, "--debug", help="Enable debug output."),
@@ -911,7 +838,6 @@ def create_options(
     commit: bool,
     interactive: bool,
     no_config_updates: bool,
-    update_precommit: bool,
     verbose: bool,
     debug: bool,
     publish: BumpOption | None,
@@ -1005,7 +931,6 @@ def create_options(
         commit=commit,
         interactive=interactive,
         no_config_updates=no_config_updates,
-        update_precommit=update_precommit,
         verbose=verbose,
         debug=debug,
         publish=publish,

@@ -179,7 +179,8 @@ class PatternCache:
 
         total_uses = pattern.usage_count
         if total_uses > 0:
-            current_successes = pattern.success_rate * total_uses
+            previous_uses = max(total_uses - 1, 0)
+            current_successes = pattern.success_rate * previous_uses
             if success:
                 current_successes += 1
             pattern.success_rate = current_successes / total_uses

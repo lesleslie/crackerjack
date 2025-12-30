@@ -145,7 +145,7 @@ uv run python -c "from crackerjack.core.workflow_orchestrator import WorkflowOrc
 
 1. ✅ Refactoring complete
 1. ✅ Complexity violations resolved
-1. ⏭️ Run full test suite: `python -m crackerjack --run-tests`
+1. ⏭️ Run full test suite: `python -m crackerjack run --run-tests`
 1. ⏭️ Verify all quality gates pass
 
 ## Related Files

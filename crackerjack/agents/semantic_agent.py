@@ -407,12 +407,16 @@ class SemanticAgent(SubAgent):
             )
 
             # Analyze pattern consistency
-            high_similarity_count = sum(
-                1
-                for pattern in related_patterns
-                for code in pattern["related_code"]
-                if code["similarity_score"] > 0.8
-            )
+            high_similarity_count = 0
+            for pattern in related_patterns:
+                if not isinstance(pattern, dict):
+                    continue
+                related_code = pattern.get("related_code", [])
+                if not isinstance(related_code, list):
+                    continue
+                for code in related_code:
+                    if isinstance(code, dict) and code.get("similarity_score", 0) > 0.8:
+                        high_similarity_count += 1
 
             if high_similarity_count > 0:
                 recommendations.append(

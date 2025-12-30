@@ -1,5 +1,5 @@
-import logging
 import gc
+import logging
 import os
 import sys
 import time
@@ -14,9 +14,8 @@ from weakref import WeakSet
 
 import psutil
 
-
-
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class MemoryStats:
@@ -239,6 +238,7 @@ class MemoryProfiler:
 class MemoryOptimizer:
     _instance: t.Optional["MemoryOptimizer"] = None
     _lock = Lock()
+
     def __init__(
         self,
     ) -> None:

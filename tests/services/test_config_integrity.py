@@ -2,7 +2,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.exceptions.config import ConfigIntegrityError
 from crackerjack.services.config_integrity import ConfigIntegrityService

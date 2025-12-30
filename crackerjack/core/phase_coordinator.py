@@ -5,9 +5,8 @@ import re
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-from acb.depends import Inject, depends
 from rich import box
+from rich.console import Console
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -37,10 +36,15 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.models.task import HookResult
 from crackerjack.services.memory_optimizer import create_lazy_service
-from crackerjack.services.monitoring.performance_cache import (
-    FileSystemCache,
-    GitOperationCache,
-)
+
+try:
+    from crackerjack.services.monitoring.performance_cache import (
+        FileSystemCache,
+        GitOperationCache,
+    )
+except Exception:  # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any  # type: ignore[assignment]
+    GitOperationCache = t.Any  # type: ignore[assignment]
 from crackerjack.services.parallel_executor import (
     AsyncCommandExecutor,
     ParallelHookExecutor,
@@ -53,22 +57,62 @@ if t.TYPE_CHECKING:
 class PhaseCoordinator:
     def __init__(
         self,
+        *,
+        console: Console | None = None,
+        pkg_path: Path | None = None,
+        session: SessionCoordinator | None = None,
+        filesystem: FileSystemInterface | None = None,
+        git_service: GitInterface | None = None,
+        hook_manager: HookManager | None = None,
+        test_manager: TestManagerProtocol | None = None,
+        publish_manager: PublishManager | None = None,
+        config_merge_service: ConfigMergeServiceProtocol | None = None,
+        logger: logging.Logger | None = None,
+        memory_optimizer: MemoryOptimizerProtocol | None = None,
+        parallel_executor: ParallelHookExecutor | None = None,
+        async_executor: AsyncCommandExecutor | None = None,
+        git_cache: GitOperationCache | None = None,
+        filesystem_cache: FileSystemCache | None = None,
+        settings: t.Any | None = None,
     ) -> None:
-        self.console = console
-        self.pkg_path = pkg_path
-        self.session = session
+        from crackerjack.config import load_settings
+        from crackerjack.config.settings import CrackerjackSettings
+        from crackerjack.managers.hook_manager import HookManagerImpl
+        from crackerjack.managers.publish_manager import PublishManagerImpl
+        from crackerjack.managers.test_manager import TestManagementImpl
+        from crackerjack.services.filesystem import FileSystemService
+        from crackerjack.services.git import GitService
 
-        # Dependencies injected via ACB's depends.get() from WorkflowOrchestrator
-        self.filesystem = filesystem
-        self.git_service = git_service
-        self.hook_manager = hook_manager
-        self.test_manager = test_manager
-        self.publish_manager = publish_manager
+        self.console = console or Console()
+        self.pkg_path = pkg_path or Path.cwd()
+        self.session = session or SessionCoordinator(
+            console=self.console, pkg_path=self.pkg_path
+        )
+
+        self._settings = settings or load_settings(CrackerjackSettings)
+
+        self.filesystem = filesystem or FileSystemService()
+        self.git_service = git_service or GitService(
+            console=self.console, pkg_path=self.pkg_path
+        )
+        self.hook_manager = hook_manager or HookManagerImpl(
+            pkg_path=self.pkg_path,
+            verbose=getattr(self._settings.execution, "verbose", False),
+            quiet=False,
+            console=self.console,
+            settings=self._settings,
+        )
+        self.test_manager = test_manager or TestManagementImpl(
+            console=self.console, pkg_path=self.pkg_path
+        )
+        self.publish_manager = publish_manager or PublishManagerImpl(
+            console=self.console, pkg_path=self.pkg_path
+        )
         self.config_merge_service = config_merge_service
 
         self.code_cleaner = CodeCleaner(
-            console=console,
-            base_directory=pkg_path,
+            console=self.console,
+            base_directory=self.pkg_path,
             file_processor=None,
             error_handler=None,
             pipeline=None,
@@ -77,27 +121,8 @@ class PhaseCoordinator:
             backup_service=None,
         )
 
-        # Ensure logger is a proper instance, not an empty tuple, string, or other invalid value
-        if isinstance(logger, tuple) and len(logger) == 0:
-            # Log this issue for debugging
-            print(
-                "WARNING: PhaseCoordinator received empty tuple for logger dependency, creating fallback"
-            )
-            # Import and create a fallback logger if we got an empty tuple
-            
-            self._logger = ACBLogger()
-        elif isinstance(logger, str):
-            # Log this issue for debugging
-            print(
-                f"WARNING: PhaseCoordinator received string for logger dependency: {logger!r}, creating fallback"
-            )
-            # Import and create a fallback logger if we got a string
-            
-            self._logger = ACBLogger()
-        else:
-            self._logger = logger
+        self._logger = logger or logging.getLogger(__name__)
 
-        # Services injected via ACB DI
         self._memory_optimizer = memory_optimizer
         self._parallel_executor = parallel_executor
         self._async_executor = async_executor
@@ -117,22 +142,11 @@ class PhaseCoordinator:
         self._fast_hooks_started: bool = False
 
     @property
-    def logger(self) -> Logger:
-        """Safely access the logger instance, ensuring it's not an empty tuple or string."""
-        if hasattr(self, "_logger") and (
-            (isinstance(self._logger, tuple) and len(self._logger) == 0)
-            or isinstance(self._logger, str)
-        ):
-            
-            print(
-                f"WARNING: PhaseCoordinator logger was invalid type ({type(self._logger).__name__}: {self._logger!r}), creating fresh logger instance"
-            )
-            self._logger = ACBLogger()
+    def logger(self) -> logging.Logger:
         return self._logger
 
     @logger.setter
-    def logger(self, value: Logger) -> None:
-        """Set the logger instance."""
+    def logger(self, value: logging.Logger) -> None:
         self._logger = value
 
     # --- Output/formatting helpers -------------------------------------------------
@@ -164,7 +178,7 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
-        if not options.clean:
+        if not getattr(options, "clean", False):
             return True
 
         self.session.track_task("cleaning", "Code cleaning")
@@ -296,7 +310,9 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
-        if not options.test:
+        if not getattr(options, "test", False) and not getattr(
+            options, "run_tests", False
+        ):
             return True
         self.session.track_task("testing", "Test execution")
         self.console.print("\n" + make_separator("-"))

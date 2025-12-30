@@ -8,17 +8,19 @@
 
 **Total Options**: ~120 options across all categories
 **Status Breakdown**:
+
 - ✅ **Working (72 options)**: Fully functional with handlers
 - ⚠️ **Broken/Not Implemented (12 options)**: Options exist but handlers raise NotImplementedError
 - 🔄 **Partial/Missing Handlers (8 options)**: Options exist but not integrated in run command
 - ⚙️ **Server-Only (8 options)**: Work via separate commands (start/stop/restart)
 - 📋 **Semantic Aliases (8 options)**: Backward compatibility wrappers
 
----
+______________________________________________________________________
 
 ## 1. ✅ FULLY WORKING OPTIONS (72)
 
 ### Core Workflow Options
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--commit` | `-c` | Commit and push to git | ✅ Working |
@@ -30,6 +32,7 @@
 | `--ai-debug` | | AI auto-fix debugging | ✅ Working |
 
 ### Version Management (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--publish` | `-p` | Bump & publish | ✅ Working |
@@ -39,6 +42,7 @@
 | `--skip-version-check` | | Skip version verification | ✅ Working |
 
 ### Testing Options (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--run-tests` | `-t` | Execute test suite | ✅ Working |
@@ -47,6 +51,7 @@
 | `--test-timeout` | | Test timeout | ✅ Working |
 
 ### Quality Control (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--strip-code` | `-x` | Remove docstrings/comments | ✅ Working |
@@ -61,6 +66,7 @@
 | `--all-files` | | Check all files | ✅ Working |
 
 ### Coverage Options (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--coverage-status` | | Show coverage status | ✅ Working |
@@ -69,6 +75,7 @@
 | `--boost-coverage` | | Auto-improve coverage | ✅ Working |
 
 ### Lock Management (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--disable-global-locks` | | Disable locking | ✅ Working |
@@ -77,6 +84,7 @@
 | `--global-lock-dir` | | Custom lock directory | ✅ Working |
 
 ### Iteration Control (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--quick` | | Max 3 iterations | ✅ Working |
@@ -84,12 +92,14 @@
 | `--max-iterations` | | Custom iteration count | ✅ Working |
 
 ### Cache Management (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--clear-cache` | | Clear all caches | ✅ Working |
 | `--cache-stats` | | Display cache statistics | ✅ Working |
 
 ### Documentation (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--generate-docs` | | Generate API docs | ✅ Working |
@@ -97,6 +107,7 @@
 | `--validate-docs` | | Validate existing docs | ✅ Working |
 
 ### Changelog (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--generate-changelog` | | Generate changelog | ✅ Working |
@@ -105,6 +116,7 @@
 | `--changelog-dry-run` | | Preview changelog | ✅ Working |
 
 ### Version Analysis (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--auto-version` | | AI version recommendation | ✅ Working |
@@ -112,6 +124,7 @@
 | `--accept-version` | | Auto-accept recommendation | ✅ Working |
 
 ### Analytics (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--heatmap` | | Generate heat map | ✅ Working |
@@ -125,6 +138,7 @@
 | `--analytics-dashboard` | | Dashboard output file | ✅ Working |
 
 ### Advanced Features (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--advanced-optimizer` | | Advanced optimization | ✅ Working |
@@ -132,6 +146,7 @@
 | `--advanced-report` | | Report output | ✅ Working |
 
 ### MkDocs Integration (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--mkdocs-integration` | | Generate MkDocs site | ✅ Working |
@@ -140,6 +155,7 @@
 | `--mkdocs-output` | | Output directory | ✅ Working |
 
 ### Contextual AI (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--contextual-ai` | | AI assistant | ✅ Working |
@@ -147,6 +163,7 @@
 | `--ai-help-query` | | Query AI assistant | ✅ Working |
 
 ### Configuration Management (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--check-config-updates` | | Check for updates | ✅ Working |
@@ -156,6 +173,7 @@
 | `--refresh-cache` | | Refresh cache | ✅ Working |
 
 ### Semantic Search (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--index` | | Index files | ✅ Working |
@@ -164,24 +182,28 @@
 | `--remove-from-index` | | Remove file from index | ✅ Working |
 
 ### Smart Features (Working)
+
 | Option | Shortcut | Description | Handler |
 |--------|----------|-------------|---------|
 | `--smart-commit` | | AI commit messages | ✅ Working (default: on) |
 
----
+______________________________________________________________________
 
 ## 2. ⚠️ BROKEN/NOT IMPLEMENTED (12 OPTIONS)
 
 These options exist in `options.py` and `CLI_OPTIONS` but their handlers **raise NotImplementedError** with message:
+
 > "Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration)."
 
 ### ACB Workflow Options (BROKEN)
+
 | Option | Description | Status |
 |--------|-------------|--------|
 | `--use-acb-workflows` | Use ACB workflows (now always true) | ❌ Hidden (redundant) |
 | `--use-legacy-orchestrator` | Opt into legacy orchestration | ❌ Raises NotImplementedError |
 
 **Location**: `crackerjack/cli/handlers/main_handlers.py:110`
+
 ```python
 def handle_acb_workflow_mode(...):
     raise NotImplementedError(
@@ -191,6 +213,7 @@ def handle_acb_workflow_mode(...):
 ```
 
 ### Orchestration Options (BROKEN)
+
 | Option | Shortcut | Description | Status |
 |--------|----------|-------------|--------|
 | `--orchestrated` | | Advanced orchestration mode | ❌ Raises NotImplementedError |
@@ -199,6 +222,7 @@ def handle_acb_workflow_mode(...):
 | `--orchestration-ai-mode` | | AI coordination mode | ❌ Parameter exists but unused |
 
 **Location**: `crackerjack/cli/handlers/main_handlers.py:97-100`
+
 ```python
 if not orchestrated:
     raise NotImplementedError(
@@ -208,6 +232,7 @@ if not orchestrated:
 ```
 
 ### Experimental Hooks (BROKEN - Partially)
+
 | Option | Description | Status |
 |--------|-------------|--------|
 | `--experimental-hooks` | Enable experimental hooks | ⚠️ Option exists, unclear if working |
@@ -217,19 +242,21 @@ if not orchestrated:
 **Notes**: These options are defined but integration status unclear. Need handler verification.
 
 ### Async Mode (BROKEN - Hidden)
+
 | Option | Description | Status |
 |--------|-------------|--------|
 | `--async` | Async file operations | ⚠️ Marked as experimental, hidden from help |
 
 **Location**: `options.py:458-463` (marked as `hidden=True`)
 
----
+______________________________________________________________________
 
 ## 3. 🔄 PARTIAL/MISSING HANDLERS (8 OPTIONS)
 
 These options exist in `options.py` but are **NOT integrated in the `run` command** handler chain.
 
 ### Monitoring/Dashboard Options (NO HANDLERS)
+
 | Option | Description | Status in __main__.py |
 |--------|-------------|----------------------|
 | `--monitor` | Multi-project monitoring | 🚫 Not in run command |
@@ -240,6 +267,7 @@ These options exist in `options.py` but are **NOT integrated in the `run` comman
 | `--dev` | Development mode | 🚫 Not in run command |
 
 **Evidence**: `__main__.py:354-356`
+
 ```python
 # Server commands (monitor, dashboard, watchdog, etc.) handled separately
 # MCP server commands now handled by MCPServerCLIFactory
@@ -249,20 +277,22 @@ These options exist in `options.py` but are **NOT integrated in the `run` comman
 **Handler Status**: `grep -r "def handle.*monitor" crackerjack/cli/handlers/` → **NO MATCHES FOUND**
 
 ### Watchdog (EXISTS BUT NOT IN RUN COMMAND)
+
 | Option | Description | Status |
 |--------|-------------|--------|
 | `--watchdog` | Service watchdog | ✅ Implementation exists in `crackerjack/mcp/service_watchdog.py` |
-|  |  | 🚫 But NOT integrated in `run` command |
+| | | 🚫 But NOT integrated in `run` command |
 
 **Notes**: Watchdog implementation exists but isn't callable from `crackerjack run --watchdog`.
 
----
+______________________________________________________________________
 
 ## 4. ⚙️ SERVER-ONLY OPTIONS (8 OPTIONS)
 
 These work via **separate commands** (not `run` subcommand):
 
 ### MCP Server Lifecycle
+
 | Option | Command Alternative | Status |
 |--------|-------------------|--------|
 | `--start-mcp-server` | `crackerjack start` | ✅ Works via MCPServerCLIFactory |
@@ -270,6 +300,7 @@ These work via **separate commands** (not `run` subcommand):
 | `--restart-mcp-server` | `crackerjack restart` | ✅ Works via MCPServerCLIFactory |
 
 ### Zuban LSP Server
+
 | Option | Description | Status |
 |--------|-------------|--------|
 | `--start-zuban-lsp` | Start Zuban LSP | ✅ Implementation in `server_manager.py` |
@@ -283,7 +314,7 @@ These work via **separate commands** (not `run` subcommand):
 
 **Notes**: These work but aren't exposed via `run` command - need separate invocation pattern.
 
----
+______________________________________________________________________
 
 ## 5. 📋 SEMANTIC ALIASES (8 OPTIONS)
 
@@ -298,36 +329,39 @@ These are **backward compatibility wrappers** that map to newer option names:
 | `.all` property | `full_release` | ✅ Aliased via `handle_legacy_mappings()` |
 
 **Additional Properties (Not CLI Options)**:
+
 - `.test` property → `run_tests`
 - `.ai_agent` property → `ai_fix`
 - `.clean` property → `strip_code`
 - `.update_docs_index` property → `generate_docs`
 
----
+______________________________________________________________________
 
 ## 6. RECOMMENDATIONS
 
 ### HIGH PRIORITY: Remove Broken Options
 
 **Immediate Action**: Remove these from `run` command and `options.py`:
+
 ```python
 # REMOVE: Broken orchestration options
 --orchestrated
---orchestration-strategy
---orchestration-progress
---orchestration-ai-mode
---use-legacy-orchestrator
+--orchestration - strategy
+--orchestration - progress
+--orchestration - ai - mode
+--use - legacy - orchestrator
 ```
 
 **Rationale**: These raise `NotImplementedError` and won't be fixed until Phase 3 (Oneiric integration).
 
 **Recommendation**: Create new Phase 3 options when Oneiric is integrated, don't try to resurrect these.
 
----
+______________________________________________________________________
 
 ### MEDIUM PRIORITY: Implement or Remove Monitoring Options
 
 **Option A: Implement Handlers**
+
 ```python
 # Add to _process_all_commands():
 if local_vars["monitor"] or local_vars["dashboard"] or local_vars["watchdog"]:
@@ -336,47 +370,52 @@ if local_vars["monitor"] or local_vars["dashboard"] or local_vars["watchdog"]:
 ```
 
 **Option B: Remove from `run` Command**
+
 - Keep these as **standalone capabilities** (like MCP server commands)
 - Don't expose via `run` command
 - Document as advanced features requiring separate invocation
 
 **Affected Options**:
+
 ```python
 --monitor
---enhanced-monitor
+--enhanced - monitor
 --dashboard
---unified-dashboard
---unified-dashboard-port
+--unified - dashboard
+--unified - dashboard - port
 --dev
 --watchdog  # Implementation exists, just not integrated
 ```
 
----
+______________________________________________________________________
 
 ### LOW PRIORITY: Clarify Experimental Hooks
 
 **Investigation Needed**: Determine if these actually work:
+
 ```python
---experimental-hooks
---enable-pyrefly
---enable-ty
+--experimental - hooks
+--enable - pyrefly
+--enable - ty
 ```
 
 **Action**: Either:
-1. Verify implementation and document properly
-2. Mark as deprecated and remove
 
----
+1. Verify implementation and document properly
+1. Mark as deprecated and remove
+
+______________________________________________________________________
 
 ### CLEANUP: Remove Hidden/Redundant Options
 
 **Remove Completely**:
+
 ```python
 --use-acb-workflows  # Already hidden, always true, redundant
 --async              # Hidden experimental, unclear status
 ```
 
----
+______________________________________________________________________
 
 ## 7. SUMMARY STATISTICS
 
@@ -390,45 +429,50 @@ if local_vars["monitor"] or local_vars["dashboard"] or local_vars["watchdog"]:
 | 🔍 Need Investigation | 12 | 10% |
 | **TOTAL** | **120** | **100%** |
 
----
+______________________________________________________________________
 
 ## 8. ACTION ITEMS
 
 ### Phase 1: Immediate Cleanup (This Week)
+
 - [ ] Remove broken orchestration options from `run` command signature
 - [ ] Remove `--use-acb-workflows` (redundant, hidden)
 - [ ] Remove `--async` (experimental, hidden, unclear status)
 - [ ] Add deprecation warnings for `--use-legacy-orchestrator`
 
 ### Phase 2: Monitoring Decision (Next Sprint)
+
 - [ ] Decide: Implement monitoring handlers OR remove from `run` command
 - [ ] If removing: Document as standalone features
 - [ ] Update CLAUDE.md with correct invocation patterns
 
 ### Phase 3: Experimental Hooks Investigation
+
 - [ ] Test `--experimental-hooks`, `--enable-pyrefly`, `--enable-ty`
 - [ ] Either document or deprecate
 
 ### Phase 4: Phase 3 Planning (Future)
+
 - [ ] Design new Oneiric workflow options
 - [ ] Don't reuse old orchestration option names
 - [ ] Plan migration path for existing users
 
----
+______________________________________________________________________
 
 ## 9. ARCHITECTURAL INSIGHTS
 
 `★ Insight ─────────────────────────────────────`
 **Two-Tier Option Architecture**: Crackerjack has evolved to separate:
+
 1. **Quality Workflow Options** (`run` command): 72 working options for code quality, testing, and release management
-2. **Server Lifecycle Options** (top-level commands): 8 options for starting/stopping MCP and Zuban LSP servers
+1. **Server Lifecycle Options** (top-level commands): 8 options for starting/stopping MCP and Zuban LSP servers
 
 This separation is **intentional** and should be maintained. The confusion comes from **legacy options** (orchestration, monitoring) that span both tiers but are no longer implemented.
 
 **Design Recommendation**: Keep server management separate from quality workflows. Don't try to unify them back into a single command.
 `─────────────────────────────────────────────────`
 
----
+______________________________________________________________________
 
 ## 10. COMPLIANCE WITH CRITICAL RULES
 
@@ -437,6 +481,6 @@ This separation is **intentional** and should be maintained. The confusion comes
 ✅ **Evidence-based**: All findings backed by grep, file reads, and code inspection
 ✅ **No assumptions**: When implementation unclear (experimental hooks), marked as "Need Investigation"
 
----
+______________________________________________________________________
 
 **End of Audit**

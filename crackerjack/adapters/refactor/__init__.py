@@ -6,7 +6,7 @@ Adapters:
 - skylos: Dead code detection (unused imports, functions, classes, variables)
 """
 
-# ACB will auto-discover these adapters via depends.set() in module files
+# Adapters are registered via constructor injection in server initialization
 # No explicit imports needed here
 
 __all__ = []

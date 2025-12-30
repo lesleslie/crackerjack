@@ -4,6 +4,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 from crackerjack.models.protocols import OptionsProtocol
 
 # Valid semantic commands for crackerjack operations
@@ -76,18 +77,18 @@ class CrackerjackCLIFacade:
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
-        # TODO(Phase 3): Replace with Oneiric CLI Factory integration
+        # CLI facade uses WorkflowPipeline directly for quality workflows
+        # MCP server lifecycle handled via MCPServerCLIFactory in __main__.py
 
     def process(self, options: OptionsProtocol) -> None:
         try:
             if self._should_handle_special_mode(options):
                 self._handle_special_modes(options)
                 return
-            # TODO(Phase 3): Replace with Oneiric workflow execution
-            raise NotImplementedError(
-                "Workflow orchestration removed in Phase 2 (ACB removal). "
-                "Will be reimplemented in Phase 3 (Oneiric integration)."
-            )
+            pipeline = WorkflowPipeline(console=self.console, pkg_path=self.pkg_path)
+            success = pipeline.run_complete_workflow_sync(options)
+            if not success:
+                raise SystemExit(1)
         except KeyboardInterrupt:
             self.console.print("\n[yellow]⏹️ Operation cancelled by user[/ yellow]")
             raise SystemExit(130)

@@ -33,7 +33,7 @@ The `./docs` directory is organized into subdirectories based on the purpose and
 
 - Development-related documentation, including logging and display implementations
 
-### ./docs/archives
+### ./docs/archive
 
 - Historical implementation plans and audit results
 - Completed project summaries and planning documents

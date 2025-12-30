@@ -7,7 +7,6 @@ import asyncio
 import logging
 import os
 from datetime import UTC, datetime
-from pathlib import Path
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.runtime import RuntimeHealthSnapshot
@@ -72,95 +71,95 @@ class CrackerjackServer:
         All adapters are ACB-free and use standard Python patterns with async init().
         """
         self.adapters = []
-
-        # Import adapter classes (all adapters are now ACB-free)
-        from crackerjack.adapters.format.ruff import RuffAdapter
-        from crackerjack.adapters.sast.bandit import BanditAdapter
-        from crackerjack.adapters.sast.semgrep import SemgrepAdapter
-        from crackerjack.adapters.type.zuban import ZubanAdapter
-        from crackerjack.adapters.refactor.refurb import RefurbAdapter
-        from crackerjack.adapters.refactor.skylos import SkylosAdapter
-        from crackerjack.adapters.ai.claude import ClaudeCodeFixer
-
-        # Track enabled adapters for logging
         enabled_names = []
 
+        # Initialize adapters based on settings
+        await self._initialize_adapters(enabled_names)
+
+        logger.info(
+            f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}"
+        )
+
+    async def _initialize_adapters(self, enabled_names: list[str]):
+        """Initialize adapters based on settings."""
         # Format/Lint: Ruff (enabled by default)
-        if getattr(self.settings, "ruff_enabled", True):
-            try:
-                ruff = RuffAdapter()
-                await ruff.init()
-                self.adapters.append(ruff)
-                enabled_names.append("Ruff")
-                logger.debug("Ruff adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Ruff adapter: {e}")
+        await self._init_adapter_if_enabled("ruff_enabled", True, "Ruff", enabled_names)
 
         # Security: Bandit (enabled by default)
-        if getattr(self.settings, "bandit_enabled", True):
-            try:
-                bandit = BanditAdapter()
-                await bandit.init()
-                self.adapters.append(bandit)
-                enabled_names.append("Bandit")
-                logger.debug("Bandit adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Bandit adapter: {e}")
+        await self._init_adapter_if_enabled(
+            "bandit_enabled", True, "Bandit", enabled_names
+        )
 
         # SAST: Semgrep (disabled by default - requires API key)
-        if getattr(self.settings, "semgrep_enabled", False):
-            try:
-                semgrep = SemgrepAdapter()
-                await semgrep.init()
-                self.adapters.append(semgrep)
-                enabled_names.append("Semgrep")
-                logger.debug("Semgrep adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Semgrep adapter: {e}")
+        await self._init_adapter_if_enabled(
+            "semgrep_enabled", False, "Semgrep", enabled_names
+        )
 
         # Type Check: Zuban (Rust-powered, enabled by default)
         zuban_enabled = getattr(
             getattr(self.settings, "zuban_lsp", None), "enabled", True
         )
         if zuban_enabled:
-            try:
-                zuban = ZubanAdapter()
-                await zuban.init()
-                self.adapters.append(zuban)
-                enabled_names.append("Zuban")
-                logger.debug("Zuban adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Zuban adapter: {e}")
+            await self._init_zuban_adapter(enabled_names)
 
         # Refactor: Refurb (enabled by default)
-        if getattr(self.settings, "refurb_enabled", True):
-            try:
-                refurb = RefurbAdapter()
-                await refurb.init()
-                self.adapters.append(refurb)
-                enabled_names.append("Refurb")
-                logger.debug("Refurb adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Refurb adapter: {e}")
+        await self._init_adapter_if_enabled(
+            "refurb_enabled", True, "Refurb", enabled_names
+        )
 
         # Refactor: Skylos (dead code detection, enabled by default)
-        if getattr(self.settings, "skylos_enabled", True):
-            try:
-                skylos = SkylosAdapter()
-                await skylos.init()
-                self.adapters.append(skylos)
-                enabled_names.append("Skylos")
-                logger.debug("Skylos adapter initialized")
-            except Exception as e:
-                logger.warning(f"Failed to initialize Skylos adapter: {e}")
+        await self._init_adapter_if_enabled(
+            "skylos_enabled", True, "Skylos", enabled_names
+        )
 
         # AI: Claude (requires API key, disabled by default)
+        await self._init_claude_adapter(enabled_names)
+
+    async def _init_adapter_if_enabled(
+        self,
+        setting_name: str,
+        default_value: bool,
+        adapter_name: str,
+        enabled_names: list[str],
+    ):
+        """Initialize an adapter if it's enabled in settings."""
+        if getattr(self.settings, setting_name, default_value):
+            try:
+                adapter_class = self._get_adapter_class(adapter_name)
+                if adapter_class:
+                    adapter = adapter_class()
+                    await adapter.init()
+                    self.adapters.append(adapter)
+                    enabled_names.append(adapter_name)
+                    logger.debug(f"{adapter_name} adapter initialized")
+            except Exception as e:
+                logger.warning(f"Failed to initialize {adapter_name} adapter: {e}")
+
+    async def _init_zuban_adapter(self, enabled_names: list[str]):
+        """Initialize the Zuban adapter."""
+        try:
+            from crackerjack.adapters.type.zuban import ZubanAdapter
+
+            zuban = ZubanAdapter()
+            await zuban.init()
+            self.adapters.append(zuban)
+            enabled_names.append("Zuban")
+            logger.debug("Zuban adapter initialized")
+        except Exception as e:
+            logger.warning(f"Failed to initialize Zuban adapter: {e}")
+
+    async def _init_claude_adapter(self, enabled_names: list[str]):
+        """Initialize the Claude AI adapter."""
         ai_settings = getattr(self.settings, "ai", None)
         if ai_settings and getattr(ai_settings, "ai_agent", False):
             try:
                 # Claude adapter requires settings passed to constructor
-                from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
                 from pydantic import SecretStr
+
+                from crackerjack.adapters.ai.claude import (
+                    ClaudeCodeFixer,
+                    ClaudeCodeFixerSettings,
+                )
 
                 # Extract API key from settings
                 api_key = getattr(ai_settings, "anthropic_api_key", None)
@@ -178,7 +177,29 @@ class CrackerjackServer:
             except Exception as e:
                 logger.warning(f"Failed to initialize Claude AI adapter: {e}")
 
-        logger.info(f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}")
+    def _get_adapter_class(self, adapter_name: str):
+        """Get the adapter class by name."""
+        if adapter_name == "Ruff":
+            from crackerjack.adapters.format.ruff import RuffAdapter
+
+            return RuffAdapter
+        elif adapter_name == "Bandit":
+            from crackerjack.adapters.sast.bandit import BanditAdapter
+
+            return BanditAdapter
+        elif adapter_name == "Semgrep":
+            from crackerjack.adapters.sast.semgrep import SemgrepAdapter
+
+            return SemgrepAdapter
+        elif adapter_name == "Refurb":
+            from crackerjack.adapters.refactor.refurb import RefurbAdapter
+
+            return RefurbAdapter
+        elif adapter_name == "Skylos":
+            from crackerjack.adapters.refactor.skylos import SkylosAdapter
+
+            return SkylosAdapter
+        return None
 
     def stop(self):
         """Stop server gracefully.
@@ -229,8 +250,12 @@ class CrackerjackServer:
                 },
                 "settings": {
                     "qa_mode": getattr(self.settings, "qa_mode", False),
-                    "ai_agent": getattr(getattr(self.settings, "ai", None), "ai_agent", False),
-                    "auto_fix": getattr(getattr(self.settings, "ai", None), "autofix", False),
+                    "ai_agent": getattr(
+                        getattr(self.settings, "ai", None), "ai_agent", False
+                    ),
+                    "auto_fix": getattr(
+                        getattr(self.settings, "ai", None), "autofix", False
+                    ),
                     "test_workers": getattr(
                         getattr(self.settings, "testing", None), "test_workers", 0
                     ),

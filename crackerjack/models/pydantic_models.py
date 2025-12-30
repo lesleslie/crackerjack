@@ -29,7 +29,6 @@ class CleaningConfig(BaseModel):
 
 class HookConfig(BaseModel):
     skip_hooks: bool = False
-    update_precommit: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
@@ -39,7 +38,6 @@ class HookConfig(BaseModel):
     def from_settings(cls, settings: Any) -> "HookConfig":
         return cls(
             skip_hooks=getattr(settings, "skip_hooks", False),
-            update_precommit=getattr(settings, "update_precommit", False),
             experimental_hooks=getattr(settings, "experimental_hooks", False),
             enable_pyrefly=getattr(settings, "enable_pyrefly", False),
             enable_ty=getattr(settings, "enable_ty", False),

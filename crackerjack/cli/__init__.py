@@ -1,6 +1,5 @@
 from .handlers import (
     handle_interactive_mode,
-    handle_orchestrated_mode,
     handle_standard_mode,
     setup_ai_agent_env,
 )
@@ -15,7 +14,6 @@ __all__ = [
     "create_options",
     "get_package_version",
     "handle_interactive_mode",
-    "handle_orchestrated_mode",
     "handle_standard_mode",
     "setup_ai_agent_env",
 ]

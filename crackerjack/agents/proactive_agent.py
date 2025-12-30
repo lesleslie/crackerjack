@@ -14,6 +14,9 @@ class ProactiveAgent(SubAgent):
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
         pass
 
+    async def can_handle(self, issue: Issue) -> float:
+        return 0.7 if issue.type in self.get_supported_types() else 0.0
+
     async def analyze_and_fix_proactively(self, issue: Issue) -> FixResult:
         cache_key = self._get_planning_cache_key(issue)
         if cache_key in self._planning_cache:
@@ -53,3 +56,15 @@ class ProactiveAgent(SubAgent):
 
     def get_cached_patterns(self) -> dict[str, t.Any]:
         return self._pattern_cache.copy()
+
+    def get_planning_confidence(self, issue: Issue) -> float:
+        """Return a confidence score based on cached patterns for the issue type."""
+        pattern_prefix = f"{issue.type.value}_"
+        confidences = [
+            t.cast(float, pattern.get("confidence", 0.0))
+            for key, pattern in self._pattern_cache.items()
+            if key.startswith(pattern_prefix)
+        ]
+        if not confidences:
+            return 0.5
+        return max(confidences)

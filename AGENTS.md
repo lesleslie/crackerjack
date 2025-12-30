@@ -11,7 +11,7 @@
 
 - `uv sync --group dev`: install runtime, testing, and MCP dependencies into the active environment.
 - `/crackerjack:run --debug`: execute the end-to-end multi-agent workflow locally before running isolated modules.
-- `uv run python -m crackerjack --help`: list available CLI entrypoints when adjusting invocation behavior.
+- `uv run python -m crackerjack run --help`: list available CLI entrypoints when adjusting invocation behavior.
 - `uv run pytest --maxfail=1`: run the default test suite, stopping on the first failure during iteration.
 - `uv run ruff check --fix && uv run ruff format`: apply lint fixes and enforce formatting, including import ordering.
 

@@ -379,9 +379,11 @@ export CRACKERJACK_DISABLE_AUTO_WORKERS=1
 ## Related
 
 - [Managers](../managers/README.md) — Backend managers called by CLI handlers
-- [Orchestration](../orchestration/README.md) — Workflow orchestration layer
+
 - [Options](./options.py) — Full list of CLI options
+
 - [Main README](../../README.md) — Command examples and workflows
+
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) — Essential commands reference
 
 ## Future Enhancements

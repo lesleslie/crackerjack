@@ -10,8 +10,6 @@ This module contains handlers for:
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
     from crackerjack.services.git import GitService
@@ -31,6 +29,8 @@ def setup_changelog_services() -> dict[str, t.Any]:
         "git_service": git_service,
         "generator": changelog_generator,
     }
+
+
 def handle_changelog_dry_run(
     generator: "ChangelogGenerator",
     changelog_since: str | None,
@@ -46,6 +46,8 @@ def handle_changelog_dry_run(
         console.print("⚠️ No new changelog entries to generate")
 
     return should_continue_after_changelog(options)
+
+
 def handle_changelog_generation(
     services: dict[str, t.Any],
     changelog_path: Path,
@@ -73,6 +75,8 @@ def handle_changelog_generation(
         return should_continue_after_changelog(options)
     console.print("❌ [bold red]Changelog generation failed![/bold red]")
     return False
+
+
 def determine_changelog_version(
     git_service: "GitService",
     changelog_version: str | None,

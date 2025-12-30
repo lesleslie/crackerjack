@@ -11,7 +11,7 @@ The QA framework adapters are organized by check type in subdirectories:
 - utility/: Utility checks (text patterns, EOF, syntax, size, deps)
 - shared/: Base classes for all QA adapters
 
-ACB 0.19.0+ auto-discovers adapters via depends.set() at module level.
+Adapters are registered via constructor injection in server initialization.
 """
 
 from .lsp._base import (
@@ -23,9 +23,9 @@ from .lsp._manager import RustToolHookManager
 from .lsp.skylos import DeadCodeIssue, SkylosAdapter
 from .lsp.zuban import TypeIssue, ZubanAdapter
 
-# NOTE: ACB 0.19.0+ uses depends.set() for adapter registration at module level
-# AI adapter registration moved to crackerjack.adapters.ai.claude module
-# QA adapters are auto-discovered from their category subdirectories
+# Adapters are registered via constructor injection in server initialization
+# AI adapter registration in crackerjack.adapters.ai.claude module
+# QA adapters are loaded from their category subdirectories
 
 __all__ = [
     "RustToolAdapter",

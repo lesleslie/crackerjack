@@ -178,6 +178,9 @@ def enhance_agent_with_claude_code_bridge(
             EnhancedProactiveAgent.__init__(self, context)
             agent_class.__init__(self, context)
 
+        async def analyze_and_fix(self, issue: Issue) -> FixResult:
+            return await agent_class.analyze_and_fix(self, issue)
+
     # Preserve the original class name and metadata
     EnhancedAgent.__name__ = f"Enhanced{agent_class.__name__}"
     EnhancedAgent.__qualname__ = f"Enhanced{agent_class.__qualname__}"

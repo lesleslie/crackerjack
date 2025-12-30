@@ -49,11 +49,12 @@ class TestInitializationPrecommitHandling:
             def debug(self, message: str, **kwargs: object) -> None:
                 return None
 
-        service = ConfigMergeService.__new__(ConfigMergeService)
-        ConfigMergeService.__init__.__wrapped__(
-            service, console, filesystem, git_service, DummyLogger()
+        return ConfigMergeService(
+            console=console,
+            filesystem=filesystem,
+            git_service=git_service,
+            logger=DummyLogger(),
         )
-        return service
 
     def _build_initialization_service(
         self, console, filesystem, git_service, pkg_path: Path
@@ -61,11 +62,13 @@ class TestInitializationPrecommitHandling:
         config_merge_service = self._build_config_merge_service(
             console, filesystem, git_service
         )
-        init_service = InitializationService.__new__(InitializationService)
-        InitializationService.__init__.__wrapped__(
-            init_service, console, filesystem, git_service, pkg_path, config_merge_service
+        return InitializationService(
+            console=console,
+            filesystem=filesystem,
+            git_service=git_service,
+            pkg_path=pkg_path,
+            config_merge_service=config_merge_service,
         )
-        return init_service
 
     def test_precommit_config_not_copied_during_initialization(
         self, console, filesystem, git_service

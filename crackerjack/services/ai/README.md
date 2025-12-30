@@ -281,8 +281,9 @@ await limiter.acquire()
 ## Related
 
 - [Intelligence](../../intelligence/README.md) - Agent orchestration and selection
-- [Workflows](../../workflows/README.md) - Workflow integration with AI services
+
 - [Services](../README.md) - Parent services documentation
+
 - [CLAUDE.md](../../../docs/guides/CLAUDE.md) - AI agent system overview
 
 ## Future Enhancements

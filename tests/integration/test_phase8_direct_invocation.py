@@ -30,7 +30,6 @@ class TestDirectInvocationExecution:
         hook = HookDefinition(
             name="trailing-whitespace",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -54,7 +53,6 @@ class TestDirectInvocationExecution:
         hook = HookDefinition(
             name="skylos",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -73,7 +71,6 @@ class TestDirectInvocationExecution:
         hook = HookDefinition(
             name="ruff-format",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -96,7 +93,6 @@ class TestDirectInvocationExecution:
         hook = HookDefinition(
             name="ruff-check",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -139,7 +135,6 @@ class TestFastHooksIntegration:
     def test_all_fast_hooks_have_direct_mode(self):
         """Test that all fast hooks use direct invocation mode."""
         for hook in FAST_HOOKS:
-            assert not hook.use_precommit_legacy, f"{hook.name} should use direct mode"
             assert hook.get_command()[0] == "uv"
 
     def test_fast_hooks_count(self):
@@ -175,10 +170,9 @@ class TestComprehensiveHooksIntegration:
     def test_all_comprehensive_hooks_have_direct_mode(self):
         """Test that all comprehensive hooks use direct invocation mode."""
         for hook in COMPREHENSIVE_HOOKS:
-            assert (
-                not hook.use_precommit_legacy
-            ), f"{hook.name} should use direct mode"
-            assert hook.get_command()[0] in ("uv", "uvx")
+            command = hook.get_command()
+            assert command[0] in ("uv", "uvx")
+            assert "pre-commit" not in " ".join(command)
 
     def test_comprehensive_hooks_count(self):
         """Test that we have expected number of comprehensive hooks."""
@@ -207,7 +201,6 @@ class TestHookExecutionPerformance:
         hook = HookDefinition(
             name="trailing-whitespace",
             command=[],
-            use_precommit_legacy=False,
         )
 
         # Measure command retrieval time
@@ -235,7 +228,6 @@ class TestHookFailureHandling:
         hook = HookDefinition(
             name="check-yaml",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -258,7 +250,6 @@ class TestHookFailureHandling:
             name="ruff-check",
             command=[],
             timeout=1,  # Very short timeout
-            use_precommit_legacy=False,
         )
 
         # Verify timeout attribute exists and can be configured
@@ -268,22 +259,15 @@ class TestHookFailureHandling:
         command = hook.get_command()
         assert command[0] == "uv"
 
-    def test_invalid_tool_gracefully_falls_back(self):
-        """Test that invalid tools fall back to pre-commit wrapper."""
+    def test_invalid_tool_raises(self):
+        """Test that invalid tools raise instead of falling back."""
         hook = HookDefinition(
             name="nonexistent-tool-12345",
             command=[],
-            use_precommit_legacy=False,
         )
 
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = "pre-commit"
-
-            command = hook.get_command()
-
-            # Should fall back to pre-commit
-            assert "pre-commit" in command[0]
-            assert "nonexistent-tool-12345" in command
+        with pytest.raises(ValueError, match="not registered for direct execution"):
+            hook.get_command()
 
 
 class TestEndToEndWorkflow:
@@ -344,7 +328,6 @@ class TestEndToEndWorkflow:
         hook = HookDefinition(
             name="check-yaml",
             command=[],
-            use_precommit_legacy=False,
         )
 
         command = hook.get_command()
@@ -401,38 +384,17 @@ class TestToolRegistryIntegration:
 class TestDirectInvocationBenefits:
     """Test the benefits of Phase 8 direct invocation."""
 
-    def test_direct_mode_reduces_subprocess_overhead(self):
-        """Test that direct mode has less overhead than pre-commit wrapper."""
-        hook_direct = HookDefinition(
+    def test_direct_mode_avoids_precommit_wrapper(self):
+        """Test that direct mode does not route through pre-commit."""
+        hook = HookDefinition(
             name="ruff-format",
             command=[],
-            use_precommit_legacy=False,
         )
 
-        hook_legacy = HookDefinition(
-            name="ruff-format",
-            command=[],
-            use_precommit_legacy=True,
-        )
+        command = hook.get_command()
 
-        with patch("shutil.which") as mock_which:
-            mock_which.return_value = "pre-commit"
-
-            # Direct mode command
-            direct_cmd = hook_direct.get_command()
-
-            # Legacy mode command
-            legacy_cmd = hook_legacy.get_command()
-
-            # Direct mode uses uv directly
-            assert direct_cmd[0] == "uv"
-
-            # Legacy mode uses pre-commit wrapper
-            assert "pre-commit" in legacy_cmd[0]
-
-            # Both should reference the same underlying tool
-            assert "ruff" in " ".join(direct_cmd)
-            assert "ruff-format" in " ".join(legacy_cmd)
+        assert command[0] == "uv"
+        assert "pre-commit" not in " ".join(command)
 
     def test_direct_mode_uses_uv_dependency_isolation(self):
         """Test that all direct commands use uv for consistent environments."""
