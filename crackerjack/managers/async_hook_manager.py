@@ -30,6 +30,11 @@ class AsyncHookManager:
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path
 
+    def get_hook_count(self, suite_name: str) -> int:
+        """Get the number of hooks in a suite."""
+        strategy = self.config_loader.load_strategy(suite_name)
+        return len(strategy.hooks)
+
     async def run_fast_hooks_async(self) -> list[HookResult]:
         strategy = self.config_loader.load_strategy("fast")
 

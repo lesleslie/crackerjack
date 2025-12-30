@@ -8,8 +8,7 @@ from typing import Any
 import pytest
 
 from crackerjack.managers.publish_manager import PublishManagerImpl
-from acb.depends import depends
-from acb.console import Console
+from rich.console import Console
 
 
 # Module-level fixtures available to all test classes
@@ -62,59 +61,6 @@ def temp_pkg_path() -> Path:
         yield Path(temp_dir)
 
 
-@pytest.fixture
-def publish_manager_di_context(
-    mock_console: MagicMock,
-    mock_git_service: MagicMock,
-    mock_version_analyzer: MagicMock,
-    mock_changelog_generator: MagicMock,
-    mock_filesystem: MagicMock,
-    mock_security_service: MagicMock,
-    mock_regex_patterns: MagicMock,
-    temp_pkg_path: Path,
-):
-    """Set up DI context for PublishManagerImpl testing."""
-    from crackerjack.models.protocols import (
-        ChangelogGeneratorProtocol,
-        FileSystemInterface,
-        GitServiceProtocol,
-        RegexPatternsProtocol,
-        SecurityServiceProtocol,
-        VersionAnalyzerProtocol,
-    )
-    from acb.logger import Logger
-
-    injection_map = {
-        Console: mock_console,
-        Logger: MagicMock(spec=Logger),
-        GitServiceProtocol: mock_git_service,
-        VersionAnalyzerProtocol: mock_version_analyzer,
-        ChangelogGeneratorProtocol: mock_changelog_generator,
-        FileSystemInterface: mock_filesystem,
-        SecurityServiceProtocol: mock_security_service,
-        RegexPatternsProtocol: mock_regex_patterns,
-        Path: temp_pkg_path,
-    }
-
-    # Save original values
-    original_values = {}
-    try:
-        # Register all dependencies
-        for dep_type, dep_value in injection_map.items():
-            try:
-                original_values[dep_type] = depends.get_sync(dep_type)
-            except Exception:
-                original_values[dep_type] = None
-            depends.set(dep_type, dep_value)
-
-        yield injection_map, temp_pkg_path
-    finally:
-        # Restore original values after test completes
-        for dep_type, original_value in original_values.items():
-            if original_value is not None:
-                depends.set(dep_type, original_value)
-
-
 def create_publish_manager(
     mock_console: MagicMock,
     mock_git_service: MagicMock,
@@ -144,7 +90,6 @@ class TestPublishManagerCore:
     @pytest.fixture
     def publish_manager(
         self,
-        publish_manager_di_context,
         mock_console,
         mock_git_service,
         mock_version_analyzer,
@@ -155,7 +100,6 @@ class TestPublishManagerCore:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -171,7 +115,6 @@ class TestPublishManagerCore:
     @pytest.fixture
     def dry_run_manager(
         self,
-        publish_manager_di_context,
         mock_console,
         mock_git_service,
         mock_version_analyzer,
@@ -182,7 +125,6 @@ class TestPublishManagerCore:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl in dry-run mode with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,

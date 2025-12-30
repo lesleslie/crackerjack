@@ -3,11 +3,9 @@ from pathlib import Path
 
 import psutil
 from rich.console import Console
-from acb.depends import depends
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
-
 
 class TestCommandBuilder:
     def __init__(
@@ -19,10 +17,7 @@ class TestCommandBuilder:
         # Normalize to pathlib.Path to avoid async path methods
         resolved_pkg_path = pkg_path
         if resolved_pkg_path is None:
-            try:
-                resolved_pkg_path = depends.get_sync(Path)
-            except Exception:
-                resolved_pkg_path = Path.cwd()
+            resolved_pkg_path = Path.cwd()
 
         try:
             self.pkg_path = Path(str(resolved_pkg_path))
@@ -36,10 +31,7 @@ class TestCommandBuilder:
                 console = Console()
 
         if settings is None:
-            try:
-                settings = depends.get_sync(CrackerjackSettings)
-            except Exception:
-                settings = CrackerjackSettings()
+            settings = CrackerjackSettings()
 
         self.console = console
         self.settings = settings

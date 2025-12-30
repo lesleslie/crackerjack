@@ -452,7 +452,7 @@ ______________________________________________________________________
 - [ ] **Step 2:** Run tests and check new coverage
 
   ```bash
-  python -m crackerjack --run-tests
+  python -m crackerjack run --run-tests
   ```
 
 - [ ] **Step 3:** Update coverage baseline if needed
@@ -663,14 +663,14 @@ ______________________________________________________________________
 - [ ] **All hooks pass**
 
   ```bash
-  python -m crackerjack
+  python -m crackerjack run
   # Should pass all hooks
   ```
 
 - [ ] **Tests pass with branch coverage**
 
   ```bash
-  python -m crackerjack --run-tests
+  python -m crackerjack run --run-tests
   # Should pass all tests
   # Check coverage report for branch metrics
   ```
@@ -694,7 +694,7 @@ ______________________________________________________________________
   ```bash
   # Test in external project
   cd /tmp/test-project
-  python -m crackerjack
+  python -m crackerjack run
   # Should detect complexipy violations
   ```
 
@@ -708,8 +708,8 @@ ______________________________________________________________________
 - [ ] **Test parallelization works**
 
   ```bash
-  python -m crackerjack --run-tests --test-workers 0
-  python -m crackerjack --run-tests --test-workers 4
+  python -m crackerjack run --run-tests --test-workers 0
+  python -m crackerjack run --run-tests --test-workers 4
   # Both should work
   ```
 

@@ -1,8 +1,7 @@
-"""Data repositories backed by ACB SQL adapter."""
+"""Data repositories backed by an in-memory query adapter."""
 
 from __future__ import annotations
 
-import logging
 import typing as t
 from typing import Any
 
@@ -12,133 +11,104 @@ from crackerjack.data.models import (
     QualityBaselineRecord,
 )
 
-LOGGER = logging.getLogger(__name__)
+
+class _InMemorySimpleOps:
+    def __init__(self, model: type[Any], store: list[Any]) -> None:
+        self._model = model
+        self._store = store
+
+    async def create_or_update(
+        self,
+        data: dict[str, Any],
+        key_field: str,
+    ) -> Any:
+        key_value = data.get(key_field)
+        for existing in self._store:
+            if getattr(existing, key_field, None) == key_value:
+                if hasattr(existing, "update_from_dict"):
+                    existing.update_from_dict(data)
+                else:
+                    for key, value in data.items():
+                        if hasattr(existing, key):
+                            setattr(existing, key, value)
+                return existing
+        instance = self._model(**data)
+        self._store.append(instance)
+        return instance
+
+    async def find(self, **filters: Any) -> Any | None:
+        for existing in self._store:
+            if all(
+                getattr(existing, key, None) == value for key, value in filters.items()
+            ):
+                return existing
+        return None
+
+    async def delete(self, **filters: Any) -> bool:
+        to_remove = [
+            existing
+            for existing in self._store
+            if all(
+                getattr(existing, key, None) == value for key, value in filters.items()
+            )
+        ]
+        for item in to_remove:
+            self._store.remove(item)
+        return bool(to_remove)
+
+    async def all(self) -> list[Any]:
+        return self._store.copy()
 
 
-from acb.depends import depends
+class _InMemoryAdvancedOps:
+    def __init__(self, simple_ops: _InMemorySimpleOps) -> None:
+        self._simple = simple_ops
+        self._order_field: str | None = None
+        self._limit: int | None = None
 
-try:
-    from acb.adapters.models._hybrid import ACBQuery  # type: ignore[attr-defined]
-    from acb.adapters.models._memory import (
-        MemoryDatabaseAdapter,  # type: ignore[attr-defined]
-    )
-    from acb.adapters.models._pydantic import (
-        PydanticModelAdapter,  # type: ignore[attr-defined]
-    )
-    from acb.adapters.models._query import registry  # type: ignore[attr-defined]
+    def order_by_desc(self, field: str) -> _InMemoryAdvancedOps:
+        self._order_field = field
+        return self
 
-    # Register in-memory adapters for default usage
-    registry.register_database_adapter("memory", MemoryDatabaseAdapter())
-    registry.register_model_adapter("pydantic", PydanticModelAdapter())
+    def limit(self, limit: int) -> _InMemoryAdvancedOps:
+        self._limit = limit
+        return self
 
-    # ACB hybrid query is available - use in-memory adapter as default
-    # (SQL/NoSQL adapters can be configured when those databases are set up)
-    _query_instance = ACBQuery(
-        database_adapter_name="memory",
-        model_adapter_name="pydantic",
-    )
-    depends.set(ACBQuery, _query_instance)
+    async def all(self) -> list[Any]:
+        records = await self._simple.all()
+        if self._order_field:
 
-except ImportError:  # pragma: no cover - fallback when hybrid query missing
-    LOGGER.warning(
-        "ACB hybrid query adapter not available; using in-memory query fallback.",
-    )
+            def key_fn(item: Any) -> Any:
+                return getattr(item, self._order_field or "", None)
 
-    class _InMemorySimpleOps:
-        def __init__(self, model: type[Any], store: list[Any]) -> None:
-            self._model = model
-            self._store = store
+            records.sort(key=key_fn, reverse=True)
+        if self._limit is not None:
+            records = records[: self._limit]
+        return records
 
-        async def create_or_update(
-            self,
-            data: dict[str, Any],
-            key_field: str,
-        ) -> Any:
-            key_value = data.get(key_field)
-            for existing in self._store:
-                if getattr(existing, key_field, None) == key_value:
-                    if hasattr(existing, "update_from_dict"):
-                        existing.update_from_dict(data)
-                    else:
-                        for key, value in data.items():
-                            if hasattr(existing, key):
-                                setattr(existing, key, value)
-                    return existing
-            instance = self._model(**data)
-            self._store.append(instance)
-            return instance
 
-        async def find(self, **filters: Any) -> Any | None:
-            for existing in self._store:
-                if all(
-                    getattr(existing, key, None) == value
-                    for key, value in filters.items()
-                ):
-                    return existing
-            return None
+class _InMemoryModelInterface:
+    def __init__(self, model: type[Any], store: list[Any]) -> None:
+        self.simple = _InMemorySimpleOps(model, store)
+        self.advanced = _InMemoryAdvancedOps(self.simple)
 
-        async def delete(self, **filters: Any) -> bool:
-            to_remove = [
-                existing
-                for existing in self._store
-                if all(
-                    getattr(existing, key, None) == value
-                    for key, value in filters.items()
-                )
-            ]
-            for item in to_remove:
-                self._store.remove(item)
-            return bool(to_remove)
 
-        async def all(self) -> list[Any]:
-            return self._store.copy()
+class InMemoryQuery:
+    def __init__(self) -> None:
+        self._stores: dict[type[Any], list[Any]] = {}
 
-    class _InMemoryAdvancedOps:
-        def __init__(self, simple_ops: _InMemorySimpleOps) -> None:
-            self._simple = simple_ops
-            self._order_field: str | None = None
-            self._limit: int | None = None
+    def for_model(self, model: type[Any]) -> _InMemoryModelInterface:
+        if model not in self._stores:
+            self._stores[model] = []
+        return _InMemoryModelInterface(model, self._stores[model])
 
-        def order_by_desc(self, field: str) -> _InMemoryAdvancedOps:
-            self._order_field = field
-            return self
 
-        def limit(self, limit: int) -> _InMemoryAdvancedOps:
-            self._limit = limit
-            return self
-
-        async def all(self) -> list[Any]:
-            records = await self._simple.all()
-            if self._order_field:
-
-                def key_fn(item: Any) -> Any:
-                    return getattr(item, self._order_field or "", None)
-
-                records.sort(key=key_fn, reverse=True)
-            if self._limit is not None:
-                records = records[: self._limit]
-            return records
-
-    class _InMemoryModelInterface:
-        def __init__(self, model: type[Any], store: list[Any]) -> None:
-            self.simple = _InMemorySimpleOps(model, store)
-            self.advanced = _InMemoryAdvancedOps(self.simple)
-
-    class ACBQuery:  # type: ignore[no-redef]
-        def __init__(self) -> None:
-            self._stores: dict[type[Any], list[Any]] = {}
-
-        def for_model(self, model: type[Any]) -> _InMemoryModelInterface:
-            if model not in self._stores:
-                self._stores[model] = []
-            return _InMemoryModelInterface(model, self._stores[model])
-
-    depends.set(ACBQuery, ACBQuery())
+_QUERY = InMemoryQuery()
 
 
 class QualityBaselineRepository:
     def __init__(self) -> None:
-        self.query = depends.get_sync(ACBQuery)
+        self.query = _QUERY
 
     async def upsert(self, data: dict[str, Any]) -> QualityBaselineRecord:
         result = await self.query.for_model(
@@ -170,7 +140,7 @@ class QualityBaselineRepository:
 
 class HealthMetricsRepository:
     def __init__(self) -> None:
-        self.query = depends.get_sync(ACBQuery)
+        self.query = _QUERY
 
     async def upsert(
         self,
@@ -191,7 +161,7 @@ class HealthMetricsRepository:
 
 class DependencyMonitorRepository:
     def __init__(self) -> None:
-        self.query = depends.get_sync(ACBQuery)
+        self.query = _QUERY
 
     async def upsert(
         self,

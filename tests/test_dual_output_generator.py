@@ -8,7 +8,7 @@ from crackerjack.documentation.dual_output_generator import (
     DocumentationResult,
     DualOutputGenerator,
 )
-from acb.console import Console
+from rich.console import Console
 
 
 def test_to_dict_basic():

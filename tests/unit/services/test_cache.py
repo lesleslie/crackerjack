@@ -615,7 +615,7 @@ class TestCrackerjackCacheQualityBaseline:
         call_args = mock_backend.set.call_args[0]
         assert call_args[0] == "baseline:abc123def456"
         # Check long TTL (30 days)
-        assert call_args[2]["ttl"] == 2592000
+        assert mock_backend.set.call_args[1]["ttl"] == 2592000
 
     def test_set_quality_baseline_disk_cache_disabled(self):
         """Test set quality baseline with disk cache disabled."""

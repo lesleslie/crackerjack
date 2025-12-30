@@ -14,14 +14,12 @@ ACB Patterns:
 from __future__ import annotations
 
 import asyncio
-import contextlib
 import hashlib
 import typing as t
 from datetime import datetime, timedelta
 from pathlib import Path
 
 import yaml
-from acb.depends import depends
 
 from crackerjack.models.protocols import QAAdapterProtocol
 from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
@@ -486,6 +484,4 @@ class QAOrchestrator:
         }
 
 
-# Register orchestrator with ACB dependency injection
-with contextlib.suppress(Exception):
-    depends.set(QAOrchestrator)
+# ACB DI registration removed

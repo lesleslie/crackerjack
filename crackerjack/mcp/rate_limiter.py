@@ -6,9 +6,9 @@ from collections import defaultdict, deque
 from dataclasses import dataclass
 from pathlib import Path
 
-from acb import console
+from rich.console import Console
 
-# console imported from acb
+console = Console()
 
 
 @dataclass
@@ -314,12 +314,21 @@ class RateLimitMiddleware:
         while self._running:
             try:
                 await self.resource_monitor.cleanup_stale_jobs()
-                await asyncio.sleep(300)
+                await self._sleep_with_guard(300)
             except asyncio.CancelledError:
                 break
             except Exception as e:
                 console.print(f"[red]Error in cleanup loop: {e}[/ red]")
-                await asyncio.sleep(60)
+                await self._sleep_with_guard(60)
+
+    async def _sleep_with_guard(self, delay: float) -> None:
+        try:
+            await asyncio.sleep(delay)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            # Ignore sleep failures in cleanup loop
+            return
 
     def get_comprehensive_stats(self) -> dict[str, t.Any]:
         return {

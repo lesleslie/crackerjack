@@ -44,7 +44,6 @@ class TestHookConfig:
     def test_default_values(self) -> None:
         config = HookConfig()
         assert config.skip_hooks is False
-        assert config.update_precommit is False
         assert config.experimental_hooks is False
         assert config.enable_pyrefly is False
         assert config.enable_ty is False
@@ -52,13 +51,11 @@ class TestHookConfig:
     def test_all_custom_values(self) -> None:
         config = HookConfig(
             skip_hooks=True,
-            update_precommit=True,
             experimental_hooks=True,
             enable_pyrefly=True,
             enable_ty=True,
         )
         assert config.skip_hooks is True
-        assert config.update_precommit is True
         assert config.experimental_hooks is True
         assert config.enable_pyrefly is True
         assert config.enable_ty is True
@@ -66,7 +63,6 @@ class TestHookConfig:
     def test_mixed_values(self) -> None:
         config = HookConfig(skip_hooks=True, experimental_hooks=True)
         assert config.skip_hooks is True
-        assert config.update_precommit is False
         assert config.experimental_hooks is True
         assert config.enable_pyrefly is False
         assert config.enable_ty is False

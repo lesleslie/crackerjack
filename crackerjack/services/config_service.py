@@ -73,9 +73,7 @@ class ConfigService:
             return yaml.safe_load(content)
         elif path.suffix.lower() == ".toml":
             content = await FileIOService.read_text_file(path)
-            import toml
-
-            return toml.loads(content)
+            return _load_toml_from_text(content)
         else:
             raise ValueError(f"Unsupported config format: {path.suffix}")
 
@@ -94,10 +92,8 @@ class ConfigService:
     @staticmethod
     def _load_toml(path: Path) -> dict[str, Any]:
         """Load TOML configuration."""
-        import toml
-
         with path.open("r", encoding="utf-8") as f:
-            return toml.load(f)
+            return _load_toml_from_text(f.read())
 
     @staticmethod
     def validate_config(
@@ -164,10 +160,8 @@ class ConfigService:
     @staticmethod
     def _save_toml(config: dict[str, Any], path: Path) -> None:
         """Save configuration as TOML."""
-        import toml
-
         with path.open("w", encoding="utf-8") as f:
-            toml.dump(config, f)
+            f.write(_dump_toml(config))
 
     @staticmethod
     def merge_configs(
@@ -196,3 +190,65 @@ class ConfigService:
                 result[key] = value
 
         return result
+
+
+def _load_toml_from_text(content: str) -> dict[str, Any]:
+    try:
+        import tomllib
+    except ImportError:
+        tomllib = None  # type: ignore[assignment]
+
+    if tomllib is not None:
+        return tomllib.loads(content)
+
+    import toml
+
+    return toml.loads(content)
+
+
+def _dump_toml(config: dict[str, Any]) -> str:
+    try:
+        import toml
+    except ImportError:
+        toml = None  # type: ignore[assignment]
+
+    if toml is not None:
+        return toml.dumps(config)
+
+    lines: list[str] = []
+
+    def emit_table(data: dict[str, Any], prefix: list[str]) -> None:
+        scalars: list[tuple[str, Any]] = []
+        tables: list[tuple[str, dict[str, Any]]] = []
+        for key, value in data.items():
+            if isinstance(value, dict):
+                tables.append((key, value))
+            else:
+                scalars.append((key, value))
+
+        if prefix:
+            lines.append(f"[{'.'.join(prefix)}]")
+
+        for key, value in scalars:
+            lines.append(f"{key} = {_format_toml_value(value)}")
+
+        for key, value in tables:
+            if lines and lines[-1] != "":
+                lines.append("")
+            emit_table(value, prefix + [key])
+
+    emit_table(config, [])
+    return "\n".join(lines) + "\n"
+
+
+def _format_toml_value(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
+        return f'"{escaped}"'
+    if isinstance(value, list):
+        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
+    raise ValueError(f"Unsupported TOML value: {value!r}")

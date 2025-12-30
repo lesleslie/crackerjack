@@ -4,11 +4,13 @@ import subprocess
 import typing as t
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from typing import TYPE_CHECKING, Any
 
-from acb.depends import depends
+# Repository pattern uses in-memory storage via cache system
+# See: crackerjack.services.cache.CrackerjackCache
+if TYPE_CHECKING:
+    pass  # No external dependencies needed
 
-from crackerjack.data.models import QualityBaselineRecord
-from crackerjack.data.repository import QualityBaselineRepository
 from crackerjack.models.protocols import QualityBaselineProtocol
 from crackerjack.services.cache import CrackerjackCache
 
@@ -48,17 +50,12 @@ class QualityBaselineService(QualityBaselineProtocol):
     def __init__(
         self,
         cache: CrackerjackCache | None = None,
-        repository: QualityBaselineRepository | None = None,
+        repository: Any = None,  # Repository pattern disabled
     ) -> None:
         self.cache = cache or CrackerjackCache()
         self._logger = logging.getLogger(__name__)
-        if repository is not None:
-            self._repository: QualityBaselineRepository | None = repository
-        else:
-            try:
-                self._repository = depends.get_sync(QualityBaselineRepository)
-            except Exception:
-                self._repository = None
+        # Repository pattern uses in-memory cache storage
+        self._repository: Any = None  # Not needed - using cache system
 
     def get_current_git_hash(self) -> str | None:
         """Get current git commit hash."""
@@ -329,7 +326,9 @@ class QualityBaselineService(QualityBaselineProtocol):
                 exc_info=exc,
             )
 
-    def _record_to_metrics(self, record: QualityBaselineRecord) -> QualityMetrics:
+    def _record_to_metrics(
+        self, record: Any
+    ) -> QualityMetrics:  # QualityBaselineRecord when enabled
         return QualityMetrics(
             git_hash=record.git_hash,
             timestamp=record.recorded_at,

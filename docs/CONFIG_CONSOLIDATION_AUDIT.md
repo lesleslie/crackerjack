@@ -897,7 +897,7 @@ After each change, verify:
 
 ```bash
 # Run all hooks
-python -m crackerjack
+python -m crackerjack run
 
 # Specifically test modified tools
 uv run zuban check ./crackerjack        # After mypy.ini removal
@@ -909,7 +909,7 @@ uv run pytest tests/                    # After pytest marker changes
 ### Coverage Still Works
 
 ```bash
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Check that coverage metrics are reasonable
 # Branch coverage should show more accurate results
@@ -919,7 +919,7 @@ python -m crackerjack --run-tests
 
 ```bash
 # Full workflow
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Should pass all checks
 ```

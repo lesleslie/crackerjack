@@ -31,7 +31,6 @@ def test_check_ast_integration():
             command=[],
             timeout=30,
             security_level=SecurityLevel.HIGH,
-            use_precommit_legacy=False,
             accepts_file_paths=True,
         )
 
@@ -75,7 +74,6 @@ def test_json_hooks_integration():
             command=[],
             timeout=30,
             security_level=SecurityLevel.MEDIUM,
-            use_precommit_legacy=False,
             accepts_file_paths=True,
         )
 
@@ -125,7 +123,6 @@ def test_check_added_large_files_integration():
             command=[],
             timeout=30,
             security_level=SecurityLevel.HIGH,
-            use_precommit_legacy=False,
             accepts_file_paths=True,
         )
 
@@ -160,7 +157,6 @@ def test_hook_execution_with_timeout():
             command=[],
             timeout=0.05,  # Very short timeout to force timeout
             security_level=SecurityLevel.HIGH,
-            use_precommit_legacy=False,
             accepts_file_paths=True,
         )
 

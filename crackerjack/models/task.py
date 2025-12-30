@@ -1,11 +1,12 @@
+import json
 import time
 import typing as t
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from rich.console import Console
 from pydantic import BaseModel
+from rich.console import Console
 
 
 class TaskStatus(Enum):
@@ -43,7 +44,7 @@ class HookResult:
     issues_count: int = (
         0  # Total count of issues (may exceed len(issues_found) if truncated)
     )
-    stage: str = "pre - commit"
+    stage: str = "fast"
     exit_code: int | None = None  # Non-zero exit codes for failed hooks
     error_message: str | None = None  # Error details from stderr or exceptions
     is_timeout: bool = False  # Whether hook failed due to timeout
@@ -119,6 +120,28 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
         if not self.metadata:
             self.metadata = {}
 
+    def _update_progress_file(self) -> None:
+        if not self.progress_file:
+            return
+        try:
+            progress_path = Path(self.progress_file)
+        except TypeError:
+            return
+        progress_data = {
+            "session_id": self.session_id,
+            "start_time": self.start_time,
+            "current_task": self.current_task,
+            "metadata": self.metadata,
+            "tasks": {task_id: asdict(task) for task_id, task in self.tasks.items()},
+        }
+        try:
+            progress_path.write_text(
+                json.dumps(progress_data, indent=2),
+                encoding="utf-8",
+            )
+        except OSError:
+            return
+
     def start_task(
         self,
         task_id: str,
@@ -151,7 +174,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
                 task.details = details
             if files_changed:
                 task.files_changed = files_changed
-                self.console.print(f"[green]✅[/ green] Completed: {task.name}")
+            self.console.print(f"[green]✅[/ green] Completed: {task.name}")
             if self.current_task == task_id:
                 self.current_task = None
 

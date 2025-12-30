@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0  # No files is not an error for formatters
 
     # Build mdformat command with git-tracked files
-    cmd = ["mdformat"]
+    cmd = ["mdformat", "--no-codeformatters"]
 
     # Add any additional arguments passed to wrapper
     if argv:

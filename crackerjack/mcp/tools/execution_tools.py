@@ -207,14 +207,11 @@ def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | No
 
 
 def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
-    from rich.console import Console
-    
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
-    def _execute_initialization(
-        target_path: t.Any, force: bool
-    ) -> dict[str, t.Any]:
+
+    def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
         filesystem = FileSystemService()
         git_service = GitService(target_path)
         return InitializationService(

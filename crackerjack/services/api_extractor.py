@@ -6,8 +6,6 @@ import re
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
 from ..models.protocols import APIExtractorProtocol
 from .regex_patterns import SAFE_PATTERNS
 
@@ -119,6 +117,7 @@ class PythonDocstringParser:
 
 class APIExtractorImpl(APIExtractorProtocol):
     """Implementation of API documentation extraction from source code."""
+
     def __init__(self) -> None:
         self.console = console
         self.docstring_parser = PythonDocstringParser()

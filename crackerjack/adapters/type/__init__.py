@@ -6,7 +6,7 @@ Adapters:
 - pyrefly: Python type checking tool (experimental)
 """
 
-# ACB will auto-discover these adapters via depends.set() in module files
+# Adapters are registered via constructor injection in server initialization
 # No explicit imports needed here
 
 __all__ = []

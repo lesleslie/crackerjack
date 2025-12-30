@@ -74,13 +74,13 @@ The ratchet system is implemented in the test workflow itself, not as a static c
 
 ```bash
 # Run tests with coverage
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Generate HTML coverage report
-python -m crackerjack --coverage-report
+python -m crackerjack run --coverage-report
 
 # Check coverage status
-python -m crackerjack --coverage-status
+python -m crackerjack run --coverage-status
 ```
 
 ### Coverage Reports
@@ -196,7 +196,7 @@ If coverage drops below baseline:
 Coverage checks run as part of the test workflow:
 
 ```bash
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 ```
 
 ### CI/CD Integration
@@ -207,7 +207,7 @@ Coverage is tracked in CI but not used as a hard gate. The ratchet system is adv
 
 ```bash
 # Before committing major changes
-python -m crackerjack --coverage-status
+python -m crackerjack run --coverage-status
 
 # If below baseline, add tests before committing
 python -m pytest --cov=crackerjack --cov-report=term-missing tests/

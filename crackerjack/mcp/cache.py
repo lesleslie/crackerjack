@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
-from acb.depends import depends
-
 # Phase 9.2: ACB Integration - Module registration for dependency injection
 MODULE_ID: Final[UUID] = uuid4()
 MODULE_STATUS: Final[str] = "stable"
@@ -347,6 +345,4 @@ class ErrorCache:
         return MODULE_STATUS
 
 
-# Phase 9.2: ACB Integration - Register ErrorCache with dependency injection system
-with suppress(Exception):
-    depends.set(ErrorCache)
+# ACB DI registration removed

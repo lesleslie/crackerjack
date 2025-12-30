@@ -5,9 +5,10 @@ import typing as t
 from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 
-from acb import console
+from rich.console import Console
 
-# console imported from acb
+console = Console()
+
 logger = logging.getLogger(__name__)
 
 

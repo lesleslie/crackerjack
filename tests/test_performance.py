@@ -1,5 +1,33 @@
 import pytest
 
+from crackerjack.core.performance import (
+    FileCache,
+    OptimizedFileWatcher,
+    ParallelTaskExecutor,
+    PerformanceMonitor,
+    batch_file_operations,
+    get_performance_monitor,
+    memoize_with_ttl,
+    optimize_subprocess_calls,
+    reset_performance_monitor,
+)
+
+get = FileCache.get
+set = FileCache.set
+clear = FileCache.clear
+size = FileCache.size
+time_operation = PerformanceMonitor.time_operation
+record_metric = PerformanceMonitor.record_metric
+get_stats = PerformanceMonitor.get_stats
+print_stats = PerformanceMonitor.print_stats
+decorator = memoize_with_ttl()
+wrapper = memoize_with_ttl()
+get_python_files = OptimizedFileWatcher.get_python_files
+get_modified_files = OptimizedFileWatcher.get_modified_files
+clear_cache = OptimizedFileWatcher.clear_cache
+execute_tasks = ParallelTaskExecutor.execute_tasks
+run_command = optimize_subprocess_calls
+
 
 def test_memoize_with_ttl_basic():
     """Test basic functionality of memoize_with_ttl."""

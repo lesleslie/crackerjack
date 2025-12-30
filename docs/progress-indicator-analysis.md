@@ -4,7 +4,7 @@
 
 ### What You're Seeing
 
-When running `python -m crackerjack -c -t -p minor`, you see:
+When running `python -m crackerjack run -c -t -p minor`, you see:
 
 ```
 ⏳ Started: Fast quality checks

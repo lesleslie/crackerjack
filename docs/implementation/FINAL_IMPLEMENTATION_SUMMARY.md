@@ -175,7 +175,7 @@ Run in ../acb project to verify:
 
 ```bash
 cd /Users/les/Projects/acb
-python -m crackerjack
+python -m crackerjack run
 ```
 
 Expected results:

@@ -105,7 +105,7 @@ class FileSystemService(FileSystemInterface):
                     recovery="Check disk space and directory permissions",
                 ) from e
 
-            if path_obj.name in {".pre-commit-config.yaml", "pyproject.toml"}:
+            if path_obj.name == "pyproject.toml":
                 content = self.clean_trailing_whitespace_and_newlines(content)
 
             path_obj.write_text(content, encoding="utf-8")

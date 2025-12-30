@@ -179,6 +179,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.codespell_wrapper",
         ],
+        # Ruff check in auto-fix mode for fast hooks (fixes what it can)
         "ruff-check": [
             "uv",
             "run",
@@ -186,8 +187,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "ruff",
             "check",
+            "--fix",
             f"./{package_name}",
         ],
+        # Ruff format in auto-fix mode for fast hooks (no --check)
         "ruff-format": [
             "uv",
             "run",
@@ -195,7 +198,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "ruff",
             "format",
-            "--check",
             f"./{package_name}",
         ],
         # Mdformat in auto-fix mode for fast hooks (no --check)

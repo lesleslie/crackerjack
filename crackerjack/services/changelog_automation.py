@@ -4,10 +4,6 @@ import re
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console
-
-from crackerjack.models.protocols import GitServiceProtocol
-
 
 class ChangelogEntry:
     """Represents a single changelog entry."""
@@ -32,9 +28,8 @@ class ChangelogEntry:
 
 class ChangelogGenerator:
     """Generate and update changelogs based on git commits."""
-    def __init__(
-        self
-    ) -> None:
+
+    def __init__(self) -> None:
         self.console = console
         self.git = git_service
 

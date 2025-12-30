@@ -206,7 +206,7 @@ class ArchitectAgent(ProactiveAgent):
             fixes_applied=[
                 f"Applied {plan.get('approach', 'specialist')} approach",
                 f"Used patterns: {', '.join(plan.get('patterns', []))}",
-                "Followed crackerjack-architect guidance",
+                "Followed crackerjack - architect guidance",
             ],
             remaining_issues=[],
             recommendations=[

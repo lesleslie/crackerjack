@@ -7,19 +7,18 @@ to the Oneiric CLI lifecycle management pattern.
 
 from __future__ import annotations
 
-import asyncio
 import logging
 import os
 import signal
 import time
-from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.config import CrackerjackSettings, load_settings
 from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
-from crackerjack.runtime import RuntimeHealthSnapshot, read_pid_file, read_runtime_health
-from crackerjack.server import CrackerjackServer
+from crackerjack.runtime import (
+    RuntimeHealthSnapshot,
+    read_runtime_health,
+)
 
 logger = logging.getLogger(__name__)
 console = Console()
@@ -30,20 +29,15 @@ def start_handler() -> None:
 
     This handler:
     1. Loads CrackerjackSettings (ACB-based app config)
-    2. Creates CrackerjackServer instance
-    3. Starts the server (which writes PID and health snapshots)
+    2. Starts the actual MCP server with mcp-common integration
 
     Example:
         >>> start_handler()
     """
-    # Load full Crackerjack settings (ACB-based, 60+ fields)
-    cj_settings = load_settings(CrackerjackSettings)
+    # Start the actual MCP server with mcp-common and Oneiric integration
+    from crackerjack.mcp.server_core import main as mcp_main
 
-    # Create server with full settings
-    server = CrackerjackServer(cj_settings)
-
-    # Start server (writes PID and health snapshots internally)
-    asyncio.run(server.start())
+    mcp_main(".", http_mode=False, http_port=None)
 
 
 def stop_handler(pid: int) -> None:
@@ -84,7 +78,9 @@ def stop_handler(pid: int) -> None:
             return
 
     # If still running after 10 seconds, force kill
-    console.print(f"[red]Process {pid} did not stop gracefully, sending SIGKILL...[/red]")
+    console.print(
+        f"[red]Process {pid} did not stop gracefully, sending SIGKILL...[/red]"
+    )
     try:
         os.kill(pid, signal.SIGKILL)
         time.sleep(0.5)

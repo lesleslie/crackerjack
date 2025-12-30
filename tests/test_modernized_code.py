@@ -35,8 +35,8 @@ class TestCodeCleaner:
             yield Path(tmp)
 
     @pytest.fixture
-    def cleaner(self, console):
-        return CodeCleaner(console=console)
+    def cleaner(self, console, temp_path):
+        return CodeCleaner(console=console, base_directory=temp_path)
 
     def test_initialization(self, cleaner, console) -> None:
         assert cleaner.console == console
@@ -46,6 +46,7 @@ class TestCodeCleaner:
 
     def test_should_process_file_valid(self, cleaner, temp_path) -> None:
         test_file = temp_path / "test_module.py"
+        test_file.write_text("print('ok')")
         assert cleaner.should_process_file(test_file) is True
 
     def test_should_process_file_invalid(self, cleaner, temp_path) -> None:
@@ -59,7 +60,7 @@ class TestCodeCleaner:
         assert cleaner.should_process_file(hidden_file) is False
 
     def test_clean_files_empty_directory(self, cleaner, temp_path) -> None:
-        results = cleaner.clean_files(temp_path)
+        results = cleaner.clean_files(temp_path, use_backup=False)
         assert isinstance(results, list)
         assert len(results) == 0
 

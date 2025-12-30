@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from crackerjack.services.regex_patterns import apply_formatting_fixes
+
 from .base import (
     AgentContext,
     FixResult,
@@ -32,7 +34,6 @@ class FormattingAgent(SubAgent):
                 "import sorting",
                 "unused import",
                 "ruff",
-                "format",
             )
         ):
             return 1.0
@@ -46,7 +47,7 @@ class FormattingAgent(SubAgent):
                 "line length",
                 "import",
                 "style",
-                "format",
+                "formatting",
             )
         ):
             return 0.8
@@ -212,11 +213,11 @@ class FormattingAgent(SubAgent):
         return content or None
 
     def _apply_content_formatting(self, content: str) -> str:
-        from crackerjack.services.regex_patterns import apply_formatting_fixes
-
         content = apply_formatting_fixes(content)
 
-        if content and not content.endswith("\n"):
+        if content == "":
+            content = "\n"
+        elif not content.endswith("\n"):
             content += "\n"
 
         return self._convert_tabs_to_spaces(content)

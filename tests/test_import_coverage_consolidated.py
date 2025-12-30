@@ -357,11 +357,3 @@ class TestLegacyImports:
             assert InteractiveCLI is not None
         except ImportError as e:
             pytest.skip(f"Interactive CLI import failed: {e}")
-
-    def test_dynamic_config(self) -> None:
-        try:
-            from crackerjack.dynamic_config import DynamicConfig
-
-            assert DynamicConfig is not None
-        except ImportError as e:
-            pytest.skip(f"Dynamic config import failed: {e}")

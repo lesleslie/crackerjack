@@ -266,7 +266,6 @@ Health and performance monitoring:
 - Real-time metrics
 - Performance tracking
 - Resource monitoring
-- See [monitoring/README.md](./monitoring/README.md)
 
 ### Quality Services (`quality/`)
 
@@ -359,9 +358,11 @@ result = await SecureSubprocess.run_command(
 ## Related
 
 - [Adapters](../adapters/README.md) — Quality tool adapters that use services
+
 - [Managers](../managers/README.md) — Managers that coordinate services
-- [Orchestration](../orchestration/README.md) — Orchestration using services
+
 - [Config](../config/README.md) — ACB Settings integration
+
 - [SECURITY.md](../../docs/reference/SECURITY.md) — Security documentation
 
 ## Future Enhancements

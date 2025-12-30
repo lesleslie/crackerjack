@@ -330,7 +330,7 @@ class DeadCodeDetector:
             True if empty except block
         """
         stripped = lines[line_idx].strip()
-        return stripped == "except: " or stripped.startswith("except ")
+        return stripped == "except:" or stripped.startswith(("except ", "except:"))
 
     @staticmethod
     def _find_empty_pass_line(lines: list[str], except_idx: int) -> int | None:

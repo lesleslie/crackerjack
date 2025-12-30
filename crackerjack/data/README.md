@@ -8,4 +8,3 @@ Static data and assets used by the package (keep small; large assets belong else
 
 - [Crackerjack Package](../README.md) - Parent package
 - [Documentation](../documentation/README.md) - Documentation helpers
-- [UI Templates](../ui/templates/README.md) - UI template files

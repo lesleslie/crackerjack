@@ -1,12 +1,11 @@
-import logging
 import copy
 import io
+import logging
 import typing as t
 from pathlib import Path
 
 import tomli
 import tomli_w
-import yaml
 from rich.console import Console
 
 from crackerjack.models.protocols import (
@@ -19,11 +18,24 @@ from crackerjack.models.protocols import (
 class ConfigMergeService(ConfigMergeServiceProtocol):
     def __init__(
         self,
+        console: Console | None = None,
+        filesystem: FileSystemInterface | None = None,
+        git_service: GitInterface | None = None,
+        logger: t.Any | None = None,
     ) -> None:
-        self.console = console
+        if filesystem is None:
+            from crackerjack.services.filesystem import FileSystemService
+
+            filesystem = FileSystemService()
+        if git_service is None:
+            from crackerjack.services.git import GitService
+
+            git_service = GitService(console=console)
+
+        self.console = console or Console()
         self.filesystem = filesystem
         self.git_service = git_service
-        self.logger = logger
+        self.logger = logger or logging.getLogger(__name__)
 
     def smart_merge_pyproject(
         self,
@@ -51,66 +63,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         self._remove_fixed_coverage_requirements(target_content)
 
         self.logger.info("Smart merged pyproject.toml", project_name=project_name)
-        return target_content
-
-    def smart_merge_pre_commit_config(
-        self,
-        source_content: dict[str, t.Any],
-        target_path: str | t.Any,
-        project_name: str,
-    ) -> dict[str, t.Any]:
-        target_path = Path(target_path)
-
-        if not target_path.exists():
-            # Process source content for project-specific references
-            processed_source = copy.deepcopy(source_content)
-            source_repos = processed_source.get("repos", [])
-            processed_source["repos"] = self._process_pre_commit_repos_for_project(
-                source_repos, project_name
-            )
-            return processed_source
-
-        with target_path.open() as f:
-            loaded_config = yaml.safe_load(f)
-            target_content: dict[str, t.Any] = (
-                loaded_config if isinstance(loaded_config, dict) else {}
-            )
-
-        if not isinstance(target_content, dict):
-            self.logger.warning(
-                f"Target config is not a dictionary, using source: {type(target_content)}"
-            )
-            return source_content
-
-        source_repos = source_content.get("repos", [])
-        target_repos = target_content.get("repos", [])
-
-        if not isinstance(target_repos, list):
-            target_repos = []
-
-        existing_repo_urls = {
-            repo.get("repo", "") for repo in target_repos if isinstance(repo, dict)
-        }
-
-        new_repos = [
-            repo
-            for repo in source_repos
-            if isinstance(repo, dict) and repo.get("repo", "") not in existing_repo_urls
-        ]
-
-        if new_repos:
-            # Replace project-specific references in new repos before adding them
-            processed_new_repos = self._process_pre_commit_repos_for_project(
-                new_repos, project_name
-            )
-            target_repos.extend(processed_new_repos)
-            target_content["repos"] = target_repos
-            self.logger.info(
-                "Merged .pre-commit-config.yaml",
-                new_repos_count=len(new_repos),
-                project_name=project_name,
-            )
-
         return target_content
 
     def smart_append_file(
@@ -294,30 +246,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
         self.logger.debug("Wrote pyproject.toml config", path=str(target_path))
 
-    def write_pre_commit_config(
-        self,
-        config: dict[str, t.Any],
-        target_path: str | t.Any,
-    ) -> None:
-        target_path = Path(target_path)
-
-        yaml_content = yaml.dump(
-            config,
-            default_flow_style=False,
-            sort_keys=False,
-            width=float("inf"),
-        )
-        content = yaml_content
-
-        from crackerjack.services.filesystem import FileSystemService
-
-        content = FileSystemService.clean_trailing_whitespace_and_newlines(content)
-
-        with target_path.open("w") as f:
-            f.write(content)
-
-        self.logger.debug("Wrote .pre-commit-config.yaml", path=str(target_path))
-
     def _ensure_crackerjack_dev_dependency(
         self,
         target_config: dict[str, t.Any],
@@ -492,49 +420,3 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                 for key, val in value.items()
             }
         return value
-
-    def _process_pre_commit_repos_for_project(
-        self, repos: list[dict[str, t.Any]], project_name: str
-    ) -> list[dict[str, t.Any]]:
-        """Process pre-commit repos to replace project-specific references."""
-        if project_name == "crackerjack":
-            return repos  # No changes needed for crackerjack itself
-
-        processed_repos = []
-        for repo in repos:
-            processed_repo = copy.deepcopy(repo)
-            self._process_repo_hooks(processed_repo, project_name)
-            processed_repos.append(processed_repo)
-
-        return processed_repos
-
-    def _process_repo_hooks(self, repo: dict[str, t.Any], project_name: str) -> None:
-        """Process hooks within a repo to replace project-specific references."""
-        hooks = repo.get("hooks", [])
-        for hook in hooks:
-            if isinstance(hook, dict):
-                self._process_hook_args(hook, project_name)
-                self._process_hook_files(hook, project_name)
-                # Special handling for validate-regex-patterns hook - keep it pointing to crackerjack package
-                # This should reference the installed crackerjack package, not the current project
-                # The entry already uses "uv run python -m crackerjack.tools.validate_regex_patterns"
-                # which is correct - it runs from the installed crackerjack package
-
-    def _process_hook_args(self, hook: dict[str, t.Any], project_name: str) -> None:
-        """Process hook args to replace project-specific references."""
-        if "args" in hook:
-            hook["args"] = [
-                arg.replace("crackerjack", project_name)
-                if isinstance(arg, str)
-                else arg
-                for arg in hook["args"]
-            ]
-
-    def _process_hook_files(self, hook: dict[str, t.Any], project_name: str) -> None:
-        """Process hook files pattern to replace project-specific references."""
-        if "files" in hook:
-            files_pattern = hook["files"]
-            if isinstance(files_pattern, str):
-                hook["files"] = files_pattern.replace(
-                    "^crackerjack/", f"^{project_name}/"
-                )

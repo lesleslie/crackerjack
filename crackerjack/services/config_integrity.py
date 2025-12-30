@@ -2,8 +2,6 @@ import tomllib
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.exceptions.config import ConfigIntegrityError
 from crackerjack.models.protocols import ConfigIntegrityServiceProtocol, ServiceProtocol
 
@@ -53,7 +51,6 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
 
     def check_config_integrity(self) -> bool:
         config_files = [
-            ".pre-commit-config.yaml",
             "pyproject.toml",
         ]
 

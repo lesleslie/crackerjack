@@ -2,8 +2,8 @@ import time
 import typing as t
 from enum import Enum, auto
 
-from rich.console import Console
 from rich.box import ROUNDED
+from rich.console import Console
 from rich.layout import Layout
 from rich.live import Live
 from rich.panel import Panel
@@ -104,7 +104,7 @@ class InteractiveWorkflowManager:
         self._setup_commit_task(options)
 
     def _setup_cleaning_task(self, options: OptionsProtocol) -> None:
-        if options.clean:
+        if getattr(options, "strip_code", False):
             self.add_task(
                 "cleaning",
                 "Clean code (remove docstrings, comments)",
@@ -113,7 +113,7 @@ class InteractiveWorkflowManager:
 
     def _setup_hooks_task(self, options: OptionsProtocol) -> None:
         if not options.skip_hooks:
-            deps = ["cleaning"] if options.clean else []
+            deps = ["cleaning"] if getattr(options, "strip_code", False) else []
             self.add_task(
                 "hooks",
                 "Run quality hooks (fast + comprehensive)",
@@ -122,11 +122,11 @@ class InteractiveWorkflowManager:
             )
 
     def _setup_testing_task(self, options: OptionsProtocol) -> None:
-        if options.test:
+        if getattr(options, "run_tests", False):
             deps = (
                 ["hooks"]
                 if not options.skip_hooks
-                else (["cleaning"] if options.clean else [])
+                else (["cleaning"] if getattr(options, "strip_code", False) else [])
             )
             self.add_task(
                 "testing",
@@ -451,11 +451,13 @@ class InteractiveCLI:
         self.console.print("[bold]🔧 Workflow Configuration[/ bold]")
         self.console.print("Configure your crackerjack workflow: \n")
         updated_options = type(options)(**vars(options))
-        updated_options.clean = Confirm.ask(
+        updated_options.strip_code = Confirm.ask(
             "🧹 Clean code (remove docstrings, comments)?",
-            default=options.clean,
+            default=getattr(options, "strip_code", False),
         )
-        updated_options.test = Confirm.ask("🧪 Run tests?", default=options.test)
+        updated_options.run_tests = Confirm.ask(
+            "🧪 Run tests?", default=getattr(options, "run_tests", False)
+        )
 
         # Only ask about commit if not explicitly set via command line
         # Check if commit was explicitly provided by looking at original vs default

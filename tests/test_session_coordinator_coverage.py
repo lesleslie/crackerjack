@@ -6,39 +6,15 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 
 import pytest
-from acb.console import Console
-
-from acb.depends import depends
+from rich.console import Console
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.task import SessionTracker
 
 
-# Module-level DI context setup for SessionCoordinator testing
 @pytest.fixture
 def mock_console_di() -> MagicMock:
-    """Mock Console for DI context."""
+    """Mock Console for SessionCoordinator testing."""
     return MagicMock(spec=Console)
-
-
-@pytest.fixture
-def session_coordinator_di_context(mock_console_di: MagicMock):
-    """Set up DI context for SessionCoordinator testing."""
-    injection_map = {Console: mock_console_di}
-
-    original_values = {}
-    try:
-        # Register Console mock with DI
-        try:
-            original_values[Console] = depends.get_sync(Console)
-        except Exception:
-            original_values[Console] = None
-        depends.set(Console, mock_console_di)
-
-        yield injection_map, mock_console_di
-    finally:
-        # Restore original values after test
-        if original_values[Console] is not None:
-            depends.set(Console, original_values[Console])
 
 
 class TestSessionCoordinator:
@@ -53,10 +29,9 @@ class TestSessionCoordinator:
             yield Path(temp_dir)
 
     @pytest.fixture
-    def coordinator(self, session_coordinator_di_context, mock_console_di, temp_dir):
-        """Create SessionCoordinator with mocked Console via DI."""
-        injection_map, mock_console = session_coordinator_di_context
-        return SessionCoordinator(console=mock_console, pkg_path=temp_dir)
+    def coordinator(self, mock_console_di, temp_dir):
+        """Create SessionCoordinator with mocked Console."""
+        return SessionCoordinator(console=mock_console_di, pkg_path=temp_dir)
 
     @pytest.fixture
     def mock_options(self):
@@ -74,9 +49,9 @@ class TestSessionCoordinator:
         assert coordinator.console == console
         assert coordinator.pkg_path == temp_dir
         assert coordinator.session_tracker is None
-        assert coordinator._cleanup_handlers == []
+        assert coordinator.cleanup_handlers == []
         assert coordinator._thread_pool is None
-        assert coordinator._lock_files == set()
+        assert coordinator.lock_files == set()
 
     def test_initialize_session_tracking_enabled(
         self,
@@ -176,7 +151,7 @@ class TestSessionCoordinator:
 
         result = coordinator.get_session_summary()
 
-        assert result is None
+        assert result["tasks_count"] == 0
 
     def test_finalize_session_success(self, coordinator) -> None:
         start_time = time.time() - 10.0

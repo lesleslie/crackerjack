@@ -3,6 +3,16 @@
 Phase 6 Implementation: MCPServerCLIFactory integration with restored main command
 """
 
+import os
+import sys
+
+# Suppress ACB logger startup messages and stderr JSON unless --debug is provided
+# Must happen before any ACB imports
+if "--debug" not in sys.argv:
+    os.environ["ACB_LOGGER_DEBUG_MODE"] = "0"
+    os.environ["ACB_LOG_LEVEL"] = "WARNING"
+    os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"  # No JSON to stderr by default
+
 import subprocess
 import typing as t
 
@@ -11,11 +21,6 @@ from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
 
 from crackerjack import __version__
-from crackerjack.cli.lifecycle_handlers import (
-    health_probe_handler,
-    start_handler,
-    stop_handler,
-)
 from crackerjack.cli import (
     CLI_OPTIONS,
     BumpOption,
@@ -45,6 +50,11 @@ from crackerjack.cli.handlers.main_handlers import (
     handle_standard_mode,
     setup_ai_agent_env,
 )
+from crackerjack.cli.lifecycle_handlers import (
+    health_probe_handler,
+    start_handler,
+    stop_handler,
+)
 from crackerjack.cli.semantic_handlers import (
     handle_remove_from_semantic_index,
     handle_semantic_index,
@@ -70,6 +80,7 @@ factory = MCPServerCLIFactory(
 )
 
 app = factory.create_app()
+app.info.help = "Crackerjack MCP Server CLI"
 
 console = Console()
 
@@ -84,7 +95,6 @@ def run(
     commit: bool = CLI_OPTIONS["commit"],
     interactive: bool = CLI_OPTIONS["interactive"],
     no_config_updates: bool = CLI_OPTIONS["no_config_updates"],
-    update_precommit: bool = CLI_OPTIONS["update_precommit"],
     verbose: bool = CLI_OPTIONS["verbose"],
     debug: bool = CLI_OPTIONS["debug"],
     publish: BumpOption | None = CLI_OPTIONS["publish"],
@@ -202,7 +212,6 @@ def run(
         commit,
         interactive,
         no_config_updates,
-        update_precommit,
         verbose,
         debug,
         publish,
@@ -296,6 +305,25 @@ def run(
         ai_fix, ai_debug, debug, verbose, options
     )
     setup_ai_agent_env(ai_fix, ai_debug or debug)
+
+    # Configure logger verbosity and stderr JSON output based on CLI flags
+    def _configure_logger_verbosity(debug: bool) -> None:
+        """Configure logger verbosity and stderr JSON output.
+
+        Stream Configuration:
+        - Default/Verbose: WARNING level, no stderr JSON (clean UX)
+        - Debug: DEBUG level, enable stderr JSON (structured logs for troubleshooting)
+        """
+        if debug:
+            os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+            os.environ["CRACKERJACK_DEBUG"] = "1"
+            # Enable structured JSON logging to stderr for debug mode
+            if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
+                del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
+            os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+        # If not debug, keep WARNING level and disabled stderr JSON from early init
+
+    _configure_logger_verbosity(debug=debug)
 
     # Process all commands
     if not _process_all_commands(locals(), options):

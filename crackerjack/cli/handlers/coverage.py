@@ -3,10 +3,8 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-def display_coverage_info(
-    coverage_info: dict[str, t.Any]
-) -> None:
+
+def display_coverage_info(coverage_info: dict[str, t.Any]) -> None:
     coverage_percent = coverage_info.get("coverage_percent", 0.0)
     coverage_source = coverage_info.get("source", "unknown")
 
@@ -20,10 +18,14 @@ def display_coverage_info(
     status_message = coverage_info.get("message")
     if status_message:
         console.print(f"[dim]{status_message}[/dim]")
+
+
 def display_coverage_report(test_manager: t.Any) -> None:
     coverage_report = test_manager.get_coverage_report()
     if coverage_report:
         console.print(f"[cyan]Details:[/cyan] {coverage_report}")
+
+
 def display_ratchet_status(test_manager: t.Any) -> None:
     from contextlib import suppress
 
@@ -37,9 +39,9 @@ def display_ratchet_status(test_manager: t.Any) -> None:
             milestones = ratchet_status.get("milestones_achieved", [])
             if milestones:
                 console.print(f"[green]Milestones Achieved:[/green] {len(milestones)}")
-def handle_coverage_status(
-    coverage_status: bool, options: t.Any
-) -> bool:
+
+
+def handle_coverage_status(coverage_status: bool, options: t.Any) -> bool:
     if not coverage_status:
         return True
 

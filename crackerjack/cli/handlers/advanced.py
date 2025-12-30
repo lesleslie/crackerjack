@@ -3,7 +3,7 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+
 def handle_advanced_optimizer(
     advanced_optimizer: bool,
     advanced_profile: str | None,
@@ -37,14 +37,16 @@ def setup_advanced_optimizer(advanced_profile: str | None) -> t.Any:
         optimizer.performance_profile.optimization_strategy = advanced_profile
 
     return optimizer
+
+
 def run_advanced_optimization(optimizer: t.Any) -> t.Any:
     import asyncio
 
     console.print("[blue]📊[/blue] Analyzing system resources and performance...")
     return asyncio.run(optimizer.run_optimization_cycle())
-def display_advanced_results(
-    result: t.Any, advanced_report: str | None
-) -> None:
+
+
+def display_advanced_results(result: t.Any, advanced_report: str | None) -> None:
     if result["status"] == "success":
         console.print("[green]✅[/green] Advanced optimization completed successfully")
         display_advanced_metrics(result["metrics"])
@@ -54,13 +56,15 @@ def display_advanced_results(
         console.print(
             f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}"
         )
+
+
 def display_advanced_metrics(metrics: t.Any) -> None:
     console.print(f"[blue]CPU Usage:[/blue] {metrics['cpu_percent']:.1f}%")
     console.print(f"[blue]Memory Usage:[/blue] {metrics['memory_percent']:.1f}%")
     console.print(f"[blue]Storage Usage:[/blue] {metrics['disk_usage_percent']:.1f}%")
-def display_advanced_recommendations(
-    recommendations: t.Any
-) -> None:
+
+
+def display_advanced_recommendations(recommendations: t.Any) -> None:
     if recommendations:
         console.print(
             f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:"
@@ -72,9 +76,9 @@ def display_advanced_recommendations(
             console.print(
                 f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}"
             )
-def save_advanced_report(
-    result: t.Any, advanced_report: str | None
-) -> None:
+
+
+def save_advanced_report(result: t.Any, advanced_report: str | None) -> None:
     if advanced_report:
         import json
 

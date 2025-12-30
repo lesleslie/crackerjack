@@ -31,13 +31,13 @@ Structured logging is automatically enabled when using AI-related flags:
 
 ```bash
 # Enable AI agent fixing with structured logging
-python -m crackerjack --ai-fix --verbose
+python -m crackerjack run --ai-fix --verbose
 
 # Enable AI debug mode with enhanced structured logging
-python -m crackerjack --ai-debug --run-tests
+python -m crackerjack run --ai-debug --run-tests
 
 # Both flags together provide maximum debugging information
-python -m crackerjack --ai-fix --ai-debug --run-tests
+python -m crackerjack run --ai-fix --ai-debug --run-tests
 ```
 
 ### AI Agent Fixing Phase Logging

@@ -334,7 +334,7 @@ def _handle_test_failure(
 1. **Run with verbose mode:**
 
    ```bash
-   python -m crackerjack -s -t -v
+   python -m crackerjack run -s -t -v
    ```
 
 1. **Verify output shows:**
@@ -347,7 +347,7 @@ def _handle_test_failure(
 1. **Test with AI debug mode:**
 
    ```bash
-   python -m crackerjack -s -t --ai-debug
+   python -m crackerjack run -s -t --ai-debug
    ```
 
 1. **Verify `-vvv` output shows:**
@@ -872,7 +872,7 @@ def _render_formatted_output(self, output: str, options: OptionsProtocol) -> Non
 1. **Run with verbose mode:**
 
    ```bash
-   python -m crackerjack -s -t -v
+   python -m crackerjack run -s -t -v
    ```
 
 1. **Verify output shows:**

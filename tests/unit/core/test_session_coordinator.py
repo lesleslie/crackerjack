@@ -19,20 +19,16 @@ class TestSessionCoordinatorInitialization:
 
     def test_initialization_default(self):
         """Test default initialization."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+        coordinator = SessionCoordinator()
 
-            coordinator = SessionCoordinator()
-
-            assert coordinator.console == mock_console
-            assert coordinator.pkg_path == Path.cwd()
-            assert coordinator.web_job_id is None
-            assert coordinator.session_id is not None
-            assert isinstance(coordinator.start_time, float)
-            assert coordinator.cleanup_handlers == []
-            assert coordinator.lock_files == set()
-            assert coordinator.current_task is None
+        assert coordinator.console is not None
+        assert coordinator.pkg_path == Path.cwd()
+        assert coordinator.web_job_id is None
+        assert coordinator.session_id is not None
+        assert isinstance(coordinator.start_time, float)
+        assert coordinator.cleanup_handlers == []
+        assert coordinator.lock_files == set()
+        assert coordinator.current_task is None
 
     def test_initialization_with_console(self):
         """Test initialization with provided console."""
@@ -44,36 +40,24 @@ class TestSessionCoordinatorInitialization:
 
     def test_initialization_with_pkg_path(self, tmp_path):
         """Test initialization with provided pkg_path."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+        coordinator = SessionCoordinator(pkg_path=tmp_path)
 
-            coordinator = SessionCoordinator(pkg_path=tmp_path)
-
-            assert coordinator.pkg_path == tmp_path
+        assert coordinator.pkg_path == tmp_path
 
     def test_initialization_with_web_job_id(self):
         """Test initialization with web job ID."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+        job_id = "test-job-123"
+        coordinator = SessionCoordinator(web_job_id=job_id)
 
-            job_id = "test-job-123"
-            coordinator = SessionCoordinator(web_job_id=job_id)
-
-            assert coordinator.web_job_id == job_id
-            assert coordinator.session_id == job_id
+        assert coordinator.web_job_id == job_id
+        assert coordinator.session_id == job_id
 
     def test_initialization_session_id_generated(self):
         """Test session ID is generated when no web_job_id."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
+        coordinator = SessionCoordinator()
 
-            coordinator = SessionCoordinator()
-
-            assert coordinator.session_id is not None
-            assert len(coordinator.session_id) == 8  # UUID hex[:8]
+        assert coordinator.session_id is not None
+        assert len(coordinator.session_id) == 8  # UUID hex[:8]
 
 
 @pytest.mark.unit
@@ -83,10 +67,8 @@ class TestSessionCoordinatorSessionTracking:
     @pytest.fixture
     def coordinator(self):
         """Create coordinator instance."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return SessionCoordinator(console=mock_console)
+        mock_console = Mock()
+        return SessionCoordinator(console=mock_console)
 
     @pytest.fixture
     def mock_options(self):
@@ -138,10 +120,8 @@ class TestSessionCoordinatorTaskTracking:
     @pytest.fixture
     def coordinator(self):
         """Create coordinator instance."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return SessionCoordinator(console=mock_console)
+        mock_console = Mock()
+        return SessionCoordinator(console=mock_console)
 
     def test_track_task(self, coordinator):
         """Test tracking a task."""
@@ -249,10 +229,8 @@ class TestSessionCoordinatorCleanup:
     @pytest.fixture
     def coordinator(self):
         """Create coordinator instance."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return SessionCoordinator(console=mock_console)
+        mock_console = Mock()
+        return SessionCoordinator(console=mock_console)
 
     def test_register_cleanup(self, coordinator):
         """Test registering cleanup handler."""
@@ -335,10 +313,8 @@ class TestSessionCoordinatorFinalization:
     @pytest.fixture
     def coordinator(self):
         """Create coordinator instance."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return SessionCoordinator(console=mock_console)
+        mock_console = Mock()
+        return SessionCoordinator(console=mock_console)
 
     def test_finalize_session_success(self, coordinator):
         """Test finalizing successful session."""
@@ -376,10 +352,8 @@ class TestSessionCoordinatorSummary:
     @pytest.fixture
     def coordinator(self):
         """Create coordinator instance."""
-        with patch("crackerjack.core.session_coordinator.depends.get_sync") as mock_get:
-            mock_console = Mock()
-            mock_get.return_value = mock_console
-            return SessionCoordinator(console=mock_console)
+        mock_console = Mock()
+        return SessionCoordinator(console=mock_console)
 
     def test_get_session_summary_with_tracker(self, coordinator):
         """Test getting session summary with tracker."""
@@ -409,7 +383,14 @@ class TestSessionCoordinatorSummary:
         summary1 = coordinator.get_session_summary()
         summary2 = coordinator.get_summary()
 
-        assert summary1 == summary2
+        # Compare all fields except duration which changes with each call
+        assert summary1["session_id"] == summary2["session_id"]
+        assert summary1["total_tasks"] == summary2["total_tasks"]
+        assert summary1["tasks_count"] == summary2["tasks_count"]
+        assert summary1["completed"] == summary2["completed"]
+        assert summary1["failed"] == summary2["failed"]
+        assert summary1["in_progress"] == summary2["in_progress"]
+        assert summary1["current_task"] == summary2["current_task"]
 
     def test_get_session_summary_backward_compatible(self, coordinator):
         """Test session summary includes backward compatible tasks_count."""

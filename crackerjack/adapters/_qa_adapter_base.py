@@ -18,16 +18,16 @@ CRITICAL: Imports protocols from models.protocols, not local definitions.
 from __future__ import annotations
 
 import asyncio
-import logging
 import typing as t
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
+from crackerjack.models.adapter_metadata import AdapterMetadata
+
 # Import protocol from models.protocols per crackerjack pattern
 from crackerjack.models.protocols import QAAdapterProtocol
-from crackerjack.models.adapter_metadata import AdapterMetadata
 
 if t.TYPE_CHECKING:
     from uuid import UUID

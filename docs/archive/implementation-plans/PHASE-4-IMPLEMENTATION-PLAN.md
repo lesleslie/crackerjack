@@ -4,7 +4,7 @@
 **Objective**: Remove ACB dependencies from QA adapters and complete server integration
 **Status**: 🚧 **IN PROGRESS**
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -14,7 +14,7 @@ Phase 4 completes the Oneiric migration by removing ACB dependencies from QA ada
 
 **Adapted Strategy**: Instead of porting to fictional "Oneiric QA adapter base classes" (which don't exist), we'll remove ACB dependencies and use standard Python patterns with logging.
 
----
+______________________________________________________________________
 
 ## Current State Analysis
 
@@ -37,6 +37,7 @@ Phase 4 completes the Oneiric migration by removing ACB dependencies from QA ada
 ### ACB Patterns Used in Adapters
 
 **Current Pattern** (example from `ruff.py`):
+
 ```python
 from acb.depends import depends
 from uuid import uuid4
@@ -45,8 +46,10 @@ from uuid import uuid4
 MODULE_ID = uuid4()  # ❌ Dynamic UUID, not static
 MODULE_STATUS = "stable"  # ❌ String, not enum
 
+
 class RuffAdapter(BaseToolAdapter):
     pass
+
 
 # ACB Registration (REQUIRED at module level)
 with suppress(Exception):
@@ -54,13 +57,14 @@ with suppress(Exception):
 ```
 
 **Issues**:
-1. `uuid4()` generates dynamic UUIDs (should be static)
-2. Uses string `"stable"` instead of enum
-3. Imports `acb.depends` (needs removal)
-4. Has `depends.set()` registration (needs removal)
-5. Base classes may still have ACB dependencies
 
----
+1. `uuid4()` generates dynamic UUIDs (should be static)
+1. Uses string `"stable"` instead of enum
+1. Imports `acb.depends` (needs removal)
+1. Has `depends.set()` registration (needs removal)
+1. Base classes may still have ACB dependencies
+
+______________________________________________________________________
 
 ## Phase 4 Tasks
 
@@ -69,15 +73,18 @@ with suppress(Exception):
 **Objective**: Remove ACB from `_qa_adapter_base.py` and `_tool_adapter_base.py`
 
 **Files to Modify**:
+
 - `crackerjack/adapters/_qa_adapter_base.py`
 - `crackerjack/adapters/_tool_adapter_base.py`
 
 **Changes Needed**:
 
 **BEFORE (ACB pattern)**:
+
 ```python
 from acb.depends import depends
 from acb.adapters.logger import LoggerProtocol
+
 
 class QAAdapterBase:
     @depends.inject
@@ -86,8 +93,10 @@ class QAAdapterBase:
 ```
 
 **AFTER (Standard Python)**:
+
 ```python
 import logging
+
 
 class QAAdapterBase:
     def __init__(self):
@@ -95,6 +104,7 @@ class QAAdapterBase:
 ```
 
 **Validation**:
+
 ```bash
 # Verify no ACB imports in base classes
 grep -r "from acb" crackerjack/adapters/_*.py
@@ -105,7 +115,7 @@ python -c "from crackerjack.adapters._qa_adapter_base import QAAdapterBase; prin
 python -c "from crackerjack.adapters._tool_adapter_base import BaseToolAdapter; print('OK')"
 ```
 
----
+______________________________________________________________________
 
 ### Task 2: Update Individual Adapters (3 hours)
 
@@ -114,6 +124,7 @@ python -c "from crackerjack.adapters._tool_adapter_base import BaseToolAdapter; 
 **Changes Per Adapter**:
 
 1. **Remove ACB imports**:
+
    ```python
    # REMOVE
    from acb.depends import depends
@@ -122,7 +133,8 @@ python -c "from crackerjack.adapters._tool_adapter_base import BaseToolAdapter; 
    from uuid import UUID
    ```
 
-2. **Generate static UUID** (use uuidv7 for time-ordered IDs):
+1. **Generate static UUID** (use uuidv7 for time-ordered IDs):
+
    ```python
    # BEFORE
    MODULE_ID = uuid4()  # ❌ Dynamic
@@ -131,17 +143,20 @@ python -c "from crackerjack.adapters._tool_adapter_base import BaseToolAdapter; 
    MODULE_ID = UUID("01947e12-3b4c-7d8e-9f0a-1b2c3d4e5f6a")  # ✅ Static UUID7
    ```
 
-3. **Use AdapterStatus enum** (if we create one):
+1. **Use AdapterStatus enum** (if we create one):
+
    ```python
    # BEFORE
    MODULE_STATUS = "stable"  # ❌ String
 
    # AFTER
    from crackerjack.models.adapter_metadata import AdapterStatus
+
    MODULE_STATUS = AdapterStatus.STABLE  # ✅ Enum
    ```
 
-4. **Remove ACB registration**:
+1. **Remove ACB registration**:
+
    ```python
    # REMOVE (entire block at module end)
    with suppress(Exception):
@@ -151,27 +166,30 @@ python -c "from crackerjack.adapters._tool_adapter_base import BaseToolAdapter; 
 **Priority Order** (based on complexity):
 
 **Simple adapters (10)** - Minimal dependencies, ~15 min each:
+
 1. mdformat.py
-2. codespell.py
-3. creosote.py
-4. pyrefly.py
-5. ty.py
-6. checks.py
-7. pip_audit.py
-8. gitleaks.py
-9. bandit.py
-10. pyscn.py
+1. codespell.py
+1. creosote.py
+1. pyrefly.py
+1. ty.py
+1. checks.py
+1. pip_audit.py
+1. gitleaks.py
+1. bandit.py
+1. pyscn.py
 
 **Complex adapters (9)** - More dependencies, ~20 min each:
+
 1. ruff.py (formatting + linting)
-2. semgrep.py (SAST)
-3. complexipy.py (complexity analysis)
-4. refurb.py (modernization)
-5. claude.py (AI integration)
-6. zuban.py (LSP - type checking)
-7. skylos.py (LSP/refactor - appears twice, dedupe needed)
+1. semgrep.py (SAST)
+1. complexipy.py (complexity analysis)
+1. refurb.py (modernization)
+1. claude.py (AI integration)
+1. zuban.py (LSP - type checking)
+1. skylos.py (LSP/refactor - appears twice, dedupe needed)
 
 **Validation After Each Adapter**:
+
 ```bash
 # Import test
 python -c "from crackerjack.adapters.format.ruff import RuffAdapter; print('OK')"
@@ -185,7 +203,7 @@ print(f'Module ID: {adapter.module_id}')
 "
 ```
 
----
+______________________________________________________________________
 
 ### Task 3: Create AdapterStatus Enum (30 min)
 
@@ -235,6 +253,7 @@ class AdapterMetadata:
 ```
 
 **Usage in Adapters**:
+
 ```python
 from crackerjack.models.adapter_metadata import AdapterStatus, AdapterMetadata
 from uuid import UUID
@@ -251,7 +270,7 @@ MODULE_METADATA = AdapterMetadata(
 )
 ```
 
----
+______________________________________________________________________
 
 ### Task 4: Implement Adapter Instantiation (2 hours)
 
@@ -260,6 +279,7 @@ MODULE_METADATA = AdapterMetadata(
 **File**: `crackerjack/server.py`
 
 **BEFORE (Phase 3 stub)**:
+
 ```python
 async def _init_qa_adapters(self):
     """Initialize enabled QA adapters.
@@ -270,10 +290,13 @@ async def _init_qa_adapters(self):
     if getattr(self.settings, "ruff_enabled", True):
         enabled_adapters.append("Ruff")
     # ... more adapter checks
-    logger.info(f"QA adapters enabled (Phase 3 - not yet instantiated): {', '.join(enabled_adapters)}")
+    logger.info(
+        f"QA adapters enabled (Phase 3 - not yet instantiated): {', '.join(enabled_adapters)}"
+    )
 ```
 
 **AFTER (Phase 4 implementation)**:
+
 ```python
 async def _init_qa_adapters(self):
     """Initialize enabled QA adapters based on settings.
@@ -291,10 +314,12 @@ async def _init_qa_adapters(self):
 
     # Initialize Ruff (format + lint)
     if getattr(self.settings, "ruff_enabled", True):
-        ruff_adapter = RuffAdapter(settings=RuffSettings(
-            mode="check",
-            fix_enabled=True,
-        ))
+        ruff_adapter = RuffAdapter(
+            settings=RuffSettings(
+                mode="check",
+                fix_enabled=True,
+            )
+        )
         await ruff_adapter.init()
         self.adapters.append(ruff_adapter)
         logger.debug("Initialized Ruff adapter")
@@ -320,6 +345,7 @@ async def _init_qa_adapters(self):
 ```
 
 **Validation**:
+
 ```python
 # Test adapter initialization
 python -c "
@@ -339,7 +365,7 @@ asyncio.run(test())
 "
 ```
 
----
+______________________________________________________________________
 
 ### Task 5: Update Health Snapshots (1 hour)
 
@@ -348,20 +374,27 @@ asyncio.run(test())
 **File**: `crackerjack/server.py`
 
 **Update `get_health_snapshot()`**:
+
 ```python
 def get_health_snapshot(self) -> dict:
     """Generate health snapshot with real adapter status."""
-    uptime = (datetime.now(UTC) - self.start_time).total_seconds() if self.start_time else 0.0
+    uptime = (
+        (datetime.now(UTC) - self.start_time).total_seconds()
+        if self.start_time
+        else 0.0
+    )
 
     # Collect adapter health data
     adapter_statuses = []
     for adapter in self.adapters:
-        adapter_statuses.append({
-            "name": adapter.adapter_name,
-            "module_id": str(adapter.module_id),
-            "healthy": getattr(adapter, "healthy", True),
-            "version": getattr(adapter, "version", "unknown"),
-        })
+        adapter_statuses.append(
+            {
+                "name": adapter.adapter_name,
+                "module_id": str(adapter.module_id),
+                "healthy": getattr(adapter, "healthy", True),
+                "version": getattr(adapter, "version", "unknown"),
+            }
+        )
 
     return {
         "server_status": "running" if self.running else "stopped",
@@ -381,11 +414,12 @@ def get_health_snapshot(self) -> dict:
     }
 ```
 
----
+______________________________________________________________________
 
 ### Task 6: Validation & Testing (1 hour)
 
 **Import Validation**:
+
 ```bash
 # Verify no ACB imports remain in adapters
 grep -r "from acb" crackerjack/adapters/
@@ -397,6 +431,7 @@ python scripts/validate_imports.py
 ```
 
 **Adapter Instantiation Test**:
+
 ```bash
 # Create test script
 cat > test_adapters.py << 'EOF'
@@ -424,13 +459,14 @@ python test_adapters.py
 ```
 
 **Server Integration Test**:
+
 ```bash
 # Test server with adapters
 python -m crackerjack qa-health
 # Expected: Shows actual adapter count and health status
 ```
 
----
+______________________________________________________________________
 
 ## UUID7 Generation
 
@@ -458,6 +494,7 @@ for i, name in enumerate(adapters, 1):
 ```
 
 **Output** (example):
+
 ```
  1. claude                = UUID("01947e12-3b4c-7d8e-9f0a-1b2c3d4e5f6a")
  2. complexipy            = UUID("01947e12-4c5d-7e8f-9a0b-1c2d3e4f5a6b")
@@ -465,11 +502,12 @@ for i, name in enumerate(adapters, 1):
 ... (continue for all 19)
 ```
 
----
+______________________________________________________________________
 
 ## Rollback Strategy
 
 **Phase 4 Rollback**:
+
 ```bash
 # Restore adapters to Phase 3 state
 git checkout HEAD~1 -- crackerjack/adapters/
@@ -483,7 +521,7 @@ python -m pytest tests/adapters/ -v
 
 **Risk Level**: MEDIUM (19 adapters affected, but changes are isolated)
 
----
+______________________________________________________________________
 
 ## Success Criteria
 
@@ -498,7 +536,7 @@ Phase 4 is complete when:
 - [ ] ✅ Server start/qa-health commands work
 - [ ] ✅ Zero import regressions (validate with scripts/validate_imports.py)
 
----
+______________________________________________________________________
 
 ## Timeline Estimate
 
@@ -513,11 +551,12 @@ Phase 4 is complete when:
 
 **Total Estimate**: ~10 hours (manageable in 1-2 coding sessions)
 
----
+______________________________________________________________________
 
 ## Notes
 
 **Difference from Original Plan**:
+
 - Original: Port to "Oneiric AdapterBase" (doesn't exist for QA tools)
 - Actual: Remove ACB, use standard Python patterns
 - Result: Simpler, more maintainable, achieves same goal

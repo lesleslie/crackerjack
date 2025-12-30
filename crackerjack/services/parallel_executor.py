@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 import subprocess
 import time
 import typing as t
@@ -7,8 +7,6 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-
-from acb.depends import depends
 
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
 from crackerjack.models.protocols import (
@@ -58,7 +56,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
         self._logger = logger or logging.getLogger("crackerjack.parallel_executor")
-        self._cache = cache or depends.get_sync(PerformanceCacheProtocol)
+        self._cache = cache
 
     def initialize(self) -> None:
         pass
@@ -314,7 +312,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         self.max_workers = max_workers
         self.cache_results = cache_results
         self._logger = logger or logging.getLogger("crackerjack.async_executor")
-        self._cache = cache or depends.get_sync(PerformanceCacheProtocol)
+        self._cache = cache
         from concurrent.futures import ThreadPoolExecutor
 
         self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)
@@ -478,6 +476,8 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         command: list[str],
         cwd: Path | None = None,
     ) -> ExecutionResult | None:
+        if self._cache is None:
+            return None
         cache_result = self._cache.get(self._get_cache_key(command, cwd))
         return t.cast(ExecutionResult | None, cache_result)
 
@@ -488,6 +488,8 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         ttl_seconds: int,
         cwd: Path | None = None,
     ) -> None:
+        if self._cache is None:
+            return
         self._cache.set(self._get_cache_key(command, cwd), result, ttl_seconds)
 
     def _get_cache_key(self, command: list[str], cwd: Path | None) -> str:
@@ -509,7 +511,7 @@ def get_parallel_executor(
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
             # logger = logger  # Migrated from ACB,
-            cache=depends.get_sync(PerformanceCacheProtocol),
+            cache=None,
             max_workers=max_workers,
             strategy=strategy,
         )
@@ -521,7 +523,7 @@ def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
     if _async_executor is None:
         _async_executor = AsyncCommandExecutor(
             # logger = logger  # Migrated from ACB,
-            cache=depends.get_sync(PerformanceCacheProtocol),
+            cache=None,
             max_workers=max_workers,
         )
     return _async_executor

@@ -1,5 +1,5 @@
-import logging
 import asyncio
+import logging
 import time
 import typing as t
 from contextlib import suppress
@@ -70,6 +70,7 @@ class AsyncHookExecutor:
         max_concurrent: int = 4,
         timeout: int = 300,
         quiet: bool = False,
+        logger: t.Any | None = None,
         hook_lock_manager: HookLockManagerProtocol | None = None,
     ) -> None:
         self.console = console
@@ -77,7 +78,7 @@ class AsyncHookExecutor:
         self.max_concurrent = max_concurrent
         self.timeout = timeout
         self.quiet = quiet
-        self.logger = logger
+        self.logger = logger or logging.getLogger(__name__)
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
         self._running_processes: set = set()  # Track running subprocesses
@@ -95,6 +96,24 @@ class AsyncHookExecutor:
         else:
             self.hook_lock_manager = hook_lock_manager
 
+    def _format_log(self, message: str, fields: dict[str, t.Any]) -> str:
+        if not fields:
+            return message
+        details = ", ".join(f"{key}={value}" for key, value in fields.items())
+        return f"{message} ({details})"
+
+    def _log_info(self, message: str, **fields: t.Any) -> None:
+        self.logger.info(self._format_log(message, fields))
+
+    def _log_warning(self, message: str, **fields: t.Any) -> None:
+        self.logger.warning(self._format_log(message, fields))
+
+    def _log_debug(self, message: str, **fields: t.Any) -> None:
+        self.logger.debug(self._format_log(message, fields))
+
+    def _log_exception(self, message: str, **fields: t.Any) -> None:
+        self.logger.exception(self._format_log(message, fields))
+
     async def execute_strategy(
         self,
         strategy: HookStrategy,
@@ -105,7 +124,7 @@ class AsyncHookExecutor:
             hook_count=len(strategy.hooks),
         ):
             start_time = time.time()
-            self.logger.info(
+            self._log_info(
                 "Starting async hook strategy execution",
                 strategy=strategy.name,
                 hooks=len(strategy.hooks),
@@ -134,7 +153,7 @@ class AsyncHookExecutor:
                 ((estimated_sequential - total_duration) / estimated_sequential) * 100,
             )
 
-            self.logger.info(
+            self._log_info(
                 "Async hook strategy completed",
                 strategy=strategy.name,
                 success=success,
@@ -436,7 +455,7 @@ class AsyncHookExecutor:
         await self._terminate_process_safely(process, hook)
         duration = time.time() - start_time
 
-        self.logger.warning(
+        self._log_warning(
             "Hook execution timed out",
             hook=hook.name,
             timeout=timeout_val,
@@ -478,12 +497,12 @@ class AsyncHookExecutor:
         """Log process termination errors appropriately."""
         error_str = str(error)
         if "Event loop is closed" in error_str:
-            self.logger.debug(
+            self._log_debug(
                 "Event loop closed while waiting for process termination",
                 hook=hook.name,
             )
         elif "handle" in error_str.lower() or "pid" in error_str.lower():
-            self.logger.debug(
+            self._log_debug(
                 "Subprocess handle issue during termination",
                 hook=hook.name,
             )
@@ -501,7 +520,7 @@ class AsyncHookExecutor:
 
         status = "passed" if return_code == 0 else "failed"
 
-        self.logger.info(
+        self._log_info(
             "Hook execution completed",
             hook=hook.name,
             status=status,
@@ -554,7 +573,7 @@ class AsyncHookExecutor:
         """Handle RuntimeError during hook execution."""
         if "Event loop is closed" in str(error):
             duration = time.time() - start_time
-            self.logger.warning(
+            self._log_warning(
                 "Event loop closed during hook execution, returning error",
                 hook=hook.name,
                 duration_seconds=round(duration, 2),
@@ -582,7 +601,7 @@ class AsyncHookExecutor:
     ) -> HookResult:
         """Handle general exceptions during hook execution."""
         duration = time.time() - start_time
-        self.logger.exception(
+        self._log_exception(
             "Hook execution failed with exception",
             hook=hook.name,
             error=str(error),

@@ -330,14 +330,14 @@ except json.JSONDecodeError as e:
 1. **Verify parallel timing**:
 
    ```bash
-   python -m crackerjack  # Should show wall-clock time, not sum
+   python -m crackerjack run  # Should show wall-clock time, not sum
    ```
 
 1. **Check JSON parsing**:
 
    ```bash
    # Should see no "JSON parse failed" messages in logs
-   python -m crackerjack --verbose
+   python -m crackerjack run --verbose
    ```
 
 ## Files to Modify

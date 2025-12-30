@@ -82,11 +82,13 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
             async def send_request(self, request):
                 return {"result": "mocked_response", "session_id": "mock_session"}
 
-        async with MockSession() as session:
+        async with MockSession():
             try:
                 # Phase 1: run_crackerjack_with_progress call commented out (WebSocket monitoring deleted)
                 # await run_crackerjack_with_progress(session, command)
-                console.print(f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]")
+                console.print(
+                    f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]"
+                )
             except Exception as e:
                 console.print(f"[bold red]Error: {e}[/ bold red]")
                 sys.exit(1)
@@ -114,9 +116,7 @@ def main() -> None:
     try:
         asyncio.run(run_with_mcp_server(args.command))
     except KeyboardInterrupt:
-        Console().print(
-            "\n[yellow]Operation cancelled by user[/ yellow]"
-        )
+        Console().print("\n[yellow]Operation cancelled by user[/ yellow]")
         sys.exit(1)
 
 

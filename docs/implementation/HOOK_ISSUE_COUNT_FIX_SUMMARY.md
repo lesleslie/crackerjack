@@ -167,7 +167,7 @@ Created three analysis documents:
 
 To verify the fix works in the user's ../acb project:
 
-1. Run `python -m crackerjack` in the acb directory
+1. Run `python -m crackerjack run` in the acb directory
 1. Check the hook results table:
    - ruff-format should show **0 issues** if config error
    - codespell should show **0 issues** if config error

@@ -123,13 +123,11 @@ class TestSequentialExecutionWithProgress:
                 name="hook1",
                 command=[],
                 stage=HookStage.FAST,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="hook2",
                 command=[],
                 stage=HookStage.FAST,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -180,7 +178,6 @@ class TestSequentialExecutionWithProgress:
                 name="ruff-check",
                 command=[],
                 stage=HookStage.FAST,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -225,21 +222,18 @@ class TestParallelExecutionWithProgress:
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=True,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="ruff-check",
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=False,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="zuban",
                 command=[],
                 stage=HookStage.COMPREHENSIVE,
                 is_formatting=False,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -312,21 +306,18 @@ class TestParallelExecutionWithProgress:
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=True,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="ruff-check",
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=False,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="mdformat",
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=True,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -363,7 +354,6 @@ class TestProgressFallback:
                 name="hook1",
                 command=[],
                 stage=HookStage.FAST,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -403,7 +393,6 @@ class TestProgressFallback:
                 name="hook1",
                 command=[],
                 stage=HookStage.FAST,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -447,7 +436,6 @@ class TestRetryWithProgress:
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=True,
-                use_precommit_legacy=False,
             ),
         ]
 
@@ -500,14 +488,12 @@ class TestErrorHandlingWithProgress:
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=False,
-                use_precommit_legacy=False,
             ),
             HookDefinition(
                 name="hook2",
                 command=[],
                 stage=HookStage.FAST,
                 is_formatting=False,
-                use_precommit_legacy=False,
             ),
         ]
 

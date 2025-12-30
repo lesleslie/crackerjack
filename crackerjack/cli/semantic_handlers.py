@@ -3,14 +3,15 @@
 from pathlib import Path
 from textwrap import dedent
 
-from acb import console
+from rich.console import Console
+
+console = Console()
+
 from rich.panel import Panel
 from rich.table import Table
 
 from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
 from crackerjack.services.vector_store import VectorStore
-
-# console imported from acb
 
 
 def handle_semantic_index(file_path: str) -> None:

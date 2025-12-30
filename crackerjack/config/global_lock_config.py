@@ -5,8 +5,7 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from acb.depends import depends
-
+from crackerjack.config import load_settings
 from crackerjack.config.settings import CrackerjackSettings, GlobalLockSettings
 
 
@@ -57,7 +56,7 @@ class GlobalLockConfig:
     ) -> GlobalLockSettings:
         """Build settings from backwards compatibility parameters."""
         # Get defaults from CrackerjackSettings
-        default_settings = depends.get_sync(CrackerjackSettings).global_lock
+        default_settings = load_settings(CrackerjackSettings).global_lock
         # Create a copy with overrides
         settings_dict = {
             "enabled": enabled if enabled is not None else default_settings.enabled,
@@ -134,7 +133,7 @@ class GlobalLockConfig:
                 enable_lock_monitoring,
             )
 
-        base_settings = settings or depends.get_sync(CrackerjackSettings).global_lock
+        base_settings = settings or load_settings(CrackerjackSettings).global_lock
         self._settings = base_settings.model_copy()
         self.session_id = (
             getattr(self._settings, "session_id", None) or self._generate_session_id()
@@ -174,7 +173,7 @@ class GlobalLockConfig:
 
         Synchronous method - no async operations needed.
         """
-        base_settings = depends.get_sync(CrackerjackSettings).global_lock
+        base_settings = load_settings(CrackerjackSettings).global_lock
         overrides = getattr(options, "global_lock", None)
 
         # Handle nested global_lock object

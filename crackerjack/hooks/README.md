@@ -471,8 +471,9 @@ print(f"Cache hit rate: {result2.cache_hit_rate:.1%}")
 ## Related
 
 - [Executors](../executors/README.md) - Hook execution engines
+
 - [Config](../config/README.md) - Hook configuration and definitions
-- [Workflows](../workflows/README.md) - Workflow integration
+
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Two-stage quality process documentation
 
 ## Future Enhancements

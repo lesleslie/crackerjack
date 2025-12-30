@@ -8,10 +8,7 @@ from unittest.mock import MagicMock
 import tempfile
 
 import pytest
-
-from acb.console import Console
-from acb.depends import depends
-from acb.logger import Logger
+from rich.console import Console
 
 
 def pytest_configure(config):
@@ -40,29 +37,8 @@ def sample_test_data():
 
 @contextmanager
 def acb_depends_context(injection_map: dict[type, Any]) -> Generator[None, None, None]:
-    """Context manager for setting up ACB dependency injection in tests.
-
-    Usage:
-        with acb_depends_context({Console: mock_console}):
-            # Your test code here
-            pass
-    """
-    original_values = {}
-    try:
-        # Save original values and set new ones
-        for dep_type, dep_value in injection_map.items():
-            try:
-                original_values[dep_type] = depends.get_sync(dep_type)
-            except Exception:
-                # Dependency not registered yet
-                original_values[dep_type] = None
-            depends.set(dep_type, dep_value)
-        yield
-    finally:
-        # Restore original values
-        for dep_type, original_value in original_values.items():
-            if original_value is not None:
-                depends.set(dep_type, original_value)
+    """Legacy no-op context manager (ACB removed)."""
+    yield
 
 
 @pytest.fixture
@@ -239,24 +215,7 @@ def publish_manager_di_context(
         Path: temp_pkg_path,
     }
 
-    # Save original values
-    original_values = {}
-    try:
-        # Register all dependencies
-        for dep_type, dep_value in injection_map.items():
-            try:
-                original_values[dep_type] = depends.get_sync(dep_type)
-            except Exception:
-                # Dependency not registered yet
-                original_values[dep_type] = None
-            depends.set(dep_type, dep_value)
-
-        yield injection_map, temp_pkg_path
-    finally:
-        # Restore original values after test completes
-        for dep_type, original_value in original_values.items():
-            if original_value is not None:
-                depends.set(dep_type, original_value)
+    yield injection_map, temp_pkg_path
 
 
 # Ensure an asyncio event loop exists for tests that use asyncio.Future() directly
@@ -473,21 +432,4 @@ def workflow_orchestrator_di_context(
         Path: temp_pkg_path,
     }
 
-    # Save original values
-    original_values = {}
-    try:
-        # Register all dependencies
-        for dep_type, dep_value in injection_map.items():
-            try:
-                original_values[dep_type] = depends.get_sync(dep_type)
-            except Exception:
-                # Dependency not registered yet
-                original_values[dep_type] = None
-            depends.set(dep_type, dep_value)
-
-        yield injection_map, temp_pkg_path
-    finally:
-        # Restore original values after test completes
-        for dep_type, original_value in original_values.items():
-            if original_value is not None:
-                depends.set(dep_type, original_value)
+    yield injection_map, temp_pkg_path

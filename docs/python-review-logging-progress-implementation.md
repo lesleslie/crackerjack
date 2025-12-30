@@ -916,7 +916,7 @@ ______________________________________________________________________
 
 ### Phase 3: Validation (Day 3)
 
-7. ✅ Run full test suite: `python -m crackerjack --run-tests`
+7. ✅ Run full test suite: `python -m crackerjack run --run-tests`
 1. ✅ Manual testing of all flag combinations
 1. ✅ CI/CD pipeline validation
 

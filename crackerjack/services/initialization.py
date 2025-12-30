@@ -4,7 +4,6 @@ import typing as t
 from pathlib import Path
 
 import tomli
-import yaml
 from rich.console import Console
 
 from crackerjack.models.protocols import ConfigMergeServiceProtocol
@@ -18,18 +17,21 @@ from .input_validator import get_input_validator, validate_and_sanitize_path
 class InitializationService:
     def __init__(
         self,
-        filesystem: FileSystemService,
-        git_service: GitService,
-        pkg_path: Path,
+        console: Console | None = None,
+        filesystem: FileSystemService | None = None,
+        git_service: GitService | None = None,
+        pkg_path: Path | None = None,
         config_merge_service: ConfigMergeServiceProtocol | None = None,
     ) -> None:
-        self.console = console
-        self.filesystem = filesystem
-        self.git_service = git_service
-        self.pkg_path = pkg_path
+        self.console = console or Console()
+        self.filesystem = filesystem or FileSystemService()
+        self.git_service = git_service or GitService(self.console, Path.cwd())
+        self.pkg_path = pkg_path or Path.cwd()
 
         self.config_merge_service = config_merge_service or ConfigMergeService(
-            filesystem, git_service
+            console=self.console,
+            filesystem=self.filesystem,
+            git_service=self.git_service,
         )
 
     def initialize_project(self, project_path: str | Path) -> bool:
@@ -661,14 +663,6 @@ python -m crackerjack - a patch
                 force,
                 results,
             )
-        elif file_name == ".pre-commit-config.yaml":
-            self._smart_merge_pre_commit_config(
-                source_file,
-                target_file,
-                project_name,
-                force,
-                results,
-            )
         elif not target_file.exists() or force:
             content = self._read_and_process_content(
                 source_file,
@@ -712,109 +706,3 @@ python -m crackerjack - a patch
 
         except Exception as e:
             self._handle_file_processing_error("pyproject.toml", e, results)
-
-    def _smart_merge_pre_commit_config(
-        self,
-        source_file: Path,
-        target_file: Path,
-        project_name: str,
-        force: bool,
-        results: dict[str, t.Any],
-    ) -> None:
-        try:
-            source_config = self._load_source_config(source_file)
-            if source_config is None:
-                return
-
-            merged_config = self._perform_config_merge(
-                source_config, target_file, project_name
-            )
-
-            if self._should_skip_merge(target_file, merged_config, results):
-                return
-
-            self._write_and_finalize_config(
-                merged_config, target_file, source_config, results
-            )
-
-        except Exception as e:
-            self._handle_file_processing_error(".pre-commit-config.yaml", e, results)
-
-    def _load_source_config(self, source_file: Path) -> dict[str, t.Any] | None:
-        with source_file.open() as f:
-            loaded_config = yaml.safe_load(f)
-            source_config: dict[str, t.Any] = (
-                loaded_config if isinstance(loaded_config, dict) else {}
-            )
-
-        if not isinstance(source_config, dict):
-            self.console.print(
-                "[yellow]⚠️[/yellow] Source .pre-commit-config.yaml is not a dictionary, skipping merge"
-            )
-            return None
-
-        return source_config
-
-    def _perform_config_merge(
-        self, source_config: dict[str, t.Any], target_file: Path, project_name: str
-    ) -> dict[str, t.Any]:
-        return self.config_merge_service.smart_merge_pre_commit_config(
-            source_config, target_file, project_name
-        )
-
-    def _should_skip_merge(
-        self,
-        target_file: Path,
-        merged_config: dict[str, t.Any],
-        results: dict[str, t.Any],
-    ) -> bool:
-        if not target_file.exists():
-            return False
-
-        with target_file.open() as f:
-            loaded_config = yaml.safe_load(f)
-            old_config: dict[str, t.Any] = (
-                loaded_config if isinstance(loaded_config, dict) else {}
-            )
-
-        if not isinstance(old_config, dict):
-            old_config = {}
-
-        old_repo_count = len(old_config.get("repos", []))
-        new_repo_count = len(merged_config.get("repos", []))
-
-        if new_repo_count == old_repo_count:
-            self._skip_existing_file(".pre-commit-config.yaml (no new repos)", results)
-            return True
-
-        return False
-
-    def _write_and_finalize_config(
-        self,
-        merged_config: dict[str, t.Any],
-        target_file: Path,
-        source_config: dict[str, t.Any],
-        results: dict[str, t.Any],
-    ) -> None:
-        self.config_merge_service.write_pre_commit_config(merged_config, target_file)
-
-        t.cast("list[str]", results["files_copied"]).append(
-            ".pre-commit-config.yaml (merged)"
-        )
-
-        self._git_add_config_file(target_file)
-        self._display_merge_success(source_config)
-
-    def _git_add_config_file(self, target_file: Path) -> None:
-        try:
-            self.git_service.add_files([str(target_file)])
-        except Exception as e:
-            self.console.print(
-                f"[yellow]⚠️[/ yellow] Could not git add .pre-commit-config.yaml: {e}"
-            )
-
-    def _display_merge_success(self, source_config: dict[str, t.Any]) -> None:
-        source_repo_count = len(source_config.get("repos", []))
-        self.console.print(
-            f"[green]✅[/ green] Merged .pre-commit-config.yaml ({source_repo_count} repos processed)"
-        )

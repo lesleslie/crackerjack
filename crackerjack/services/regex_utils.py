@@ -266,7 +266,7 @@ def print_migration_suggestion(suggestion: dict[str, t.Any]) -> None:
         print(" 3. Add new ValidatedPattern to regex_patterns.py")
         print(" 4. Test thoroughly with comprehensive test cases")
     print(" 5. Replace re.sub() call with safe pattern usage")
-    print(" 6. Run pre-commit hook to validate")
+    print(" 6. Run hook to validate")
 
     print("=" * 50)
 

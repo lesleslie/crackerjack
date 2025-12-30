@@ -6,25 +6,13 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from acb.adapters import AdapterNotInstalled, import_adapter
-from acb.depends import depends
-
 from crackerjack.models.task import HookResult
 
 logger = logging.getLogger(__name__)
 
+# Cache adapter removed with ACB - using in-memory caching only
 Cache: Any | None = None
 _cache_import_error: Exception | None = None
-
-if import_adapter is not None:
-    try:
-        Cache = import_adapter("cache")
-    except AdapterNotInstalled as e:  # pragma: no cover - depends on env
-        _cache_import_error = e
-        Cache = None
-    except Exception as e:  # pragma: no cover - defensive
-        _cache_import_error = e
-        Cache = None
 
 
 @dataclass
@@ -52,37 +40,8 @@ class CacheStats:
 
 
 def get_cache() -> Any:
-    """Return the configured cache backend from ACB."""
-    if Cache is None or depends is None:
-        reason = (
-            f"{type(_cache_import_error).__name__}: {_cache_import_error}"
-            if _cache_import_error is not None
-            else "cache adapter import failed"
-        )
-        msg = (
-            "ACB cache adapter is unavailable. "
-            f"Resolve adapter configuration before continuing ({reason})."
-        )
-        raise RuntimeError(msg)
-    try:
-        return depends.get_sync(Cache)
-    except Exception as exception:  # pragma: no cover - runtime safety
-        # Check if the error is specifically about the adapter not being found
-        error_msg = str(exception).lower()
-        if "adapter" in error_msg and "not found" in error_msg and "cache" in error_msg:
-            # Instead of raising an error, return None to trigger fallback behavior
-            import logging
-
-            logging.getLogger(__name__).warning(
-                "ACB cache adapter not found or not installed, using fallback behavior"
-            )
-            return None
-        else:
-            msg = (
-                "Failed to resolve ACB cache adapter via dependency injection. "
-                "Ensure adapters.yml specifies a valid cache adapter."
-            )
-            raise RuntimeError(msg) from exception
+    """Return the configured cache backend (ACB removed)."""
+    return None
 
 
 class CrackerjackCache:

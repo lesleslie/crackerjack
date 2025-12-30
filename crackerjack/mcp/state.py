@@ -334,7 +334,7 @@ class StateManager:
 
     def list_checkpoints(self) -> list[dict[str, t.Any]]:
         checkpoints: list[dict[str, t.Any]] = []
-        for checkpoint_file in self.checkpoints_dir.glob(" * .json"):
+        for checkpoint_file in self.checkpoints_dir.glob("*.json"):
             try:
                 with checkpoint_file.open() as f:
                     data = json.load(f)

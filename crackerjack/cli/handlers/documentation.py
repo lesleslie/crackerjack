@@ -9,7 +9,7 @@ This module contains handlers for:
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+
 def generate_documentation(doc_service: t.Any) -> bool:
     """Generate API documentation using documentation service."""
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
@@ -21,6 +21,8 @@ def generate_documentation(doc_service: t.Any) -> bool:
         return True
     console.print("❌ [bold red]Documentation generation failed![/bold red]")
     return False
+
+
 def validate_documentation_files(doc_service: t.Any) -> None:
     """Validate existing documentation files for consistency."""
     console.print("🔍 [bold blue]Validating documentation...[/bold blue]")
@@ -203,8 +205,9 @@ def build_mkdocs_site(
             serve=serve,
         )
     )
-def handle_mkdocs_build_result(
-    site: t.Any, mkdocs_serve: bool) -> None:
+
+
+def handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
     """Display MkDocs build results to console."""
     if site:
         console.print(
@@ -221,6 +224,8 @@ def handle_mkdocs_build_result(
             console.print("[yellow]Press Ctrl+C to stop the server[/yellow]")
     else:
         console.print("[red]❌[/red] Failed to generate MkDocs site")
+
+
 def handle_mkdocs_integration(
     mkdocs_integration: bool,
     mkdocs_serve: bool,

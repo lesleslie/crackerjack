@@ -138,7 +138,7 @@ class TestTaskModels:
             duration=2.5,
             files_processed=15,
             issues_found=["unused import in file.py"],
-            stage="pre - commit",
+            stage="fast",
         )
 
         assert result.id == "hook_1"
@@ -147,7 +147,7 @@ class TestTaskModels:
         assert result.duration == 2.5
         assert result.files_processed == 15
         assert result.issues_found == ["unused import in file.py"]
-        assert result.stage == "pre - commit"
+        assert result.stage == "fast"
 
     def test_hook_result_defaults(self) -> None:
         result = HookResult(
@@ -159,7 +159,7 @@ class TestTaskModels:
 
         assert result.files_processed == 0
         assert result.issues_found == []
-        assert result.stage == "pre - commit"
+        assert result.stage == "fast"
 
     def test_session_tracker_creation(self) -> None:
         from rich.console import Console

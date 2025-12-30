@@ -425,9 +425,13 @@ class InteractiveCLI:
         workflow_steps: list[t.Callable[[WorkflowBuilder, str], str]] = [
             self._add_setup_phase,
             self._add_config_phase,
-            partial(self._add_cleaning_phase, enabled=options.clean),
+            partial(
+                self._add_cleaning_phase, enabled=getattr(options, "strip_code", False)
+            ),
             self._add_fast_hooks_phase,
-            partial(self._add_testing_phase, enabled=options.test),
+            partial(
+                self._add_testing_phase, enabled=getattr(options, "run_tests", False)
+            ),
             self._add_comprehensive_hooks_phase,
             partial(
                 self._add_version_phase,

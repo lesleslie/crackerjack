@@ -3,7 +3,6 @@ import typing as t
 from dataclasses import dataclass
 
 import aiohttp
-from rich.console import Console
 
 from crackerjack.core.retry import retry_api_call
 
@@ -23,7 +22,6 @@ class VersionChecker:
         self.tools_to_check = {
             "ruff": self._get_ruff_version,
             "pyright": self._get_pyright_version,
-            "pre-commit": self._get_precommit_version,
             "uv": self._get_uv_version,
         }
 
@@ -95,9 +93,6 @@ class VersionChecker:
     def _get_pyright_version(self) -> str | None:
         return self._get_tool_version("pyright")
 
-    def _get_precommit_version(self) -> str | None:
-        return self._get_tool_version("pre-commit")
-
     def _get_uv_version(self) -> str | None:
         return self._get_tool_version("uv")
 
@@ -124,7 +119,6 @@ class VersionChecker:
             pypi_urls = {
                 "ruff": "https://pypi.org/pypi/ruff/json",
                 "pyright": "https://pypi.org/pypi/pyright/json",
-                "pre-commit": "https://pypi.org/pypi/pre-commit/json",
                 "uv": "https://pypi.org/pypi/uv/json",
             }
 

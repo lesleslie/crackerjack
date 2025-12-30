@@ -70,7 +70,7 @@ class ServiceStatus:
 
 class ServiceWatchdog:
     def __init__(self, console: Console | None = None) -> None:
-        self.console = console or acb_console
+        self.console = console or Console()
         self.timeout_manager = get_timeout_manager()
         self.services: dict[str, ServiceStatus] = {}
         self.is_running = False

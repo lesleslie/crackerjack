@@ -577,8 +577,9 @@ LSP-aware: ~100MB (shares LSP server memory)
 ## Related
 
 - [Hooks](../hooks/README.md) - Hook definitions and lifecycle
-- [Workflows](../workflows/README.md) - Workflow integration
+
 - [Config](../config/README.md) - Executor configuration
+
 - [CLAUDE.md](../../docs/guides/CLAUDE.md) - Quality process overview
 
 ## Future Enhancements

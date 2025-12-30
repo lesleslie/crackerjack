@@ -26,8 +26,9 @@ import re
 import typing as t
 from uuid import UUID
 
-from crackerjack.models.adapter_metadata import AdapterStatus
 from pydantic import BaseModel, Field, SecretStr, field_validator
+
+from crackerjack.models.adapter_metadata import AdapterStatus
 
 # Static UUID from registry (NEVER change once set)
 MODULE_ID = UUID("514c99ad-4f9a-4493-acca-542b0c43f95a")

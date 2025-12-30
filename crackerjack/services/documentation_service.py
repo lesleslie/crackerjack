@@ -3,8 +3,6 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
 from ..models.protocols import (
     APIExtractorProtocol,
     DocumentationGeneratorProtocol,
@@ -16,6 +14,7 @@ from .documentation_generator import DocumentationGeneratorImpl
 
 class DocumentationServiceImpl(DocumentationServiceProtocol):
     """Main service for automated documentation generation and maintenance."""
+
     def __init__(
         self,
         pkg_path: Path,

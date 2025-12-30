@@ -366,6 +366,8 @@ class TestProtocolMethodSignatures:
                     self.clean = False
                     self.test = False
                     self.benchmark = False
+                    self.benchmark_regression = False
+                    self.benchmark_regression_threshold = 0.1
                     self.test_workers = 0
                     self.test_timeout = 0
                     self.publish = None
@@ -375,7 +377,6 @@ class TestProtocolMethodSignatures:
                     self.start_mcp_server = False
                     self.create_pr = False
                     self.skip_hooks = False
-                    self.update_precommit = False
                     self.async_mode = False
                     self.experimental_hooks = False
                     self.enable_pyrefly = False
@@ -401,6 +402,8 @@ class TestProtocolMethodSignatures:
             "clean",
             "test",
             "benchmark",
+            "benchmark_regression",
+            "benchmark_regression_threshold",
             "test_workers",
             "test_timeout",
             "publish",
@@ -410,7 +413,6 @@ class TestProtocolMethodSignatures:
             "start_mcp_server",
             "create_pr",
             "skip_hooks",
-            "update_precommit",
             "async_mode",
             "experimental_hooks",
             "enable_pyrefly",

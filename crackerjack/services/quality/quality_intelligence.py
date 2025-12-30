@@ -8,7 +8,6 @@ from enum import Enum
 from pathlib import Path
 
 import numpy as np
-from scipy import stats
 
 from crackerjack.models.protocols import QualityIntelligenceProtocol
 
@@ -17,6 +16,15 @@ from .quality_baseline_enhanced import (
     EnhancedQualityBaselineService,
     TrendDirection,
 )
+
+# Try to import scipy, but handle the case where it's not available
+try:
+    from scipy import stats
+
+    SCIPY_AVAILABLE = True
+except (ImportError, SyntaxError):
+    stats = None
+    SCIPY_AVAILABLE = False
 
 
 class AnomalyType(str, Enum):
@@ -171,6 +179,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
         """Detect anomalies in quality metrics using statistical analysis (sync version)."""
+        if not SCIPY_AVAILABLE:
+            # Return empty list if scipy is not available
+            return []
+
         metrics = self._get_default_metrics() if metrics is None else metrics
 
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
@@ -188,6 +200,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
         """Detect anomalies in quality metrics using statistical analysis (async version)."""
+        if not SCIPY_AVAILABLE:
+            # Return empty list if scipy is not available
+            return []
+
         metrics = self._get_default_metrics() if metrics is None else metrics
 
         baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
@@ -359,6 +375,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     def identify_patterns(self, days: int = 60) -> list[QualityPattern]:
         """Identify patterns in quality metrics using correlation and trend analysis (sync version)."""
+        if not SCIPY_AVAILABLE:
+            # Return empty list if scipy is not available
+            return []
+
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
         if len(baselines) < self.min_data_points:
             return []
@@ -368,6 +388,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     async def identify_patterns_async(self, days: int = 60) -> list[QualityPattern]:
         """Identify patterns in quality metrics using correlation and trend analysis (async version)."""
+        if not SCIPY_AVAILABLE:
+            # Return empty list if scipy is not available
+            return []
+
         baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
         if len(baselines) < self.min_data_points:
             return []
@@ -421,6 +445,9 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         days: int,
     ) -> QualityPattern | None:
         """Analyze correlation between two metrics."""
+        if not SCIPY_AVAILABLE:
+            return None  # Skip correlation analysis if scipy is not available
+
         values1 = np.array(metrics_data[metric1])
         values2 = np.array(metrics_data[metric2])
 
@@ -505,6 +532,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, horizon_days: int = 14, confidence_level: float = 0.95
     ) -> list[QualityPrediction]:
         """Generate advanced predictions with confidence intervals."""
+        if not SCIPY_AVAILABLE:
+            # Return empty list if scipy is not available
+            return []
+
         baselines = self.quality_service.get_recent_baselines(limit=90)
         if len(baselines) < self.min_data_points:
             return []
@@ -574,6 +605,20 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, values: list[t.Any], horizon_days: int
     ) -> dict[str, t.Any]:
         """Perform linear regression and predict future value."""
+        if not SCIPY_AVAILABLE:
+            # Fallback to a simple average if scipy is not available
+            values_array = np.array(values)
+            predicted_value = float(np.mean(values_array))
+
+            return {
+                "slope": 0.0,
+                "intercept": predicted_value,
+                "predicted_value": predicted_value,
+                "time_indices": np.arange(len(values)),
+                "values_array": values_array,
+                "horizon_days": horizon_days,
+            }
+
         values_array = np.array(values)
         time_indices = np.arange(len(values))
 
@@ -608,6 +653,15 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
         residuals = values_array - (slope * time_indices + intercept)
         residual_std = np.std(residuals)
+
+        if not SCIPY_AVAILABLE:
+            # If scipy is not available, use a simple approach with standard deviation
+            # This is a fallback that provides a basic confidence interval
+            margin_error = 1.96 * residual_std  # Approximate 95% confidence interval
+            return {
+                "lower": predicted_value - margin_error,
+                "upper": predicted_value + margin_error,
+            }
 
         future_index = len(values) + regression_results["horizon_days"]
         t_value = stats.t.ppf((1 + confidence_level) / 2, len(values) - 2)

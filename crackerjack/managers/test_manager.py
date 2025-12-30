@@ -3,10 +3,7 @@ import subprocess
 import time
 import typing as t
 from pathlib import Path
-
-from acb.config import root_path
 from rich.console import Console
-from acb.depends import depends
 from rich import box
 from rich.panel import Panel
 from rich.table import Table
@@ -25,7 +22,7 @@ from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
-
+root_path = Path.cwd()
 
 class TestManager:
     def __init__(
@@ -44,16 +41,10 @@ class TestManager:
                 console = Console()
 
         if coverage_ratchet is None:
-            try:
-                coverage_ratchet = depends.get_sync(CoverageRatchetProtocol)
-            except Exception:
-                coverage_ratchet = None
+            coverage_ratchet = None
 
         if coverage_badge is None:
-            try:
-                coverage_badge = depends.get_sync(CoverageBadgeServiceProtocol)
-            except Exception:
-                coverage_badge = None
+            coverage_badge = None
 
         if command_builder is None:
             command_builder = TestCommandBuilder()
@@ -65,7 +56,7 @@ class TestManager:
         try:
             self.pkg_path = Path(str(resolved_path))
         except Exception:
-            # Fallback in the unlikely event root_path lacks __str__
+            # Fallback in the unlikely event Path.cwd() lacks __str__
             self.pkg_path = Path(resolved_path)
 
         # Ensure downstream components receive a concrete pathlib.Path
@@ -79,14 +70,68 @@ class TestManager:
 
         self._last_test_failures: list[str] = []
         self._progress_callback: t.Callable[[dict[str, t.Any]], None] | None = None
-        self.coverage_ratchet_enabled = True
+        self.coverage_ratchet_enabled = coverage_ratchet is not None
         self.use_lsp_diagnostics = True
+        self._service_initialized = False
+        self._request_count = 0
+        self._error_count = 0
+        self._custom_metrics: dict[str, t.Any] = {}
+        self._resources: list[t.Any] = []
 
     def set_progress_callback(
         self,
         callback: t.Callable[[dict[str, t.Any]], None] | None,
     ) -> None:
         self._progress_callback = callback
+
+    def initialize(self) -> None:
+        self._service_initialized = True
+
+    def cleanup(self) -> None:
+        for resource in self._resources.copy():
+            self.cleanup_resource(resource)
+        self._resources.clear()
+        self._service_initialized = False
+
+    def health_check(self) -> bool:
+        return True
+
+    def shutdown(self) -> None:
+        self.cleanup()
+
+    def metrics(self) -> dict[str, t.Any]:
+        return {
+            "initialized": self._service_initialized,
+            "requests": self._request_count,
+            "errors": self._error_count,
+            "custom_metrics": self._custom_metrics.copy(),
+        }
+
+    def is_healthy(self) -> bool:
+        return self.health_check()
+
+    def register_resource(self, resource: t.Any) -> None:
+        self._resources.append(resource)
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        cleanup = getattr(resource, "cleanup", None)
+        close = getattr(resource, "close", None)
+        if callable(cleanup):
+            cleanup()
+        elif callable(close):
+            close()
+
+    def record_error(self, error: Exception) -> None:
+        self._error_count += 1
+
+    def increment_requests(self) -> None:
+        self._request_count += 1
+
+    def get_custom_metric(self, name: str) -> t.Any:
+        return self._custom_metrics.get(name)
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        self._custom_metrics[name] = value
 
     def set_coverage_ratchet_enabled(self, enabled: bool) -> None:
         self.coverage_ratchet_enabled = enabled
@@ -154,7 +199,12 @@ class TestManager:
         cmd = self.command_builder.build_validation_command()
 
         spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
-        with Live(spinner, console=self.console, transient=True):
+        try:
+            with Live(spinner, console=self.console, transient=True):
+                result = subprocess.run(
+                    cmd, cwd=self.pkg_path, capture_output=True, text=True
+                )
+        except Exception:
             result = subprocess.run(
                 cmd, cwd=self.pkg_path, capture_output=True, text=True
             )
@@ -168,6 +218,8 @@ class TestManager:
         return True
 
     def get_coverage_ratchet_status(self) -> dict[str, t.Any]:
+        if self.coverage_ratchet is None:
+            return {"status": "disabled", "message": "Coverage ratchet unavailable"}
         return self.coverage_ratchet.get_status_report()
 
     def get_test_stats(self) -> dict[str, t.Any]:
@@ -185,6 +237,8 @@ class TestManager:
 
     def get_coverage_report(self) -> str | None:
         try:
+            if self.coverage_ratchet is None:
+                return None
             return self.coverage_ratchet.get_coverage_report()
         except Exception:
             return None
@@ -256,6 +310,10 @@ class TestManager:
 
     def get_coverage(self) -> dict[str, t.Any]:
         try:
+            if self.coverage_ratchet is None:
+                direct_coverage = self._get_coverage_from_file()
+                return self._handle_no_ratchet_status(direct_coverage)
+
             status = self.coverage_ratchet.get_status_report()
 
             # Check if we have actual coverage data from coverage.json even if ratchet is not initialized
@@ -708,7 +766,7 @@ class TestManager:
             self.console.print()
 
     def _process_coverage_ratchet(self) -> bool:
-        if not self.coverage_ratchet_enabled:
+        if not self.coverage_ratchet_enabled or self.coverage_ratchet is None:
             return True
 
         ratchet_result = self.coverage_ratchet.check_and_update_coverage()
@@ -1092,10 +1150,10 @@ class TestManager:
         self, line: str, lines: list[str], i: int, current_failure: "TestFailure"
     ) -> bool:
         """Parse traceback lines."""
-        if line.startswith("    ") or line.startswith("\t") or line.startswith("E   "):
+        if line.startswith(("    ", "\t", "E   ")):
             current_failure.traceback.append(line)
             return True
-        elif line.strip().startswith("=") or (
+        elif line.strip().startswith(("=", "FAILED")) or (
             i < len(lines) - 1 and "FAILED" in lines[i + 1]
         ):
             return False
@@ -1105,7 +1163,7 @@ class TestManager:
         self, line: str, capture_type: str | None, current_failure: "TestFailure"
     ) -> bool:
         """Parse captured output lines."""
-        if line.strip().startswith("=") or line.strip().startswith("_"):
+        if line.strip().startswith(("=", "_")):
             return False
 
         if capture_type == "stdout":
@@ -1258,8 +1316,7 @@ class TestManager:
 
                 # Add assertion details
                 if failure.assertion:
-                    components.append("")  # Spacer
-                    components.append("[bold red]Assertion Error:[/bold red]")
+                    components.extend(("", "[bold red]Assertion Error:[/bold red]"))
 
                     # Syntax highlight the assertion
                     assertion_syntax = Syntax(
@@ -1274,8 +1331,7 @@ class TestManager:
                 # Add relevant traceback (last 15 lines)
                 relevant_traceback = failure.get_relevant_traceback(max_lines=15)
                 if relevant_traceback:
-                    components.append("")  # Spacer
-                    components.append("[bold red]Traceback:[/bold red]")
+                    components.extend(("", "[bold red]Traceback:[/bold red]"))
 
                     traceback_text = "\n".join(relevant_traceback)
                     traceback_syntax = Syntax(
@@ -1290,13 +1346,11 @@ class TestManager:
 
                 # Add captured output if present
                 if failure.captured_stdout:
-                    components.append("")  # Spacer
-                    components.append("[bold yellow]Captured stdout:[/bold yellow]")
+                    components.extend(("", "[bold yellow]Captured stdout:[/bold yellow]"))
                     components.append(f"[dim]{failure.captured_stdout}[/dim]")
 
                 if failure.captured_stderr:
-                    components.append("")  # Spacer
-                    components.append("[bold yellow]Captured stderr:[/bold yellow]")
+                    components.extend(("", "[bold yellow]Captured stderr:[/bold yellow]"))
                     components.append(f"[dim]{failure.captured_stderr}[/dim]")
 
                 # Create grouped content
@@ -1374,6 +1428,5 @@ class TestManager:
             self.console.print(
                 "[cyan]🔍 LSP diagnostics enabled for faster test feedback[/cyan]"
             )
-
 
 TestManagementImpl = TestManager

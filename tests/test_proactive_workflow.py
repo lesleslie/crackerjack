@@ -28,7 +28,6 @@ class DummyOptions:
     start_mcp_server: bool = False
     create_pr: bool = False
     skip_hooks: bool = False
-    update_precommit: bool = False
     async_mode: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False

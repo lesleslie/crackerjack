@@ -5,7 +5,6 @@ import time
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
 from mcp_common.ui import ServerPanels
 
 from .secure_subprocess import execute_secure_subprocess
@@ -156,6 +155,8 @@ def stop_process(pid: int, force: bool = False) -> bool:
 
     except (OSError, ProcessLookupError):
         return True
+
+
 def stop_mcp_server() -> bool:
     processes = find_mcp_server_processes()
 
@@ -204,14 +205,17 @@ def stop_zuban_lsp() -> bool:
             success = False
 
     return success
+
+
 def stop_all_servers() -> bool:
     # Phase 1: stop_websocket_server() call removed (WebSocket stack deleted)
     mcp_success = stop_mcp_server()
     zuban_lsp_success = stop_zuban_lsp()
 
     return mcp_success and zuban_lsp_success
-def restart_mcp_server(
-) -> bool:
+
+
+def restart_mcp_server() -> bool:
     ServerPanels.info(
         title="MCP Server", message="Restarting Crackerjack MCP Server..."
     )
@@ -256,6 +260,8 @@ def restart_mcp_server(
     except Exception as e:
         ServerPanels.error(title="MCP Restart Error", message=str(e))
         return False
+
+
 def restart_zuban_lsp() -> bool:
     """Restart zuban LSP server."""
     console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/ bold cyan]")
@@ -290,6 +296,8 @@ def restart_zuban_lsp() -> bool:
     except Exception as e:
         console.print(f"❌ Failed to restart Zuban LSP server: {e}")
         return False
+
+
 def list_server_status() -> None:
     console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
 

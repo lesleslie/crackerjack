@@ -1,7 +1,5 @@
 import typing as t
 
-from acb.depends import depends
-
 from crackerjack.config import CrackerjackSettings
 from crackerjack.mcp.context import MCPServerContext, get_context
 from crackerjack.mcp.rate_limiter import RateLimitMiddleware
@@ -11,7 +9,6 @@ from crackerjack.services.input_validator import (
 )
 
 if t.TYPE_CHECKING:
-    # TODO(Phase 3): Re-add workflow type hints with Oneiric integration
     pass
 
 
@@ -150,8 +147,10 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
     Note: Returns a copy of global settings with stage-specific overrides.
     The global settings remain unchanged.
     """
-    # Get base settings from DI
-    base_settings = depends.get_sync(CrackerjackSettings)
+    # Get base settings without DI
+    from crackerjack.config import load_settings
+
+    base_settings = load_settings(CrackerjackSettings)
 
     # Create a new settings instance with stage-specific values
     # We copy the base settings and override specific fields
@@ -282,10 +281,6 @@ class _AdaptedOptions:
         return self.settings.skip_hooks
 
     @property
-    def update_precommit(self) -> bool:
-        return self.settings.update_precommit
-
-    @property
     def experimental_hooks(self) -> bool:
         return self.settings.experimental_hooks
 
@@ -329,17 +324,12 @@ class _AdaptedOptions:
         return False
 
 
-from rich.console import Console
-from acb.depends import Inject
-
 from crackerjack.services.filesystem import FileSystemService
 from crackerjack.services.git import GitService
 from crackerjack.services.initialization import InitializationService
 
 
-def _execute_init_stage(
-    orchestrator: "WorkflowOrchestrator"
-) -> bool:
+def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
     try:
         from pathlib import Path
 

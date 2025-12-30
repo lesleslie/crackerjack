@@ -9,7 +9,7 @@ Example:
     >>> snapshot = RuntimeHealthSnapshot(
     ...     orchestrator_pid=os.getpid(),
     ...     watchers_running=True,
-    ...     lifecycle_state={"server_status": "running"}
+    ...     lifecycle_state={"server_status": "running"},
     ... )
     >>> write_runtime_health(Path(".oneiric_cache/runtime_health.json"), snapshot)
 """
@@ -38,8 +38,8 @@ class RuntimeHealthSnapshot:
         ...     watchers_running=True,
         ...     lifecycle_state={
         ...         "server_status": "running",
-        ...         "start_time": "2025-12-26T10:00:00Z"
-        ...     }
+        ...         "start_time": "2025-12-26T10:00:00Z",
+        ...     },
         ... )
     """
 
@@ -77,7 +77,7 @@ def write_runtime_health(path: Path, snapshot: RuntimeHealthSnapshot) -> None:
         >>> snapshot = RuntimeHealthSnapshot(
         ...     orchestrator_pid=os.getpid(),
         ...     watchers_running=True,
-        ...     lifecycle_state={"server_status": "running"}
+        ...     lifecycle_state={"server_status": "running"},
         ... )
         >>> write_runtime_health(Path(".oneiric_cache/runtime_health.json"), snapshot)
     """

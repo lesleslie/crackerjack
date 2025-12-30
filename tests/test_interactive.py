@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 
 import pytest
-from acb.console import Console
+from rich.console import Console
 
 from crackerjack.cli.interactive import launch_interactive_cli
 from crackerjack.errors import ErrorCode, ExecutionError

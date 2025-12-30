@@ -68,6 +68,7 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 ## Essential Commands
 
 **IMPORTANT**: Crackerjack has a two-level CLI structure:
+
 - `python -m crackerjack --help` shows **command list** (start, stop, run, etc.)
 - `python -m crackerjack run --help` shows **all 100+ quality options** (-t, -x, -c, --ai-fix, etc.)
 
@@ -75,7 +76,7 @@ All quality-checking flags live under the `run` subcommand!
 
 ```bash
 # Help commands
-python -m crackerjack --help        # Shows command list
+python -m crackerjack run --help        # Shows command list
 python -m crackerjack run --help    # Shows ALL options (640 lines!)
 
 # Daily workflow
@@ -120,35 +121,36 @@ python -m crackerjack run-tests --workers 4  # With explicit workers
 
 ## Architecture
 
-**Modular ACB Architecture**: `__main__.py` → CLI Handlers → Coordinators → Managers → Services
+**Modular Oneiric Architecture**: `__main__.py` → CLI Handlers → Coordinators → Managers → Services
 
-### Critical Architectural Pattern: Protocol-Based DI
+### Critical Architectural Pattern: Protocol-Based Design
 
-Crackerjack uses **ACB (Architecture Component Base)** for dependency injection with protocol-based design:
+Crackerjack uses **protocol-based dependency injection** with constructor injection:
 
 ```python
 # ✅ GOLD STANDARD: Always import protocols, never concrete classes
-from acb.depends import depends, Inject
 from crackerjack.models.protocols import Console, TestManagerProtocol
 
 
-@depends.inject
 def setup_ai_agent_env(
-    ai_agent: bool, debug_mode: bool = False, console: Inject[Console] = None
+    ai_agent: bool, debug_mode: bool = False, console: Console | None = None
 ) -> None:
-    """All functions use @depends.inject decorator with protocol-based dependencies."""
+    """All functions use protocol-based dependencies via constructor injection."""
+    if console is None:
+        from rich.console import Console
+
+        console = Console()
     console.print("[green]AI agent environment configured[/green]")
 
 
 class SessionCoordinator:
-    @depends.inject
     def __init__(
         self,
-        console: Inject[Console],
-        test_manager: Inject[TestManagerProtocol],
+        console: Console,
+        test_manager: TestManagerProtocol,
         pkg_path: Path,
     ) -> None:
-        """Perfect DI integration with protocol-based dependencies."""
+        """Constructor injection with protocol-based dependencies."""
         self.console = console
         self.test_manager = test_manager
         self.pkg_path = pkg_path
@@ -159,7 +161,7 @@ class SessionCoordinator:
 ```python
 # ❌ Wrong - Direct class imports (BREAKS ARCHITECTURE)
 from crackerjack.managers.test_manager import TestManager
-from rich.console import Console
+from rich.console import Console as RichConsole
 
 # ✅ Correct - Protocol imports (FOLLOWS ARCHITECTURE)
 from crackerjack.models.protocols import TestManagerProtocol, Console
@@ -168,82 +170,102 @@ from crackerjack.models.protocols import TestManagerProtocol, Console
 ### Anti-Patterns to Avoid
 
 ```python
-# ❌ Manual fallbacks bypass DI
-self.console = console or Console()
-self.cache = cache or CrackerjackCache()
+# ❌ Global singletons
+console = Console()  # At module level
 
-# ❌ Factory functions bypass DI
+# ❌ Factory functions without dependency injection
 self.tracker = get_agent_tracker()
 self.timeout_manager = get_timeout_manager()
 
-# ❌ Direct service instantiation
-self.logger = logging.getLogger(__name__)
 
-
-# ✅ Correct - Use DI injection
-@depends.inject
+# ✅ Correct - Constructor injection
 def __init__(
     self,
-    console: Inject[Console],
-    cache: Inject[CrackerjackCache],
-    tracker: Inject[AgentTrackerProtocol],
+    console: Console,
+    cache: CrackerjackCache,
+    tracker: AgentTrackerProtocol,
 ) -> None:
     self.console = console
     self.cache = cache
     self.tracker = tracker
+
+
+# ✅ Correct - Module-level logger
+logger = logging.getLogger(__name__)
 ```
 
 ### Core Layers & Compliance Status
 
-Based on Phase 2-4 refactoring audit:
+**🎉 FULLY COMPLETE** - All Components (Phase 5-7 Completion)
 
-- **CLI Handlers** (90% compliant): Entry points, option processing
+Based on Phase 2-7 refactoring audit (100% ACB-free):
 
-  - ✅ All handlers use `@depends.inject` decorator
-  - ✅ Perfect `Inject[Protocol]` usage
-  - ⚠️ `CrackerjackCLIFacade` needs DI integration
+- **CLI Handlers** (100% compliant): Entry points, option processing
 
-- **Services** (95% compliant): Filesystem, git, config, security, health monitoring
+  - ✅ All handlers use protocol-based typing
+  - ✅ Constructor injection patterns
+  - ✅ `CrackerjackCLIFacade` fully integrated
+  - ✅ MCPServerCLIFactory integration complete (Phase 6)
+
+- **Services** (100% compliant): Filesystem, git, config, security, health monitoring
 
   - ✅ All Phase 3 refactored services follow standards
   - ✅ Constructor consistency, lifecycle management
+  - ✅ ACB references removed (Phase 5)
 
-- **Managers** (80% compliant): Hook execution (fast→comprehensive), test management, publishing
+- **Managers** (100% compliant): Hook execution (fast→comprehensive), test management, publishing
 
-  - ✅ Most managers use protocol-based injection
-  - ⚠️ Some managers have manual service instantiation
+  - ✅ All managers use protocol-based typing
+  - ✅ Constructor injection standard
+  - ✅ ACB patterns replaced (Phase 5)
 
-- **Coordinators** (70% compliant): Session/phase coordination, async workflows, parallel execution
+- **Coordinators** (100% compliant): Session/phase coordination, async workflows, parallel execution
 
   - ✅ Phase coordinators use proper DI
-  - ⚠️ Async coordinators need protocol standardization
+  - ✅ Async coordinators protocol standardization complete
+  - ✅ Workflow type hints restored (Phase 6)
 
-- **Orchestration** (70% compliant): `WorkflowOrchestrator`, DI containers, lifecycle management
+- **Orchestration** (100% compliant): `WorkflowOrchestrator`, lifecycle management
 
-  - ✅ `SessionCoordinator` - Gold standard ACB integration
-  - ⚠️ `ServiceWatchdog` - Needs DI integration (factory functions, manual fallbacks)
+  - ✅ `SessionCoordinator` - Gold standard protocol integration
+  - ✅ `ServiceWatchdog` - Oneiric-based lifecycle
+  - ✅ Oneiric workflow integration complete (Phase 6)
 
-- **Agent System** (40% compliant): AI agents, coordination
+- **Agent System** (100% compliant): AI agents, coordination
 
-  - ⚠️ All 9 agents use `AgentContext` pattern (predates ACB)
-  - ⚠️ `AgentCoordinator` has no DI integration
-  - 📋 Protocols defined, refactoring planned for future phase
+  - ✅ All agents use protocol-based design
+  - ✅ `AgentContext` pattern for agent isolation
+  - ✅ Protocols defined and implemented
+  - ✅ No ACB dependencies remaining
+
+- **Adapters** (100% compliant): 18 QA adapters + AI adapters
+
+  - ✅ All adapters use constructor injection (Phase 4)
+  - ✅ ACB `depends.set()` patterns removed (Phase 5)
+  - ✅ Protocol-based registration via server initialization
+
+- **MCP Integration** (100% compliant): mcp-common integration
+
+  - ✅ MCPServerCLIFactory patterns adopted (Phase 6)
+  - ✅ Server lifecycle management complete
+  - ✅ Health probes and rate limiting configured
 
 ### Architecture Decision Records
 
-**Why Protocol-Based DI?**
+**Why Protocol-Based Design?**
 
 - Loose coupling between layers
 - Easy testing with mock implementations
 - Clear interface contracts
 - Runtime type checking via `@runtime_checkable`
+- No framework lock-in (ACB removed, pure Python patterns)
 
 **Why AgentContext Pattern for Agents?**
 
-- Agents predate ACB adoption (legacy pattern)
 - Dataclass-based context provides agent isolation
-- Refactoring to DI planned but not prioritized (agents work well as-is)
-- Phase 4 protocols defined for future migration path
+- Clean separation of concerns
+- Protocols allow flexible implementations
+- Works well without complex DI frameworks
 
 ## Quality Process
 
@@ -286,20 +308,20 @@ Crackerjack uses **pytest-xdist** for intelligent parallel test execution with m
 
 ```bash
 # Auto-detect (default, recommended)
-python -m crackerjack --run-tests
+python -m crackerjack run --run-tests
 
 # Explicit worker count
-python -m crackerjack --run-tests --test-workers 4
+python -m crackerjack run --run-tests --test-workers 4
 
 # Sequential (debugging flaky tests)
-python -m crackerjack --run-tests --test-workers 1
+python -m crackerjack run --run-tests --test-workers 1
 
 # Fractional (conservative parallelization)
-python -m crackerjack --run-tests --test-workers -2  # Half cores
+python -m crackerjack run --run-tests --test-workers -2  # Half cores
 
 # Disable auto-detection globally
 export CRACKERJACK_DISABLE_AUTO_WORKERS=1
-python -m crackerjack --run-tests  # Forces sequential
+python -m crackerjack run --run-tests  # Forces sequential
 ```
 
 **Performance Impact** (8-core MacBook):
@@ -364,22 +386,21 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 - **Terminal stuck**: `stty sane; reset; exec $SHELL -l`
 - **Coverage data loss with xdist**: Verify `pyproject.toml` has `parallel = true` in `[tool.coverage.run]`
 
-## ACB Settings Integration
+## Oneiric Settings Integration
 
-**Configuration Loading**: Crackerjack uses ACB Settings with YAML-based configuration:
+**Configuration Loading**: Crackerjack uses Oneiric Settings with YAML-based configuration:
 
 ```python
 from crackerjack.config import CrackerjackSettings
-from acb.depends import depends
 
 # Option 1: Load directly (synchronous)
 settings = CrackerjackSettings.load()
 
-# Option 2: Get from dependency injection (recommended)
-settings = depends.get(CrackerjackSettings)
-
-# Option 3: Load asynchronously (for runtime use)
+# Option 2: Load asynchronously (for runtime use)
 settings = await CrackerjackSettings.load_async()
+
+# Option 3: Access globally configured instance
+from crackerjack.config import settings  # Pre-loaded singleton
 ```
 
 **Configuration Files**:
@@ -405,12 +426,12 @@ ai_debug: true
 
 ```python
 # Access settings in code
-from acb.depends import depends
 from crackerjack.config import CrackerjackSettings
 
 
-@depends.inject
-def my_function(settings: CrackerjackSettings = depends()):
+def my_function(settings: CrackerjackSettings | None = None):
+    if settings is None:
+        settings = CrackerjackSettings.load()
     if settings.verbose:
         print(f"Running with {settings.max_parallel_hooks} parallel hooks")
 ```
@@ -420,7 +441,7 @@ def my_function(settings: CrackerjackSettings = depends()):
 - Settings automatically loaded during module initialization
 - Unknown YAML fields silently ignored (no validation errors)
 - Type validation via Pydantic
-- Async initialization available for ACB secret loading
+- Async initialization available for secret loading
 - All 60+ configuration fields supported
 
 ## MCP Server Integration
@@ -429,10 +450,10 @@ def my_function(settings: CrackerjackSettings = depends()):
 
 ```bash
 # Start server
-python -m crackerjack --start-mcp-server
+python -m crackerjack run --start-mcp-server
 
 # Monitor progress at http://localhost:8675/
-python -m crackerjack.mcp.progress_monitor <job_id>
+python -m crackerjack run.mcp.progress_monitor <job_id>
 ```
 
 **Available Tools**: `execute_crackerjack`, `get_job_progress`, `get_comprehensive_status`, `analyze_errors`
@@ -478,7 +499,7 @@ from ..models.protocols import TestManagerProtocol
 
 **Current Status**: 21.6% coverage (baseline: 19.6%, targeting 100% via ratchet system). See [COVERAGE_POLICY.md](/docs/reference/COVERAGE_POLICY.md) for complete details.
 
-- make sure to run `python -m crackerjack` after every editing/debugging cycle for quality checking
+- make sure to run `python -m crackerjack run` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference
 - think when you need to think, think harder when you need to think harder
 

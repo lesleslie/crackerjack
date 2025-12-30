@@ -3,11 +3,8 @@
 Phase 3 Implementation: Streamlined CLI (648→180 lines, 72% reduction)
 """
 
-import asyncio
 import logging
 import subprocess
-import sys
-from pathlib import Path
 
 import typer
 from rich.console import Console
@@ -35,35 +32,40 @@ def start(
     instance_id: str | None = typer.Option(
         None, "--instance-id", help="Server instance ID for multi-instance support"
     ),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Enable verbose logging"),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Enable verbose logging"
+    ),
+    http_mode: bool = typer.Option(
+        False, "--http", help="Start server in HTTP mode instead of STDIO"
+    ),
+    http_port: int = typer.Option(
+        8676, "--http-port", help="HTTP port for the server (default: 8676)"
+    ),
 ):
     """Start Crackerjack MCP server.
 
     The server manages QA adapter lifecycle and provides MCP tool endpoints.
     Use Ctrl+C to stop the server gracefully.
     """
-    # Load settings
-    settings = load_settings(CrackerjackSettings)
-
     # Apply CLI overrides
     if instance_id:
         # TODO(Phase 4): Implement instance_id support
-        console.print(f"[yellow]Instance ID support not yet implemented (Phase 4)[/yellow]")
+        console.print(
+            "[yellow]Instance ID support not yet implemented (Phase 4)[/yellow]"
+        )
 
     if verbose:
         logging.basicConfig(level=logging.DEBUG)
         console.print("[blue]Verbose logging enabled[/blue]")
 
-    # Create and start server
-    server = CrackerjackServer(settings)
-
     try:
         console.print("[green]Starting Crackerjack MCP server...[/green]")
-        console.print(f"[dim]Process ID: {server.get_health_snapshot()['process_id']}[/dim]")
-        asyncio.run(server.start())
+        # Start the actual MCP server with mcp-common and Oneiric integration
+        from crackerjack.mcp.server_core import main as mcp_main
+
+        mcp_main(".", http_mode=http_mode, http_port=http_port if http_mode else None)
     except KeyboardInterrupt:
         console.print("\n[yellow]Shutting down server...[/yellow]")
-        server.stop()
         raise typer.Exit(0)
 
 

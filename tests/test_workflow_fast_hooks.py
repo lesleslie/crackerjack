@@ -124,7 +124,7 @@ def test_direct_crackerjack_behavior():
 
     # Use crackerjack itself as test subject - run with fast hooks only first
     print("Testing fast hooks only...")
-    result = run_command("python -m crackerjack --fast", timeout=45)
+    result = run_command("python -m crackerjack run --fast", timeout=45)
 
     if result is None:
         print("❌ Command failed to run or timed out")
@@ -139,7 +139,7 @@ def test_direct_crackerjack_behavior():
 
     # Now test with tests to see if it continues after fast hooks
     print("\nTesting with tests option...")
-    result2 = run_command("python -m crackerjack -t", timeout=120)
+    result2 = run_command("python -m crackerjack run -t", timeout=120)
 
     if result2 is None:
         print("❌ Command failed to run or timed out")
@@ -207,7 +207,7 @@ def test_workflow_with_external_project():
         )
 
         # Run crackerjack with tests
-        result = run_command("python -m crackerjack -t", timeout=90)
+        result = run_command("python -m crackerjack run -t", timeout=90)
 
         if result is None:
             print("❌ Command failed to run or timed out")
@@ -257,7 +257,7 @@ def test_workflow_with_bad_formatting():
         )
 
         # Run crackerjack with tests - should fail at hooks
-        result = run_command("python -m crackerjack -t", timeout=90)
+        result = run_command("python -m crackerjack run -t", timeout=90)
 
         if result is None:
             print("❌ Command failed to run or timed out")

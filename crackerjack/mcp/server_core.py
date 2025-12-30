@@ -10,7 +10,11 @@ from typing import Final
 from mcp_common.ui import ServerPanels
 from rich.console import Console
 
-from crackerjack.runtime import RuntimeHealthSnapshot, write_pid_file, write_runtime_health
+from crackerjack.runtime import (
+    RuntimeHealthSnapshot,
+    write_pid_file,
+    write_runtime_health,
+)
 
 # Get Rich Console instance
 console = Console()
@@ -42,11 +46,11 @@ from .context import (
     MCPServerConfig,
     MCPServerContext,
     clear_context,
-    get_context,
     set_context,
 )
 from .rate_limiter import RateLimitConfig
 from .tools import (
+    initialize_skills,
     register_core_tools,
     register_execution_tools,
     register_intelligence_tools,
@@ -54,10 +58,9 @@ from .tools import (
     register_proactive_tools,
     register_progress_tools,
     register_semantic_tools,
+    register_skill_tools,
     register_utility_tools,
 )
-
-# console imported from acb
 
 
 def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
@@ -386,6 +389,18 @@ def main(
         if not mcp_app:
             return
 
+        # Initialize skill system with project context
+        console.print("[cyan]Initializing skill system...[/ cyan]")
+        try:
+            initialize_skills(project_path, mcp_app)
+            register_skill_tools(mcp_app)
+            console.print("[green]✅ Skill system initialized[/ green]")
+        except Exception as e:
+            console.print(
+                f"[yellow]⚠️  Skill system initialization failed: {e}[/ yellow]"
+            )
+            # Don't fail server startup if skills fail
+
         _show_server_startup_info(project_path, mcp_config, http_mode)
 
         # Write Oneiric runtime health snapshots before starting server
@@ -414,7 +429,7 @@ def main(
         traceback.print_exc()
     finally:
         # Update health snapshot on shutdown
-        try:
+        with suppress(Exception):
             snapshot = RuntimeHealthSnapshot(
                 orchestrator_pid=os.getpid(),
                 watchers_running=False,
@@ -424,9 +439,6 @@ def main(
                 },
             )
             write_runtime_health(runtime_dir / "runtime_health.json", snapshot)
-        except Exception:
-            # Silently ignore snapshot write failures during shutdown
-            pass
 
         clear_context()
 

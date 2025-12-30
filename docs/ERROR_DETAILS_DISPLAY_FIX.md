@@ -234,7 +234,7 @@ Run crackerjack in a project with tool failures:
 
 ```bash
 cd /Users/les/Projects/acb
-python -m crackerjack --verbose
+python -m crackerjack run --verbose
 ```
 
 Expected: Error details now show in "Details for failing hooks" section

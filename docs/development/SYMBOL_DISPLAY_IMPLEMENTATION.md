@@ -215,7 +215,7 @@ tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountEdgeCases::test_
 
 To verify in the user's ../acb project:
 
-1. Run `python -m crackerjack` in the acb directory
+1. Run `python -m crackerjack run` in the acb directory
 1. Check the Fast Hooks Results table:
    - Config errors (ruff-format, codespell) should show `⚠️`
    - Code violations (ruff-check) should show actual count (e.g., 95)

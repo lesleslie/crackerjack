@@ -132,5 +132,5 @@ def _setup_acb_services(self) -> None:
 
 1. Review and approve plan
 1. Implement refactoring
-1. Run `python -m crackerjack` to validate
+1. Run `python -m crackerjack run` to validate
 1. Verify complexity reduction with ruff

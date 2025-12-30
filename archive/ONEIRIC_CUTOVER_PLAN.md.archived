@@ -57,7 +57,7 @@ Goal: fully remove ACB and Crackerjack-specific monitoring/health dashboards, an
   - `.oneiric_cache/runtime_health.json`
   - `.oneiric_cache/runtime_telemetry.json`
 - Output raw JSON snapshots without custom monitoring logic.
-- Ensure it is generic so it can be re-used across MCP servers.
+- Ensure it is generic so it can be reused across MCP servers.
 
 ## Implementation Checklist (Sequenced)
 

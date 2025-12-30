@@ -1,13 +1,11 @@
 import logging
 import subprocess
-from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console
 
-
-
 logger = logging.getLogger(__name__)
+
 
 class AutofixCoordinator:
     def __init__(
@@ -34,8 +32,8 @@ class AutofixCoordinator:
             else:
                 self.logger.warning(f"Unknown autofix mode: {mode}")
                 return False
-        except Exception as e:
-            self.logger.exception("Error applying autofix", error=str(e))
+        except Exception:
+            self.logger.exception("Error applying autofix")
             return False
 
     def apply_fast_stage_fixes(self) -> bool:
@@ -127,10 +125,8 @@ class AutofixCoordinator:
                 timeout=300,
             )
             return self._handle_command_result(result, description)
-        except Exception as e:
-            self.logger.exception(
-                f"Error running fix command: {description}", error=str(e)
-            )
+        except Exception:
+            self.logger.exception("Error running fix command: %s", description)
             return False
 
     def _handle_command_result(
@@ -144,10 +140,12 @@ class AutofixCoordinator:
             self.logger.info(f"Fix command applied changes: {description}")
             return True
 
+        stderr_excerpt = result.stderr[:200] if result.stderr else "No stderr"
         self.logger.warning(
-            f"Fix command failed: {description}",
-            returncode=result.returncode,
-            stderr=result.stderr[:200] if result.stderr else "No stderr",
+            "Fix command failed: %s (returncode=%s, stderr=%s)",
+            description,
+            result.returncode,
+            stderr_excerpt,
         )
         return False
 

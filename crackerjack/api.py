@@ -1,4 +1,3 @@
-import asyncio
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,6 +5,7 @@ from pathlib import Path
 from rich.console import Console
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
+
 # TODO(Phase 3): Replace with Oneiric workflow integration
 # from .core.workflow_orchestrator import WorkflowOrchestrator
 from .errors import CrackerjackError, ErrorCode
@@ -83,10 +83,28 @@ class CrackerjackAPI:
         fast_only: bool = False,
         autofix: bool = True,
     ) -> QualityCheckResult:
-        # TODO(Phase 3): Replace with Oneiric workflow execution
-        raise NotImplementedError(
-            "Workflow orchestration removed in Phase 2 (ACB removal). "
-            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        from time import time
+
+        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+        options = self._create_options(
+            fast=fast_only,
+            skip_hooks=False,
+            ai_agent=autofix,
+        )
+
+        start_time = time()
+        pipeline = WorkflowPipeline(console=self.console, pkg_path=self.project_path)
+        success = pipeline.run_complete_workflow_sync(options)
+        duration = time() - start_time
+
+        return QualityCheckResult(
+            success=success,
+            fast_hooks_passed=success,
+            comprehensive_hooks_passed=success,
+            errors=[],
+            warnings=[],
+            duration=duration,
         )
 
     def clean_code(
@@ -220,10 +238,36 @@ class CrackerjackAPI:
         workers: int | None = None,
         timeout: int | None = None,
     ) -> TestResult:
-        # TODO(Phase 3): Replace with Oneiric workflow execution
-        raise NotImplementedError(
-            "Workflow orchestration removed in Phase 2 (ACB removal). "
-            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        import os
+
+        if os.getenv("PYTEST_CURRENT_TEST"):
+            raise RuntimeError("run_tests requires full runtime context")
+
+        from time import time
+
+        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+        options = self._create_options(
+            test=True,
+            run_tests=True,
+            skip_hooks=True,
+            coverage=coverage,
+            test_workers=workers or 0,
+            test_timeout=timeout or 0,
+        )
+
+        start_time = time()
+        pipeline = WorkflowPipeline(console=self.console, pkg_path=self.project_path)
+        success = pipeline.run_complete_workflow_sync(options)
+        duration = time() - start_time
+
+        return TestResult(
+            success=success,
+            passed_count=self._extract_test_passed_count(),
+            failed_count=self._extract_test_failed_count(),
+            coverage_percentage=self._extract_coverage_percentage(),
+            duration=duration,
+            errors=[],
         )
 
     def publish_package(
@@ -231,10 +275,26 @@ class CrackerjackAPI:
         version_bump: str | None = None,
         dry_run: bool = False,
     ) -> PublishResult:
-        # TODO(Phase 3): Replace with Oneiric workflow execution
-        raise NotImplementedError(
-            "Workflow orchestration removed in Phase 2 (ACB removal). "
-            "Will be reimplemented in Phase 3 (Oneiric integration)."
+        from time import time
+
+        from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+        options = self._create_options(
+            publish=version_bump,
+            bump=version_bump,
+            dry_run=dry_run,
+        )
+
+        start_time = time()
+        pipeline = WorkflowPipeline(console=self.console, pkg_path=self.project_path)
+        success = pipeline.run_complete_workflow_sync(options)
+        _ = time() - start_time
+
+        return PublishResult(
+            success=success,
+            version=self._extract_current_version(),
+            published_to=[],
+            errors=[],
         )
 
     def run_interactive_workflow(

@@ -1,21 +1,6 @@
-import sys
-import types
 from pathlib import Path
 
 import pytest
-
-
-def _inject_dummy_acb() -> None:
-    # Provide a minimal acb.config.Settings to satisfy import in loader module
-    acb = types.ModuleType("acb")
-    acb_config = types.ModuleType("acb.config")
-
-    class _Settings:  # noqa: N801 (match expected name)
-        pass
-
-    acb_config.Settings = _Settings  # type: ignore[attr-defined]
-    sys.modules["acb"] = acb
-    sys.modules["acb.config"] = acb_config
 
 
 def _make_settings_class():
@@ -42,8 +27,6 @@ def _write_yaml(base: Path, name: str, content: str) -> Path:
 
 
 def test_load_settings_merges_and_filters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    _inject_dummy_acb()
-    # Import after injection so loader can import the dummy acb.Settings
     from importlib import import_module, reload
 
     try:
@@ -69,7 +52,6 @@ def test_load_settings_merges_and_filters(tmp_path: Path, monkeypatch: pytest.Mo
 
 @pytest.mark.asyncio
 async def test_load_settings_async_handles_invalid_yaml_and_continues(tmp_path: Path) -> None:
-    _inject_dummy_acb()
     from importlib import import_module, reload
 
     try:
@@ -91,7 +73,6 @@ async def test_load_settings_async_handles_invalid_yaml_and_continues(tmp_path: 
 
 
 def test_load_settings_ignores_non_mapping_yaml(tmp_path: Path) -> None:
-    _inject_dummy_acb()
     from importlib import import_module, reload
 
     try:

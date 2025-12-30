@@ -35,8 +35,13 @@ class FailedGitResult:
 
 
 class GitService(GitInterface):
-    def __init__(self, pkg_path: Path | None = None) -> None:
-        self.console = console
+    def __init__(
+        self, console: Console | Path | None = None, pkg_path: Path | None = None
+    ) -> None:
+        if isinstance(console, Path) and pkg_path is None:
+            pkg_path = console
+            console = None
+        self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(
@@ -159,7 +164,7 @@ class GitService(GitInterface):
 
     def _retry_commit_after_restage(self, message: str) -> bool:
         self.console.print(
-            "[yellow]🔄[/yellow] Pre-commit hooks modified files - attempting to re-stage and retry commit"
+            "[yellow]🔄[/yellow] Hooks modified files - attempting to re-stage and retry commit"
         )
 
         add_result = self._run_git_command(GIT_COMMANDS["add_updated"])
@@ -186,7 +191,7 @@ class GitService(GitInterface):
         self, result: subprocess.CompletedProcess[str] | FailedGitResult
     ) -> bool:
         if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
-            self.console.print("[red]❌[/ red] Commit blocked by pre-commit hooks")
+            self.console.print("[red]❌[/ red] Commit blocked by hooks")
             if result.stderr.strip():
                 self.console.print(
                     f"[yellow]Hook output: [/ yellow]\n{result.stderr.strip()}"

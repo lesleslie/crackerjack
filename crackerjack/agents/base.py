@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from uuid import uuid4
 
 
 class Priority(Enum):
@@ -33,10 +34,10 @@ class IssueType(Enum):
 
 @dataclass
 class Issue:
-    id: str
     type: IssueType
     severity: Priority
     message: str
+    id: str = field(default_factory=lambda: f"issue_{uuid4().hex}")
     file_path: str | None = None
     line_number: int | None = None
     details: list[str] = field(default_factory=list)
@@ -46,7 +47,7 @@ class Issue:
 @dataclass
 class FixResult:
     success: bool
-    confidence: float
+    confidence: float = 0.0
     fixes_applied: list[str] = field(default_factory=list)
     remaining_issues: list[str] = field(default_factory=list)
     recommendations: list[str] = field(default_factory=list)
@@ -100,7 +101,7 @@ class AgentContext:
 class SubAgent(ABC):
     def __init__(self, context: AgentContext) -> None:
         self.context = context
-        self.name = self.__class__.__name__
+        self.name = getattr(self, "name", self.__class__.__name__)
 
     @abstractmethod
     async def can_handle(self, issue: Issue) -> float:

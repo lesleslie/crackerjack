@@ -12,40 +12,46 @@ Phase 4 successfully removed all ACB (Advanced Code Builder) dependencies from C
 ## Objectives Achieved
 
 1. ✅ Removed ACB dependencies from all remaining adapters
-2. ✅ Implemented production-ready adapter instantiation in CrackerjackServer
-3. ✅ Validated all adapters work without ACB integration
-4. ✅ Maintained backward compatibility with existing functionality
+1. ✅ Implemented production-ready adapter instantiation in CrackerjackServer
+1. ✅ Validated all adapters work without ACB integration
+1. ✅ Maintained backward compatibility with existing functionality
 
 ## Files Modified
 
 ### Adapters Updated (6)
 
 1. **`crackerjack/adapters/type/pyrefly.py`**
+
    - Removed: ACB imports, depends registration
    - Added: Static UUID `25e1e5cf-d1f8-485e-85ab-01c8b540734a`
    - Changed: `MODULE_STATUS` from string "experimental" to `AdapterStatus.BETA`
 
-2. **`crackerjack/adapters/type/ty.py`**
+1. **`crackerjack/adapters/type/ty.py`**
+
    - Removed: ACB imports, depends registration
    - Added: Static UUID `624df020-07cb-491f-9476-ca6daad3ba0b`
    - Changed: `MODULE_STATUS` from string "experimental" to `AdapterStatus.BETA`
 
-3. **`crackerjack/adapters/type/zuban.py`**
+1. **`crackerjack/adapters/type/zuban.py`**
+
    - Removed: ACB imports, depends registration
    - Added: Static UUID `e42fd557-ed29-4104-8edd-46607ab807e2`
    - Changed: `MODULE_STATUS` from string "stable" to `AdapterStatus.STABLE`
 
-4. **`crackerjack/adapters/refactor/skylos.py`**
+1. **`crackerjack/adapters/refactor/skylos.py`**
+
    - Removed: ACB imports, depends registration
    - Added: Static UUID `445401b8-b273-47f1-9015-22e721757d46`
    - Changed: `MODULE_STATUS` from string "stable" to `AdapterStatus.STABLE`
 
-5. **`crackerjack/adapters/refactor/refurb.py`**
+1. **`crackerjack/adapters/refactor/refurb.py`**
+
    - Removed: ACB imports, depends registration
    - Added: Static UUID `0f3546f6-4e29-4d9d-98f8-43c6f3c21a4e`
    - Changed: `MODULE_STATUS` from string "stable" to `AdapterStatus.STABLE`
 
-6. **`crackerjack/adapters/ai/claude.py`** (Most Complex)
+1. **`crackerjack/adapters/ai/claude.py`** (Most Complex)
+
    - Removed: `CleanupMixin` inheritance, ACB Config, depends.get(), loguru logger
    - Added: Standard Python logging, constructor-injected settings
    - Changed:
@@ -57,6 +63,7 @@ Phase 4 successfully removed all ACB (Advanced Code Builder) dependencies from C
 ### Server Implementation
 
 **`crackerjack/server.py`**
+
 - Completely rewrote `_init_qa_adapters()` from Phase 3 stub to full implementation
 - Added graceful degradation with try-except per adapter
 - Implemented settings-driven enablement (ruff_enabled, ai_agent, etc.)
@@ -66,13 +73,15 @@ Phase 4 successfully removed all ACB (Advanced Code Builder) dependencies from C
 ### Validation Scripts Created
 
 1. **`validate_phase4_adapters.py`**
+
    - Tests all 6 updated adapters
    - Validates: MODULE_ID (UUID type, correct value), MODULE_STATUS (AdapterStatus enum)
    - Checks for ACB imports removal
    - Tests instantiation and initialization
    - Result: ✅ 6/6 adapters passed
 
-2. **`validate_server_integration.py`**
+1. **`validate_server_integration.py`**
+
    - Tests CrackerjackServer with real settings
    - Validates adapter instantiation in production configuration
    - Checks health snapshot generation
@@ -81,6 +90,7 @@ Phase 4 successfully removed all ACB (Advanced Code Builder) dependencies from C
 ## Adapter Architecture Changes
 
 ### Before (ACB Pattern)
+
 ```python
 from acb.depends import depends
 from acb.cleanup import CleanupMixin
@@ -89,10 +99,12 @@ from contextlib import suppress
 MODULE_ID = UUID("01937d86-...")  # Dynamic UUID
 MODULE_STATUS = "stable"  # String status
 
+
 class AdapterName(CleanupMixin):
     def __init__(self):
         super().__init__()
         # ACB resource registration
+
 
 # ACB Registration
 with suppress(Exception):
@@ -100,6 +112,7 @@ with suppress(Exception):
 ```
 
 ### After (Standard Python Pattern)
+
 ```python
 import logging
 from uuid import UUID
@@ -110,6 +123,7 @@ MODULE_ID = UUID("25e1e5cf-...")
 MODULE_STATUS = AdapterStatus.STABLE
 
 logger = logging.getLogger(__name__)
+
 
 class AdapterName:
     def __init__(self, settings: AdapterSettings | None = None):
@@ -139,12 +153,15 @@ async def _init_qa_adapters(self):
         except Exception as e:
             logger.warning(f"Failed to initialize Ruff adapter: {e}")
 
-    logger.info(f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}")
+    logger.info(
+        f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}"
+    )
 ```
 
 ## Validation Results
 
 ### Adapter Validation (validate_phase4_adapters.py)
+
 ```
 === Phase 4 Adapter Validation ===
 
@@ -173,6 +190,7 @@ Failed: 0/6
 ```
 
 ### Server Integration (validate_server_integration.py)
+
 ```
 === Phase 4 Server Integration Validation ===
 
@@ -206,6 +224,7 @@ Note: Claude adapter not initialized (expected - requires API key in settings)
 ## Adapters Not Requiring Updates
 
 ### LSP Adapters (Already ACB-Free)
+
 - `crackerjack/adapters/lsp/zuban.py` - Uses BaseRustToolAdapter (newer architecture)
 - `crackerjack/adapters/lsp/skylos.py` - Uses BaseRustToolAdapter (newer architecture)
 
@@ -214,11 +233,11 @@ These adapters were built with the newer BaseRustToolAdapter base class and neve
 ## Technical Achievements
 
 1. **Zero Breaking Changes**: All adapters maintain existing functionality
-2. **Type Safety**: AdapterStatus enum replaces error-prone strings
-3. **UUID Stability**: Static UUIDs from registry ensure consistent identification
-4. **Graceful Degradation**: Server continues even if individual adapters fail
-5. **Standard Patterns**: Replaced ACB DI with constructor injection
-6. **Production Ready**: All adapters validated in realistic server configuration
+1. **Type Safety**: AdapterStatus enum replaces error-prone strings
+1. **UUID Stability**: Static UUIDs from registry ensure consistent identification
+1. **Graceful Degradation**: Server continues even if individual adapters fail
+1. **Standard Patterns**: Replaced ACB DI with constructor injection
+1. **Production Ready**: All adapters validated in realistic server configuration
 
 ## Impact on Codebase
 
@@ -231,10 +250,11 @@ These adapters were built with the newer BaseRustToolAdapter base class and neve
 ## Next Steps (Phase 5)
 
 Recommended future work:
+
 1. Remove ACB from CrackerjackSettings (migrate to Pydantic BaseSettings)
-2. Update agent system to use standard DI patterns
-3. Remove remaining ACB dependencies from orchestration layer
-4. Complete migration to Oneiric runtime patterns
+1. Update agent system to use standard DI patterns
+1. Remove remaining ACB dependencies from orchestration layer
+1. Complete migration to Oneiric runtime patterns
 
 ## Migration Status
 

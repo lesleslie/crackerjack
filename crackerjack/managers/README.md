@@ -352,7 +352,6 @@ manager.max_concurrent = 1
 
 ## Related
 
-- [Orchestration](../orchestration/README.md) — Lower-level orchestration used by managers
 - [Services](../services/README.md) — Services used by managers
 - [Adapters](../adapters/README.md) — Adapters managed by hook managers
 - [CLI](../cli/README.md) — CLI handlers that use managers

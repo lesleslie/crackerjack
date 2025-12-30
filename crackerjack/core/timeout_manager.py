@@ -304,9 +304,8 @@ class AsyncTimeoutManager:
             should_yield, error = self._dispatch_exception_handler(
                 e, operation, start_time, timeout_value, strategy
             )
-            if should_yield:
-                yield
-            elif error:
+            # For graceful degradation, don't re-raise the exception
+            if error:
                 raise error
 
     async def with_timeout(

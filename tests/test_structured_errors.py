@@ -27,7 +27,6 @@ class OptionsProtocol(t.Protocol):
     interactive: bool
     doc: bool
     no_config_updates: bool
-    update_precommit: bool
     update_docs: bool
     clean: bool
     test: bool

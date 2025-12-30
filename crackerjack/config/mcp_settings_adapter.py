@@ -1,6 +1,6 @@
 """MCP Server settings adapter for Crackerjack.
 
-Bridges CrackerjackSettings (ACB-based) to MCPServerSettings (Pydantic-based)
+Bridges CrackerjackSettings (Pydantic-based) to MCPServerSettings (Pydantic-based)
 for Oneiric CLI factory integration.
 """
 
@@ -19,11 +19,11 @@ class CrackerjackMCPSettings(MCPServerSettings):
     """Adapter bridging CrackerjackSettings to Oneiric MCPServerSettings.
 
     This adapter allows Crackerjack to use mcp-common's MCPServerCLIFactory
-    while maintaining its existing ACB-based configuration system. It converts
+    while maintaining its existing Pydantic-based configuration system. It converts
     between the two formats transparently.
 
     Architecture:
-        CrackerjackSettings (ACB, 60+ fields) → CrackerjackMCPSettings → MCPServerCLIFactory
+        CrackerjackSettings (Pydantic, 60+ fields) → CrackerjackMCPSettings → MCPServerCLIFactory
         ├─ Preserves app config (hooks, tests, AI, etc.)
         └─ Provides CLI lifecycle config (PID files, health snapshots)
 
@@ -52,7 +52,9 @@ class CrackerjackMCPSettings(MCPServerSettings):
 
         Example:
             >>> cj_settings = CrackerjackSettings.load()
-            >>> mcp_settings = CrackerjackMCPSettings.from_crackerjack_settings(cj_settings)
+            >>> mcp_settings = CrackerjackMCPSettings.from_crackerjack_settings(
+            ...     cj_settings
+            ... )
             >>> assert mcp_settings.server_name == "crackerjack"
         """
         return cls(
@@ -71,7 +73,7 @@ class CrackerjackMCPSettings(MCPServerSettings):
         """Load settings from CrackerjackSettings singleton.
 
         This method integrates with Crackerjack's existing settings system,
-        loading from ACB Settings (settings/crackerjack.yaml + settings/local.yaml).
+        loading from Pydantic Settings (settings/crackerjack.yaml + settings/local.yaml).
 
         Args:
             server_name: Server identifier (default: "crackerjack")

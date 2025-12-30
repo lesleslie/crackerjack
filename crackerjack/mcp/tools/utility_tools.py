@@ -1,10 +1,9 @@
 import json
+import tempfile
 import time
 import typing as t
 from datetime import datetime
 from pathlib import Path
-
-from acb.config import Config
 
 from crackerjack.mcp.context import get_context
 
@@ -31,9 +30,7 @@ async def clean_temp_files(
     if patterns is None:
         patterns = ["*.log", ".coverage.*"]
     if directories is None:
-        from acb.config import tmp_path
-
-        directories = [Path(tmp_path)]
+        directories = [Path(tempfile.gettempdir())]
 
     cutoff = datetime.now() - timedelta(hours=older_than_hours)
     cleaned_files = []
@@ -169,11 +166,11 @@ def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
 
 def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int]:
     """Clean temporary files older than cutoff_time."""
-    from acb.config import tmp_path
+    from pathlib import Path
 
     cleaned = []
     total_size = 0
-    tmp_dir = Path(tmp_path)
+    tmp_dir = Path(tempfile.gettempdir())
 
     if not tmp_dir.exists():
         return cleaned, total_size
@@ -271,6 +268,8 @@ def _create_cleanup_response(
         },
         indent=2,
     )
+
+
 def _register_config_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:

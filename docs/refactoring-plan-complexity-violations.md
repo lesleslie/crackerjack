@@ -153,7 +153,7 @@ def _handle_read_errors(self, path: Path, error: Exception) -> None:
 ## Testing Strategy
 
 1. Run existing test suite after each refactoring
-1. Verify complexity with: `python -m crackerjack`
+1. Verify complexity with: `python -m crackerjack run`
 1. Ensure no behavior changes with integration tests
 1. Check coverage ratchet is maintained
 

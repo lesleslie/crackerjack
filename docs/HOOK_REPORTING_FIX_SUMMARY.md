@@ -153,8 +153,8 @@ Details for failing fast hooks:
       - crackerjack/models/task.py:78: Missing blank line
       ... and 12 more issues (run with --ai-debug for full details)
   - codespell (failed)
-      - README.md:45: teh ==> the
-      - CLAUDE.md:234: performace ==> performance
+      - README.md:45: the ==> the
+      - CLAUDE.md:234: performance ==> performance
       ... and 5 more issues (run with --ai-debug for full details)
 ```
 
