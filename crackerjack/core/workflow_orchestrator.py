@@ -69,10 +69,6 @@ class WorkflowPipeline:
             self.logger.exception("workflow-failed", extra={"error": str(exc)})
             self.session.finalize_session(self.session.start_time, success=False)
             return False
-        except Exception as exc:
-            self.logger.exception("workflow-failed", extra={"error": str(exc)})
-            self.session.finalize_session(self.session.start_time, success=False)
-            return False
 
         success = _workflow_result_success(result)
         self.session.finalize_session(self.session.start_time, success=success)

@@ -9,7 +9,7 @@ Checked all MCP servers in `~/.claude/.mcp.json` with pinned versions against la
 
 **2 servers need updates**
 
----
+______________________________________________________________________
 
 ## Updates Available ⚠
 
@@ -20,12 +20,14 @@ Checked all MCP servers in `~/.claude/.mcp.json` with pinned versions against la
 | 2025.9.25 | **2025.11.25** | @modelcontextprotocol/server-memory |
 
 **Update command:**
+
 ```bash
 claude mcp remove memory -s project
 claude mcp add --transport stdio memory -- npx -y @modelcontextprotocol/server-memory@2025.11.25
 ```
 
 **Or edit ~/.claude/.mcp.json:**
+
 ```json
 "memory": {
   "type": "stdio",
@@ -34,7 +36,7 @@ claude mcp add --transport stdio memory -- npx -y @modelcontextprotocol/server-m
 }
 ```
 
----
+______________________________________________________________________
 
 ### 2. mcp-gitlab
 
@@ -43,12 +45,14 @@ claude mcp add --transport stdio memory -- npx -y @modelcontextprotocol/server-m
 | 2.0.6 | **2.0.21** | @zereight/mcp-gitlab |
 
 **Update command:**
+
 ```bash
 claude mcp remove gitlab -s project
 claude mcp add --transport stdio gitlab -- npx -y @zereight/mcp-gitlab@2.0.21
 ```
 
 **Or edit ~/.claude/.mcp.json:**
+
 ```json
 "gitlab": {
   "type": "stdio",
@@ -57,7 +61,7 @@ claude mcp add --transport stdio gitlab -- npx -y @zereight/mcp-gitlab@2.0.21
 }
 ```
 
----
+______________________________________________________________________
 
 ## Using "latest" Tag ℹ️
 
@@ -70,6 +74,7 @@ The following servers are configured without version pinning:
 | `"mcp-turso-cloud"` | 0.0.11 | **Pin to specific version** |
 
 **Current config (unpinned):**
+
 ```json
 "turso-cloud": {
   "type": "stdio",
@@ -79,6 +84,7 @@ The following servers are configured without version pinning:
 ```
 
 **Recommended (pinned):**
+
 ```json
 "turso-cloud": {
   "type": "stdio",
@@ -95,7 +101,7 @@ Using `"logfire-mcp@latest"` - Consider pinning to specific version for stabilit
 
 Using `"penpot-mcp"` without version - Consider pinning to specific version.
 
----
+______________________________________________________________________
 
 ## Up to Date ✅
 
@@ -106,23 +112,24 @@ The following servers are already on the latest version:
 | macos_automator | 0.4.1 | @steipete/macos-automator-mcp |
 | peekaboo | 2.0.3 | @steipete/peekaboo-mcp |
 
----
+______________________________________________________________________
 
 ## Recommendations
 
 ### High Priority
 
 1. **Update server-memory**: Security and bug fixes (2 month old version)
-2. **Update mcp-gitlab**: 15 patch versions behind (bug fixes)
+1. **Update mcp-gitlab**: 15 patch versions behind (bug fixes)
 
 ### Medium Priority
 
 3. **Pin mcp-turso-cloud** to 0.0.11 for stability
-4. **Consider pinning Python packages** (logfire-mcp, penpot-mcp)
+1. **Consider pinning Python packages** (logfire-mcp, penpot-mcp)
 
 ### Update Strategy
 
 **Option A: Update All Now (Recommended)**
+
 ```bash
 # Update memory
 claude mcp remove memory -s project
@@ -140,7 +147,7 @@ claude mcp add --transport stdio turso-cloud -- npx -y mcp-turso-cloud@0.0.11
 **Option B: Manual Edit**
 Edit `~/.claude/.mcp.json` directly and restart Claude Code.
 
----
+______________________________________________________________________
 
 ## Version Check Method
 
@@ -155,7 +162,7 @@ cat ~/.claude/.mcp.json | grep -A 3 '"memory"'
 cat ~/.claude/.mcp.json | grep -A 3 '"gitlab"'
 ```
 
----
+______________________________________________________________________
 
 ## Notes
 
