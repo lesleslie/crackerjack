@@ -276,7 +276,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     def _calculate_statistical_metrics(
         self, values: list[float]
-    ) -> dict[str, float] | None:
+    ) -> dict[str, t.Any] | None:
         """Calculate statistical metrics for anomaly detection."""
         values_array = np.array(values)
         mean_val = np.mean(values_array)
@@ -288,8 +288,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         z_scores = np.abs((values_array - mean_val) / std_val)
 
         return {
-            "mean": mean_val,
-            "std": std_val,
+            "mean": float(mean_val),
+            "std": float(std_val),
             "z_scores": z_scores,
             "values_array": values_array,
         }
@@ -401,7 +401,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     def _extract_metrics_data(self, baselines: list[t.Any]) -> dict[str, list[float]]:
         """Extract metric data from baselines for correlation analysis."""
-        metrics_data = {
+        metrics_data: dict[str, list[float]] = {
             "quality_score": [],
             "coverage_percent": [],
             "hook_failures": [],
@@ -622,9 +622,9 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         values_array = np.array(values)
         time_indices = np.arange(len(values))
 
-        slope, intercept, r_value, p_value, std_err = stats.linregress(
-            time_indices, values_array
-        )
+        result = stats.linregress(time_indices, values_array)
+        slope = result.slope
+        intercept = result.intercept
 
         future_index = len(values) + horizon_days
         predicted_value = slope * future_index + intercept
@@ -652,7 +652,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         predicted_value = regression_results["predicted_value"]
 
         residuals = values_array - (slope * time_indices + intercept)
-        residual_std = np.std(residuals)
+        residual_std = float(np.std(residuals))
 
         if not SCIPY_AVAILABLE:
             # If scipy is not available, use a simple approach with standard deviation

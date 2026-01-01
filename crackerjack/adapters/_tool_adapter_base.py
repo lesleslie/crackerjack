@@ -15,6 +15,7 @@ Key Patterns:
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 import typing as t
 from abc import abstractmethod
@@ -22,10 +23,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
+from crackerjack.models.adapter_metadata import AdapterMetadata
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
+
+# Module-level logger for structured logging
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -190,7 +195,14 @@ class BaseToolAdapter(QAAdapterBase):
     async def init(self) -> None:
         """Initialize adapter with tool validation."""
         if not self.settings:
-            self.settings = ToolAdapterSettings(tool_name=self.tool_name)
+            # Get timeout from CrackerjackSettings or use default
+            timeout_seconds = self._get_timeout_from_settings()
+
+            self.settings = ToolAdapterSettings(
+                tool_name=self.tool_name,
+                timeout_seconds=timeout_seconds,
+                max_workers=4,  # Default workers
+            )
 
         # Validate tool is available
         available = await self.validate_tool_available()
@@ -204,6 +216,46 @@ class BaseToolAdapter(QAAdapterBase):
         self._tool_version = await self.get_tool_version()
 
         await super().init()
+
+    def _get_timeout_from_settings(self) -> int:
+        """Get timeout for this adapter from CrackerjackSettings.
+
+        Returns:
+            Timeout in seconds, or default 300 if not configured
+
+        Example:
+            >>> adapter._get_timeout_from_settings()
+            120
+        """
+        try:
+            from crackerjack.config import CrackerjackSettings
+            from crackerjack.config.loader import load_settings
+
+            # Load settings from pyproject.toml and YAML files
+            settings = load_settings(CrackerjackSettings)
+
+            # Get adapter name (e.g., "skylos" from "SkylosAdapter")
+            adapter_name = self.tool_name.lower()
+
+            # Try to get timeout from adapter_timeouts
+            adapter_timeouts = settings.adapter_timeouts
+            if adapter_timeouts and hasattr(
+                adapter_timeouts, f"{adapter_name}_timeout"
+            ):
+                timeout = getattr(adapter_timeouts, f"{adapter_name}_timeout")
+                logger.debug(
+                    f"Using configured timeout for {self.tool_name}: {timeout}s",
+                )
+                return timeout
+        except Exception as e:
+            logger.debug(f"Could not load timeout from settings: {e}")
+
+        # Default timeout if not configured
+        default_timeout = 300
+        logger.debug(
+            f"Using default timeout for {self.tool_name}: {default_timeout}s",
+        )
+        return default_timeout
 
     @property
     @abstractmethod

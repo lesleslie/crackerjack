@@ -99,7 +99,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path)
+            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
         except Exception:
             return _NullGitService()  # type: ignore[return-value]
 
@@ -112,7 +112,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return VersionAnalyzer(self._git_service)
+            return VersionAnalyzer(self._git_service)  # type: ignore[arg-type]
         except Exception:
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 
@@ -125,7 +125,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(self._git_service, self.pkg_path)
+            return ChangelogGenerator(self._git_service, self.pkg_path)  # type: ignore[arg-type, return-value]
         except Exception:
             return _NullChangelogGenerator()  # type: ignore[return-value]
 

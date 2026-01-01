@@ -23,15 +23,36 @@ class _InMemorySimpleOps:
         key_field: str,
     ) -> Any:
         key_value = data.get(key_field)
+        existing = self._find_existing_by_key(key_field, key_value)
+
+        if existing:
+            return self._update_existing(existing, data)
+
+        return self._create_new(data)
+
+    def _find_existing_by_key(self, key_field: str, key_value: Any) -> Any | None:
+        """Find existing entity by key field."""
         for existing in self._store:
             if getattr(existing, key_field, None) == key_value:
-                if hasattr(existing, "update_from_dict"):
-                    existing.update_from_dict(data)
-                else:
-                    for key, value in data.items():
-                        if hasattr(existing, key):
-                            setattr(existing, key, value)
                 return existing
+        return None
+
+    def _update_existing(self, existing: Any, data: dict[str, Any]) -> Any:
+        """Update an existing entity."""
+        if hasattr(existing, "update_from_dict"):
+            existing.update_from_dict(data)
+        else:
+            self._update_entity_fields(existing, data)
+        return existing
+
+    def _update_entity_fields(self, existing: Any, data: dict[str, Any]) -> None:
+        """Update entity fields from data dictionary."""
+        for key, value in data.items():
+            if hasattr(existing, key):
+                setattr(existing, key, value)
+
+    def _create_new(self, data: dict[str, Any]) -> Any:
+        """Create a new entity and add it to the store."""
         instance = self._model(**data)
         self._store.append(instance)
         return instance

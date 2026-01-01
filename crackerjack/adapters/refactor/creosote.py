@@ -97,7 +97,10 @@ class CreosoteAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = CreosoteSettings()
+            self.settings = CreosoteSettings(
+                timeout_seconds=60,
+                max_workers=4,
+            )
             logger.info("Using default CreosoteSettings")
         await super().init()
         logger.debug(

@@ -98,7 +98,10 @@ class PyreflyAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = PyreflySettings()
+            self.settings = PyreflySettings(
+                timeout_seconds=180,
+                max_workers=4,
+            )
             logger.info("Using default PyreflySettings")
         await super().init()
         logger.debug(

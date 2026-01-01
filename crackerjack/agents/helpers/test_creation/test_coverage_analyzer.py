@@ -11,6 +11,10 @@ from typing import Any
 
 from crackerjack.agents.base import AgentContext
 
+# Import helper classes
+from .test_ast_analyzer import TestASTAnalyzer
+from .test_template_generator import TestTemplateGenerator
+
 
 class TestCoverageAnalyzer:
     """Coverage analyzer helper for test creation.
@@ -183,8 +187,6 @@ class TestCoverageAnalyzer:
 
     async def _find_uncovered_modules_enhanced(self) -> list[dict[str, Any]]:
         """Find uncovered modules with priority scoring."""
-        from .test_ast_analyzer import TestASTAnalyzer
-
         uncovered: list[dict[str, Any]] = []
 
         project_path = Path(str(self.context.project_path))
@@ -281,8 +283,6 @@ class TestCoverageAnalyzer:
 
     async def _find_untested_functions_enhanced(self) -> list[dict[str, Any]]:
         """Find untested functions with priority scoring."""
-        from .test_ast_analyzer import TestASTAnalyzer
-
         untested: list[dict[str, Any]] = []
 
         package_dir = self.context.project_path / "crackerjack"
@@ -381,8 +381,6 @@ class TestCoverageAnalyzer:
 
     async def _identify_coverage_gaps(self) -> list[dict[str, Any]]:
         """Identify coverage gaps in existing tests."""
-        from .test_ast_analyzer import TestASTAnalyzer
-
         gaps: list[dict[str, Any]] = []
 
         try:
@@ -462,9 +460,6 @@ class TestCoverageAnalyzer:
 
     async def create_tests_for_module(self, module_path: str) -> dict[str, list[str]]:
         """Create tests for a module."""
-        from .test_ast_analyzer import TestASTAnalyzer
-        from .test_template_generator import TestTemplateGenerator
-
         fixes: list[str] = []
         files: list[str] = []
 
@@ -538,8 +533,6 @@ class TestCoverageAnalyzer:
 
     async def create_tests_for_file(self, file_path: str) -> dict[str, list[str]]:
         """Create tests for file."""
-        from .test_ast_analyzer import TestASTAnalyzer
-
         ast_analyzer = TestASTAnalyzer(self.context)
         if ast_analyzer.has_corresponding_test(file_path):
             return {"fixes": [], "files": []}
@@ -548,8 +541,6 @@ class TestCoverageAnalyzer:
 
     async def find_untested_functions(self) -> list[dict[str, Any]]:
         """Find untested functions (basic version)."""
-        from .test_ast_analyzer import TestASTAnalyzer
-
         untested: list[dict[str, Any]] = []
 
         package_dir = self.context.project_path / "crackerjack"
@@ -602,9 +593,6 @@ class TestCoverageAnalyzer:
         func_info: dict[str, Any],
     ) -> dict[str, list[str]]:
         """Create test for function."""
-        from .test_ast_analyzer import TestASTAnalyzer
-        from .test_template_generator import TestTemplateGenerator
-
         fixes: list[str] = []
         files: list[str] = []
 

@@ -1,8 +1,12 @@
 import logging
 import subprocess
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from rich.console import Console
+
+if TYPE_CHECKING:
+    from crackerjack.models.protocols import LoggerProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -10,15 +14,15 @@ logger = logging.getLogger(__name__)
 class AutofixCoordinator:
     def __init__(
         self,
-        console: object | None = None,
+        console: Console | None = None,
         pkg_path: Path | None = None,
-        logger: object | None = None,
+        logger: "LoggerProtocol | None" = None,
     ) -> None:
         # Allow explicit injection from tests; fall back to standard logging
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
         # Use module logger or provided logger for tests
-        self.logger = logger or logging.getLogger("crackerjack.autofix")
+        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:

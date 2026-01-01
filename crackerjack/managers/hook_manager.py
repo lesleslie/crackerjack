@@ -20,6 +20,9 @@ try:
     from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     OrchestrationConfig = None  # type: ignore
+    orchestration_available = False
+else:
+    orchestration_available = OrchestrationConfig is not None
 
 try:
     from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
@@ -27,6 +30,9 @@ try:
     )
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
     HookOrchestratorSettings = None  # type: ignore
+    orchestration_available = False
+else:
+    orchestration_available = HookOrchestratorSettings is not None
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
@@ -34,6 +40,7 @@ if t.TYPE_CHECKING:
 
 class HookManagerImpl:
     executor: HookExecutor | LSPAwareHookExecutor | ProgressHookExecutor
+    _settings: CrackerjackSettings | None
 
     def _setup_git_service(self, use_incremental: bool, pkg_path: Path):
         """Setup GitService for incremental execution."""
@@ -171,7 +178,7 @@ class HookManagerImpl:
         self.orchestration_mode = (
             orchestration_mode
             if orchestration_mode is not None
-            else (self._settings.orchestration_mode or "oneiric")
+            else (getattr(self._settings, "orchestration_mode", None) or "oneiric")
         )
 
     def _load_orchestration_config(
@@ -276,6 +283,10 @@ class HookManagerImpl:
         )
 
         self._orchestrator: HookOrchestratorAdapter | None = None
+
+        # Progress callback attributes for PhaseCoordinator integration
+        self._progress_callback: t.Callable[[int, int], None] | None = None
+        self._progress_start_callback: t.Callable[[int, int], None] | None = None
 
     def set_config_path(self, config_path: Path) -> None:
         self._config_path = config_path

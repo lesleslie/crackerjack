@@ -263,8 +263,8 @@ class PerformanceRecommender:
             lines=lines, modified=False, optimization_description=None
         )
 
-    @staticmethod
     def _fix_list_operations_enhanced(
+        self,
         lines: list[str],
         issue: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
@@ -636,31 +636,60 @@ class PerformanceRecommender:
         lines: list[str], original_idx: int, target_content: str
     ) -> list[int]:
         """Find candidate indices for string concatenation fix."""
-        candidate_indices: list[int] = []
+        # Try original index first
+        if PerformanceRecommender._is_valid_original_index(
+            lines, original_idx, target_content
+        ):
+            return [original_idx]
 
-        if 0 <= original_idx < len(lines):
-            original_line = lines[original_idx]
-            if "+=" in original_line and (
-                not target_content or original_line.strip() == target_content
-            ):
-                candidate_indices.append(original_idx)
+        # Try exact content match
+        if target_content:
+            exact_matches = PerformanceRecommender._find_exact_content_matches(
+                lines, target_content
+            )
+            if exact_matches:
+                return exact_matches
 
-        if not candidate_indices and target_content:
-            for idx, line in enumerate(lines):
-                if line.strip() == target_content:
-                    candidate_indices.append(idx)
+        # Fall back to pattern matching
+        return PerformanceRecommender._find_pattern_matches(lines)
 
-        if not candidate_indices:
-            for idx, line in enumerate(lines):
-                stripped = line.strip()
-                if (
-                    "+=" in stripped
-                    and any(quote in stripped for quote in ('"', "'"))
-                    and ".append(" not in stripped
-                ):
-                    candidate_indices.append(idx)
+    @staticmethod
+    def _is_valid_original_index(
+        lines: list[str], original_idx: int, target_content: str
+    ) -> bool:
+        """Check if original index is a valid candidate."""
+        if not (0 <= original_idx < len(lines)):
+            return False
 
-        return candidate_indices
+        original_line = lines[original_idx]
+        has_concat = "+=" in original_line
+        matches_target = not target_content or original_line.strip() == target_content
+
+        return has_concat and matches_target
+
+    @staticmethod
+    def _find_exact_content_matches(lines: list[str], target_content: str) -> list[int]:
+        """Find lines with exact content match."""
+        return [idx for idx, line in enumerate(lines) if line.strip() == target_content]
+
+    @staticmethod
+    def _find_pattern_matches(lines: list[str]) -> list[int]:
+        """Find lines matching string concatenation pattern."""
+        return [
+            idx
+            for idx, line in enumerate(lines)
+            if PerformanceRecommender._is_concatenation_pattern(line)
+        ]
+
+    @staticmethod
+    def _is_concatenation_pattern(line: str) -> bool:
+        """Check if line matches string concatenation pattern."""
+        stripped = line.strip()
+        has_concat = "+=" in stripped
+        has_quotes = any(quote in stripped for quote in ('"', "'"))
+        not_append = ".append(" not in stripped
+
+        return has_concat and has_quotes and not_append
 
     @staticmethod
     def _fix_line_at_index(lines: list[str], line_idx: int, original_line: str) -> bool:
@@ -766,33 +795,48 @@ class PerformanceRecommender:
         parent_indent_str: str,
     ) -> bool:
         """Add the join statement after processing."""
-        modified = False
         join_line = f"{parent_indent_str}{target} = ''.join({parts_name})"
 
-        if loop_start_idx is not None:
-            current_indent = len(lines[line_idx]) - len(lines[line_idx].lstrip())
-            loop_body_indent = current_indent
-            insert_at = None
-            for j in range(line_idx + 1, len(lines)):
-                candidate = lines[j]
-                stripped = candidate.lstrip()
-                if not stripped:
-                    continue
-                indent = len(candidate) - len(candidate.lstrip())
-                if indent < loop_body_indent:
-                    insert_at = j
-                    break
-            if insert_at is None:
-                insert_at = len(lines)
-            if join_line not in lines:
-                lines.insert(insert_at, join_line)
-                modified = True
-        else:
-            if join_line not in lines:
-                lines.insert(line_idx + 1, join_line)
-                modified = True
+        if join_line in lines:
+            return False
 
-        return modified
+        if loop_start_idx is not None:
+            return PerformanceRecommender._add_join_in_loop(lines, line_idx, join_line)
+        return PerformanceRecommender._add_join_after_line(lines, line_idx, join_line)
+
+    @staticmethod
+    def _add_join_in_loop(lines: list[str], line_idx: int, join_line: str) -> bool:
+        """Add join statement at the end of a loop."""
+        current_indent = len(lines[line_idx]) - len(lines[line_idx].lstrip())
+        loop_body_indent = current_indent
+
+        insert_at = PerformanceRecommender._find_loop_end_insertion_point(
+            lines, line_idx, loop_body_indent
+        )
+
+        lines.insert(insert_at, join_line)
+        return True
+
+    @staticmethod
+    def _find_loop_end_insertion_point(
+        lines: list[str], line_idx: int, loop_body_indent: int
+    ) -> int:
+        """Find the appropriate insertion point after a loop."""
+        for j in range(line_idx + 1, len(lines)):
+            candidate = lines[j]
+            stripped = candidate.lstrip()
+            if not stripped:
+                continue
+            indent = len(candidate) - len(candidate.lstrip())
+            if indent < loop_body_indent:
+                return j
+        return len(lines)
+
+    @staticmethod
+    def _add_join_after_line(lines: list[str], line_idx: int, join_line: str) -> bool:
+        """Add join statement after a specific line."""
+        lines.insert(line_idx + 1, join_line)
+        return True
 
     @staticmethod
     def _fix_repeated_operations(

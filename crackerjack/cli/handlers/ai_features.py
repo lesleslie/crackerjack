@@ -3,6 +3,11 @@
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
+# Module-level console instance
+console = Console()
+
 
 def handle_contextual_ai(
     contextual_ai: bool,

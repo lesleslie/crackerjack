@@ -1,14 +1,16 @@
 from contextlib import suppress
 from pathlib import Path
 
+from rich.console import Console
+
 from .regex_patterns import SAFE_PATTERNS
 
 
 class CoverageBadgeService:
     """Service for managing coverage badges in README.md files."""
 
-    def __init__(self, project_root: Path) -> None:
-        self.console = console
+    def __init__(self, project_root: Path, console: Console | None = None) -> None:
+        self.console = console or Console()
         self.project_root = project_root
         self.readme_path = project_root / "README.md"
 

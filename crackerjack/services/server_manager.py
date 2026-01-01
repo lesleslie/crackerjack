@@ -6,9 +6,13 @@ import typing as t
 from pathlib import Path
 
 from mcp_common.ui import ServerPanels
+from rich.console import Console
 
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
+
+# Module-level console instance for server management functions
+console = Console()
 
 
 def find_mcp_server_processes() -> list[dict[str, t.Any]]:

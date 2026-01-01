@@ -54,56 +54,85 @@ def compare_commands() -> dict[str, dict]:
     precommit_config = load_precommit_config()
     precommit_commands = extract_precommit_commands(precommit_config)
 
+    results = _compare_tool_commands(precommit_commands)
+    _add_precommit_only_commands(results, precommit_commands)
+
+    return results
+
+
+def _compare_tool_commands(precommit_commands: dict[str, list[str]]) -> dict[str, dict]:
+    """Compare tool commands with pre-commit commands."""
     results = {}
 
-    # Compare each tool command
     for tool_name, tool_command in TOOL_COMMANDS.items():
         precommit_command = precommit_commands.get(tool_name)
 
         if precommit_command is None:
-            # Tool only in tool_commands.py (could be a custom tool)
-            results[tool_name] = {
-                "status": "tool_commands_only",
-                "tool_command": tool_command,
-                "precommit_command": None,
-                "match": None,
-            }
+            results[tool_name] = _create_tool_only_result(tool_command)
             continue
 
-        # Normalize commands for comparison
-        # tool_commands.py includes "uv run" prefix, pre-commit might not
-        tool_normalized = tool_command.copy()
-        precommit_normalized = precommit_command.copy()
+        match = _commands_match(tool_command, precommit_command)
+        results[tool_name] = _create_comparison_result(
+            tool_command, precommit_command, match
+        )
 
-        # Check if commands match (allowing for uv run prefix differences)
-        match = False
+    return results
 
-        # Direct match
-        if tool_normalized == precommit_normalized:
-            match = True
-        # Match if pre-commit has extra/different prefix
-        elif " ".join(tool_normalized[2:]) == " ".join(precommit_normalized):
-            match = True
-        # Match if commands are equivalent (same tool, same args)
-        elif (
-            len(tool_normalized) >= 3
-            and precommit_normalized
-            and tool_normalized[2] == precommit_normalized[0]  # Same tool name
-        ):
-            # Check if args match (allowing for ordering differences)
-            tool_args = set(tool_normalized[3:])
-            precommit_args = set(precommit_normalized[1:])
-            if tool_args == precommit_args:
-                match = True
 
-        results[tool_name] = {
-            "status": "match" if match else "mismatch",
-            "tool_command": tool_command,
-            "precommit_command": precommit_command,
-            "match": match,
-        }
+def _create_tool_only_result(tool_command: list[str]) -> dict[str, t.Any]:
+    """Create result for tool only in tool_commands.py."""
+    return {
+        "status": "tool_commands_only",
+        "tool_command": tool_command,
+        "precommit_command": None,
+        "match": None,
+    }
 
-    # Check for hooks only in .pre-commit-config.yaml
+
+def _commands_match(tool_command: list[str], precommit_command: list[str]) -> bool:
+    """Check if tool and pre-commit commands match."""
+    # Direct match
+    if tool_command == precommit_command:
+        return True
+
+    # Match if pre-commit has extra/different prefix
+    if " ".join(tool_command[2:]) == " ".join(precommit_command):
+        return True
+
+    # Match if commands are equivalent (same tool, same args)
+    return _commands_equivalent(tool_command, precommit_command)
+
+
+def _commands_equivalent(tool_command: list[str], precommit_command: list[str]) -> bool:
+    """Check if commands are equivalent ignoring prefix."""
+    if not (len(tool_command) >= 3 and precommit_command):
+        return False
+
+    if tool_command[2] != precommit_command[0]:  # Same tool name
+        return False
+
+    # Check if args match (allowing for ordering differences)
+    tool_args = set(tool_command[3:])
+    precommit_args = set(precommit_command[1:])
+    return tool_args == precommit_args
+
+
+def _create_comparison_result(
+    tool_command: list[str], precommit_command: list[str], match: bool
+) -> dict[str, t.Any]:
+    """Create comparison result for matching commands."""
+    return {
+        "status": "match" if match else "mismatch",
+        "tool_command": tool_command,
+        "precommit_command": precommit_command,
+        "match": match,
+    }
+
+
+def _add_precommit_only_commands(
+    results: dict[str, dict], precommit_commands: dict[str, list[str]]
+) -> None:
+    """Add commands that only exist in pre-commit config."""
     for hook_id in precommit_commands:
         if hook_id not in TOOL_COMMANDS:
             results[hook_id] = {
@@ -112,8 +141,6 @@ def compare_commands() -> dict[str, dict]:
                 "precommit_command": precommit_commands[hook_id],
                 "match": None,
             }
-
-    return results
 
 
 def generate_summary_section(results: dict[str, dict], lines: list[str]) -> None:

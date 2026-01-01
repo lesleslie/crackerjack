@@ -7,6 +7,7 @@ from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crackerjack.config.hooks import HookDefinition, SecurityLevel
 from crackerjack.models.protocols import (
@@ -16,6 +17,9 @@ from crackerjack.models.protocols import (
     ServiceProtocol,
 )
 from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
+
+if TYPE_CHECKING:
+    from crackerjack.models.protocols import LoggerProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +50,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
 
     def __init__(
         self,
-        logger: object | None = None,
+        logger: "LoggerProtocol | None" = None,
         cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 3,
         timeout_seconds: int = 300,
@@ -55,7 +59,10 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         self.max_workers = max_workers
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
-        self._logger = logger or logging.getLogger("crackerjack.parallel_executor")
+        # Type: LoggerProtocol (logging.Logger is compatible)
+        self._logger: LoggerProtocol = logger or logging.getLogger(
+            "crackerjack.parallel_executor"
+        )  # type: ignore[assignment]
         self._cache = cache
 
     def initialize(self) -> None:
@@ -302,16 +309,20 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
     to improve performance and responsiveness.
     """
 
+    _logger: "LoggerProtocol"
+
     def __init__(
         self,
-        logger: object | None = None,
+        logger: "LoggerProtocol | None" = None,
         cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 4,
         cache_results: bool = True,
     ):
         self.max_workers = max_workers
         self.cache_results = cache_results
-        self._logger = logger or logging.getLogger("crackerjack.async_executor")
+        self._logger = logger or t.cast(
+            "LoggerProtocol", logging.getLogger("crackerjack.async_executor")
+        )
         self._cache = cache
         from concurrent.futures import ThreadPoolExecutor
 

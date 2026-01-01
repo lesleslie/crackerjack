@@ -532,7 +532,7 @@ class ServiceCollectionBuilder:
 
         self.container.register_singleton(
             UnifiedConfigurationService,
-            factory=lambda: UnifiedConfigurationService(console, pkg_path),
+            factory=lambda: UnifiedConfigurationService(pkg_path),
         )
 
         self.container.register_singleton(

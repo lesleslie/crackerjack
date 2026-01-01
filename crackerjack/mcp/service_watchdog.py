@@ -7,6 +7,7 @@ from contextlib import suppress
 from typing import Any
 
 import aiohttp
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
@@ -46,8 +47,10 @@ class ServiceWatchdog:
         self,
         services: list[ServiceConfig],
         event_queue: asyncio.Queue[dict[str, Any]] | None = None,
+        console: Console | None = None,
     ) -> None:
         self.services = services
+        self.console = console or Console()
         self.is_running = True
         self.session: aiohttp.ClientSession | None = None
         self.event_queue = event_queue
@@ -79,7 +82,7 @@ class ServiceWatchdog:
 
         for service in self.services:
             if service.process:
-                console.print(f"[yellow]🛑 Stopping {service.name}...[/ yellow]")
+                self.console.print(f"[yellow]🛑 Stopping {service.name}...[/ yellow]")
                 service.process.terminate()
                 try:
                     service.process.wait(timeout=10)
@@ -224,7 +227,7 @@ class ServiceWatchdog:
         error: Exception,
     ) -> None:
         service.last_error = str(error)
-        console.print(f"[red]❌ Error monitoring {service.name}: {error}[/ red]")
+        self.console.print(f"[red]❌ Error monitoring {service.name}: {error}[/ red]")
         await asyncio.sleep(10.0)
 
     async def _health_check(self, service: ServiceConfig) -> bool:
@@ -269,7 +272,7 @@ class ServiceWatchdog:
         ]
 
         if len(service.restart_timestamps) >= service.max_restarts:
-            console.print(
+            self.console.print(
                 f"[red]🚨 {service.name} exceeded restart limit ({service.max_restarts} in {service.restart_window}s)[/ red]",
             )
             service.last_error = "Restart rate limit exceeded"
@@ -282,19 +285,21 @@ class ServiceWatchdog:
             return
 
         try:
-            console.print(
+            self.console.print(
                 f"[yellow]🔪 Terminating existing {service.name} process (PID: {service.process.pid})[/ yellow]",
             )
             service.process.terminate()
             service.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
-            console.print(f"[red]💀 Force killing {service.name} process[/ red]")
+            self.console.print(f"[red]💀 Force killing {service.name} process[/ red]")
             service.process.kill()
         except Exception as e:
-            console.print(f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]")
+            self.console.print(
+                f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]"
+            )
 
     async def _wait_before_restart(self, service: ServiceConfig) -> None:
-        console.print(
+        self.console.print(
             f"[yellow]⏳ Waiting {service.restart_delay}s before restarting {service.name}...[/ yellow]",
         )
         await asyncio.sleep(service.restart_delay)
@@ -318,11 +323,11 @@ class ServiceWatchdog:
                 await asyncio.sleep(10.0)
 
             except Exception as e:
-                console.print(f"[red]Error updating display: {e}[/ red]")
+                self.console.print(f"[red]Error updating display: {e}[/ red]")
                 await asyncio.sleep(5.0)
 
     async def _update_status_display(self) -> None:
-        console.clear()
+        self.console.clear()
         table = self._create_status_table()
 
         for service in self.services:
@@ -333,10 +338,10 @@ class ServiceWatchdog:
 
             table.add_row(service.name, status, health, restarts, error)
 
-        console.print(
+        self.console.print(
             Panel(table, title="Crackerjack Service Watchdog", border_style="cyan")
         )
-        console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
+        self.console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
 
     def _create_status_table(self) -> Table:
         table = Table(title="🔍 Crackerjack Service Watchdog")
@@ -410,6 +415,7 @@ async def create_default_watchdog(
 
 async def main() -> None:
     watchdog = await create_default_watchdog()
+    console = Console()
 
     try:
         await watchdog.start()

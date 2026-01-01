@@ -945,44 +945,90 @@ class TestManager:
         Returns:
             List of (section_type, section_content) tuples
         """
-        sections = []
-        lines = output.split("\n")
+        sections: list[tuple[str, str]] = []
 
         current_section: list[str] = []
         current_type = "header"
 
+        lines = output.split("\n")
         for line in lines:
-            # Detect section boundaries
-            if "short test summary" in line.lower():
-                # Save previous section
-                if current_section:
-                    sections.append((current_type, "\n".join(current_section)))
-                current_section = [line]
-                current_type = "summary"
-
-            elif " FAILED " in line or " ERROR " in line:
-                # Save previous section
-                if current_section and current_type != "failure":
-                    sections.append((current_type, "\n".join(current_section)))
-                    current_section = []
-                current_type = "failure"
-                current_section.append(line)
-
-            elif line.startswith("=") and ("passed" in line or "failed" in line):
-                # Footer section
-                if current_section:
-                    sections.append((current_type, "\n".join(current_section)))
-                current_section = [line]
-                current_type = "footer"
-
-            else:
-                current_section.append(line)
+            current_type, current_section = self._process_line_for_section(
+                line, current_type, current_section, sections
+            )
 
         # Add final section
         if current_section:
             sections.append((current_type, "\n".join(current_section)))
 
         return sections
+
+    def _process_line_for_section(
+        self,
+        line: str,
+        current_type: str,
+        current_section: list[str],
+        sections: list[tuple[str, str]],
+    ) -> tuple[str, list[str]]:
+        """Process a single line and update section tracking.
+
+        Returns:
+            Tuple of (current_type, current_section) after processing
+        """
+        if self._is_summary_boundary(line):
+            return self._handle_section_transition(
+                line, current_type, current_section, sections, "summary"
+            )
+        elif self._is_failure_start(line):
+            return self._handle_failure_section(
+                line, current_type, current_section, sections
+            )
+        elif self._is_footer_start(line):
+            return self._handle_section_transition(
+                line, current_type, current_section, sections, "footer"
+            )
+        else:
+            current_section.append(line)
+            return current_type, current_section
+
+    def _is_summary_boundary(self, line: str) -> bool:
+        """Check if line marks summary section boundary."""
+        return "short test summary" in line.lower()
+
+    def _is_failure_start(self, line: str) -> bool:
+        """Check if line marks start of failure section."""
+        return " FAILED " in line or " ERROR " in line
+
+    def _is_footer_start(self, line: str) -> bool:
+        """Check if line marks start of footer section."""
+        return line.startswith("=") and ("passed" in line or "failed" in line)
+
+    def _handle_section_transition(
+        self,
+        line: str,
+        current_type: str,
+        current_section: list[str],
+        sections: list[tuple[str, str]],
+        new_type: str,
+    ) -> tuple[str, list[str]]:
+        """Handle transition to a new section type."""
+        if current_section:
+            sections.append((current_type, "\n".join(current_section)))
+        return new_type, [line]
+
+    def _handle_failure_section(
+        self,
+        line: str,
+        current_type: str,
+        current_section: list[str],
+        sections: list[tuple[str, str]],
+    ) -> tuple[str, list[str]]:
+        """Handle failure section start."""
+        if current_section and current_type != "failure":
+            sections.append((current_type, "\n".join(current_section)))
+            current_section = []
+        current_type = "failure"
+        current_section.append(line)
+        return current_type, current_section
 
     def _render_formatted_output(
         self,
@@ -1004,45 +1050,73 @@ class TestManager:
         clean_output = output if already_clean else self._strip_ansi_codes(output)
 
         # Try structured parsing first (Phase 2)
+        if self._try_structured_rendering(clean_output):
+            return
+
+        # Fallback to Phase 1 rendering if parsing fails
+        self._render_fallback_sections(clean_output, options)
+
+    def _try_structured_rendering(self, clean_output: str) -> bool:
+        """Try to render output using structured failure parser.
+
+        Returns:
+            True if structured rendering succeeded, False otherwise
+        """
         try:
             failures = self._extract_structured_failures(clean_output)
             if failures:
-                self._render_banner(
-                    "Detailed Failure Analysis",
-                    line_style="red",
-                    char="═",
+                self._render_structured_failures_with_summary(clean_output, failures)
+                return True
+            return False
+        except Exception as e:
+            self._render_parsing_error_message(e)
+            return False
+
+    def _render_structured_failures_with_summary(
+        self, clean_output: str, failures: list["TestFailure"]
+    ) -> None:
+        """Render structured failures with summary section."""
+        from rich.panel import Panel
+
+        self._render_banner(
+            "Detailed Failure Analysis",
+            line_style="red",
+            char="═",
+        )
+
+        self._render_structured_failure_panels(failures)
+
+        # Show summary section
+        sections = self._split_output_sections(clean_output)
+        for section_type, section_content in sections:
+            if section_type == "summary":
+                panel = Panel(
+                    section_content.strip(),
+                    title="[bold yellow]📋 Test Summary[/bold yellow]",
+                    border_style="yellow",
+                    width=get_console_width(),
+                )
+                self.console.print(panel)
+            elif section_type == "footer":
+                self.console.print(
+                    f"\n[cyan]{section_content.strip()}[/cyan]\n"
                 )
 
-                self._render_structured_failure_panels(failures)
+    def _render_parsing_error_message(self, error: Exception) -> None:
+        """Render error message when structured parsing fails."""
+        self.console.print(
+            f"[dim yellow]⚠️  Structured parsing failed: {error}[/dim yellow]"
+        )
+        self.console.print(
+            "[dim yellow]Falling back to standard formatting...[/dim yellow]\n"
+        )
 
-                # Still show summary section
-                sections = self._split_output_sections(clean_output)
-                for section_type, section_content in sections:
-                    if section_type == "summary":
-                        panel = Panel(
-                            section_content.strip(),
-                            title="[bold yellow]📋 Test Summary[/bold yellow]",
-                            border_style="yellow",
-                            width=get_console_width(),
-                        )
-                        self.console.print(panel)
-                    elif section_type == "footer":
-                        self.console.print(
-                            f"\n[cyan]{section_content.strip()}[/cyan]\n"
-                        )
+    def _render_fallback_sections(
+        self, clean_output: str, options: OptionsProtocol
+    ) -> None:
+        """Render output using fallback section-based approach (Phase 1)."""
+        from rich.panel import Panel
 
-                return
-
-        except Exception as e:
-            # Fallback to Phase 1 rendering if parsing fails
-            self.console.print(
-                f"[dim yellow]⚠️  Structured parsing failed: {e}[/dim yellow]"
-            )
-            self.console.print(
-                "[dim yellow]Falling back to standard formatting...[/dim yellow]\n"
-            )
-
-        # Fallback: Phase 1 section-based rendering
         sections = self._split_output_sections(clean_output)
 
         for section_type, section_content in sections:
@@ -1203,52 +1277,91 @@ class TestManager:
         capture_type = None
 
         for i, line in enumerate(lines):
-            # Parse failure header
-            new_failure, header_found = self._parse_failure_header(
-                line, current_failure
+            result = self._parse_failure_line(
+                line, lines, i, current_failure, in_traceback, in_captured, capture_type
             )
-            if header_found:
+
+            # Handle state updates from parsing
+            if result.get("new_failure"):
                 if current_failure:
                     failures.append(current_failure)
-                current_failure = new_failure
+                current_failure = result["new_failure"]
                 in_traceback = True
                 in_captured = False
+                capture_type = None
+            elif result.get("skip_line"):
                 continue
-
-            if not current_failure:
-                continue
-
-            # Parse location and assertion
-            if self._parse_location_and_assertion(line, current_failure, in_traceback):
-                continue
-
-            # Parse captured section headers
-            is_captured, new_capture_type = self._parse_captured_section_header(line)
-            if is_captured:
-                in_captured = True
-                capture_type = new_capture_type
-                in_traceback = False
-                continue
-
-            # Parse traceback lines
-            if in_traceback:
-                in_traceback = self._parse_traceback_line(
-                    line, lines, i, current_failure
-                )
-
-            # Parse captured output
-            if in_captured and capture_type:
-                in_captured = self._parse_captured_output(
-                    line, capture_type, current_failure
-                )
-                if not in_captured:
-                    capture_type = None
+            else:
+                # Update state flags
+                in_traceback = result.get("in_traceback", in_traceback)
+                in_captured = result.get("in_captured", in_captured)
+                capture_type = result.get("capture_type", capture_type)
 
         # Save final failure
         if current_failure:
             failures.append(current_failure)
 
         return failures
+
+    def _parse_failure_line(
+        self,
+        line: str,
+        lines: list[str],
+        index: int,
+        current_failure: "TestFailure | None",
+        in_traceback: bool,
+        in_captured: bool,
+        capture_type: str | None,
+    ) -> dict[str, t.Any]:
+        """Parse a single line of failure output.
+
+        Returns:
+            Dictionary with state updates:
+            - new_failure: TestFailure if new failure started
+            - skip_line: bool if this line should be skipped
+            - in_traceback: bool if currently in traceback
+            - in_captured: bool if currently in captured output
+            - capture_type: str if capture type changed
+        """
+        result: dict[str, t.Any] = {}
+
+        # Check for new failure header
+        new_failure, header_found = self._parse_failure_header(line, current_failure)
+        if header_found:
+            result["new_failure"] = new_failure
+            return result
+
+        if not current_failure:
+            result["skip_line"] = True
+            return result
+
+        # Check for captured section headers
+        is_captured, new_capture_type = self._parse_captured_section_header(line)
+        if is_captured:
+            result["in_captured"] = True
+            result["capture_type"] = new_capture_type
+            result["in_traceback"] = False
+            return result
+
+        # Parse based on current state
+        if in_captured and capture_type:
+            in_captured = self._parse_captured_output(line, capture_type, current_failure)
+            result["in_captured"] = in_captured
+            if not in_captured:
+                result["capture_type"] = None
+            return result
+
+        if in_traceback:
+            in_traceback = self._parse_traceback_line(line, lines, index, current_failure)
+            result["in_traceback"] = in_traceback
+            return result
+
+        # Try parsing location and assertion
+        if self._parse_location_and_assertion(line, current_failure, in_traceback):
+            result["skip_line"] = True
+            return result
+
+        return result
 
     def _render_structured_failure_panels(self, failures: list["TestFailure"]) -> None:
         """Render failures as Rich panels with tables and syntax highlighting.
@@ -1272,100 +1385,139 @@ class TestManager:
             return
 
         # Group failures by file for better organization
+        failures_by_file = self._group_failures_by_file(failures)
+
+        # Render each file group
+        for file_path, file_failures in failures_by_file.items():
+            self._render_file_failure_header(file_path, file_failures)
+            for i, failure in enumerate(file_failures, 1):
+                self._render_single_failure_panel(failure, i, len(file_failures))
+
+    def _group_failures_by_file(
+        self, failures: list["TestFailure"]
+    ) -> dict[str, list["TestFailure"]]:
+        """Group failures by file path for organized rendering."""
         failures_by_file: dict[str, list[TestFailure]] = {}
         for failure in failures:
             file_path = failure.get_file_path()
             if file_path not in failures_by_file:
                 failures_by_file[file_path] = []
             failures_by_file[file_path].append(failure)
+        return failures_by_file
 
-        # Render each file group
-        for file_path, file_failures in failures_by_file.items():
-            self.console.print(
-                f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n"
+    def _render_file_failure_header(
+        self, file_path: str, file_failures: list["TestFailure"]
+    ) -> None:
+        """Render header for a file's failures."""
+        self.console.print(
+            f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n"
+        )
+
+    def _render_single_failure_panel(
+        self, failure: "TestFailure", index: int, total: int
+    ) -> None:
+        """Render a single failure panel with all details."""
+        from rich.console import Group
+        from rich.panel import Panel
+        from rich.syntax import Syntax
+        from rich.table import Table
+
+        from rich import box
+
+        # Create details table
+        table = self._create_failure_details_table(failure)
+
+        # Build panel components
+        components = self._build_failure_components(failure, table)
+
+        # Create grouped content and render panel
+        group = Group(*components)
+        panel = Panel(
+            group,
+            title=f"[bold red]❌ Failure {index}/{total}[/bold red]",
+            border_style="red",
+            width=get_console_width(),
+            padding=(1, 2),
+        )
+        self.console.print(panel)
+
+    def _create_failure_details_table(self, failure: "TestFailure") -> "Table":
+        """Create summary table for failure details."""
+        from rich.table import Table
+
+        from rich import box
+
+        table = Table(
+            show_header=False,
+            box=box.SIMPLE,
+            padding=(0, 1),
+            border_style="red",
+        )
+        table.add_column("Key", style="cyan bold", width=12)
+        table.add_column("Value", overflow="fold")
+
+        # Add basic rows
+        table.add_row("Test", f"[yellow]{failure.test_name}[/yellow]")
+        table.add_row(
+            "Location", f"[blue underline]{failure.location}[/blue underline]"
+        )
+        table.add_row("Status", f"[red bold]{failure.status}[/red bold]")
+
+        if failure.duration:
+            table.add_row("Duration", f"{failure.duration:.3f}s")
+
+        # Add summary timing insight if available
+        duration_note = self._get_duration_note(failure)
+        if duration_note:
+            table.add_row("Timing", duration_note)
+
+        return table
+
+    def _build_failure_components(
+        self, failure: "TestFailure", table: "Table"
+    ) -> list[t.Any]:
+        """Build list of Rich renderables for failure panel."""
+        from rich.syntax import Syntax
+
+        components: list[t.Any] = [table]
+
+        # Add assertion details
+        if failure.assertion:
+            components.extend(("", "[bold red]Assertion Error:[/bold red]"))
+            assertion_syntax = Syntax(
+                failure.assertion,
+                "python",
+                theme="monokai",
+                line_numbers=False,
+                background_color="default",
             )
+            components.append(assertion_syntax)
 
-            for i, failure in enumerate(file_failures, 1):
-                # Create details table
-                table = Table(
-                    show_header=False,
-                    box=box.SIMPLE,
-                    padding=(0, 1),
-                    border_style="red",
-                )
-                table.add_column("Key", style="cyan bold", width=12)
-                table.add_column("Value", overflow="fold")
+        # Add relevant traceback (last 15 lines)
+        relevant_traceback = failure.get_relevant_traceback(max_lines=15)
+        if relevant_traceback:
+            components.extend(("", "[bold red]Traceback:[/bold red]"))
+            traceback_text = "\n".join(relevant_traceback)
+            traceback_syntax = Syntax(
+                traceback_text,
+                "python",
+                theme="monokai",
+                line_numbers=False,
+                word_wrap=True,
+                background_color="default",
+            )
+            components.append(traceback_syntax)
 
-                # Add rows
-                table.add_row("Test", f"[yellow]{failure.test_name}[/yellow]")
-                table.add_row(
-                    "Location", f"[blue underline]{failure.location}[/blue underline]"
-                )
-                table.add_row("Status", f"[red bold]{failure.status}[/red bold]")
+        # Add captured output if present
+        if failure.captured_stdout:
+            components.extend(("", "[bold yellow]Captured stdout:[/bold yellow]"))
+            components.append(f"[dim]{failure.captured_stdout}[/dim]")
 
-                if failure.duration:
-                    table.add_row("Duration", f"{failure.duration:.3f}s")
+        if failure.captured_stderr:
+            components.extend(("", "[bold yellow]Captured stderr:[/bold yellow]"))
+            components.append(f"[dim]{failure.captured_stderr}[/dim]")
 
-                # Add summary timing insight if available
-                duration_note = self._get_duration_note(failure)
-                if duration_note:
-                    table.add_row("Timing", duration_note)
-
-                # Components for panel (mixed list of renderables for Rich Group)
-                components: list[t.Any] = [table]
-
-                # Add assertion details
-                if failure.assertion:
-                    components.extend(("", "[bold red]Assertion Error:[/bold red]"))
-
-                    # Syntax highlight the assertion
-                    assertion_syntax = Syntax(
-                        failure.assertion,
-                        "python",
-                        theme="monokai",
-                        line_numbers=False,
-                        background_color="default",
-                    )
-                    components.append(assertion_syntax)
-
-                # Add relevant traceback (last 15 lines)
-                relevant_traceback = failure.get_relevant_traceback(max_lines=15)
-                if relevant_traceback:
-                    components.extend(("", "[bold red]Traceback:[/bold red]"))
-
-                    traceback_text = "\n".join(relevant_traceback)
-                    traceback_syntax = Syntax(
-                        traceback_text,
-                        "python",
-                        theme="monokai",
-                        line_numbers=False,
-                        word_wrap=True,
-                        background_color="default",
-                    )
-                    components.append(traceback_syntax)
-
-                # Add captured output if present
-                if failure.captured_stdout:
-                    components.extend(("", "[bold yellow]Captured stdout:[/bold yellow]"))
-                    components.append(f"[dim]{failure.captured_stdout}[/dim]")
-
-                if failure.captured_stderr:
-                    components.extend(("", "[bold yellow]Captured stderr:[/bold yellow]"))
-                    components.append(f"[dim]{failure.captured_stderr}[/dim]")
-
-                # Create grouped content
-                group = Group(*components)
-
-                # Render panel
-                panel = Panel(
-                    group,
-                    title=f"[bold red]❌ Failure {i}/{len(file_failures)}[/bold red]",
-                    border_style="red",
-                    width=get_console_width(),
-                    padding=(1, 2),
-                )
-
-            self.console.print(panel)
+        return components
 
     def _get_duration_note(self, failure: "TestFailure") -> str | None:
         """Return a duration note highlighting long-running failures."""

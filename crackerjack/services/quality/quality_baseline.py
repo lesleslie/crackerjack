@@ -343,7 +343,8 @@ class QualityBaselineService(QualityBaselineProtocol):
             quality_score=record.quality_score,
         )
 
-    def _run_async(self, coro: t.Awaitable[t.Any]) -> t.Any:
+    def _run_async(self, coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
+        """Run coroutine synchronously, creating event loop if needed."""
         try:
             asyncio.get_running_loop()
         except RuntimeError:

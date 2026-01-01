@@ -4,15 +4,15 @@
 **Auditor**: Claude Code (Sonnet 4.5)
 **Scope**: All MCP servers across 14 projects + management recommendations
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
 Your MCP infrastructure is **well-architected** with 8 production servers running across **3 categories**:
 
 1. **Custom Python HTTP Servers** (5 servers): Session-buddy, Crackerjack, Excalidraw, Mermaid, Unifi
-2. **Third-Party NPX Services** (3 servers): macos_automator, Peekaboo, Memory
-3. **Additional Servers** (5+ more across different projects): GitLab, Context7, Playwright, Kapture, etc.
+1. **Third-Party NPX Services** (3 servers): macos_automator, Peekaboo, Memory
+1. **Additional Servers** (5+ more across different projects): GitLab, Context7, Playwright, Kapture, etc.
 
 **Current Management**: Shell script auto-start (`auto-start-mcp-servers.sh`) + project-specific `.mcp.json` configs
 **✅ NEW RECOMMENDATION**: **Global MCP Configuration** - Consolidate all servers into `~/.claude/.mcp.json` and use Claude Code's native server management
@@ -21,7 +21,7 @@ Your MCP infrastructure is **well-architected** with 8 production servers runnin
 
 See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complete migration steps.
 
----
+______________________________________________________________________
 
 ## Current MCP Infrastructure
 
@@ -40,6 +40,7 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 | **context7** | stdio (NPX) | N/A | ✅ Running | Documentation search | Active (2 instances) |
 
 **Additional Project-Specific Servers**:
+
 - **GitLab**: `@zereight/mcp-gitlab@2.0.6` (excalidraw-mcp, mcp-common projects)
 - **Playwright**: `@playwright/mcp@latest` (active in current session)
 - **Kapture**: `kapture-mcp@latest bridge` (browser automation)
@@ -50,6 +51,7 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 ### 2. Configuration Analysis
 
 **✅ Strengths**:
+
 - **Modular Configuration**: Each project has its own `.mcp.json`
 - **Consistent Naming**: Server names follow conventions (e.g., "session-buddy", "crackerjack")
 - **Mixed Transport**: Smart use of both HTTP (for heavy servers) and stdio (for lightweight)
@@ -58,24 +60,28 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 **⚠️ Issues Identified**:
 
 1. **Configuration Drift**:
+
    - `session-buddy` config appears as `"session-mgmt"` in some projects (legacy naming)
    - Port conflicts possible if multiple projects run simultaneously (e.g., mermaid on 3033)
 
-2. **No Global Config**:
+1. **No Global Config**:
+
    - No `~/.mcp.json` for server-wide defaults
    - Each project repeats common server configs (macos_automator, peekaboo, memory)
 
-3. **Manual Startup Management**:
+1. **Manual Startup Management**:
+
    - Auto-start script is project-specific (doesn't handle all 14 projects)
    - No unified stop/restart mechanism
    - No health monitoring or auto-restart on failure
 
-4. **Process Management**:
+1. **Process Management**:
+
    - Servers run as detached `nohup` processes (hard to manage)
    - No process group supervision (if parent dies, orphans remain)
    - Log files scattered in `/tmp/` (not centralized)
 
----
+______________________________________________________________________
 
 ## Current Auto-Start Mechanism
 
@@ -87,24 +93,26 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 **How It Works**:
 
 1. **Reads `.mcp.json`**: Uses `jq` to parse project config
-2. **Port Checking**: Checks if port is already in use via `lsof`
-3. **Selective Start**: Only starts localhost HTTP servers (skips stdio)
-4. **Known Servers**: Hardcoded `case` statement for 9 server types
+1. **Port Checking**: Checks if port is already in use via `lsof`
+1. **Selective Start**: Only starts localhost HTTP servers (skips stdio)
+1. **Known Servers**: Hardcoded `case` statement for 9 server types
 
 **Strengths**:
+
 - ✅ Automatic startup on session open
 - ✅ Port conflict detection
 - ✅ Background logging to `/tmp/mcp-{name}.log`
 - ✅ 3-second wait for FastMCP initialization
 
 **Weaknesses**:
+
 - ❌ Project-specific (only knows about servers in current project)
 - ❌ Hardcoded server list (doesn't discover new servers automatically)
 - ❌ No error handling if server fails to start
 - ❌ No unified stop/restart command
 - ❌ Orphaned processes if script is interrupted
 
----
+______________________________________________________________________
 
 ## Management Tool Evaluation
 
@@ -115,6 +123,7 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 **Status**: Production-ready (2025)
 
 **Pros**:
+
 - ✅ **Native macOS Integration**: Uses LaunchAgents for proper process management
 - ✅ **GUI Dashboard**: Visual server status, logs, and controls
 - ✅ **Unified Configuration**: Single config for all projects
@@ -123,11 +132,13 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 - ✅ **No Orphaned Processes**: Proper process lifecycle management
 
 **Cons**:
+
 - ⚠️ **Proprietary**: Not open-source (unclear licensing)
 - ⚠️ **Learning Curve**: New UI to learn
 - ⚠️ **Limited Documentation**: Website sparse on details
 
 **Why MacMCP Over Alternatives**:
+
 - **Better than MCP Manager**: Native macOS vs. Electron cross-platform
 - **Better than MCP Manager Desktop**: More mature, actively maintained
 - **Better than Manual Scripts**: Proper process supervision vs. nohup hacks
@@ -139,11 +150,13 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 **Status**: Work-in-progress
 
 **Pros**:
+
 - ✅ Open-source (MIT License)
 - ✅ Cross-platform (Windows, macOS, Linux)
 - ✅ Server discovery from multiple sources
 
 **Cons**:
+
 - ❌ **WIP**: Not production-ready
 - ❌ **Electron-Based**: Heavier than native macOS
 - ❌ **Less Mature**: Fewer features than MacMCP
@@ -151,17 +164,19 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 ### Alternative: Stay with Current Script
 
 **Pros**:
+
 - ✅ Zero new dependencies
 - ✅ Full control over behavior
 - ✅ Already working
 
 **Cons**:
+
 - ❌ No health monitoring
 - ❌ Manual process management
 - ❌ No unified stop/restart
 - ❌ Orphaned processes risk
 
----
+______________________________________________________________________
 
 ## Recommendations
 
@@ -170,12 +185,14 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
 **Migration Steps**:
 
 1. **Install MacMCP**:
+
    ```bash
    # Download from https://macmcp.com/
    # (No Homebrew Cask available as of 2025-12-29)
    ```
 
-2. **Create Global MCP Config** (`~/.mcp.json`):
+1. **Create Global MCP Config** (`~/.mcp.json`):
+
    ```json
    {
      "mcpServers": {
@@ -203,15 +220,17 @@ See [MCP_GLOBAL_MIGRATION_GUIDE.md](./MCP_GLOBAL_MIGRATION_GUIDE.md) for complet
    }
    ```
 
-3. **Project-Specific Configs**: Keep project `.mcp.json` files for project-specific servers (crackerjack, session-buddy, etc.)
+1. **Project-Specific Configs**: Keep project `.mcp.json` files for project-specific servers (crackerjack, session-buddy, etc.)
 
-4. **Disable Auto-Start Script**:
+1. **Disable Auto-Start Script**:
+
    ```bash
    # Comment out in ~/.claude/settings.json:
    # "command": "nohup ~/.claude/scripts/auto-start-mcp-servers.sh >/dev/null 2>&1 &"
    ```
 
-5. **Configure MacMCP**:
+1. **Configure MacMCP**:
+
    - Add all 14 project directories to auto-discovery
    - Set server health checks (ping every 30s)
    - Configure auto-restart on failure
@@ -258,27 +277,27 @@ check_server_health() {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Migration Strategy
 
 ### Option 1: Gradual Migration (Recommended)
 
 1. **Week 1**: Install MacMCP, configure stdio servers (macos_automator, peekaboo, memory)
-2. **Week 2**: Migrate HTTP servers one by one (start with session-buddy)
-3. **Week 3**: Disable auto-start script for migrated servers
-4. **Week 4**: Full validation, remove old script entirely
+1. **Week 2**: Migrate HTTP servers one by one (start with session-buddy)
+1. **Week 3**: Disable auto-start script for migrated servers
+1. **Week 4**: Full validation, remove old script entirely
 
 ### Option 2: Big Bang Migration
 
 1. **Backup current configs**: Copy all `.mcp.json` files
-2. **Install MacMCP**: Configure all servers at once
-3. **Test thoroughly**: Verify all servers connect
-4. **Switch over**: Disable old script in one go
+1. **Install MacMCP**: Configure all servers at once
+1. **Test thoroughly**: Verify all servers connect
+1. **Switch over**: Disable old script in one go
 
 **Risk Assessment**: Option 1 safer (can rollback per server)
 
----
+______________________________________________________________________
 
 ## Configuration Cleanup
 
@@ -301,11 +320,12 @@ sed -i '' 's/session-mgmt/session-buddy/g' /Users/les/Projects/*/.mcp.json
 **Issue**: Mermaid on 3033 might conflict with other services
 
 **Fix**: Use unique port ranges:
+
 - **Python MCP servers**: 8600-8699 (session-buddy: 8678, crackerjack: 8676)
 - **Third-party NPX**: 3000-3099 (mermaid: 3033, excalidraw: 3032)
 - **Service integrations**: 3030-3099 (unifi: 3038, mailgun: 3039, raindropio: 3034)
 
----
+______________________________________________________________________
 
 ## Monitoring & Observability
 
@@ -353,18 +373,20 @@ for port in 8678 8676 3032 3033 3038; do
 done
 ```
 
----
+______________________________________________________________________
 
 ## Security Considerations
 
 ### Current Security Posture
 
 ✅ **Good**:
+
 - All HTTP servers bind to `127.0.0.1` (localhost only)
 - No authentication needed for local tools
 - stdio servers have no network exposure
 
 ⚠️ **Concerns**:
+
 - No authentication on HTTP endpoints (anyone on localhost can access)
 - Log files may contain sensitive data (`/tmp/mcp-*.log` world-readable)
 - No rate limiting on HTTP servers
@@ -372,6 +394,7 @@ done
 ### Recommendations
 
 1. **Add API Authentication** (if needed):
+
    ```python
    # FastAPI example
    from fastapi import Header, HTTPException
@@ -385,12 +408,14 @@ done
        ...
    ```
 
-2. **Secure Log Files**:
+1. **Secure Log Files**:
+
    ```bash
    chmod 600 /tmp/mcp-*.log
    ```
 
-3. **Add Rate Limiting**:
+1. **Add Rate Limiting**:
+
    ```python
    from slowapi import Limiter
    limiter = Limiter(key_func=get_remote_address)
@@ -401,13 +426,14 @@ done
        ...
    ```
 
----
+______________________________________________________________________
 
 ## Performance Optimization
 
 ### Current Resource Usage
 
 From `ps` output:
+
 - **session-buddy**: 4.8% CPU, 24MB RAM (204 hours uptime)
 - **crackerjack**: 2.7% CPU, 17MB RAM (117 hours uptime)
 - **excalidraw**: 2.4% CPU, 15MB RAM (120 hours uptime)
@@ -418,33 +444,38 @@ From `ps` output:
 ### Optimization Opportunities
 
 1. **Merge Memory & Context7**:
+
    - Both do semantic search
    - Consider using only `memory` server (more feature-rich)
 
-2. **Idle Server Sleep**:
+1. **Idle Server Sleep**:
+
    ```python
    # Add to servers with low usage
    if idle_seconds > 3600:  # 1 hour
        enter_low_power_mode()
    ```
 
-3. **Connection Pooling**:
+1. **Connection Pooling**:
+
    - Reuse HTTP connections instead of opening new ones
    - Reduces latency for frequent calls
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 ### Current State: 7/10 ⭐⭐⭐⭐⭐⭐⭐
 
 **Strengths**:
+
 - ✅ Modular architecture with clear separation of concerns
 - ✅ Good mix of HTTP (heavy) and stdio (lightweight) servers
 - ✅ Automatic startup via shell script
 - ✅ All servers stable and healthy
 
 **Weaknesses**:
+
 - ❌ No unified management interface
 - ❌ Manual process management (orphan risk)
 - ❌ No health monitoring or auto-restart
@@ -453,13 +484,15 @@ From `ps` output:
 ### Recommendation: Adopt MacMCP + Cleanup
 
 **Priority Actions**:
+
 1. **Install MacMCP** (native macOS management)
-2. **Create global `.mcp.json`** for common servers
-3. **Standardize naming** (session-buddy vs session-mgmt)
-4. **Add health monitoring** (or use MacMCP's built-in)
-5. **Centralize logs** to `~/Library/Logs/MCP/`
+1. **Create global `.mcp.json`** for common servers
+1. **Standardize naming** (session-buddy vs session-mgmt)
+1. **Add health monitoring** (or use MacMCP's built-in)
+1. **Centralize logs** to `~/Library/Logs/MCP/`
 
 **Expected Outcome**:
+
 - 🚀 **80% faster server management** (GUI vs. shell scripts)
 - 🛡️ **Zero orphaned processes** (proper LaunchAgent supervision)
 - 📊 **Real-time health monitoring** (auto-restart on failure)
@@ -467,25 +500,28 @@ From `ps` output:
 
 **Risk Level**: Low (MacMCP is mature, can rollback easily)
 
----
+______________________________________________________________________
 
 ## Additional Resources
 
 ### Tools Mentioned
+
 - [MacMCP](https://macmcp.com/) - Native macOS MCP manager (RECOMMENDED)
 - [MCP Manager](https://github.com/marcusglee11/mcp-manager) - Cross-platform alternative
 - [MCP Manager Desktop](https://github.com/MCP-Club/mcp-manager-desktop) - WIP desktop app
 
 ### Documentation
+
 - [MCP Specification](https://modelcontextprotocol.io/) - Official protocol docs
 - [FastMCP](https://github.com/jlowin/fastmcp) - Python MCP server framework
 - [Claude Code MCP Docs](https://docs.anthropic.com/claude-code/mcp) - Official Claude Code integration
 
 ### Community
+
 - [r/MCP subreddit](https://reddit.com/r/mcp) - MCP discussions & tools
 - [MCP Discord](https://discord.gg/mcp) - Real-time chat (if exists)
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-12-29
 **Next Review**: 2025-01-29 (or after MacMCP adoption)

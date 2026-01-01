@@ -62,7 +62,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
         self._remove_fixed_coverage_requirements(target_content)
 
-        self.logger.info("Smart merged pyproject.toml", project_name=project_name)
+        self.logger.info(f"Smart merged pyproject.toml project_name={project_name}")
         return target_content
 
     def smart_append_file(
@@ -96,7 +96,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         merged_content += source_content.strip() + "\n"
         merged_content += end_marker + "\n"
 
-        self.logger.info("Smart appended file with markers", path=str(target_path))
+        self.logger.info(f"Smart appended file with markers path={target_path}")
         return merged_content
 
     def smart_merge_gitignore(
@@ -122,9 +122,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         all_patterns_count = len(parsed_content.existing_patterns) + new_patterns_count
 
         self.logger.info(
-            "Smart merged .gitignore (cleaned duplicates)",
-            new_patterns_count=new_patterns_count,
-            total_crackerjack_patterns=all_patterns_count,
+            f"Smart merged .gitignore (cleaned duplicates) new_patterns_count={new_patterns_count} total_crackerjack_patterns={all_patterns_count}"
         )
         return merged_content
 
@@ -133,7 +131,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         for pattern in patterns:
             merged_content += f"{pattern}\n"
         target_path.write_text(merged_content)
-        self.logger.info("Created .gitignore", new_patterns_count=len(patterns))
+        self.logger.info(f"Created .gitignore new_patterns_count={len(patterns)}")
         return merged_content
 
     def _parse_existing_gitignore_content(self, lines: list[str]) -> t.Any:
@@ -226,6 +224,49 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         new_patterns_to_add = [p for p in new_patterns if p not in existing_patterns]
         return list[t.Any](existing_patterns) + new_patterns_to_add
 
+    def smart_merge_pre_commit_config(
+        self,
+        source_content: dict[str, t.Any],
+        target_path: str | t.Any,
+        project_name: str,
+    ) -> dict[str, t.Any]:
+        """Smart merge pre-commit configuration.
+
+        This is a placeholder implementation that returns the source content.
+        The actual merge logic should be implemented based on specific requirements.
+
+        Args:
+            source_content: Source pre-commit config content
+            target_path: Target file path
+            project_name: Name of the project
+
+        Returns:
+            Merged pre-commit configuration
+        """
+        # For now, just return the source content
+        # Actual implementation would merge with existing config if it exists
+        self.logger.info(f"Smart merge pre-commit config for {project_name}")
+        return source_content
+
+    def write_pre_commit_config(
+        self,
+        config: dict[str, t.Any],
+        target_path: str | t.Any,
+    ) -> None:
+        """Write pre-commit configuration to file.
+
+        Args:
+            config: Pre-commit configuration dictionary
+            target_path: Target file path
+        """
+        import json
+
+        target_path = Path(target_path)
+        with target_path.open("w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2)
+
+        self.logger.debug(f"Wrote pre-commit config path={target_path}")
+
     def write_pyproject_config(
         self,
         config: dict[str, t.Any],
@@ -244,7 +285,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         with target_path.open("w", encoding="utf-8") as f:
             f.write(content)
 
-        self.logger.debug("Wrote pyproject.toml config", path=str(target_path))
+        self.logger.debug(f"Wrote pyproject.toml config path={target_path}")
 
     def _ensure_crackerjack_dev_dependency(
         self,

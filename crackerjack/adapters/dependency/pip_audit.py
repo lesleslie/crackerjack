@@ -102,7 +102,10 @@ class PipAuditAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = PipAuditSettings()
+            self.settings = PipAuditSettings(
+                timeout_seconds=120,
+                max_workers=4,
+            )
             logger.info("Using default PipAuditSettings")
         await super().init()
         logger.debug(

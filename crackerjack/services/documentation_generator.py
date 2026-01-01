@@ -4,6 +4,7 @@ import typing as t
 from pathlib import Path
 from string import Template
 
+from ..core.console import CrackerjackConsole
 from ..models.protocols import DocumentationGeneratorProtocol
 
 
@@ -124,7 +125,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     """Implementation of documentation generation from extracted API data."""
 
     def __init__(self) -> None:
-        self.console = console
+        self.console = CrackerjackConsole()
         self.renderer = MarkdownTemplateRenderer()
 
     def generate_api_reference(self, api_data: dict[str, t.Any]) -> str:

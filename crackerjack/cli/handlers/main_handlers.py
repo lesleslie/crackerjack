@@ -9,11 +9,18 @@ workflows and need to be separated from monitoring-specific handlers.
 from __future__ import annotations
 
 import os
+import typing as t
 from pathlib import Path
 
 from rich.console import Console
 
 from ..options import Options
+
+if t.TYPE_CHECKING:
+    from crackerjack.models.config import ConfigUpdateInfo
+    from crackerjack.services.quality.config_template import (
+        ConfigTemplateService,
+    )
 
 console = Console()
 
@@ -67,7 +74,7 @@ def handle_interactive_mode(options: Options) -> None:
     from ..interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options)
+    launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
 
 
 def handle_standard_mode(
@@ -82,7 +89,7 @@ def handle_standard_mode(
     from crackerjack.cli.facade import CrackerjackCLIFacade
 
     runner = CrackerjackCLIFacade(console=console)
-    runner.process(options)
+    runner.process(options)  # type: ignore[arg-type]
 
 
 def handle_config_updates(options: Options) -> None:
@@ -105,7 +112,7 @@ def handle_config_updates(options: Options) -> None:
 
 
 def _handle_check_updates(
-    config_service: ConfigTemplateService, pkg_path: Path
+    config_service: ConfigTemplateService, pkg_path: Path, console: Console
 ) -> None:
     """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
@@ -128,6 +135,7 @@ def _handle_apply_updates(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     interactive: bool,
+    console: Console,
 ) -> None:
     """Handle applying configuration updates."""
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
@@ -152,6 +160,7 @@ def _handle_diff_config(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     config_type: str,
+    console: Console,
 ) -> None:
     """Handle showing configuration diff."""
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
@@ -161,7 +170,7 @@ def _handle_diff_config(
 
 
 def _handle_refresh_cache(
-    config_service: ConfigTemplateService, pkg_path: Path
+    config_service: ConfigTemplateService, pkg_path: Path, console: Console
 ) -> None:
     """Handle refreshing cache."""
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
@@ -169,7 +178,9 @@ def _handle_refresh_cache(
     console.print("[green]✅ Cache refreshed[/green]")
 
 
-def _display_available_updates(updates: dict[str, ConfigUpdateInfo]) -> None:
+def _display_available_updates(
+    updates: dict[str, ConfigUpdateInfo], console: Console
+) -> None:
     """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
@@ -193,6 +204,7 @@ def _apply_config_updates_batch(
     configs: list[str],
     pkg_path: Path,
     interactive: bool,
+    console: Console,
 ) -> int:
     """Apply configuration updates in batch and return success count."""
     success_count = 0
@@ -202,7 +214,9 @@ def _apply_config_updates_batch(
     return success_count
 
 
-def _report_update_results(success_count: int, total_count: int) -> None:
+def _report_update_results(
+    success_count: int, total_count: int, console: Console
+) -> None:
     """Report the results of configuration updates."""
     if success_count == total_count:
         console.print(

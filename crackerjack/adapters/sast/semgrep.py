@@ -63,7 +63,10 @@ class SemgrepAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = SemgrepSettings()
+            self.settings = SemgrepSettings(
+                timeout_seconds=1200,
+                max_workers=4,
+            )
             logger.info("Using default SemgrepSettings")
         await super().init()
         logger.debug(

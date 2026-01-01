@@ -12,11 +12,11 @@ import os
 import signal
 import time
 
+from mcp_common.cli.health import RuntimeHealthSnapshot as MCPRuntimeHealthSnapshot
 from rich.console import Console
 
 from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 from crackerjack.runtime import (
-    RuntimeHealthSnapshot,
     read_runtime_health,
 )
 
@@ -90,14 +90,14 @@ def stop_handler(pid: int) -> None:
         console.print("[green]Server stopped[/green]")
 
 
-def health_probe_handler() -> RuntimeHealthSnapshot:
+def health_probe_handler() -> MCPRuntimeHealthSnapshot:
     """Get health snapshot from running Crackerjack MCP server.
 
     This handler reads the health snapshot JSON file written by the running
     server. Used for liveness/readiness probes.
 
     Returns:
-        RuntimeHealthSnapshot from running server
+        MCPRuntimeHealthSnapshot from running server (converted from crackerjack's format)
 
     Raises:
         RuntimeError: If health snapshot not found or stale
@@ -120,12 +120,17 @@ def health_probe_handler() -> RuntimeHealthSnapshot:
         msg = f"Invalid health snapshot: {health_path}"
         raise RuntimeError(msg)
 
-    # Check snapshot freshness (TTL from settings)
+    # Check snapshot freshness (TTL from settings) BEFORE returning
     if health_path.stat().st_mtime < time.time() - settings.health_ttl_seconds:
         msg = f"Health snapshot is stale (>{settings.health_ttl_seconds}s old)"
         raise RuntimeError(msg)
 
-    return snapshot
+    # Convert crackerjack's RuntimeHealthSnapshot to mcp_common's format
+    return MCPRuntimeHealthSnapshot(
+        orchestrator_pid=snapshot.orchestrator_pid,
+        watchers_running=snapshot.watchers_running,
+        lifecycle_state=snapshot.lifecycle_state,
+    )
 
 
 __all__ = ["start_handler", "stop_handler", "health_probe_handler"]

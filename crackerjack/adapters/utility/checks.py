@@ -83,7 +83,8 @@ class UtilityCheckSettings(QABaseSettings):
     )
 
     @field_validator("pattern")
-    def validate_pattern(cls, v: str | None, values: dict[str, t.Any]) -> str | None:
+    @classmethod
+    def validate_pattern(cls, v: str | None) -> str | None:
         """Validate regex pattern using safe compilation.
 
         Uses CompiledPatternCache for security and performance.
@@ -92,7 +93,6 @@ class UtilityCheckSettings(QABaseSettings):
 
         Args:
             v: Pattern string to validate
-            values: Other field values (unused)
 
         Returns:
             Validated pattern string or None
@@ -109,9 +109,8 @@ class UtilityCheckSettings(QABaseSettings):
         return v
 
     @field_validator("parser_type")
-    def validate_parser_type(
-        cls, v: str | None, values: dict[str, t.Any]
-    ) -> str | None:
+    @classmethod
+    def validate_parser_type(cls, v: str | None) -> str | None:
         """Validate parser type for SYNTAX_VALIDATION checks.
 
         Parser type validation only occurs if parser_type is provided.
@@ -168,10 +167,16 @@ class UtilityCheckAdapter(QAAdapterBase):
         """Initialize adapter with settings validation."""
         if not self.settings:
             # Default to trailing whitespace check if no settings provided
+            # Provide all required fields with None defaults
             self.settings = UtilityCheckSettings(
                 check_type=UtilityCheckType.TEXT_PATTERN,
                 pattern=r"\s+$",
+                parser_type=None,
+                max_size_bytes=None,
                 auto_fix=True,
+                lock_command=None,
+                timeout_seconds=300,
+                max_workers=4,
             )
         await super().init()
 

@@ -28,7 +28,7 @@ enable_lsp_optimization: false
 run_tests: false
 benchmark: false
 test_workers: 0  # 0 = auto-detect via pytest-xdist, 1 = sequential, >1 = explicit, <0 = fractional
-test_timeout: 600  # 0 = use default
+test_timeout: 1800  # 0 = use default (increased to 30 minutes for large test suite)
 auto_detect_workers: true  # Enable pytest-xdist auto-detection (default: true)
 max_workers: 8  # Maximum parallel workers (safety limit)
 min_workers: 2  # Minimum parallel workers (when auto-detecting)
@@ -78,8 +78,8 @@ mcp_websocket_port: 8675
 mcp_http_enabled: false
 
 # Zuban LSP
-zuban_enabled: true
-zuban_auto_start: true
+zuban_enabled: false
+zuban_auto_start: false
 zuban_port: 8677
 zuban_mode: "stdio"
 zuban_timeout: 30

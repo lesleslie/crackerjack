@@ -3,6 +3,11 @@
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
+# Module-level console instance
+console = Console()
+
 
 def display_coverage_info(coverage_info: dict[str, t.Any]) -> None:
     coverage_percent = coverage_info.get("coverage_percent", 0.0)
@@ -50,7 +55,7 @@ def handle_coverage_status(coverage_status: bool, options: t.Any) -> bool:
 
         pkg_path = Path.cwd()
 
-        test_manager = TestManager(pkg_path)
+        test_manager = TestManager(console, pkg_path=pkg_path)
 
         console.print("[cyan]📊[/cyan] Coverage Status Report")
         console.print("=" * 50)

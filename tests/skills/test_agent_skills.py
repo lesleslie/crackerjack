@@ -270,17 +270,19 @@ def test_agent_skill_registry_register(
     skill = AgentSkill(mock_agent, metadata)
     registry.register(skill)
 
-    # Verify skill was registered
-    assert len(registry._skills) == 0  # skill_id not generated yet
+    # Verify skill was registered (skill_id is generated in __init__)
+    assert len(registry._skills) == 1
+    assert skill.skill_id in registry._skills
 
-    # Test register_agent method
-    mock_agent_class = Mock()
-    mock_agent_class.return_value = mock_agent
+    # Test register_agent method with Mock class that can be instantiated
+    mock_agent_class = type("MockAgent", (SubAgent,), {})
+    mock_agent_instance = MagicMock(spec=SubAgent)
+    mock_agent_instance.name = "MockAgent"
 
-    skill = registry.register_agent(mock_agent_class, agent_context)
+    skill2 = registry.register_agent(lambda ctx: mock_agent_instance, agent_context)
 
-    assert skill is not None
-    assert len(registry._skills) > 0
+    assert skill2 is not None
+    assert len(registry._skills) == 2
 
 
 def test_agent_skill_registry_get_by_category(
@@ -369,8 +371,9 @@ async def test_agent_skill_registry_find_best_skill(
         return_value={IssueType.COMPLEXITY}
     )
 
+    # Register high confidence agent using lambda for factory
     registry.register_agent(
-        type(high_conf_agent),
+        lambda ctx: high_conf_agent,
         agent_context,
         metadata=SkillMetadata(
             name="HighConfidenceAgent",
@@ -381,8 +384,9 @@ async def test_agent_skill_registry_find_best_skill(
         ),
     )
 
+    # Register low confidence agent using lambda for factory
     registry.register_agent(
-        type(low_conf_agent),
+        lambda ctx: low_conf_agent,
         agent_context,
         metadata=SkillMetadata(
             name="LowConfidenceAgent",

@@ -11,6 +11,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
+class PredictorProtocol(t.Protocol):
+    """Protocol for predictor implementations."""
+
+    def predict(self, values: list[float], periods: int = 1) -> list[float]: ...
+
+
 @dataclass
 class TrendAnalysis:
     """Trend analysis result for a metric."""
@@ -140,8 +146,8 @@ class PredictiveAnalyticsEngine:
             lambda: deque[tuple[datetime, float]](maxlen=history_limit)
         )
 
-        # Predictors
-        self.predictors = {
+        # Predictors - use protocol for type safety
+        self.predictors: dict[str, PredictorProtocol] = {
             "moving_average": MovingAveragePredictor(window_size=10),
             "linear_trend": LinearTrendPredictor(),
             "seasonal": SeasonalPredictor(season_length=24),
@@ -204,7 +210,7 @@ class PredictiveAnalyticsEngine:
 
         # Generate predictions
         config = self.metric_configs.get(metric_type, {})
-        predictor_name = config.get("predictor", "moving_average")
+        predictor_name: str = config.get("predictor", "moving_average")  # type: ignore[assignment]
         predictor = self.predictors[predictor_name]
 
         predicted_values = predictor.predict(values, periods=24)  # 24 periods ahead

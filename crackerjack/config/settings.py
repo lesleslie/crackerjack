@@ -28,6 +28,7 @@ class TestSettings(Settings):
     max_workers: int = 8
     min_workers: int = 2
     memory_per_worker_gb: float = 2.0
+    coverage: bool = False
 
 
 class PublishSettings(Settings):
@@ -60,6 +61,7 @@ class ExecutionSettings(Settings):
 
 class ProgressSettings(Settings):
     enabled: bool = False
+    track_progress: bool = True
 
 
 class CleanupSettings(Settings):
@@ -78,12 +80,14 @@ class ConsoleSettings(Settings):
     """Console/UI related settings."""
 
     width: int = 70
+    verbose: bool = False
 
 
 class MCPServerSettings(Settings):
     http_port: int = 8676
     http_host: str = "127.0.0.1"
     http_enabled: bool = False
+    websocket_port: int = 8675
 
 
 class ZubanLSPSettings(Settings):
@@ -105,6 +109,22 @@ class GlobalLockSettings(Settings):
     enable_lock_monitoring: bool = True
 
 
+class AdapterTimeouts(Settings):
+    """Timeout settings for QA adapters (in seconds)."""
+
+    zuban_lsp_timeout: float = 120.0  # Zuban LSP server
+    skylos_timeout: int = 120  # Dead code detection
+    refurb_timeout: int = 120  # Modern Python suggestions
+    zuban_timeout: int = 120  # Type checking
+    bandit_timeout: int = 300  # Security linting
+    semgrep_timeout: int = 300  # Security pattern matching
+    pip_audit_timeout: int = 120  # Dependency security
+    creosote_timeout: int = 120  # Unused imports
+    complexipy_timeout: int = 60  # Complexity analysis
+    pyscn_timeout: int = 60  # Code quality
+    gitleaks_timeout: int = 60  # Secret detection
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
@@ -120,6 +140,7 @@ class CrackerjackSettings(Settings):
     mcp_server: MCPServerSettings = MCPServerSettings()
     zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()
+    adapter_timeouts: AdapterTimeouts = AdapterTimeouts()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True

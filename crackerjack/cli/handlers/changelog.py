@@ -10,6 +10,10 @@ This module contains handlers for:
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
+# Module-level console instance
+console = Console()
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
     from crackerjack.services.git import GitService

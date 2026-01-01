@@ -19,4 +19,4 @@ try:
     from .pip_audit import PipAuditAdapter
 except ImportError:
     # pip-audit is an optional dependency (install with: uv sync --extra dependency)
-    PipAuditAdapter = None  # type: ignore[assignment,misc]
+    PipAuditAdapter = None  # type: ignore[assignment,misc,no-redef]

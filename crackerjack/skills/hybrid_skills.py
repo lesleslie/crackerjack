@@ -175,10 +175,7 @@ class HybridSkill(AgentSkill):
         Returns:
             List of created ToolMappings
         """
-        mappings = []
-
-        # can_handle tool
-        mappings.append(
+        mappings = [
             self.register_tool(
                 operation="can_handle",
                 description=f"Check if {self.metadata.name} can handle an issue",
@@ -203,11 +200,7 @@ class HybridSkill(AgentSkill):
                         "confidence": {"type": "number"},
                     },
                 },
-            )
-        )
-
-        # execute tool
-        mappings.append(
+            ),
             self.register_tool(
                 operation="execute",
                 description=f"Execute {self.metadata.name} on an issue",
@@ -241,11 +234,7 @@ class HybridSkill(AgentSkill):
                         },
                     },
                 },
-            )
-        )
-
-        # batch_execute tool
-        mappings.append(
+            ),
             self.register_tool(
                 operation="batch_execute",
                 description=f"Execute {self.metadata.name} on multiple issues",
@@ -274,11 +263,7 @@ class HybridSkill(AgentSkill):
                         },
                     },
                 },
-            )
-        )
-
-        # get_info tool
-        mappings.append(
+            ),
             self.register_tool(
                 operation="get_info",
                 description=f"Get information about {self.metadata.name}",
@@ -295,8 +280,8 @@ class HybridSkill(AgentSkill):
                         "tool_count": {"type": "integer"},
                     },
                 },
-            )
-        )
+            ),
+        ]
 
         return mappings
 
@@ -339,8 +324,9 @@ class HybridSkill(AgentSkill):
         elif mapping.method_name == "batch_execute":
             issues_data = kwargs.get("issues", [])
             issues = [self._parse_issue(i) for i in issues_data]
-            results = await self.batch_execute(issues)
-            return {"results": [r.to_dict() for r in await results]}
+            results_coro = self.batch_execute(issues)
+            results = await results_coro
+            return {"results": [r.to_dict() for r in results]}
 
         elif mapping.method_name == "get_info":
             info = self.get_info()

@@ -186,7 +186,7 @@ class EmbeddingService:
             logger.debug(f"Generating embeddings for {len(valid_texts)} texts")
 
             # Generate embeddings for each text using fallback approach
-            result = [[] for _ in texts]
+            result: list[list[float]] = [[] for _ in texts]
 
             for i, text in enumerate(valid_texts):
                 original_index = valid_indices[i]
@@ -343,7 +343,7 @@ class EmbeddingService:
         chunks = []
 
         current_chunk = ""
-        overlap_sentences = []
+        overlap_sentences: list[str] = []
 
         for sentence in sentences:
             # Check if adding this sentence would exceed chunk size

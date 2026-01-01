@@ -1,5 +1,7 @@
 from pathlib import Path
 
+from rich.console import Console
+
 from .config_integrity import ConfigIntegrityService
 from .smart_scheduling import SmartSchedulingService
 from .version_checker import VersionChecker, VersionInfo
@@ -13,8 +15,10 @@ __all__ = [
 
 
 class ToolVersionService:
-    def __init__(self, project_path: Path | None = None) -> None:
-        self.console = console
+    def __init__(
+        self, console: Console | None = None, project_path: Path | None = None
+    ) -> None:
+        self.console = console or Console()
         self.project_path = project_path or Path.cwd()
 
         self._version_checker = VersionChecker()

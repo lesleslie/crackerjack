@@ -6,6 +6,7 @@ import re
 import typing as t
 from pathlib import Path
 
+from ..core.console import CrackerjackConsole
 from ..models.protocols import APIExtractorProtocol
 from .regex_patterns import SAFE_PATTERNS
 
@@ -119,7 +120,7 @@ class APIExtractorImpl(APIExtractorProtocol):
     """Implementation of API documentation extraction from source code."""
 
     def __init__(self) -> None:
-        self.console = console
+        self.console = CrackerjackConsole()
         self.docstring_parser = PythonDocstringParser()
 
     def extract_from_python_files(self, files: list[Path]) -> dict[str, t.Any]:

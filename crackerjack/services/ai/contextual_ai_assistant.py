@@ -6,6 +6,8 @@ import typing as t
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.models.protocols import FileSystemInterface
 
 
@@ -39,9 +41,10 @@ class ContextualAIAssistant:
     def __init__(
         self,
         filesystem: FileSystemInterface,
+        console: Console | None = None,
     ) -> None:
         self.filesystem = filesystem
-        self.console = console
+        self.console = console or Console()
         self.project_root = Path.cwd()
         self.pyproject_path = self.project_root / "pyproject.toml"
         self.cache_file = self.project_root / ".crackerjack" / "ai_context.json"

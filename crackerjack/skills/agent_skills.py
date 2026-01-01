@@ -21,6 +21,7 @@ Example:
 """
 
 import asyncio
+import operator
 import typing as t
 from dataclasses import dataclass, field
 from enum import Enum
@@ -235,7 +236,29 @@ class AgentSkill:
 
             # Execute concurrently
             tasks = [self.execute(issue) for issue in handleable]
-            return await asyncio.gather(*tasks, return_exceptions=True)
+            raw_results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Filter out exceptions, keep only SkillExecutionResult
+            results: list[SkillExecutionResult] = []
+            for result in raw_results:
+                if isinstance(result, BaseException):
+                    # Convert exception to error result with default values
+                    results.append(
+                        SkillExecutionResult(
+                            skill_name=self.skill_id,
+                            success=False,
+                            confidence=0.0,
+                            issues_handled=0,
+                            fixes_applied=[],
+                            recommendations=[],
+                            files_modified=[],
+                            execution_time_ms=0,
+                        )
+                    )
+                else:
+                    results.append(result)
+
+            return results
 
         return _batch()
 
@@ -382,7 +405,7 @@ class AgentSkillRegistry:
                 return None
 
             # Return best skill
-            valid_pairs.sort(key=lambda x: x[1], reverse=True)
+            valid_pairs.sort(key=operator.itemgetter(1), reverse=True)
             return valid_pairs[0][0]
 
         return _find()
@@ -472,7 +495,6 @@ class AgentSkillRegistry:
                 tags.add(word)
 
         # Add issue type tags
-        for issue_type in supported_types:
-            tags.add(issue_type.value)
+        tags.update(issue_type.value for issue_type in supported_types)
 
         return tags

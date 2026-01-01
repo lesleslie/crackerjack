@@ -81,7 +81,8 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         Returns:
             List of changed file paths relative to project root
         """
-        return self._git_service.get_changed_files_since(since, self.project_root)
+        files_str = self._git_service.get_changed_files_since(since, self.project_root)
+        return [Path(f) for f in files_str]
 
     def get_staged_files(self) -> list[Path]:
         """Get currently staged files (in git index).
@@ -89,7 +90,8 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         Returns:
             List of staged file paths relative to project root
         """
-        return self._git_service.get_staged_files(self.project_root)
+        files_str = self._git_service.get_staged_files()
+        return [Path(f) for f in files_str]
 
     def get_unstaged_files(self) -> list[Path]:
         """Get unstaged modified files (working tree changes).

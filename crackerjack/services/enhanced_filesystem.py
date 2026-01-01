@@ -45,7 +45,7 @@ class FileCache:
             return None
 
         self._access_times[key] = now
-        self.logger.debug("Cache hit", key=key)
+        self.logger.debug(f"Cache hit key={key}")
         content: str | None = cache_entry["content"]
         return content
 
@@ -61,7 +61,7 @@ class FileCache:
             "size": len(content),
         }
         self._access_times[key] = now
-        self.logger.debug("Cache put", key=key, size=len(content))
+        self.logger.debug(f"Cache put key={key} size={len(content)}")
 
     def _evict(self, key: str) -> None:
         self._cache.pop(key, None)
@@ -73,7 +73,7 @@ class FileCache:
 
         lru_key = min(self._access_times, key=lambda k: self._access_times.get(k, 0.0))
         self._evict(lru_key)
-        self.logger.debug("Cache LRU eviction", key=lru_key)
+        self.logger.debug(f"Cache LRU eviction key={lru_key}")
 
     def clear(self) -> None:
         self._cache.clear()
@@ -259,11 +259,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     results[path] = self.read_file(path)
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to read file",
-                        path=str(path),
-                        error=str(e),
-                    )
+                    self.logger.exception(f"Failed to read file path={path} error={e}")
                     results[path] = ""
             return results
 
@@ -274,11 +270,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
             for path, result in zip(paths, results_list, strict=False):
                 if isinstance(result, Exception):
-                    self.logger.error(
-                        "Failed to read file",
-                        path=str(path),
-                        error=str(result),
-                    )
+                    self.logger.error(f"Failed to read file path={path} error={result}")
                     results[path] = ""
                 elif isinstance(result, str):  # Explicit check for mypy
                     results[path] = result
@@ -291,11 +283,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 try:
                     self.write_file(path, content)
                 except Exception as e:
-                    self.logger.exception(
-                        "Failed to write file",
-                        path=str(path),
-                        error=str(e),
-                    )
+                    self.logger.exception(f"Failed to write file path={path} error={e}")
             return
 
         with LoggingContext("write_multiple_files", count=len(file_data)):
@@ -402,7 +390,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         path_obj = Path(path) if isinstance(path, str) else path
         try:
             path_obj.mkdir(parents=True, exist_ok=True)
-            self.logger.debug("Directory created", path=str(path_obj))
+            self.logger.debug(f"Directory created path={path_obj}")
         except OSError as e:
             raise FileError(
                 message=f"Cannot create directory: {path_obj}",
@@ -421,7 +409,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 self.cache._evict(cache_key)
                 self._file_timestamps.pop(str(path_obj), None)
 
-                self.logger.debug("File deleted", path=str(path_obj))
+                self.logger.debug(f"File deleted path={path_obj}")
         except OSError as e:
             raise FileError(
                 message=f"Cannot delete file: {path_obj}",

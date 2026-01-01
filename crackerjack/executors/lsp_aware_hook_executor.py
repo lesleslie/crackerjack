@@ -3,6 +3,8 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.config.hooks import HookDefinition, HookStrategy
 from crackerjack.executors.hook_executor import HookExecutionResult, HookExecutor
 from crackerjack.models.task import HookResult
@@ -20,6 +22,7 @@ class LSPAwareHookExecutor(HookExecutor):
 
     def __init__(
         self,
+        console: Console,
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,

@@ -98,7 +98,10 @@ class TyAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = TySettings()
+            self.settings = TySettings(
+                timeout_seconds=180,
+                max_workers=4,
+            )
             logger.info("Using default TySettings")
         await super().init()
         logger.debug(

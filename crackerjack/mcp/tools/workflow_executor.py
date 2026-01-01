@@ -592,7 +592,7 @@ async def _attempt_coverage_improvement(
 
         from crackerjack.agents.base import AgentContext
 
-        agent_context = AgentContext(project_path=project_path, console=None)
+        agent_context = AgentContext(project_path=project_path)
 
         _update_progress(
             job_id,

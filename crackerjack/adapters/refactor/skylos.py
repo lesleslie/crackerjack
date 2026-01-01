@@ -87,12 +87,21 @@ class SkylosAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = SkylosSettings()
+            # Get timeout from CrackerjackSettings
+            timeout_seconds = self._get_timeout_from_settings()
+
+            self.settings = SkylosSettings(
+                timeout_seconds=timeout_seconds,
+                max_workers=4,
+            )
             logger.info("Using default SkylosSettings")
         await super().init()
         logger.debug(
             "SkylosAdapter initialization complete",
-            extra={"confidence_threshold": self.settings.confidence_threshold},
+            extra={
+                "confidence_threshold": self.settings.confidence_threshold,
+                "timeout_seconds": self.settings.timeout_seconds,
+            },
         )
 
     @property

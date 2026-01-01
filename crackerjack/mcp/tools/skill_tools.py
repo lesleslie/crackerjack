@@ -162,34 +162,39 @@ def _register_get_skill_info(mcp_app: "FastMCP") -> None:
         Returns:
             Detailed skill information
         """
-        registry_key = f"{skill_type}_skills"
-
-        if registry_key not in _skill_registries:
+        registry = _get_skill_registry(skill_type)
+        if registry is None:
             return {"error": f"Unknown skill type: {skill_type}"}
 
-        registry = _skill_registries[registry_key]
+        skill = registry.get_skill(skill_id)
+        if not skill:
+            return {"error": "Skill not found"}
 
-        if skill_type == "agent":
-            skill = registry.get_skill(skill_id)
-            return skill.get_info() if skill else {"error": "Skill not found"}
+        return _format_skill_info(skill, skill_type)
 
-        elif skill_type == "mcp":
-            skill = registry.get_skill(skill_id)
-            return skill.to_dict() if skill else {"error": "Skill not found"}
 
-        elif skill_type == "hybrid":
-            skill = registry.get_skill(skill_id)
-            if skill:
-                info = skill.get_info()
-                # Add tool mappings
-                if hasattr(skill, "get_tool_mappings"):
-                    info["tools"] = [m.to_dict() for m in skill.get_tool_mappings()]
-                return info
-            else:
-                return {"error": "Skill not found"}
+def _get_skill_registry(skill_type: str) -> t.Any | None:
+    """Get skill registry by type."""
+    registry_key = f"{skill_type}_skills"
+    return _skill_registries.get(registry_key)
 
-        else:
-            return {"error": f"Unknown skill type: {skill_type}"}
+
+def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
+    """Format skill information based on skill type."""
+    if skill_type == "agent":
+        return skill.get_info()
+
+    elif skill_type == "mcp":
+        return skill.to_dict()
+
+    elif skill_type == "hybrid":
+        info = skill.get_info()
+        # Add tool mappings
+        if hasattr(skill, "get_tool_mappings"):
+            info["tools"] = [m.to_dict() for m in skill.get_tool_mappings()]
+        return info
+
+    return {"error": f"Unknown skill type: {skill_type}"}
 
 
 def _register_search_skills(mcp_app: "FastMCP") -> None:
@@ -233,30 +238,39 @@ def _register_search_skills(mcp_app: "FastMCP") -> None:
 def _search_agent_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
     """Search for agent skills."""
     agent_skills = _skill_registries["agent_skills"]
-    matching = []
 
-    for skill_info in agent_skills.list_all_skills():
-        metadata = skill_info["metadata"]
+    return [
+        skill_info
+        for skill_info in agent_skills.list_all_skills()
+        if _matches_search_criteria(skill_info["metadata"], query, search_in)
+    ]
 
-        # Search in names
-        if search_in in ("all", "names"):
-            if query.lower() in metadata["name"].lower():
-                matching.append(skill_info)
-                continue
 
-        # Search in descriptions
-        if search_in in ("all", "descriptions"):
-            if query.lower() in metadata["description"].lower():
-                matching.append(skill_info)
-                continue
+def _matches_search_criteria(
+    metadata: dict[str, t.Any], query: str, search_in: str
+) -> bool:
+    """Check if skill metadata matches search criteria."""
+    # Search in names
+    if search_in in ("all", "names"):
+        if query.lower() in metadata["name"].lower():
+            return True
 
-        # Search in tags
-        if search_in in ("all", "tags"):
-            if any(query.lower() in tag.lower() for tag in metadata.get("tags", [])):
-                matching.append(skill_info)
-                continue
+    # Search in descriptions
+    if search_in in ("all", "descriptions"):
+        if query.lower() in metadata["description"].lower():
+            return True
 
-    return matching
+    # Search in tags
+    if search_in in ("all", "tags"):
+        if _matches_tags(metadata.get("tags", []), query):
+            return True
+
+    return False
+
+
+def _matches_tags(tags: list[str], query: str) -> bool:
+    """Check if any tag matches the query."""
+    return any(query.lower() in tag.lower() for tag in tags)
 
 
 def _search_mcp_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
@@ -274,27 +288,12 @@ def _search_mcp_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 def _search_hybrid_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
     """Search for hybrid skills."""
     hybrid_skills = _skill_registries["hybrid_skills"]
-    matching = []
 
-    for skill_info in hybrid_skills.list_all_skills():
-        metadata = skill_info["metadata"]
-
-        if search_in in ("all", "names"):
-            if query.lower() in metadata["name"].lower():
-                matching.append(skill_info)
-                continue
-
-        if search_in in ("all", "descriptions"):
-            if query.lower() in metadata["description"].lower():
-                matching.append(skill_info)
-                continue
-
-        if search_in in ("all", "tags"):
-            if any(query.lower() in tag.lower() for tag in metadata.get("tags", [])):
-                matching.append(skill_info)
-                continue
-
-    return matching
+    return [
+        skill_info
+        for skill_info in hybrid_skills.list_all_skills()
+        if _matches_search_criteria(skill_info["metadata"], query, search_in)
+    ]
 
 
 def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:

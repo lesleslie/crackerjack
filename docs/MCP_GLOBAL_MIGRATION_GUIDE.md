@@ -3,19 +3,20 @@
 **Date**: 2025-12-29
 **Goal**: Consolidate all MCP servers from 14 projects into a single global configuration
 
----
+______________________________________________________________________
 
 ## Summary
 
 ✅ **Successfully consolidated 19 unique MCP servers** from 14 active projects into a single `~/.claude/.mcp.json` configuration.
 
 **Why This Matters**:
+
 - **Unified Management**: Enable/disable servers globally from one place
 - **No Duplication**: Eliminates redundant server definitions across projects
 - **Claude Code Native**: Uses Claude Code's built-in MCP server management UI
 - **Simpler Onboarding**: New projects automatically inherit all available servers
 
----
+______________________________________________________________________
 
 ## Server Inventory
 
@@ -53,11 +54,12 @@
 | **raindropio** | HTTP (3034) | 2 | 🟢 Low - Bookmarks |
 | **unifi** | HTTP (3038) | 1 | 🟢 Low - Network management |
 
----
+______________________________________________________________________
 
 ## Priority Recommendations
 
 ### 🔴 High Priority (Always Enable)
+
 Keep these running 24/7 - they're used across almost all projects:
 
 ```bash
@@ -68,6 +70,7 @@ Keep these running 24/7 - they're used across almost all projects:
 ```
 
 ### 🟡 Medium Priority (Enable as Needed)
+
 Enable when working on specific features:
 
 ```bash
@@ -82,6 +85,7 @@ Enable when working on specific features:
 ```
 
 ### 🟢 Low Priority (Disable by Default)
+
 Only enable when actively using these services:
 
 ```bash
@@ -103,7 +107,7 @@ Only enable when actively using these services:
 ✅ unifi            # Network management
 ```
 
----
+______________________________________________________________________
 
 ## Migration Steps
 
@@ -114,6 +118,7 @@ Only enable when actively using these services:
 This file now contains all 19 unique servers discovered across your 14 active projects.
 
 **What Changed**:
+
 - ✅ Consolidated duplicate definitions (same server defined in multiple projects)
 - ✅ Added descriptions for each server (usage frequency notes)
 - ✅ Standardized format (command/args ordering)
@@ -124,6 +129,7 @@ This file now contains all 19 unique servers discovered across your 14 active pr
 **File to Edit**: `~/.claude/settings.json`
 
 **Current**:
+
 ```json
 "hooks": {
   "SessionStart": [
@@ -195,9 +201,9 @@ mv /Users/les/Projects/session-buddy/.mcp.json \
 ### Step 4: Restart Claude Code
 
 1. **Quit Claude Code** completely (Cmd+Q)
-2. **Relaunch** Claude Code
-3. **Verify**: Open Claude Code settings → MCP Servers
-4. **Confirm**: All 19 servers appear in the list
+1. **Relaunch** Claude Code
+1. **Verify**: Open Claude Code settings → MCP Servers
+1. **Confirm**: All 19 servers appear in the list
 
 ### Step 5: Test Server Connectivity
 
@@ -217,16 +223,18 @@ curl http://localhost:3038/mcp        # unifi
 ```
 
 **Expected Behavior**:
+
 - HTTP servers should return JSON responses (or 404 for `/mcp` endpoint if no POST)
 - stdio servers should auto-start when enabled in Claude Code UI
 
----
+______________________________________________________________________
 
 ## Server Management Workflow
 
 ### Daily Usage
 
 **High Priority Servers** (Always On):
+
 ```bash
 # Via Claude Code UI: Settings → MCP Servers
 ✅ context7        # Keep enabled
@@ -235,6 +243,7 @@ curl http://localhost:3038/mcp        # unifi
 ```
 
 **Medium Priority Servers** (Enable as Needed):
+
 ```bash
 # Working on macOS features?
 Settings → MCP Servers → ✅ macos_automator, ✅ peekaboo
@@ -247,6 +256,7 @@ Settings → MCP Servers → ✅ memory
 ```
 
 **Low Priority Servers** (Disable When Not in Use):
+
 ```bash
 # Deploying to GCP?
 Settings → MCP Servers → ✅ cloud-run
@@ -262,7 +272,7 @@ Settings → MCP Servers → ✅ sentry
 **If a project needs a unique server** not in the global config:
 
 1. **Add to global config** first (preferred)
-2. **Create project override** only if necessary:
+1. **Create project override** only if necessary:
 
 ```json
 // /Users/les/Projects/special-project/.mcp.json
@@ -279,7 +289,7 @@ Settings → MCP Servers → ✅ sentry
 
 **Merge Behavior**: Claude Code merges global + project configs (project overrides global).
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -288,29 +298,34 @@ Settings → MCP Servers → ✅ sentry
 **Symptoms**: Server defined in `~/.claude/.mcp.json` but not showing in Claude Code
 
 **Solutions**:
+
 1. **Verify JSON syntax**:
+
    ```bash
    jq . ~/.claude/.mcp.json
    # Should return "parse error:..." if invalid
    ```
 
-2. **Restart Claude Code** (required after config changes)
+1. **Restart Claude Code** (required after config changes)
 
-3. **Check for typos** in server names or commands
+1. **Check for typos** in server names or commands
 
 ### Issue: HTTP Server Not Connecting
 
 **Symptoms**: `http://localhost:PORT/mcp` returns connection refused
 
 **Solutions**:
+
 1. **Verify server is running**:
+
    ```bash
    lsof -i :8678  # Check session-buddy
    lsof -i :8676  # Check crackerjack
    lsof -i :3032  # Check excalidraw
    ```
 
-2. **Start server manually** (if needed):
+1. **Start server manually** (if needed):
+
    ```bash
    # session-buddy
    cd /Users/les/Projects/session-buddy
@@ -321,7 +336,8 @@ Settings → MCP Servers → ✅ sentry
    .venv/bin/uvicorn crackerjack.mcp.server_core:http_app --host 127.0.0.1 --port 8676
    ```
 
-3. **Check server logs**:
+1. **Check server logs**:
+
    ```bash
    tail -f /tmp/mcp-session-buddy.log
    tail -f /tmp/mcp-crackerjack.log
@@ -332,18 +348,22 @@ Settings → MCP Servers → ✅ sentry
 **Symptoms**: NPX/UVX server fails to start when enabled
 
 **Solutions**:
+
 1. **Verify package exists**:
+
    ```bash
    npx -y @upstash/context7-mcp@1.0.20 --version
    uvx logfire-mcp@latest --help
    ```
 
-2. **Check network connection** (for首次 downloads):
+1. **Check network connection** (for首次 downloads):
+
    ```bash
    npm ping  # Should succeed
    ```
 
-3. **Test manually**:
+1. **Test manually**:
+
    ```bash
    npx -y @upstash/context7-mcp@1.0.20
    # Should start interactive session or show help
@@ -354,17 +374,21 @@ Settings → MCP Servers → ✅ sentry
 **Symptoms**: Multiple servers trying to use the same port
 
 **Solutions**:
+
 1. **Identify conflict**:
+
    ```bash
    lsof -i :3033  # What's using mermaid port?
    ```
 
-2. **Kill conflicting process**:
+1. **Kill conflicting process**:
+
    ```bash
    kill -9 <PID>
    ```
 
-3. **Update port in global config** (if needed):
+1. **Update port in global config** (if needed):
+
    ```json
    "mermaid": {
      "url": "http://localhost:3034/mcp",  // Changed from 3033
@@ -372,7 +396,7 @@ Settings → MCP Servers → ✅ sentry
    }
    ```
 
----
+______________________________________________________________________
 
 ## Rollback Plan
 
@@ -418,7 +442,7 @@ rm ~/.claude/.mcp.json
 
 Quit and relaunch to apply changes.
 
----
+______________________________________________________________________
 
 ## Benefits Achieved
 
@@ -430,31 +454,35 @@ Quit and relaunch to apply changes.
 ✅ **Better Visibility**: See all available servers at a glance
 ✅ **Resource Control**: Disable unused servers to free memory/CPU
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 ### Immediate (Day 1)
+
 1. ✅ Global config created (`~/.claude/.mcp.json`)
-2. ⏳ Disable auto-start script in `~/.claude/settings.json`
-3. ⏳ Restart Claude Code and verify servers appear in UI
-4. ⏳ Test high-priority servers (context7, session-buddy, crackerjack)
+1. ⏳ Disable auto-start script in `~/.claude/settings.json`
+1. ⏳ Restart Claude Code and verify servers appear in UI
+1. ⏳ Test high-priority servers (context7, session-buddy, crackerjack)
 
 ### Week 1
+
 1. ⏳ Remove project-level `.mcp.json` files
-2. ⏳ Document server usage patterns (which servers for which tasks)
-3. ⏳ Create quick-reference card for common server combinations
+1. ⏳ Document server usage patterns (which servers for which tasks)
+1. ⏳ Create quick-reference card for common server combinations
 
 ### Week 2-4
-1. ⏳ Monitor server stability and performance
-2. ⏳ Add new servers to global config as needed
-3. ⏳ Optimize server enable/disable patterns based on actual usage
 
----
+1. ⏳ Monitor server stability and performance
+1. ⏳ Add new servers to global config as needed
+1. ⏳ Optimize server enable/disable patterns based on actual usage
+
+______________________________________________________________________
 
 ## Appendix: Server Usage Patterns
 
 ### Web Development Projects
+
 ```
 ✅ crackerjack     # Quality checks
 ✅ session-buddy   # Session management
@@ -464,6 +492,7 @@ Quit and relaunch to apply changes.
 ```
 
 ### Python/Crackerjack Development
+
 ```
 ✅ crackerjack     # Self-testing
 ✅ session-buddy   # Context tracking
@@ -472,6 +501,7 @@ Quit and relaunch to apply changes.
 ```
 
 ### Diagram/Documentation Work
+
 ```
 ✅ excalidraw      # Visual diagrams
 ✅ mermaid         # Code diagrams
@@ -480,6 +510,7 @@ Quit and relaunch to apply changes.
 ```
 
 ### macOS Automation Tasks
+
 ```
 ✅ macos_automator # AppleScript/JXA
 ✅ peekaboo        # Screenshot analysis
@@ -487,6 +518,7 @@ Quit and relaunch to apply changes.
 ```
 
 ### Cloud Deployment (GCP)
+
 ```
 ✅ cloud-run       # GCP deployment
 ✅ crackerjack     # Pre-deploy checks
@@ -494,7 +526,7 @@ Quit and relaunch to apply changes.
 ✅ logfire         # Application observability
 ```
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-12-29
 **Status**: ✅ Global config created, awaiting user testing
