@@ -98,3 +98,11 @@ settings/local.yaml
 # Local settings overrides (ACB configuration)
 /.uv-cache/
 /.complexipy_cache/
+
+# Documentation archives (skip in formatters/docs processing)
+/docs/archive/
+docs/archive/
+
+# Git worktrees (Crystal)
+/worktrees/
+/worktree-*/
