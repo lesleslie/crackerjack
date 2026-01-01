@@ -252,14 +252,10 @@ class AsyncHookExecutor:
 
     async def _terminate_single_process(self, proc: asyncio.subprocess.Process) -> None:
         """Terminate a single subprocess safely."""
-        try:
+        with suppress(ProcessLookupError, Exception):
             if proc.returncode is None:
                 proc.kill()
                 await self._wait_for_process_termination(proc)
-        except ProcessLookupError:
-            pass
-        except Exception:
-            pass
 
     async def _wait_for_process_termination(
         self, proc: asyncio.subprocess.Process
@@ -353,10 +349,7 @@ class AsyncHookExecutor:
             timeout_val = getattr(hook, "timeout", self.timeout)
 
             self.logger.debug(
-                "Starting hook execution",
-                hook=hook.name,
-                command=" ".join(cmd),
-                timeout=timeout_val,
+                f"Starting hook execution: hook={hook.name}, command={' '.join(cmd)}, timeout={timeout_val}"
             )
 
             repo_root = self._get_repo_root()

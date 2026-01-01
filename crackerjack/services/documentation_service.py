@@ -3,6 +3,8 @@
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
 from ..models.protocols import (
     APIExtractorProtocol,
     DocumentationGeneratorProtocol,
@@ -21,10 +23,10 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         api_extractor: APIExtractorProtocol | None = None,
         doc_generator: DocumentationGeneratorProtocol | None = None,
     ) -> None:
-        self.console = console
         self.pkg_path = pkg_path
         self.api_extractor = api_extractor or APIExtractorImpl()
         self.doc_generator = doc_generator or DocumentationGeneratorImpl()
+        self.console = Console()
 
         # Define standard paths
         self.docs_dir = pkg_path / "docs"

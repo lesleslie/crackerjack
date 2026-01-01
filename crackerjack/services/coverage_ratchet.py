@@ -3,6 +3,7 @@ import typing as t
 from datetime import datetime
 from pathlib import Path
 
+from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 
 from crackerjack.models.protocols import CoverageRatchetProtocol
@@ -15,13 +16,17 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
     TOLERANCE_MARGIN = 2.0
 
-    def __init__(self, pkg_path: Path) -> None:
+    def __init__(
+        self,
+        pkg_path: Path,
+        console: Console | None = None,
+    ) -> None:
         # Normalize to pathlib.Path to avoid async path behaviors
         try:
             self.pkg_path = Path(str(pkg_path))
         except Exception:
             self.pkg_path = Path(pkg_path)
-        self.console = console
+        self.console = console or Console()
         self.ratchet_file = self.pkg_path / ".coverage-ratchet.json"
         self.pyproject_file = self.pkg_path / "pyproject.toml"
 

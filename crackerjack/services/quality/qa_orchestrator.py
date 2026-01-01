@@ -171,31 +171,36 @@ class QAOrchestrator:
         self,
         checks: list[QACheckConfig],
         files: list[Path] | None,
-    ) -> list[asyncio.Task]:
-        """Create asyncio tasks for check execution."""
-        tasks = []
+    ) -> list[t.Coroutine[t.Any, t.Any, QAResult]]:
+        """Create awaitable tasks for check execution."""
+        tasks: list[t.Coroutine[t.Any, t.Any, QAResult]] = []
 
         for check_config in checks:
             adapter = self.get_adapter(check_config.check_name)
             if not adapter:
                 continue
 
-            # Create task for this check
+            # Create awaitable for this check
             task = self._execute_single_check(adapter, check_config, files)
             tasks.append(task)
 
         return tasks
 
     async def _handle_fail_fast(
-        self, tasks: list[asyncio.Task]
+        self, tasks: list[t.Coroutine[t.Any, t.Any, QAResult]]
     ) -> list[QAResult] | None:
         """Handle fail-fast logic if configured."""
         if not self.config.fail_fast or not tasks:
             return None
 
+        # Convert awaitables to tasks for wait
+        task_list: list[asyncio.Task[QAResult]] = [
+            asyncio.create_task(t) for t in tasks
+        ]
+
         # Wait for first task to complete
         done, pending = await asyncio.wait(
-            tasks[-1:], return_when=asyncio.FIRST_COMPLETED
+            task_list[-1:], return_when=asyncio.FIRST_COMPLETED
         )
         result = done.pop().result()
         if not result.is_success:

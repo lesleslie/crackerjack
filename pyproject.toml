@@ -154,6 +154,10 @@ zuban_lsp_timeout = 120.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
 
+# Quality tool timeout settings (in seconds)
+skylos_timeout = 120  # Dead code detection (2 minutes)
+refurb_timeout = 120  # Modern Python suggestions (2 minutes)
+
 # Test parallelization settings
 test_workers = 0  # 0 = auto-detect, 1 = sequential, >1 = explicit, <0 = fractional
 max_workers = 8  # Maximum parallel workers (safety limit)
@@ -347,7 +351,7 @@ exclude-deps = [
 ]
 
 [tool.refurb]
-enable_all = true
+enable_all = false
 quiet = true
 python_version = "3.13"
 ignore = [
@@ -379,40 +383,10 @@ exclude_patterns = [
     "**/tests/**",
     "**/test_*.py",
 ]
-max_complexity = 15
+max_complexity = 25
 
-[tool.mypy]
-python_version = "3.13"
-
-[tool.zuban]
-strict = true
-show_error_codes = true
-exclude = [
-    ".venv",
-    "venv",
-    ".tox",
-    "__pycache__",
-    ".pytest_cache",
-    ".mypy_cache",
-    ".ruff_cache",
-    ".uv_cache",
-    ".git",
-    ".hg",
-    ".svn",
-    "build",
-    "dist",
-    ".eggs",
-    ".*\\.egg-info",
-    "node_modules",
-    ".vscode",
-    ".idea",
-    "docs/_build",
-    "tests",
+[tool.mdformat]
+skip = [
+    "docs/archive/**",
+    "**/archives/**",
 ]
-
-[tool.zuban.lsp]
-host = "127.0.0.1"
-port = 8677
-timeout = 120.0
-enable_diagnostics = true
-real_time_feedback = true

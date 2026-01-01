@@ -321,7 +321,7 @@ class DataCompactionManager:
 
     @staticmethod
     def _build_compaction_result(
-        data_type: str, rules: dict[str, t.Any], stats: dict[str, int]
+        data_type: str, rules: dict[str, t.Any], stats: dict[str, int | float]
     ) -> dict[str, t.Any]:
         """Build the compaction result dictionary."""
         return {
@@ -679,7 +679,6 @@ class AdvancedOptimizer:
 
         return recommendations
 
-    @staticmethod
     def _generate_scaling_recommendations(
         self, scaling_metrics: ScalingMetrics
     ) -> list[OptimizationRecommendation]:

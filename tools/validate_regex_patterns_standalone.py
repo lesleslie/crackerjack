@@ -148,43 +148,57 @@ def main(file_paths: list[str]) -> int:
         for file_path_str in file_paths:
             file_path = Path(file_path_str)
 
-            if file_path.suffix != ".py":
-                continue
-
-            if not file_path.exists():
+            if not _should_validate_file(file_path):
                 continue
 
             try:
                 issues = validate_file(file_path)
-
                 if issues:
                     exit_code = 1
-                    print(f"\n❌ {file_path}:")
-                    for line_no, message in issues:
-                        print(f" Line {line_no}: {message}")
+                    _report_file_issues(file_path, issues)
             except Exception as e:
                 print(f"Warning: Could not validate {file_path}: {e}", file=sys.stderr)
                 continue
 
-        if exit_code == 0:
-            print("✅ All regex patterns validated successfully!")
-        else:
-            print("\n" + "=" * 70)
-            print("REGEX VALIDATION FAILED")
-            print("=" * 70)
-            print("To fix these issues:")
-            print("1. Use patterns from crackerjack.services.regex_patterns")
-            print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
-            print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
-            print("4. Fix \\g<1> replacement syntax (no spaces)")
-            print("=" * 70)
-
+        _print_validation_result(exit_code)
         return exit_code
     except Exception as e:
         print(f"Error in regex validation: {e}", file=sys.stderr)
-
         print("✅ All regex patterns validated successfully!")
         return 0
+
+
+def _should_validate_file(file_path: Path) -> bool:
+    """Check if file should be validated."""
+    return file_path.suffix == ".py" and file_path.exists()
+
+
+def _report_file_issues(file_path: Path, issues: list[tuple[int, str]]) -> None:
+    """Report validation issues for a file."""
+    print(f"\n❌ {file_path}:")
+    for line_no, message in issues:
+        print(f" Line {line_no}: {message}")
+
+
+def _print_validation_result(exit_code: int) -> None:
+    """Print validation result summary."""
+    if exit_code == 0:
+        print("✅ All regex patterns validated successfully!")
+    else:
+        _print_failure_instructions()
+
+
+def _print_failure_instructions() -> None:
+    """Print instructions for fixing validation failures."""
+    print("\n" + "=" * 70)
+    print("REGEX VALIDATION FAILED")
+    print("=" * 70)
+    print("To fix these issues:")
+    print("1. Use patterns from crackerjack.services.regex_patterns")
+    print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
+    print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
+    print("4. Fix \\g<1> replacement syntax (no spaces)")
+    print("=" * 70)
 
 
 if __name__ == "__main__":

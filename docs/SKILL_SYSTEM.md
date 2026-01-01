@@ -5,8 +5,8 @@
 Crackerjack's Skills System provides a multi-layered architecture that bridges AI agent capabilities with MCP tool integration. The system implements **three complementary approaches** to expose skills:
 
 1. **Agent Skills** (Option 1) - Maps internal agent capabilities to skills
-2. **MCP Skills** (Option 2) - Groups existing MCP tools into purpose-based skills
-3. **Hybrid Skills** (Option 3) - Combines agents with MCP tool delegation
+1. **MCP Skills** (Option 2) - Groups existing MCP tools into purpose-based skills
+1. **Hybrid Skills** (Option 3) - Combines agents with MCP tool delegation
 
 ## Architecture
 
@@ -43,11 +43,13 @@ Crackerjack's Skills System provides a multi-layered architecture that bridges A
 **Purpose**: Map internal agent capabilities to a skill-based interface
 
 **Key Classes**:
+
 - `AgentSkill` - Wrapper around `SubAgent` with skill metadata
 - `AgentSkillRegistry` - Manages and discovers agent skills
 - `SkillMetadata` - Rich metadata about agent capabilities
 
 **Usage**:
+
 ```python
 from crackerjack.skills import AgentSkillRegistry
 from crackerjack.agents.base import AgentContext
@@ -69,6 +71,7 @@ result = await skill.execute(issue)
 ```
 
 **Features**:
+
 - ✅ Preserves existing agent architecture
 - ✅ Adds skill discovery layer
 - ✅ Confidence-based skill matching
@@ -80,11 +83,13 @@ result = await skill.execute(issue)
 **Purpose**: Group existing MCP tools into purpose-based skills
 
 **Key Classes**:
+
 - `MCPSkill` - Groups related MCP tools
 - `MCPSkillRegistry` - Manages MCP skill groups
 - `ToolReference` - Metadata about MCP tools
 
 **Predefined Skills**:
+
 ```python
 MCP_SKILL_GROUPS = {
     "quality_checks": {
@@ -104,6 +109,7 @@ MCP_SKILL_GROUPS = {
 ```
 
 **Usage**:
+
 ```python
 from crackerjack.skills import MCPSkillRegistry
 
@@ -122,6 +128,7 @@ tools = registry.get_tools_in_skill("quality_checks")
 ```
 
 **Features**:
+
 - ✅ Better tool discoverability
 - ✅ Logical grouping by functionality
 - ✅ Domain-based organization
@@ -133,11 +140,13 @@ tools = registry.get_tools_in_skill("quality_checks")
 **Purpose**: Combine agent capabilities with MCP tool exposure
 
 **Key Classes**:
+
 - `HybridSkill` - Agent skill with MCP tool integration
 - `HybridSkillRegistry` - Manages hybrid skills
 - `ToolDelegator` - Delegates skill execution to MCP tools
 
 **Usage**:
+
 ```python
 from crackerjack.skills import HybridSkillRegistry
 from crackerjack.agents.base import AgentContext
@@ -160,12 +169,14 @@ result = await registry.execute_via_tool(
 
 **Auto-Generated Tools**:
 Each hybrid skill automatically generates 4 MCP tools:
+
 1. `{skill_id}_can_handle` - Check if skill can handle an issue
-2. `{skill_id}_execute` - Execute the skill
-3. `{skill_id}_batch_execute` - Execute on multiple issues
-4. `{skill_id}_get_info` - Get skill information
+1. `{skill_id}_execute` - Execute the skill
+1. `{skill_id}_batch_execute` - Execute on multiple issues
+1. `{skill_id}_get_info` - Get skill information
 
 **Features**:
+
 - ✅ Best of both worlds (agent + tools)
 - ✅ Automatic tool generation
 - ✅ MCP protocol integration
@@ -192,31 +203,37 @@ register_skill_tools(mcp_app)
 The skill system exposes **8 MCP tools** for skill management:
 
 1. **`list_skills`** - List all available skills
+
    ```python
    list_skills(skill_type="all")  # "all", "agent", "mcp", "hybrid"
    ```
 
-2. **`get_skill_info`** - Get detailed skill information
+1. **`get_skill_info`** - Get detailed skill information
+
    ```python
    get_skill_info(skill_id="abc123", skill_type="agent")
    ```
 
-3. **`search_skills`** - Search for skills by query
+1. **`search_skills`** - Search for skills by query
+
    ```python
    search_skills(query="refactoring", search_in="all")
    ```
 
-4. **`get_skills_for_issue`** - Get skills that can handle an issue type
+1. **`get_skills_for_issue`** - Get skills that can handle an issue type
+
    ```python
    get_skills_for_issue(issue_type="complexity")
    ```
 
-5. **`get_skill_statistics`** - Get registry statistics
+1. **`get_skill_statistics`** - Get registry statistics
+
    ```python
    get_skill_statistics()
    ```
 
-6. **`execute_skill`** - Execute a skill on an issue
+1. **`execute_skill`** - Execute a skill on an issue
+
    ```python
    execute_skill(
        skill_id="abc123",
@@ -225,7 +242,8 @@ The skill system exposes **8 MCP tools** for skill management:
    )
    ```
 
-7. **`find_best_skill`** - Find the best skill for an issue
+1. **`find_best_skill`** - Find the best skill for an issue
+
    ```python
    find_best_skill(issue_type="complexity")
    ```
@@ -350,6 +368,7 @@ result = await mcp_app.call_tool(
 The skill system reads configuration from:
 
 1. **AgentContext** - For agent-based skills
+
    ```python
    context = AgentContext(
        project_path=Path("."),
@@ -359,7 +378,8 @@ The skill system reads configuration from:
    )
    ```
 
-2. **MCP Server Config** - For tool registration
+1. **MCP Server Config** - For tool registration
+
    ```python
    mcp_config = {
        "http_port": 8676,
@@ -429,9 +449,9 @@ The skill system includes comprehensive tests for:
 ### Optimization Tips
 
 1. **Use skill caching** - Skills are cached in registries
-2. **Batch operations** - Use `batch_execute()` for multiple issues
-3. **Filter by type** - Use `get_skills_for_type()` instead of searching all
-4. **Confidence thresholds** - Adjust to reduce unnecessary executions
+1. **Batch operations** - Use `batch_execute()` for multiple issues
+1. **Filter by type** - Use `get_skills_for_type()` instead of searching all
+1. **Confidence thresholds** - Adjust to reduce unnecessary executions
 
 ## Troubleshooting
 
@@ -440,47 +460,50 @@ The skill system includes comprehensive tests for:
 **Problem**: Skills don't show up in MCP tool list
 
 **Solution**:
+
 1. Check MCP server startup logs for "Skill system initialized"
-2. Verify agents are registered in `agent_registry`
-3. Check for exceptions during skill initialization
+1. Verify agents are registered in `agent_registry`
+1. Check for exceptions during skill initialization
 
 ### Skill Execution Fails
 
 **Problem**: Skill execution returns errors
 
 **Solution**:
+
 1. Verify issue type matches skill's `supported_types`
-2. Check agent's `can_handle()` confidence score
-3. Review agent logs for specific errors
-4. Increase timeout if needed
+1. Check agent's `can_handle()` confidence score
+1. Review agent logs for specific errors
+1. Increase timeout if needed
 
 ### Tools Not Generated
 
 **Problem**: Hybrid skill tools not appearing in MCP
 
 **Solution**:
+
 1. Verify `register_mcp_app()` was called
-2. Check `enable_hybrid_skills=True` in registration
-3. Review MCP server logs for registration errors
+1. Check `enable_hybrid_skills=True` in registration
+1. Review MCP server logs for registration errors
 
 ## Future Enhancements
 
 Planned improvements to the skill system:
 
 1. **Skill Composition** - Combine multiple skills into workflows
-2. **Skill Learning** - Track success rates and improve matching
-3. **Skill Aliases** - Custom names for skill combinations
-4. **Skill Versioning** - Support multiple skill versions
-5. **Cross-Project Skills** - Share skills between projects
-6. **Skill Marketplace** - Community-contributed skills
+1. **Skill Learning** - Track success rates and improve matching
+1. **Skill Aliases** - Custom names for skill combinations
+1. **Skill Versioning** - Support multiple skill versions
+1. **Cross-Project Skills** - Share skills between projects
+1. **Skill Marketplace** - Community-contributed skills
 
 ## Contributing
 
 To add new skills:
 
 1. **For Agent Skills**: Create new `SubAgent` subclass
-2. **For MCP Skills**: Add to `MCP_SKILL_GROUPS` dictionary
-3. **For Hybrid Skills**: Register in `register_all_hybrid_skills()`
+1. **For MCP Skills**: Add to `MCP_SKILL_GROUPS` dictionary
+1. **For Hybrid Skills**: Register in `register_all_hybrid_skills()`
 
 See `tests/skills/` for examples and test patterns.
 

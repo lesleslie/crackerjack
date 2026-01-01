@@ -53,9 +53,7 @@ class RefurbSettings(ToolAdapterSettings):
     enable_checks: list[str] = Field(default_factory=list)
     python_version: str | None = None  # e.g., "3.13"
     explain: bool = False  # Show detailed explanations
-    timeout_seconds: int = (
-        660  # 11 minutes to allow for comprehensive refactoring analysis
-    )
+    # timeout_seconds is now set by base class from CrackerjackSettings
 
 
 class RefurbAdapter(BaseToolAdapter):
@@ -102,7 +100,13 @@ class RefurbAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = RefurbSettings()
+            # Get timeout from CrackerjackSettings
+            timeout_seconds = self._get_timeout_from_settings()
+
+            self.settings = RefurbSettings(
+                timeout_seconds=timeout_seconds,
+                max_workers=4,
+            )
             logger.info("Using default RefurbSettings")
         await super().init()
         logger.debug(
@@ -112,6 +116,7 @@ class RefurbAdapter(BaseToolAdapter):
                 "enable_checks_count": len(self.settings.enable_checks),
                 "disable_checks_count": len(self.settings.disable_checks),
                 "has_python_version": self.settings.python_version is not None,
+                "timeout_seconds": self.settings.timeout_seconds,
             },
         )
 

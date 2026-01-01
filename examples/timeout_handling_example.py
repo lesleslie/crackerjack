@@ -36,7 +36,8 @@ console = Console()
 async def simulate_fast_operation() -> str:
     """Simulate a fast operation that usually succeeds."""
     await asyncio.sleep(0.5)  # 500ms operation
-    if asyncio.current_task().get_name() == "failing_task":
+    current_task = asyncio.current_task()
+    if current_task is not None and current_task.get_name() == "failing_task":
         raise RuntimeError("Simulated failure")
     return "Fast operation completed"
 

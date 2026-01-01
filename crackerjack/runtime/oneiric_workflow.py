@@ -189,7 +189,7 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     nodes: list[dict[str, t.Any]] = []
     previous: str | None = None
     for step in steps:
-        node = {"id": step, "task": step}
+        node: dict[str, t.Any] = {"id": step, "task": step}
         if previous:
             node["depends_on"] = [previous]
         nodes.append(node)

@@ -402,43 +402,59 @@ class SemanticAgent(SubAgent):
         context_suggestions = insights.get("context_suggestions", [])
 
         if related_patterns:
-            recommendations.append(
-                f"Found {len(related_patterns)} similar code patterns across the codebase"
-            )
-
-            # Analyze pattern consistency
-            high_similarity_count = 0
-            for pattern in related_patterns:
-                if not isinstance(pattern, dict):
-                    continue
-                related_code = pattern.get("related_code", [])
-                if not isinstance(related_code, list):
-                    continue
-                for code in related_code:
-                    if isinstance(code, dict) and code.get("similarity_score", 0) > 0.8:
-                        high_similarity_count += 1
-
-            if high_similarity_count > 0:
-                recommendations.append(
-                    f"Detected {high_similarity_count} highly similar implementations - "
-                    "consider refactoring for DRY principle compliance"
-                )
+            recommendations.extend(self._analyze_related_patterns(related_patterns))
 
         if context_suggestions:
             recommendations.append(
                 "Semantic analysis revealed contextual insights for code understanding"
             )
 
-        # General semantic recommendations
-        recommendations.extend(
-            [
-                "Consider semantic indexing of related modules for better code discovery",
-                "Review similar patterns for consistency in naming and implementation",
-                "Use semantic search to discover reusable components before implementing new ones",
-            ]
-        )
+        # Add general semantic recommendations
+        recommendations.extend(self._get_general_semantic_recommendations())
 
         return recommendations
+
+    def _analyze_related_patterns(self, related_patterns: list[t.Any]) -> list[str]:
+        """Analyze related patterns and generate recommendations."""
+        recommendations = []
+
+        recommendations.append(
+            f"Found {len(related_patterns)} similar code patterns across the codebase"
+        )
+
+        # Analyze pattern consistency
+        high_similarity_count = self._count_high_similarity_patterns(related_patterns)
+        if high_similarity_count > 0:
+            recommendations.append(
+                f"Detected {high_similarity_count} highly similar implementations - "
+                "consider refactoring for DRY principle compliance"
+            )
+
+        return recommendations
+
+    def _count_high_similarity_patterns(self, related_patterns: list[t.Any]) -> int:
+        """Count patterns with high similarity scores."""
+        high_similarity_count = 0
+
+        for pattern in related_patterns:
+            if not isinstance(pattern, dict):
+                continue
+            related_code = pattern.get("related_code", [])
+            if not isinstance(related_code, list):
+                continue
+            for code in related_code:
+                if isinstance(code, dict) and code.get("similarity_score", 0) > 0.8:
+                    high_similarity_count += 1
+
+        return high_similarity_count
+
+    def _get_general_semantic_recommendations(self) -> list[str]:
+        """Get general semantic analysis recommendations."""
+        return [
+            "Consider semantic indexing of related modules for better code discovery",
+            "Review similar patterns for consistency in naming and implementation",
+            "Use semantic search to discover reusable components before implementing new ones",
+        ]
 
     def _update_pattern_stats(self, result: FixResult) -> None:
         """Update pattern discovery statistics."""

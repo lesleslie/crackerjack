@@ -9,7 +9,7 @@ from crackerjack.services.input_validator import (
 )
 
 if t.TYPE_CHECKING:
-    pass
+    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
 
 
 async def create_task_with_subagent(
@@ -205,102 +205,102 @@ class _AdaptedOptions:
     # Git properties
     @property
     def commit(self) -> bool:
-        return self.settings.commit
+        return self.settings.git.commit
 
     @property
     def create_pr(self) -> bool:
-        return self.settings.create_pr
+        return self.settings.git.create_pr
 
     # Execution properties
     @property
     def interactive(self) -> bool:
-        return self.settings.interactive
+        return self.settings.execution.interactive
 
     @property
     def no_config_updates(self) -> bool:
-        return self.settings.no_config_updates
+        return self.settings.execution.no_config_updates
 
     @property
     def verbose(self) -> bool:
-        return self.settings.verbose
+        return self.settings.console.verbose
 
     @property
     def async_mode(self) -> bool:
-        return self.settings.async_mode
+        return self.settings.execution.async_mode
 
     # Testing properties
     @property
     def test(self) -> bool:
-        return self.settings.run_tests  # Note: Field renamed in CrackerjackSettings
+        return self.settings.testing.test  # Note: Field renamed in CrackerjackSettings
 
     @property
     def benchmark(self) -> bool:
-        return self.settings.benchmark
+        return self.settings.testing.benchmark
 
     @property
     def test_workers(self) -> int:
-        return self.settings.test_workers
+        return self.settings.testing.test_workers
 
     @property
     def test_timeout(self) -> int:
-        return self.settings.test_timeout
+        return self.settings.testing.test_timeout
 
     # Publishing properties
     @property
     def publish(self) -> t.Any | None:
-        return self.settings.publish_version
+        return self.settings.publishing.publish
 
     @property
     def bump(self) -> t.Any | None:
-        return self.settings.bump_version
+        return self.settings.publishing.bump
 
     @property
     def all(self) -> t.Any | None:
-        return self.settings.all_workflow
+        return self.settings.publishing.all
 
     @property
     def no_git_tags(self) -> bool:
-        return self.settings.no_git_tags
+        return self.settings.publishing.no_git_tags
 
     @property
     def skip_version_check(self) -> bool:
-        return self.settings.skip_version_check
+        return self.settings.publishing.skip_version_check
 
     # AI properties
     @property
     def ai_agent(self) -> bool:
-        return self.settings.ai_agent
+        return self.settings.ai.ai_agent
 
     @property
     def start_mcp_server(self) -> bool:
-        return self.settings.start_mcp_server
+        return self.settings.ai.start_mcp_server
 
     # Hook properties
     @property
     def skip_hooks(self) -> bool:
-        return self.settings.skip_hooks
+        return self.settings.hooks.skip_hooks
 
     @property
     def experimental_hooks(self) -> bool:
-        return self.settings.experimental_hooks
+        return self.settings.hooks.experimental_hooks
 
     @property
     def enable_pyrefly(self) -> bool:
-        return self.settings.enable_pyrefly
+        return self.settings.hooks.enable_pyrefly
 
     @property
     def enable_ty(self) -> bool:
-        return self.settings.enable_ty
+        return self.settings.hooks.enable_ty
 
     # Cleaning properties
     @property
     def clean(self) -> bool:
-        return self.settings.clean
+        return self.settings.cleaning.clean
 
     # Progress properties
     @property
     def track_progress(self) -> bool:
-        return self.settings.progress_enabled
+        return self.settings.progress.track_progress
 
     # Default/static properties (not in settings, keep defaults)
     @property
@@ -313,7 +313,7 @@ class _AdaptedOptions:
 
     @property
     def coverage(self) -> bool:
-        return self.settings.coverage_enabled
+        return self.settings.testing.coverage
 
     @property
     def keep_releases(self) -> int:
@@ -335,10 +335,14 @@ def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
 
         pkg_path = orchestrator.pkg_path
 
+        from rich.console import Console
+
+        console = Console()
+
         filesystem = FileSystemService()
         git_service = GitService(pkg_path)
 
-        init_service = InitializationService(filesystem, git_service, pkg_path)
+        init_service = InitializationService(console, filesystem, git_service, pkg_path)
 
         results = init_service.initialize_project_full(target_path=Path.cwd())
 

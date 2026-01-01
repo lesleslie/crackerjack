@@ -99,7 +99,10 @@ class ZubanAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = ZubanSettings()
+            self.settings = ZubanSettings(
+                timeout_seconds=300,
+                max_workers=4,
+            )
             logger.info("Using default ZubanSettings")
         await super().init()
         logger.debug(

@@ -17,6 +17,7 @@ Standard Python Patterns:
 from __future__ import annotations
 
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -46,6 +47,10 @@ class MdformatSettings(ToolAdapterSettings):
     line_length: int = 88  # Match Python formatting
     check_only: bool = False  # Auto-fix mode, not check-only
     wrap_mode: str = "keep"  # keep, no, or number
+    timeout_seconds: int = (
+        300  # Default timeout for markdown formatting (5 minutes for large files)
+    )
+    max_workers: int = 4  # Default worker count
 
 
 class MdformatAdapter(BaseToolAdapter):
@@ -90,7 +95,7 @@ class MdformatAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = await MdformatSettings.create_async()
+            self.settings = MdformatSettings()
         await super().init()
 
     @property

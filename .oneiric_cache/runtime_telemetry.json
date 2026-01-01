@@ -1,1 +1,42 @@
-{"last_event": {}, "last_workflow": {"workflow": "crackerjack", "node_count": 3, "entry_nodes": ["configuration"], "nodes": [{"node": "configuration", "task": "configuration", "depends_on": [], "duration_ms": 3.8746450445614755, "attempts": 1, "retry_policy": null}, {"node": "publishing", "task": "publishing", "depends_on": ["configuration"], "duration_ms": 0.35726098576560616, "attempts": 1, "retry_policy": null}, {"node": "commit", "task": "commit", "depends_on": ["publishing"], "duration_ms": 0.35683601163327694, "attempts": 1, "retry_policy": null}], "total_duration_ms": 4.588742041960359, "recorded_at": "2025-12-30T15:30:02.119121+00:00"}}
+{
+  "last_event": {},
+  "last_workflow": {
+    "entry_nodes": [
+      "configuration"
+    ],
+    "node_count": 3,
+    "nodes": [
+      {
+        "attempts": 1,
+        "depends_on": [],
+        "duration_ms": 3.352880012243986,
+        "node": "configuration",
+        "retry_policy": null,
+        "task": "configuration"
+      },
+      {
+        "attempts": 1,
+        "depends_on": [
+          "configuration"
+        ],
+        "duration_ms": 0.3623110242187977,
+        "node": "publishing",
+        "retry_policy": null,
+        "task": "publishing"
+      },
+      {
+        "attempts": 1,
+        "depends_on": [
+          "publishing"
+        ],
+        "duration_ms": 0.1573340268805623,
+        "node": "commit",
+        "retry_policy": null,
+        "task": "commit"
+      }
+    ],
+    "recorded_at": "2026-01-01T10:57:03.297139+00:00",
+    "total_duration_ms": 3.872525063343346,
+    "workflow": "crackerjack"
+  }
+}

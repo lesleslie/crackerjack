@@ -47,7 +47,15 @@ class AdapterMetadata:
     status: AdapterStatus
     description: str = ""
 
-    def to_dict(self) -> dict[str, t.Any]:
+    def dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
+        """Convert to dictionary for serialization (Pydantic compatibility).
+
+        Returns:
+            Dictionary representation suitable for JSON serialization
+        """
+        return self.to_dict()
+
+    def to_dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
         """Convert to dictionary for serialization.
 
         Returns:

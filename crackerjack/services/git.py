@@ -41,7 +41,8 @@ class GitService(GitInterface):
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
             console = None
-        self.console = console or Console()
+        # Type narrowing: self.console is always Console after this logic
+        self.console: Console = console or Console()  # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(

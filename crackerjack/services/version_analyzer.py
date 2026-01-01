@@ -6,6 +6,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from rich.console import Console
+
 from .changelog_automation import ChangelogEntry, ChangelogGenerator
 from .git import GitService
 
@@ -192,8 +194,12 @@ class ConventionalCommitAnalyzer:
 class VersionAnalyzer:
     """Main service for analyzing changes and recommending version bumps."""
 
-    def __init__(self, git_service: GitService) -> None:
-        self.console = console
+    def __init__(
+        self,
+        git_service: GitService,
+        console: Console | None = None,
+    ) -> None:
+        self.console = console or Console()
         self.git = git_service
 
         # Initialize specialized analyzers

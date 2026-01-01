@@ -4,6 +4,8 @@ import re
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.models.protocols import GitInterface
 from crackerjack.services.regex_patterns import CompiledPatternCache
 
@@ -11,9 +13,13 @@ from crackerjack.services.regex_patterns import CompiledPatternCache
 class CommitMessageGenerator:
     """Generate intelligent commit messages based on changes and context."""
 
-    def __init__(self, git_service: GitInterface) -> None:
+    def __init__(
+        self,
+        git_service: GitInterface,
+        console: Console | None = None,
+    ) -> None:
         """Initialize commit message generator."""
-        self.console = console
+        self.console = console or Console()
         self.git = git_service
 
         # Common change type patterns

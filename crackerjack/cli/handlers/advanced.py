@@ -3,6 +3,11 @@
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
+# Module-level console instance
+console = Console()
+
 
 def handle_advanced_optimizer(
     advanced_optimizer: bool,

@@ -50,6 +50,8 @@ class CodespellSettings(ToolAdapterSettings):
     ignore_words_file: Path | None = None
     check_filenames: bool = False
     quiet_level: int = 2  # Only show errors
+    timeout_seconds: int = 60  # Default timeout for spelling checks
+    max_workers: int = 4  # Default worker count
 
 
 class CodespellAdapter(BaseToolAdapter):
@@ -93,7 +95,7 @@ class CodespellAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = await CodespellSettings.create_async()
+            self.settings = CodespellSettings()
         await super().init()
 
     @property

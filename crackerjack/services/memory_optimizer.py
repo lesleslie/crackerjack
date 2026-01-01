@@ -9,10 +9,13 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from functools import wraps
 from threading import Lock
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from weakref import WeakSet
 
 import psutil
+
+if TYPE_CHECKING:
+    from crackerjack.models.protocols import LoggerProtocol
 
 logger = logging.getLogger(__name__)
 
@@ -29,10 +32,12 @@ class MemoryStats:
 
 
 class LazyLoader:
+    _logger: "LoggerProtocol"
+
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: object,
+        logger: "LoggerProtocol",
         name: str = "unnamed",
         auto_dispose: bool = True,
     ):
@@ -104,10 +109,12 @@ class LazyLoader:
 
 
 class ResourcePool:
+    _logger: "LoggerProtocol"
+
     def __init__(
         self,
         factory: Callable[[], Any],
-        logger: object,
+        logger: "LoggerProtocol",
         max_size: int = 5,
         name: str = "unnamed",
     ):
@@ -183,7 +190,9 @@ class ResourcePool:
 
 
 class MemoryProfiler:
-    def __init__(self, logger: object) -> None:
+    _logger: "LoggerProtocol"
+
+    def __init__(self, logger: "LoggerProtocol") -> None:
         self._start_memory = 0.0
         self._peak_memory = 0.0
         self._measurements: list[tuple[float, float]] = []
@@ -244,13 +253,13 @@ class MemoryOptimizer:
     ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
-        self._profiler = MemoryProfiler(logger=logger)
+        self._profiler = MemoryProfiler(logger=logger)  # type: ignore[arg-type]
         self._stats_lock = Lock()
         self._lazy_created_count = 0
         self._lazy_loaded_count = 0
         self._gc_threshold = 100
         self._auto_gc = True
-        self._logger = logger
+        self._logger: logging.Logger = logger  # type: ignore[annotation]
 
     @classmethod
     def get_instance(cls) -> "MemoryOptimizer":

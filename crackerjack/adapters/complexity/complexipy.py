@@ -20,6 +20,7 @@ import json
 import logging
 import shutil
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -105,7 +106,11 @@ class ComplexipyAdapter(BaseToolAdapter):
             # Load max_complexity from pyproject.toml and use it to initialize settings
             config_data = self._load_config_from_pyproject()
             max_complexity = config_data.get("max_complexity", 15)
-            self.settings = ComplexipySettings(max_complexity=max_complexity)
+            self.settings = ComplexipySettings(
+                max_complexity=max_complexity,
+                timeout_seconds=90,
+                max_workers=4,
+            )
             logger.info(
                 "Using default ComplexipySettings",
                 extra={"max_complexity": max_complexity},
@@ -206,7 +211,12 @@ class ComplexipyAdapter(BaseToolAdapter):
         # Move generated complexipy files to centralized location
         json_file = self._move_complexipy_results_to_output_dir()
 
-        if self.settings.use_json_output and json_file and json_file.exists():
+        if (
+            self.settings
+            and self.settings.use_json_output
+            and json_file
+            and json_file.exists()
+        ):
             try:
                 with json_file.open() as f:
                     data = json.load(f)
@@ -263,7 +273,11 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             List of ToolIssue objects
         """
-        issues = []
+        issues: list[ToolIssue] = []
+
+        if not self.settings:
+            logger.warning("Settings not initialized, cannot parse JSON")
+            return issues
 
         # Handle flat list structure (current complexipy format)
         if isinstance(data, list):
@@ -328,6 +342,9 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             ToolIssue if needed, otherwise None
         """
+        if not self.settings:
+            return None
+
         complexity = func.get("complexity", 0)
 
         # Only report if exceeds threshold
@@ -358,11 +375,11 @@ class ComplexipyAdapter(BaseToolAdapter):
         """
         message_parts = [f"Complexity: {complexity}"]
 
-        if self.settings.include_cognitive:
+        if self.settings and self.settings.include_cognitive:
             cognitive = func.get("cognitive_complexity", 0)
             message_parts.append(f"Cognitive: {cognitive}")
 
-        if self.settings.include_maintainability:
+        if self.settings and self.settings.include_maintainability:
             maintainability = func.get("maintainability", 100)
             message_parts.append(f"Maintainability: {maintainability:.1f}")
 
@@ -377,6 +394,9 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             "error" or "warning" based on threshold
         """
+        if not self.settings:
+            return "warning"
+
         if complexity > self.settings.max_complexity * 2:
             return "error"
         return "warning"
@@ -435,6 +455,9 @@ class ComplexipyAdapter(BaseToolAdapter):
         Returns:
             ToolIssue if valid complexity data found, otherwise None
         """
+        if not self.settings:
+            return None
+
         with suppress(ValueError, IndexError):
             func_data = self._extract_function_data(line)
             if func_data:

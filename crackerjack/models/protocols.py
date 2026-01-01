@@ -110,6 +110,8 @@ class OptionsProtocol(t.Protocol):
     skip_config_merge: bool = False
     disable_global_locks: bool = False
     global_lock_timeout: int = 600
+    strip_code: bool = False
+    run_tests: bool = False
     global_lock_cleanup: bool = True
     global_lock_dir: str | None = None
     generate_docs: bool = False
@@ -123,6 +125,8 @@ class ConsoleInterface(t.Protocol):
     def print(self, *args: t.Any, **kwargs: t.Any) -> None: ...
 
     def input(self, _: str = "") -> str: ...
+
+    async def aprint(self, *args: t.Any, **kwargs: t.Any) -> None: ...
 
 
 @t.runtime_checkable
@@ -180,7 +184,15 @@ class HookManager(t.Protocol):
 
     def set_config_path(self, path: str | t.Any) -> None: ...
 
-    def get_hook_summary(self, results: t.Any) -> t.Any: ...
+    def get_hook_summary(
+        self, results: t.Any, elapsed_time: float | None = None
+    ) -> t.Any: ...
+
+    def get_hook_count(self, suite_name: str) -> int: ...
+
+    # Progress callback attributes for PhaseCoordinator integration
+    _progress_callback: t.Callable[[int, int], None] | None
+    _progress_start_callback: t.Callable[[int, int], None] | None
 
 
 @t.runtime_checkable
@@ -460,13 +472,15 @@ class DocumentationValidatorProtocol(t.Protocol):
 class LoggerProtocol(t.Protocol):
     """Protocol for structured logging interface."""
 
-    def info(self, message: str, **kwargs: t.Any) -> None: ...
+    def info(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
-    def warning(self, message: str, **kwargs: t.Any) -> None: ...
+    def warning(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
-    def error(self, message: str, **kwargs: t.Any) -> None: ...
+    def error(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
-    def debug(self, message: str, **kwargs: t.Any) -> None: ...
+    def debug(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
+
+    def exception(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
 
 @t.runtime_checkable
@@ -1138,9 +1152,9 @@ class GitServiceProtocol(t.Protocol):
 
     def create_pull_request(self, title: str, body: str) -> bool: ...
 
-    def get_changed_files_since(self, since: str, project_root: Path) -> list[Path]: ...
+    def get_changed_files_since(self, since: str, project_root: Path) -> list[str]: ...
 
-    def get_staged_files(self, project_root: Path) -> list[Path]: ...
+    def get_staged_files(self) -> list[str]: ...
 
     def get_unstaged_files(self, project_root: Path) -> list[Path]: ...
 
@@ -1187,12 +1201,6 @@ class SafeFileModifierProtocol(ServiceProtocol, t.Protocol):
 class VersionAnalyzerProtocol(t.Protocol):
     """Protocol for version analysis service."""
 
-    def analyze_changes(self, commit_messages: list[str]) -> dict[str, t.Any]: ...
-
-    def recommend_next_version(self) -> str: ...
-
-    def get_version_bump_type(self, changes: dict[str, t.Any]) -> str: ...
-
     async def recommend_version_bump(
         self, since_version: str | None = None
     ) -> t.Any: ...  # Returns VersionBumpRecommendation
@@ -1216,16 +1224,6 @@ class HealthMetricsServiceProtocol(ServiceProtocol, t.Protocol):
 @t.runtime_checkable
 class ChangelogGeneratorProtocol(t.Protocol):
     """Protocol for changelog generation service."""
-
-    def generate_changelog_entries(self, changes: dict[str, t.Any]) -> list[str]: ...
-
-    def write_changelog(
-        self, entries: list[str], changelog_file: str | Path
-    ) -> bool: ...
-
-    def update_changelog_with_version(
-        self, changelog_file: str | Path, version: str
-    ) -> bool: ...
 
     def generate_changelog_from_commits(
         self, changelog_path: Path, version: str, since_version: str | None = None

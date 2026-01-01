@@ -82,7 +82,7 @@ def register_all_skills(
     enable_agent_skills: bool = True,
     enable_mcp_skills: bool = True,
     enable_hybrid_skills: bool = True,
-) -> dict[str, t.Any]:
+) -> dict[str, AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry]:
     """
     Register all skill types with the MCP server.
 
@@ -99,7 +99,9 @@ def register_all_skills(
     Returns:
         Dictionary with all registries and statistics
     """
-    registries = {}
+    registries: dict[
+        str, AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry
+    ] = {}
 
     # Register agent skills (Option 1)
     if enable_agent_skills:

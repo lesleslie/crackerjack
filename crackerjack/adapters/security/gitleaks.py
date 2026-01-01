@@ -103,7 +103,10 @@ class GitleaksAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = GitleaksSettings()
+            self.settings = GitleaksSettings(
+                timeout_seconds=120,
+                max_workers=4,
+            )
             logger.info("Using default GitleaksSettings")
         await super().init()
         logger.debug(

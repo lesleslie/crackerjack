@@ -158,7 +158,7 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
 def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
     """Parse cleanup options from kwargs string."""
     try:
-        extra_kwargs = json.loads(kwargs) if kwargs.strip() else {}
+        extra_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
         return extra_kwargs, None
     except json.JSONDecodeError as e:
         return {}, f"Invalid JSON in kwargs: {e}"
@@ -168,7 +168,7 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int
     """Clean temporary files older than cutoff_time."""
     from pathlib import Path
 
-    cleaned = []
+    cleaned: list[str] = []
     total_size = 0
     tmp_dir = Path(tempfile.gettempdir())
 
@@ -190,7 +190,7 @@ def _clean_progress_files(
     context: t.Any, cutoff_time: float, dry_run: bool
 ) -> tuple[list[str], int]:
     """Clean progress files older than cutoff_time."""
-    cleaned = []
+    cleaned: list[str] = []
     total_size = 0
 
     if not hasattr(context, "progress_dir") or not context.progress_dir.exists():
@@ -273,6 +273,8 @@ def _create_cleanup_response(
 def _register_config_tool(mcp_app: t.Any) -> None:
     @mcp_app.tool()
     async def config_crackerjack(args: str = "", kwargs: str = "{}") -> str:
+        from crackerjack.config import CrackerjackSettings
+
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -285,6 +287,9 @@ def _register_config_tool(mcp_app: t.Any) -> None:
         action = args_parts[0].lower()
 
         try:
+            from crackerjack.config import load_settings
+
+            config = load_settings(CrackerjackSettings)
             if action == "list":
                 result = config.model_dump()
             elif action == "get" and len(args_parts) > 1:

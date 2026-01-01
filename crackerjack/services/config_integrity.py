@@ -2,13 +2,15 @@ import tomllib
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.exceptions.config import ConfigIntegrityError
 from crackerjack.models.protocols import ConfigIntegrityServiceProtocol, ServiceProtocol
 
 
 class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
-    def __init__(self, project_path: Path) -> None:
-        self.console = console
+    def __init__(self, project_path: Path, console: Console | None = None) -> None:
+        self.console = console or Console()
         self.project_path = project_path
         self.cache_dir = Path.home() / ".cache" / "crackerjack"
         self.cache_dir.mkdir(parents=True, exist_ok=True)

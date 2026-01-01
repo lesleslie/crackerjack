@@ -216,29 +216,51 @@ def _dump_toml(config: dict[str, Any]) -> str:
         return toml.dumps(config)
 
     lines: list[str] = []
-
-    def emit_table(data: dict[str, Any], prefix: list[str]) -> None:
-        scalars: list[tuple[str, Any]] = []
-        tables: list[tuple[str, dict[str, Any]]] = []
-        for key, value in data.items():
-            if isinstance(value, dict):
-                tables.append((key, value))
-            else:
-                scalars.append((key, value))
-
-        if prefix:
-            lines.append(f"[{'.'.join(prefix)}]")
-
-        for key, value in scalars:
-            lines.append(f"{key} = {_format_toml_value(value)}")
-
-        for key, value in tables:
-            if lines and lines[-1] != "":
-                lines.append("")
-            emit_table(value, prefix + [key])
-
-    emit_table(config, [])
+    emit_table(config, [], lines)
     return "\n".join(lines) + "\n"
+
+
+def emit_table(data: dict[str, Any], prefix: list[str], lines: list[str]) -> None:
+    """Emit a TOML table to the lines list."""
+    scalars, tables = _separate_scalars_and_tables(data)
+
+    if prefix:
+        lines.append(f"[{'.'.join(prefix)}]")
+
+    _emit_scalar_values(scalars, lines)
+    _emit_nested_tables(tables, prefix, lines)
+
+
+def _separate_scalars_and_tables(
+    data: dict[str, Any],
+) -> tuple[list[tuple[str, Any]], list[tuple[str, dict[str, Any]]]]:
+    """Separate scalar values from nested tables."""
+    scalars: list[tuple[str, Any]] = []
+    tables: list[tuple[str, dict[str, Any]]] = []
+
+    for key, value in data.items():
+        if isinstance(value, dict):
+            tables.append((key, value))
+        else:
+            scalars.append((key, value))
+
+    return scalars, tables
+
+
+def _emit_scalar_values(scalars: list[tuple[str, Any]], lines: list[str]) -> None:
+    """Emit scalar key-value pairs."""
+    for key, value in scalars:
+        lines.append(f"{key} = {_format_toml_value(value)}")
+
+
+def _emit_nested_tables(
+    tables: list[tuple[str, dict[str, Any]]], prefix: list[str], lines: list[str]
+) -> None:
+    """Emit nested tables."""
+    for key, value in tables:
+        if lines and lines[-1] != "":
+            lines.append("")
+        emit_table(value, prefix + [key], lines)
 
 
 def _format_toml_value(value: Any) -> str:

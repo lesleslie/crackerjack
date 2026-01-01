@@ -33,7 +33,7 @@ class UnifiedConfigurationService:
             self.logger.info("Unified configuration loaded")
             return settings
         except Exception as e:
-            self.logger.exception("Configuration validation failed", error=str(e))
+            self.logger.exception(f"Configuration validation failed error={e}")
             raise ValidationError(
                 message="Invalid configuration",
                 details=str(e),
@@ -92,12 +92,12 @@ class UnifiedConfigurationService:
 
             if validation_errors:
                 for error in validation_errors:
-                    self.logger.error("Configuration validation error", error=error)
+                    self.logger.error(f"Configuration validation error error={error}")
                 return False
 
             self.logger.info("Configuration validation passed")
             return True
 
         except Exception as e:
-            self.logger.exception("Configuration validation failed", error=str(e))
+            self.logger.exception(f"Configuration validation failed error={e}")
             return False

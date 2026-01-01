@@ -3,6 +3,7 @@ import typing as t
 from dataclasses import dataclass
 
 import aiohttp
+from rich.console import Console
 
 from crackerjack.core.retry import retry_api_call
 
@@ -17,8 +18,8 @@ class VersionInfo:
 
 
 class VersionChecker:
-    def __init__(self) -> None:
-        self.console = console
+    def __init__(self, console: Console | None = None) -> None:
+        self.console = console or Console()
         self.tools_to_check = {
             "ruff": self._get_ruff_version,
             "pyright": self._get_pyright_version,

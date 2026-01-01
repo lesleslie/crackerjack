@@ -3,6 +3,7 @@ from __future__ import annotations
 import time
 import typing as t
 import uuid
+from contextlib import suppress
 from pathlib import Path
 
 from rich.console import Console
@@ -10,6 +11,7 @@ from rich.console import Console
 from crackerjack.models.task import SessionTracker
 
 if t.TYPE_CHECKING:
+    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
     from crackerjack.models.protocols import OptionsProtocol
 
 
@@ -183,13 +185,10 @@ class SessionCoordinator:
                 )
 
         for lock_path in list(self.lock_files):
-            try:
+            with suppress(OSError):
                 if lock_path.exists():
                     lock_path.unlink()
-            except OSError:
-                pass
-            finally:
-                self.lock_files.discard(lock_path)
+            self.lock_files.discard(lock_path)
 
     def register_cleanup(self, handler: t.Callable[[], None]) -> None:
         """Register cleanup handler to execute when session completes."""

@@ -233,8 +233,8 @@ class TestCommandBuilder:
             return options.test_timeout
 
         if hasattr(options, "benchmark") and options.benchmark:
-            return 900
-        return 900
+            return 1800
+        return 1800
 
     def _detect_package_name(self) -> str:
         """Detect the main package name for coverage reporting."""

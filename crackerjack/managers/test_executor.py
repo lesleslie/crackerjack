@@ -96,7 +96,7 @@ class TestExecutor:
                 cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
-                timeout=30,  # Collection should be fast
+                timeout=120,  # Increased timeout for large test suites (was 30s)
                 env=self._setup_test_environment(),
             )
 
@@ -272,16 +272,27 @@ class TestExecutor:
             return
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
+        # Match collection summary lines, but avoid matching test names
+        # Valid patterns:
+        # - "collected 3680 items" / "collected 3680 tests"
+        # - "3680 tests collected"
+        # - "4 workers [3680 items]"
+        # NOT: "test_collection_pattern_parametrized[=== 5000 tests collected ===-5000]"
         if "collected" in line and ("item" in line or "test" in line):
-            # Fixed regex: \d+ (one or more digits) and (?:item|test) (alternation without spaces)
-            match = re.search(r"(\d+)\s+(?:item|test)", line)
+            # More specific regex: require "collected" word before the number,
+            # or number followed by space and "item/test" at line start/end
+            # This avoids matching test names that happen to contain these words
+            match = re.search(r"(?:collected\s+)?(\d+)\s+(?:item|test)s?(?:\s+collected)?", line)
             if match:
-                progress.update(
-                    total_tests=int(match.group(1)),
-                    is_collecting=False,
-                    collection_status="Collection complete",
-                )
-                return True
+                # Additional validation: ensure we're not in a test function name
+                # Test names contain "::" or end with ">"
+                if "::" not in line and not line.strip().endswith(">"):
+                    progress.update(
+                        total_tests=int(match.group(1)),
+                        is_collecting=False,
+                        collection_status="Collection complete",
+                    )
+                    return True
         return False
 
     def _handle_session_events(self, line: str, progress: TestProgress) -> bool:

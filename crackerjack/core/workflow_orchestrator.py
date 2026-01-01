@@ -132,6 +132,46 @@ class WorkflowPipeline:
             return False
         return True
 
+    def _configure_session_cleanup(self, options: t.Any) -> None:
+        """Configure session cleanup handlers.
+
+        This is a placeholder for future session cleanup configuration.
+        Currently, session cleanup is handled by SessionCoordinator directly.
+        """
+        pass  # Session cleanup handled by SessionCoordinator
+
+    def _initialize_zuban_lsp(self, options: t.Any) -> None:
+        """Initialize Zuban LSP integration.
+
+        This is a placeholder for future LSP integration.
+        Currently, type checking is performed via pre-commit hooks.
+        """
+        pass  # LSP integration not yet implemented
+
+    def _configure_hook_manager_lsp(self, options: t.Any) -> None:
+        """Configure HookManager LSP integration.
+
+        This is a placeholder for future LSP-aware hook management.
+        Currently, hook execution uses standard LSPAwareHookExecutor.
+        """
+        pass  # LSP hook manager not yet implemented
+
+    def _register_lsp_cleanup_handler(self, options: t.Any) -> None:
+        """Register LSP cleanup handler.
+
+        This is a placeholder for future LSP resource cleanup.
+        Currently, cleanup is handled by standard Python context managers.
+        """
+        pass  # LSP cleanup not yet implemented
+
+    def _log_workflow_startup_info(self, options: t.Any) -> None:
+        """Log workflow startup information.
+
+        This is a placeholder for enhanced workflow logging.
+        Currently, basic logging is handled by Oneiric workflow bridge.
+        """
+        pass  # Enhanced logging not yet implemented
+
 
 def _workflow_result_success(result: dict[str, t.Any]) -> bool:
     results = result.get("results") if isinstance(result, dict) else None

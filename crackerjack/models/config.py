@@ -331,18 +331,24 @@ class WorkflowOptions:
         }
 
         for attr, value in self._DEFAULT_OVERRIDES.items():
-            if attr in {"commit", "create_pr"} and "git" in kwargs:
-                continue
-            if attr == "clean" and "cleaning" in kwargs:
-                continue
-            if attr == "test" and "testing" in kwargs:
-                continue
-            if attr in {"publish", "bump"} and "publishing" in kwargs:
-                continue
-            if attr in {"interactive", "dry_run"} and "execution" in kwargs:
+            if self._should_skip_override(attr, kwargs):
                 continue
             if attr not in kwargs:
                 setattr(self, attr, value)
+
+    def _should_skip_override(self, attr: str, kwargs: dict[str, Any]) -> bool:
+        """Check if an override attribute should be skipped."""
+        if attr in {"commit", "create_pr"} and "git" in kwargs:
+            return True
+        if attr == "clean" and "cleaning" in kwargs:
+            return True
+        if attr == "test" and "testing" in kwargs:
+            return True
+        if attr in {"publish", "bump"} and "publishing" in kwargs:
+            return True
+        if attr in {"interactive", "dry_run"} and "execution" in kwargs:
+            return True
+        return False
 
     def _set_kwargs_attributes(self, kwargs: dict[str, Any]) -> None:
         """Set attributes based on provided kwargs."""
@@ -591,7 +597,6 @@ class WorkflowOptions:
         self.hooks.skip_hooks = value
 
     @property
-    @property
     def experimental_hooks(self) -> bool:
         return self.hooks.experimental_hooks
 
@@ -666,18 +671,18 @@ class WorkflowOptions:
 
     def to_settings(self) -> CrackerjackSettings:
         return CrackerjackSettings(
-            cleaning=self.cleaning.__dict__,
-            hooks=self.hooks.__dict__,
-            testing=self.testing.__dict__,
-            publishing=self.publishing.__dict__,
-            git=self.git.__dict__,
-            ai=self.ai.__dict__,
-            execution=self.execution.__dict__,
-            progress={"enabled": self.progress.track_progress},
-            cleanup=self.cleanup.__dict__,
-            advanced=self.advanced.__dict__,
-            mcp_server=self.mcp_server.__dict__,
-            zuban_lsp=self.zuban_lsp.__dict__,
+            cleaning=CleaningSettings(**self.cleaning.__dict__),
+            hooks=HookSettings(**self.hooks.__dict__),
+            testing=TestSettings(**self.testing.__dict__),
+            publishing=PublishSettings(**self.publishing.__dict__),
+            git=GitSettings(**self.git.__dict__),
+            ai=AISettings(**self.ai.__dict__),
+            execution=ExecutionSettings(**self.execution.__dict__),
+            progress=ProgressSettings(**self.progress.__dict__),
+            cleanup=CleanupSettingsModel(**self.cleanup.__dict__),
+            advanced=AdvancedSettings(**self.advanced.__dict__),
+            mcp_server=MCPServerSettings(**self.mcp_server.__dict__),
+            zuban_lsp=ZubanLSPSettings(**self.zuban_lsp.__dict__),
         )
 
     @classmethod

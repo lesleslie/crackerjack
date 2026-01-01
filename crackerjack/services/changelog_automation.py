@@ -1,8 +1,11 @@
 """Automatic changelog generation and updates service."""
 
 import re
+import typing as t
 from datetime import datetime
 from pathlib import Path
+
+from rich.console import Console
 
 
 class ChangelogEntry:
@@ -29,8 +32,12 @@ class ChangelogEntry:
 class ChangelogGenerator:
     """Generate and update changelogs based on git commits."""
 
-    def __init__(self) -> None:
-        self.console = console
+    def __init__(
+        self,
+        console: Console | None = None,
+        git_service: t.Any = None,
+    ) -> None:
+        self.console = console or Console()
         self.git = git_service
 
         # Conventional commit type mappings to changelog sections

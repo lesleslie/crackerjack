@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -109,7 +110,10 @@ class BanditAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = BanditSettings()
+            self.settings = BanditSettings(
+                timeout_seconds=1200,
+                max_workers=4,
+            )
             logger.info("Using default BanditSettings")
         await super().init()
         logger.debug(

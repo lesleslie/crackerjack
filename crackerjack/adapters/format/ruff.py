@@ -112,7 +112,10 @@ class RuffAdapter(BaseToolAdapter):
     async def init(self) -> None:
         """Initialize adapter with default settings."""
         if not self.settings:
-            self.settings = RuffSettings()
+            self.settings = RuffSettings(
+                timeout_seconds=300,
+                max_workers=4,
+            )
         await super().init()
 
     @property

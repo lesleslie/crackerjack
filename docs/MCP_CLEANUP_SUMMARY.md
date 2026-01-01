@@ -3,7 +3,7 @@
 **Date**: 2025-12-29
 **Status**: ✅ **COMPLETE**
 
----
+______________________________________________________________________
 
 ## What Was Done
 
@@ -29,6 +29,7 @@
 ```
 
 **Projects with no MCP config** (as expected):
+
 - `jinja2-inflection` (no config)
 - `mailgun-mcp` (no config)
 - `unifi-mcp` (no config)
@@ -38,6 +39,7 @@
 **File**: `~/.claude/settings.json`
 
 **Change**: Commented out the MCP auto-start hook:
+
 ```json
 {
   "type": "command",
@@ -53,7 +55,7 @@
 **Servers**: 19 unique MCP servers
 **Status**: Active and ready to use
 
----
+______________________________________________________________________
 
 ## Current State
 
@@ -91,18 +93,20 @@
 ### Single Source of Truth
 
 **Before**:
+
 - ❌ 16 separate `.mcp.json` files
 - ❌ ~50 duplicate server definitions
 - ❌ Manual shell script management
 - ❌ No unified enable/disable
 
 **After**:
+
 - ✅ 1 global `~/.claude/.mcp.json`
 - ✅ 19 unique servers (no duplicates)
 - ✅ Claude Code native management
 - ✅ Built-in enable/disable UI
 
----
+______________________________________________________________________
 
 ## Next Steps
 
@@ -111,9 +115,9 @@
 **Required for changes to take effect**:
 
 1. Quit Claude Code (Cmd+Q)
-2. Relaunch Claude Code
-3. Open Settings → MCP Servers
-4. Verify all 19 servers appear
+1. Relaunch Claude Code
+1. Open Settings → MCP Servers
+1. Verify all 19 servers appear
 
 ### 2. Test Core Servers
 
@@ -174,7 +178,7 @@ cd /Users/les/Projects/crackerjack
 .venv/bin/uvicorn crackerjack.mcp.server_core:http_app --host 127.0.0.1 --port 8676
 ```
 
----
+______________________________________________________________________
 
 ## Rollback (If Needed)
 
@@ -202,7 +206,7 @@ cp ~/.claude/.mcp.json /Users/les/Projects/crackerjack/.mcp.json
 # ... etc for other projects
 ```
 
----
+______________________________________________________________________
 
 ## Benefits Achieved
 
@@ -214,7 +218,7 @@ cp ~/.claude/.mcp.json /Users/les/Projects/crackerjack/.mcp.json
 ✅ **Resource Control**: Disable unused servers
 ✅ **Faster Onboarding**: New projects inherit all servers
 
----
+______________________________________________________________________
 
 ## Documentation
 
@@ -223,28 +227,31 @@ cp ~/.claude/.mcp.json /Users/les/Projects/crackerjack/.mcp.json
 - **Quick Reference**: `~/.claude/MCP_QUICK_REFERENCE.md`
 - **Full Audit**: `/Users/les/Projects/crackerjack/docs/MCP_SERVER_AUDIT.md`
 
----
+______________________________________________________________________
 
 ## Support
 
 ### Issues?
 
 **Server not appearing**:
+
 1. Verify JSON syntax: `jq . ~/.claude/.mcp.json`
-2. Restart Claude Code
-3. Check Claude Code Settings → MCP Servers
+1. Restart Claude Code
+1. Check Claude Code Settings → MCP Servers
 
 **HTTP server not connecting**:
+
 1. Check if running: `lsof -i :8678` (or other port)
-2. Start manually (see "Verify HTTP Servers" above)
-3. Check logs: `tail -f /tmp/mcp-*.log`
+1. Start manually (see "Verify HTTP Servers" above)
+1. Check logs: `tail -f /tmp/mcp-*.log`
 
 **stdio server not starting**:
-1. Test package: `npx -y @upstash/context7-mcp@1.0.20 --version`
-2. Check network: `npm ping`
-3. Enable via Claude Code UI (auto-starts on enable)
 
----
+1. Test package: `npx -y @upstash/context7-mcp@1.0.20 --version`
+1. Check network: `npm ping`
+1. Enable via Claude Code UI (auto-starts on enable)
+
+______________________________________________________________________
 
 **Migration completed successfully!** 🎉
 

@@ -7,11 +7,11 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
 from ..services.security_logger import get_security_logger
+from .console import CrackerjackConsole
 from .timeout_manager import TimeoutStrategy, get_timeout_manager
 
 logger = logging.getLogger("crackerjack.service_watchdog")
@@ -69,8 +69,8 @@ class ServiceStatus:
 
 
 class ServiceWatchdog:
-    def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+    def __init__(self, console: CrackerjackConsole | None = None) -> None:
+        self.console = console or CrackerjackConsole()
         self.timeout_manager = get_timeout_manager()
         self.services: dict[str, ServiceStatus] = {}
         self.is_running = False
@@ -468,7 +468,7 @@ class ServiceWatchdog:
 _global_watchdog: ServiceWatchdog | None = None
 
 
-def get_service_watchdog(console: Console | None = None) -> ServiceWatchdog:
+def get_service_watchdog(console: CrackerjackConsole | None = None) -> ServiceWatchdog:
     global _global_watchdog
     if _global_watchdog is None:
         _global_watchdog = ServiceWatchdog(console)
@@ -505,7 +505,7 @@ def remove_service(service_id: str) -> None:
     watchdog.remove_service(service_id)
 
 
-def start_watchdog(console: Console | None = None) -> None:
+def start_watchdog(console: CrackerjackConsole | None = None) -> None:
     """Start the service watchdog."""
     watchdog = get_service_watchdog(console)
     try:

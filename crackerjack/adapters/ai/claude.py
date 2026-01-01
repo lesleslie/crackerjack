@@ -171,9 +171,9 @@ class ClaudeCodeFixer:
 
         Async initialization happens in init() method.
         """
-        self._client = None
+        self._client: t.Any | None = None
         self._settings = settings
-        self._client_lock = None
+        self._client_lock: asyncio.Lock | None = None
         self._initialized = False
 
     async def init(self) -> None:

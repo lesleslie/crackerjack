@@ -57,8 +57,8 @@ class GlobalLockConfig:
         """Build settings from backwards compatibility parameters."""
         # Get defaults from CrackerjackSettings
         default_settings = load_settings(CrackerjackSettings).global_lock
-        # Create a copy with overrides
-        settings_dict = {
+        # Create a copy with overrides - use Any for mixed types
+        settings_dict: dict[str, t.Any] = {
             "enabled": enabled if enabled is not None else default_settings.enabled,
             "timeout_seconds": (
                 timeout_seconds
@@ -96,7 +96,19 @@ class GlobalLockConfig:
                 else default_settings.enable_lock_monitoring
             ),
         }
-        return GlobalLockSettings(**settings_dict)
+        # Build GlobalLockSettings with proper types
+        return GlobalLockSettings(
+            enabled=bool(settings_dict["enabled"]),
+            timeout_seconds=float(settings_dict["timeout_seconds"]),
+            stale_lock_hours=float(settings_dict["stale_lock_hours"]),
+            lock_directory=Path(settings_dict["lock_directory"]),
+            session_heartbeat_interval=float(
+                settings_dict["session_heartbeat_interval"]
+            ),
+            max_retry_attempts=int(settings_dict["max_retry_attempts"]),
+            retry_delay_seconds=float(settings_dict["retry_delay_seconds"]),
+            enable_lock_monitoring=bool(settings_dict["enable_lock_monitoring"]),
+        )
 
     def __init__(
         self,

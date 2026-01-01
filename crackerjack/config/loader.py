@@ -6,7 +6,7 @@ with support for configuration layering and environment-specific overrides.
 Configuration Priority (highest to lowest):
     1. settings/local.yaml (local overrides, gitignored)
     2. settings/crackerjack.yaml (main configuration)
-    3. Default values from Settings class
+    3. Default values from BaseSettings class
 
 Example:
     >>> from crackerjack.config import CrackerjackSettings
@@ -67,7 +67,89 @@ def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
     return merged_data
 
 
-def load_settings[T: Settings](
+def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
+    """Load [tool.crackerjack] section from pyproject.toml.
+
+    Args:
+        settings_dir: Directory containing pyproject.toml (parent of settings/)
+
+    Returns:
+        Configuration data from pyproject.toml [tool.crackerjack] section
+
+    Example:
+        >>> data = _load_pyproject_toml(Path("."))
+        >>> data.get("adapter_timeouts")
+        {'skylos_timeout': 120, 'refurb_timeout': 120}
+    """
+    # pyproject.toml is in the parent directory of settings/
+    pyproject_path = settings_dir.parent / "pyproject.toml"
+
+    if not pyproject_path.exists():
+        logger.debug(f"pyproject.toml not found at {pyproject_path}")
+        return {}
+
+    try:
+        import tomllib
+
+        with pyproject_path.open("rb") as f:
+            data = tomllib.load(f)
+
+        # Extract [tool.crackerjack] section
+        crackerjack_config = data.get("tool", {}).get("crackerjack", {})
+
+        if crackerjack_config:
+            logger.debug("Loaded configuration from pyproject.toml")
+            # Extract timeout keys and structure them for AdapterTimeouts
+            adapter_timeouts_data: dict[str, t.Any] = {}
+
+            # Get only keys that end with _timeout
+            for key, value in list(crackerjack_config.items()):
+                if key.endswith("_timeout"):
+                    adapter_timeouts_data[key] = value
+                    # Remove from main config to avoid "extra fields" error
+                    del crackerjack_config[key]
+
+            # Add nested adapter_timeouts if any timeouts were found
+            if adapter_timeouts_data:
+                crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
+
+        return crackerjack_config
+
+    except ImportError:
+        # Fallback to tomli for Python < 3.11
+        try:
+            import tomli
+
+            with pyproject_path.open("rb") as f:
+                data = tomli.load(f)
+
+            crackerjack_config = data.get("tool", {}).get("crackerjack", {})
+
+            if crackerjack_config:
+                logger.debug("Loaded configuration from pyproject.toml (via tomli)")
+                adapter_timeouts_data: dict[str, t.Any] = {}
+
+                for key, value in list(crackerjack_config.items()):
+                    if key.endswith("_timeout"):
+                        adapter_timeouts_data[key] = value
+                        del crackerjack_config[key]
+
+                if adapter_timeouts_data:
+                    crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
+
+            return crackerjack_config
+
+        except ImportError:
+            logger.warning(
+                "Neither tomllib nor tomli available for pyproject.toml parsing"
+            )
+            return {}
+    except Exception as e:
+        logger.error(f"Failed to parse pyproject.toml: {e}")
+        return {}
+
+
+def load_settings[T: BaseSettings](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
@@ -77,7 +159,7 @@ def load_settings[T: Settings](
     with priority-based overriding. Unknown YAML fields are silently ignored.
 
     Args:
-        settings_class: The Settings class to instantiate
+        settings_class: The BaseSettings class to instantiate
         settings_dir: Directory containing YAML files (default: ./settings)
 
     Returns:
@@ -89,7 +171,7 @@ def load_settings[T: Settings](
         3. Default values from Settings class
 
     Example:
-        >>> class MySettings(Settings):
+        >>> class MySettings(BaseSettings):
         ...     debug: bool = False
         ...     max_workers: int = 4
         >>> settings = load_settings(MySettings)
@@ -107,6 +189,11 @@ def load_settings[T: Settings](
 
     # Load and merge data from all config files
     merged_data = _merge_config_data(config_files)
+
+    # Load configuration from pyproject.toml and merge
+    # Priority: pyproject.toml < YAML files (YAML overrides pyproject)
+    pyproject_data = _load_pyproject_toml(settings_dir)
+    merged_data.update(pyproject_data)
 
     # Filter to only fields defined in the Settings class
     # This prevents validation errors from unknown YAML keys
@@ -129,7 +216,7 @@ def load_settings[T: Settings](
     return settings_class(**relevant_data)
 
 
-async def load_settings_async[T: Settings](
+async def load_settings_async[T: BaseSettings](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
@@ -140,7 +227,7 @@ async def load_settings_async[T: Settings](
     other async setup operations.
 
     Args:
-        settings_class: The Settings class to instantiate
+        settings_class: The BaseSettings class to instantiate
         settings_dir: Directory containing YAML files (default: ./settings)
 
     Returns:
@@ -167,13 +254,18 @@ async def load_settings_async[T: Settings](
     # Load and merge YAML data from all files
     merged_data = await _load_yaml_data(config_files)
 
+    # Load configuration from pyproject.toml and merge
+    # Priority: pyproject.toml < YAML files (YAML overrides pyproject)
+    pyproject_data = _load_pyproject_toml(settings_dir)
+    merged_data.update(pyproject_data)
+
     # Process the loaded data
     relevant_data = _filter_relevant_data(merged_data, settings_class)
     _log_filtered_fields(merged_data, relevant_data)
     _log_load_info(settings_class, relevant_data)
 
-    # Async initialization (loads secrets, performs async setup)
-    return await settings_class.create_async(**relevant_data)
+    # Create settings instance
+    return settings_class(**relevant_data)
 
 
 async def _load_yaml_data(config_files: list[Path]) -> dict[str, t.Any]:
@@ -212,10 +304,10 @@ async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
         return None
 
 
-def _filter_relevant_data[T: Settings](
+def _filter_relevant_data[T: BaseSettings](
     merged_data: dict[str, t.Any], settings_class: type[T]
 ) -> dict[str, t.Any]:
-    """Filter the loaded data to only fields defined in the Settings class."""
+    """Filter the loaded data to only fields defined in the BaseSettings class."""
     return {k: v for k, v in merged_data.items() if k in settings_class.model_fields}
 
 
@@ -230,7 +322,7 @@ def _log_filtered_fields(
         )
 
 
-def _log_load_info[T: Settings](
+def _log_load_info[T: BaseSettings](
     settings_class: type[T], relevant_data: dict[str, t.Any]
 ) -> None:
     """Log information about the loaded configuration."""

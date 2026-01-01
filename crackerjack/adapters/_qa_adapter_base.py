@@ -152,7 +152,10 @@ class QAAdapterBase:
         - Validate configuration
         """
         if not self.settings:
-            self.settings = QABaseSettings()
+            self.settings = QABaseSettings(
+                timeout_seconds=300,
+                max_workers=4,
+            )
 
         # Create semaphore for concurrency control
         max_workers = self.settings.max_workers

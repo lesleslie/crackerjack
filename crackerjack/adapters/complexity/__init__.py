@@ -7,4 +7,4 @@ Adapters:
 # Adapters are registered via constructor injection in server initialization
 # No explicit imports needed here
 
-__all__ = []
+__all__: list[str] = []
