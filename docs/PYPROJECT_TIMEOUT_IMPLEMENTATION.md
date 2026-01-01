@@ -7,9 +7,11 @@ Successfully implemented centralized timeout configuration for QA adapters via `
 ## Implementation Summary
 
 ### Phase 1: Extended CrackerjackSettings ✅
+
 **File**: `crackerjack/config/settings.py`
 
 Added `AdapterTimeouts` class with 11 timeout fields:
+
 ```python
 class AdapterTimeouts(Settings):
     """Timeout settings for QA adapters (in seconds)."""
@@ -27,6 +29,7 @@ class AdapterTimeouts(Settings):
 ```
 
 Added `adapter_timeouts` field to `CrackerjackSettings`:
+
 ```python
 class CrackerjackSettings(Settings):
     # ... existing fields ...
@@ -34,9 +37,11 @@ class CrackerjackSettings(Settings):
 ```
 
 ### Phase 2: Extended Configuration Loader ✅
+
 **File**: `crackerjack/config/loader.py`
 
 Added `_load_pyproject_toml()` function that:
+
 - Reads `[tool.crackerjack]` section from `pyproject.toml`
 - Extracts timeout keys (e.g., `skylos_timeout`)
 - Structures them properly for `AdapterTimeouts` validation
@@ -46,21 +51,25 @@ Added `_load_pyproject_toml()` function that:
 Integrated into both `load_settings()` and `load_settings_async()` functions.
 
 **Configuration Priority** (highest to lowest):
+
 1. `settings/local.yaml` (local overrides, gitignored)
-2. `settings/crackerjack.yaml` (main configuration)
-3. `pyproject.toml [tool.crackerjack]` (project defaults)
-4. Class default values
+1. `settings/crackerjack.yaml` (main configuration)
+1. `pyproject.toml [tool.crackerjack]` (project defaults)
+1. Class default values
 
 ### Phase 3: Updated BaseToolAdapter ✅
+
 **File**: `crackerjack/adapters/_tool_adapter_base.py`
 
 Added `_get_timeout_from_settings()` method that:
+
 - Loads CrackerjackSettings from all sources (pyproject.toml → YAML → defaults)
 - Resolves adapter timeout based on `tool_name` property
 - Returns configured timeout or 300s default
 - Includes proper error handling and logging
 
 Added missing logger import:
+
 ```python
 import logging
 
@@ -68,14 +77,17 @@ logger = logging.getLogger(__name__)
 ```
 
 ### Phase 4: Updated Individual Adapters ✅
+
 **Files**: `crackerjack/adapters/refactor/skylos.py`, `crackerjack/adapters/refactor/refurb.py`
 
 Modified `init()` methods to:
+
 - Call `_get_timeout_from_settings()` to get configured timeout
 - Pass timeout to settings object constructor
 - Removed all hardcoded timeout values
 
 **Before**:
+
 ```python
 self.settings = SkylosSettings(
     timeout_seconds=300,  # Hardcoded
@@ -84,6 +96,7 @@ self.settings = SkylosSettings(
 ```
 
 **After**:
+
 ```python
 timeout_seconds = self._get_timeout_from_settings()
 self.settings = SkylosSettings(
@@ -93,9 +106,11 @@ self.settings = SkylosSettings(
 ```
 
 ### Phase 5: Verified Configuration Loading ✅
+
 **Test**: `/tmp/test_timeout_config.py`
 
 Confirmed all 10 adapter timeout values load correctly from `pyproject.toml`:
+
 - ✅ skylos: 120s
 - ✅ refurb: 120s
 - ✅ zuban: 120s
@@ -108,30 +123,36 @@ Confirmed all 10 adapter timeout values load correctly from `pyproject.toml`:
 - ✅ gitleaks: 60s
 
 ### Phase 6: Verified Adapter Timeout Usage ✅
+
 **Test**: `/tmp/test_adapter_timeouts.py`
 
 Confirmed adapters use configured timeouts at runtime:
+
 - ✅ Skylos adapter: Uses 120s from pyproject.toml
 - ✅ Refurb adapter: Uses 120s from pyproject.toml
 
 ## Key Architecture Decisions
 
 ### 1. Loader Location
+
 - Chose to add pyproject.toml loading to `loader.py` (not `__init__.py`)
 - Keeps all configuration loading logic in one place
 - Maintains separation of concerns
 
 ### 2. Timeout Resolution Strategy
+
 - Adapters call `_get_timeout_from_settings()` in their `init()` methods
 - Allows adapters to use specific settings types (SkylosSettings vs ToolAdapterSettings)
 - Base class provides fallback logic, but adapters drive the process
 
 ### 3. Error Handling
+
 - Graceful fallback to 300s default if settings can't be loaded
 - Debug logging for troubleshooting
 - No breaking changes if configuration is missing
 
 ### 4. Configuration Priority
+
 - YAML files override pyproject.toml (allows local overrides)
 - pyproject.toml provides project defaults
 - Class defaults are ultimate fallback
@@ -149,24 +170,27 @@ Confirmed adapters use configured timeouts at runtime:
 ## Files Modified
 
 1. `crackerjack/config/settings.py` - Added AdapterTimeouts class
-2. `crackerjack/config/loader.py` - Added pyproject.toml loading
-3. `crackerjack/adapters/_tool_adapter_base.py` - Added timeout resolution logic
-4. `crackerjack/adapters/refactor/skylos.py` - Removed hardcoded timeout
-5. `crackerjack/adapters/refactor/refurb.py` - Removed hardcoded timeout
+1. `crackerjack/config/loader.py` - Added pyproject.toml loading
+1. `crackerjack/adapters/_tool_adapter_base.py` - Added timeout resolution logic
+1. `crackerjack/adapters/refactor/skylos.py` - Removed hardcoded timeout
+1. `crackerjack/adapters/refactor/refurb.py` - Removed hardcoded timeout
 
 ## Testing
 
 ### Configuration Loading Test
+
 ```bash
 python /tmp/test_timeout_config.py
 ```
 
 ### Adapter Timeout Usage Test
+
 ```bash
 python /tmp/test_adapter_timeouts.py
 ```
 
 ### Regression Testing
+
 ```bash
 python -m crackerjack run -x  # Comprehensive hooks
 ```
@@ -174,20 +198,21 @@ python -m crackerjack run -x  # Comprehensive hooks
 ## Future Enhancements
 
 1. **Add more adapters**: Extend pattern to all 18 QA adapters
-2. **Configuration validation**: Add CLI command to validate timeout settings
-3. **Timeout recommendations**: Suggest timeouts based on project size
-4. **Dynamic timeout adjustment**: Adjust based on historical performance
+1. **Configuration validation**: Add CLI command to validate timeout settings
+1. **Timeout recommendations**: Suggest timeouts based on project size
+1. **Dynamic timeout adjustment**: Adjust based on historical performance
 
 ## Migration Guide
 
 For other adapters that need timeout configuration:
 
 1. Remove hardcoded `timeout_seconds` from adapter's Settings class
-2. Update `init()` method to call `_get_timeout_from_settings()`
-3. Add timeout field to `AdapterTimeouts` class in `settings.py`
-4. Add timeout value to `pyproject.toml [tool.crackerjack]` section
+1. Update `init()` method to call `_get_timeout_from_settings()`
+1. Add timeout field to `AdapterTimeouts` class in `settings.py`
+1. Add timeout value to `pyproject.toml [tool.crackerjack]` section
 
 Example:
+
 ```python
 # In adapter's init() method
 async def init(self) -> None:
@@ -211,7 +236,7 @@ async def init(self) -> None:
 ✅ **Implementation Complete**: All phases successfully implemented and tested
 ⏳ **Regression Testing**: Comprehensive hooks in progress
 
----
+______________________________________________________________________
 
 **Date**: 2025-12-31
 **Author**: Claude Code (Explanatory Mode)

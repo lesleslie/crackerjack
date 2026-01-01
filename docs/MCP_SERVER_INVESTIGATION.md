@@ -8,8 +8,8 @@
 Your MCP servers are configured in **TWO DIFFERENT LOCATIONS**, and only ONE is being used by Claude Code:
 
 1. **`~/.claude/.mcp.json`** (NOT USED by Claude Code) - Contains only 4 servers
-2. **`~/Library/Application Support/Claude/claude_desktop_config.json`** (USED) - Contains kapture server
-3. **Plugin MCP configs** - Loaded from enabled plugins in `~/.claude/plugins/cache/*/`
+1. **`~/Library/Application Support/Claude/claude_desktop_config.json`** (USED) - Contains kapture server
+1. **Plugin MCP configs** - Loaded from enabled plugins in `~/.claude/plugins/cache/*/`
 
 ## Current Situation
 
@@ -44,6 +44,7 @@ web-reader - ✓ Connected
 ### What's in Git HEAD (19 SERVERS - NOT COMMITTED)
 
 The git repository still has **all 19 servers** configured:
+
 - 11 stdio servers (context7, macos_automator, memory, peekaboo, gitlab, cloud-run, logfire, upstash, turso-cloud, playwright, penpot)
 - 8 HTTP servers (session-buddy, crackerjack, excalidraw, mermaid, mailgun, raindropio, unifi, sentry)
 
@@ -54,8 +55,8 @@ The git repository still has **all 19 servers** configured:
 ### Timeline
 
 1. **Dec 30, 2025 (commit 5d97d24)** - Documentation cleanup, ADDED .mcp.json with 19 servers
-2. **Jan 1, 2026 03:06 AM** - .mcp.json was MODIFIED (uncommitted), 15 servers removed
-3. **Current state** - Working directory has only 4 servers, git still has 19
+1. **Jan 1, 2026 03:06 AM** - .mcp.json was MODIFIED (uncommitted), 15 servers removed
+1. **Current state** - Working directory has only 4 servers, git still has 19
 
 ### Evidence
 
@@ -83,14 +84,17 @@ $ git -C ~/.claude diff HEAD -- .mcp.json
 Instead, it reads MCP servers from:
 
 1. **Plugin MCP configs** (PRIMARY SOURCE)
+
    - Each enabled plugin has its own `.mcp.json`
    - Location: `~/.claude/plugins/cache/<plugin-name>/<version>/.mcp.json`
 
-2. **Claude Desktop config** (SECONDARY SOURCE)
+1. **Claude Desktop config** (SECONDARY SOURCE)
+
    - Location: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Currently only has "kapture" server
 
-3. **Z.ai infrastructure** (INJECTED)
+1. **Z.ai infrastructure** (INJECTED)
+
    - web-search-prime
    - web-reader
    - zai-mcp-server
@@ -127,27 +131,28 @@ Instead, it reads MCP servers from:
 ### Servers Removed (but still in git HEAD)
 
 **Stdio Servers (npx/uvx):**
+
 1. ❌ context7 - NOW LOADED FROM PLUGIN
-2. ❌ macos_automator - MISSING
-3. ❌ memory - MISSING
-4. ❌ peekaboo - MISSING
-5. ❌ gitlab - MISSING (plugin exists but disabled)
-6. ❌ cloud-run - MISSING
-7. ❌ logfire - MISSING
-8. ❌ upstash - MISSING
-9. ❌ turso-cloud - MISSING
-10. ✅ playwright - NOW LOADED FROM PLUGIN
-11. ❌ penpot - MISSING
+1. ❌ macos_automator - MISSING
+1. ❌ memory - MISSING
+1. ❌ peekaboo - MISSING
+1. ❌ gitlab - MISSING (plugin exists but disabled)
+1. ❌ cloud-run - MISSING
+1. ❌ logfire - MISSING
+1. ❌ upstash - MISSING
+1. ❌ turso-cloud - MISSING
+1. ✅ playwright - NOW LOADED FROM PLUGIN
+1. ❌ penpot - MISSING
 
 **HTTP Servers:**
-12. ✅ session-buddy - IN ~/.claude/.mcp.json (but ignored)
-13. ✅ crackerjack - IN ~/.claude/.mcp.json (but ignored)
-14. ✅ excalidraw - IN ~/.claude/.mcp.json (but ignored)
-15. ✅ mermaid - IN ~/.claude/.mcp.json (but ignored)
-16. ❌ mailgun (localhost:3039) - MISSING
-17. ❌ raindropio (localhost:3034) - MISSING
-18. ❌ unifi (localhost:3038) - MISSING
-19. ⚠️ sentry (https://mcp.sentry.dev/mcp) - IN PLUGIN but needs auth
+12\. ✅ session-buddy - IN ~/.claude/.mcp.json (but ignored)
+13\. ✅ crackerjack - IN ~/.claude/.mcp.json (but ignored)
+14\. ✅ excalidraw - IN ~/.claude/.mcp.json (but ignored)
+15\. ✅ mermaid - IN ~/.claude/.mcp.json (but ignored)
+16\. ❌ mailgun (localhost:3039) - MISSING
+17\. ❌ raindropio (localhost:3034) - MISSING
+18\. ❌ unifi (localhost:3038) - MISSING
+19\. ⚠️ sentry (https://mcp.sentry.dev/mcp) - IN PLUGIN but needs auth
 
 ## Z.ai Integration
 
@@ -179,11 +184,12 @@ zai-mcp-server:
 ### Immediate Actions
 
 1. **Decide on MCP Server Management Strategy:**
+
    - **Option A:** Use Claude Code CLI (`claude mcp add/remove`) - RECOMMENDED
    - **Option B:** Keep plugin-based configuration
    - **Option C:** Manual configuration in claude_desktop_config.json
 
-2. **Restore Missing Servers (if needed):**
+1. **Restore Missing Servers (if needed):**
 
 ```bash
 # Option 1: Revert the uncommitted changes
@@ -199,6 +205,7 @@ claude mcp add --transport stdio peekaboo -- npx -y @steipete/peekaboo-mcp@2.0.3
 3. **Make Local HTTP Servers Visible:**
 
 The 4 local servers (session-buddy, crackerjack, excalidraw, mermaid) won't show up because:
+
 - They're in `~/.claude/.mcp.json` (IGNORED)
 - They're NOT in plugin configs
 - They're NOT in claude_desktop_config.json
@@ -242,31 +249,35 @@ EOF
 **Standardize on ONE configuration method:**
 
 1. **Delete/ignore `~/.claude/.mcp.json`** (it's not being used anyway)
-2. **Use `claude mcp add` CLI** for all server configuration
-3. **Enable/disable plugins** via Claude Code settings
-4. **Document the decision** in your CLAUDE.md
+1. **Use `claude mcp add` CLI** for all server configuration
+1. **Enable/disable plugins** via Claude Code settings
+1. **Document the decision** in your CLAUDE.md
 
 ### Understanding Z.ai's Role
 
 **Important:** Z.ai is a PROXY that:
+
 - Intercepts all Anthropic API calls (ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic)
 - Injects its own MCP servers (zai-mcp-server, web-search-prime, web-reader)
 - May modify MCP server discovery behavior
 
 **This could explain why:**- Your `~/.claude/.mcp.json` is ignored
+
 - Some servers show up that you didn't configure
 - Configuration is inconsistent
 
 ## Conclusion
 
 The missing servers are due to:
+
 1. **Uncommitted changes** to .mcp.json that removed 15 servers
-2. **Claude Code doesn't read** `~/.claude/.mcp.json` anyway
-3. **Z.ai proxy** may be interfering with normal MCP discovery
-4. **Multiple configuration locations** causing confusion
+1. **Claude Code doesn't read** `~/.claude/.mcp.json` anyway
+1. **Z.ai proxy** may be interfering with normal MCP discovery
+1. **Multiple configuration locations** causing confusion
 
 **Next Steps:**
+
 1. Decide which configuration method to use (CLI recommended)
-2. Add missing servers via `claude mcp add` commands
-3. Update documentation to reflect the chosen method
-4. Test that all servers show up in `claude mcp list`
+1. Add missing servers via `claude mcp add` commands
+1. Update documentation to reflect the chosen method
+1. Test that all servers show up in `claude mcp list`
