@@ -1,8 +1,8 @@
 {
   "lifecycle_state": {
     "server_status": "stopped",
-    "shutdown_time": "2026-01-01T06:05:35.814069"
+    "shutdown_time": "2026-01-02T03:46:57.168457"
   },
-  "orchestrator_pid": 92393,
+  "orchestrator_pid": 12099,
   "watchers_running": false
 }

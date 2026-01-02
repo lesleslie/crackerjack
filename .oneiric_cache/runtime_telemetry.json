@@ -4,12 +4,12 @@
     "entry_nodes": [
       "configuration"
     ],
-    "node_count": 4,
+    "node_count": 5,
     "nodes": [
       {
         "attempts": 1,
         "depends_on": [],
-        "duration_ms": 5.356790032237768,
+        "duration_ms": 4.7975280322134495,
         "node": "configuration",
         "retry_policy": null,
         "task": "configuration"
@@ -19,17 +19,27 @@
         "depends_on": [
           "configuration"
         ],
-        "duration_ms": 0.36010699113830924,
-        "node": "cleaning",
+        "duration_ms": 61976.56246100087,
+        "node": "fast_hooks",
         "retry_policy": null,
-        "task": "cleaning"
+        "task": "fast_hooks"
       },
       {
         "attempts": 1,
         "depends_on": [
-          "cleaning"
+          "fast_hooks"
         ],
-        "duration_ms": 0.2044900320470333,
+        "duration_ms": 406813.23983706534,
+        "node": "comprehensive_hooks",
+        "retry_policy": null,
+        "task": "comprehensive_hooks"
+      },
+      {
+        "attempts": 1,
+        "depends_on": [
+          "comprehensive_hooks"
+        ],
+        "duration_ms": 8.105870918370783,
         "node": "publishing",
         "retry_policy": null,
         "task": "publishing"
@@ -39,14 +49,14 @@
         "depends_on": [
           "publishing"
         ],
-        "duration_ms": 0.36571803502738476,
+        "duration_ms": 1.3492050347849727,
         "node": "commit",
         "retry_policy": null,
         "task": "commit"
       }
     ],
-    "recorded_at": "2026-01-02T00:19:28.089008+00:00",
-    "total_duration_ms": 6.2871050904504955,
+    "recorded_at": "2026-01-02T11:35:41.420334+00:00",
+    "total_duration_ms": 468804.0549020516,
     "workflow": "crackerjack"
   }
 }
