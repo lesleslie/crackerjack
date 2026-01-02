@@ -18,7 +18,7 @@ from ..options import Options
 
 if t.TYPE_CHECKING:
     from crackerjack.models.config import ConfigUpdateInfo
-    from crackerjack.services.quality.config_template import (
+    from crackerjack.services.config_template import (
         ConfigTemplateService,
     )
 
@@ -94,7 +94,7 @@ def handle_standard_mode(
 
 def handle_config_updates(options: Options) -> None:
     """Handle configuration update commands."""
-    from crackerjack.services.quality.config_template import ConfigTemplateService
+    from crackerjack.services.config_template import ConfigTemplateService
 
     pkg_path = Path.cwd()
     config_service = ConfigTemplateService(console, pkg_path)
