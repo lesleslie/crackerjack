@@ -185,20 +185,22 @@ class TestPublishManagerCore:
 
             mock_mask.assert_called()
 
-    def test_get_current_version_success(self, publish_manager) -> None:
+    def test_get_current_version_success(self, publish_manager, temp_pkg_path) -> None:
         pyproject_content = """
 [project]
 name = "test - package"
 version = "1.2.3"
 description = "Test package"
 """
-        with patch.object(
-            publish_manager.filesystem,
-            "read_file",
-            return_value=pyproject_content,
-        ):
-            version = publish_manager._get_current_version()
-            assert version == "1.2.3"
+        # Create the actual pyproject.toml file
+        pyproject_path = temp_pkg_path / "pyproject.toml"
+        pyproject_path.write_text(pyproject_content)
+
+        # Configure mock filesystem to return the file content
+        publish_manager.filesystem.read_file.return_value = pyproject_content
+
+        version = publish_manager._get_current_version()
+        assert version == "1.2.3"
 
     def test_get_current_version_missing_file(self, publish_manager) -> None:
         version = publish_manager._get_current_version()

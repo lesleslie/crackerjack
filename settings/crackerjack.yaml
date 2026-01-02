@@ -95,7 +95,7 @@ execution_mode: "legacy"  # Hook execution mode: 'legacy' (pre-commit subprocess
 
 # Cache settings
 enable_caching: true
-cache_backend: "memory"  # 'memory' or 'tool_proxy'
+cache_backend: "tool_proxy"  # 'memory' or 'tool_proxy' - enabled disk caching
 cache_ttl: 3600  # seconds
 cache_max_entries: 100  # memory cache only
 
