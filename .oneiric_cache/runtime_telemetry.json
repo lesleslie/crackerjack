@@ -4,12 +4,12 @@
     "entry_nodes": [
       "configuration"
     ],
-    "node_count": 3,
+    "node_count": 4,
     "nodes": [
       {
         "attempts": 1,
         "depends_on": [],
-        "duration_ms": 3.352880012243986,
+        "duration_ms": 5.356790032237768,
         "node": "configuration",
         "retry_policy": null,
         "task": "configuration"
@@ -19,7 +19,17 @@
         "depends_on": [
           "configuration"
         ],
-        "duration_ms": 0.3623110242187977,
+        "duration_ms": 0.36010699113830924,
+        "node": "cleaning",
+        "retry_policy": null,
+        "task": "cleaning"
+      },
+      {
+        "attempts": 1,
+        "depends_on": [
+          "cleaning"
+        ],
+        "duration_ms": 0.2044900320470333,
         "node": "publishing",
         "retry_policy": null,
         "task": "publishing"
@@ -29,14 +39,14 @@
         "depends_on": [
           "publishing"
         ],
-        "duration_ms": 0.1573340268805623,
+        "duration_ms": 0.36571803502738476,
         "node": "commit",
         "retry_policy": null,
         "task": "commit"
       }
     ],
-    "recorded_at": "2026-01-01T10:57:03.297139+00:00",
-    "total_duration_ms": 3.872525063343346,
+    "recorded_at": "2026-01-02T00:19:28.089008+00:00",
+    "total_duration_ms": 6.2871050904504955,
     "workflow": "crackerjack"
   }
 }

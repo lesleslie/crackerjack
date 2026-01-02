@@ -1,10 +1,8 @@
 {
   "lifecycle_state": {
-    "http_mode": false,
-    "http_port": null,
-    "server_status": "running",
-    "start_time": "2026-01-01T04:43:01.675006"
+    "server_status": "stopped",
+    "shutdown_time": "2026-01-01T06:05:35.814069"
   },
-  "orchestrator_pid": 80079,
-  "watchers_running": true
+  "orchestrator_pid": 92393,
+  "watchers_running": false
 }

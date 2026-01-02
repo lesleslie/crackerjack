@@ -50,10 +50,21 @@ def extract_markdown_links(content: str) -> list[tuple[str, int]]:
     # Exclude links wrapped in angle brackets (markdown syntax examples)
     pattern = r"\[([^\]]+)\]\(([^\s)<>]+)(?:\s+[\"'][^\"']*[\"'])?\)"
 
+    in_code_block = False  # Track fenced code blocks (```)
+
     for line_num, line in enumerate(content.split("\n"), start=1):
-        # Skip lines that are code blocks or inline code examples
-        # Look for backticks before/after link patterns
-        if "``" in line or "`[" in line:
+        # Track fenced code blocks (```language or ```)
+        if line.strip().startswith("```"):
+            in_code_block = not in_code_block
+            continue
+
+        # Skip if we're inside any code block
+        if in_code_block:
+            continue
+
+        # Skip lines with inline code markers that might contain false positives
+        # Check for both `...]` (backtick after bracket) and `[`...` (backtick before bracket)
+        if "`]" in line or "`[" in line or "``" in line:
             continue
 
         for match in re.finditer(pattern, line):

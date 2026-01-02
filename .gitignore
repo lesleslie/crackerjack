@@ -99,6 +99,9 @@ settings/local.yaml
 /.uv-cache/
 /.complexipy_cache/
 
+# Pyscn static analysis reports
+.pyscn/
+
 # Documentation archives (skip in formatters/docs processing)
 /docs/archive/
 docs/archive/
@@ -106,3 +109,7 @@ docs/archive/
 # Git worktrees (Crystal)
 /worktrees/
 /worktree-*/
+/.oneiric_cache/
+/.jbeval/
+/.conductor/
+/.ai/
