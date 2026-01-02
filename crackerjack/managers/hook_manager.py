@@ -601,6 +601,28 @@ class HookManagerImpl:
         strategy = self.config_loader.load_strategy(suite_name)
         return len(strategy.hooks)
 
+    def install_hooks(self) -> bool:
+        """Install git hooks.
+
+        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
+        pre-commit hook installation. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
+        )
+        return True
+
+    def update_hooks(self) -> bool:
+        """Update hooks to latest versions.
+
+        Phase 8.5: This method is deprecated. Direct tool invocation uses UV for
+        dependency management. Returns True with informational message.
+        """
+        self.console.print(
+            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
+        )
+        return True
+
     @staticmethod
     def get_hook_summary(
         results: list[HookResult], elapsed_time: float | None = None

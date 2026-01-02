@@ -20,7 +20,7 @@ class TestExecutor:
     def execute_with_progress(
         self,
         cmd: list[str],
-        timeout: int = 600,
+        timeout: int = 1800,  # Match pytest-timeout default (30 min)
     ) -> subprocess.CompletedProcess[str]:
         # Pre-collect tests to set the total count upfront if possible
         total_tests = self._pre_collect_tests(cmd)
@@ -40,7 +40,7 @@ class TestExecutor:
         self,
         cmd: list[str],
         progress_callback: t.Callable[[dict[str, t.Any]], None],
-        timeout: int = 600,
+        timeout: int = 1800,  # Match pytest-timeout default (30 min)
     ) -> subprocess.CompletedProcess[str]:
         # Pre-collect tests to set the total count upfront if possible
         total_tests = self._pre_collect_tests(cmd)
@@ -390,7 +390,7 @@ class TestExecutor:
         env: dict[str, str],
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
-        timeout: int,
+        timeout: int = 1800,  # Match pytest-timeout default (30 min)
     ) -> subprocess.CompletedProcess[str]:
         process = subprocess.Popen(
             cmd,

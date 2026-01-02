@@ -67,6 +67,30 @@ def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
     return merged_data
 
 
+def _extract_adapter_timeouts(crackerjack_config: dict[str, t.Any]) -> None:
+    """Extract and restructure timeout keys for AdapterTimeouts model.
+
+    Modifies crackerjack_config in-place:
+    - Removes all keys ending with _timeout
+    - Adds nested adapter_timeouts dict with those keys
+
+    Args:
+        crackerjack_config: Configuration dictionary to process
+    """
+    adapter_timeouts_data: dict[str, t.Any] = {}
+
+    # Get only keys that end with _timeout
+    for key, value in list(crackerjack_config.items()):
+        if key.endswith("_timeout"):
+            adapter_timeouts_data[key] = value
+            # Remove from main config to avoid "extra fields" error
+            del crackerjack_config[key]
+
+    # Add nested adapter_timeouts if any timeouts were found
+    if adapter_timeouts_data:
+        crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
+
+
 def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
     """Load [tool.crackerjack] section from pyproject.toml.
 
@@ -99,19 +123,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
 
         if crackerjack_config:
             logger.debug("Loaded configuration from pyproject.toml")
-            # Extract timeout keys and structure them for AdapterTimeouts
-            adapter_timeouts_data: dict[str, t.Any] = {}
-
-            # Get only keys that end with _timeout
-            for key, value in list(crackerjack_config.items()):
-                if key.endswith("_timeout"):
-                    adapter_timeouts_data[key] = value
-                    # Remove from main config to avoid "extra fields" error
-                    del crackerjack_config[key]
-
-            # Add nested adapter_timeouts if any timeouts were found
-            if adapter_timeouts_data:
-                crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
+            _extract_adapter_timeouts(crackerjack_config)
 
         return crackerjack_config
 
@@ -127,15 +139,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
 
             if crackerjack_config:
                 logger.debug("Loaded configuration from pyproject.toml (via tomli)")
-                adapter_timeouts_data: dict[str, t.Any] = {}
-
-                for key, value in list(crackerjack_config.items()):
-                    if key.endswith("_timeout"):
-                        adapter_timeouts_data[key] = value
-                        del crackerjack_config[key]
-
-                if adapter_timeouts_data:
-                    crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
+                _extract_adapter_timeouts(crackerjack_config)
 
             return crackerjack_config
 
