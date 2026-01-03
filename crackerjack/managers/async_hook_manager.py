@@ -38,7 +38,8 @@ class AsyncHookManager:
     async def run_fast_hooks_async(self) -> list[HookResult]:
         strategy = self.config_loader.load_strategy("fast")
 
-        strategy.parallel = False
+        strategy.parallel = True
+        strategy.max_workers = 3
 
         if self._config_path:
             for hook in strategy.hooks:

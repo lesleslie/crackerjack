@@ -80,7 +80,6 @@ dependencies = [
     "pyscn==1.5.0",
     "pip-audit>=2.10.0",
     "bandit>=1.9.2",
-    "bevy>=3.1.0b12",
 ]
 
 [dependency-groups]
@@ -90,9 +89,7 @@ dev = [
     "excalidraw-mcp>=0.34.0",
     "zensical>=0.0.15",
 ]
-session = [
-    "session-buddy>=0.10.5",
-]
+session = []
 
 [project.license]
 text = "BSD-3-CLAUSE"
@@ -350,7 +347,6 @@ exclude-deps = [
     "structlog",
     "mdformat",
     "mdformat-ruff",
-    "bevy",
 ]
 
 [tool.refurb]
