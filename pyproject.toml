@@ -386,7 +386,7 @@ exclude_patterns = [
     "**/tests/**",
     "**/test_*.py",
 ]
-max_complexity = 25
+max_complexity = 15
 
 [tool.mdformat]
 skip = [
