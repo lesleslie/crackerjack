@@ -276,7 +276,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=720,  # Increased from 180 to 600, now 720s (12 min) for comprehensive dead code scanning on larger codebases
+        timeout=600,  # Comprehensive dead code scanning (10 minutes) - reduced scope to package directory only
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
