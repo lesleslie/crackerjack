@@ -3,8 +3,9 @@
 ## Executive Summary
 
 Investigation of two issues:
+
 1. **Skylos timeout not being respected** when configured in pyproject.toml
-2. **Oneiric's comprehensive_hooks configuration** referencing non-existent hooks
+1. **Oneiric's comprehensive_hooks configuration** referencing non-existent hooks
 
 ## Root Cause Analysis
 
@@ -15,16 +16,19 @@ Investigation of two issues:
 **Root Cause**: **Two separate timeout systems that don't communicate**
 
 1. **Hook System** (pre-commit hooks):
+
    - Uses hardcoded `HookDefinition` objects in `crackerjack/config/hooks.py`
    - Skylos hook definition: `timeout=600` (line 278)
    - Executed via `hook_executor.py:383` → uses `hook.timeout` (hardcoded value)
 
-2. **Adapter System** (QA tool wrappers):
+1. **Adapter System** (QA tool wrappers):
+
    - Reads `adapter_timeouts` from settings (`_tool_adapter_base.py:240-245`)
    - Checks `settings.adapter_timeouts.{name}_timeout`
    - Returns 300s default if not configured
 
 **The Disconnect**:
+
 ```python
 # In hooks.py - HookDefinition (hardcoded)
 HookDefinition(
@@ -43,12 +47,14 @@ def get_timeout(self) -> int:
 ```
 
 **Why the timeout setting exists but doesn't work**:
+
 - `adapter_timeouts` configuration IS loaded correctly from pyproject.toml
 - But hook execution path never checks it!
 - Hooks use `HookDefinition.timeout` field (hardcoded in hooks.py)
 - Adapters use `adapter_timeouts.{name}_timeout` (from pyproject.toml)
 
 **Configuration Flow**:
+
 ```
 pyproject.toml: skylos_timeout = 720
          ↓ (loader.py extracts _timeout keys)
@@ -64,6 +70,7 @@ Hook execution uses 600s  ✗ WRONG - should be 720s
 **Problem**: Oneiric's pyproject.toml configures hooks that don't exist in crackerjack's hook registry.
 
 **Oneiric's configuration** (`../oneiric/pyproject.toml:290-300`):
+
 ```toml
 [tool.crackerjack]
 comprehensive_hooks = [
@@ -80,6 +87,7 @@ comprehensive_hooks = [
 ```
 
 **Actual comprehensive hooks in crackerjack** (`crackerjack/config/hooks.py:220-329`):
+
 ```python
 COMPREHENSIVE_HOOKS = [
     "zuban",           # Type checking
@@ -97,6 +105,7 @@ COMPREHENSIVE_HOOKS = [
 ```
 
 **Why `comprehensive_hooks` configuration doesn't work**:
+
 - `HookConfigLoader.load_strategy()` only supports "fast" or "comprehensive"
 - Always returns hardcoded `FAST_STRATEGY` or `COMPREHENSIVE_STRATEGY`
 - No mechanism to override hook lists from pyproject.toml!
@@ -178,15 +187,16 @@ verbose = false
 ### What is NOT configurable:
 
 1. **Hook lists** - Cannot customize which hooks run in fast/comprehensive strategies
-2. **Hook timeouts** - `adapter_timeouts` only apply to direct adapter execution, not hooks
-3. **Hook stages** - Cannot move hooks between fast/comprehensive stages
-4. **Retry policies** - Hardcoded in hook strategies
+1. **Hook timeouts** - `adapter_timeouts` only apply to direct adapter execution, not hooks
+1. **Hook stages** - Cannot move hooks between fast/comprehensive stages
+1. **Retry policies** - Hardcoded in hook strategies
 
 ## Recommended Fixes
 
 ### Fix 1: Make Hook Timeouts Respected
 
 **Option A**: Update hook definitions from settings (recommended)
+
 ```python
 # In hooks.py - after loading from pyproject.toml
 def _update_hook_timeouts(settings: CrackerjackSettings):
@@ -198,6 +208,7 @@ def _update_hook_timeouts(settings: CrackerjackSettings):
 ```
 
 **Option B**: Make hooks check adapter_timeouts at runtime
+
 ```python
 # In HookDefinition.get_timeout()
 def get_timeout(self) -> int:
@@ -214,6 +225,7 @@ def get_timeout(self) -> int:
 ### Fix 2: Document Actual Hook Configuration
 
 **Remove non-existent hooks from oneiric's config**:
+
 ```toml
 [tool.crackerjack]
 # This field is NOT currently supported - hooks are hardcoded
@@ -227,6 +239,7 @@ refurb_timeout = 120
 ### Fix 3: Add Hook Customization Support (Future Enhancement)
 
 If hook customization is needed, implement:
+
 ```python
 # In settings.py
 class HookSettings(Settings):
@@ -245,16 +258,19 @@ def load_strategy(name: str, custom_hooks: list[str] | None = None):
 ## Summary
 
 **Current State**:
+
 - ✅ `adapter_timeouts` configuration IS loaded from pyproject.toml
 - ❌ Hook system DOESN'T use these timeouts (uses hardcoded values)
 - ❌ `comprehensive_hooks` configuration is NOT supported
 - ✅ Only adapter timeouts work for DIRECT adapter execution
 
 **What Works**:
+
 - Configuring timeouts for direct adapter execution (not via hooks)
 - All fields in `CrackerjackSettings` (console, testing, MCP server, etc.)
 
 **What Doesn't Work**:
+
 - Overriding hook timeouts via pyproject.toml
 - Customizing which hooks run in fast/comprehensive strategies
 - Adding new hooks via configuration

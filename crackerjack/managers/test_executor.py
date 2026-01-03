@@ -145,8 +145,9 @@ class TestExecutor:
 
             self._cleanup_threads([stdout_thread, stderr_thread, monitor_thread])
 
-            stdout_str = process.stdout.read() if process.stdout else ""
-            stderr_str = process.stderr.read() if process.stderr else ""
+            # Get output from buffers (threads have already consumed the streams)
+            stdout_str = progress.get_stdout()
+            stderr_str = progress.get_stderr()
             return subprocess.CompletedProcess(
                 cmd, process.returncode, stdout_str, stderr_str
             )
@@ -214,6 +215,8 @@ class TestExecutor:
         def read_output() -> None:
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
+                    # Always buffer output for later retrieval
+                    progress.append_stdout(line)
                     if line.strip():
                         self._process_test_output_line(line.strip(), progress)
                         self._update_display_if_needed(progress, live)
@@ -228,6 +231,8 @@ class TestExecutor:
         def read_stderr() -> None:
             if process.stderr:
                 for line in iter(process.stderr.readline, ""):
+                    # Always buffer output for later retrieval
+                    progress.append_stderr(line)
                     if line.strip() and "warning" not in line.lower():
                         progress.update(current_test=f"⚠️ {line.strip()}")
                         self._update_display_if_needed(progress, live)

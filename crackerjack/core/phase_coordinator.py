@@ -474,8 +474,9 @@ class PhaseCoordinator:
         self.console.print(
             f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
         )
-        self.logger.exception(
-            "Hook execution raised exception",
+        self.logger.error(
+            "Hook execution raised exception: %s",
+            exc,
             extra={"suite": suite_name, "attempt": attempt},
         )
 

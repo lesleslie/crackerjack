@@ -66,7 +66,7 @@ class WorkflowPipeline:
                 "crackerjack", context={"pkg_path": str(self.pkg_path)}
             )
         except Exception as exc:
-            self.logger.exception("workflow-failed", extra={"error": str(exc)})
+            self.logger.error("Workflow failed: %s", exc, extra={"error": str(exc)})
             self.session.finalize_session(self.session.start_time, success=False)
             return False
 
