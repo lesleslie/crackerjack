@@ -113,7 +113,7 @@ class AdapterTimeouts(Settings):
     """Timeout settings for QA adapters (in seconds)."""
 
     zuban_lsp_timeout: float = 120.0  # Zuban LSP server
-    skylos_timeout: int = 120  # Dead code detection
+    skylos_timeout: int = 720  # Dead code detection (default: 12 minutes)
     refurb_timeout: int = 120  # Modern Python suggestions
     zuban_timeout: int = 120  # Type checking
     bandit_timeout: int = 300  # Security linting

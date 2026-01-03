@@ -363,8 +363,8 @@ class TestProtocolMethodSignatures:
                     self.interactive = False
                     self.no_config_updates = False
                     self.verbose = False
-                    self.clean = False
-                    self.test = False
+                    self.strip_code = False
+                    self.run_tests = False
                     self.benchmark = False
                     self.benchmark_regression = False
                     self.benchmark_regression_threshold = 0.1
@@ -373,7 +373,7 @@ class TestProtocolMethodSignatures:
                     self.publish = None
                     self.bump = None
                     self.all = None
-                    self.ai_agent = False
+                    self.ai_fix = False
                     self.start_mcp_server = False
                     self.create_pr = False
                     self.skip_hooks = False

@@ -11,7 +11,7 @@ from crackerjack.models.task import Task, TaskStatus
 class TestCleaningConfig:
     def test_default_values(self) -> None:
         config = CleaningConfig()
-        assert config.clean is True
+        assert config.strip_code is True
         assert config.update_docs is False
         assert config.force_update_docs is False
         assert config.compress_docs is False
@@ -25,7 +25,7 @@ class TestCleaningConfig:
             compress_docs=True,
             auto_compress_docs=True,
         )
-        assert config.clean is False
+        assert config.strip_code is False
         assert config.update_docs is True
         assert config.force_update_docs is True
         assert config.compress_docs is True
@@ -33,7 +33,7 @@ class TestCleaningConfig:
 
     def test_partial_custom_values(self) -> None:
         config = CleaningConfig(update_docs=True, compress_docs=True)
-        assert config.clean is True
+        assert config.strip_code is True
         assert config.update_docs is True
         assert config.force_update_docs is False
         assert config.compress_docs is True

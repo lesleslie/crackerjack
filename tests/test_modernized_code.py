@@ -325,8 +325,8 @@ class TestWorkflowOptions:
     def test_default_values(self) -> None:
         options = WorkflowOptions()
 
-        assert options.clean is False
-        assert options.test is False
+        assert options.strip_code is None
+        assert options.run_tests is False
         assert options.publish is None
         assert options.bump is None
         assert options.commit is False
@@ -336,8 +336,8 @@ class TestWorkflowOptions:
 
     def test_from_args_with_attributes(self) -> None:
         class MockArgs:
-            clean = True
-            test = True
+            strip_code = True
+            run_tests = True
             publish = "pypi"
             bump = "patch"
             commit = True
@@ -348,8 +348,8 @@ class TestWorkflowOptions:
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.clean is True
-        assert options.test is True
+        assert options.strip_code is True
+        assert options.run_tests is True
         assert options.publish == "pypi"
         assert options.bump == "patch"
         assert options.commit is True
@@ -359,14 +359,14 @@ class TestWorkflowOptions:
 
     def test_from_args_missing_attributes(self) -> None:
         class MockArgs:
-            clean = True
+            strip_code = True
 
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.clean is True
+        assert options.strip_code is True
 
-        assert options.test is False
+        assert options.run_tests is False
         assert options.publish is None
 
 
@@ -395,8 +395,8 @@ class TestInteractiveCLI:
 
     def test_create_dynamic_workflow_full(self, cli) -> None:
         options = WorkflowOptions(
-            clean=True,
-            test=True,
+            strip_code=True,
+            run_tests=True,
             publish="pypi",
             bump="patch",
             commit=True,

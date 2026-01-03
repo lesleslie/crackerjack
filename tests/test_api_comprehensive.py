@@ -293,12 +293,12 @@ class TestCrackerjackAPI:
         # Test with clean option
         options = api.create_workflow_options(clean=True)
         assert options.cleaning is not None
-        assert options.cleaning.clean is True
+        assert options.cleaning.strip_code is True
 
         # Test with test option
-        options = api.create_workflow_options(test=True)
+        options = api.create_workflow_options(run_tests=True)
         assert options.testing is not None
-        assert options.testing.test is True
+        assert options.testing.run_tests is True
 
         # Test with publish option
         options = api.create_workflow_options(publish="pypi")

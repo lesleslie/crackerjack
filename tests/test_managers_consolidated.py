@@ -76,7 +76,7 @@ addopts = "-v"
 
 class MockOptions:
     def __init__(self, **kwargs) -> None:
-        self.test = False
+        self.run_tests = False
         self.benchmark = False
         self.test_workers = 0
         self.test_timeout = 0
@@ -90,7 +90,7 @@ class MockOptions:
         self.verbose = False
         self.dry_run = False
 
-        self.ai_agent = False
+        self.ai_fix = False
 
         for key, value in kwargs.items():
             setattr(self, key, value)

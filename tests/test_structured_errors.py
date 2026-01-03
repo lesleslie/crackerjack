@@ -22,7 +22,7 @@ from crackerjack.errors import (
 class OptionsProtocol(t.Protocol):
     publish: bool
     verbose: bool
-    ai_agent: bool
+    ai_fix: bool
     commit: bool
     interactive: bool
     doc: bool
@@ -118,7 +118,7 @@ class TestErrorHandlingIntegration:
             mock_options = MagicMock()
             mock_options.publish = True
             mock_options.verbose = True
-            mock_options.ai_agent = False
+            mock_options.ai_fix = False
             mock_options.async_mode = False
             mock_options.all = None
             mock_options.start_mcp_server = False
@@ -158,7 +158,7 @@ class TestErrorHandlingIntegration:
         output_io = io.StringIO()
         console = Console(file=output_io, width=70)
         with patch("sys.exit"):
-            handle_error(error, console, verbose=True, ai_agent=True)
+            handle_error(error, console, verbose=True, ai_fix=True)
         output = output_io.getvalue()
         assert "status" in output
         assert "error_code" in output
