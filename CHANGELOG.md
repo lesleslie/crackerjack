@@ -1,5 +1,11 @@
 ______________________________________________________________________
 
+## [0.47.5] - 2026-01-03
+
+### Changed
+
+- Update config, core, deps
+
 ## [Unreleased] - 0.47.0
 
 ### 🚀 Major Release: Oneiric Migration Complete
