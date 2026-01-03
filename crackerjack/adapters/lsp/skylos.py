@@ -73,10 +73,18 @@ class SkylosAdapter(BaseRustToolAdapter):
         if self.context.interactive:
             args.extend(["--web", "--port", str(self.web_dashboard_port)])
 
-        # Add target files or determine the appropriate target directory
+        # Filter target files to only include package directory files
+        # This prevents scanning tests, docs, scripts, etc.
         if target_files:
-            args.extend(str(f) for f in target_files)
+            package_files = self._filter_package_files(target_files)
+            if package_files:
+                args.extend(str(f) for f in package_files)
+            else:
+                # No package files in target, scan package directory instead
+                package_target = self._determine_package_target()
+                args.append(package_target)
         else:
+            # No target files specified, scan package directory
             package_target = self._determine_package_target()
             args.append(package_target)
 
@@ -125,6 +133,64 @@ class SkylosAdapter(BaseRustToolAdapter):
                 if item.name not in excluded:
                     return item.name
         return None
+
+    def _filter_package_files(self, target_files: list[Path]) -> list[Path]:
+        """Filter files to only include those in the package directory.
+
+        Excludes files from: tests, docs, scripts, examples, .venv, etc.
+        Only includes files from the main package directory.
+        """
+        from pathlib import Path
+
+        # Get package name to determine valid files
+        cwd = Path.cwd()
+        package_name = self._get_package_name_from_pyproject(cwd)
+        if not package_name:
+            package_name = self._find_package_directory_with_init(cwd)
+        if not package_name:
+            package_name = "crackerjack"  # Default fallback
+
+        # Directories to exclude from scanning
+        excluded_dirs = {
+            "tests",
+            "test",
+            "docs",
+            "doc",
+            "scripts",
+            "script",
+            "examples",
+            "example",
+            ".venv",
+            "venv",
+            "build",
+            "dist",
+            ".git",
+            "__pycache__",
+            ".pytest_cache",
+            ".mypy_cache",
+            ".ruff_cache",
+            "archive",
+            ".archive",
+        }
+
+        package_files = []
+        for file_path in target_files:
+            # Convert to absolute path for comparison
+            abs_path = file_path.resolve() if not file_path.is_absolute() else file_path
+
+            # Get the top-level directory for this file
+            try:
+                rel_path = abs_path.relative_to(cwd)
+                top_level_dir = rel_path.parts[0] if rel_path.parts else ""
+
+                # Only include if in package directory and not in excluded dirs
+                if top_level_dir == package_name and top_level_dir not in excluded_dirs:
+                    package_files.append(file_path)
+            except ValueError:
+                # File is outside cwd, skip it
+                continue
+
+        return package_files
 
     def parse_output(self, output: str) -> ToolResult:
         """Parse Skylos output into standardized result."""

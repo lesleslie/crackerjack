@@ -26,7 +26,7 @@ def setup_changelog_services() -> dict[str, t.Any]:
 
     pkg_path = Path()
     git_service = GitService()
-    changelog_generator = ChangelogGenerator()
+    changelog_generator = ChangelogGenerator(git_service=git_service)
 
     return {
         "pkg_path": pkg_path,

@@ -376,6 +376,11 @@ class HookExecutor:
                 else hook.get_command()
             )
 
+            # For long-running hooks (timeout > 120s), use process monitoring
+            if hook.timeout > 120:
+                return self._run_with_monitoring(command, hook, repo_root, clean_env)
+
+            # For quick hooks, use standard execution
             return subprocess.run(
                 command,
                 cwd=repo_root,
@@ -396,6 +401,76 @@ class HookExecutor:
             return subprocess.CompletedProcess(
                 args=hook.get_command(), returncode=1, stdout="", stderr=str(e)
             )
+
+    def _run_with_monitoring(
+        self,
+        command: list[str],
+        hook: HookDefinition,
+        cwd: Path,
+        env: dict[str, str],
+    ) -> subprocess.CompletedProcess[str]:
+        """Run subprocess with active monitoring for hung process detection.
+
+        Args:
+            command: Command to execute
+            hook: Hook definition with timeout settings
+            cwd: Working directory
+            env: Environment variables
+
+        Returns:
+            CompletedProcess with execution results
+        """
+        from crackerjack.executors.process_monitor import ProcessMonitor
+
+        # Start process with Popen for monitoring
+        process = subprocess.Popen(
+            command,
+            cwd=cwd,
+            env=env,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        # Create monitor with configured thresholds
+        monitor = ProcessMonitor(
+            check_interval=30.0,  # Check every 30 seconds
+            cpu_threshold=0.1,  # Consider hung if CPU < 0.1%
+            stall_timeout=120.0,  # Report stall after 2 minutes of inactivity
+        )
+
+        # Define stall callback
+        def on_stall(hook_name: str, metrics: object) -> None:
+            """Handle detected stall."""
+            self.console.print(
+                f"[yellow]⚠️  {hook_name} may be hung "
+                f"(CPU < 0.1% for 2+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]"
+            )
+
+        # Start monitoring
+        monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
+
+        try:
+            # Wait for process with timeout
+            stdout, stderr = process.communicate(timeout=hook.timeout)
+            returncode = process.returncode
+
+            return subprocess.CompletedProcess(
+                args=command,
+                returncode=returncode,
+                stdout=stdout,
+                stderr=stderr,
+            )
+
+        except subprocess.TimeoutExpired:
+            # Process exceeded timeout, terminate it
+            process.kill()
+            stdout, stderr = process.communicate()
+            raise  # Re-raise to be handled by execute_single_hook
+
+        finally:
+            # Stop monitoring
+            monitor.stop_monitoring()
 
     def _display_hook_output_if_needed(
         self, result: subprocess.CompletedProcess[str], hook_name: str = ""

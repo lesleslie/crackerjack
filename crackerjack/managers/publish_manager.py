@@ -125,7 +125,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(self._git_service, self.pkg_path)  # type: ignore[arg-type, return-value]
+            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
         except Exception:
             return _NullChangelogGenerator()  # type: ignore[return-value]
 

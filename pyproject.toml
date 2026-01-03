@@ -158,7 +158,7 @@ zuban_lsp_strict_mode = true
 terminal_width = 70
 
 # Quality tool timeout settings (in seconds)
-skylos_timeout = 720  # Dead code detection (12 minutes)
+skylos_timeout = 600  # Dead code detection (10 minutes)
 refurb_timeout = 180  # Modern Python suggestions (3 minutes)
 
 # Test parallelization settings
