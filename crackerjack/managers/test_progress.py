@@ -18,6 +18,9 @@ class TestProgress:
         self.collection_status: str = "Starting collection..."
         self._lock = threading.Lock()
         self._seen_files: set[str] = set()
+        # Output buffers for capturing stdout/stderr from test execution
+        self._stdout_buffer: list[str] = []
+        self._stderr_buffer: list[str] = []
 
     @property
     def completed(self) -> int:
@@ -60,6 +63,26 @@ class TestProgress:
             for key, value in kwargs.items():
                 if hasattr(self, key):
                     setattr(self, key, value)
+
+    def append_stdout(self, line: str) -> None:
+        """Append a line to stdout buffer (thread-safe)."""
+        with self._lock:
+            self._stdout_buffer.append(line)
+
+    def append_stderr(self, line: str) -> None:
+        """Append a line to stderr buffer (thread-safe)."""
+        with self._lock:
+            self._stderr_buffer.append(line)
+
+    def get_stdout(self) -> str:
+        """Get accumulated stdout as a single string (thread-safe)."""
+        with self._lock:
+            return "".join(self._stdout_buffer)
+
+    def get_stderr(self) -> str:
+        """Get accumulated stderr as a single string (thread-safe)."""
+        with self._lock:
+            return "".join(self._stderr_buffer)
 
     def _create_progress_bar(self, width: int = 20) -> str:
         """Create a visual progress bar.

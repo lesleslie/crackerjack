@@ -400,6 +400,8 @@ class TestManager:
 
         # Parse and display test statistics panel
         stats = self._parse_test_statistics(output)
+        # Override parsed duration with actual wall-clock time
+        stats["duration"] = duration
         if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=True)
 
@@ -422,6 +424,8 @@ class TestManager:
         combined_output = stdout + "\n" + stderr
         clean_output = self._strip_ansi_codes(combined_output)
         stats = self._parse_test_statistics(clean_output, already_clean=True)
+        # Override parsed duration with actual wall-clock time
+        stats["duration"] = duration
         if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=False)
 
@@ -458,9 +462,12 @@ class TestManager:
             self.console.print(
                 f"    [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]"
             )
-            if duration > 290:  # Approaching 300s timeout
+            # Check if approaching actual timeout (90% threshold)
+            timeout = self.command_builder.get_test_timeout(options)
+            timeout_threshold = timeout * 0.9
+            if duration > timeout_threshold:
                 self.console.print(
-                    "    [yellow]⚠️  Execution time was very close to timeout, may have timed out[/yellow]"
+                    f"    [yellow]⚠️  Execution time ({duration:.1f}s) was very close to timeout ({timeout}s), may have timed out[/yellow]"
                 )
             self.console.print(
                 "    [red]Workflow failed: Test workflow execution failed[/red]"
@@ -692,9 +699,9 @@ class TestManager:
 
         # Only show xfailed/xpassed if they exist
         if stats.get("xfailed", 0) > 0:
-            metrics.append(("⚠️ Expected Failures", stats["xfailed"], "yellow"))
+            metrics.append(("📌 XFailed", stats["xfailed"], "yellow"))
         if stats.get("xpassed", 0) > 0:
-            metrics.append(("✨ Unexpected Passes", stats["xpassed"], "green"))
+            metrics.append(("⭐ XPassed", stats["xpassed"], "green"))
 
         for label, count, _ in metrics:
             percentage = f"{(count / total * 100):.1f}%" if total > 0 else "0.0%"
