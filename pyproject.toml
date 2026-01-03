@@ -89,7 +89,9 @@ dev = [
     "excalidraw-mcp>=0.34.0",
     "zensical>=0.0.15",
 ]
-session = []
+session = [
+    "session-buddy>=0.10.7",
+]
 
 [project.license]
 text = "BSD-3-CLAUSE"
