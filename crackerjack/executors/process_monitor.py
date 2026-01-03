@@ -33,7 +33,7 @@ class ProcessMonitor:
         self,
         check_interval: float = 30.0,
         cpu_threshold: float = 0.1,
-        stall_timeout: float = 120.0,
+        stall_timeout: float = 180.0,
     ) -> None:
         """Initialize process monitor.
 
