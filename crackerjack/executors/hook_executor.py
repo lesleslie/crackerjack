@@ -420,7 +420,10 @@ class HookExecutor:
         Returns:
             CompletedProcess with execution results
         """
-        from crackerjack.executors.process_monitor import ProcessMonitor
+        from crackerjack.executors.process_monitor import (
+            ProcessMetrics,
+            ProcessMonitor,
+        )
 
         # Start process with Popen for monitoring
         process = subprocess.Popen(
@@ -440,7 +443,7 @@ class HookExecutor:
         )
 
         # Define stall callback
-        def on_stall(hook_name: str, metrics: object) -> None:
+        def on_stall(hook_name: str, metrics: ProcessMetrics) -> None:
             """Handle detected stall."""
             self.console.print(
                 f"[yellow]⚠️  {hook_name} may be hung "

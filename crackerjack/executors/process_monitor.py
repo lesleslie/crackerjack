@@ -92,55 +92,117 @@ class ProcessMonitor:
         while not self._stop_event.is_set():
             elapsed = time.time() - start_time
 
-            # Check if process is still running
-            if process.poll() is not None:
-                logger.debug(f"{hook_name}: Process completed, stopping monitor")
-                return
-
-            # Check if total timeout exceeded
-            if elapsed > timeout:
-                logger.warning(
-                    f"{hook_name}: Timeout of {timeout}s exceeded (elapsed: {elapsed:.1f}s)"
-                )
+            # Check process status and timeout
+            if self._should_stop_monitoring(process, hook_name, elapsed, timeout):
                 return
 
             # Periodic health check
             if time.time() - last_cpu_check >= self.check_interval:
-                metrics = self._get_process_metrics(process.pid, elapsed)
-
-                if metrics:
-                    logger.debug(
-                        f"{hook_name}: CPU={metrics.cpu_percent:.1f}%, "
-                        f"MEM={metrics.memory_mb:.1f}MB, "
-                        f"elapsed={metrics.elapsed_seconds:.1f}s"
-                    )
-
-                    # Detect potential hang: CPU near zero for extended period
-                    if metrics.cpu_percent < self.cpu_threshold:
-                        consecutive_zero_cpu += 1
-
-                        # If CPU has been near-zero for stall_timeout duration
-                        stall_duration = consecutive_zero_cpu * self.check_interval
-                        if stall_duration >= self.stall_timeout:
-                            logger.warning(
-                                f"{hook_name}: Process appears hung "
-                                f"(CPU < {self.cpu_threshold}% for {stall_duration:.1f}s)"
-                            )
-
-                            # Notify callback if provided
-                            if on_stall:
-                                on_stall(hook_name, metrics)
-
-                            # Reset counter after reporting
-                            consecutive_zero_cpu = 0
-                    else:
-                        # Reset counter if CPU activity detected
-                        consecutive_zero_cpu = 0
-
+                consecutive_zero_cpu = self._perform_health_check(
+                    process.pid,
+                    hook_name,
+                    elapsed,
+                    consecutive_zero_cpu,
+                    on_stall,
+                )
                 last_cpu_check = time.time()
 
             # Sleep briefly before next iteration
             time.sleep(min(5.0, self.check_interval / 6))
+
+    def _should_stop_monitoring(
+        self,
+        process: subprocess.Popen[str],
+        hook_name: str,
+        elapsed: float,
+        timeout: int,
+    ) -> bool:
+        """Check if monitoring should stop due to process completion or timeout."""
+        # Check if process is still running
+        if process.poll() is not None:
+            logger.debug(f"{hook_name}: Process completed, stopping monitor")
+            return True
+
+        # Check if total timeout exceeded
+        if elapsed > timeout:
+            logger.warning(
+                f"{hook_name}: Timeout of {timeout}s exceeded (elapsed: {elapsed:.1f}s)"
+            )
+            return True
+
+        return False
+
+    def _perform_health_check(
+        self,
+        pid: int,
+        hook_name: str,
+        elapsed: float,
+        consecutive_zero_cpu: int,
+        on_stall: Callable[[str, ProcessMetrics], None] | None,
+    ) -> int:
+        """Perform health check and return updated consecutive_zero_cpu counter."""
+        metrics = self._get_process_metrics(pid, elapsed)
+
+        if not metrics:
+            return consecutive_zero_cpu
+
+        self._log_metrics(hook_name, metrics)
+
+        # Check CPU activity
+        return self._check_cpu_activity(
+            hook_name, metrics, consecutive_zero_cpu, on_stall
+        )
+
+    def _log_metrics(self, hook_name: str, metrics: ProcessMetrics) -> None:
+        """Log process metrics for debugging."""
+        logger.debug(
+            f"{hook_name}: CPU={metrics.cpu_percent:.1f}%, "
+            f"MEM={metrics.memory_mb:.1f}MB, "
+            f"elapsed={metrics.elapsed_seconds:.1f}s"
+        )
+
+    def _check_cpu_activity(
+        self,
+        hook_name: str,
+        metrics: ProcessMetrics,
+        consecutive_zero_cpu: int,
+        on_stall: Callable[[str, ProcessMetrics], None] | None,
+    ) -> int:
+        """Check CPU activity and handle stall detection."""
+        # CPU below threshold - potential hang
+        if metrics.cpu_percent < self.cpu_threshold:
+            consecutive_zero_cpu += 1
+            return self._handle_potential_stall(
+                hook_name, metrics, consecutive_zero_cpu, on_stall
+            )
+
+        # CPU activity detected - reset counter
+        return 0
+
+    def _handle_potential_stall(
+        self,
+        hook_name: str,
+        metrics: ProcessMetrics,
+        consecutive_zero_cpu: int,
+        on_stall: Callable[[str, ProcessMetrics], None] | None,
+    ) -> int:
+        """Handle potential process stall."""
+        stall_duration = consecutive_zero_cpu * self.check_interval
+
+        if stall_duration >= self.stall_timeout:
+            logger.warning(
+                f"\n{hook_name}: Process appears hung "
+                f"(CPU < {self.cpu_threshold}% for {stall_duration:.1f}s)"
+            )
+
+            # Notify callback if provided
+            if on_stall:
+                on_stall(hook_name, metrics)
+
+            # Reset counter after reporting
+            return 0
+
+        return consecutive_zero_cpu
 
     def _get_process_metrics(self, pid: int, elapsed: float) -> ProcessMetrics | None:
         """Get current metrics for a process using ps command.
