@@ -108,8 +108,8 @@ class TestBanditAdapter:
         config = adapter.get_default_config()
 
         assert isinstance(config, QACheckConfig)
-        assert config.check_type == QACheckType.SECURITY
-        assert config.stage == "comprehensive"  # Security in comprehensive stage
+        assert config.check_type == QACheckType.SAST
+        assert config.stage == "comprehensive"  # SAST in comprehensive stage
 
     def test_bandit_adapter_tool_name(self):
         """Test BanditAdapter tool name."""

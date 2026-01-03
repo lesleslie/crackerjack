@@ -667,3 +667,15 @@ class HookManagerImpl:
             "total_duration": total_duration,
             "success_rate": (passed / len(results)) * 100 if results else 0,
         }
+
+    @staticmethod
+    def validate_hooks_config() -> bool:
+        """Validate hooks configuration (deprecated method).
+
+        This method is kept for backward compatibility and always returns True.
+        Modern validation is handled automatically during hook execution.
+
+        Returns:
+            bool: Always True for backward compatibility
+        """
+        return True

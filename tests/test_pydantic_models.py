@@ -30,7 +30,7 @@ class TestPydanticModels:
             update_docs=False,
             targets=["path1", "path2"]
         )
-        assert config.clean == True
+        assert config.strip_code == True
         assert config.update_docs == False
         assert config.targets == ["path1", "path2"]
 
@@ -50,7 +50,7 @@ class TestPydanticModels:
             benchmark=True,
             test_workers=4
         )
-        assert config.test == True
+        assert config.run_tests == True
         assert config.benchmark == True
         assert config.test_workers == 4
 
@@ -78,7 +78,7 @@ class TestPydanticModels:
             ai_agent=True,
             max_iterations=10
         )
-        assert config.ai_agent == True
+        assert config.ai_fix == True
         assert config.max_iterations == 10
 
     def test_execution_config_creation(self):
@@ -138,18 +138,18 @@ class TestPydanticModels:
     def test_workflow_options_creation(self):
         """Test WorkflowOptions creation."""
         options = WorkflowOptions()
-        assert options.cleaning.clean == True  # default value
-        assert options.testing.test == False   # default value
+        assert options.cleaning.strip_code == True  # default value
+        assert options.testing.run_tests == False   # default value
         assert isinstance(options.hooks, HookConfig)
 
     def test_workflow_options_property_access(self):
         """Test WorkflowOptions property access."""
         options = WorkflowOptions()
-        assert options.clean == options.cleaning.clean
+        assert options.strip_code == options.cleaning.strip_code
 
         # Test property setters
-        options.clean = False
-        assert options.cleaning.clean == False
+        options.strip_code = False
+        assert options.cleaning.strip_code == False
 
     def test_execution_result_creation(self):
         """Test ExecutionResult creation."""

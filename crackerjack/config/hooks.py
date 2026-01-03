@@ -1,3 +1,4 @@
+from contextlib import suppress
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -275,7 +276,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=600,  # Increased from 180 to reduce timeout issues with comprehensive dead code scanning
+        timeout=720,  # Increased from 180 to 600, now 720s (12 min) for comprehensive dead code scanning on larger codebases
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -348,12 +349,46 @@ COMPREHENSIVE_STRATEGY = HookStrategy(
 )
 
 
+def _update_hook_timeouts_from_settings(hooks: list[HookDefinition]) -> None:
+    """Update hook timeouts from adapter_timeouts configuration.
+
+    This function modifies hook definitions in-place to apply timeout overrides
+    from pyproject.toml [tool.crackerjack] configuration. This allows projects
+    to customize hook timeouts without modifying crackerjack source code.
+
+    Args:
+        hooks: List of HookDefinition objects to update
+
+    Example:
+        >>> from crackerjack.config import CrackerjackSettings, load_settings
+        >>> settings = load_settings(CrackerjackSettings)
+        >>> _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
+        >>> # Skylos hook now uses settings.adapter_timeouts.skylos_timeout
+    """
+    with suppress(Exception):
+        from crackerjack.config import CrackerjackSettings, load_settings
+
+        # Load settings from pyproject.toml and YAML files
+        settings = load_settings(CrackerjackSettings)
+
+        # Update each hook's timeout from adapter_timeouts if configured
+        for hook in hooks:
+            timeout_attr = f"{hook.name}_timeout"
+            if hasattr(settings.adapter_timeouts, timeout_attr):
+                configured_timeout = getattr(settings.adapter_timeouts, timeout_attr)
+                hook.timeout = configured_timeout
+
+
 class HookConfigLoader:
     @staticmethod
     def load_strategy(name: str, _: Path | None = None) -> HookStrategy:
         if name == "fast":
+            # Apply timeout overrides before returning strategy
+            _update_hook_timeouts_from_settings(FAST_HOOKS)
             return FAST_STRATEGY
         if name == "comprehensive":
+            # Apply timeout overrides before returning strategy
+            _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
             return COMPREHENSIVE_STRATEGY
         msg = f"Unknown hook strategy: {name}"
         raise ValueError(msg)

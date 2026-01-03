@@ -131,7 +131,7 @@ class TestTestManagerTestExecution:
     def test_run_tests_early_return_when_disabled(self, manager):
         """Test run_tests returns early when tests disabled."""
         options = Mock()
-        options.test = False
+        options.run_tests = False
 
         result = manager.run_tests(options)
 
@@ -142,7 +142,7 @@ class TestTestManagerTestExecution:
     def test_run_tests_success(self, manager):
         """Test successful test execution."""
         options = Mock()
-        options.test = True
+        options.run_tests = True
 
         # Mock successful execution
         mock_result = Mock()
@@ -162,7 +162,7 @@ class TestTestManagerTestExecution:
     def test_run_tests_failure(self, manager):
         """Test handling test execution failure."""
         options = Mock()
-        options.test = True
+        options.run_tests = True
 
         # Mock failed execution
         mock_result = Mock()
@@ -182,7 +182,7 @@ class TestTestManagerTestExecution:
     def test_run_tests_exception_handling(self, manager):
         """Test run_tests handles exceptions."""
         options = Mock()
-        options.test = True
+        options.run_tests = True
 
         manager.command_builder.build_command.side_effect = Exception("Test error")
 

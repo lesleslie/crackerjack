@@ -255,7 +255,7 @@ class TestSessionCoordinator:
         # Create mock options
         options = Mock()
         options.verbose = True
-        options.test = True
+        options.run_tests = True
 
         with patch.object(session, '_setup_logging'), \
              patch.object(session, '_setup_websocket_progress_file'), \

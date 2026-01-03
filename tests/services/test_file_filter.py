@@ -71,7 +71,7 @@ class TestGetStagedFiles:
         staged = filter_svc.get_staged_files()
 
         assert staged == expected_files
-        mock_git_service.get_staged_files.assert_called_once_with(tmp_path)
+        mock_git_service.get_staged_files.assert_called_once_with()
 
 
 class TestGetUnstagedFiles:
@@ -251,7 +251,7 @@ class TestGetAllModifiedFiles:
         assert len(all_modified) == 2
         assert file1 in all_modified
         assert file2 in all_modified
-        mock_git_service.get_staged_files.assert_called_once_with(tmp_path)
+        mock_git_service.get_staged_files.assert_called_once_with()
         mock_git_service.get_unstaged_files.assert_called_once_with(tmp_path)
 
     def test_get_all_modified_removes_duplicates(self, tmp_path, mock_git_service: MagicMock):
@@ -267,7 +267,7 @@ class TestGetAllModifiedFiles:
 
         assert len(all_modified) == 1
         assert file1 in all_modified
-        mock_git_service.get_staged_files.assert_called_once_with(tmp_path)
+        mock_git_service.get_staged_files.assert_called_once_with()
         mock_git_service.get_unstaged_files.assert_called_once_with(tmp_path)
 
 

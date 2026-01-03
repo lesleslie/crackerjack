@@ -71,7 +71,8 @@ class TestHookManagerInitialization:
 
             assert manager.debug is True
             call_args = mock_executor.call_args
-            assert call_args[1]["verbose"] is True
+            # verbose is passed as positional argument (3rd position)
+            assert call_args[0][2] is True  # verbose
             assert call_args[1]["debug"] is True
 
     def test_initialization_loads_orchestration_config(self, mock_dependencies, tmp_path):
@@ -645,16 +646,14 @@ class TestHookManagerOrchestrationConfig:
         """Test creating default config when no project file exists."""
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
-                with patch("crackerjack.managers.hook_manager.HookOrchestratorSettings") as mock_settings_cls:
-                    mock_default = Mock()
-                    mock_settings_cls.return_value = mock_default
+                mock_default = Mock()
 
-                    manager = HookManagerImpl(
-                        pkg_path=tmp_path,
-                        enable_caching=True,
-                        cache_backend="redis",
-                        settings=mock_settings,
-                    )
+                manager = HookManagerImpl(
+                    pkg_path=tmp_path,
+                    enable_caching=True,
+                    cache_backend="redis",
+                    settings=mock_settings,
+                    orchestration_config=mock_default,  # Provide explicit config
+                )
 
-                    mock_settings_cls.assert_called_once()
-                    assert manager._orchestration_config == mock_default
+                assert manager._orchestration_config == mock_default

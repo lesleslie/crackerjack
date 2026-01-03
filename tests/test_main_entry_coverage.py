@@ -28,15 +28,15 @@ class TestOptions:
     def test_options_default_values(self) -> None:
         options = Options()
 
-        assert options.clean is False
-        assert options.test is False
+        assert options.strip_code is None
+        assert options.run_tests is False
         assert options.interactive is False
         assert options.verbose is False
         assert options.commit is False
         assert options.publish is None
         assert options.bump is None
         assert options.benchmark is False
-        assert options.ai_agent is False
+        assert options.ai_fix is None
 
     def test_options_with_values(self) -> None:
         # Use new field names for initialization (backward compatibility is handled by properties)
@@ -52,15 +52,15 @@ class TestOptions:
             ai_fix=True,
         )
 
-        assert options.clean is True
-        assert options.test is True
+        assert options.strip_code is True
+        assert options.run_tests is True
         assert options.interactive is True
         assert options.verbose is True
         assert options.commit is True
         assert options.publish == BumpOption.patch
         assert options.bump == BumpOption.minor
         assert options.benchmark is True
-        assert bool(options.ai_agent) is True  # ai_agent uses ai_fix which can be None/bool
+        assert bool(options.ai_fix) is True  # ai_fix can be None/bool
 
     def test_options_with_all_flags(self) -> None:
         options = Options(
@@ -69,12 +69,12 @@ class TestOptions:
             no_config_updates=True,
             verbose=True,
             update_docs=True,
-            clean=True,
-            test=True,
+            strip_code=True,
+            run_tests=True,
             benchmark=True,
             test_workers=4,
             test_timeout=300,
-            ai_agent=True,
+            ai_fix=True,
             start_mcp_server=True,
         )
 

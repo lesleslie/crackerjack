@@ -109,8 +109,8 @@ def test_example():
         )
 
         assert isinstance(options, WorkflowOptions)
-        assert options.clean is True
-        assert options.test is True
+        assert options.strip_code is True
+        assert options.run_tests is True
         assert options.publish == "pypi"
         assert options.bump == "patch"
         assert options.commit is True

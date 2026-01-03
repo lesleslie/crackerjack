@@ -33,35 +33,35 @@ class TestWorkflowOptions:
     def test_cleaning_config_defaults(self) -> None:
         config = CleaningConfig()
 
-        assert config.clean is True
+        assert config.strip_code is True
         assert config.update_docs is False
 
     def test_cleaning_config_with_values(self) -> None:
         config = CleaningConfig(
-            clean=False,
+            strip_code=False,
             update_docs=True,
         )
 
-        assert config.clean is False
+        assert config.strip_code is False
         assert config.update_docs is True
 
     def test_testing_config_defaults(self) -> None:
         config = TestConfig()
 
-        assert config.test is False
+        assert config.run_tests is False
         assert config.test_workers == 0
         assert config.test_timeout == 0
         assert config.benchmark is False
 
     def test_testing_config_with_values(self) -> None:
         config = TestConfig(
-            test=True,
+            run_tests=True,
             test_workers=4,
             test_timeout=300,
             benchmark=True,
         )
 
-        assert config.test is True
+        assert config.run_tests is True
         assert config.test_workers == 4
         assert config.test_timeout == 300
         assert config.benchmark is True
@@ -91,11 +91,11 @@ class TestWorkflowOptions:
     def test_workflow_options_nested_access(self) -> None:
         options = WorkflowOptions()
 
-        options.cleaning.clean = False
-        options.testing.test = True
+        options.cleaning.strip_code = False
+        options.testing.run_tests = True
 
-        assert options.cleaning.clean is False
-        assert options.testing.test is True
+        assert options.cleaning.strip_code is False
+        assert options.testing.run_tests is True
 
 
 class TestTaskModels:
@@ -284,10 +284,10 @@ class TestModelIntegration:
     def test_complex_workflow_options(self) -> None:
         options = WorkflowOptions()
 
-        options.cleaning.clean = True
+        options.cleaning.strip_code = True
         options.cleaning.targets = [Path("src / "), Path("tests / ")]
 
-        options.testing.test = True
+        options.testing.run_tests = True
         options.testing.workers = 4
         options.testing.timeout = 300
         options.testing.benchmark = True
@@ -301,9 +301,9 @@ class TestModelIntegration:
         options.execution.verbose = True
         options.execution.dry_run = False
 
-        assert options.cleaning.clean is True
+        assert options.cleaning.strip_code is True
         assert len(options.cleaning.targets) == 2
-        assert options.testing.test is True
+        assert options.testing.run_tests is True
         assert options.testing.workers == 4
         assert options.publishing.publish == "patch"
         assert options.git.commit is True
