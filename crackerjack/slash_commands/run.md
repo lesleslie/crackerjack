@@ -30,7 +30,7 @@ This slash command provides intelligent crackerjack execution with automatic fal
 Both execution paths use AI agent mode for autonomous code quality enforcement:
 
 - `--ai-fix`: AI auto-fixing mode for structured error output and intelligent fixing
-- `--test`: Run tests with comprehensive test coverage
+- `--run-tests`: Run tests with comprehensive test coverage (short form: `-t`)
 - `--verbose`: Show detailed AI decision-making and execution details
 
 ## 💡 Agent Recommendation
@@ -133,7 +133,7 @@ AI: I'll use the /run command to automatically fix all code quality issues with 
 [AI first tries: session-mgmt:crackerjack-run]
 ✅ Session-mgmt available - using enhanced execution mode
 
-[Enhanced execution with session context: python -m crackerjack --ai-fix --test --verbose]
+[Enhanced execution with session context: python -m crackerjack run --ai-fix --run-tests --verbose]
 
 The crackerjack AI agent completed successfully after 2 iterations! Here's what was automatically fixed:
 
