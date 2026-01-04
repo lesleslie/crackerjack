@@ -153,18 +153,20 @@ Intelligent caching system learns from error patterns:
 ### Starting the MCP Server
 
 ```bash
-# Standard MCP server (stdio)
-python -m crackerjack --start-mcp-server
-
-# With WebSocket monitoring
-python -m crackerjack --start-mcp-server
-# WebSocket available at: ws://localhost:8675
+# Start MCP server
+python -m crackerjack start
 
 # Restart server
-python -m crackerjack --restart-mcp-server
+python -m crackerjack restart
 
 # Stop server
-python -m crackerjack --stop-mcp-server
+python -m crackerjack stop
+
+# Check server status
+python -m crackerjack status
+
+# Health check
+python -m crackerjack health
 ```
 
 ### MCP Client Configuration
@@ -178,7 +180,7 @@ Add to your MCP client configuration (e.g., Claude Desktop):
       "command": "uvx",
       "args": [
         "crackerjack",
-        "--start-mcp-server"
+        "start"
       ],
       "env": {
         "UV_KEYRING_PROVIDER": "subprocess",
@@ -209,32 +211,6 @@ analysis = analyze_errors_with_caching(
 action = get_next_action(session_id="xyz789")
 ```
 
-### WebSocket Progress Monitoring
-
-```bash
-# Monitor job progress in real-time
-python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
-
-# Or programmatically
-import asyncio
-from crackerjack.mcp.progress_monitor import ProgressMonitor
-
-async def monitor():
-    monitor = ProgressMonitor(job_id="abc123")
-    await monitor.connect("ws://localhost:8675")
-    await monitor.stream_progress()
-```
-
-### Dashboard
-
-```bash
-# Start comprehensive monitoring dashboard
-python -m crackerjack --dashboard
-
-# Enhanced monitoring with patterns
-python -m crackerjack --enhanced-monitor
-```
-
 ## Slash Commands
 
 MCP integrates with crackerjack slash commands:
@@ -258,13 +234,6 @@ max_concurrent_jobs = 5
 max_job_duration = 3600  # 1 hour
 ```
 
-### WebSocket Security
-
-- **Localhost-only**: WebSocket server binds to 127.0.0.1
-- **No authentication**: Assumes trusted local environment
-- **Origin validation**: CORS headers restrict access
-- **Resource limits**: Connection timeout and max message size
-
 ### Input Validation
 
 All MCP tool inputs are validated:
@@ -281,12 +250,7 @@ MCP settings in `settings/crackerjack.yaml`:
 ```yaml
 # MCP Server
 mcp_server_enabled: true
-mcp_websocket_port: 8675
 mcp_max_concurrent_jobs: 5
-
-# Progress Monitoring
-progress_update_interval: 1.0  # seconds
-progress_websocket_enabled: true
 
 # Error Caching
 error_cache_size: 1000
@@ -299,7 +263,6 @@ Typical MCP server performance:
 
 - **Tool Execution**: < 100ms for metadata tools
 - **Job Creation**: < 50ms overhead
-- **WebSocket Latency**: < 10ms for progress updates
 - **Error Analysis**: 200-500ms with caching
 - **Concurrent Jobs**: Up to 5 simultaneous workflows
 
@@ -307,13 +270,11 @@ Typical MCP server performance:
 
 - `tools/` — Main tools directory
   - `README.md` — Tool development guide
-- `websocket/` — WebSocket protocol implementation
-  - `README.md` — WebSocket integration docs
 
 ## Best Practices
 
 1. **Use Job IDs**: Always track jobs by their UUIDs
-1. **Monitor Progress**: Use WebSocket for long-running jobs
+1. **Monitor Progress**: Use `get_job_progress` tool for job status
 1. **Handle Errors**: Check job status and error messages
 1. **Cache Patterns**: Let error caching learn common issues
 1. **Session Management**: Use checkpoints for resumability
@@ -324,24 +285,14 @@ Typical MCP server performance:
 ### Server Won't Start
 
 ```bash
-# Check if port is in use
-netstat -an | grep :8675
+# Check server status
+python -m crackerjack status
 
 # View server logs
-python -m crackerjack --start-mcp-server --verbose
+python -m crackerjack start --verbose
 
 # Force restart
-python -m crackerjack --restart-mcp-server
-```
-
-### WebSocket Connection Issues
-
-```bash
-# Test WebSocket connectivity
-curl -s "http://localhost:8675/" || echo "Server not responding"
-
-# Check firewall rules
-# Ensure localhost traffic allowed
+python -m crackerjack restart
 ```
 
 ### Job Stuck
@@ -353,8 +304,8 @@ get_job_progress(job_id="abc123")
 # View comprehensive status
 get_comprehensive_status()
 
-# If necessary, restart watchdog
-python -m crackerjack --watchdog
+# If necessary, restart server
+python -m crackerjack restart
 ```
 
 ## Related

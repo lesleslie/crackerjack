@@ -298,11 +298,8 @@ python -m crackerjack run --dry-run --run-tests --verbose
 # Custom iteration limit
 python -m crackerjack run --ai-fix --max-iterations 15
 
-# MCP server with WebSocket support (localhost:8675)
+# MCP server
 python -m crackerjack start
-
-# Progress monitoring via WebSocket
-python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 
 # Lifecycle commands (start/stop/restart/status/health) are available via MCPServerCLIFactory.
 ```
@@ -950,7 +947,7 @@ Model Context Protocol (MCP) enables AI agents to interact directly with Cracker
 1. **Start the MCP server:**
 
    ```bash
-   # Starts WebSocket server on localhost:8675 with MCP protocol support
+   # Start MCP server
    python -m crackerjack start
    ```
 
@@ -1070,11 +1067,6 @@ keyring set https://upload.pypi.org/legacy/ __token__
 - **`get_stage_status`**: Check current status of quality stages
 - **`get_next_action`**: Get optimal next action based on session state
 - **`session_management`**: Manage sessions with checkpoints and resume capability
-
-**WebSocket Endpoints:**
-
-- **Server URL**: `ws://localhost:8675`
-- **Progress Streaming**: `/ws/progress/{job_id}` for real-time updates
 
 ### Slash Commands
 
@@ -1394,14 +1386,11 @@ python -m crackerjack run --publish major  # 1.0.0 -> 2.0.0
 ## MCP Integration
 
 **AI Agent Support:**
-Crackerjack provides a WebSocket-enabled MCP server for AI agent integration:
+Crackerjack provides an MCP server for AI agent integration:
 
 ```bash
-# Start WebSocket MCP server on localhost:8675
+# Start MCP server
 python -m crackerjack start
-
-# Monitor job progress via WebSocket
-python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
 ```
 
 **MCP client configuration (stdio-based):**
@@ -1421,12 +1410,6 @@ python -m crackerjack.mcp.progress_monitor <job_id> ws://localhost:8675
   }
 }
 ```
-
-**WebSocket MCP client configuration:**
-
-- **Server URL**: `ws://localhost:8675`
-- **Protocol**: WebSocket-based MCP with real-time progress streaming
-- **Endpoints**: `/ws/progress/{job_id}` for live job monitoring
 
 **Available tools:** `execute_crackerjack`, `get_job_progress`, `run_crackerjack_stage`, `analyze_errors`, `smart_error_analysis`, `get_next_action`, `session_management`
 
@@ -1540,12 +1523,12 @@ python -m crackerjack run               # Run quality checks
 # Server won't start
 python -m crackerjack start --verbose
 
-# WebSocket connection issues
-# Check if server is running on localhost:8675
-netstat -an | grep :8675
+# Server connection issues
+# Check if server is running
+python -m crackerjack status
 
-# Test WebSocket connectivity
-curl -s "http://localhost:8675/" || echo "Server not responding"
+# Test server health
+python -m crackerjack health
 ```
 
 #### Performance Issues

@@ -35,7 +35,7 @@ The command will show information like:
           "pid": 12345,
           "cpu": "0.5%",
           "mem": "0.8%",
-          "command": "python -m crackerjack --start-mcp-server"
+          "command": "python -m crackerjack start"
         }
       ]
     },

@@ -446,14 +446,11 @@ def my_function(settings: CrackerjackSettings | None = None):
 
 ## MCP Server Integration
 
-**Features**: Dual protocol (MCP + WebSocket), real-time progress, job tracking
+**Features**: MCP protocol, real-time progress tracking, job management
 
 ```bash
 # Start server
-python -m crackerjack run --start-mcp-server
-
-# Monitor progress at http://localhost:8675/
-python -m crackerjack run.mcp.progress_monitor <job_id>
+python -m crackerjack start
 ```
 
 **Available Tools**: `execute_crackerjack`, `get_job_progress`, `get_comprehensive_status`, `analyze_errors`
