@@ -1,4 +1,4 @@
-"""SAST (Static Application Security Testing) adapters for ACB QA framework.
+"""SAST (Static Application Security Testing) adapters for the QA framework.
 
 This package contains adapters for static application security testing tools
 that analyze source code for vulnerabilities, security anti-patterns, and

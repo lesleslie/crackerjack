@@ -35,7 +35,7 @@ from crackerjack.adapters.lint.codespell import CodespellAdapter, CodespellSetti
 
 async def run_codespell() -> None:
     adapter = CodespellAdapter(
-        settings=CodespellSettings(fix_enabled=False, ignore_words=["acb", "pydantic"])
+        settings=CodespellSettings(fix_enabled=False, ignore_words=["legacy", "pydantic"])
     )
     await adapter.init()
     result = await adapter.check(files=[Path("src/"), Path("docs/")])

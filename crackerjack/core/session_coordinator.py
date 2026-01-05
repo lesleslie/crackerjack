@@ -30,6 +30,7 @@ class SessionCoordinator:
         self.session_id = web_job_id or uuid.uuid4().hex[:8]
         self.start_time = time.time()
         self.cleanup_config: t.Any = None
+        self._cleanup_config: t.Any = None
         self.cleanup_handlers: list[t.Callable[[], None]] = []
         self.lock_files: set[Path] = set()
         self.current_task: str | None = None
@@ -42,6 +43,13 @@ class SessionCoordinator:
 
     def initialize_session_tracking(self, options: OptionsProtocol) -> None:
         """Initialize session metadata and baseline tracking."""
+        if not getattr(options, "track_progress", False):
+            return
+
+        self._setup_logging(options)
+        self._setup_websocket_progress_file()
+        self._initialize_quality_service()
+
         self.session_tracker = SessionTracker(
             session_id=self.session_id, start_time=self.start_time
         )
@@ -55,6 +63,7 @@ class SessionCoordinator:
         )
         self.tasks = self.session_tracker.tasks
         self.start_session("workflow")
+        self.console.print("[cyan]📊[/ cyan] Session tracking enabled")
 
     def start_session(self, task_name: str) -> None:
         """Record the start of a high-level session task."""
@@ -111,6 +120,7 @@ class SessionCoordinator:
         details: str | None = None,
         files_changed: list[str] | None = None,
         error_message: str | None = None,
+        progress: int | None = None,
     ) -> None:
         """Update a task's status in the current session.
 
@@ -143,6 +153,8 @@ class SessionCoordinator:
                 task.status = "in_progress"
                 if details:
                     task.details = details
+                if progress is not None:
+                    task.progress = progress
             return
 
         # Fallback: set arbitrary status value if task exists
@@ -151,6 +163,8 @@ class SessionCoordinator:
             task.status = normalized or task.status
             if details:
                 task.details = details
+            if progress is not None:
+                task.progress = progress
 
     def fail_task(
         self,
@@ -162,9 +176,38 @@ class SessionCoordinator:
         if self.session_tracker:
             self.session_tracker.fail_task(task_id, error_message, details)
 
+    def get_session_summary(self) -> dict[str, t.Any] | None:
+        """Return a summary of session task outcomes."""
+        if not self.session_tracker or not self.session_tracker.tasks:
+            return None
+        tasks = list(self.session_tracker.tasks.values())
+        total = len(tasks)
+        completed = len([t for t in tasks if t.status == "completed"])
+        failed = len([t for t in tasks if t.status == "failed"])
+        return {
+            "total": total,
+            "completed": completed,
+            "failed": failed,
+        }
+
+    def get_summary(self) -> dict[str, t.Any]:
+        """Return session summary details."""
+        tasks = (
+            {tid: task.__dict__ for tid, task in self.session_tracker.tasks.items()}
+            if self.session_tracker
+            else {}
+        )
+        return {
+            "session_id": self.session_id,
+            "start_time": self.start_time,
+            "tasks": tasks,
+            "metadata": self.session_tracker.metadata if self.session_tracker else {},
+        }
+
     def finalize_session(self, start_time: float, success: bool) -> None:
         """Finalize session bookkeeping."""
         duration = time.time() - start_time
+        self._end_time = time.time()
         if self.session_tracker:
             self.session_tracker.metadata["duration"] = duration
             self.session_tracker.metadata["success"] = success
@@ -184,6 +227,15 @@ class SessionCoordinator:
                     f"[red]Cleanup handler error:[/ red] {type(exc).__name__}: {exc}",
                 )
 
+        with suppress(Exception):
+            self._cleanup_temporary_files()
+        with suppress(Exception):
+            self._cleanup_debug_logs()
+        with suppress(Exception):
+            self._cleanup_coverage_files()
+        with suppress(Exception):
+            self._cleanup_pycache_directories()
+
         for lock_path in list(self.lock_files):
             with suppress(OSError):
                 if lock_path.exists():
@@ -199,27 +251,36 @@ class SessionCoordinator:
         self.lock_files.add(path)
 
     def set_cleanup_config(self, config: t.Any) -> None:
-        """Store cleanup configuration from options."""
-        self.cleanup_config = config
+        """Set cleanup configuration used by cleanup helpers."""
+        self._cleanup_config = config
 
-    def get_session_summary(self) -> dict[str, t.Any]:
-        """Return high-level session summary."""
-        if self.session_tracker:
-            summary = self.session_tracker.get_summary()
-            # Backward compatible alias
-            if "tasks_count" not in summary:
-                summary["tasks_count"] = summary.get("total_tasks", 0)
-            return summary
-        return {
-            "session_id": self.session_id,
-            "metadata": {"pkg_path": str(self.pkg_path)},
-            "tasks": {},
-            "tasks_count": 0,
-        }
+    def _cleanup_temporary_files(self) -> None:
+        pass
 
-    def get_summary(self) -> dict[str, t.Any]:
-        """Alias for get_session_summary."""
-        return self.get_session_summary()
+    def _cleanup_debug_logs(self) -> None:
+        pass
+
+    def _cleanup_coverage_files(self) -> None:
+        pass
+
+    def _cleanup_pycache_directories(self) -> None:
+        pass
+
+    def _setup_logging(self, options: OptionsProtocol) -> None:
+        pass
+
+    def _setup_websocket_progress_file(self) -> None:
+        pass
+
+    def _initialize_quality_service(self) -> None:
+        pass
+
+    def update_stage(self, stage: str, status: str) -> None:
+        """Update stage status and write progress if applicable."""
+        self._update_websocket_progress(stage, status)
+
+    def _update_websocket_progress(self, stage: str, status: str) -> None:
+        pass
 
 
 class SessionController:

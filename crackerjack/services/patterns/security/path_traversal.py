@@ -54,6 +54,20 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("normal/path", "normal/path"),
         ],
     ),
+    "detect_utf8_overlong_traversal": ValidatedPattern(
+        name="detect_utf8_overlong_traversal",
+        pattern=r"%c0%2e%c0%2e%c0%2f",
+        replacement="[TRAVERSAL]",
+        description="Detect UTF-8 overlong encoded traversal sequences",
+        global_replace=True,
+        test_cases=[
+            (
+                "test%c0%2e%c0%2e%c0%2fpasswd",
+                "test[TRAVERSAL]passwd",
+            ),
+            ("normal/path", "normal/path"),
+        ],
+    ),
     "detect_null_bytes_url": ValidatedPattern(
         name="detect_null_bytes_url",
         pattern=r"%00",

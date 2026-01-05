@@ -228,10 +228,10 @@ Need to check what actual adapters return for config errors:
 
 ### 2. Test in Real Environment
 
-Run crackerjack in the ../acb project to verify:
+Run crackerjack in the ../legacy project to verify:
 
 ```bash
-cd /Users/les/Projects/acb
+cd /Users/les/Projects/legacy
 python -m crackerjack run
 ```
 

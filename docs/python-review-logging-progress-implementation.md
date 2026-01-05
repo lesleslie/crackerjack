@@ -32,9 +32,9 @@ ______________________________________________________________________
 ```python
 # __main__.py - Lines 275-278
 if "--debug" not in sys.argv:
-    os.environ["ACB_LOGGER_DEBUG_MODE"] = "0"
-    os.environ["ACB_LOG_LEVEL"] = "WARNING"
-    os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
+    os.environ["legacy_LOGGER_DEBUG_MODE"] = "0"
+    os.environ["legacy_LOG_LEVEL"] = "WARNING"
+    os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"
 ```
 
 #### Issues
@@ -62,19 +62,19 @@ import sys
 import os
 from typing import Final
 
-# Early detection of debug/verbose flags BEFORE any ACB imports
+# Early detection of debug/verbose flags BEFORE any legacy imports
 # This is more robust than string matching and handles all argparse variants
 _EARLY_DEBUG_FLAG: Final[bool] = any(
     arg in ("--debug", "-d") or arg.startswith("--debug=") for arg in sys.argv[1:]
 )
 
-# Suppress ACB logger startup and stderr JSON unless debug mode
+# Suppress legacy logger startup and stderr JSON unless debug mode
 if not _EARLY_DEBUG_FLAG:
-    os.environ.setdefault("ACB_LOGGER_DEBUG_MODE", "0")
-    os.environ.setdefault("ACB_LOG_LEVEL", "WARNING")
-    os.environ.setdefault("ACB_DISABLE_STRUCTURED_STDERR", "1")
+    os.environ.setdefault("legacy_LOGGER_DEBUG_MODE", "0")
+    os.environ.setdefault("legacy_LOG_LEVEL", "WARNING")
+    os.environ.setdefault("legacy_DISABLE_STRUCTURED_STDERR", "1")
 
-# Now safe to import ACB-dependent modules
+# Now safe to import legacy-dependent modules
 import asyncio
 import typing as t
 # ... rest of imports
@@ -99,11 +99,11 @@ ______________________________________________________________________
 def _configure_logger_verbosity(debug: bool) -> None:
     """Configure logger verbosity and stderr JSON output."""
     if debug:
-        os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+        os.environ["legacy_LOG_LEVEL"] = "DEBUG"
         os.environ["CRACKERJACK_DEBUG"] = "1"
-        if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
-            del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
-        os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+        if "legacy_DISABLE_STRUCTURED_STDERR" in os.environ:
+            del os.environ["legacy_DISABLE_STRUCTURED_STDERR"]
+        os.environ["legacy_FORCE_STRUCTURED_STDERR"] = "1"
 ```
 
 #### Issues
@@ -127,7 +127,7 @@ import os
 from contextlib import contextmanager
 from typing import Iterator
 
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.models.protocols import LoggerProtocol
 
 
@@ -154,29 +154,29 @@ def logger_verbosity(
     """
     # Save original state for restoration
     original_state = {
-        "ACB_LOG_LEVEL": os.environ.get("ACB_LOG_LEVEL"),
+        "legacy_LOG_LEVEL": os.environ.get("legacy_LOG_LEVEL"),
         "CRACKERJACK_DEBUG": os.environ.get("CRACKERJACK_DEBUG"),
-        "ACB_DISABLE_STRUCTURED_STDERR": os.environ.get(
-            "ACB_DISABLE_STRUCTURED_STDERR"
+        "legacy_DISABLE_STRUCTURED_STDERR": os.environ.get(
+            "legacy_DISABLE_STRUCTURED_STDERR"
         ),
-        "ACB_FORCE_STRUCTURED_STDERR": os.environ.get("ACB_FORCE_STRUCTURED_STDERR"),
+        "legacy_FORCE_STRUCTURED_STDERR": os.environ.get("legacy_FORCE_STRUCTURED_STDERR"),
     }
 
     try:
         # Apply new configuration
         if debug:
-            os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+            os.environ["legacy_LOG_LEVEL"] = "DEBUG"
             os.environ["CRACKERJACK_DEBUG"] = "1"
         else:
-            os.environ["ACB_LOG_LEVEL"] = "WARNING"
+            os.environ["legacy_LOG_LEVEL"] = "WARNING"
             os.environ.pop("CRACKERJACK_DEBUG", None)  # Safe deletion
 
         if enable_stderr_json:
-            os.environ.pop("ACB_DISABLE_STRUCTURED_STDERR", None)
-            os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+            os.environ.pop("legacy_DISABLE_STRUCTURED_STDERR", None)
+            os.environ["legacy_FORCE_STRUCTURED_STDERR"] = "1"
         else:
-            os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
-            os.environ.pop("ACB_FORCE_STRUCTURED_STDERR", None)
+            os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"
+            os.environ.pop("legacy_FORCE_STRUCTURED_STDERR", None)
 
         # Reconfigure logger instance if available
         _reconfigure_active_logger(debug=debug)
@@ -234,15 +234,15 @@ def configure_logger_verbosity(*, debug: bool = False, verbose: bool = False) ->
         verbose: Enable more detailed user-facing output (not low-level logs)
     """
     if debug:
-        os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+        os.environ["legacy_LOG_LEVEL"] = "DEBUG"
         os.environ["CRACKERJACK_DEBUG"] = "1"
-        os.environ.pop("ACB_DISABLE_STRUCTURED_STDERR", None)
-        os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+        os.environ.pop("legacy_DISABLE_STRUCTURED_STDERR", None)
+        os.environ["legacy_FORCE_STRUCTURED_STDERR"] = "1"
     else:
         # Keep clean output for default and verbose modes
-        os.environ["ACB_LOG_LEVEL"] = "WARNING"
+        os.environ["legacy_LOG_LEVEL"] = "WARNING"
         os.environ.pop("CRACKERJACK_DEBUG", None)
-        os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
+        os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"
 
     # Reconfigure active logger instance
     _reconfigure_active_logger(debug=debug)
@@ -287,7 +287,7 @@ print("INFO: Registering LoggerProtocol with fresh logger instance")
 
 ❌ **CRITICAL Anti-Pattern**: Direct `print()` bypasses logging architecture
 
-- Violates clean architecture (bypasses ACB logger)
+- Violates clean architecture (bypasses legacy logger)
 - No structured logging (not machine-readable)
 - Output to stdout instead of proper logging stream
 - Hard to test (can't capture/mock)
@@ -314,8 +314,8 @@ import os
 import sys
 from typing import Any, Protocol, runtime_checkable
 
-from acb.depends import depends
-from acb.logger import Logger
+from legacy.depends import depends
+from legacy.logger import Logger
 
 
 # Logging function that works during early initialization
@@ -361,25 +361,25 @@ def ensure_logger_dependency() -> None:
             _log_dependency_issue(
                 "Logger dependency was registered as empty tuple, replacing with fresh instance"
             )
-            from acb.logger import Logger as ACBLogger
+            from legacy.logger import Logger as legacyLogger
 
-            fresh_logger = ACBLogger()
+            fresh_logger = legacyLogger()
             depends.set(Logger, fresh_logger)
 
         elif isinstance(logger_instance, str):
             _log_dependency_issue(
                 f"Logger dependency was registered as string ({logger_instance!r}), replacing with fresh instance"
             )
-            from acb.logger import Logger as ACBLogger
+            from legacy.logger import Logger as legacyLogger
 
-            fresh_logger = ACBLogger()
+            fresh_logger = legacyLogger()
             depends.set(Logger, fresh_logger)
 
     except Exception:
         # No logger registered, create one
-        from acb.logger import Logger as ACBLogger
+        from legacy.logger import Logger as legacyLogger
 
-        fresh_logger = ACBLogger()
+        fresh_logger = legacyLogger()
         depends.set(Logger, fresh_logger)
 
     # Handle LoggerProtocol registration
@@ -391,9 +391,9 @@ def ensure_logger_dependency() -> None:
             _log_dependency_issue(
                 "LoggerProtocol dependency was invalid, replacing with fresh instance"
             )
-            from acb.logger import Logger as ACBLogger
+            from legacy.logger import Logger as legacyLogger
 
-            fresh_logger = ACBLogger()
+            fresh_logger = legacyLogger()
             depends.set(LoggerProtocol, fresh_logger)
 
     except ImportError:
@@ -401,9 +401,9 @@ def ensure_logger_dependency() -> None:
     except Exception:
         # Register LoggerProtocol if not available
         try:
-            from acb.logger import Logger as ACBLogger
+            from legacy.logger import Logger as legacyLogger
 
-            fresh_logger = ACBLogger()
+            fresh_logger = legacyLogger()
             _log_dependency_issue(
                 "Registering LoggerProtocol with fresh logger instance", level="INFO"
             )
@@ -527,15 +527,15 @@ ______________________________________________________________________
 
 ```python
 # __main__.py - Multiple env var mutations
-os.environ["ACB_LOG_LEVEL"] = "WARNING"
-os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
+os.environ["legacy_LOG_LEVEL"] = "WARNING"
+os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"
 ```
 
 **Problem**: `os.environ` is a shared global dictionary
 
 - Multiple threads reading/writing = race conditions
 - No locks or synchronization
-- ACB may spawn background threads during initialization
+- legacy may spawn background threads during initialization
 
 #### ✅ Pythonic Solution: Thread-Local Storage for Logger State
 
@@ -609,7 +609,7 @@ if get_debug_mode():
 - ✅ Better testing isolation (threads don't interfere)
 - ✅ More explicit than environment variables
 
-**Note**: Environment variables still needed for ACB initialization, but internal state should use thread-local storage.
+**Note**: Environment variables still needed for legacy initialization, but internal state should use thread-local storage.
 
 ______________________________________________________________________
 
@@ -619,9 +619,9 @@ ______________________________________________________________________
 
 ```python
 # dependency_guard.py - Lines 32-35, 43-45, 64-67, 74-76, 84-88
-from acb.logger import Logger as ACBLogger
+from legacy.logger import Logger as legacyLogger
 
-fresh_logger = ACBLogger()
+fresh_logger = legacyLogger()
 depends.set(Logger, fresh_logger)
 ```
 
@@ -637,9 +637,9 @@ def _create_and_register_logger() -> Logger:
     Returns:
         Newly created and registered Logger instance
     """
-    from acb.logger import Logger as ACBLogger
+    from legacy.logger import Logger as legacyLogger
 
-    fresh_logger = ACBLogger()
+    fresh_logger = legacyLogger()
     depends.set(Logger, fresh_logger)
 
     # Also try to register as LoggerProtocol if available
@@ -703,7 +703,7 @@ def configure_logger_verbosity(
     # Determine effective log level
     effective_level: Final[LogLevel] = level or ("DEBUG" if debug else "WARNING")
 
-    os.environ["ACB_LOG_LEVEL"] = effective_level
+    os.environ["legacy_LOG_LEVEL"] = effective_level
     # ... rest of implementation
 ```
 
@@ -746,9 +746,9 @@ class TestLoggerVerbosity:
         original = {
             k: os.environ.get(k)
             for k in [
-                "ACB_LOG_LEVEL",
+                "legacy_LOG_LEVEL",
                 "CRACKERJACK_DEBUG",
-                "ACB_DISABLE_STRUCTURED_STDERR",
+                "legacy_DISABLE_STRUCTURED_STDERR",
             ]
         }
 
@@ -769,30 +769,30 @@ class TestLoggerVerbosity:
         """Default mode should set WARNING level and disable stderr JSON."""
         configure_logger_verbosity(debug=False, verbose=False)
 
-        assert os.environ["ACB_LOG_LEVEL"] == "WARNING"
-        assert os.environ.get("ACB_DISABLE_STRUCTURED_STDERR") == "1"
+        assert os.environ["legacy_LOG_LEVEL"] == "WARNING"
+        assert os.environ.get("legacy_DISABLE_STRUCTURED_STDERR") == "1"
         assert "CRACKERJACK_DEBUG" not in os.environ
 
     def test_debug_mode_sets_debug_level(self, clean_env):
         """Debug mode should set DEBUG level and enable stderr JSON."""
         configure_logger_verbosity(debug=True, verbose=False)
 
-        assert os.environ["ACB_LOG_LEVEL"] == "DEBUG"
+        assert os.environ["legacy_LOG_LEVEL"] == "DEBUG"
         assert os.environ["CRACKERJACK_DEBUG"] == "1"
-        assert os.environ.get("ACB_FORCE_STRUCTURED_STDERR") == "1"
-        assert "ACB_DISABLE_STRUCTURED_STDERR" not in os.environ
+        assert os.environ.get("legacy_FORCE_STRUCTURED_STDERR") == "1"
+        assert "legacy_DISABLE_STRUCTURED_STDERR" not in os.environ
 
     def test_context_manager_restores_state(self, clean_env):
         """Context manager should restore original environment state."""
         # Set initial state
-        os.environ["ACB_LOG_LEVEL"] = "INFO"
+        os.environ["legacy_LOG_LEVEL"] = "INFO"
 
         with logger_verbosity(debug=True):
             # Inside context, debug mode active
-            assert os.environ["ACB_LOG_LEVEL"] == "DEBUG"
+            assert os.environ["legacy_LOG_LEVEL"] == "DEBUG"
 
         # After context, original state restored
-        assert os.environ["ACB_LOG_LEVEL"] == "INFO"
+        assert os.environ["legacy_LOG_LEVEL"] == "INFO"
 
     def test_early_debug_detection(self):
         """Test early debug flag detection from sys.argv."""

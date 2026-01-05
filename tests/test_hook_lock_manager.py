@@ -184,7 +184,7 @@ class TestHookLockManagerAsyncLocking:
         # Set timeout shorter than hold time to force one task to timeout
         # Task1 acquires immediately, holds for 0.5s
         # Task2 needs to fail before 0.5s elapses, so timeout must be < 0.5s
-        manager.set_hook_timeout(hook_name, 0.2)  # Timeout shorter than lock hold time
+        manager.set_hook_timeout(hook_name, 0.05)  # Timeout shorter than lock hold time
 
         results = []
 
@@ -192,7 +192,7 @@ class TestHookLockManagerAsyncLocking:
             try:
                 async with manager.acquire_hook_lock(hook_name):
                     results.append(f"{identifier}_acquired")
-                    await asyncio.sleep(0.5)  # Hold lock for 0.5 seconds
+                    await asyncio.sleep(0.2)  # Hold lock for a bit
                     results.append(f"{identifier}_released")
             except TimeoutError:
                 results.append(f"{identifier}_timeout")
@@ -218,16 +218,16 @@ class TestHookLockManagerAsyncLocking:
 
         hook_name = "timeout_handling_test"
         manager.add_hook_to_lock_list(hook_name)
-        manager.set_hook_timeout(hook_name, 0.1)  # Very short timeout
+        manager.set_hook_timeout(hook_name, 0.05)  # Very short timeout
 
         # Acquire lock and hold it
         async def hold_lock():
             async with manager.acquire_hook_lock(hook_name):
-                await asyncio.sleep(1.0)  # Hold for 1 second
+                await asyncio.sleep(0.2)  # Hold briefly
 
         # Start holding lock
         hold_task = asyncio.create_task(hold_lock())
-        await asyncio.sleep(0.05)  # Let first task acquire lock
+        await asyncio.sleep(0.02)  # Let first task acquire lock
 
         # Try to acquire lock with timeout
         start_time = time.time()
@@ -237,7 +237,7 @@ class TestHookLockManagerAsyncLocking:
 
         timeout_duration = time.time() - start_time
         # Should timeout around 0.1 seconds
-        assert 0.05 < timeout_duration < 0.3
+        assert 0.02 < timeout_duration < 0.2
 
         # Cleanup
         hold_task.cancel()
@@ -391,7 +391,7 @@ class TestHeartbeatMechanism:
 
         test_config = GlobalLockConfig(
             lock_directory=tmp_path / "locks",
-            session_heartbeat_interval=0.1,  # Very frequent heartbeats for testing
+            session_heartbeat_interval=0.05,  # Very frequent heartbeats for testing
         )
         manager._global_config = test_config
         manager.enable_global_lock(True)
@@ -409,7 +409,7 @@ class TestHeartbeatMechanism:
             initial_heartbeat = initial_data["last_heartbeat"]
 
             # Wait for heartbeat to update
-            await asyncio.sleep(0.3)  # Wait for 3 heartbeats
+            await asyncio.sleep(0.12)  # Wait for a few heartbeats
 
             # Check updated heartbeat
             with open(lock_path, encoding="utf-8") as f:
@@ -867,7 +867,7 @@ class TestErrorHandling:
 
         test_config = GlobalLockConfig(
             lock_directory=tmp_path / "locks",
-            session_heartbeat_interval=0.05,  # Very frequent for testing
+            session_heartbeat_interval=0.02,  # Very frequent for testing
         )
         manager._global_config = test_config
         manager.enable_global_lock(True)
@@ -881,7 +881,7 @@ class TestErrorHandling:
             lock_path.unlink()
 
             # Wait for heartbeat to detect missing file
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.06)
 
             # Hook should no longer be tracked as active
             assert hook_name not in manager._active_global_locks

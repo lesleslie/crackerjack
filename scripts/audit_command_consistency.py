@@ -1,16 +1,8 @@
-"""Audit command consistency between .pre-commit-config.yaml and tool_commands.py.
-
-Phase 10.4.2: Command Harmonization
-
-This script compares hook definitions in both locations and identifies discrepancies.
-"""
-
 import sys
 from pathlib import Path
 
 import yaml
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -18,18 +10,12 @@ from crackerjack.config.tool_commands import TOOL_COMMANDS
 
 
 def load_precommit_config() -> dict:
-    """Load .pre-commit-config.yaml."""
     config_path = project_root / ".pre-commit-config.yaml"
     with config_path.open() as f:
         return yaml.safe_load(f)
 
 
 def extract_precommit_commands(config: dict) -> dict[str, list[str]]:
-    """Extract hook commands from pre-commit config.
-
-    Returns:
-        Dict mapping hook ID to full command (entry + args)
-    """
     commands = {}
 
     for repo in config.get("repos", []):
@@ -38,7 +24,6 @@ def extract_precommit_commands(config: dict) -> dict[str, list[str]]:
             entry = hook.get("entry", "").split()
             args = hook.get("args", [])
 
-            # Combine entry and args
             full_command = entry + args
             commands[hook_id] = full_command
 
@@ -46,11 +31,6 @@ def extract_precommit_commands(config: dict) -> dict[str, list[str]]:
 
 
 def compare_commands() -> dict[str, dict]:
-    """Compare commands between .pre-commit-config.yaml and tool_commands.py.
-
-    Returns:
-        Dict mapping hook names to comparison results
-    """
     precommit_config = load_precommit_config()
     precommit_commands = extract_precommit_commands(precommit_config)
 
@@ -61,7 +41,6 @@ def compare_commands() -> dict[str, dict]:
 
 
 def _compare_tool_commands(precommit_commands: dict[str, list[str]]) -> dict[str, dict]:
-    """Compare tool commands with pre-commit commands."""
     results = {}
 
     for tool_name, tool_command in TOOL_COMMANDS.items():
@@ -80,7 +59,6 @@ def _compare_tool_commands(precommit_commands: dict[str, list[str]]) -> dict[str
 
 
 def _create_tool_only_result(tool_command: list[str]) -> dict[str, t.Any]:
-    """Create result for tool only in tool_commands.py."""
     return {
         "status": "tool_commands_only",
         "tool_command": tool_command,
@@ -90,28 +68,22 @@ def _create_tool_only_result(tool_command: list[str]) -> dict[str, t.Any]:
 
 
 def _commands_match(tool_command: list[str], precommit_command: list[str]) -> bool:
-    """Check if tool and pre-commit commands match."""
-    # Direct match
     if tool_command == precommit_command:
         return True
 
-    # Match if pre-commit has extra/different prefix
     if " ".join(tool_command[2:]) == " ".join(precommit_command):
         return True
 
-    # Match if commands are equivalent (same tool, same args)
     return _commands_equivalent(tool_command, precommit_command)
 
 
 def _commands_equivalent(tool_command: list[str], precommit_command: list[str]) -> bool:
-    """Check if commands are equivalent ignoring prefix."""
     if not (len(tool_command) >= 3 and precommit_command):
         return False
 
-    if tool_command[2] != precommit_command[0]:  # Same tool name
+    if tool_command[2] != precommit_command[0]:
         return False
 
-    # Check if args match (allowing for ordering differences)
     tool_args = set(tool_command[3:])
     precommit_args = set(precommit_command[1:])
     return tool_args == precommit_args
@@ -120,7 +92,6 @@ def _commands_equivalent(tool_command: list[str], precommit_command: list[str]) 
 def _create_comparison_result(
     tool_command: list[str], precommit_command: list[str], match: bool
 ) -> dict[str, t.Any]:
-    """Create comparison result for matching commands."""
     return {
         "status": "match" if match else "mismatch",
         "tool_command": tool_command,
@@ -132,7 +103,6 @@ def _create_comparison_result(
 def _add_precommit_only_commands(
     results: dict[str, dict], precommit_commands: dict[str, list[str]]
 ) -> None:
-    """Add commands that only exist in pre-commit config."""
     for hook_id in precommit_commands:
         if hook_id not in TOOL_COMMANDS:
             results[hook_id] = {
@@ -144,7 +114,6 @@ def _add_precommit_only_commands(
 
 
 def generate_summary_section(results: dict[str, dict], lines: list[str]) -> None:
-    """Generate the summary section of the report."""
     matches = sum(1 for r in results.values() if r["status"] == "match")
     mismatches = sum(1 for r in results.values() if r["status"] == "mismatch")
     tool_only = sum(1 for r in results.values() if r["status"] == "tool_commands_only")
@@ -166,7 +135,6 @@ def generate_summary_section(results: dict[str, dict], lines: list[str]) -> None
 def generate_mismatched_commands_section(
     results: dict[str, dict], lines: list[str]
 ) -> None:
-    """Generate the mismatched commands section of the report."""
     mismatches = sum(1 for r in results.values() if r["status"] == "mismatch")
 
     if mismatches > 0:
@@ -202,7 +170,6 @@ def generate_mismatched_commands_section(
 
 
 def generate_tool_only_section(results: dict[str, dict], lines: list[str]) -> None:
-    """Generate the tool_commands.py only section of the report."""
     tool_only = sum(1 for r in results.values() if r["status"] == "tool_commands_only")
 
     if tool_only > 0:
@@ -225,7 +192,6 @@ def generate_tool_only_section(results: dict[str, dict], lines: list[str]) -> No
 
 
 def generate_precommit_only_section(results: dict[str, dict], lines: list[str]) -> None:
-    """Generate the .pre-commit-config.yaml only section of the report."""
     precommit_only = sum(1 for r in results.values() if r["status"] == "precommit_only")
 
     if precommit_only > 0:
@@ -250,7 +216,6 @@ def generate_precommit_only_section(results: dict[str, dict], lines: list[str]) 
 
 
 def generate_all_consistent_section(results: dict[str, dict], lines: list[str]) -> None:
-    """Generate the all commands consistent section of the report."""
     matches = sum(1 for r in results.values() if r["status"] == "match")
 
     if matches == len(results):
@@ -265,14 +230,6 @@ def generate_all_consistent_section(results: dict[str, dict], lines: list[str]) 
 
 
 def generate_report(results: dict[str, dict]) -> str:
-    """Generate markdown report of command consistency audit.
-
-    Args:
-        results: Comparison results from compare_commands()
-
-    Returns:
-        Markdown-formatted report
-    """
     lines = [
         "# Hook Command Consistency Audit",
         "",
@@ -291,19 +248,15 @@ def generate_report(results: dict[str, dict]) -> str:
 
 
 def main():
-    """Main entry point."""
     print("=" * 80)
     print("Phase 10.4.2: Hook Command Consistency Audit")
     print("=" * 80)
     print()
 
-    # Compare commands
     results = compare_commands()
 
-    # Generate report
     report = generate_report(results)
 
-    # Save report
     report_path = project_root / "docs" / "HOOK-COMMAND-AUDIT.md"
     report_path.write_text(report)
 
@@ -313,7 +266,6 @@ def main():
     print()
     print(report)
 
-    # Exit with error if mismatches found
     mismatches = sum(1 for r in results.values() if r["status"] == "mismatch")
     if mismatches > 0:
         print(f"\n⚠️ Found {mismatches} mismatched commands!")

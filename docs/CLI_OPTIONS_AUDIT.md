@@ -2,7 +2,7 @@
 
 **Date**: 2025-12-27
 **Purpose**: Comprehensive audit of all 100+ CLI options to identify deprecated, broken, or unused functionality
-**Status**: Phase 2 Complete (ACB Removed), Phase 3 Pending (Oneiric Integration)
+**Status**: Phase 2 Complete (legacy Removed), Phase 3 Pending (Oneiric Integration)
 
 ## Executive Summary
 
@@ -193,21 +193,21 @@ ______________________________________________________________________
 
 These options exist in `options.py` and `CLI_OPTIONS` but their handlers **raise NotImplementedError** with message:
 
-> "Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration)."
+> "Workflow orchestration removed in Phase 2 (legacy removal). Will be reimplemented in Phase 3 (Oneiric integration)."
 
-### ACB Workflow Options (BROKEN)
+### legacy Workflow Options (BROKEN)
 
 | Option | Description | Status |
 |--------|-------------|--------|
-| `--use-acb-workflows` | Use ACB workflows (now always true) | ❌ Hidden (redundant) |
+| `--use-legacy-workflows` | Use orchestrated workflows (now always true) | ❌ Hidden (redundant) |
 | `--use-legacy-orchestrator` | Opt into legacy orchestration | ❌ Raises NotImplementedError |
 
 **Location**: `crackerjack/cli/handlers/main_handlers.py:110`
 
 ```python
-def handle_acb_workflow_mode(...):
+def handle_legacy_workflow_mode(...):
     raise NotImplementedError(
-        "ACB workflow engine removed in Phase 2 (ACB removal). "
+        "orchestrated workflow engine removed in Phase 2 (legacy removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
 ```
@@ -226,7 +226,7 @@ def handle_acb_workflow_mode(...):
 ```python
 if not orchestrated:
     raise NotImplementedError(
-        "Legacy workflow orchestration removed in Phase 2 (ACB removal). "
+        "Legacy workflow orchestration removed in Phase 2 (legacy removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
 ```
@@ -411,7 +411,7 @@ ______________________________________________________________________
 **Remove Completely**:
 
 ```python
---use-acb-workflows  # Already hidden, always true, redundant
+--use-legacy-workflows  # Already hidden, always true, redundant
 --async              # Hidden experimental, unclear status
 ```
 
@@ -436,7 +436,7 @@ ______________________________________________________________________
 ### Phase 1: Immediate Cleanup (This Week)
 
 - [ ] Remove broken orchestration options from `run` command signature
-- [ ] Remove `--use-acb-workflows` (redundant, hidden)
+- [ ] Remove `--use-legacy-workflows` (redundant, hidden)
 - [ ] Remove `--async` (experimental, hidden, unclear status)
 - [ ] Add deprecation warnings for `--use-legacy-orchestrator`
 

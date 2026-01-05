@@ -15,6 +15,23 @@ import tempfile
 import time
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.slow,
+    pytest.mark.chaos,
+    pytest.mark.external,
+]
+
+
+if os.getenv("CRACKERJACK_E2E") != "1":
+    pytest.skip(
+        "Fast-hooks validation tests are opt-in (set CRACKERJACK_E2E=1).",
+        allow_module_level=True,
+    )
+
 
 def create_project_with_guaranteed_fast_hook_failure():
     """Create a project that will definitely fail fast hooks."""

@@ -1,7 +1,7 @@
 """Adapter metadata and status definitions.
 
 Provides type-safe enums and metadata structures for QA adapters,
-replacing ACB's adapter metadata with Crackerjack-specific implementations.
+replacing the legacy adapter metadata with Crackerjack-specific implementations.
 """
 
 from __future__ import annotations

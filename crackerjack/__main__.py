@@ -1,18 +1,3 @@
-"""Crackerjack CLI entry point with Oneiric integration.
-
-Phase 6 Implementation: MCPServerCLIFactory integration with restored main command
-"""
-
-import os
-import sys
-
-# Suppress ACB logger startup messages and stderr JSON unless --debug is provided
-# Must happen before any ACB imports
-if "--debug" not in sys.argv:
-    os.environ["ACB_LOGGER_DEBUG_MODE"] = "0"
-    os.environ["ACB_LOG_LEVEL"] = "WARNING"
-    os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"  # No JSON to stderr by default
-
 import subprocess
 import typing as t
 
@@ -64,11 +49,6 @@ from crackerjack.cli.semantic_handlers import (
 from crackerjack.config import CrackerjackSettings, load_settings
 from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 
-# ============================================================================
-# MCP Server Lifecycle (Oneiric Factory Pattern)
-# ============================================================================
-
-# Load settings for CLI factory
 mcp_settings = CrackerjackMCPSettings.load_for_crackerjack()
 
 factory = MCPServerCLIFactory(
@@ -85,9 +65,34 @@ app.info.help = "Crackerjack MCP Server CLI"
 console = Console()
 
 
-# ============================================================================
-# Main Quality Workflow Command (Restored from Pre-Phase 6)
-# ============================================================================
+def _detect_package_name_standalone() -> str:
+    from pathlib import Path
+
+    pkg_path = Path.cwd()
+
+    pyproject_path = pkg_path / "pyproject.toml"
+    if pyproject_path.exists():
+        from contextlib import suppress
+
+        with suppress(Exception):
+            import tomllib
+
+            with pyproject_path.open("rb") as f:
+                data = tomllib.load(f)
+                project_name = data.get("project", {}).get("name")
+                if project_name:
+                    return project_name.replace("-", "_")
+
+    for item in pkg_path.iterdir():
+        if (
+            item.is_dir()
+            and not item.name.startswith(".")
+            and item.name not in ("tests", "docs", "build", "dist", "__pycache__")
+            and (item / "__init__.py").exists()
+        ):
+            return item.name
+
+    return "crackerjack"
 
 
 @app.command()
@@ -189,25 +194,10 @@ def run(
     semantic_stats: bool = CLI_OPTIONS["semantic_stats"],
     remove_from_index: str | None = CLI_OPTIONS["remove_from_index"],
 ) -> None:
-    """Run Crackerjack quality workflow with comprehensive options.
-
-    This is the main entry point for running quality checks, tests, and
-    release workflows. Run without arguments for basic quality checks,
-    or use flags to customize behavior.
-
-    Common examples:
-        crackerjack run --run-tests           # Quality checks + tests
-        crackerjack run --ai-fix --run-tests  # Auto-fix with AI
-        crackerjack run --fast                # Quick formatting only
-        crackerjack run --all patch           # Full release workflow
-    """
-    # Load settings
     settings = load_settings(CrackerjackSettings)
 
-    # Print version on startup
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
 
-    # Create options object
     options = create_options(
         commit,
         interactive,
@@ -294,42 +284,30 @@ def run(
         ai_fix=ai_fix,
     )
 
-    # Set semantic search options
     options.index = index
     options.search = search
     options.semantic_stats = semantic_stats
     options.remove_from_index = remove_from_index
 
-    # Setup debug/verbose flags
     ai_fix, verbose = setup_debug_and_verbose_flags(
         ai_fix, ai_debug, debug, verbose, options
     )
     setup_ai_agent_env(ai_fix, ai_debug or debug)
 
-    # Configure logger verbosity and stderr JSON output based on CLI flags
     def _configure_logger_verbosity(debug: bool) -> None:
-        """Configure logger verbosity and stderr JSON output.
-
-        Stream Configuration:
-        - Default/Verbose: WARNING level, no stderr JSON (clean UX)
-        - Debug: DEBUG level, enable stderr JSON (structured logs for troubleshooting)
-        """
         if debug:
             os.environ["ACB_LOG_LEVEL"] = "DEBUG"
             os.environ["CRACKERJACK_DEBUG"] = "1"
-            # Enable structured JSON logging to stderr for debug mode
+
             if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
                 del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
             os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
-        # If not debug, keep WARNING level and disabled stderr JSON from early init
 
     _configure_logger_verbosity(debug=debug)
 
-    # Process all commands
     if not _process_all_commands(locals(), options):
         return
 
-    # Run workflow
     if interactive:
         handle_interactive_mode(options)
     else:
@@ -337,7 +315,6 @@ def run(
 
 
 def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
-    """Process all command-line commands and return True if workflow should continue."""
     if _handle_cache_commands(local_vars["clear_cache"], local_vars["cache_stats"]):
         return False
 
@@ -359,8 +336,6 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
     ):
         return False
 
-    # Server commands (monitor, dashboard, watchdog, etc.) handled separately
-    # MCP server commands now handled by MCPServerCLIFactory
     # TODO: Restore monitor/dashboard/watchdog handling if needed
 
     if not handle_coverage_status(local_vars["coverage_status"], options):
@@ -370,7 +345,6 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
-    """Handle documentation and analysis commands."""
     if not handle_documentation_commands(
         local_vars["generate_docs"], local_vars["validate_docs"], options
     ):
@@ -397,7 +371,6 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 
 def _handle_specialized_analytics(local_vars: t.Any) -> bool:
-    """Handle advanced analytics commands."""
     if not handle_heatmap_generation(
         local_vars["heatmap"], local_vars["heatmap_type"], local_vars["heatmap_output"]
     ):
@@ -427,7 +400,6 @@ def _handle_semantic_commands(
     remove_from_index: str | None,
     options: t.Any,
 ) -> bool:
-    """Handle semantic search commands."""
     if not _has_semantic_operations(index, search, semantic_stats, remove_from_index):
         return True
 
@@ -447,7 +419,6 @@ def _has_semantic_operations(
     semantic_stats: bool,
     remove_from_index: str | None,
 ) -> bool:
-    """Check if any semantic operations are requested."""
     return any([index, search, semantic_stats, remove_from_index])
 
 
@@ -457,7 +428,6 @@ def _execute_semantic_operations(
     semantic_stats: bool,
     remove_from_index: str | None,
 ) -> None:
-    """Execute semantic search operations."""
     if index:
         handle_semantic_index(index)
 
@@ -472,7 +442,6 @@ def _execute_semantic_operations(
 
 
 def _handle_advanced_features(local_vars: t.Any) -> bool:
-    """Handle advanced features like optimization and MkDocs."""
     if not handle_advanced_optimizer(
         local_vars["advanced_optimizer"],
         local_vars["advanced_profile"],
@@ -498,11 +467,6 @@ def _handle_advanced_features(local_vars: t.Any) -> bool:
     return True
 
 
-# ============================================================================
-# Standalone Commands (Domain-Specific, Preserved from Phase 6)
-# ============================================================================
-
-
 @app.command()
 def run_tests(
     workers: int = typer.Option(
@@ -517,29 +481,20 @@ def run_tests(
         False, "--benchmark", help="Run performance benchmarks"
     ),
 ):
-    """Run test suite with pytest (standalone command).
-
-    Supports parallel execution via pytest-xdist with automatic worker detection.
-    Coverage is tracked with pytest-cov and stored in htmlcov/ directory.
-    """
     cmd = ["pytest"]
 
-    # Worker configuration (pytest-xdist)
     if workers != 1:
         cmd.extend(["-n", str(workers) if workers > 0 else "auto"])
 
-    # Coverage tracking
     if coverage:
-        cmd.extend(["--cov=crackerjack", "--cov-report=html", "--cov-report=term"])
+        package_name = _detect_package_name_standalone()
+        cmd.extend([f"--cov={package_name}", "--cov-report=html", "--cov-report=term"])
 
-    # Timeout protection
     cmd.append(f"--timeout={timeout}")
 
-    # Verbosity
     if verbose:
         cmd.append("-vv")
 
-    # Benchmarks
     if benchmark:
         cmd.append("--benchmark-only")
 
@@ -550,10 +505,6 @@ def run_tests(
 
 @app.command()
 def qa_health():
-    """Check health of QA adapters (standalone command).
-
-    Displays enabled/disabled adapter flags and health status.
-    """
     from crackerjack.server import CrackerjackServer
 
     settings = load_settings(CrackerjackSettings)
@@ -570,18 +521,17 @@ def qa_health():
     console.print("\n[bold]Enabled Adapters:[/bold]")
     for adapter_name, enabled in enabled_flags.items():
         status = "✅" if enabled else "❌"
-        console.print(f"  {status} {adapter_name}")
+        console.print(f" {status} {adapter_name}")
 
     if qa_status.get("total", 0) == qa_status.get("healthy", 0):
         console.print("\n[green]✅ All adapters healthy[/green]")
         raise typer.Exit(0)
     else:
-        console.print("\n[yellow]⚠️  Some adapters unhealthy[/yellow]")
+        console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
         raise typer.Exit(1)
 
 
 def main():
-    """CLI entry point."""
     app()
 
 

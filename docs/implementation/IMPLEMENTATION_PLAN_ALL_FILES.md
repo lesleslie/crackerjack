@@ -4,7 +4,7 @@
 
 Three critical issues identified:
 
-1. **ACB mode placeholder**: Uses hardcoded `passed` results with 0.0s duration and empty file lists
+1. **legacy mode placeholder**: Uses hardcoded `passed` results with 0.0s duration and empty file lists
 1. **Legacy mode uses --all-files**: Forces hooks to check entire codebase, not just changed files
 1. **Executor doesn't pass files**: Calls `get_command()` instead of `build_command(files)` with changed files
 
@@ -85,7 +85,7 @@ else:
   - Add `all_files` parameter to `get_command()` and `build_command()`
   - Conditionally add `--all-files` flag
 
-### Part 4: Fix ACB Mode Placeholder (Future Work)
+### Part 4: Fix legacy Mode Placeholder (Future Work)
 
 **Current Problem**:
 

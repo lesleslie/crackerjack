@@ -43,7 +43,7 @@ class TestRetryDecorator:
         """Test retry logic with eventual success."""
         call_count = 0
 
-        @retry(max_attempts=3, backoff=0.1)
+        @retry(max_attempts=3, backoff=0.01)
         def flaky_operation() -> str:
             nonlocal call_count
             call_count += 1
@@ -59,7 +59,7 @@ class TestRetryDecorator:
     def test_retry_exhausts_attempts(self) -> None:
         """Test that retry gives up after max attempts."""
 
-        @retry(max_attempts=3, backoff=0.1)
+        @retry(max_attempts=3, backoff=0.01)
         def always_fails() -> str:
             raise NetworkError("Permanent failure")
 
@@ -82,7 +82,7 @@ class TestRetryDecorator:
         """Test retry with async functions."""
         call_count = 0
 
-        @retry(max_attempts=3, backoff=0.1)
+        @retry(max_attempts=3, backoff=0.01)
         async def async_flaky() -> str:
             nonlocal call_count
             call_count += 1
@@ -103,9 +103,9 @@ class TestTimeoutDecorator:
     async def test_async_timeout_success(self) -> None:
         """Test async function completes within timeout."""
 
-        @with_timeout(seconds=1.0)
+        @with_timeout(seconds=0.2)
         async def fast_operation() -> str:
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.02)
             return "done"
 
         result = await fast_operation()
@@ -115,9 +115,9 @@ class TestTimeoutDecorator:
     async def test_async_timeout_exceeded(self) -> None:
         """Test async function exceeds timeout."""
 
-        @with_timeout(seconds=0.1)
+        @with_timeout(seconds=0.05)
         async def slow_operation() -> str:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.2)
             return "done"
 
         with pytest.raises(CrackerjackTimeoutError):
@@ -127,9 +127,9 @@ class TestTimeoutDecorator:
     async def test_timeout_custom_message(self) -> None:
         """Test timeout with custom error message."""
 
-        @with_timeout(seconds=0.1, error_message="Custom timeout message")
+        @with_timeout(seconds=0.05, error_message="Custom timeout message")
         async def slow_operation() -> str:
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.2)
             return "done"
 
         with pytest.raises(CrackerjackTimeoutError) as exc_info:

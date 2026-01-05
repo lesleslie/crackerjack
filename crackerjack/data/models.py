@@ -5,7 +5,6 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from sqlalchemy import JSON, Column, DateTime, String
 from sqlmodel import Field, SQLModel
 
 
@@ -15,10 +14,10 @@ class QualityBaselineRecord(SQLModel, table=True):
     __tablename__ = "quality_baselines"
 
     id: int | None = Field(default=None, primary_key=True)
-    git_hash: str = Field(sa_column=Column(String(64), unique=True, index=True))
+    git_hash: str = Field(index=True, unique=True)
     recorded_at: datetime = Field(
         default_factory=datetime.utcnow,
-        sa_column=Column(DateTime(timezone=True), index=True),
+        index=True,
     )
     coverage_percent: float = Field(default=0.0)
     test_count: int = Field(default=0)
@@ -31,7 +30,6 @@ class QualityBaselineRecord(SQLModel, table=True):
     quality_score: int = Field(default=0)
     extra_metadata: dict[str, Any] | None = Field(
         default=None,
-        sa_column=Column(JSON, nullable=True),
     )
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
@@ -48,20 +46,14 @@ class ProjectHealthRecord(SQLModel, table=True):
     __tablename__ = "project_health"
 
     id: int | None = Field(default=None, primary_key=True)
-    project_root: str = Field(sa_column=Column(String(255), unique=True, index=True))
-    lint_error_trend: list[int] = Field(default_factory=list, sa_column=Column(JSON))
-    test_coverage_trend: list[float] = Field(
-        default_factory=list,
-        sa_column=Column(JSON),
-    )
-    dependency_age: dict[str, int] = Field(
-        default_factory=dict,
-        sa_column=Column(JSON),
-    )
-    config_completeness: float = Field(default=0.0)
+    project_name: str = Field(index=True, unique=True)
+    health_score: int = Field(default=0)
+    issue_count: int = Field(default=0)
+    warning_count: int = Field(default=0)
+    error_count: int = Field(default=0)
+    maintenance_score: int = Field(default=0)
     last_updated: datetime = Field(
         default_factory=datetime.utcnow,
-        sa_column=Column(DateTime(timezone=True)),
     )
 
 
@@ -71,9 +63,8 @@ class DependencyMonitorCacheRecord(SQLModel, table=True):
     __tablename__ = "dependency_monitor_cache"
 
     id: int | None = Field(default=None, primary_key=True)
-    project_root: str = Field(sa_column=Column(String(255), unique=True, index=True))
-    cache_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    project_root: str = Field(index=True, unique=True)
+    cache_data: dict[str, Any] = Field(default_factory=dict)
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
-        sa_column=Column(DateTime(timezone=True)),
     )

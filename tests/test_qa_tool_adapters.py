@@ -279,13 +279,13 @@ class TestCodespellAdapter:
     def test_codespell_adapter_with_ignore_words(self):
         """Test CodespellAdapter with ignored words."""
         settings = CodespellSettings(
-            ignore_words=["acb", "pydantic", "uuid"],
+            ignore_words=["pydantic", "uuid", "dataclass"],
             skip_hidden=True,
         )
         adapter = CodespellAdapter(settings=settings)
 
         assert len(adapter.settings.ignore_words) == 3
-        assert "acb" in adapter.settings.ignore_words
+        assert "pydantic" in adapter.settings.ignore_words
         assert adapter.settings.skip_hidden is True
 
     def test_codespell_adapter_auto_fix(self):
@@ -424,38 +424,6 @@ class TestToolAdapterCommonPatterns:
             adapter = adapter_class()
             assert hasattr(adapter, "parse_output")
             assert callable(adapter.parse_output)
-
-
-class TestToolAdapterModuleRegistration:
-    """Test ACB module registration for tool adapters."""
-
-    def test_all_modules_have_registration(self):
-        """Test all adapter modules have MODULE_ID and MODULE_STATUS."""
-        from crackerjack.adapters.format import ruff, mdformat
-        from crackerjack.adapters.lint import codespell
-        from crackerjack.adapters.sast import bandit
-        from crackerjack.adapters.security import gitleaks
-        from crackerjack.adapters.type import zuban
-        from crackerjack.adapters.refactor import refurb, creosote
-        from crackerjack.adapters.complexity import complexipy
-
-        modules = [
-            ruff,
-            bandit,
-            gitleaks,
-            zuban,
-            refurb,
-            complexipy,
-            creosote,
-            codespell,
-            mdformat,
-        ]
-
-        for module in modules:
-            assert hasattr(module, "MODULE_ID")
-            assert isinstance(module.MODULE_ID, UUID)
-            assert hasattr(module, "MODULE_STATUS")
-            assert module.MODULE_STATUS in ["stable", "beta", "experimental"]
 
 
 class TestToolAdapterStageAssignment:

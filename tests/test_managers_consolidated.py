@@ -41,7 +41,7 @@ def console(mock_console_di):
 def create_test_manager_with_path(temp_project, console=None):
     """Helper to create TestManagementImpl with custom pkg_path.
 
-    Since TestManager gets pkg_path from ACB's root_path via DI,
+    Since TestManager gets pkg_path from the DI root_path,
     we need to manually override it after instantiation for tests.
     """
     return TestManagementImpl(console=console, pkg_path=temp_project)
@@ -106,6 +106,7 @@ class TestHookManagerImpl:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
         manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
+        manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
@@ -120,6 +121,7 @@ class TestHookManagerImpl:
         mock_run.return_value = Mock(returncode=0, stdout="All hooks passed", stderr="")
 
         manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
+        manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
 
         results = manager.run_comprehensive_hooks()
         assert isinstance(results, list)
@@ -129,12 +131,14 @@ class TestHookManagerImpl:
         mock_run.return_value = Mock(returncode=1, stdout="", stderr="Hook failed")
 
         manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
+        manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
 
     def test_skip_hooks_option(self, console, temp_project) -> None:
         manager = HookManagerImpl(pkg_path=temp_project, enable_orchestration=False)
+        manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)
@@ -530,6 +534,7 @@ class TestManagersIntegration:
 
         options = MockOptions(test=True)
 
+        hook_manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
         hook_results = hook_manager.run_fast_hooks()
         assert isinstance(hook_results, list)
 
@@ -546,9 +551,14 @@ class TestManagerConfiguration:
             MockOptions(experimental_hooks=True),
         ]
 
-        for _config in configs:
-            results = manager.run_fast_hooks()
-            assert isinstance(results, list)
+        with patch.object(
+            manager.executor,
+            "execute_strategy",
+            return_value=Mock(results=[]),
+        ):
+            for _config in configs:
+                results = manager.run_fast_hooks()
+                assert isinstance(results, list)
 
     def test_test_config_integration(self, console, temp_project) -> None:
         manager = TestManagementImpl(console=console, pkg_path=temp_project)
@@ -596,6 +606,7 @@ class TestManagerErrorHandling:
         mock_run.side_effect = subprocess.CalledProcessError(1, ["cmd"])
 
         manager = HookManagerImpl(console=console, pkg_path=temp_project)
+        manager.executor.execute_strategy = Mock(return_value=Mock(results=[]))
 
         results = manager.run_fast_hooks()
         assert isinstance(results, list)

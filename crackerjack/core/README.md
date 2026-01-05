@@ -18,7 +18,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 - Session metadata and task tracking via `SessionTracker`
 - Cleanup handler registration and execution
 - Lock file management
-- Gold standard ACB integration with protocol-based DI
+- Gold standard legacy integration with protocol-based DI
 
 **phase_coordinator.py** - Execution phase coordination:
 
@@ -145,7 +145,7 @@ The core package provides the orchestration backbone for Crackerjack's workflow 
 ### Session Coordination (Gold Standard)
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.protocols import Console
 
@@ -333,7 +333,7 @@ def manage_resources(
 
 ## Configuration
 
-Core components integrate with ACB Settings:
+Core components integrate with settings:
 
 ```yaml
 # settings/crackerjack.yaml
@@ -367,7 +367,7 @@ Based on Phase 2-4 refactoring audit:
 
 - **Coordinators (70% compliant)**:
 
-  - ✅ `SessionCoordinator` - Gold standard ACB integration
+  - ✅ `SessionCoordinator` - Gold standard legacy integration
   - ✅ Phase coordinators use proper DI
   - ⚠️ Async coordinators need protocol standardization
 

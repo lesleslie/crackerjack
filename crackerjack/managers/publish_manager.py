@@ -65,7 +65,7 @@ class PublishManagerImpl:
         self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
 
-        # Services injected via ACB DI
+        # Services injected via legacy DI
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
         self._changelog_generator = self._resolve_changelog_generator(
@@ -201,7 +201,7 @@ class PublishManagerImpl:
         try:
             content = self.filesystem.read_file(pyproject_path)
 
-            # Use injected service or get through ACB DI
+            # Use injected service or get through legacy DI
             if self._regex_patterns is not None:
                 update_pyproject_version_func = (
                     self._regex_patterns.update_pyproject_version
@@ -212,6 +212,10 @@ class PublishManagerImpl:
                 )
 
             new_content = update_pyproject_version_func(content, new_version)
+            if not isinstance(new_content, str):
+                new_content = _RegexPatterns().update_pyproject_version(
+                    content, new_version
+                )
             if content != new_content:
                 if not self.dry_run:
                     self.filesystem.write_file(pyproject_path, new_content)
@@ -510,16 +514,15 @@ class PublishManagerImpl:
 
     def _format_file_size(self, size: int) -> str:
         if size < 1024 * 1024:
-            return f"{size / 1024: .1f}KB"
-        return f"{size / (1024 * 1024): .1f}MB"
+            return f"{size / 1024:.1f}KB"
+        return f"{size / (1024 * 1024):.1f}MB"
 
     def publish_package(self) -> bool:
-        if not self._validate_prerequisites():
-            return False
-
         try:
+            if not self._validate_prerequisites():
+                return False
             self.console.print("[yellow]🚀[/ yellow] Publishing to PyPI")
-            return self._perform_publish_workflow_with_retry()
+            return self._perform_publish_workflow()
         except Exception as e:
             self.console.print(f"[red]❌[/ red] Publish error: {e}")
             return False
@@ -563,10 +566,10 @@ class PublishManagerImpl:
             "Successfully published",
         ]
 
-        has_success_indicator = (
-            any(indicator in result.stdout for indicator in success_indicators)
-            if result.stdout
-            else False
+        stdout_text = str(getattr(result, "stdout", "") or "")
+        stderr_text = str(getattr(result, "stderr", "") or "")
+        has_success_indicator = any(
+            indicator in stdout_text for indicator in success_indicators
         )
 
         # Consider it successful if either return code is 0 OR we find success indicators
@@ -576,7 +579,7 @@ class PublishManagerImpl:
             self._handle_publish_success()
             return True
 
-        self._handle_publish_failure(result.stderr)
+        self._handle_publish_failure(stderr_text)
         return False
 
     def _handle_publish_failure(self, error_msg: str) -> None:
@@ -691,14 +694,17 @@ class PublishManagerImpl:
             return False
 
     def get_package_info(self) -> dict[str, t.Any]:
-        pyproject_path = self.pkg_path / "pyproject.toml"
-        if not pyproject_path.exists():
-            return {}
         try:
             from tomllib import loads
 
+            pyproject_path = self.pkg_path / "pyproject.toml"
             content = self.filesystem.read_file(pyproject_path)
-            data = loads(content)
+            if not content:
+                return {}
+            try:
+                data = loads(content)
+            except Exception:
+                data = self._parse_project_section_fallback(content)
             project = data.get("project", {})
 
             return {
@@ -712,6 +718,41 @@ class PublishManagerImpl:
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/ yellow] Error reading package info: {e}")
             return {}
+
+    @staticmethod
+    def _parse_project_section_fallback(content: str) -> dict[str, t.Any]:
+        import ast
+
+        project: dict[str, t.Any] = {}
+        in_project = False
+
+        for raw_line in content.splitlines():
+            line = raw_line.strip()
+            if not line or line.startswith("#"):
+                continue
+            if line.startswith("[") and line.endswith("]"):
+                in_project = line.strip("[]") == "project"
+                continue
+            if not in_project or "=" not in line:
+                continue
+            key, value = line.split("=", 1)
+            normalized_key = key.strip().replace(" ", "")
+            raw_value = value.strip()
+            if raw_value.startswith("[") and raw_value.endswith("]"):
+                try:
+                    parsed_value = ast.literal_eval(raw_value)
+                except Exception:
+                    parsed_value = []
+                project[normalized_key] = parsed_value
+            elif raw_value.startswith("{") and raw_value.endswith("}"):
+                try:
+                    project[normalized_key] = ast.literal_eval(raw_value)
+                except Exception:
+                    project[normalized_key] = {}
+            else:
+                project[normalized_key] = raw_value.strip('"').strip("'")
+
+        return {"project": project}
 
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
         """Update changelog with entries from git commits since last version."""

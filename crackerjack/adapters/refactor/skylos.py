@@ -5,7 +5,7 @@ It helps maintain clean code by detecting elements that are no longer used.
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -146,8 +146,11 @@ class SkylosAdapter(BaseToolAdapter):
             cmd.append("--json")
 
         # Add targets - use package directory to avoid scanning .venv
-        target = self._determine_scan_target(files)
-        cmd.append(target)
+        if files:
+            cmd.extend([str(f) for f in files])
+        else:
+            target = self._determine_scan_target(files)
+            cmd.append(target)
 
         logger.info(
             "Built Skylos command",
@@ -196,6 +199,10 @@ class SkylosAdapter(BaseToolAdapter):
 
         # Default fallback
         return "crackerjack"
+
+    def _detect_package_directory(self, cwd: Path) -> str | None:
+        """Backward-compatible alias for _find_package_directory."""
+        return self._find_package_directory(cwd)
 
     def _read_package_from_toml(self, cwd: Path) -> str | None:
         """Read package name from pyproject.toml.

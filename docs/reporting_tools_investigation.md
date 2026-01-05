@@ -409,7 +409,7 @@ HookExecutor._parse_complexipy_issues() [OUR CODE]
 - `LSPAwareHookExecutor`: Extends HookExecutor with LSP integration (conditionally used)
 - `PhaseCoordinator`: Orchestrates hook phases
 - `HookManager`: Manages hook configuration and execution
-- `AsyncWorkflowOrchestrator`: Async workflow coordination (ACB mode)
+- `AsyncWorkflowOrchestrator`: Async workflow coordination (legacy mode)
 
 ### Inheritance Chain
 

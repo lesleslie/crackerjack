@@ -41,7 +41,7 @@ The Crackerjack test suite has been significantly improved with **all identified
 | Test File | Tests | Status | Notes |
 |-----------|-------|--------|-------|
 | `tests/test_qa_tool_adapters.py` | 51 | ✅ PASSING | All QA tool adapters working |
-| `tests/unit/managers/test_hook_manager.py` | 31/39 | ✅ PASSING | 8 skipped (ACB dependencies) |
+| `tests/unit/managers/test_hook_manager.py` | 31/39 | ✅ PASSING | 8 skipped (legacy dependencies) |
 | `tests/test_error_handling_decorators.py` | 12 | ✅ PASSING | Error handling verified |
 | `tests/test_config_service.py` | 13 | ✅ PASSING | Config services working |
 | `tests/test_global_lock_config.py` | 18 | ✅ PASSING | Lock configuration verified |
@@ -134,7 +134,7 @@ The Crackerjack test suite has been significantly improved with **all identified
    pytest tests/test_qa_tool_adapters.py tests/unit/managers/test_hook_manager.py -v
    ```
 
-1. **Review Skipped Tests**: Investigate ACB/Oneiric integration tests
+1. **Review Skipped Tests**: Investigate legacy/Oneiric integration tests
 
    ```bash
    # Find skipped tests

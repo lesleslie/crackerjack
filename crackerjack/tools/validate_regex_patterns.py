@@ -42,9 +42,7 @@ ALLOWED_PATTERNS = {
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
-    r"\\g\s+<\s*\d+\s*>",  # Only match when there are spaces before <
-    r"\\g<\s+\d+>",  # Spaces after opening <
-    r"\\g<\d+\s+>",  # Spaces before closing >
+    r"\\g<[^>]*\\s+[^>]*>",  # Any whitespace inside \g<...>
 ]
 
 
@@ -103,11 +101,13 @@ class RegexVisitor(ast.NodeVisitor):
     def _check_replacement_syntax(self, replacement: str, line_no: int) -> None:
         for pattern in FORBIDDEN_REPLACEMENT_PATTERNS:
             if re.search(pattern, replacement):
+                normalized = re.sub(r"\s+", "", replacement)
                 self.issues.append(
                     (
                         line_no,
-                        f"CRITICAL: Bad replacement syntax detected: '{replacement}'. "
-                        f"Use \\g<1> not \\g<1>",
+                        "CRITICAL: Bad replacement syntax detected: "
+                        f"'{replacement}'. Use '{normalized}' (no spaces in \\g<...>). "
+                        "Use \\g<1> not \\g<1>",
                     )
                 )
 

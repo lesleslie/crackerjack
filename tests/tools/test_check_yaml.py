@@ -53,7 +53,7 @@ items:
         yaml_file = tmp_path / "test.yaml"
         content = """
 parent:
-child: value
+   child: value
 """
         yaml_file.write_text(content)
 

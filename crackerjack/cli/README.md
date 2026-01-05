@@ -6,7 +6,7 @@ Command-line interface handlers and option processing for the Crackerjack CLI us
 
 ## Overview
 
-The CLI package provides the primary user interface for Crackerjack, handling command-line arguments, option validation, and routing to appropriate backend handlers. It follows a modular handler-based architecture with 90% ACB compliance, using protocol-based dependency injection for most components.
+The CLI package provides the primary user interface for Crackerjack, handling command-line arguments, option validation, and routing to appropriate backend handlers. It follows a modular handler-based architecture with 90% legacy compliance, using protocol-based dependency injection for most components.
 
 ## Architecture
 
@@ -163,10 +163,10 @@ Parallel test execution configuration:
 
 ### Protocol-Based Dependency Injection
 
-Most handlers use ACB dependency injection (90% compliance):
+Most handlers use dependency injection (90% compliance):
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console, CrackerjackCache
 
 
@@ -259,7 +259,7 @@ if options.my_new_option:
 
 ```python
 # handlers/my_handlers.py
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console
 
 

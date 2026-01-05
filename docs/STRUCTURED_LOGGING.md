@@ -2,7 +2,7 @@
 
 ## Overview
 
-Crackerjack now leverages the advanced structured logging capabilities provided by the ACB (AI-Centric Building blocks) project, specifically using structlog. This provides enhanced logging features that are optimized for AI agent consumption as well as human readability.
+Crackerjack now leverages the advanced structured logging capabilities provided by the legacy (AI-Centric Building blocks) project, specifically using structlog. This provides enhanced logging features that are optimized for AI agent consumption as well as human readability.
 
 ## Key Features
 
@@ -104,4 +104,4 @@ The structured logs output to stderr follow this format:
 
 ## Advanced Configuration
 
-The logging system can be configured through the ACB settings system. For custom configurations, see the ACB documentation for logger settings.
+The logging system can be configured through the legacy settings system. For custom configurations, see the legacy documentation for logger settings.

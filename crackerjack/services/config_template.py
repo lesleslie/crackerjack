@@ -76,11 +76,13 @@ class ConfigTemplateService:
 
     def _build_pytest_config(self) -> dict[str, t.Any]:
         """Build pytest configuration."""
+        # Note: Coverage package name should be detected dynamically during project setup
+        # This template uses a placeholder that should be replaced during initialization
         return {
             "ini_options": {
                 "asyncio_mode": "auto",
                 "timeout": 300,
-                "addopts": "--cov=crackerjack --cov-report=term-missing:skip-covered",
+                "addopts": "--cov={package_name} --cov-report=term-missing:skip-covered",
                 "testpaths": ["tests"],
                 "markers": [
                     "unit: marks test as a unit test",

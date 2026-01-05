@@ -196,7 +196,7 @@ class InteractiveWorkflowManager:
             # TODO(Phase 3): Replace with Oneiric workflow execution
             if self.orchestrator is None:
                 raise NotImplementedError(
-                    "Workflow orchestration removed in Phase 2 (ACB removal). "
+                    "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
                     "Will be reimplemented in Phase 3 (Oneiric integration)."
                 )
             phase_method = getattr(self.orchestrator, task.phase_method)

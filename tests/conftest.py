@@ -1,9 +1,8 @@
 """Test configuration for new Crackerjack features."""
 
-from contextlib import contextmanager
-import builtins
 from pathlib import Path
 from typing import Any, Generator
+from logging import Logger
 from unittest.mock import MagicMock
 import tempfile
 
@@ -35,37 +34,17 @@ def sample_test_data():
     }
 
 
-@contextmanager
-def acb_depends_context(injection_map: dict[type, Any]) -> Generator[None, None, None]:
-    """Legacy no-op context manager (ACB removed)."""
-    yield
-
-
 @pytest.fixture
 def mock_console() -> MagicMock:
     """Fixture providing a mock console for tests."""
     return MagicMock(spec=Console)
 
 
-@pytest.fixture
-def acb_di_fixture(mock_console: MagicMock) -> Generator[dict[type, Any], None, None]:
-    """Fixture providing ACB dependency injection setup for tests.
-
-    Usage:
-        def test_something(acb_di_fixture):
-            # DI is automatically set up
-            coordinator = SessionCoordinator(console=acb_di_fixture[Console], ...)
-    """
-    with acb_depends_context({Console: mock_console}):
-        yield {Console: mock_console}
-
-
 # ============================================================================
 # Pattern 1: DI-Aware Fixtures for Manager Classes
 # ============================================================================
-# These fixtures support testing ACB-based manager classes that use
-# @depends.inject decorator. They register mock services with the DI
-# system so managers can be instantiated without passing parameters.
+# These fixtures support testing DI-based manager classes. They register
+# mock services so managers can be instantiated without passing parameters.
 # ============================================================================
 
 

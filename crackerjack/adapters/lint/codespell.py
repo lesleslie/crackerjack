@@ -9,7 +9,7 @@ It helps maintain professional quality by catching:
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """
@@ -73,7 +73,7 @@ class CodespellAdapter(BaseToolAdapter):
         ```python
         settings = CodespellSettings(
             fix_enabled=True,
-            ignore_words=["acb", "pydantic"],
+            ignore_words=["pydantic", "uuid"],
             skip_hidden=True,
         )
         adapter = CodespellAdapter(settings=settings)
@@ -263,7 +263,7 @@ class CodespellAdapter(BaseToolAdapter):
             settings={
                 "fix_enabled": False,
                 "skip_hidden": True,
-                "ignore_words": ["acb", "pydantic", "uuid"],
+                "ignore_words": ["pydantic", "uuid", "dataclass"],
                 "check_filenames": False,
             },
         )

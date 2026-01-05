@@ -154,6 +154,7 @@ class Options(BaseModel):
     generate_docs: bool = False
     docs_format: str = "markdown"
     validate_docs: bool = False
+    update_docs_index: bool = False
     generate_changelog: bool = False
     changelog_version: str | None = None
     changelog_since: str | None = None
@@ -200,6 +201,30 @@ class Options(BaseModel):
         if self.thorough:
             return 8
         return self.max_iterations
+
+    @property
+    def clean(self) -> bool | None:
+        return self.strip_code
+
+    @clean.setter
+    def clean(self, value: bool | None) -> None:
+        self.strip_code = value
+
+    @property
+    def test(self) -> bool:
+        return self.run_tests
+
+    @test.setter
+    def test(self, value: bool) -> None:
+        self.run_tests = value
+
+    @property
+    def ai_agent(self) -> bool | None:
+        return self.ai_fix
+
+    @ai_agent.setter
+    def ai_agent(self, value: bool | None) -> None:
+        self.ai_fix = value
 
     @classmethod
     @field_validator("publish", "bump", "full_release", mode="before")

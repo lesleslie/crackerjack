@@ -232,6 +232,7 @@ def detect_path_traversal_patterns(path_str: str) -> list[str]:
         "detect_directory_traversal_backslash",
         "detect_url_encoded_traversal",
         "detect_double_url_encoded_traversal",
+        "detect_utf8_overlong_traversal",
     ]
 
     for pattern_name in traversal_patterns:

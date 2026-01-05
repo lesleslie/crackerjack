@@ -58,7 +58,7 @@ def validate_hooks_config() -> bool:
 ### ✅ Passing Tests
 
 - `tests/test_qa_tool_adapters.py` - All 51 adapter tests passing
-- `tests/unit/managers/test_hook_manager.py` - 31/39 tests passing (8 skipped due to ACB dependencies)
+- `tests/unit/managers/test_hook_manager.py` - 31/39 tests passing (8 skipped due to legacy dependencies)
 - `tests/test_error_handling_decorators.py` - All 12 tests passing
 - `tests/test_config_service.py` - All 13 tests passing
 - `tests/test_global_lock_config.py` - All 18 tests passing
@@ -70,7 +70,7 @@ def validate_hooks_config() -> bool:
 
 - **Total Tests Run**: 225
 - **Passed**: 225
-- **Skipped**: 8 (ACB/Oneiric dependencies)
+- **Skipped**: 8 (legacy/Oneiric dependencies)
 - **Failed**: 0
 
 ## 🔧 Core Functionality Verification
@@ -104,7 +104,7 @@ All critical components are working correctly:
 ## 🚀 Next Steps Recommendations
 
 1. **Run Full Test Suite**: `pytest --tb=short -q`
-1. **Address Skipped Tests**: Investigate ACB/Oneiric integration tests if needed
+1. **Address Skipped Tests**: Investigate legacy/Oneiric integration tests if needed
 1. **Performance Optimization**: Review any timeout issues in larger test suites
 1. **CI/CD Integration**: Update pipelines to use the now-stable test suite
 

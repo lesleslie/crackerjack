@@ -21,7 +21,7 @@ def get_console_width() -> int:
     """Return the preferred console width from settings or pyproject.
 
     Priority:
-    1) ACB settings (CrackerjackSettings.console.width)
+    1) Settings (CrackerjackSettings.console.width)
     2) pyproject.toml [tool.crackerjack].terminal_width
     3) Default: 70
     """
@@ -56,7 +56,7 @@ def get_console_width() -> int:
 # Note: settings_instance is module-level and can be imported directly
 settings_instance = load_settings(CrackerjackSettings)
 
-# TODO(Phase 3): ACB Logger registration removed in Phase 2
+# TODO(Phase 3): Legacy logger registration removed in Phase 2
 # Will be replaced with Oneiric dependency management in Phase 3
 # from crackerjack.utils.dependency_guard import (
 #     ensure_logger_dependency,
@@ -80,8 +80,8 @@ settings_instance = load_settings(CrackerjackSettings)
 
 
 def register_services() -> None:
-    """Placeholder for legacy DI setup (ACB removed)."""
-    logger.info("register_services skipped (ACB DI removed)")
+    """Placeholder for legacy DI setup (removed)."""
+    logger.info("register_services skipped (legacy DI removed)")
 
 
 # Service registration is called explicitly by application entry point

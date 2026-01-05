@@ -3,7 +3,7 @@
 This module provides utilities for managing adapter output files in a centralized
 location (.crackerjack/outputs/) to keep the project root clean.
 
-ACB Patterns:
+Design notes:
 - Pure utility module (no DI registration needed)
 - Simple, focused responsibility
 - Consistent path management across all adapters

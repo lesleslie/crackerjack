@@ -9,7 +9,7 @@ dependencies for known security vulnerabilities using the OSV database. It provi
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """

@@ -70,7 +70,7 @@ AI-driven optimization strategies:
 
 ```python
 from crackerjack.services.ai import ContextualAIAssistant
-from acb.depends import depends
+from legacy.depends import depends
 
 assistant = depends.get(ContextualAIAssistant)
 
@@ -89,7 +89,7 @@ for rec in recommendations:
 
 ```python
 from crackerjack.services.ai import IntelligentCommitService
-from acb.depends import depends
+from legacy.depends import depends
 
 commit_service = depends.get(IntelligentCommitService)
 
@@ -108,7 +108,7 @@ print(f"Suggested commit message:\n{message}")
 
 ```python
 from crackerjack.services.ai import EmbeddingService
-from acb.depends import depends
+from legacy.depends import depends
 
 embedding_service = depends.get(EmbeddingService)
 
@@ -128,7 +128,7 @@ similar_snippets = await embedding_service.find_similar_code(embedding, threshol
 
 ```python
 from crackerjack.services.ai import PredictiveAnalytics
-from acb.depends import depends
+from legacy.depends import depends
 
 analytics = depends.get(PredictiveAnalytics)
 
@@ -146,7 +146,7 @@ print(f"Trend: {prediction.trend}")  # 'improving', 'stable', 'degrading'
 
 ```python
 from crackerjack.services.ai import AdvancedOptimizer
-from acb.depends import depends
+from legacy.depends import depends
 
 optimizer = depends.get(AdvancedOptimizer)
 
@@ -167,7 +167,7 @@ for suggestion in optimization.suggestions:
 All AI services follow the provider abstraction pattern:
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console
 
 
@@ -197,7 +197,7 @@ AI services analyze project context to provide relevant recommendations:
 
 ## Configuration
 
-AI services are configured through ACB Settings:
+AI services are configured through settings:
 
 ```yaml
 # settings/crackerjack.yaml

@@ -237,7 +237,7 @@ Command-line interface handlers and option processing for the Crackerjack CLI.
 
 **Missing:**
 
-- ACB Settings integration details
+- settings integration details
 - Configuration file hierarchy (settings/crackerjack.yaml, settings/local.yaml)
 - Environment variable handling
 - Configuration validation
@@ -246,9 +246,9 @@ Command-line interface handlers and option processing for the Crackerjack CLI.
 **Recommended Addition:**
 
 ```markdown
-## ACB Settings Integration
+## settings Integration
 
-Crackerjack uses ACB Settings with YAML-based configuration:
+Crackerjack uses settings with YAML-based configuration:
 
 - `settings/crackerjack.yaml` - Base configuration (committed)
 - `settings/local.yaml` - Local overrides (gitignored)
@@ -442,7 +442,7 @@ ______________________________________________________________________
 1. **Expand Core Package READMEs** (5 files)
 
    - `cli/README.md` - CLI architecture and patterns
-   - `config/README.md` - ACB Settings integration
+   - `config/README.md` - settings integration
    - `models/README.md` - Protocol-based DI patterns
    - `core/README.md` - Utilities overview
    - **Impact:** These are fundamental packages that developers interact with daily
@@ -578,7 +578,7 @@ Detailed description including:
 
 [Explanation of patterns used]
 
-### ACB Compliance Status
+### legacy Compliance Status
 
 [If applicable - compliance table]
 

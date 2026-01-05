@@ -1,15 +1,10 @@
 #!/usr/bin/env python3
-"""
-Comprehensive test status verification script.
-This script checks the current state of the test suite and identifies any remaining issues.
-"""
 
 import subprocess
 import sys
 
 
 def run_pytest_test(test_path, timeout=30):
-    """Run a specific pytest test with timeout."""
     try:
         cmd = [
             sys.executable,
@@ -35,7 +30,6 @@ def run_pytest_test(test_path, timeout=30):
 
 
 def check_test_files():
-    """Check various test files to see which ones are passing."""
     test_files = [
         "tests/test_qa_tool_adapters.py",
         "tests/unit/managers/test_hook_manager.py",
@@ -57,20 +51,17 @@ def check_test_files():
         else:
             print(f"❌ {test_file}: FAILED")
             if stderr:
-                print(f"   Error: {stderr[:200]}...")
+                print(f" Error: {stderr[:200]}...")
 
     return results
 
 
 def main():
-    """Main verification function."""
     print("🔍 Crackerjack Test Suite Verification")
     print("=" * 50)
 
-    # Check individual test files
     results = check_test_files()
 
-    # Summary
     passed = sum(1 for result in results.values() if result["success"])
     total = len(results)
 
@@ -83,10 +74,10 @@ def main():
         print("- The major pytest errors have been fixed")
         print("- Core functionality is working correctly")
         print("- Consider running the full test suite with: pytest --tb=short -q")
-        print("- Some tests may still be skipped due to ACB/Oneiric dependencies")
+        print("- Some tests may still be skipped due to integration dependencies")
         return True
     else:
-        print("⚠️  Some tests are still failing")
+        print("⚠️ Some tests are still failing")
         return False
 
 

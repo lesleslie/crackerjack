@@ -1,7 +1,7 @@
 """Unit tests for CrackerjackCache.
 
 Tests caching functionality including hook results, file hashes,
-config data, agent decisions, and quality baselines with ACB backend integration.
+config data, agent decisions, and quality baselines with backend integration.
 """
 
 from pathlib import Path
@@ -90,7 +90,7 @@ class TestCrackerjackCacheInitialization:
         assert cache._backend == mock_backend
 
     def test_initialization_without_backend_fallback(self):
-        """Test cache falls back when ACB backend unavailable."""
+        """Test cache falls back when backend unavailable."""
         with patch("crackerjack.services.cache.get_cache", side_effect=RuntimeError("Backend unavailable")):
             cache = CrackerjackCache()
 
@@ -660,9 +660,10 @@ class TestCrackerjackCacheUtilities:
 
         result = cache.get_cache_stats()
 
-        assert "acb_cache" in result
-        assert result["acb_cache"]["hits"] == 10
-        assert result["acb_cache"]["misses"] == 5
+        assert len(result) == 1
+        stats = next(iter(result.values()))
+        assert stats["hits"] == 10
+        assert stats["misses"] == 5
 
 
 @pytest.mark.unit

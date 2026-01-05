@@ -8,7 +8,7 @@ ______________________________________________________________________
 
 ## Executive Summary
 
-The Oneiric migration replaces ACB dependency injection and custom WebSocket monitoring with standardized Oneiric patterns. This brings **breaking changes to CLI commands** but preserves all QA functionality.
+The Oneiric migration replaces dependency injection and custom WebSocket monitoring with standardized Oneiric patterns. This brings **breaking changes to CLI commands** but preserves all QA functionality.
 
 **Key Changes:**
 
@@ -23,7 +23,7 @@ ______________________________________________________________________
 
 ### 1. MCP Server Lifecycle Commands ⚠️ HIGH IMPACT
 
-**Before (ACB):**
+**Before (legacy):**
 
 ```bash
 # Start server
@@ -62,7 +62,7 @@ ______________________________________________________________________
 
 ### 2. Health Monitoring ⚠️ MEDIUM IMPACT
 
-**Before (ACB):**
+**Before (legacy):**
 
 ```bash
 # No dedicated health command
@@ -96,7 +96,7 @@ ______________________________________________________________________
 
 ### 3. WebSocket Server REMOVED ⚠️ MEDIUM IMPACT
 
-**Before (ACB):**
+**Before (legacy):**
 
 ```bash
 # WebSocket server options
@@ -131,7 +131,7 @@ ______________________________________________________________________
 
 ### 4. Multi-Instance Support ✅ NEW FEATURE
 
-**Before (ACB):**
+**Before (legacy):**
 
 ```bash
 # Single instance only
@@ -258,11 +258,11 @@ If migration causes issues:
 # Rollback to pre-migration state
 git checkout <pre-migration-commit>
 
-# Reinstall ACB dependency
+# Reinstall legacy dependency
 uv sync
 
 # Restore old CLI commands
-python -m crackerjack run --start-mcp-server  # Works with ACB
+python -m crackerjack run --start-mcp-server  # Works with legacy
 ```
 
 **Rollback Risk:** LOW (clean git revert, no data loss)

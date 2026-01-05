@@ -23,7 +23,7 @@ def test_terminal_restoration() -> None:
     sys.stdout.write("\033[?1049h")
     sys.stdout.write("\033[?25l")
     sys.stdout.flush()
-    time.sleep(1)
+    time.sleep(0.05)
 
     with contextlib.suppress(Exception):
         subprocess.run(

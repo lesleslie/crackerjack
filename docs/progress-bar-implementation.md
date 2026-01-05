@@ -121,7 +121,7 @@ Progress is reported **after each wave** of hooks completes:
 
 ### Compatibility
 
-- **ACB mode**: Full progress bar support ✅
+- **legacy mode**: Full progress bar support ✅
 - **Legacy mode**: No progress bar (uses existing pre-commit output)
 - **Orchestration disabled**: No progress bar (uses ProgressHookExecutor if configured)
 
@@ -150,7 +150,7 @@ python -m crackerjack run -c -t -p minor
 
    - Wave can have multiple hooks running in parallel
    - Progress jumps (e.g., 0→3→5→11 for 3 waves)
-   - This is intentional for ACB's parallel execution model
+   - This is intentional for legacy's parallel execution model
 
 1. **No progress for legacy mode**:
 
@@ -186,41 +186,41 @@ python -m crackerjack run -c -t -p minor
    - Requires historical timing data
    - Not critical for short-running hooks
 
-1. **ACB core integration**:
+1. **legacy core integration**:
 
-   - Move console width to ACB's Console constructor
-   - Would benefit all ACB users
+   - Move console width to legacy's Console constructor
+   - Would benefit all legacy users
    - Requires upstream changes
 
-## Is This an ACB Feature?
+## Is This an legacy Feature?
 
 **Current implementation**: Purely Crackerjack-side ✅
 
-**Should it be in ACB?**
+**Should it be in legacy?**
 
-- Console width configuration: Yes, could be in ACB
+- Console width configuration: Yes, could be in legacy
 
   - `Console(width=70)` would be cleaner
-  - ACB Console already supports width property
-  - Would need ACB update to accept width in constructor
+  - legacy Console already supports width property
+  - Would need legacy update to accept width in constructor
 
 - Progress callbacks: Maybe
 
-  - Generic enough for other ACB workflows
+  - Generic enough for other orchestrated workflows
   - But progress model varies by application
   - Crackerjack's wave-based model is specific to hooks
 
 **Recommendation**:
 
 - Keep progress bar in Crackerjack (application-specific)
-- Propose console width constructor parameter to ACB (general utility)
-- File issue: `acb.console.Console(width=70)` for configurable console width
+- Propose console width constructor parameter to legacy (general utility)
+- File issue: `legacy.console.Console(width=70)` for configurable console width
 
 ## Conclusion
 
 ✅ **Implemented**: Compact progress bar respecting 70-char console width
 ✅ **No env vars needed**: All configuration via Crackerjack settings
-✅ **Clean integration**: No ACB changes required
+✅ **Clean integration**: No legacy changes required
 ✅ **User configurable**: Three levels of configuration (local, project, pyproject)
 
 The progress bar provides meaningful feedback during the 46-second execution gap while maintaining clean, readable output within the configured terminal width.

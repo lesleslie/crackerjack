@@ -14,6 +14,23 @@ import sys
 import tempfile
 from pathlib import Path
 
+import pytest
+
+
+pytestmark = [
+    pytest.mark.e2e,
+    pytest.mark.slow,
+    pytest.mark.chaos,
+    pytest.mark.external,
+]
+
+
+if os.getenv("CRACKERJACK_E2E") != "1":
+    pytest.skip(
+        "Fast-hooks workflow tests are opt-in (set CRACKERJACK_E2E=1).",
+        allow_module_level=True,
+    )
+
 
 def run_command(cmd, capture_output=True, timeout=60):
     """Run a command and return the result."""

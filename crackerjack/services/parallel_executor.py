@@ -521,7 +521,7 @@ def get_parallel_executor(
     global _parallel_executor
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
-            # logger = logger  # Migrated from ACB,
+            # logger = logger  # Migrated from legacy runtime,
             cache=None,
             max_workers=max_workers,
             strategy=strategy,
@@ -533,7 +533,7 @@ def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
     global _async_executor
     if _async_executor is None:
         _async_executor = AsyncCommandExecutor(
-            # logger = logger  # Migrated from ACB,
+            # logger = logger  # Migrated from legacy runtime,
             cache=None,
             max_workers=max_workers,
         )

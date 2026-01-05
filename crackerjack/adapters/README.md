@@ -1,6 +1,6 @@
 # Adapters
 
-Interfaces and adapters to external tools/services or subsystems. Each adapter follows ACB-style patterns with typed settings, async initialization, and standardized results.
+Interfaces and adapters to external tools/services or subsystems. Each adapter follows legacy-style patterns with typed settings, async initialization, and standardized results.
 
 ## Index
 

@@ -16,7 +16,7 @@ The models package provides the foundational data structures and protocol-based 
 
 **Core Service Protocols:**
 
-- `ServiceProtocol` - Base protocol for all ACB services with lifecycle management
+- `ServiceProtocol` - Base protocol for all legacy services with lifecycle management
 - `Console` (ConsoleInterface) - Rich console output interface
 - `TestManagerProtocol` - Test execution and coverage management
 - `HookManager` / `SecurityAwareHookManager` - Pre-commit hook orchestration
@@ -78,7 +78,7 @@ The models package provides the foundational data structures and protocol-based 
 **config.py** - Core configuration models:
 
 - Project-wide configuration structures
-- ACB Settings integration
+- settings integration
 - Environment-specific overrides
 
 **config_adapter.py** - Configuration adapters:
@@ -125,7 +125,7 @@ The models package provides the foundational data structures and protocol-based 
 
 ```python
 # ✅ CORRECT - Always import protocols from models/protocols.py
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import (
     Console,
     TestManagerProtocol,
@@ -183,7 +183,7 @@ self.logger = logging.getLogger(__name__)
 1. **Flexibility**: Swap implementations without changing dependents
 1. **Type Safety**: Runtime type checking via `@runtime_checkable`
 1. **Clear Contracts**: Protocol defines exact interface requirements
-1. **ACB Integration**: Seamless integration with ACB dependency injection
+1. **legacy Integration**: Seamless integration with dependency injection
 
 ## Usage Examples
 
@@ -247,7 +247,7 @@ class MyService:
 ### Dependency Injection Integration
 
 ```python
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.models.protocols import Console, TestManagerProtocol
 
 # Register concrete implementation

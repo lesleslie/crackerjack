@@ -139,7 +139,7 @@ class HookManagerImpl:
 
             orchestration_available = True
         except ModuleNotFoundError:
-            # Orchestration module was removed in Phase 2 (ACB migration)
+            # Orchestration module was removed in Phase 2 (runtime migration)
             # Fall back to legacy executor path
             orchestration_available = False
             HookOrchestratorSettings = None
@@ -195,7 +195,7 @@ class HookManagerImpl:
             self._settings = CrackerjackSettings()
 
         # Check if orchestration module is available
-        # Orchestration module was removed in Phase 2 (ACB migration)
+        # Orchestration module was removed in Phase 2 (runtime migration)
         # This import block is intentionally left empty as orchestration is no longer available
         # The code will use legacy executor path
 
@@ -305,7 +305,7 @@ class HookManagerImpl:
                 HookOrchestratorSettings,
             )
         except ModuleNotFoundError:
-            # Orchestration module was removed in Phase 2 (ACB migration)
+            # Orchestration module was removed in Phase 2 (runtime migration)
             # Fall back to legacy executor path
             self.orchestration_enabled = False
             return
@@ -316,7 +316,7 @@ class HookManagerImpl:
         execution_mode = getattr(
             self._orchestration_config,
             "execution_mode",
-            getattr(self._orchestration_config, "orchestration_mode", "acb"),
+            getattr(self._orchestration_config, "orchestration_mode", "oneiric"),
         )
 
         orchestrator_settings = HookOrchestratorSettings(

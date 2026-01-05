@@ -32,6 +32,14 @@ class CleaningConfig:
     auto_compress_docs: bool = False
     targets: list[Path] = field(default_factory=list)
 
+    @property
+    def strip_code(self) -> bool:
+        return self.clean
+
+    @strip_code.setter
+    def strip_code(self, value: bool) -> None:
+        self.clean = value
+
     @classmethod
     def from_settings(cls, settings: CleaningSettings) -> CleaningConfig:
         return cls(
@@ -71,6 +79,14 @@ class TestConfig:
     benchmark_regression_threshold: float = 0.1
     test_workers: int = 0
     test_timeout: int = 0
+
+    @property
+    def run_tests(self) -> bool:
+        return self.test
+
+    @run_tests.setter
+    def run_tests(self, value: bool) -> None:
+        self.test = value
 
     @property
     def workers(self) -> int:
@@ -144,6 +160,14 @@ class AIConfig:
     ai_agent_autofix: bool = False
     start_mcp_server: bool = False
     max_iterations: int = 5
+
+    @property
+    def ai_fix(self) -> bool:
+        return self.ai_agent
+
+    @ai_fix.setter
+    def ai_fix(self, value: bool) -> None:
+        self.ai_agent = value
 
     @classmethod
     def from_settings(cls, settings: AISettings) -> AIConfig:
@@ -276,7 +300,7 @@ class WorkflowOptions:
 
     _DEFAULT_OVERRIDES: dict[str, Any] = field(
         default_factory=lambda: {
-            "clean": False,
+            "clean": None,
             "test": False,
             "publish": None,
             "bump": None,
@@ -320,7 +344,7 @@ class WorkflowOptions:
     def _set_default_overrides(self, kwargs: dict[str, Any]) -> None:
         """Set default overrides for specific attributes."""
         self._DEFAULT_OVERRIDES = {
-            "clean": False,
+            "clean": None,
             "test": False,
             "publish": None,
             "bump": None,
@@ -375,33 +399,49 @@ class WorkflowOptions:
         zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
-        self._initialize_config_attributes(
-            cleaning,
-            hooks,
-            testing,
-            publishing,
-            git,
-            ai,
-            execution,
-            progress,
-            cleanup,
-            advanced,
-            mcp_server,
-            zuban_lsp,
+        # Initialize all configuration attributes with defaults
+        self.cleaning = cleaning or CleaningConfig(clean=None)
+        self.hooks = hooks or HookConfig()
+        self.testing = testing or TestConfig(test=False)
+        self.publishing = publishing or PublishConfig(publish=None, bump=None)
+        self.git = git or GitConfig(commit=False, create_pr=False)
+        self.ai = ai or AIConfig(
+            ai_agent=False,
+            autofix=True,
+            ai_agent_autofix=False,
+            start_mcp_server=False,
+            max_iterations=5,
         )
-        override_context = kwargs.copy()
-        if git is not None:
-            override_context["git"] = git
-        if cleaning is not None:
-            override_context["cleaning"] = cleaning
-        if testing is not None:
-            override_context["testing"] = testing
-        if publishing is not None:
-            override_context["publishing"] = publishing
-        if execution is not None:
-            override_context["execution"] = execution
-        self._set_default_overrides(override_context)
-        self._set_kwargs_attributes(kwargs)
+        self.execution = execution or ExecutionConfig(
+            interactive=True,
+            verbose=False,
+            async_mode=False,
+            no_config_updates=False,
+            dry_run=False,
+        )
+        self.progress = progress or ProgressConfig(
+            track_progress=False, resume_from=None, progress_file=None
+        )
+        self.cleanup = cleanup or CleanupConfig(
+            auto_cleanup=True, keep_debug_logs=5, keep_coverage_files=10
+        )
+        self.advanced = advanced or AdvancedConfig(
+            enabled=False, license_key=None, organization=None
+        )
+        self.mcp_server = mcp_server or MCPServerConfig(
+            http_port=8676,
+            http_host="127.0.0.1",
+            websocket_port=8675,
+            http_enabled=False,
+        )
+        self.zuban_lsp = zuban_lsp or ZubanLSPConfig(
+            enabled=True, auto_start=True, port=8677, mode="stdio", timeout=30
+        )
+
+        # Set any additional attributes from kwargs
+        for attr, value in kwargs.items():
+            if hasattr(self, attr):
+                setattr(self, attr, value)
 
     # Convenience property mappings
     @property
@@ -410,6 +450,14 @@ class WorkflowOptions:
 
     @clean.setter
     def clean(self, value: bool) -> None:
+        self.cleaning.clean = value
+
+    @property
+    def strip_code(self) -> bool:
+        return self.cleaning.clean
+
+    @strip_code.setter
+    def strip_code(self, value: bool) -> None:
         self.cleaning.clean = value
 
     @property
@@ -426,6 +474,14 @@ class WorkflowOptions:
 
     @test.setter
     def test(self, value: bool) -> None:
+        self.testing.test = value
+
+    @property
+    def run_tests(self) -> bool:
+        return self.testing.test
+
+    @run_tests.setter
+    def run_tests(self, value: bool) -> None:
         self.testing.test = value
 
     @property
@@ -514,6 +570,14 @@ class WorkflowOptions:
 
     @ai_agent.setter
     def ai_agent(self, value: bool) -> None:
+        self.ai.ai_agent = value
+
+    @property
+    def ai_fix(self) -> bool:
+        return self.ai.ai_agent
+
+    @ai_fix.setter
+    def ai_fix(self, value: bool) -> None:
         self.ai.ai_agent = value
 
     @property
@@ -687,22 +751,56 @@ class WorkflowOptions:
 
     @classmethod
     def from_args(cls, args: Any) -> WorkflowOptions:
-        simple_fields = [
-            "clean",
-            "test",
-            "publish",
-            "bump",
-            "commit",
-            "create_pr",
-            "interactive",
-            "dry_run",
-        ]
-        kwargs = {
-            field: getattr(args, field)
-            for field in simple_fields
-            if hasattr(args, field)
-        }
-        return cls(**kwargs)
+        # Get attributes from args object
+        attrs = vars(args) if hasattr(args, "__dict__") else {}
+
+        # Create a default instance first to get the default configs
+        default_instance = cls()
+
+        # Prepare individual config objects based on defaults and provided attributes
+        cleaning_kwargs = default_instance.cleaning.__dict__.copy()
+        if "strip_code" in attrs:
+            cleaning_kwargs["clean"] = attrs["strip_code"]
+        elif "clean" in attrs:
+            cleaning_kwargs["clean"] = attrs["clean"]
+        cleaning_config = CleaningConfig(**cleaning_kwargs)
+
+        testing_kwargs = default_instance.testing.__dict__.copy()
+        if "run_tests" in attrs:
+            testing_kwargs["test"] = attrs["run_tests"]
+        elif "test" in attrs:
+            testing_kwargs["test"] = attrs["test"]
+        testing_config = TestConfig(**testing_kwargs)
+
+        git_kwargs = default_instance.git.__dict__.copy()
+        if "commit" in attrs:
+            git_kwargs["commit"] = attrs["commit"]
+        if "create_pr" in attrs:
+            git_kwargs["create_pr"] = attrs["create_pr"]
+        git_config = GitConfig(**git_kwargs)
+
+        publishing_kwargs = default_instance.publishing.__dict__.copy()
+        if "publish" in attrs:
+            publishing_kwargs["publish"] = attrs["publish"]
+        if "bump" in attrs:
+            publishing_kwargs["bump"] = attrs["bump"]
+        publishing_config = PublishConfig(**publishing_kwargs)
+
+        execution_kwargs = default_instance.execution.__dict__.copy()
+        if "interactive" in attrs:
+            execution_kwargs["interactive"] = attrs["interactive"]
+        if "dry_run" in attrs:
+            execution_kwargs["dry_run"] = attrs["dry_run"]
+        execution_config = ExecutionConfig(**execution_kwargs)
+
+        # Return new instance with updated configs
+        return cls(
+            cleaning=cleaning_config,
+            testing=testing_config,
+            git=git_config,
+            publishing=publishing_config,
+            execution=execution_config,
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -9,7 +9,7 @@ Pyscn is a Python static code analyzer for security that detects:
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """

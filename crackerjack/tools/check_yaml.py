@@ -19,6 +19,20 @@ from pathlib import Path
 
 import yaml
 
+
+class _UniqueKeyLoader(yaml.SafeLoader):
+    """YAML loader that rejects duplicate keys."""
+
+    def construct_mapping(self, node, deep=False):  # type: ignore[override]
+        mapping = {}
+        for key_node, value_node in node.value:
+            key = self.construct_object(key_node, deep=deep)
+            if key in mapping:
+                raise yaml.YAMLError(f"Duplicate key: {key}")
+            mapping[key] = self.construct_object(value_node, deep=deep)
+        return mapping
+
+
 from ._git_utils import get_files_by_extension
 
 
@@ -36,7 +50,7 @@ def validate_yaml_file(file_path: Path) -> tuple[bool, str | None]:
     try:
         with file_path.open(encoding="utf-8") as f:
             # Load YAML and validate structure
-            yaml.safe_load(f)
+            yaml.load(f, Loader=_UniqueKeyLoader)
         return True, None
     except yaml.YAMLError as e:
         return False, str(e)

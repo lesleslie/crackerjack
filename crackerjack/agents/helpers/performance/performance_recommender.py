@@ -717,7 +717,7 @@ class PerformanceRecommender:
         )
 
         parts_name = f"{target}_parts"
-        modified |= PerformanceRecommender._ensure_parts_initialized(
+        line_idx += PerformanceRecommender._ensure_parts_initialized(
             lines, loop_start_idx, line_idx, parts_name, parent_indent_str
         )
 
@@ -768,22 +768,22 @@ class PerformanceRecommender:
         line_idx: int,
         parts_name: str,
         parent_indent_str: str,
-    ) -> bool:
+    ) -> int:
         """Ensure parts list is initialized."""
         has_parts_init = any(
             parts_name in line and line.strip().endswith("= []") for line in lines
         )
         if not has_parts_init:
             insert_at = loop_start_idx if loop_start_idx is not None else line_idx
-            lines.insert(insert_at, f"{parent_indent_str}{parts_name} = []")
             lines.insert(
                 insert_at,
                 f"{parent_indent_str}# Performance: build strings with list join",
             )
-            if loop_start_idx is not None and insert_at <= line_idx:
-                line_idx += 2
-            return True
-        return False
+            lines.insert(insert_at + 1, f"{parent_indent_str}{parts_name} = []")
+            if insert_at <= line_idx:
+                return 2
+            return 0
+        return 0
 
     @staticmethod
     def _add_join_statement(

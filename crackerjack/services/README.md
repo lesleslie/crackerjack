@@ -6,7 +6,7 @@ Service abstractions and provider integrations for infrastructure, quality, moni
 
 ## Overview
 
-The services package contains 60+ specialized service modules organized into functional categories. Services handle infrastructure concerns (filesystem, git, config), quality enforcement, monitoring, security, and AI integration. Most services follow ACB patterns with dependency injection and lifecycle management.
+The services package contains 60+ specialized service modules organized into functional categories. Services handle infrastructure concerns (filesystem, git, config), quality enforcement, monitoring, security, and AI integration. Most services follow legacy patterns with dependency injection and lifecycle management.
 
 ## Service Categories
 
@@ -147,7 +147,7 @@ The services package contains 60+ specialized service modules organized into fun
 
 ## Architecture
 
-### ACB Compliance Status
+### legacy Compliance Status
 
 Based on Phase 2-4 refactoring audit:
 
@@ -162,10 +162,10 @@ Based on Phase 2-4 refactoring audit:
 
 ### Dependency Injection Pattern
 
-Most services follow ACB dependency injection:
+Most services follow dependency injection:
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console, CrackerjackCache
 
 
@@ -287,10 +287,10 @@ Pattern detection and analysis:
 
 ## Configuration
 
-Services use ACB Settings for configuration:
+Services use settings for configuration:
 
 ```python
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.config import CrackerjackSettings
 
 settings = depends.get(CrackerjackSettings)
@@ -361,7 +361,7 @@ result = await SecureSubprocess.run_command(
 
 - [Managers](../managers/README.md) — Managers that coordinate services
 
-- [Config](../config/README.md) — ACB Settings integration
+- [Config](../config/README.md) — settings integration
 
 - [SECURITY.md](../../docs/reference/SECURITY.md) — Security documentation
 

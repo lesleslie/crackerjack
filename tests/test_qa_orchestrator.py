@@ -147,8 +147,7 @@ class TestOrchestratorConfiguration:
 
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
-            fast_checks=[fast_check],
-            comprehensive_checks=[comp_check],
+            checks=[fast_check, comp_check],
         )
 
         orchestrator = QAOrchestrator(config)

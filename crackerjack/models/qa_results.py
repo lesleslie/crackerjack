@@ -1,4 +1,4 @@
-"""Result models for ACB Quality Assurance framework."""
+"""Result models for the quality assurance framework."""
 
 from __future__ import annotations
 

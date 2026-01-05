@@ -13,8 +13,8 @@ ______________________________________________________________________
 Logging messages appear when running `python -m crackerjack run` without `--debug` flag:
 
 ```
-2025-11-26 02:29:41 [info] Application started [acb.adapters.logger.structlog]
-[ 2025-11-26 02:29:04.095 ] INFO in acb.adapters.logger[ 298 ] App path: /Users/les/Projects/session-mgmt-mcp
+2025-11-26 02:29:41 [info] Application started [legacy.adapters.logger.structlog]
+[ 2025-11-26 02:29:04.095 ] INFO in legacy.adapters.logger[ 298 ] App path: /Users/les/Projects/session-mgmt-mcp
 INFO: Registering LoggerProtocol with fresh logger instance
 ```
 
@@ -22,7 +22,7 @@ INFO: Registering LoggerProtocol with fresh logger instance
 
 - **No flags**: Clean output, no logging messages
 - **`--verbose`**: More detailed progress information (not low-level logs)
-- **`--debug`**: ALL logging output including ACB internals
+- **`--debug`**: ALL logging output including legacy internals
 
 ______________________________________________________________________
 
@@ -38,11 +38,11 @@ ______________________________________________________________________
 
 ### Logging Issue Root Causes
 
-#### 1. **ACB Logger Auto-Initialization** (PRIMARY)
+#### 1. **legacy Logger Auto-Initialization** (PRIMARY)
 
-**File**: `.venv/lib/python3.13/site-packages/acb/logger.py:61-104`
+**File**: `.venv/lib/python3.13/site-packages/legacy/logger.py:61-104`
 
-ACB's logger automatically initializes at **module import time** and calls `_log_app_info()`, which unconditionally logs startup information:
+legacy's logger automatically initializes at **module import time** and calls `_log_app_info()`, which unconditionally logs startup information:
 
 ```python
 def _initialize_logger() -> None:
@@ -58,8 +58,8 @@ def _initialize_logger() -> None:
 
 **Location of Messages**:
 
-- `acb/adapters/logger/structlog.py:320-328` - "Application started" message
-- `acb/adapters/logger/loguru.py:296-299` - "App path" message
+- `legacy/adapters/logger/structlog.py:320-328` - "Application started" message
+- `legacy/adapters/logger/loguru.py:296-299` - "App path" message
 
 #### 2. **Dependency Guard Warnings** (SECONDARY)
 
@@ -81,7 +81,7 @@ print(
 
 **File**: `crackerjack/config/__init__.py:110-133`
 
-Logger initialization happens during config module import, triggering ACB's startup logging before CLI flags are processed.
+Logger initialization happens during config module import, triggering legacy's startup logging before CLI flags are processed.
 
 ### Progress Bar Issue Root Causes
 
@@ -96,19 +96,19 @@ This inconsistency doesn't directly cause repetition but creates visual confusio
 
 No explicit terminal mode detection (`force_terminal`, `is_terminal`) found in progress bar initialization. Rich may not be detecting interactive terminal correctly.
 
-#### 3. **ACB Console Wrapper Abstraction**
+#### 3. **legacy Console Wrapper Abstraction**
 
-Using ACB's Console wrapper may hide Rich's terminal detection configuration that controls live-updating behavior.
+Using legacy's Console wrapper may hide Rich's terminal detection configuration that controls live-updating behavior.
 
 ______________________________________________________________________
 
 ## Proposed Solutions
 
-### Solution 1: Control ACB Logger Verbosity
+### Solution 1: Control legacy Logger Verbosity
 
 #### Verbosity Level Definitions
 
-| Flag Combination | ACB Logger Level | STDOUT Output | STDERR Output | Use Case |
+| Flag Combination | legacy Logger Level | STDOUT Output | STDERR Output | Use Case |
 |------------------|------------------|---------------|---------------|----------|
 | **None** | WARNING | Clean progress bars only | Silent (no JSON) | Default production use |
 | **`--verbose`** | WARNING | Detailed progress info | Silent (no JSON) | User wants more context |
@@ -123,7 +123,7 @@ ______________________________________________________________________
 
 #### A. Suppress Auto-Initialization Logging (RECOMMENDED)
 
-**Approach**: Set environment variables before ACB logger initializes to control startup verbosity AND disable stderr JSON output by default.
+**Approach**: Set environment variables before legacy logger initializes to control startup verbosity AND disable stderr JSON output by default.
 
 **Implementation**: Add early environment setup in `crackerjack/__main__.py` BEFORE any imports:
 
@@ -132,20 +132,20 @@ ______________________________________________________________________
 import sys
 import os
 
-# Suppress ACB logger startup messages by default
+# Suppress legacy logger startup messages by default
 # Disable stderr JSON sink unless --debug is provided
 if "--debug" not in sys.argv:
-    os.environ["ACB_LOGGER_DEBUG_MODE"] = "0"
-    os.environ["ACB_LOG_LEVEL"] = "WARNING"
-    os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"  # Disable JSON to stderr
+    os.environ["legacy_LOGGER_DEBUG_MODE"] = "0"
+    os.environ["legacy_LOG_LEVEL"] = "WARNING"
+    os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"  # Disable JSON to stderr
 ```
 
 **Rationale**:
 
-- ACB's structlog adapter enables stderr JSON output by default (`enable_stderr_sink: True`)
+- legacy's structlog adapter enables stderr JSON output by default (`enable_stderr_sink: True`)
 - Users don't need structured JSON logs during normal operation
 - Only developers debugging need machine-readable JSON logs
-- Setting `ACB_DISABLE_STRUCTURED_STDERR=1` turns off stderr JSON sink early
+- Setting `legacy_DISABLE_STRUCTURED_STDERR=1` turns off stderr JSON sink early
 
 **Challenge**: This happens before argument parsing, but `sys.argv` check is sufficient for early suppression.
 
@@ -165,7 +165,7 @@ def _configure_logger_verbosity(debug: bool, verbose: bool) -> None:
     - --verbose: WARNING level, stdout only (no stderr JSON)
     - --debug: DEBUG level, stdout + stderr JSON (full structured logging)
     """
-    from acb.depends import depends
+    from legacy.depends import depends
     from crackerjack.models.protocols import LoggerProtocol
 
     try:
@@ -174,19 +174,19 @@ def _configure_logger_verbosity(debug: bool, verbose: bool) -> None:
             # Enable full debug logging + structured JSON to stderr
             if hasattr(logger, "_logger"):
                 logger._logger.setLevel("DEBUG")
-            os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+            os.environ["legacy_LOG_LEVEL"] = "DEBUG"
             os.environ["CRACKERJACK_DEBUG"] = "1"
             # Enable stderr JSON sink for structured logging
-            if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
-                del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
-            os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+            if "legacy_DISABLE_STRUCTURED_STDERR" in os.environ:
+                del os.environ["legacy_DISABLE_STRUCTURED_STDERR"]
+            os.environ["legacy_FORCE_STRUCTURED_STDERR"] = "1"
         else:
             # Keep clean output (WARNING level, no stderr JSON)
             if hasattr(logger, "_logger"):
                 logger._logger.setLevel("WARNING")
-            os.environ["ACB_LOG_LEVEL"] = "WARNING"
+            os.environ["legacy_LOG_LEVEL"] = "WARNING"
             # Ensure stderr JSON remains disabled
-            os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"
+            os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"
     except Exception:
         pass  # Logger not available yet
 
@@ -288,7 +288,7 @@ ______________________________________________________________________
 
 ### Phase 1: Logging Fixes (High Priority)
 
-#### Step 1.1: Early ACB Logger Suppression + Disable Stderr JSON
+#### Step 1.1: Early legacy Logger Suppression + Disable Stderr JSON
 
 **File**: `crackerjack/__main__.py` (Top of file, before imports)
 
@@ -298,20 +298,20 @@ ______________________________________________________________________
 import sys
 import os
 
-# Suppress ACB logger startup messages and stderr JSON unless --debug is provided
-# Must happen before any ACB imports
+# Suppress legacy logger startup messages and stderr JSON unless --debug is provided
+# Must happen before any legacy imports
 if "--debug" not in sys.argv:
-    os.environ["ACB_LOGGER_DEBUG_MODE"] = "0"
-    os.environ["ACB_LOG_LEVEL"] = "WARNING"
-    os.environ["ACB_DISABLE_STRUCTURED_STDERR"] = "1"  # No JSON to stderr by default
+    os.environ["legacy_LOGGER_DEBUG_MODE"] = "0"
+    os.environ["legacy_LOG_LEVEL"] = "WARNING"
+    os.environ["legacy_DISABLE_STRUCTURED_STDERR"] = "1"  # No JSON to stderr by default
 
-# Now safe to import ACB-dependent modules
+# Now safe to import legacy-dependent modules
 import asyncio
 import typing as t
 # ... rest of imports
 ```
 
-**Key Change**: Added `ACB_DISABLE_STRUCTURED_STDERR` to prevent JSON logging to stderr during normal operation.
+**Key Change**: Added `legacy_DISABLE_STRUCTURED_STDERR` to prevent JSON logging to stderr during normal operation.
 
 #### Step 1.2: Silence Dependency Guard Prints
 
@@ -348,19 +348,19 @@ def _configure_logger_verbosity(debug: bool) -> None:
     - Debug: DEBUG level, enable stderr JSON (structured logs for troubleshooting)
     """
     if debug:
-        os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+        os.environ["legacy_LOG_LEVEL"] = "DEBUG"
         os.environ["CRACKERJACK_DEBUG"] = "1"
         # Enable structured JSON logging to stderr for debug mode
-        if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
-            del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
-        os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+        if "legacy_DISABLE_STRUCTURED_STDERR" in os.environ:
+            del os.environ["legacy_DISABLE_STRUCTURED_STDERR"]
+        os.environ["legacy_FORCE_STRUCTURED_STDERR"] = "1"
     # If not debug, keep WARNING level and disabled stderr JSON from early init
 
 
 _configure_logger_verbosity(debug=debug)
 ```
 
-**Key Addition**: Debug mode now explicitly enables stderr JSON sink via `ACB_FORCE_STRUCTURED_STDERR`.
+**Key Addition**: Debug mode now explicitly enables stderr JSON sink via `legacy_FORCE_STRUCTURED_STDERR`.
 
 ### Phase 2: Progress Bar Fixes (Medium Priority)
 
@@ -413,7 +413,7 @@ python -m crackerjack run --verbose
 
 **Expected**:
 
-- ✅ NO ACB startup messages (not user-facing detail)
+- ✅ NO legacy startup messages (not user-facing detail)
 - ✅ NO JSON output to stderr (stderr should be silent)
 - ✅ More detailed progress descriptions on stdout
 - ✅ Enhanced user-facing information
@@ -428,7 +428,7 @@ python -m crackerjack run --debug
 
 **Expected**:
 
-- ✅ Full logging output to stdout (ACB startup messages visible)
+- ✅ Full logging output to stdout (legacy startup messages visible)
 - ✅ Structured JSON logs to stderr (machine-readable format)
 - ✅ Dependency guard messages visible on stdout
 - ✅ "Application started" message appears on stdout
@@ -448,7 +448,7 @@ python -m crackerjack run --ai-debug --run-tests
 - ✅ Structured JSON logging to stderr (for AI consumption)
 - ✅ Human-readable output to stdout
 - ✅ AI agent debug messages on stdout
-- ✅ ACB logger messages on stdout (debug mode active)
+- ✅ legacy logger messages on stdout (debug mode active)
 - ✅ Progress bars for both hooks and tests update cleanly on stdout
 - ✅ Clean separation: stderr = JSON only, stdout = human-readable + progress
 
@@ -477,7 +477,7 @@ ______________________________________________________________________
 **Potential Issues**:
 
 - Early `sys.argv` check may miss unusual argument formats
-- ACB logger may have internal state that resists reconfiguration
+- legacy logger may have internal state that resists reconfiguration
 
 **Mitigation**:
 
@@ -510,7 +510,7 @@ ______________________________________________________________________
 
 1. **`crackerjack/__main__.py`**
 
-   - Add early ACB logger suppression (top of file)
+   - Add early legacy logger suppression (top of file)
    - Add post-parse logger configuration (after line 296)
 
 1. **`crackerjack/utils/dependency_guard.py`**
@@ -533,7 +533,7 @@ ______________________________________________________________________
 
 ## Success Criteria
 
-1. ✅ Running `python -m crackerjack run` shows NO ACB logger startup messages on stdout
+1. ✅ Running `python -m crackerjack run` shows NO legacy logger startup messages on stdout
 1. ✅ Running `python -m crackerjack run` produces NO output to stderr (silent)
 1. ✅ Running `python -m crackerjack run --verbose` shows NO low-level logs (user detail only on stdout)
 1. ✅ Running `python -m crackerjack run --verbose` produces NO output to stderr (silent)

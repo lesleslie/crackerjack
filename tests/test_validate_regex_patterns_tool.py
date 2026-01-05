@@ -80,7 +80,7 @@ class TestValidateRegexPatternsTool:
                 def bad_replacement():
                     text = "foo-bar"
                     # Bad syntax with spaces
-                    result = re.sub(r"(\\w+)-(\\w+)", r"\\g<1>_\\g<2>", text)  # REGEX OK: test case
+                    result = re.sub(r"(\\w+)-(\\w+)", r"\\g<1 >_\\g<2>", text)  # REGEX OK: test case
                     return result
             """)
             )

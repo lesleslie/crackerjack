@@ -22,9 +22,6 @@ from .services.security_logger import (
 
 class SafePatternApplicator:
     def apply_docstring_patterns(self, code: str) -> str:
-        # Intentionally a no-op for docstrings here. Actual docstring removal is
-        # handled by the structured AST cleaning step (_create_docstring_step).
-        # This keeps SafePatternApplicator focused on formatting-only changes.
         return code
 
     def apply_formatting_patterns(self, content: str) -> str:
@@ -34,23 +31,17 @@ class SafePatternApplicator:
         return content
 
     def has_preserved_comment(self, line: str) -> bool:
-        # Preserve shebangs (still useful for executable scripts)
         if line.strip().startswith(("#! /", "#!/")):
             return True
 
         line_lower = line.lower()
         preserved_keywords = [
-            # Security & linting directives (critical)
             "nosec",
             "noqa",
             "pragma",
-            # Type checking directives (critical)
             "type: ",
-            # Security markers (custom)
             "regex ok",
-            # Task tracking (useful)
             "todo",
-            # Note: "coding:" and "encoding:" removed - obsolete since Python 3.0
         ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
@@ -447,7 +438,6 @@ class CodeCleaner(BaseModel):
         )
 
         if pkg_dir is None:
-            # Use configured base directory when no explicit path is provided
             pkg_dir = self.base_directory or Path.cwd()
 
         python_files = self._discover_package_files(pkg_dir)
@@ -507,8 +497,7 @@ class CodeCleaner(BaseModel):
     def _prepare_package_directory(self, pkg_dir: Path | None) -> Path:
         if pkg_dir is None:
             pkg_dir = self.base_directory or Path.cwd()
-        # Avoid normalizing symlinks to preserve exact input path semantics
-        # while still enforcing base-directory containment.
+
         if self.base_directory and not SecurePathValidator.is_within_directory(
             pkg_dir, self.base_directory
         ):
@@ -1114,18 +1103,15 @@ class CodeCleaner(BaseModel):
             return _safe_applicator.has_preserved_comment(stripped_line)
 
         def _remove_comment_from_line(self, line: str) -> str:
-            """Remove comment from line while preserving strings."""
             if not self._line_needs_comment_processing(line):
                 return line
 
             return self._process_line_for_comment_removal(line)
 
         def _line_needs_comment_processing(self, line: str) -> bool:
-            """Check if line needs comment processing."""
             return '"' in line or "'" in line or "#" in line
 
         def _process_line_for_comment_removal(self, line: str) -> str:
-            """Process line to remove comments while preserving strings and special comments."""
             result_chars = []
             string_state = {"in_string": False, "quote_char": None}
 
@@ -1147,26 +1133,18 @@ class CodeCleaner(BaseModel):
         def _should_stop_for_comment(
             self, char: str, string_state: dict[str, t.Any], line: str, index: int
         ) -> tuple[bool, bool]:
-            """Check if we should stop processing at comment.
-
-            Returns:
-                (should_stop, preserve_rest): should_stop=True when comment found,
-                                              preserve_rest=True if comment should be kept
-            """
             if string_state["in_string"] or char != "#":
                 return (False, False)
 
-            # Check if the comment portion should be preserved
             comment_part = line[index:].strip()
             if _safe_applicator.has_preserved_comment(comment_part):
-                return (True, True)  # Stop processing, preserve the comment
+                return (True, True)
 
-            return (True, False)  # Stop processing, discard the comment
+            return (True, False)
 
         def _update_string_state(
             self, char: str, index: int, line: str, string_state: dict[str, t.Any]
         ) -> None:
-            """Update string parsing state."""
             if not string_state["in_string"]:
                 if char in ('"', "'"):
                     string_state["in_string"] = True

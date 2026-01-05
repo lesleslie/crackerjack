@@ -123,7 +123,7 @@ Refactor 11 functions exceeding complexity threshold of 15 to meet crackerjack q
 - Each helper should have single responsibility
 - Reuse common patterns (e.g., error handling)
 
-### Maintain ACB Architecture
+### Maintain legacy Architecture
 
 - Preserve all `@depends.inject` decorators
 - Keep protocol-based dependency injection intact

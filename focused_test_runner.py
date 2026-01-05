@@ -1,7 +1,4 @@
 #!/usr/bin/env python3
-"""
-Focused test runner to check critical test areas without running the entire suite.
-"""
 
 import subprocess
 import sys
@@ -9,7 +6,6 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 def run_test_file(test_path, timeout=20):
-    """Run a specific test file with timeout."""
     try:
         cmd = [
             sys.executable,
@@ -28,7 +24,6 @@ def run_test_file(test_path, timeout=20):
             cwd="/Users/les/Projects/crackerjack",
         )
 
-        # Parse results
         stdout_lines = result.stdout.strip().split("\n")
         if stdout_lines:
             last_line = stdout_lines[-1]
@@ -46,11 +41,9 @@ def run_test_file(test_path, timeout=20):
 
 
 def main():
-    """Run focused tests on critical areas."""
     print("🔍 Focused Test Runner - Checking Critical Areas")
     print("=" * 60)
 
-    # Critical test files to check
     test_files = [
         "tests/test_qa_tool_adapters.py",
         "tests/unit/managers/test_hook_manager.py",
@@ -64,7 +57,6 @@ def main():
 
     results = {}
 
-    # Run tests in parallel with thread pool
     with ThreadPoolExecutor(max_workers=4) as executor:
         future_to_test = {
             executor.submit(run_test_file, test_file): test_file
@@ -79,16 +71,15 @@ def main():
 
                 if success:
                     print(f"✅ {test_file}")
-                    print(f"   {result}")
+                    print(f" {result}")
                 else:
                     print(f"❌ {test_file}")
-                    print(f"   {result}")
+                    print(f" {result}")
 
             except Exception as e:
                 print(f"💥 {test_file}: Exception - {e}")
                 results[test_file] = {"success": False, "result": str(e)}
 
-    # Summary
     print("\n" + "=" * 60)
     print("📊 SUMMARY")
     print("=" * 60)
@@ -107,14 +98,14 @@ def main():
         print("4. ✅ Error handling and configuration services working")
         print("\n🚀 NEXT STEPS:")
         print("- Consider running specific integration tests if needed")
-        print("- Review any skipped tests (ACB/Oneiric dependencies)")
+        print("- Review any skipped tests (integration dependencies)")
         print("- Update CI/CD pipelines with current stable test suite")
         return True
     else:
-        print("⚠️  Some critical tests need attention")
+        print("⚠️ Some critical tests need attention")
         for test_file, result in results.items():
             if not result["success"]:
-                print(f"   - {test_file}: {result['result']}")
+                print(f" - {test_file}: {result['result']}")
         return False
 
 

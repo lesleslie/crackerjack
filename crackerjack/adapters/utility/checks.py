@@ -5,7 +5,7 @@ EOF newlines, YAML/TOML validation, file size limits, and dependency locks.
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Configuration-driven validators and fixers
 - Async execution with semaphore control
 """

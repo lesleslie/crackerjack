@@ -75,7 +75,7 @@ organization: null
 mcp_http_port: 8676
 mcp_http_host: "127.0.0.1"
 mcp_websocket_port: 8675
-mcp_http_enabled: false
+mcp_http_enabled: true
 
 # Zuban LSP
 zuban_enabled: false
@@ -87,11 +87,11 @@ zuban_timeout: 30
 # === Orchestration Settings ===
 
 # Core orchestration
-# NOTE: Orchestration module was removed in Phase 2 (ACB migration)
+# NOTE: Orchestration module was removed in Phase 2 (runtime migration)
 # Legacy executor path is now the default
 enable_orchestration: false
-orchestration_mode: "legacy"  # 'legacy' or 'acb'
-execution_mode: "legacy"  # Hook execution mode: 'legacy' (pre-commit subprocess) or 'acb' (direct adapters)
+orchestration_mode: "legacy"  # 'legacy' or 'oneiric'
+execution_mode: "legacy"  # Hook execution mode: 'legacy' (pre-commit subprocess) or 'direct' (adapter execution)
 
 # Cache settings
 enable_caching: true

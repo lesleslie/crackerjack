@@ -76,7 +76,7 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 
 | Aspect | Pre-commit | Crackerjack |
 |--------|-----------|-------------|
-| **Execution Model** | Wrapper framework that spawns subprocesses for each hook | Direct tool invocation with ACB adapter architecture |
+| **Execution Model** | Wrapper framework that spawns subprocesses for each hook | Direct tool invocation with adapter architecture |
 | **Concurrency** | Synchronous sequential execution (one hook at a time) | **Async-first with 11 concurrent adapters** - true parallel execution |
 | **Performance** | Overhead from framework wrapper + subprocess spawning | Zero wrapper overhead, 70% cache hit rate, 50% faster workflows |
 | **Language Focus** | Language-agnostic (Python, Go, Rust, Docker, etc.) | Python-first with native tool implementations |
@@ -116,11 +116,11 @@ Crackerjack and pre-commit solve related but different problems. While pre-commi
 | Feature | Pre-commit | Crackerjack |
 |---------|-----------|-------------|
 | **AI Integration** | ❌ Not built-in | ✅ 12 specialized AI agents + auto-fixing |
-| **Dependency Injection** | ❌ Not applicable | ✅ ACB framework with protocol-based DI |
+| **Dependency Injection** | ❌ Not applicable | ✅ legacy framework with protocol-based DI |
 | **Caching** | ✅ Per-file hash caching | ✅ Content-based caching (70% hit rate) |
 | **MCP Server** | ❌ Not included | ✅ Built-in MCP server for Claude integration |
 | **Monitoring** | ❌ Not included | ✅ MCP status + progress monitors |
-| **Configuration Management** | ✅ YAML + `--config` flag | ✅ ACB Settings with YAML + local overrides |
+| **Configuration Management** | ✅ YAML + `--config` flag | ✅ settings with YAML + local overrides |
 | **Auto-Update** | ✅ `pre-commit autoupdate` | ⚠️ Manual UV dependency updates |
 | **Language Support** | ✅ 15+ languages (Python, Go, Rust, Docker, etc.) | ✅ Python + external tools (gitleaks, etc.) |
 
@@ -183,9 +183,9 @@ python -m crackerjack run --run-tests
 - [AI Auto-Fix Features](#ai-auto-fix-features)
 - [Core Workflow](#core-workflow)
 - [Core Features](#core-features)
-- [ACB Architecture & Performance](#-acb-architecture--performance)
+- [legacy Architecture & Performance](#-legacy-architecture--performance)
 - [Adapters](#adapters)
-- [Configuration Management](#-configuration-management-acb-settings--configuration-templates)
+- [Configuration Management](#-configuration-management-legacy-settings--configuration-templates)
 - [MCP Server Configuration](#mcp-server-configuration)
 - [Quality Hook Modes](#quality-hook-modes)
 - [Command Reference](#command-reference)
@@ -493,13 +493,13 @@ python -m crackerjack run --run-tests
 - **Pull Request Creation:** Creates pull requests to upstream repositories on GitHub or GitLab
 - **Git Hook Integration:** Ensures code quality before commits with fast, direct tool execution
 
-## ⚡ ACB Architecture & Performance
+## ⚡ legacy Architecture & Performance
 
-Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, providing advanced-grade dependency injection, intelligent caching, and parallel execution.
+Crackerjack is built on the **legacy DI framework** framework, providing advanced-grade dependency injection, intelligent caching, and parallel execution.
 
-### What is ACB?
+### What is legacy?
 
-[ACB](https://github.com/lesleslie/acb) is a lightweight dependency injection framework that enables:
+[legacy](https://github.com/lesleslie/legacy) is a lightweight dependency injection framework that enables:
 
 - **Module-level registration** via `depends.set()` for clean dependency management
 - **Runtime-checkable protocols** ensuring type safety across all components
@@ -508,10 +508,10 @@ Crackerjack is built on the **ACB (Asynchronous Component Base)** framework, pro
 
 ### Architecture Overview
 
-**ACB Workflow Engine (Default since Phase 4.2)**
+**legacy Workflow Engine (Default since Phase 4.2)**
 
 ```
-User Command # → BasicWorkflowEngine (ACB)
+User Command # → BasicWorkflowEngine (legacy)
     ↓
 Workflow Selection (Standard/Fast/Comprehensive/Test)
     ↓
@@ -545,26 +545,26 @@ PhaseCoordinator (Orchestration Layer)
     ↓
 HookManager + TestManager
     ↓
-[Same execution path as ACB from here...]
+[Same execution path as legacy from here...]
 ```
 
 **Architecture Compliance (Phase 2-4.2 Audit Results)**
 
 | Layer | Compliance | Status | Notes |
 |-------|-----------|--------|-------|
-| **ACB Workflows** | 95% | ✅ Production | **Default since Phase 4.2** - Real-time output, non-blocking |
+| **legacy Workflows** | 95% | ✅ Production | **Default since Phase 4.2** - Real-time output, non-blocking |
 | **CLI Handlers** | 90% | ✅ Excellent | Gold standard: `@depends.inject` + `Inject[Protocol]` |
 | **Services** | 95% | ✅ Excellent | Phase 3 refactored, consistent constructors |
 | **Managers** | 80% | ✅ Good | Protocol-based injection, minor improvements needed |
 | **Legacy Orchestration** | 70% | ⚠️ Opt-out | Available with `--use-legacy-orchestrator` |
 | **Coordinators** | 70% | ⚠️ Mixed | Phase coordinators ✅, async needs standardization |
-| **Agent System** | 40% | 📋 Legacy | Uses `AgentContext` pattern (predates ACB) |
+| **Agent System** | 40% | 📋 Legacy | Uses `AgentContext` pattern (predates legacy) |
 
 **Key Architectural Patterns**
 
 ```python
 # ✅ GOLD STANDARD Pattern (from CLI Handlers)
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console
 
 
@@ -581,7 +581,7 @@ def setup_environment_wrong(console: Console | None = None):
 
 ### Performance Benefits
 
-| Metric | Legacy | ACB Workflows (Phase 4.2) | Improvement |
+| Metric | Legacy | legacy Workflows (Phase 4.2) | Improvement |
 |--------|--------|----------------------------|-------------|
 | **Fast Hooks** | ~45s | ~48s | Comparable |
 | **Full Workflow** | ~60s | ~90s | Real-time output |
@@ -597,7 +597,7 @@ def setup_environment_wrong(console: Console | None = None):
 
 **Location:** `crackerjack/adapters/`
 
-ACB-registered adapters for all quality checks:
+legacy-registered adapters for all quality checks:
 
 - **Format:** Ruff formatting, mdformat
 - **Lint:** Codespell, complexity analysis
@@ -614,7 +614,7 @@ ACB-registered adapters for all quality checks:
 
 Features:
 
-- **Dual execution mode:** Legacy (pre-commit CLI) + ACB (direct adapters)
+- **Dual execution mode:** Legacy (pre-commit CLI) + legacy (direct adapters)
 - **Dependency resolution:** Intelligent hook ordering (e.g., format before lint)
 - **Adaptive strategies:** Fast, comprehensive, or dependency-aware execution
 - **Graceful degradation:** Timeout strategies prevent hanging
@@ -638,7 +638,7 @@ Benefits:
 
 **Location:** `crackerjack/mcp/`
 
-ACB-registered services:
+legacy-registered services:
 
 - **MCPServerService:** FastMCP server for AI agent integration
 - **ErrorCache:** Pattern tracking for AI fix recommendations
@@ -647,7 +647,7 @@ ACB-registered services:
 
 ### Migration from Pre-commit
 
-Crackerjack has migrated from pre-commit subprocess calls to direct ACB adapter execution:
+Crackerjack has migrated from pre-commit subprocess calls to direct adapter execution:
 
 **Old Approach (Pre-commit):**
 
@@ -655,7 +655,7 @@ Crackerjack has migrated from pre-commit subprocess calls to direct ACB adapter 
 pre-commit run ruff --all-files  # Subprocess overhead
 ```
 
-**New Approach (ACB):**
+**New Approach (legacy):**
 
 ```bash
 python -m crackerjack run --fast  # Direct Python API, 70% faster
@@ -663,13 +663,13 @@ python -m crackerjack run --fast  # Direct Python API, 70% faster
 
 **Migration Guide:** See `docs/README.md` (Migration Notes)
 
-### Configuration Management (ACB Settings & Configuration Templates)
+### Configuration Management (settings & Configuration Templates)
 
 Crackerjack utilizes a **dual configuration system** to handle both runtime application settings and project configuration templates:
 
-#### 1. Runtime Configuration (ACB Settings)
+#### 1. Runtime Configuration (settings)
 
-**ACB Settings** manages application runtime configuration:
+**settings** manages application runtime configuration:
 
 **Before (11 config files, ~1,808 LOC):**
 
@@ -682,7 +682,7 @@ from crackerjack.orchestration.config import OrchestrationConfig
 **After (1 settings file, ~300 LOC):**
 
 ```python
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.config import CrackerjackSettings
 
 settings = depends.get(CrackerjackSettings)
@@ -738,17 +738,17 @@ merge_result = config_merge_service.smart_merge_pyproject(
 
 **Migration Details:** See `docs/README.md` (Migration Notes)
 
-### Using ACB Dependency Injection
+### Using legacy Dependency Injection
 
 Example: Custom QA Adapter
 
 ```python
 import uuid
 from contextlib import suppress
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase
 
-# Module-level registration (ACB pattern)
+# Module-level registration (legacy pattern)
 MODULE_ID = uuid.UUID("01937d86-xxxx-xxxx-xxxx-xxxxxxxxxxxx")
 MODULE_STATUS = "stable"
 
@@ -792,7 +792,7 @@ with suppress(Exception):
 - **Configurable limits:** Default 60s per hook, 300s overall
 - **Context managers:** Automatic cleanup on timeout
 
-### ACB Benefits
+### legacy Benefits
 
 1. **Type Safety:** Runtime-checkable protocols ensure correctness
 1. **Testability:** Easy mocking with `depends.get()`
@@ -916,7 +916,7 @@ This advanced-grade pattern management system has **eliminated all regex-related
 
 ## Adapters
 
-Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using ACB patterns. Each adapter exposes typed settings, async initialization, and standardized results.
+Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 
 - AI — Claude-powered code fixes: [crackerjack/adapters/ai/README.md](./crackerjack/adapters/ai/README.md)
 - Complexity — Code complexity analysis (Complexipy): [crackerjack/adapters/complexity/README.md](./crackerjack/adapters/complexity/README.md)

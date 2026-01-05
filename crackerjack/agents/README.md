@@ -16,7 +16,7 @@ The agents package contains 13 specialized AI agents that work together to autom
 - **EnhancedAgentCoordinator**: Advanced coordinator with batch processing and collaborative agent modes
 - **AgentRegistry**: Central registry for agent discovery and metadata
 - **AgentTracker**: Tracks agent activities, success rates, and performance metrics
-- **AgentContext**: Dataclass-based context for agent isolation (legacy pattern, predates ACB)
+- **AgentContext**: Dataclass-based context for agent isolation (legacy pattern, predates legacy)
 - **BaseAgent**: Abstract base class providing common agent functionality
 
 ### Specialized Agents
@@ -121,7 +121,7 @@ The agents package contains 13 specialized AI agents that work together to autom
 
 ### AgentContext Pattern (Legacy)
 
-Agents currently use the `AgentContext` dataclass pattern which predates ACB adoption:
+Agents currently use the `AgentContext` dataclass pattern which predates legacy adoption:
 
 ```python
 @dataclass
@@ -133,7 +133,7 @@ class AgentContext:
     # ... other context fields
 ```
 
-**Note:** Phase 4 protocols defined for future migration to ACB dependency injection, but not yet prioritized as agents work well with current pattern.
+**Note:** Phase 4 protocols defined for future migration to dependency injection, but not yet prioritized as agents work well with current pattern.
 
 ### Confidence-Based Routing
 
@@ -205,12 +205,12 @@ result = await agent.analyze_security_issue(
 
 Based on Phase 2-4 refactoring audit:
 
-| Component | ACB Compliance | Status | Notes |
+| Component | legacy Compliance | Status | Notes |
 |-----------|---------------|--------|-------|
-| Agent Classes | 40% | 📋 Legacy | Use `AgentContext` pattern (predates ACB) |
+| Agent Classes | 40% | 📋 Legacy | Use `AgentContext` pattern (predates legacy) |
 | AgentCoordinator | Low | ⚠️ Needs DI | No dependency injection |
 | Helper Modules | N/A | ✅ Stable | Functional utilities |
-| Future Migration | Planned | 📋 Backlog | Protocols defined for ACB migration |
+| Future Migration | Planned | 📋 Backlog | Protocols defined for legacy migration |
 
 ## Configuration
 
@@ -259,7 +259,7 @@ Typical agent performance (per iteration):
 
 ## Future Enhancements
 
-- [ ] Migrate to ACB dependency injection (Phase 5+)
+- [ ] Migrate to dependency injection (Phase 5+)
 - [ ] Implement agent learning from successful fixes
 - [ ] Add agent-specific telemetry and metrics
 - [ ] Develop agent benchmarking framework
