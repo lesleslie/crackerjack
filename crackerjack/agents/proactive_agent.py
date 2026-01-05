@@ -58,7 +58,6 @@ class ProactiveAgent(SubAgent):
         return self._pattern_cache.copy()
 
     def get_planning_confidence(self, issue: Issue) -> float:
-        """Return a confidence score based on cached patterns for the issue type."""
         pattern_prefix = f"{issue.type.value}_"
         confidences = [
             t.cast(float, pattern.get("confidence", 0.0))

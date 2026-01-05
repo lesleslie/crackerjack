@@ -16,30 +16,25 @@ from crackerjack.models.protocols import (
 )
 
 
-# Null Object Pattern implementations for optional dependencies
 class _NullGitService:
-    """Null object for GitServiceProtocol when git is not available."""
 
     def is_git_repo(self) -> bool:
         return False
 
 
 class _NullVersionAnalyzer:
-    """Null object for VersionAnalyzerProtocol when version analysis is unavailable."""
 
     async def recommend_version_bump(self) -> t.Any:
         return None
 
 
 class _NullChangelogGenerator:
-    """Null object for ChangelogGeneratorProtocol when changelog generation is unavailable."""
 
     def generate_changelog_from_commits(self, **_: t.Any) -> bool:
         return False
 
 
 class _RegexPatterns:
-    """Fallback regex patterns implementation."""
 
     def update_pyproject_version(self, content: str, version: str) -> str:
         from crackerjack.services.regex_patterns import update_pyproject_version
@@ -60,12 +55,12 @@ class PublishManagerImpl:
         pkg_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
-        # Foundation dependencies
+
         self.console = self._resolve_console(console)
         self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
 
-        # Services injected via legacy DI
+
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
         self._changelog_generator = self._resolve_changelog_generator(
@@ -76,7 +71,6 @@ class PublishManagerImpl:
         self.security = self._resolve_security(security)
 
     def _resolve_console(self, console: Console | None) -> Console:
-        """Resolve console dependency with fallback."""
         if console is not None:
             return console
         try:
@@ -85,7 +79,6 @@ class PublishManagerImpl:
             return Console()
 
     def _resolve_pkg_path(self, pkg_path: Path | None) -> Path:
-        """Resolve package path dependency with fallback."""
         if pkg_path is not None:
             return pkg_path
         return Path.cwd()
@@ -93,54 +86,49 @@ class PublishManagerImpl:
     def _resolve_git_service(
         self, git_service: GitServiceProtocol | None
     ) -> GitServiceProtocol:
-        """Resolve git service dependency with null object fallback."""
         if git_service is not None:
             return git_service
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
+            return GitService(console=self.console, pkg_path=self.pkg_path) # type: ignore[return-value]
         except Exception:
-            return _NullGitService()  # type: ignore[return-value]
+            return _NullGitService() # type: ignore[return-value]
 
     def _resolve_version_analyzer(
         self, version_analyzer: VersionAnalyzerProtocol | None
     ) -> VersionAnalyzerProtocol:
-        """Resolve version analyzer dependency with null object fallback."""
         if version_analyzer is not None:
             return version_analyzer
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return VersionAnalyzer(self._git_service)  # type: ignore[arg-type]
+            return VersionAnalyzer(self._git_service) # type: ignore[arg-type]
         except Exception:
-            return _NullVersionAnalyzer()  # type: ignore[return-value]
+            return _NullVersionAnalyzer() # type: ignore[return-value]
 
     def _resolve_changelog_generator(
         self, changelog_generator: ChangelogGeneratorProtocol | None
     ) -> ChangelogGeneratorProtocol:
-        """Resolve changelog generator dependency with null object fallback."""
         if changelog_generator is not None:
             return changelog_generator
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
+            return ChangelogGenerator(git_service=self._git_service) # type: ignore[return-value]
         except Exception:
-            return _NullChangelogGenerator()  # type: ignore[return-value]
+            return _NullChangelogGenerator() # type: ignore[return-value]
 
     def _resolve_regex_patterns(
         self, regex_patterns: RegexPatternsProtocol | None
     ) -> RegexPatternsProtocol:
-        """Resolve regex patterns dependency with fallback implementation."""
         if regex_patterns is not None:
             return regex_patterns
-        return _RegexPatterns()  # type: ignore[return-value]
+        return _RegexPatterns() # type: ignore[return-value]
 
     def _resolve_filesystem(
         self, filesystem: FileSystemInterface | None
     ) -> FileSystemInterface:
-        """Resolve filesystem dependency with concrete fallback."""
         if filesystem is not None:
             return filesystem
         from crackerjack.services.filesystem import FileSystemService
@@ -150,7 +138,6 @@ class PublishManagerImpl:
     def _resolve_security(
         self, security: SecurityServiceProtocol | None
     ) -> SecurityServiceProtocol:
-        """Resolve security dependency with concrete fallback."""
         if security is not None:
             return security
         from crackerjack.services.security import SecurityService
@@ -201,7 +188,7 @@ class PublishManagerImpl:
         try:
             content = self.filesystem.read_file(pyproject_path)
 
-            # Use injected service or get through legacy DI
+
             if self._regex_patterns is not None:
                 update_pyproject_version_func = (
                     self._regex_patterns.update_pyproject_version
@@ -258,7 +245,7 @@ class PublishManagerImpl:
             raise ValueError(msg)
         self.console.print(f"[cyan]📦[/ cyan] Current version: {current_version}")
 
-        # Get intelligent version analysis and recommendation
+
         recommendation = self._get_version_recommendation()
         if recommendation and version_type != "interactive":
             self._display_version_analysis(recommendation)
@@ -281,7 +268,7 @@ class PublishManagerImpl:
                 self.console.print(
                     f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
-                # Update changelog after successful version bump
+
                 self._update_changelog_for_version(current_version, new_version)
             else:
                 msg = "Failed to update version in file"
@@ -315,19 +302,18 @@ class PublishManagerImpl:
             return "patch"
 
     def _get_version_recommendation(self) -> t.Any:
-        """Get AI-powered version bump recommendation based on git history."""
         try:
             import asyncio
 
-            # Use injected version analyzer service
+
             version_analyzer = self._version_analyzer
 
-            # Get recommendation asynchronously
+
             try:
-                # Try to get existing event loop
+
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    # Create a new event loop in a thread if one is already running
+
                     import concurrent.futures
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -340,7 +326,7 @@ class PublishManagerImpl:
                         version_analyzer.recommend_version_bump()
                     )
             except RuntimeError:
-                # No event loop, create one
+
                 recommendation = asyncio.run(version_analyzer.recommend_version_bump())
 
             return recommendation
@@ -350,7 +336,6 @@ class PublishManagerImpl:
             return None
 
     def _display_version_analysis(self, recommendation: t.Any) -> None:
-        """Display version analysis in a compact format."""
         if not recommendation:
             return
 
@@ -363,7 +348,7 @@ class PublishManagerImpl:
         if recommendation.reasoning:
             self.console.print(f"[dim]→ {recommendation.reasoning[0]}[/dim]")
 
-        # Show key changes briefly
+
         if recommendation.breaking_changes:
             self.console.print(
                 f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected"
@@ -541,7 +526,6 @@ class PublishManagerImpl:
 
     @retry_api_call(max_attempts=3, delay=2.0, backoff=2.0, max_delay=60.0)
     def _perform_publish_workflow_with_retry(self) -> bool:
-        """Perform the publish workflow with retry logic for API connection errors."""
         if self.dry_run:
             return self._handle_dry_run_publish()
 
@@ -557,8 +541,7 @@ class PublishManagerImpl:
     def _execute_publish(self) -> bool:
         result = self._run_command(["uv", "publish"])
 
-        # Check for success indicators in output even if return code is non-zero
-        # UV can return non-zero codes for warnings while still succeeding
+
         success_indicators = [
             "Successfully uploaded",
             "Package uploaded successfully",
@@ -572,7 +555,7 @@ class PublishManagerImpl:
             indicator in stdout_text for indicator in success_indicators
         )
 
-        # Consider it successful if either return code is 0 OR we find success indicators
+
         success = result.returncode == 0 or has_success_indicator
 
         if success:
@@ -644,7 +627,6 @@ class PublishManagerImpl:
             return False
 
     def create_git_tag_local(self, version: str) -> bool:
-        """Create git tag locally without pushing (for use with push_with_tags)."""
         try:
             if self.dry_run:
                 self.console.print(
@@ -664,7 +646,6 @@ class PublishManagerImpl:
             return False
 
     def create_git_tag(self, version: str) -> bool:
-        """Create git tag and push it immediately (legacy method for standalone use)."""
         try:
             if self.dry_run:
                 self.console.print(
@@ -755,19 +736,18 @@ class PublishManagerImpl:
         return {"project": project}
 
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
-        """Update changelog with entries from git commits since last version."""
         try:
-            # Use injected changelog generator service
+
             changelog_generator = self._changelog_generator
 
-            # Look for changelog file
+
             changelog_path = self.pkg_path / "CHANGELOG.md"
 
-            # Generate changelog entries since last version
+
             success = changelog_generator.generate_changelog_from_commits(
                 changelog_path=changelog_path,
                 version=new_version,
-                since_version=f"v{old_version}",  # Assumes git tags are prefixed with 'v'
+                since_version=f"v{old_version}",
             )
 
             if success:

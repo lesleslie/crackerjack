@@ -24,7 +24,6 @@ async def clean_temp_files(
     patterns: list[str] | None = None,
     directories: list[Path] | None = None,
 ) -> dict[str, t.Any]:
-    """Clean temporary files from specified directories."""
     from datetime import datetime, timedelta
 
     if patterns is None:
@@ -52,7 +51,6 @@ async def clean_temp_files(
 def _process_directory(
     directory: Path, patterns: list[str], cutoff: t.Any, dry_run: bool
 ) -> tuple[list[str], int]:
-    """Process a single directory for cleaning."""
     if not directory.exists():
         return [], 0
 
@@ -70,7 +68,6 @@ def _process_directory(
 def _process_file_for_cleanup(
     file: Path, cutoff: t.Any, dry_run: bool
 ) -> tuple[list[str], int]:
-    """Process a single file to determine if it should be cleaned."""
     file_info = _check_file_eligibility(file, cutoff)
     if not file_info:
         return [], 0
@@ -79,11 +76,11 @@ def _process_file_for_cleanup(
     if not should_clean:
         return [], 0
 
-    # Add to cleaned files
+
     cleaned_files = [str(file)]
     total_size = file_size
 
-    # Actually delete the file if not in dry_run mode
+
     if not dry_run:
         file.unlink()
 
@@ -93,7 +90,6 @@ def _process_file_for_cleanup(
 def _process_pattern(
     directory: Path, pattern: str, cutoff: t.Any, dry_run: bool
 ) -> tuple[list[str], int]:
-    """Process a single pattern within a directory."""
     cleaned_files = []
     total_size = 0
 
@@ -107,7 +103,6 @@ def _process_pattern(
 
 
 def _check_file_eligibility(file: Path, cutoff: t.Any) -> tuple[int, bool] | None:
-    """Check if a file is eligible for cleaning based on cutoff time."""
     try:
         file_time = datetime.fromtimestamp(file.stat().st_mtime)
         if file_time < cutoff:
@@ -156,7 +151,6 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
 
 
 def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
-    """Parse cleanup options from kwargs string."""
     try:
         extra_kwargs: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
         return extra_kwargs, None
@@ -165,7 +159,6 @@ def _parse_cleanup_options(kwargs: str) -> tuple[dict[str, t.Any], str | None]:
 
 
 def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int]:
-    """Clean temporary files older than cutoff_time."""
     from pathlib import Path
 
     cleaned: list[str] = []
@@ -189,7 +182,6 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int
 def _clean_progress_files(
     context: t.Any, cutoff_time: float, dry_run: bool
 ) -> tuple[list[str], int]:
-    """Clean progress files older than cutoff_time."""
     cleaned: list[str] = []
     total_size = 0
 
@@ -295,7 +287,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
             elif action == "get" and len(args_parts) > 1:
                 result = getattr(config, args_parts[1], None)
             elif action == "validate":
-                # Validation is now implicit with Pydantic v2
+
                 result = {"status": "valid"}
             else:
                 return _create_error_response(
@@ -311,9 +303,8 @@ def _register_config_tool(mcp_app: t.Any) -> None:
 async def analyze_project(
     scope: str = "all", report_format: str = "summary"
 ) -> dict[str, t.Any]:
-    """Analyzes the project and returns a summary."""
-    # This is a mock implementation to fix the import error.
-    # In a real scenario, this would perform a detailed analysis.
+
+
     return {
         "scope": scope,
         "report_format": report_format,

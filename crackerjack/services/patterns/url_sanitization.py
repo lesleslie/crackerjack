@@ -1,4 +1,3 @@
-"""URL sanitization patterns for security."""
 
 from .core import ValidatedPattern
 
@@ -10,10 +9,10 @@ PATTERNS: dict[str, ValidatedPattern] = {
         description="Sanitize localhost URLs with ports for security",
         global_replace=True,
         test_cases=[
-            ("http://localhost:8000/api/test", "[INTERNAL_URL]"),
-            ("https://localhost:3000/dashboard", "[INTERNAL_URL]"),
+            ("http://localhost: 8000/api/test", "[INTERNAL_URL]"),
+            ("https://localhost: 3000/dashboard", "[INTERNAL_URL]"),
             (
-                "Visit http://localhost:8080/admin for details",
+                "Visit http://localhost: 8080/admin for details",
                 "Visit [INTERNAL_URL] for details",
             ),
             ("https://example.com/test", "https://example.com/test"),
@@ -54,12 +53,12 @@ PATTERNS: dict[str, ValidatedPattern] = {
         description="Sanitize WebSocket localhost URLs with ports for security",
         global_replace=True,
         test_cases=[
-            ("ws://localhost:8675/websocket", "[INTERNAL_URL]"),
-            ("ws://localhost:3000/socket", "[INTERNAL_URL]"),
-            ("Connect to ws://localhost:8000/ws", "Connect to [INTERNAL_URL]"),
+            ("ws://localhost: 8675/websocket", "[INTERNAL_URL]"),
+            ("ws://localhost: 3000/socket", "[INTERNAL_URL]"),
+            ("Connect to ws://localhost: 8000/ws", "Connect to [INTERNAL_URL]"),
             (
-                "wss://example.com:443/socket",
-                "wss://example.com:443/socket",
+                "wss://example.com: 443/socket",
+                "wss://example.com: 443/socket",
             ),
         ],
     ),
@@ -89,8 +88,8 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("http://localhost/dashboard", "[INTERNAL_URL]"),
             ("Visit http://localhost/admin", "Visit [INTERNAL_URL]"),
             (
-                "https://localhost:443/test",
-                "https://localhost:443/test",
+                "https://localhost: 443/test",
+                "https://localhost: 443/test",
             ),
         ],
     ),
@@ -106,8 +105,8 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("ws://localhost/socket", "[INTERNAL_URL]"),
             ("Connect to ws://localhost/ws", "Connect to [INTERNAL_URL]"),
             (
-                "wss://localhost:443/socket",
-                "wss://localhost:443/socket",
+                "wss://localhost: 443/socket",
+                "wss://localhost: 443/socket",
             ),
         ],
     ),

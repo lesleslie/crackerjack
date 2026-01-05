@@ -489,13 +489,12 @@ class ContextualAIAssistant:
                 self.console.print()
 
     def get_quick_help(self, query: str) -> str:
-        """Get quick help for common queries using keyword matching."""
         query_lower = query.lower()
 
-        # Define help responses with keywords
+
         help_mapping = self._get_help_keyword_mapping()
 
-        # Find the first matching help response
+
         for keywords, response in help_mapping:
             if self._query_contains_keywords(query_lower, keywords):
                 return response
@@ -503,7 +502,6 @@ class ContextualAIAssistant:
         return "For full help, run: python -m crackerjack --help\nFor AI assistance: python -m crackerjack --ai-fix"
 
     def _get_help_keyword_mapping(self) -> list[tuple[list[str], str]]:
-        """Get mapping of keywords to help responses."""
         return [
             (
                 ["coverage"],
@@ -531,11 +529,10 @@ class ContextualAIAssistant:
             ),
             (
                 ["dashboard", "monitor"],
-                # Phase 1: WebSocket server command removed from help text (WebSocket stack deleted)
+
                 "Start monitoring dashboard: python -m crackerjack --dashboard",
             ),
         ]
 
     def _query_contains_keywords(self, query: str, keywords: list[str]) -> bool:
-        """Check if query contains any of the specified keywords."""
         return any(keyword in query for keyword in keywords)

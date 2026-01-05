@@ -1,8 +1,3 @@
-"""Bandit security scanner output parsing patterns.
-
-This module provides regex patterns for parsing Bandit security analysis tool output,
-including issue detection, location information, confidence, and severity levels.
-"""
 
 from ..core import ValidatedPattern
 

@@ -14,7 +14,6 @@ from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
 
 class AsyncWorkflowPipeline:
-    """Async workflow pipeline wrapper using Oneiric-backed workflow pipeline."""
 
     def __init__(
         self,

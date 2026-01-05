@@ -1,10 +1,9 @@
-"""CLI handlers module for Crackerjack."""
 
 from __future__ import annotations
 
 import logging
 
-# Import main handler functions that coordinate the core CLI workflows
+
 from .main_handlers import (
     console,
     handle_config_updates,

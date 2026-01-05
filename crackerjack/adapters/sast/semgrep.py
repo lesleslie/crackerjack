@@ -1,14 +1,3 @@
-"""Semgrep adapter for Crackerjack QA framework - Modern security scanning.
-
-Semgrep is a fast, open-source, static analysis tool for finding bugs,
-enforcing code standards, and finding security vulnerabilities.
-
-Standard Python Patterns:
-- MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No dependency injection
-- Extends BaseToolAdapter for tool execution
-- Async execution with JSON output parsing
-"""
 
 from __future__ import annotations
 
@@ -30,38 +19,34 @@ from crackerjack.models.qa_results import QACheckType
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# Static UUID from registry (NEVER change once set)
+
 MODULE_ID = UUID("bff2e3e9-9b3c-49b7-a8c0-526fe56b0c37")
 MODULE_STATUS = AdapterStatus.STABLE
 
-# Module-level logger for structured logging
+
 logger = logging.getLogger(__name__)
 
 
 class SemgrepSettings(ToolAdapterSettings):
-    """Settings for Semgrep adapter."""
 
     tool_name: str = "semgrep"
     use_json_output: bool = True
-    config: str = "p/python"  # Default ruleset
+    config: str = "p/python"
     exclude_tests: bool = True
     timeout_seconds: int = 1200
 
 
 class SemgrepAdapter(BaseToolAdapter):
-    """Adapter for Semgrep - Modern static analysis."""
 
     settings: SemgrepSettings | None = None
 
     def __init__(self, settings: SemgrepSettings | None = None) -> None:
-        """Initialize Semgrep adapter."""
         super().__init__(settings=settings)
         logger.debug(
             "SemgrepAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
-        """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = SemgrepSettings(
                 timeout_seconds=1200,
@@ -79,17 +64,14 @@ class SemgrepAdapter(BaseToolAdapter):
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         return "Semgrep (Security)"
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID."""
         return MODULE_ID
 
     @property
     def tool_name(self) -> str:
-        """CLI tool name."""
         return "semgrep"
 
     def build_command(
@@ -97,20 +79,19 @@ class SemgrepAdapter(BaseToolAdapter):
         files: list[Path],
         config: QACheckConfig | None = None,
     ) -> list[str]:
-        """Build Semgrep command."""
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
         cmd = [self.tool_name, "scan"]
 
-        # JSON output
+
         if self.settings.use_json_output:
             cmd.append("--json")
 
-        # Config
+
         cmd.extend(["--config", self.settings.config])
 
-        # Add targets
+
         cmd.extend([str(f) for f in files])
 
         logger.info(
@@ -126,7 +107,6 @@ class SemgrepAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-        """Parse Semgrep JSON output into standardized issues."""
         if not result.raw_output:
             logger.debug("No output to parse")
             return []
@@ -142,7 +122,7 @@ class SemgrepAdapter(BaseToolAdapter):
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
             )
-            return []  # No text parsing for semgrep for now
+            return []
 
         issues = []
         for item in data.get("results", []):
@@ -171,20 +151,14 @@ class SemgrepAdapter(BaseToolAdapter):
         return issues
 
     def _get_check_type(self) -> QACheckType:
-        """Return SAST check type."""
         return QACheckType.SAST
 
     def _detect_package_directory(self) -> str:
-        """Detect the package directory name from pyproject.toml.
-
-        Returns:
-            Package directory name (e.g., 'crackerjack', 'session_buddy')
-        """
         from contextlib import suppress
 
         current_dir = Path.cwd()
 
-        # Try to read package name from pyproject.toml
+
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -194,25 +168,24 @@ class SemgrepAdapter(BaseToolAdapter):
                     data = tomllib.load(f)
 
                 if "project" in data and "name" in data["project"]:
-                    # Convert package name to directory name (replace - with _)
+
                     package_name = str(data["project"]["name"]).replace("-", "_")
 
-                    # Verify directory exists
+
                     if (current_dir / package_name).exists():
                         return package_name
 
-        # Fallback to directory name if package dir exists
+
         if (current_dir / current_dir.name).exists():
             return current_dir.name
 
-        # Default fallback
+
         return "src"
 
     def get_default_config(self) -> QACheckConfig:
-        """Get default configuration for Semgrep adapter."""
         from crackerjack.models.qa_config import QACheckConfig
 
-        # Dynamically detect package directory
+
         package_dir = self._detect_package_directory()
 
         return QACheckConfig(

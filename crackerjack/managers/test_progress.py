@@ -18,7 +18,7 @@ class TestProgress:
         self.collection_status: str = "Starting collection..."
         self._lock = threading.Lock()
         self._seen_files: set[str] = set()
-        # Output buffers for capturing stdout/stderr from test execution
+
         self._stdout_buffer: list[str] = []
         self._stderr_buffer: list[str] = []
 
@@ -42,21 +42,19 @@ class TestProgress:
 
     @property
     def tests_per_second(self) -> float:
-        """Calculate test execution rate."""
         if self.elapsed_time > 0 and self.completed > 0:
             return self.completed / self.elapsed_time
         return 0.0
 
     @property
     def overall_status_color(self) -> str:
-        """Determine overall status color based on test results."""
         if self.failed > 0 or self.errors > 0:
             return "red"
         elif self.completed > 0 and self.completed == self.total_tests:
             return "green"
         elif self.passed > 0:
-            return "yellow"  # Tests running, some passed
-        return "cyan"  # Default color
+            return "yellow"
+        return "cyan"
 
     def update(self, **kwargs: t.Any) -> None:
         with self._lock:
@@ -65,34 +63,22 @@ class TestProgress:
                     setattr(self, key, value)
 
     def append_stdout(self, line: str) -> None:
-        """Append a line to stdout buffer (thread-safe)."""
         with self._lock:
             self._stdout_buffer.append(line)
 
     def append_stderr(self, line: str) -> None:
-        """Append a line to stderr buffer (thread-safe)."""
         with self._lock:
             self._stderr_buffer.append(line)
 
     def get_stdout(self) -> str:
-        """Get accumulated stdout as a single string (thread-safe)."""
         with self._lock:
             return "".join(self._stdout_buffer)
 
     def get_stderr(self) -> str:
-        """Get accumulated stderr as a single string (thread-safe)."""
         with self._lock:
             return "".join(self._stderr_buffer)
 
     def _create_progress_bar(self, width: int = 20) -> str:
-        """Create a visual progress bar.
-
-        Args:
-            width: Width of the progress bar in characters
-
-        Returns:
-            Formatted progress bar string like [████████░░░░] 40%
-        """
         if self.total_tests == 0:
             return ""
 
@@ -100,9 +86,9 @@ class TestProgress:
         filled = int(progress_ratio * width)
         empty = width - filled
 
-        # Use different characters for passed vs failed
+
         if self.failed > 0 or self.errors > 0:
-            fill_char = "▓"  # Denser for failures
+            fill_char = "▓"
             bar_color = "red"
         else:
             fill_char = "█"
@@ -114,11 +100,6 @@ class TestProgress:
         return f"[{bar_color}][{bar}] {percentage}%[/{bar_color}]"
 
     def _format_eta(self) -> str:
-        """Format ETA in human-readable form.
-
-        Returns:
-            Formatted ETA string like "ETA: 12s" or "ETA: 2m 34s"
-        """
         eta = self.eta_seconds
         if eta is None or eta <= 0:
             return ""
@@ -135,11 +116,6 @@ class TestProgress:
             return f"ETA: {hours}h {minutes}m"
 
     def _format_test_rate(self) -> str:
-        """Format test execution rate.
-
-        Returns:
-            Formatted rate string like "12.5 tests/s"
-        """
         rate = self.tests_per_second
         if rate == 0:
             return ""
@@ -163,11 +139,6 @@ class TestProgress:
         return " | ".join(status_parts)
 
     def _format_progress_counters(self) -> list[str]:
-        """Format pass/fail/skip/error status counters.
-
-        Returns:
-            List of formatted status counter strings
-        """
         status_parts = []
         if self.completed > 0:
             progress_pct = (self.completed / self.total_tests) * 100
@@ -189,22 +160,22 @@ class TestProgress:
     def _format_execution_progress(self) -> str:
         parts = []
 
-        # Simple spinner-based display for parallel test execution
+
         if self.total_tests > 0:
-            # Main message with test count (using simple spinner character)
+
             parts.append(f"⠋ [cyan]Running {self.total_tests} tests[/cyan]")
 
-            # Add status counters with emojis if any tests have completed
+
             status_parts = self._format_progress_counters()
             if status_parts:
                 parts.append(" | ".join(status_parts))
 
-            # Add elapsed time
+
             elapsed = self.elapsed_time
             if elapsed > 1:
                 parts.append(f"[dim]{elapsed:.0f}s[/dim]")
         else:
-            # Before collection completes
+
             parts.append("⠋ [cyan]Preparing tests...[/cyan]")
 
         return " | ".join(parts) if len(parts) > 1 else (parts[0] if parts else "")

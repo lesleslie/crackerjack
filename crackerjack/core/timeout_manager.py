@@ -129,7 +129,6 @@ class AsyncTimeoutManager:
         return self._performance_monitor
 
     def _handle_operation_success(self, operation: str, start_time: float) -> float:
-        """Handle successful operation completion."""
         self.performance_monitor.record_operation_success(operation, start_time)
         elapsed = time.time() - start_time
         self._record_success(operation, elapsed)
@@ -144,7 +143,6 @@ class AsyncTimeoutManager:
         error_msg: str = "",
         error_type: str = "custom_timeout",
     ) -> float | None:
-        """Handle timeout error based on strategy."""
         elapsed = time.time() - start_time
         self.performance_monitor.record_operation_timeout(
             operation, start_time, timeout_value, error_msg
@@ -158,13 +156,12 @@ class AsyncTimeoutManager:
             logger.warning(
                 f"Operation {operation} {error_type} ({elapsed: .1f}s), continuing gracefully"
             )
-            return elapsed  # Return elapsed time to indicate graceful degradation
+            return elapsed
 
         return None
 
     @asynccontextmanager
     async def _execute_with_timeout_context(self, timeout_value: float):
-        """Execute the context with timeout handling."""
         try:
             async with asyncio.timeout(timeout_value):
                 yield
@@ -180,7 +177,6 @@ class AsyncTimeoutManager:
                 yield
 
     def _should_yield_on_graceful_degradation(self, result: float | None) -> bool:
-        """Check if graceful degradation should yield."""
         return result is not None
 
     def _handle_custom_timeout_exception(
@@ -191,7 +187,6 @@ class AsyncTimeoutManager:
         strategy: TimeoutStrategy,
         error: TimeoutError,
     ) -> float | None:
-        """Handle custom TimeoutError exception."""
         return self._handle_timeout_error(
             operation, start_time, timeout_value, strategy, str(error), "timed out"
         )
@@ -203,7 +198,6 @@ class AsyncTimeoutManager:
         timeout_value: float,
         strategy: TimeoutStrategy,
     ) -> float | None:
-        """Handle asyncio.timeout context manager timeout."""
         return self._handle_timeout_error(
             operation,
             start_time,
@@ -220,7 +214,6 @@ class AsyncTimeoutManager:
         timeout_value: float,
         strategy: TimeoutStrategy,
     ) -> float | None:
-        """Handle asyncio.CancelledError exception."""
         return self._handle_timeout_error(
             operation, start_time, timeout_value, strategy, "cancelled", "was cancelled"
         )
@@ -228,7 +221,6 @@ class AsyncTimeoutManager:
     def _handle_generic_exception(
         self, operation: str, start_time: float, strategy: TimeoutStrategy
     ) -> None:
-        """Handle generic exceptions."""
         self.performance_monitor.record_operation_failure(operation, start_time)
         elapsed = time.time() - start_time
         self._record_failure(operation, elapsed)
@@ -244,8 +236,7 @@ class AsyncTimeoutManager:
         timeout_value: float,
         strategy: TimeoutStrategy,
     ) -> tuple[bool, Exception | None]:
-        """Dispatch exception to appropriate handler."""
-        # Custom TimeoutError
+
         if isinstance(error, TimeoutError):
             result = self._handle_custom_timeout_exception(
                 operation, start_time, timeout_value, strategy, error
@@ -253,7 +244,7 @@ class AsyncTimeoutManager:
             should_yield = self._should_yield_on_graceful_degradation(result)
             return should_yield, (None if should_yield else error)
 
-        # Asyncio timeout
+
         if isinstance(error, builtins.TimeoutError):
             result = self._handle_asyncio_timeout_exception(
                 operation, start_time, timeout_value, strategy
@@ -264,7 +255,7 @@ class AsyncTimeoutManager:
             )
             return should_yield, (None if should_yield else reraise_error)
 
-        # Cancelled error
+
         if isinstance(error, asyncio.CancelledError):
             result = self._handle_cancelled_exception(
                 operation, start_time, timeout_value, strategy
@@ -275,7 +266,7 @@ class AsyncTimeoutManager:
             )
             return should_yield, (None if should_yield else reraise_error)
 
-        # Generic exception
+
         self._handle_generic_exception(operation, start_time, strategy)
         return False, error
 
@@ -304,7 +295,7 @@ class AsyncTimeoutManager:
             should_yield, error = self._dispatch_exception_handler(
                 e, operation, start_time, timeout_value, strategy
             )
-            # For graceful degradation, don't re-raise the exception
+
             if error:
                 raise error
 

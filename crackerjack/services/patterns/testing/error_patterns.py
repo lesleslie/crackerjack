@@ -1,8 +1,3 @@
-"""Test error pattern matching.
-
-This module contains patterns for identifying and parsing various error
-patterns in test failures, including assertions, imports, fixtures, and more.
-"""
 
 from ..core import ValidatedPattern
 

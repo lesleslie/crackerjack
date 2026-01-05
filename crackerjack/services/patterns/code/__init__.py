@@ -1,4 +1,3 @@
-"""Code-related patterns."""
 
 from ..core import ValidatedPattern
 from .detection import PATTERNS as DETECTION_PATTERNS

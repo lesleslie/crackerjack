@@ -16,13 +16,13 @@ from crackerjack.runtime import (
     write_runtime_health,
 )
 
-# Get Rich Console instance
+
 console = Console()
 
 try:
     import tomli
 except ImportError:
-    tomli = None  # type: ignore[assignment]
+    tomli = None # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -30,9 +30,9 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None  # type: ignore[misc,assignment,no-redef]
+    FastMCP = None # type: ignore[misc, assignment, no-redef]
 
-# Import FastMCP rate limiting middleware (Phase 3 Security Hardening)
+
 try:
     from fastmcp.server.middleware.rate_limiting import RateLimitingMiddleware
 
@@ -137,14 +137,14 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
 
     mcp_app = FastMCP("crackerjack-mcp-server", streamable_http_path="/mcp")
 
-    # Add rate limiting middleware (Phase 3 Security Hardening)
+
     if RATE_LIMITING_AVAILABLE:
         rate_limiter = RateLimitingMiddleware(
-            max_requests_per_second=12.0,  # Sustainable rate for code quality operations
-            burst_capacity=35,  # Allow bursts for test/lint operations
-            global_limit=True,  # Protect the crackerjack server globally
+            max_requests_per_second=12.0,
+            burst_capacity=35,
+            global_limit=True,
         )
-        # Use public API (Phase 3.1 C1 fix: standardize middleware access)
+
         mcp_app.add_middleware(rate_limiter)
 
     from crackerjack.slash_commands import get_slash_command_path
@@ -197,8 +197,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
     return mcp_app
 
 
-# Export ASGI app for uvicorn (standardized startup pattern)
-# Create a default server instance for uvicorn
 _default_config = {"http_port": 8676, "http_host": "127.0.0.1"}
 _default_mcp_app = create_mcp_server(_default_config)
 http_app = _default_mcp_app.http_app if _default_mcp_app else None
@@ -290,7 +288,7 @@ def _print_server_info(
     else:
         mode = "STDIO"
         http_endpoint = None
-    # Use mcp-common ServerPanels info panel
+
     items: dict[str, str] = {
         "Project": project_path.name,
         "Mode": mode,
@@ -329,7 +327,6 @@ def _initialize_project_and_config(
     http_port: int | None,
     http_mode: bool,
 ) -> tuple[Path, dict[str, t.Any]]:
-    """Initialize project path and config."""
     project_path = Path(project_path_arg).resolve()
     mcp_config = _load_mcp_config(project_path)
     mcp_config = _merge_config_with_args(mcp_config, http_port, http_mode)
@@ -337,7 +334,6 @@ def _initialize_project_and_config(
 
 
 def _create_and_validate_server(mcp_config: dict[str, t.Any]) -> t.Any | None:
-    """Create and validate the MCP server."""
     mcp_app = create_mcp_server(mcp_config)
     if not mcp_app:
         console.print("[red]Failed to create MCP server[/ red]")
@@ -349,10 +345,9 @@ def _show_server_startup_info(
     mcp_config: dict[str, t.Any],
     http_mode: bool,
 ) -> None:
-    """Show server startup information."""
     _print_server_info(project_path, mcp_config, http_mode)
 
-    # Show final success panel before starting the server
+
     if mcp_config.get("http_enabled", False) or http_mode:
         http_endpoint = (
             f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
@@ -360,7 +355,7 @@ def _show_server_startup_info(
     else:
         http_endpoint = None
 
-    # Final startup success panel via mcp-common
+
     ServerPanels.startup_success(
         server_name="Crackerjack MCP",
         endpoint=http_endpoint,
@@ -375,7 +370,7 @@ def main(
     if not MCP_AVAILABLE:
         return
 
-    # Define runtime directory for Oneiric snapshots
+
     runtime_dir = Path(".oneiric_cache")
 
     try:
@@ -389,7 +384,7 @@ def main(
         if not mcp_app:
             return
 
-        # Initialize skill system with project context
+
         console.print("[cyan]Initializing skill system...[/ cyan]")
         try:
             initialize_skills(project_path, mcp_app)
@@ -397,13 +392,13 @@ def main(
             console.print("[green]✅ Skill system initialized[/ green]")
         except Exception as e:
             console.print(
-                f"[yellow]⚠️  Skill system initialization failed: {e}[/ yellow]"
+                f"[yellow]⚠️ Skill system initialization failed: {e}[/ yellow]"
             )
-            # Don't fail server startup if skills fail
+
 
         _show_server_startup_info(project_path, mcp_config, http_mode)
 
-        # Write Oneiric runtime health snapshots before starting server
+
         pid = os.getpid()
         snapshot = RuntimeHealthSnapshot(
             orchestrator_pid=pid,
@@ -428,7 +423,7 @@ def main(
 
         traceback.print_exc()
     finally:
-        # Update health snapshot on shutdown
+
         with suppress(Exception):
             snapshot = RuntimeHealthSnapshot(
                 orchestrator_pid=os.getpid(),

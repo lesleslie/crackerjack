@@ -1,4 +1,3 @@
-"""Skylos adapter for dead code detection."""
 
 import typing as t
 from dataclasses import dataclass
@@ -12,15 +11,13 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class DeadCodeIssue(Issue):
-    """Skylos dead code detection issue."""
 
-    severity: str = "warning"  # Override default, dead code is typically warning
-    issue_type: str = "unknown"  # "import", "function", "class", "variable", etc.
+    severity: str = "warning"
+    issue_type: str = "unknown"
     name: str = "unknown"
     confidence: float = 0.0
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert issue to dictionary with Skylos-specific fields."""
         base_dict = super().to_dict()
         base_dict.update(
             {
@@ -33,30 +30,25 @@ class DeadCodeIssue(Issue):
 
 
 class SkylosAdapter(BaseRustToolAdapter):
-    """Skylos dead code detection adapter."""
 
     def __init__(
         self,
         context: "ExecutionContext",
-        confidence_threshold: int = 99,  # Higher threshold to reduce false positives in DI system
+        confidence_threshold: int = 99,
         web_dashboard_port: int = 5090,
     ) -> None:
-        """Initialize Skylos adapter."""
         super().__init__(context)
         self.confidence_threshold = confidence_threshold
         self.web_dashboard_port = web_dashboard_port
 
     def get_tool_name(self) -> str:
-        """Get the name of the tool."""
         return "skylos"
 
     def supports_json_output(self) -> bool:
-        """Skylos supports JSON output mode."""
         return True
 
     def get_command_args(self, target_files: list[Path]) -> list[str]:
-        """Get command arguments for Skylos execution."""
-        # Use higher confidence threshold to avoid false positives from DI system
+
         args = [
             "uv",
             "run",
@@ -65,50 +57,47 @@ class SkylosAdapter(BaseRustToolAdapter):
             str(max(95, self.confidence_threshold)),
         ]
 
-        # Add JSON mode for AI agents
+
         if self._should_use_json_output():
             args.append("--json")
 
-        # Add web dashboard for interactive mode
+
         if self.context.interactive:
             args.extend(["--web", "--port", str(self.web_dashboard_port)])
 
-        # Filter target files to only include package directory files
-        # This prevents scanning tests, docs, scripts, etc.
+
         if target_files:
             package_files = self._filter_package_files(target_files)
             if package_files:
                 args.extend(str(f) for f in package_files)
             else:
-                # No package files in target, scan package directory instead
+
                 package_target = self._determine_package_target()
                 args.append(package_target)
         else:
-            # No target files specified, scan package directory
+
             package_target = self._determine_package_target()
             args.append(package_target)
 
         return args
 
     def _determine_package_target(self) -> str:
-        """Determine the package target directory to scan."""
         from pathlib import Path
 
-        # Look for package directory in common locations
+
         cwd = Path.cwd()
         package_name = self._get_package_name_from_pyproject(cwd)
 
         if not package_name:
             package_name = self._find_package_directory_with_init(cwd)
 
-        # Default to 'crackerjack' if nothing found
+
         if not package_name:
             package_name = "crackerjack"
 
         return f"./{package_name}"
 
     def _get_package_name_from_pyproject(self, cwd: Path) -> str | None:
-        """Get package name from pyproject.toml."""
         pyproject_path = cwd / "pyproject.toml"
         if not pyproject_path.exists():
             return None
@@ -125,7 +114,6 @@ class SkylosAdapter(BaseRustToolAdapter):
         return None
 
     def _find_package_directory_with_init(self, cwd: Path) -> str | None:
-        """Find first directory with __init__.py in project root."""
         excluded = {"tests", "docs", ".venv", "venv", "build", "dist"}
 
         for item in cwd.iterdir():
@@ -135,22 +123,17 @@ class SkylosAdapter(BaseRustToolAdapter):
         return None
 
     def _filter_package_files(self, target_files: list[Path]) -> list[Path]:
-        """Filter files to only include those in the package directory.
-
-        Excludes files from: tests, docs, scripts, examples, .venv, etc.
-        Only includes files from the main package directory.
-        """
         from pathlib import Path
 
-        # Get package name to determine valid files
+
         cwd = Path.cwd()
         package_name = self._get_package_name_from_pyproject(cwd)
         if not package_name:
             package_name = self._find_package_directory_with_init(cwd)
         if not package_name:
-            package_name = "crackerjack"  # Default fallback
+            package_name = "crackerjack"
 
-        # Directories to exclude from scanning
+
         excluded_dirs = {
             "tests",
             "test",
@@ -175,31 +158,29 @@ class SkylosAdapter(BaseRustToolAdapter):
 
         package_files = []
         for file_path in target_files:
-            # Convert to absolute path for comparison
+
             abs_path = file_path.resolve() if not file_path.is_absolute() else file_path
 
-            # Get the top-level directory for this file
+
             try:
                 rel_path = abs_path.relative_to(cwd)
                 top_level_dir = rel_path.parts[0] if rel_path.parts else ""
 
-                # Only include if in package directory and not in excluded dirs
+
                 if top_level_dir == package_name and top_level_dir not in excluded_dirs:
                     package_files.append(file_path)
             except ValueError:
-                # File is outside cwd, skip it
+
                 continue
 
         return package_files
 
     def parse_output(self, output: str) -> ToolResult:
-        """Parse Skylos output into standardized result."""
         if self._should_use_json_output():
             return self._parse_json_output(output)
         return self._parse_text_output(output)
 
     def _parse_json_output(self, output: str) -> ToolResult:
-        """Parse JSON output for AI agents."""
         data = self._parse_json_output_safe(output)
         if data is None:
             return self._create_error_result(
@@ -212,7 +193,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                     file_path=Path(item["file"]),
                     line_number=item.get("line", 1),
                     message=f"Dead {item['type']}: {item['name']}",
-                    severity="warning",  # Dead code is typically a warning, not error
+                    severity="warning",
                     issue_type=item["type"],
                     name=item["name"],
                     confidence=item.get("confidence", 0.0),
@@ -220,7 +201,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 for item in data.get("dead_code", [])
             ]
 
-            # For skylos, having dead code issues means the check failed (not success)
+
             success = len(issues) == 0
 
             return ToolResult(
@@ -236,11 +217,10 @@ class SkylosAdapter(BaseRustToolAdapter):
             )
 
     def _parse_text_output(self, output: str) -> ToolResult:
-        """Parse text output for human-readable display."""
         issues: list[Issue] = []
 
         if not output.strip():
-            # No output typically means no dead code found
+
             return ToolResult(
                 success=True,
                 issues=[],
@@ -248,8 +228,7 @@ class SkylosAdapter(BaseRustToolAdapter):
                 tool_version=self.get_tool_version(),
             )
 
-        # Parse Skylos text output
-        # Expected format: "file.py:line: unused import 'name' (confidence: 86%)"
+
         for line in output.strip().split("\\n"):
             line = line.strip()
             if not line:
@@ -259,7 +238,7 @@ class SkylosAdapter(BaseRustToolAdapter):
             if issue:
                 issues.append(issue)
 
-        # For skylos, having ANY dead code issues means it failed the check
+
         success = len(issues) == 0
 
         return ToolResult(
@@ -270,7 +249,6 @@ class SkylosAdapter(BaseRustToolAdapter):
         )
 
     def _parse_text_line(self, line: str) -> DeadCodeIssue | None:
-        """Parse a single line of Skylos text output."""
         try:
             basic_info = self._extract_basic_line_info(line)
             if not basic_info:
@@ -294,7 +272,6 @@ class SkylosAdapter(BaseRustToolAdapter):
             return None
 
     def _extract_basic_line_info(self, line: str) -> tuple[Path, int, str] | None:
-        """Extract file path, line number, and message from line."""
         if ":" not in line:
             return None
 
@@ -312,7 +289,6 @@ class SkylosAdapter(BaseRustToolAdapter):
         return file_path, line_number, message_part
 
     def _extract_issue_details(self, message_part: str) -> dict[str, str]:
-        """Extract issue type and name from message."""
         issue_type = "unknown"
         name = "unknown"
 
@@ -331,14 +307,12 @@ class SkylosAdapter(BaseRustToolAdapter):
         return {"type": issue_type, "name": name}
 
     def _extract_name_from_quotes(self, message_part: str) -> str:
-        """Extract name from single quotes in message."""
         quoted_parts = message_part.split("'")
         if len(quoted_parts) >= 2:
             return quoted_parts[1]
         return "unknown"
 
     def _extract_confidence(self, message_part: str) -> float:
-        """Extract confidence percentage from message."""
         if "(confidence:" not in message_part:
             return float(self.confidence_threshold)
 

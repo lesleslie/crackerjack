@@ -541,7 +541,7 @@ class SecurityAgent(SubAgent):
         var_name_result = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(
             line
         )
-        if var_name_result != line:  # Pattern matched and extracted variable name
+        if var_name_result != line:
             var_name = var_name_result
             env_var_name = var_name.upper()
             return f"{var_name} = os.getenv('{env_var_name}', '')"

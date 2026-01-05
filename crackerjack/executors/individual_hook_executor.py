@@ -148,7 +148,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := error_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 file_path, line_num, col_num, code, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -176,7 +176,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := error_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -189,7 +189,7 @@ class HookOutputParser:
                     },
                 )
             elif match := warning_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 file_path, line_num, col_num, message = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -215,7 +215,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := issue_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 code, message = match.groups()
                 result["errors"].append(
                     {"code": code, "message": message, "type": "security"},
@@ -234,7 +234,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := unused_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 file_path, line_num, item_type, item_name = match.groups()
                 result["files_processed"].add(file_path)
                 result["warnings"].append(
@@ -259,7 +259,7 @@ class HookOutputParser:
             if not line:
                 continue
             if match := complex_pattern.match(line):
-                assert match is not None  # Type checker: match cannot be None here
+                assert match is not None
                 file_path, line_num, col_num, function_name, complexity = match.groups()
                 result["files_processed"].add(file_path)
                 result["errors"].append(
@@ -340,7 +340,7 @@ class IndividualHookExecutor:
                 hook_lock_manager as default_manager,
             )
 
-            # Type cast: default_manager implements the protocol interface
+
             self.hook_lock_manager = t.cast(HookLockManagerProtocol, default_manager)
         else:
             self.hook_lock_manager = hook_lock_manager
@@ -357,7 +357,6 @@ class IndividualHookExecutor:
         self,
         strategy: HookStrategy,
     ) -> IndividualExecutionResult:
-        """Execute hook strategy with individual (sequential) execution and progress tracking."""
         start_time = time.time()
         self._print_strategy_header(strategy)
 
@@ -371,8 +370,7 @@ class IndividualHookExecutor:
     async def execute_strategy(
         self,
         strategy: HookStrategy,
-    ) -> HookExecutionResult:  # Changed return type to match base class
-        """Execute hook strategy - API-compatible method matching other executors."""
+    ) -> HookExecutionResult:
         start_time = time.time()
         self._print_strategy_header(strategy)
 
@@ -381,7 +379,7 @@ class IndividualHookExecutor:
         for hook in strategy.hooks:
             await self._execute_single_hook_in_strategy(hook, execution_state)
 
-        # Call finalize with original strategy name instead of modified one
+
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in execution_state["hook_results"])
 
@@ -391,9 +389,9 @@ class IndividualHookExecutor:
             execution_state["hook_progress"],
         )
 
-        # Return HookExecutionResult to maintain interface compatibility
+
         return HookExecutionResult(
-            strategy_name=strategy.name,  # Use original name, not with "_individual" suffix
+            strategy_name=strategy.name,
             results=execution_state["hook_results"],
             total_duration=total_duration,
             success=success,
@@ -466,11 +464,11 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-        # Don't print verbose "Running..." messages - the dotted-line format shows status
+
         cmd = hook.get_command()
 
         try:
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore[attr-defined]
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name): # type: ignore[attr-defined]
                 result = await self._run_command_with_streaming(
                     cmd, hook.timeout, progress
                 )
@@ -488,7 +486,7 @@ class IndividualHookExecutor:
                 )
 
                 status = "passed" if result.returncode == 0 else "failed"
-                # Ensure failed hooks always have at least 1 issue count
+
                 issues_count = 1 if status == "failed" else 0
 
                 hook_result = HookResult(
@@ -513,7 +511,7 @@ class IndividualHookExecutor:
                 name=hook.name,
                 status="failed",
                 duration=hook.timeout,
-                issues_count=1,  # Timeout counts as 1 issue
+                issues_count=1,
             )
         except Exception as e:
             progress.status = "failed"
@@ -525,7 +523,7 @@ class IndividualHookExecutor:
                 name=hook.name,
                 status="failed",
                 duration=progress.duration or 0,
-                issues_count=1,  # Error counts as 1 issue
+                issues_count=1,
             )
 
     async def _run_command_with_streaming(
@@ -555,8 +553,8 @@ class IndividualHookExecutor:
         return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
-        # Use pkg_path directly as the working directory for hook execution
-        # This ensures hooks run in the correct project directory regardless of project name
+
+
         return await asyncio.create_subprocess_exec(
             *cmd,
             cwd=self.pkg_path,
@@ -684,15 +682,11 @@ class IndividualHookExecutor:
         result: HookResult,
         progress: HookProgress,
     ) -> None:
-        """Print hook result in dotted-line format matching pre-commit style.
-
-        Format: hook-name.......................................... ✅
-        """
         status_icon = "✅" if result.status == "passed" else "❌"
 
-        # Calculate dotted line (same logic as base HookExecutor)
+
         max_width = get_console_width()
-        content_width = max_width - 4  # Adjusted for icon and padding
+        content_width = max_width - 4
 
         if len(hook_name) > content_width:
             line = hook_name[: content_width - 3] + "..."

@@ -181,7 +181,7 @@ class ThreadSafeStatusCollector:
                     snapshot.services = cached_data
                 return
 
-            # Phase 1: find_websocket_server_processes import removed (WebSocket stack deleted)
+
             from crackerjack.services.server_manager import find_mcp_server_processes
 
             mcp_task = asyncio.create_task(asyncio.to_thread(find_mcp_server_processes))
@@ -190,7 +190,7 @@ class ThreadSafeStatusCollector:
                 asyncio.gather(mcp_task),
                 timeout=10.0,
             )
-            # Unpack single result from gather
+
             mcp_processes = mcp_processes[0]
 
             services_data = {
@@ -198,7 +198,7 @@ class ThreadSafeStatusCollector:
                     "running": len(mcp_processes) > 0,
                     "processes": mcp_processes,
                 },
-                # Phase 1: websocket_server status removed (WebSocket stack deleted)
+
             }
 
             with self._data_lock:
@@ -340,7 +340,7 @@ class ThreadSafeStatusCollector:
             stats = {
                 "server_info": {
                     "project_path": str(context.config.project_path),
-                    # Phase 1: websocket_port and websocket_active removed (WebSocket stack deleted)
+
                 },
                 "rate_limiting": {
                     "enabled": context.rate_limiter is not None,

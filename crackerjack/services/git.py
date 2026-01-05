@@ -1,4 +1,4 @@
-import subprocess  # nosec B404
+import subprocess # nosec B404
 import typing as t
 from pathlib import Path
 
@@ -41,8 +41,8 @@ class GitService(GitInterface):
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
             console = None
-        # Type narrowing: self.console is always Console after this logic
-        self.console: Console = console or Console()  # type: ignore[assignment]
+
+        self.console: Console = console or Console() # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(
@@ -214,7 +214,6 @@ class GitService(GitInterface):
             return False
 
     def push_with_tags(self) -> bool:
-        """Push commits and any tags to remote using --follow-tags."""
         try:
             result = self._run_git_command(GIT_COMMANDS["push_with_tags"])
             if result.returncode == 0:
@@ -355,20 +354,6 @@ class GitService(GitInterface):
         include_staged: bool = True,
         include_unstaged: bool = True,
     ) -> list[Path]:
-        """Get changed files filtered by file extensions.
-
-        Args:
-            extensions: List of extensions to filter by (e.g., [".py", ".md"])
-            include_staged: Include staged files in results
-            include_unstaged: Include unstaged files in results
-
-        Returns:
-            List of Path objects for changed files matching the extensions
-
-        Example:
-            >>> git_service.get_changed_files_by_extension([".py"])
-            [Path("crackerjack/services/git.py"), Path("tests/test_git.py")]
-        """
         try:
             all_changed: set[str] = set()
 
@@ -382,14 +367,14 @@ class GitService(GitInterface):
                 if unstaged_result.stdout.strip():
                     all_changed.update(unstaged_result.stdout.strip().split("\n"))
 
-            # Filter by extensions
+
             filtered = [
                 self.pkg_path / f
                 for f in all_changed
                 if f and any(f.endswith(ext) for ext in extensions)
             ]
 
-            # Only return files that actually exist
+
             return [f for f in filtered if f.exists()]
 
         except Exception as e:
@@ -399,7 +384,6 @@ class GitService(GitInterface):
             return []
 
     def get_current_commit_hash(self) -> str | None:
-        """Get the hash of the current commit (HEAD)."""
         try:
             result = self._run_git_command(["rev-parse", "HEAD"])
             if result.returncode == 0 and result.stdout.strip():
@@ -410,7 +394,6 @@ class GitService(GitInterface):
             return None
 
     def reset_hard(self, commit_hash: str) -> bool:
-        """Reset the repository to a specific commit hash (hard reset)."""
         try:
             result = self._run_git_command(["reset", "--hard", commit_hash])
             if result.returncode == 0:

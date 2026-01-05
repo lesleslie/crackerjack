@@ -1,22 +1,3 @@
-"""Settings loader for Pydantic configuration with YAML support.
-
-This module provides utilities for loading Pydantic Settings from YAML files
-with support for configuration layering and environment-specific overrides.
-
-Configuration Priority (highest to lowest):
-    1. settings/local.yaml (local overrides, gitignored)
-    2. settings/crackerjack.yaml (main configuration)
-    3. Default values from BaseSettings class
-
-Example:
-    >>> from crackerjack.config import CrackerjackSettings
-    >>> settings = CrackerjackSettings.load()
-    >>> settings.verbose
-    False
-
-    >>> # Async loading with full initialization
-    >>> settings = await CrackerjackSettings.load_async()
-"""
 
 from __future__ import annotations
 
@@ -34,7 +15,6 @@ T = TypeVar("T", bound=BaseSettings)
 
 
 def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
-    """Load a single config file and return its data."""
     if not config_file.exists():
         logger.debug(f"Configuration file not found: {config_file}")
         return {}
@@ -59,7 +39,6 @@ def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
 
 
 def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
-    """Merge data from all config files."""
     merged_data = {}
     for config_file in config_files:
         file_data = _load_single_config_file(config_file)
@@ -68,44 +47,22 @@ def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
 
 
 def _extract_adapter_timeouts(crackerjack_config: dict[str, t.Any]) -> None:
-    """Extract and restructure timeout keys for AdapterTimeouts model.
-
-    Modifies crackerjack_config in-place:
-    - Removes all keys ending with _timeout
-    - Adds nested adapter_timeouts dict with those keys
-
-    Args:
-        crackerjack_config: Configuration dictionary to process
-    """
     adapter_timeouts_data: dict[str, t.Any] = {}
 
-    # Get only keys that end with _timeout
+
     for key, value in list(crackerjack_config.items()):
         if key.endswith("_timeout"):
             adapter_timeouts_data[key] = value
-            # Remove from main config to avoid "extra fields" error
+
             del crackerjack_config[key]
 
-    # Add nested adapter_timeouts if any timeouts were found
+
     if adapter_timeouts_data:
         crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
 
 
 def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
-    """Load [tool.crackerjack] section from pyproject.toml.
 
-    Args:
-        settings_dir: Directory containing pyproject.toml (parent of settings/)
-
-    Returns:
-        Configuration data from pyproject.toml [tool.crackerjack] section
-
-    Example:
-        >>> data = _load_pyproject_toml(Path("."))
-        >>> data.get("adapter_timeouts")
-        {'skylos_timeout': 120, 'refurb_timeout': 120}
-    """
-    # pyproject.toml is in the parent directory of settings/
     pyproject_path = settings_dir.parent / "pyproject.toml"
 
     if not pyproject_path.exists():
@@ -118,7 +75,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         with pyproject_path.open("rb") as f:
             data = tomllib.load(f)
 
-        # Extract [tool.crackerjack] section
+
         crackerjack_config = data.get("tool", {}).get("crackerjack", {})
 
         if crackerjack_config:
@@ -128,7 +85,7 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         return crackerjack_config
 
     except ImportError:
-        # Fallback to tomli for Python < 3.11
+
         try:
             import tomli
 
@@ -157,55 +114,28 @@ def load_settings[T: BaseSettings](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
-    """Load settings from YAML files with layered configuration.
-
-    This function loads configuration from multiple YAML files and merges them
-    with priority-based overriding. Unknown YAML fields are silently ignored.
-
-    Args:
-        settings_class: The BaseSettings class to instantiate
-        settings_dir: Directory containing YAML files (default: ./settings)
-
-    Returns:
-        Initialized Settings instance with merged configuration
-
-    Configuration Priority (highest to lowest):
-        1. settings/local.yaml (local overrides, gitignored)
-        2. settings/crackerjack.yaml (main configuration)
-        3. Default values from Settings class
-
-    Example:
-        >>> class MySettings(BaseSettings):
-        ...     debug: bool = False
-        ...     max_workers: int = 4
-        >>> settings = load_settings(MySettings)
-        >>> settings.debug
-        False
-    """
     if settings_dir is None:
         settings_dir = Path.cwd() / "settings"
 
-    # Configuration files in priority order (lowest to highest)
+
     config_files = [
         settings_dir / "crackerjack.yaml",
         settings_dir / "local.yaml",
     ]
 
-    # Load and merge data from all config files
+
     merged_data = _merge_config_data(config_files)
 
-    # Load configuration from pyproject.toml and merge
-    # Priority: pyproject.toml < YAML files (YAML overrides pyproject)
+
     pyproject_data = _load_pyproject_toml(settings_dir)
     merged_data.update(pyproject_data)
 
-    # Filter to only fields defined in the Settings class
-    # This prevents validation errors from unknown YAML keys
+
     relevant_data = {
         k: v for k, v in merged_data.items() if k in settings_class.model_fields
     }
 
-    # Log filtered fields if any were excluded
+
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
@@ -216,7 +146,7 @@ def load_settings[T: BaseSettings](
         f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}"
     )
 
-    # Synchronous initialization (safe for module-level code)
+
     return settings_class(**relevant_data)
 
 
@@ -224,56 +154,32 @@ async def load_settings_async[T: BaseSettings](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
-    """Load settings asynchronously with full legacy initialization.
-
-    This function provides the same configuration loading as load_settings()
-    but uses legacy async initialization which includes secret loading and
-    other async setup operations.
-
-    Args:
-        settings_class: The BaseSettings class to instantiate
-        settings_dir: Directory containing YAML files (default: ./settings)
-
-    Returns:
-        Initialized Settings instance with async initialization complete
-
-    Note:
-        Use this for application runtime when async context is available.
-        For module-level initialization, use synchronous load_settings().
-
-    Example:
-        >>> settings = await load_settings_async(CrackerjackSettings)
-        >>> settings.verbose
-        False
-    """
     if settings_dir is None:
         settings_dir = Path.cwd() / "settings"
 
-    # Configuration files in priority order (lowest to highest)
+
     config_files = [
         settings_dir / "crackerjack.yaml",
         settings_dir / "local.yaml",
     ]
 
-    # Load and merge YAML data from all files
+
     merged_data = await _load_yaml_data(config_files)
 
-    # Load configuration from pyproject.toml and merge
-    # Priority: pyproject.toml < YAML files (YAML overrides pyproject)
+
     pyproject_data = _load_pyproject_toml(settings_dir)
     merged_data.update(pyproject_data)
 
-    # Process the loaded data
+
     relevant_data = _filter_relevant_data(merged_data, settings_class)
     _log_filtered_fields(merged_data, relevant_data)
     _log_load_info(settings_class, relevant_data)
 
-    # Create settings instance
+
     return settings_class(**relevant_data)
 
 
 async def _load_yaml_data(config_files: list[Path]) -> dict[str, t.Any]:
-    """Load and merge YAML data from configuration files."""
     merged_data: dict[str, t.Any] = {}
     for config_file in config_files:
         file_data = await _load_single_yaml_file(config_file)
@@ -285,7 +191,6 @@ async def _load_yaml_data(config_files: list[Path]) -> dict[str, t.Any]:
 
 
 async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
-    """Load a single YAML file and return its content."""
     if not config_file.exists():
         return None
 
@@ -311,14 +216,12 @@ async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
 def _filter_relevant_data[T: BaseSettings](
     merged_data: dict[str, t.Any], settings_class: type[T]
 ) -> dict[str, t.Any]:
-    """Filter the loaded data to only fields defined in the BaseSettings class."""
     return {k: v for k, v in merged_data.items() if k in settings_class.model_fields}
 
 
 def _log_filtered_fields(
     merged_data: dict[str, t.Any], relevant_data: dict[str, t.Any]
 ) -> None:
-    """Log any fields that were excluded due to not being in the settings class."""
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
@@ -329,7 +232,6 @@ def _log_filtered_fields(
 def _log_load_info[T: BaseSettings](
     settings_class: type[T], relevant_data: dict[str, t.Any]
 ) -> None:
-    """Log information about the loaded configuration."""
     logger.debug(
         f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)"
     )

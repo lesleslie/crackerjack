@@ -1,8 +1,3 @@
-"""AST parsing helper for test creation.
-
-This module provides AST analysis capabilities for extracting code structure
-from Python source files. Uses AgentContext pattern (legacy, intentional).
-"""
 
 import ast
 from pathlib import Path
@@ -12,10 +7,6 @@ from crackerjack.agents.base import AgentContext
 
 
 class TestASTAnalyzer:
-    """AST parsing helper for test creation.
-
-    Uses AgentContext pattern (legacy, intentional).
-    """
 
     def __init__(self, context: AgentContext) -> None:
         self.context = context
@@ -24,7 +15,6 @@ class TestASTAnalyzer:
         self,
         file_path: Path,
     ) -> list[dict[str, Any]]:
-        """Extract all functions from a Python file."""
         functions: list[dict[str, Any]] = []
 
         try:
@@ -41,7 +31,6 @@ class TestASTAnalyzer:
         return functions
 
     def _parse_function_nodes(self, tree: ast.AST) -> list[dict[str, Any]]:
-        """Parse function nodes from AST."""
         functions: list[dict[str, Any]] = []
 
         for node in ast.walk(tree):
@@ -58,13 +47,11 @@ class TestASTAnalyzer:
     def _is_valid_function_node(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> bool:
-        """Check if function node should be included."""
         return not node.name.startswith(("_", "test_"))
 
     def _create_function_info(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> dict[str, Any]:
-        """Create function info dict from AST node."""
         return {
             "name": node.name,
             "line": node.lineno,
@@ -76,7 +63,6 @@ class TestASTAnalyzer:
         }
 
     async def extract_classes_from_file(self, file_path: Path) -> list[dict[str, Any]]:
-        """Extract all classes from a Python file."""
         classes: list[dict[str, Any]] = []
 
         try:
@@ -93,7 +79,6 @@ class TestASTAnalyzer:
         return classes
 
     def _process_ast_nodes_for_classes(self, tree: ast.AST) -> list[dict[str, Any]]:
-        """Process AST nodes to extract class information."""
         classes: list[dict[str, Any]] = []
 
         for node in ast.walk(tree):
@@ -104,16 +89,13 @@ class TestASTAnalyzer:
         return classes
 
     def _should_include_class(self, node: ast.ClassDef) -> bool:
-        """Check if class should be included in analysis."""
         return not node.name.startswith("_")
 
     def _create_class_info(self, node: ast.ClassDef) -> dict[str, Any]:
-        """Create class info dict from AST node."""
         methods = self._extract_public_methods_from_class(node)
         return {"name": node.name, "line": node.lineno, "methods": methods}
 
     def _extract_public_methods_from_class(self, node: ast.ClassDef) -> list[str]:
-        """Extract public method names from class node."""
         return [
             item.name
             for item in node.body
@@ -123,7 +105,6 @@ class TestASTAnalyzer:
     def _get_function_signature(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> str:
-        """Get function signature string."""
         args = [arg.arg for arg in node.args.args]
         prefix = "async " if isinstance(node, ast.AsyncFunctionDef) else ""
         return f"{prefix}{node.name}({', '.join(args)})"
@@ -131,7 +112,6 @@ class TestASTAnalyzer:
     def _get_return_annotation(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef
     ) -> str:
-        """Get return type annotation string."""
         if node.returns:
             return ast.unparse(node.returns) if (hasattr(ast, "unparse")) else "Any"
         return "Any"
@@ -141,7 +121,6 @@ class TestASTAnalyzer:
         func_info: dict[str, Any],
         file_path: Path,
     ) -> bool:
-        """Check if a function has corresponding test."""
         test_file_path = await self.generate_test_file_path(file_path)
 
         if not test_file_path.exists():
@@ -160,7 +139,6 @@ class TestASTAnalyzer:
         return any(pattern in test_content for pattern in test_patterns)
 
     async def generate_test_file_path(self, source_file: Path) -> Path:
-        """Generate path for test file corresponding to source file."""
         tests_dir = self.context.project_path / "tests"
         tests_dir.mkdir(exist_ok=True)
 
@@ -172,7 +150,6 @@ class TestASTAnalyzer:
         return tests_dir / test_name
 
     def get_module_import_path(self, file_path: Path) -> str:
-        """Get module import path from file path."""
         try:
             relative_path = file_path.relative_to(self.context.project_path)
             parts = (*relative_path.parts[:-1], relative_path.stem)
@@ -181,15 +158,12 @@ class TestASTAnalyzer:
             return file_path.stem
 
     def should_skip_module_for_coverage(self, py_file: Path) -> bool:
-        """Check if module should be skipped for coverage analysis."""
         return py_file.name.startswith("test_") or py_file.name == "__init__.py"
 
     def should_skip_file_for_testing(self, py_file: Path) -> bool:
-        """Check if file should be skipped for testing."""
         return py_file.name.startswith("test_")
 
     def has_corresponding_test(self, file_path: str) -> bool:
-        """Check if source file has corresponding test file."""
         path = Path(file_path)
 
         test_patterns = [
@@ -207,10 +181,8 @@ class TestASTAnalyzer:
         return False
 
     def get_relative_module_path(self, py_file: Path) -> str:
-        """Get relative module path from project root."""
         return str(py_file.relative_to(self.context.project_path))
 
     def _log(self, message: str, level: str = "INFO") -> None:
-        """Log message through context."""
-        # This is a helper - logging would typically go through the agent
+
         pass

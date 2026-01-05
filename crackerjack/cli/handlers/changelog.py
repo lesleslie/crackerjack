@@ -1,18 +1,10 @@
-"""CLI handlers for changelog generation and version analysis.
-
-This module contains handlers for:
-- Changelog generation from git commits
-- Changelog dry-run previews
-- Automated version analysis and recommendations
-- Debug/verbose flag setup
-"""
 
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
 
-# Module-level console instance
+
 console = Console()
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
@@ -20,7 +12,6 @@ if t.TYPE_CHECKING:
 
 
 def setup_changelog_services() -> dict[str, t.Any]:
-    """Set up changelog generation services (git, generator, path)."""
     from crackerjack.services.changelog_automation import ChangelogGenerator
     from crackerjack.services.git import GitService
 
@@ -40,7 +31,6 @@ def handle_changelog_dry_run(
     changelog_since: str | None,
     options: t.Any,
 ) -> bool:
-    """Handle changelog dry-run (preview without writing)."""
     console.print("🔍 [bold blue]Previewing changelog generation...[/bold blue]")
     entries = generator.generate_changelog_entries(changelog_since)
     if entries:
@@ -59,7 +49,6 @@ def handle_changelog_generation(
     changelog_since: str | None,
     options: t.Any,
 ) -> bool:
-    """Handle changelog generation and write to file."""
     console.print("📝 [bold blue]Generating changelog...[/bold blue]")
 
     version = determine_changelog_version(
@@ -87,7 +76,6 @@ def determine_changelog_version(
     changelog_since: str | None,
     options: t.Any,
 ) -> str:
-    """Determine changelog version (auto-detect via AI or use provided version)."""
     if getattr(options, "auto_version", False) and not changelog_version:
         try:
             import asyncio
@@ -113,7 +101,6 @@ def determine_changelog_version(
 
 
 def should_continue_after_changelog(options: t.Any) -> bool:
-    """Check if workflow should continue after changelog commands."""
     return any(
         [
             options.run_tests,
@@ -132,18 +119,6 @@ def handle_changelog_commands(
     changelog_since: str | None,
     options: t.Any,
 ) -> bool:
-    """Handle all changelog-related commands (generation, dry-run, versioning).
-
-    Args:
-        generate_changelog: Whether to generate changelog
-        changelog_dry_run: Whether to preview changelog without writing
-        changelog_version: Explicit version to use (or None for auto/unreleased)
-        changelog_since: Git reference to generate changelog since
-        options: CLI options object
-
-    Returns:
-        True if execution should continue to other workflows
-    """
     if not (generate_changelog or changelog_dry_run):
         return True
 
@@ -161,25 +136,12 @@ def handle_changelog_commands(
     return should_continue_after_changelog(options)
 
 
-# === Version Analysis Handler ===
 def handle_version_analysis(
     auto_version: bool,
     version_since: str | None,
     accept_version: bool,
     options: t.Any,
 ) -> bool:
-    """Handle automated version analysis and recommendations.
-
-    Args:
-        auto_version: Whether to perform automated version analysis
-        version_since: Git reference to analyze changes since
-        accept_version: Whether to auto-accept the recommendation
-        options: CLI options object
-        console: Rich console for output
-
-    Returns:
-        True if execution should continue to other workflows
-    """
     if not auto_version:
         return True
 
@@ -225,35 +187,20 @@ def handle_version_analysis(
     )
 
 
-# === Debug/Verbose Setup ===
-
-
 def setup_debug_and_verbose_flags(
     ai_fix: bool, ai_debug: bool, debug: bool, verbose: bool, options: t.Any
 ) -> tuple[bool, bool]:
-    """Set up debug and verbose flags for AI and general operations.
-
-    Args:
-        ai_fix: Whether AI fixing is enabled
-        ai_debug: Whether AI debug mode is enabled
-        debug: Whether general debug mode is enabled
-        verbose: Whether verbose output is enabled
-        options: CLI options object to update
-
-    Returns:
-        Tuple of (ai_fix, verbose) flags after processing
-    """
     if ai_debug:
         ai_fix = True
         verbose = True
         options.verbose = True
-        options.ai_debug = True  # Set ai_debug on options for downstream checks
+        options.ai_debug = True
 
     if debug:
         verbose = True
         options.verbose = True
 
-    # Set up structured logging for AI-related operations if needed
+
     if ai_fix or ai_debug:
         from crackerjack.services.logging import setup_structured_logging
 

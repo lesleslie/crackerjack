@@ -42,14 +42,14 @@ class HookResult:
     files_checked: list[str | Path] = field(default_factory=list)
     issues_found: list[str] | None = None
     issues_count: int = (
-        0  # Total count of issues (may exceed len(issues_found) if truncated)
+        0
     )
     stage: str = "fast"
-    exit_code: int | None = None  # Non-zero exit codes for failed hooks
-    error_message: str | None = None  # Error details from stderr or exceptions
-    is_timeout: bool = False  # Whether hook failed due to timeout
+    exit_code: int | None = None
+    error_message: str | None = None
+    is_timeout: bool = False
     is_config_error: bool = (
-        False  # Whether failure is due to config/tool error (not code issues)
+        False
     )
     hook_name: str | None = None
     returncode: int | None = None
@@ -71,7 +71,7 @@ class HookResult:
             self.files_processed = len(self.files_checked)
         if self.issues_found is None:
             self.issues_found = []
-        # If issues_count not explicitly set, default to length of issues_found list
+
         if self.issues_count == 0 and self.issues_found:
             self.issues_count = len(self.issues_found)
 
@@ -130,7 +130,7 @@ class SessionTracker(BaseModel, arbitrary_types_allowed=True):
     tasks: dict[str, TaskStatusData] = {}
     current_task: str | None = None
     metadata: dict[str, t.Any] = {}
-    console: t.Any = None  # Console instance from DI
+    console: t.Any = None
 
     def __init__(self, console: Console | None = None, **data: t.Any) -> None:
         if console is None:

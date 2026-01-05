@@ -1,32 +1,16 @@
-"""CLI handlers for analytics features (heatmap, anomaly detection, predictive analytics)."""
 
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
 
-# Module-level console instance for analytics handlers
-console = Console()
 
-# =============================================================================
-# Heatmap Generation
-# =============================================================================
+console = Console()
 
 
 def _generate_heatmap_by_type(
     generator: t.Any, heatmap_type: str, project_root: Path, console: t.Any
 ) -> t.Any | None:
-    """Generate heatmap data based on the specified type.
-
-    Args:
-        generator: HeatMapGenerator instance
-        heatmap_type: Type of heatmap to generate
-        project_root: Project root directory
-        console: Console for output
-
-    Returns:
-        Heatmap data or None if type is unknown
-    """
     if heatmap_type == "error_frequency":
         return generator.generate_error_frequency_heatmap()
     if heatmap_type == "complexity":
@@ -47,18 +31,6 @@ def _save_heatmap_output(
     heatmap_type: str,
     console: t.Any,
 ) -> bool:
-    """Save heatmap output to file.
-
-    Args:
-        generator: HeatMapGenerator instance
-        heatmap_data: Generated heatmap data
-        heatmap_output: Optional output path
-        heatmap_type: Type of heatmap
-        console: Console for output
-
-    Returns:
-        True if saved successfully, False otherwise
-    """
     if heatmap_output:
         output_path = Path(heatmap_output)
         if output_path.suffix.lower() == ".html":
@@ -75,7 +47,7 @@ def _save_heatmap_output(
         console.print(f"[red]❌[/red] Unsupported output format: {output_path.suffix}")
         return False
 
-    # Default: save as HTML
+
     default_filename = f"heatmap_{heatmap_type}.html"
     html_content = generator.generate_html_visualization(heatmap_data)
     Path(default_filename).write_text(html_content, encoding="utf-8")
@@ -124,9 +96,6 @@ def handle_heatmap_generation(
         return False
 
 
-# =============================================================================
-# Anomaly Detection
-# =============================================================================
 def generate_anomaly_sample_data(detector: t.Any) -> None:
     from datetime import datetime, timedelta
 
@@ -152,29 +121,24 @@ def generate_anomaly_sample_data(detector: t.Any) -> None:
 
 
 def get_sample_metric_value(metric_type: str) -> float:
-    """Generate sample metric values for demo/visualization purposes.
-
-    Note: Uses standard random (not cryptographic) as this is ONLY for
-    generating fake demo data, not for any security-sensitive purposes.
-    """
     import random
 
-    # Demo data generation - cryptographic randomness not required
-    is_anomaly = random.random() <= 0.1  # nosec B311
+
+    is_anomaly = random.random() <= 0.1 # nosec B311
 
     if metric_type == "test_pass_rate":
-        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)  # nosec B311
+        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98) # nosec B311
 
     elif metric_type == "coverage_percentage":
-        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)  # nosec B311
+        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95) # nosec B311
 
     elif metric_type == "complexity_score":
-        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)  # nosec B311
+        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15) # nosec B311
 
     elif metric_type == "execution_time":
-        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
+        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120) # nosec B311
 
-    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
+    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3) # nosec B311
 
 
 def display_anomaly_results(
@@ -277,17 +241,7 @@ def handle_anomaly_detection(
         return False
 
 
-# =============================================================================
-# Predictive Analytics
-# =============================================================================
-
-
 def generate_predictive_sample_data(engine: t.Any) -> list[str]:
-    """Generate sample data for predictive monitoring demo/visualization.
-
-    Note: Uses standard random (not cryptographic) as this is ONLY for
-    generating fake demo data, not for any security-sensitive purposes.
-    """
     import random
     from datetime import datetime, timedelta
 
@@ -317,8 +271,8 @@ def generate_predictive_sample_data(engine: t.Any) -> list[str]:
 
             trend_factor = 1.0 + (i * 0.001)
 
-            # Demo data generation - cryptographic randomness not required
-            noise = random.uniform(0.9, 1.1)  # nosec B311
+
+            noise = random.uniform(0.9, 1.1) # nosec B311
 
             value = base_value * trend_factor * noise
 

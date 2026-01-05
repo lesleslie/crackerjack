@@ -19,7 +19,6 @@ class FileSystemService(FileSystemInterface):
         return result
 
     def _validate_path_exists(self, path_obj: Path, operation: str) -> None:
-        """Validate that a path exists."""
         if not path_obj.exists():
             raise FileError(
                 message=f"File does not exist: {path_obj}",
@@ -30,7 +29,6 @@ class FileSystemService(FileSystemInterface):
     def _handle_permission_error(
         self, error: PermissionError, path: str | Path, operation: str
     ) -> None:
-        """Handle permission errors."""
         raise FileError(
             message=f"Permission denied {operation}: {path}",
             error_code=ErrorCode.PERMISSION_ERROR,
@@ -41,7 +39,6 @@ class FileSystemService(FileSystemInterface):
     def _handle_unicode_error(
         self, error: UnicodeDecodeError, path: str | Path
     ) -> None:
-        """Handle unicode decode errors."""
         raise FileError(
             message=f"Unable to decode file as UTF-8: {path}",
             error_code=ErrorCode.FILE_READ_ERROR,
@@ -52,7 +49,6 @@ class FileSystemService(FileSystemInterface):
     def _handle_os_error(
         self, error: OSError, path: str | Path, operation: str
     ) -> None:
-        """Handle OS errors."""
         raise FileError(
             message=f"System error {operation}: {path}",
             error_code=ErrorCode.FILE_READ_ERROR,
@@ -63,7 +59,6 @@ class FileSystemService(FileSystemInterface):
     def _handle_disk_space_error(
         self, error: OSError, path: str | Path, operation: str
     ) -> None:
-        """Handle disk space errors."""
         if "No space left on device" in str(error):
             raise ResourceError(
                 message=f"Insufficient disk space to {operation}: {path}",
@@ -84,13 +79,13 @@ class FileSystemService(FileSystemInterface):
             return path_obj.read_text(encoding="utf-8")
         except PermissionError as e:
             self._handle_permission_error(e, path, "reading file")
-            raise  # Ensure type checker knows this doesn't return
+            raise
         except UnicodeDecodeError as e:
             self._handle_unicode_error(e, path)
-            raise  # Ensure type checker knows this doesn't return
+            raise
         except OSError as e:
             self._handle_os_error(e, path, "reading file")
-            raise  # Ensure type checker knows this doesn't return
+            raise
 
     def write_file(self, path: str | Path, content: str) -> None:
         try:

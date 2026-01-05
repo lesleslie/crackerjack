@@ -1,4 +1,3 @@
-"""Code transformation and refactoring logic."""
 
 import typing as t
 
@@ -7,28 +6,13 @@ from ...base import AgentContext
 
 
 class CodeTransformer:
-    """Transforms and refactors code to reduce complexity."""
 
     def __init__(self, context: AgentContext) -> None:
-        """Initialize transformer with agent context.
-
-        Args:
-            context: AgentContext for logging
-        """
         self.context = context
 
     def refactor_complex_functions(
         self, content: str, complex_functions: list[dict[str, t.Any]]
     ) -> str:
-        """Refactor complex functions.
-
-        Args:
-            content: File content
-            complex_functions: List of complex functions
-
-        Returns:
-            Refactored content
-        """
         lines = content.split("\n")
 
         for func_info in complex_functions:
@@ -54,26 +38,10 @@ class CodeTransformer:
         return content
 
     def apply_enhanced_strategies(self, content: str) -> str:
-        """Apply enhanced complexity reduction strategies.
-
-        Args:
-            content: File content
-
-        Returns:
-            Refactored content
-        """
         enhanced_content = self._apply_enhanced_complexity_patterns(content)
         return enhanced_content
 
     def _apply_enhanced_complexity_patterns(self, content: str) -> str:
-        """Apply enhanced complexity reduction patterns.
-
-        Args:
-            content: File content
-
-        Returns:
-            Refactored content
-        """
         operations = [
             self._extract_nested_conditions,
             self._simplify_boolean_expressions,
@@ -89,14 +57,6 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
-        """Extract nested conditions into helper methods.
-
-        Args:
-            content: File content
-
-        Returns:
-            Transformed content
-        """
         lines = content.split("\n")
         modified_lines = []
 
@@ -119,14 +79,6 @@ class CodeTransformer:
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
-        """Simplify complex boolean expressions.
-
-        Args:
-            content: File content
-
-        Returns:
-            Transformed content
-        """
         lines = content.split("\n")
         modified_lines = []
 
@@ -144,14 +96,6 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_validation_patterns(content: str) -> str:
-        """Extract validation patterns.
-
-        Args:
-            content: File content
-
-        Returns:
-            Transformed content
-        """
         if "validation_extract" in SAFE_PATTERNS:
             content = SAFE_PATTERNS["validation_extract"].apply(content)
         else:
@@ -167,14 +111,6 @@ class CodeTransformer:
 
     @staticmethod
     def _simplify_data_structures(content: str) -> str:
-        """Simplify complex data structures.
-
-        Args:
-            content: File content
-
-        Returns:
-            Transformed content
-        """
         lines = content.split("\n")
         modified_lines = []
 
@@ -198,14 +134,6 @@ class CodeTransformer:
 
     @staticmethod
     def refactor_detect_agent_needs_pattern(content: str) -> str:
-        """Refactor detect_agent_needs function pattern.
-
-        Args:
-            content: File content
-
-        Returns:
-            Refactored content
-        """
         detect_func_start = "async def detect_agent_needs("
         if detect_func_start not in content:
             return content
@@ -243,15 +171,6 @@ class CodeTransformer:
     def _extract_logical_sections(
         self, func_content: str, func_info: dict[str, t.Any]
     ) -> list[dict[str, str]]:
-        """Extract logical sections from function.
-
-        Args:
-            func_content: Function content
-            func_info: Function info
-
-        Returns:
-            List of sections
-        """
         sections: list[dict[str, str]] = []
         lines = func_content.split("\n")
         current_section: list[str] = []
@@ -285,15 +204,6 @@ class CodeTransformer:
     def _should_start_new_section(
         stripped: str, current_section_type: str | None
     ) -> bool:
-        """Check if should start new section.
-
-        Args:
-            stripped: Stripped line
-            current_section_type: Current section type
-
-        Returns:
-            True if should start new section
-        """
         if stripped.startswith("if ") and len(stripped) > 50:
             return True
         return (
@@ -302,15 +212,6 @@ class CodeTransformer:
 
     @staticmethod
     def _initialize_new_section(line: str, stripped: str) -> tuple[list[str], str]:
-        """Initialize new section.
-
-        Args:
-            line: Full line
-            stripped: Stripped line
-
-        Returns:
-            Tuple of section lines and type
-        """
         if stripped.startswith("if ") and len(stripped) > 50:
             return [line], "conditional"
         elif stripped.startswith(("for ", "while ")):
@@ -321,16 +222,6 @@ class CodeTransformer:
     def _create_section(
         current_section: list[str], section_type: str | None, section_count: int
     ) -> dict[str, str]:
-        """Create section dict.
-
-        Args:
-            current_section: Section lines
-            section_type: Section type
-            section_count: Section count
-
-        Returns:
-            Section dict
-        """
         effective_type = section_type or "general"
         name_prefix = "handle" if effective_type == "conditional" else "process"
 
@@ -342,15 +233,6 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_function_content(lines: list[str], func_info: dict[str, t.Any]) -> str:
-        """Extract function content.
-
-        Args:
-            lines: File lines
-            func_info: Function info
-
-        Returns:
-            Function content
-        """
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
 
@@ -365,16 +247,6 @@ class CodeTransformer:
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Apply function extraction refactoring.
-
-        Args:
-            content: File content
-            func_info: Function info
-            extracted_helpers: Helper functions
-
-        Returns:
-            Refactored content
-        """
         lines = content.split("\n")
 
         if not CodeTransformer._is_extraction_valid(
@@ -390,16 +262,6 @@ class CodeTransformer:
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> bool:
-        """Check if extraction is valid.
-
-        Args:
-            lines: File lines
-            func_info: Function info
-            extracted_helpers: Helpers
-
-        Returns:
-            True if valid
-        """
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
 
@@ -411,16 +273,6 @@ class CodeTransformer:
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Perform extraction transformation.
-
-        Args:
-            lines: File lines
-            func_info: Function info
-            extracted_helpers: Helpers
-
-        Returns:
-            Transformed content
-        """
         new_lines = CodeTransformer._replace_function_with_calls(
             lines, func_info, extracted_helpers
         )
@@ -434,16 +286,6 @@ class CodeTransformer:
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> list[str]:
-        """Replace function with helper calls.
-
-        Args:
-            lines: File lines
-            func_info: Function info
-            extracted_helpers: Helpers
-
-        Returns:
-            Modified lines
-        """
         start_line = func_info["line_start"] - 1
         end_line = func_info.get("line_end", len(lines)) - 1
         func_indent = len(lines[start_line]) - len(lines[start_line].lstrip())
@@ -461,16 +303,6 @@ class CodeTransformer:
         func_info: dict[str, t.Any],
         extracted_helpers: list[dict[str, str]],
     ) -> str:
-        """Add helper definitions to class.
-
-        Args:
-            new_lines: Modified lines
-            func_info: Function info
-            extracted_helpers: Helpers
-
-        Returns:
-            Final content
-        """
         start_line = func_info["line_start"] - 1
         class_end = CodeTransformer._find_class_end(new_lines, start_line)
 
@@ -485,15 +317,6 @@ class CodeTransformer:
 
     @staticmethod
     def _find_class_end(lines: list[str], func_start: int) -> int:
-        """Find end of class.
-
-        Args:
-            lines: File lines
-            func_start: Function start
-
-        Returns:
-            Class end line
-        """
         class_indent = CodeTransformer._find_class_indent(lines, func_start)
         if class_indent is None:
             return len(lines)
@@ -501,15 +324,6 @@ class CodeTransformer:
 
     @staticmethod
     def _find_class_indent(lines: list[str], func_start: int) -> int | None:
-        """Find class indentation.
-
-        Args:
-            lines: File lines
-            func_start: Function start
-
-        Returns:
-            Class indent or None
-        """
         for i in range(func_start, -1, -1):
             if lines[i].strip().startswith("class "):
                 return len(lines[i]) - len(lines[i].lstrip())
@@ -519,16 +333,6 @@ class CodeTransformer:
     def _find_class_end_line(
         lines: list[str], func_start: int, class_indent: int
     ) -> int:
-        """Find class end line.
-
-        Args:
-            lines: File lines
-            func_start: Function start
-            class_indent: Class indent
-
-        Returns:
-            Class end line
-        """
         for i in range(func_start + 1, len(lines)):
             line = lines[i]
             if line.strip() and len(line) - len(line.lstrip()) <= class_indent:

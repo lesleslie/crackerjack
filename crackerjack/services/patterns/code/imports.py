@@ -1,4 +1,3 @@
-"""Code pattern descriptions."""
 
 from ..core import ValidatedPattern
 
@@ -95,13 +94,13 @@ PATTERNS: dict[str, ValidatedPattern] = {
             (
                 "def func(x: t.Any) -> t.Dict:",
                 "def func(x: ny) -> ict:",
-            ),  # Removes t.A and t.D
+            ),
             (
                 "value: t.Optional[str] = None",
                 "value: ptional[str] = None",
-            ),  # Removes t.O
-            ("from typing import Dict", "from typing import Dict"),  # No match
-            ("data = dict()", "data = dict()"),  # No match
+            ),
+            ("from typing import Dict", "from typing import Dict"),
+            ("data = dict()", "data = dict()"),
         ],
     ),
 }

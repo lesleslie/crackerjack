@@ -6,12 +6,6 @@ from pathlib import Path
 
 from rich.console import Console
 
-# Phase 1: progress_monitor import commented out (module deleted with WebSocket stack)
-# This client_runner.py utility depends on deleted WebSocket monitoring infrastructure
-# from .progress_monitor import (
-#     run_crackerjack_with_enhanced_progress as run_crackerjack_with_progress,
-# )
-
 
 def is_mcp_server_running(host: str = "localhost", port: int = 5173) -> bool:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -56,21 +50,10 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
 
     try:
         Path(__file__).parent.parent / "__main__.py"
-        # Commenting out stdio_client due to incompatible type issues
-        # async with (
-        #     stdio_client(  # type: ignore
-        #         sys.executable,
-        #         str(server_script),
-        #         "--start-mcp-server",
-        #     ) as (read_stream, write_stream),
-        #     read_stream.session(
-        #         read_stream=read_stream,
-        #         write_stream=write_stream,
-        #     ) as session,
-        # ):
-        #     try:
 
-        # Instead, simulate the functionality with a mock
+
+        # stdio_client( # type: ignore
+
 
         class MockSession:
             async def __aenter__(self):
@@ -84,8 +67,8 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
 
         async with MockSession():
             try:
-                # Phase 1: run_crackerjack_with_progress call commented out (WebSocket monitoring deleted)
-                # await run_crackerjack_with_progress(session, command)
+
+
                 console.print(
                     f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]"
                 )

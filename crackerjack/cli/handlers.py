@@ -40,7 +40,7 @@ def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
                 f" • Verbose Mode: {'✅ Enabled' if os.environ.get('AI_AGENT_VERBOSE') == '1' else '❌ Disabled'}",
             )
             console.print(" • Enhanced logging will be available during execution")
-    elif debug_mode:  # Handle debug mode without AI agent
+    elif debug_mode:
         os.environ["AI_AGENT_DEBUG"] = "1"
         os.environ["AI_AGENT_VERBOSE"] = "1"
         console.print(
@@ -54,7 +54,7 @@ def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
         )
         console.print(" • Structured logging enabled for debugging")
 
-    # Set up structured logging if debug or ai_agent is enabled
+
     if ai_agent or debug_mode:
         from crackerjack.services.logging import setup_structured_logging
 
@@ -105,7 +105,6 @@ def handle_restart_mcp_server() -> None:
 
 
 def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
-    """Start Zuban LSP server."""
     from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
     )
@@ -131,7 +130,6 @@ def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
 
 
 def handle_stop_zuban_lsp() -> None:
-    """Stop Zuban LSP server."""
     from crackerjack.services.server_manager import stop_zuban_lsp
 
     console.print("[bold red]🛑 Stopping Zuban LSP Server[/bold red]")
@@ -146,7 +144,6 @@ def handle_stop_zuban_lsp() -> None:
 
 
 def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
-    """Restart Zuban LSP server."""
     from crackerjack.services.server_manager import restart_zuban_lsp
 
     if restart_zuban_lsp():
@@ -164,18 +161,13 @@ def handle_interactive_mode(options: Options) -> None:
     from .interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
+    launch_interactive_cli(pkg_version, options) # type: ignore[arg-type]
 
 
 def handle_standard_mode(
     options: Options,
     job_id: str | None = None,
 ) -> None:
-    """Execute standard quality workflow.
-
-    TODO(Phase 3): Workflow orchestration infrastructure removed in Phase 2.
-    Will be reimplemented with Oneiric integration.
-    """
     raise NotImplementedError(
         "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
@@ -183,7 +175,6 @@ def handle_standard_mode(
 
 
 def handle_config_updates(options: Options) -> None:
-    """Handle configuration update commands."""
     from crackerjack.services.config_template import ConfigTemplateService
 
     pkg_path = Path.cwd()
@@ -204,7 +195,6 @@ def handle_config_updates(options: Options) -> None:
 def _handle_check_updates(
     config_service: "ConfigTemplateService", pkg_path: Path, console: Console
 ) -> None:
-    """Handle checking for configuration updates."""
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
 
@@ -227,7 +217,6 @@ def _handle_apply_updates(
     interactive: bool,
     console: Console,
 ) -> None:
-    """Handle applying configuration updates."""
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
 
@@ -252,7 +241,6 @@ def _handle_diff_config(
     config_type: str,
     console: Console,
 ) -> None:
-    """Handle showing configuration diff."""
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
     diff_preview = config_service._generate_diff_preview(config_type, pkg_path)
     console.print(f"\nChanges for {config_type}:")
@@ -262,7 +250,6 @@ def _handle_diff_config(
 def _handle_refresh_cache(
     config_service: "ConfigTemplateService", pkg_path: Path, console: Console
 ) -> None:
-    """Handle refreshing cache."""
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
     console.print("[green]✅ Cache refreshed[/green]")
@@ -271,17 +258,15 @@ def _handle_refresh_cache(
 def _display_available_updates(
     updates: dict[str, "ConfigUpdateInfo"], console: Console
 ) -> None:
-    """Display available configuration updates."""
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
         if update_info.needs_update:
             console.print(
-                f"  • {config_type}: {update_info.current_version} → {update_info.latest_version}"
+                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}"
             )
 
 
 def _get_configs_needing_update(updates: dict[str, "ConfigUpdateInfo"]) -> list[str]:
-    """Get list of configurations that need updates."""
     return [
         config_type
         for config_type, update_info in updates.items()
@@ -296,7 +281,6 @@ def _apply_config_updates_batch(
     interactive: bool,
     console: Console,
 ) -> int:
-    """Apply configuration updates in batch and return success count."""
     success_count = 0
     for config_type in configs:
         if config_service.apply_update(config_type, pkg_path, interactive=interactive):
@@ -307,7 +291,6 @@ def _apply_config_updates_batch(
 def _report_update_results(
     success_count: int, total_count: int, console: Console
 ) -> None:
-    """Report the results of configuration updates."""
     if success_count == total_count:
         console.print(
             f"[green]✅ Successfully updated {success_count} configurations[/green]"

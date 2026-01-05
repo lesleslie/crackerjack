@@ -1,4 +1,3 @@
-"""SQLModel data models for the Crackerjack data layer."""
 
 from __future__ import annotations
 
@@ -9,7 +8,6 @@ from sqlmodel import Field, SQLModel
 
 
 class QualityBaselineRecord(SQLModel, table=True):
-    """Persistent representation of quality metrics for a git revision."""
 
     __tablename__ = "quality_baselines"
 
@@ -33,7 +31,6 @@ class QualityBaselineRecord(SQLModel, table=True):
     )
 
     def update_from_dict(self, data: dict[str, Any]) -> None:
-        """Update this record in-place from a dictionary of values."""
         for key, value in data.items():
             if not hasattr(self, key):
                 continue
@@ -41,7 +38,6 @@ class QualityBaselineRecord(SQLModel, table=True):
 
 
 class ProjectHealthRecord(SQLModel, table=True):
-    """Persistent representation of project health metrics."""
 
     __tablename__ = "project_health"
 
@@ -58,7 +54,6 @@ class ProjectHealthRecord(SQLModel, table=True):
 
 
 class DependencyMonitorCacheRecord(SQLModel, table=True):
-    """Cache entry for dependency monitor state."""
 
     __tablename__ = "dependency_monitor_cache"
 

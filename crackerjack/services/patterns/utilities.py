@@ -1,4 +1,3 @@
-"""General utility patterns for extraction and manipulation."""
 
 from .core import ValidatedPattern
 
@@ -6,13 +5,13 @@ PATTERNS: dict[str, ValidatedPattern] = {
     "extract_coverage_percentage": ValidatedPattern(
         name="extract_coverage_percentage",
         pattern=r"coverage-([\d\.]+)%25",
-        replacement="",  # Not used for extraction, just validation
+        replacement="",
         description="Search for coverage percentage in badge URL",
         test_cases=[
-            ("coverage-85.0%25", ""),  # Will use search() to get group(1)
+            ("coverage-85.0%25", ""),
             ("coverage-75.5%25", ""),
             ("coverage-100.0%25", ""),
-            ("no coverage here", "no coverage here"),  # No match
+            ("no coverage here", "no coverage here"),
         ],
     ),
     "extract_range_size": ValidatedPattern(

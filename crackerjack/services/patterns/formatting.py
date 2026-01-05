@@ -1,4 +1,3 @@
-"""Formatting and whitespace normalization patterns."""
 
 from .core import ValidatedPattern
 
@@ -24,7 +23,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("- - help", "--help"),
             ("- - ai-fix", "--ai-fix"),
             ("--help", "--help"),
-            # Phase 1: Removed test case for --start-websocket-server (WebSocket stack deleted)
+
         ],
     ),
     "fix_short_flag_spacing": ValidatedPattern(
@@ -137,7 +136,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "normalize_multiple_newlines": ValidatedPattern(
         name="normalize_multiple_newlines",
-        pattern=r"\n{3,}",
+        pattern=r"\n{3, }",
         replacement="\n\n",
         description="Normalize multiple consecutive newlines to maximum 2",
         global_replace=True,
@@ -167,18 +166,18 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_comma": ValidatedPattern(
         name="spacing_after_comma",
-        pattern=r",(?! |\n|$)",
+        pattern=r", (?! |\n|$)",
         replacement=r", ",
         description="Add space after comma if missing (skip if already spaced, at end of line, or end of string)",
         global_replace=True,
         test_cases=[
-            ("func(a,b,c)", "func(a, b, c)"),
             ("func(a, b, c)", "func(a, b, c)"),
-            ("[1,2,3]", "[1, 2, 3]"),
+            ("func(a, b, c)", "func(a, b, c)"),
             ("[1, 2, 3]", "[1, 2, 3]"),
-            ("{'x':1,'y':2,'z':3}", "{'x':1, 'y':2, 'z':3}"),
-            ("trailing,\nnewline", "trailing,\nnewline"),
-            ("end_comma,", "end_comma,"),
+            ("[1, 2, 3]", "[1, 2, 3]"),
+            ("{'x':1, 'y':2, 'z':3}", "{'x':1, 'y':2, 'z':3}"),
+            ("trailing, \nnewline", "trailing, \nnewline"),
+            ("end_comma, ", "end_comma, "),
         ],
     ),
     "spacing_after_colon": ValidatedPattern(
@@ -195,12 +194,12 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("https://github.com", "https://github.com"),
             ("http://example.com", "http://example.com"),
             ("ftp://server.com", "ftp://server.com"),
-            ("repo:local", "repo: local"),
+            ("repo: local", "repo: local"),
         ],
     ),
     "multiple_spaces": ValidatedPattern(
         name="multiple_spaces",
-        pattern=r" {2,}",
+        pattern=r" {2, }",
         replacement=r" ",
         description="Replace multiple spaces with single space",
         global_replace=True,

@@ -1,14 +1,3 @@
-"""Generic utility check adapter for simple Quality Assurance checks.
-
-This adapter handles simple, configuration-driven checks like whitespace,
-EOF newlines, YAML/TOML validation, file size limits, and dependency locks.
-
-Standard Python Patterns:
-- MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No dependency injection
-- Configuration-driven validators and fixers
-- Async execution with semaphore control
-"""
 
 from __future__ import annotations
 
@@ -32,16 +21,15 @@ from crackerjack.services.regex_patterns import CompiledPatternCache
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# Static UUID from registry (NEVER change once set)
+
 MODULE_ID = UUID("ed516d6d-b273-458a-a2fc-c656046897cd")
 MODULE_STATUS = AdapterStatus.STABLE
 
-# Module-level logger for structured logging
+
 logger = logging.getLogger(__name__)
 
 
 class UtilityCheckType(str, Enum):
-    """Types of utility checks supported by this adapter."""
 
     TEXT_PATTERN = "text_pattern"
     SYNTAX_VALIDATION = "syntax_validation"
@@ -51,10 +39,6 @@ class UtilityCheckType(str, Enum):
 
 
 class UtilityCheckSettings(QABaseSettings):
-    """Settings for utility check adapter.
-
-    Configuration-driven checks are defined here or loaded from YAML.
-    """
 
     check_type: UtilityCheckType = Field(
         ...,
@@ -85,24 +69,9 @@ class UtilityCheckSettings(QABaseSettings):
     @field_validator("pattern")
     @classmethod
     def validate_pattern(cls, v: str | None) -> str | None:
-        """Validate regex pattern using safe compilation.
-
-        Uses CompiledPatternCache for security and performance.
-        Pattern validation only occurs if pattern is provided.
-        Runtime check() will enforce required patterns.
-
-        Args:
-            v: Pattern string to validate
-
-        Returns:
-            Validated pattern string or None
-
-        Raises:
-            ValueError: If pattern compilation fails
-        """
         if v is not None:
             try:
-                # Use cached, safe pattern compilation
+
                 CompiledPatternCache.get_compiled_pattern(v)
             except ValueError as e:
                 raise ValueError(f"Invalid regex pattern: {e}")
@@ -111,63 +80,24 @@ class UtilityCheckSettings(QABaseSettings):
     @field_validator("parser_type")
     @classmethod
     def validate_parser_type(cls, v: str | None) -> str | None:
-        """Validate parser type for SYNTAX_VALIDATION checks.
-
-        Parser type validation only occurs if parser_type is provided.
-        Runtime check() will enforce required parser_type.
-        """
         if v is not None and v not in ("yaml", "toml", "json"):
             raise ValueError(f"Unsupported parser type: {v}")
         return v
 
 
 class UtilityCheckAdapter(QAAdapterBase):
-    """Generic adapter for configuration-driven utility checks.
-
-    Handles simple checks like:
-    - Trailing whitespace detection/fixing
-    - EOF newline enforcement
-    - YAML/TOML/JSON syntax validation
-    - File size limits
-    - Dependency lock verification (uv.lock)
-
-    Example:
-        ```python
-        from uuid import uuid7
-        from crackerjack.adapters.qa.utility_check import (
-            UtilityCheckAdapter,
-            UtilityCheckSettings,
-            UtilityCheckType,
-        )
-
-        settings = UtilityCheckSettings(
-            check_type=UtilityCheckType.TEXT_PATTERN,
-            pattern=r"\\s+$",
-            auto_fix=True,
-        )
-        adapter = UtilityCheckAdapter(settings=settings)
-        await adapter.init()
-        result = await adapter.check(files=[Path("src/file.py")])
-        ```
-    """
 
     settings: UtilityCheckSettings | None = None
 
     def __init__(self, settings: UtilityCheckSettings | None = None) -> None:
-        """Initialize utility check adapter.
-
-        Args:
-            settings: Optional settings override
-        """
         super().__init__()
         if settings:
             self.settings = settings
 
     async def init(self) -> None:
-        """Initialize adapter with settings validation."""
         if not self.settings:
-            # Default to trailing whitespace check if no settings provided
-            # Provide all required fields with None defaults
+
+
             self.settings = UtilityCheckSettings(
                 check_type=UtilityCheckType.TEXT_PATTERN,
                 pattern=r"\s+$",
@@ -182,14 +112,12 @@ class UtilityCheckAdapter(QAAdapterBase):
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         if self.settings:
             return f"UtilityCheck ({self.settings.check_type.value})"
         return "UtilityCheck"
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID."""
         return MODULE_ID
 
     async def check(
@@ -197,15 +125,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> QAResult:
-        """Execute utility check on files.
-
-        Args:
-            files: List of files to check (None = check all matching patterns)
-            config: Optional configuration override
-
-        Returns:
-            QAResult with check execution results
-        """
         if not self._initialized:
             await self.init()
 
@@ -214,13 +133,13 @@ class UtilityCheckAdapter(QAAdapterBase):
 
         start_time = asyncio.get_event_loop().time()
 
-        # Determine files to check
+
         target_files = await self._get_target_files(files, config)
 
         if not target_files:
             return self._create_skipped_result("No files to check", start_time)
 
-        # Execute appropriate check based on type
+
         check_type = self.settings.check_type
 
         if check_type == UtilityCheckType.TEXT_PATTERN:
@@ -243,15 +162,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         file_path: Path,
         exclude_patterns: list[str],
     ) -> bool:
-        """Check if file matches any exclude pattern.
-
-        Args:
-            file_path: File to check
-            exclude_patterns: List of glob patterns to exclude
-
-        Returns:
-            True if file should be excluded
-        """
         for exclude_pattern in exclude_patterns:
             if file_path.match(exclude_pattern):
                 return True
@@ -262,15 +172,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         exclude_patterns: list[str],
     ) -> list[Path]:
-        """Filter files by exclude patterns.
-
-        Args:
-            files: Files to filter
-            exclude_patterns: List of glob patterns to exclude
-
-        Returns:
-            Filtered file list
-        """
         return [
             file_path
             for file_path in files
@@ -282,34 +183,24 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path] | None,
         config: QACheckConfig | None,
     ) -> list[Path]:
-        """Get list of files to check based on patterns.
-
-        Args:
-            files: Explicit file list or None for pattern matching
-            config: Configuration with file patterns
-
-        Returns:
-            List of Path objects to check
-        """
         if files:
             return files
 
         if not self.settings:
             return []
 
-        # Use config patterns if available, otherwise use settings patterns
+
         patterns = config.file_patterns if config else self.settings.file_patterns
         exclude_patterns = (
             config.exclude_patterns if config else self.settings.exclude_patterns
         )
 
-        # Simple glob-based file discovery
-        # In production, this would integrate with git/project structure
+
         target_files: list[Path] = []
         for pattern in patterns:
             target_files.extend(Path.cwd().glob(pattern))
 
-        # Filter out excluded files
+
         if exclude_patterns:
             target_files = self._apply_exclude_filters(target_files, exclude_patterns)
 
@@ -320,15 +211,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         lines: list[str],
         pattern: t.Pattern[str],
     ) -> tuple[list[str], int]:
-        """Process file lines for pattern violations.
-
-        Args:
-            lines: File lines to process
-            pattern: Compiled regex pattern
-
-        Returns:
-            Tuple of (fixed_lines, issues_count)
-        """
         fixed_lines = []
         issues_count = 0
 
@@ -336,7 +218,7 @@ class UtilityCheckAdapter(QAAdapterBase):
             if pattern.search(line):
                 issues_count += 1
                 if self.settings and self.settings.auto_fix:
-                    # Remove pattern matches (e.g., trailing whitespace)
+
                     fixed_lines.append(pattern.sub("", line))
                 else:
                     fixed_lines.append(line)
@@ -353,18 +235,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files_modified: list[Path],
         elapsed_ms: float,
     ) -> QAResult:
-        """Create QAResult for pattern check.
-
-        Args:
-            files: Files checked
-            issues_found: Number of issues found
-            issues_fixed: Number of issues fixed
-            files_modified: List of modified files
-            elapsed_ms: Execution time in milliseconds
-
-        Returns:
-            QAResult with appropriate status
-        """
         if issues_found == 0:
             return QAResult(
                 check_id=MODULE_ID,
@@ -406,19 +276,10 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         start_time: float,
     ) -> QAResult:
-        """Check files for text pattern violations.
-
-        Args:
-            files: Files to check
-            start_time: Check start time
-
-        Returns:
-            QAResult with pattern check results
-        """
         if not self.settings or not self.settings.pattern:
             raise ValueError("Pattern not configured")
 
-        # Use safe cached pattern compilation
+
         pattern = CompiledPatternCache.get_compiled_pattern(self.settings.pattern)
         issues_found = 0
         issues_fixed = 0
@@ -438,7 +299,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                     issues_fixed += file_issues
 
             except Exception as e:
-                # Add structured logging for failures
+
                 logger.warning(
                     "Failed to check file for pattern violations",
                     extra={
@@ -462,15 +323,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         start_time: float,
     ) -> QAResult:
-        """Check files for missing EOF newlines.
-
-        Args:
-            files: Files to check
-            start_time: Check start time
-
-        Returns:
-            QAResult with EOF check results
-        """
         issues_found = 0
         issues_fixed = 0
         files_modified: list[Path] = []
@@ -485,7 +337,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                         issues_fixed += 1
                         files_modified.append(file_path)
             except Exception as e:
-                # Add structured logging for failures
+
                 logger.warning(
                     "Failed to check file for EOF newline",
                     extra={
@@ -541,15 +393,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         start_time: float,
     ) -> QAResult:
-        """Validate file syntax (YAML/TOML/JSON).
-
-        Args:
-            files: Files to check
-            start_time: Check start time
-
-        Returns:
-            QAResult with syntax validation results
-        """
         if not self.settings or not self.settings.parser_type:
             raise ValueError("Parser type not configured")
 
@@ -573,7 +416,7 @@ class UtilityCheckAdapter(QAAdapterBase):
             except Exception as e:
                 issues_found += 1
                 error_details.append(f"{file_path}: {e}")
-                # Add structured logging for failures
+
                 logger.warning(
                     "Failed to validate file syntax",
                     extra={
@@ -616,15 +459,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         start_time: float,
     ) -> QAResult:
-        """Check files against size limits.
-
-        Args:
-            files: Files to check
-            start_time: Check start time
-
-        Returns:
-            QAResult with size check results
-        """
         if not self.settings or self.settings.max_size_bytes is None:
             raise ValueError("Max size not configured")
 
@@ -643,7 +477,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                         f"{file_path} ({size_mb:.2f} MB > {max_mb:.2f} MB)"
                     )
             except Exception as e:
-                # Add structured logging for failures
+
                 logger.warning(
                     "Failed to check file size",
                     extra={
@@ -687,15 +521,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         files: list[Path],
         start_time: float,
     ) -> QAResult:
-        """Check dependency lock file integrity.
-
-        Args:
-            files: Files to check (typically uv.lock)
-            start_time: Check start time
-
-        Returns:
-            QAResult with dependency lock check results
-        """
         if not self.settings or not self.settings.lock_command:
             raise ValueError("Lock command not configured")
 
@@ -757,15 +582,6 @@ class UtilityCheckAdapter(QAAdapterBase):
             )
 
     def _create_skipped_result(self, reason: str, start_time: float) -> QAResult:
-        """Create a skipped result.
-
-        Args:
-            reason: Reason for skipping
-            start_time: Check start time
-
-        Returns:
-            QAResult with skipped status
-        """
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
         return QAResult(
             check_id=MODULE_ID,
@@ -778,17 +594,9 @@ class UtilityCheckAdapter(QAAdapterBase):
 
     @staticmethod
     def _get_check_type() -> QACheckType:
-        """Determine QA check type based on utility check type.
-
-        Utility checks map to FORMAT type since they can format/fix files.
-
-        Returns:
-            QACheckType.FORMAT for all utility checks
-        """
         return QACheckType.FORMAT
 
     def _get_syntax_validation_patterns(self) -> list[str]:
-        """Get file patterns for syntax validation based on parser type."""
         if not self.settings:
             return ["**/*.yaml", "**/*.toml", "**/*.json"]
 
@@ -805,14 +613,6 @@ class UtilityCheckAdapter(QAAdapterBase):
     def _get_config_for_check_type(
         self, check_type: UtilityCheckType
     ) -> tuple[list[str], str, bool]:
-        """Get configuration tuple for a specific check type.
-
-        Args:
-            check_type: The utility check type
-
-        Returns:
-            Tuple of (file_patterns, stage, is_formatter)
-        """
         if check_type == UtilityCheckType.TEXT_PATTERN:
             return (
                 ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json", "**/*.md"],
@@ -828,31 +628,19 @@ class UtilityCheckAdapter(QAAdapterBase):
         if check_type == UtilityCheckType.DEPENDENCY_LOCK:
             return (["uv.lock", "requirements.lock"], "fast", False)
 
-        # Fallback defaults
+
         return (["**/*.py"], "fast", False)
 
     def get_default_config(self) -> QACheckConfig:
-        """Get default configuration for utility checks.
-
-        Configuration varies based on the check_type setting:
-        - TEXT_PATTERN: fast stage, common text files
-        - EOF_NEWLINE: fast stage, all files, is_formatter=True
-        - SYNTAX_VALIDATION: comprehensive stage, parser-specific patterns
-        - SIZE_CHECK: fast stage, all files
-        - DEPENDENCY_LOCK: fast stage, lock files only
-
-        Returns:
-            QACheckConfig with check-type-specific defaults
-        """
         from crackerjack.models.qa_config import QACheckConfig
 
-        # Get configuration based on check type
+
         if self.settings and self.settings.check_type:
             file_patterns, stage, is_formatter = self._get_config_for_check_type(
                 self.settings.check_type
             )
         else:
-            # No settings, use generic defaults
+
             file_patterns = ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json"]
             stage = "fast"
             is_formatter = False
@@ -870,7 +658,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 "**/node_modules/**",
                 "**/__pycache__/**",
             ],
-            timeout_seconds=60,  # Utility checks should be fast
+            timeout_seconds=60,
             parallel_safe=True,
             is_formatter=is_formatter,
             stage=stage,

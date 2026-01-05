@@ -1,10 +1,3 @@
-"""
-Bridge between crackerjack's built-in agents and Claude Code's external agents.
-
-This module provides integration between the internal agent system and Claude Code's
-specialized agents located in ~/.claude/agents. It enables crackerjack's built-in
-agents to consult with expert external agents for complex scenarios.
-"""
 
 import logging
 import typing as t
@@ -15,16 +8,16 @@ from crackerjack.services.file_modifier import SafeFileModifier
 
 from .base import AgentContext, FixResult, Issue, IssueType
 
-# Conditional import - ClaudeCodeFixer may not be available
+
 _claude_ai_available = False
 ClaudeCodeFixer: type[t.Any] | None = None
 
 with suppress(ImportError):
-    from crackerjack.adapters.ai.claude import ClaudeCodeFixer  # type: ignore[no-redef]
+    from crackerjack.adapters.ai.claude import ClaudeCodeFixer # type: ignore[no-redef]
 
     _claude_ai_available = True
 
-# Mapping of internal issue types to Claude Code external agents
+
 CLAUDE_CODE_AGENT_MAPPING = {
     IssueType.COMPLEXITY: ["refactoring-specialist", "crackerjack-architect"],
     IssueType.DRY_VIOLATION: ["refactoring-specialist", "crackerjack-architect"],
@@ -38,12 +31,11 @@ CLAUDE_CODE_AGENT_MAPPING = {
     IssueType.FORMATTING: ["python-pro"],
 }
 
-# Minimum confidence threshold for consulting external agents
+
 EXTERNAL_CONSULTATION_THRESHOLD = 0.8
 
 
 class ClaudeCodeBridge:
-    """Bridge for consulting Claude Code external agents with real AI integration."""
 
     def __init__(self, context: AgentContext) -> None:
         self.context = context
@@ -51,8 +43,8 @@ class ClaudeCodeBridge:
         self._agent_path = Path.home() / ".claude" / "agents"
         self._consultation_cache: dict[str, dict[str, t.Any]] = {}
 
-        # Real AI integration components (if available)
-        self.ai_fixer: t.Any | None = None  # ClaudeCodeFixer instance or None
+
+        self.ai_fixer: t.Any | None = None
         self.file_modifier = SafeFileModifier()
         self._ai_available = _claude_ai_available
 
@@ -64,41 +56,29 @@ class ClaudeCodeBridge:
     def should_consult_external_agent(
         self, issue: Issue, internal_confidence: float
     ) -> bool:
-        """Determine if we should consult an external Claude Code agent."""
-        # Only consult for complex issues that meet threshold
+
         if internal_confidence >= EXTERNAL_CONSULTATION_THRESHOLD:
             return False
 
-        # Check if we have relevant external agents for this issue type
+
         return issue.type in CLAUDE_CODE_AGENT_MAPPING
 
     def _get_agent_mapping(self) -> dict[t.Any, list[str]]:
-        """Get the agent mapping for external access."""
         return CLAUDE_CODE_AGENT_MAPPING
 
     def _get_consultation_threshold(self) -> float:
-        """Get the consultation threshold for external access."""
         return EXTERNAL_CONSULTATION_THRESHOLD
 
     def get_recommended_external_agents(self, issue: Issue) -> list[str]:
-        """Get list of recommended external agents for an issue."""
         return CLAUDE_CODE_AGENT_MAPPING.get(issue.type, [])
 
     def verify_agent_availability(self, agent_name: str) -> bool:
-        """Check if a Claude Code agent file exists."""
         agent_file = self._agent_path / f"{agent_name}.md"
         return agent_file.exists()
 
     async def consult_external_agent(
         self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """
-        Consult with a Claude Code external agent for expert guidance.
-
-        This method would ideally use the Task tool to invoke external agents,
-        but since we're within crackerjack's internal system, we'll simulate
-        the consultation process and provide structured recommendations.
-        """
         cache_key = (
             f"{agent_name}:{issue.type.value}:{issue.file_path}:{issue.line_number}"
         )
@@ -111,12 +91,12 @@ class ClaudeCodeBridge:
             self.logger.warning(f"Agent {agent_name} not available in ~/.claude/agents")
             return {"status": "unavailable", "recommendations": []}
 
-        # Generate consultation based on agent expertise and issue type
+
         consultation = await self._generate_agent_consultation(
             issue, agent_name, context
         )
 
-        # Cache successful consultations
+
         if consultation.get("status") == "success":
             self._consultation_cache[cache_key] = consultation
 
@@ -125,7 +105,6 @@ class ClaudeCodeBridge:
     async def _generate_agent_consultation(
         self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Generate structured consultation response from agent expertise."""
         consultation: dict[str, t.Any] = {
             "status": "success",
             "agent": agent_name,
@@ -136,7 +115,7 @@ class ClaudeCodeBridge:
             "confidence": 0.9,
         }
 
-        # Agent-specific consultation logic
+
         if agent_name == "crackerjack-architect":
             consultation.update(
                 await self._consult_crackerjack_architect(issue, context)
@@ -161,7 +140,6 @@ class ClaudeCodeBridge:
     async def _consult_crackerjack_architect(
         self, issue: Issue, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Consult with crackerjack-architect for architectural guidance."""
         return {
             "recommendations": [
                 "Apply clean code principles (DRY, YAGNI, KISS)",
@@ -188,7 +166,6 @@ class ClaudeCodeBridge:
     async def _consult_python_pro(
         self, issue: Issue, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Consult with python-pro for Python-specific best practices."""
         return {
             "recommendations": [
                 "Use modern Python 3.13+ type hints with | unions",
@@ -215,7 +192,6 @@ class ClaudeCodeBridge:
     async def _consult_security_auditor(
         self, issue: Issue, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Consult with security-auditor for security best practices."""
         return {
             "recommendations": [
                 "Never use hardcoded paths or credentials",
@@ -242,7 +218,6 @@ class ClaudeCodeBridge:
     async def _consult_refactoring_specialist(
         self, issue: Issue, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Consult with refactoring-specialist for code improvement."""
         return {
             "recommendations": [
                 "Break down complex functions (complexity ≤ 15)",
@@ -269,7 +244,6 @@ class ClaudeCodeBridge:
     async def _consult_test_specialist(
         self, issue: Issue, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Consult with crackerjack-test-specialist for testing guidance."""
         return {
             "recommendations": [
                 "Avoid complex async tests that can hang",
@@ -296,7 +270,6 @@ class ClaudeCodeBridge:
     async def _consult_generic_agent(
         self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
     ) -> dict[str, t.Any]:
-        """Generic consultation for unspecified agents."""
         return {
             "recommendations": [
                 f"Consult {agent_name} documentation for specific guidance",
@@ -308,14 +281,6 @@ class ClaudeCodeBridge:
         }
 
     async def _ensure_ai_fixer(self) -> t.Any:
-        """Lazy initialization of AI fixer adapter.
-
-        Returns:
-            Initialized ClaudeCodeFixer instance
-
-        Raises:
-            RuntimeError: If Claude AI is not available or initialization fails
-        """
         if not self._ai_available:
             raise RuntimeError(
                 "Claude AI adapter not available - install optional AI dependencies"
@@ -334,7 +299,6 @@ class ClaudeCodeBridge:
     def _extract_ai_response_fields(
         self, ai_result: dict[str, t.Any]
     ) -> tuple[str, str, float, list[str], list[str]]:
-        """Extract fields from AI result."""
         fixed_code = str(ai_result.get("fixed_code", ""))
         explanation = str(ai_result.get("explanation", "No explanation"))
         confidence = float(ai_result.get("confidence", 0.0))
@@ -346,7 +310,6 @@ class ClaudeCodeBridge:
     async def _apply_fix_to_file(
         self, file_path: str, fixed_code: str, dry_run: bool
     ) -> dict[str, t.Any]:
-        """Apply the fix to the file using SafeFileModifier."""
         modify_result = await self.file_modifier.apply_fix(
             file_path=file_path,
             fixed_content=fixed_code,
@@ -364,7 +327,6 @@ class ClaudeCodeBridge:
         potential_side_effects: list[str],
         fix_type: str,
     ) -> FixResult:
-        """Handle the case when the AI successfully fixes the issue."""
         self.logger.info(
             f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})"
         )
@@ -388,7 +350,6 @@ class ClaudeCodeBridge:
     def _handle_dry_run_response(
         self, confidence: float, changes_made: list[str], issue: Issue
     ) -> FixResult:
-        """Handle the case for dry-run mode."""
         return FixResult(
             success=True,
             confidence=confidence,
@@ -402,7 +363,6 @@ class ClaudeCodeBridge:
         )
 
     def _handle_error_response(self, error_msg: str, issue: Issue) -> FixResult:
-        """Handle the case when there's an error in AI fix."""
         self.logger.error(f"AI fix failed: {error_msg}")
 
         return FixResult(
@@ -417,8 +377,7 @@ class ClaudeCodeBridge:
     def _handle_low_confidence_response(
         self, confidence: float, explanation: str, issue: Issue
     ) -> FixResult:
-        """Handle the case when confidence is too low."""
-        min_confidence = 0.7  # Match AI fixer's default
+        min_confidence = 0.7
         self.logger.warning(
             f"AI confidence {confidence:.2f} below threshold {min_confidence}"
         )
@@ -438,18 +397,12 @@ class ClaudeCodeBridge:
     async def _validate_ai_result(
         self, ai_result: dict[str, t.Any], issue: Issue
     ) -> tuple[str, str, float, list[str], list[str]] | None:
-        """Validate AI result and extract fields.
 
-        Returns:
-            Tuple of (fixed_code, explanation, confidence, changes_made, side_effects)
-            or None if validation failed (already returned FixResult)
-        """
-        # Check if AI fix was successful
         if not ai_result.get("success"):
             ai_result.get("error", "Unknown AI error")
             return None
 
-        # Extract AI response fields
+
         (
             fixed_code,
             explanation,
@@ -458,8 +411,8 @@ class ClaudeCodeBridge:
             potential_side_effects,
         ) = self._extract_ai_response_fields(ai_result)
 
-        # Validate confidence threshold
-        min_confidence = 0.7  # Match AI fixer's default
+
+        min_confidence = 0.7
         if confidence < min_confidence:
             return None
 
@@ -482,7 +435,6 @@ class ClaudeCodeBridge:
         issue: Issue,
         dry_run: bool,
     ) -> FixResult:
-        """Apply AI fix to file using SafeFileModifier."""
         modify_result = await self._apply_fix_to_file(file_path, fixed_code, dry_run)
 
         if not modify_result.get("success"):
@@ -501,7 +453,7 @@ class ClaudeCodeBridge:
                 files_modified=[],
             )
 
-        # Success - fix applied
+
         return self._handle_successful_ai_fix(
             issue,
             file_path,
@@ -516,30 +468,13 @@ class ClaudeCodeBridge:
         issue: Issue,
         dry_run: bool = False,
     ) -> FixResult:
-        """Consult with Claude AI to fix an issue using real AI integration.
-
-        This method replaces the simulation-based approach with real AI-powered
-        code fixing. It:
-        1. Calls the ClaudeCodeFixer adapter to generate a fix
-        2. Validates the AI response (confidence, success)
-        3. Uses SafeFileModifier to safely apply changes
-        4. Handles errors gracefully
-        5. Returns a proper FixResult
-
-        Args:
-            issue: Issue to fix
-            dry_run: If True, only generate fix without applying
-
-        Returns:
-            FixResult with fix details and success status
-        """
         try:
-            # Initialize AI fixer if needed
+
             fixer = await self._ensure_ai_fixer()
 
-            # Extract issue details for AI context
+
             file_path = str(issue.file_path) if issue.file_path else "unknown"
-            issue_description = issue.message  # Issue uses 'message' not 'description'
+            issue_description = issue.message
             code_snippet = "\n".join(issue.details) if issue.details else ""
             fix_type = issue.type.value
 
@@ -547,7 +482,7 @@ class ClaudeCodeBridge:
                 f"Consulting Claude AI for {fix_type} issue in {file_path}"
             )
 
-            # Call AI fixer to generate code fix
+
             ai_result = await fixer.fix_code_issue(
                 file_path=file_path,
                 issue_description=issue_description,
@@ -555,15 +490,15 @@ class ClaudeCodeBridge:
                 fix_type=fix_type,
             )
 
-            # Validate AI result
+
             validation_result = await self._validate_ai_result(ai_result, issue)
             if validation_result is None:
-                # Validation failed - extract error from ai_result
+
                 if not ai_result.get("success"):
                     error_msg = ai_result.get("error", "Unknown AI error")
                     return self._handle_error_response(error_msg, issue)
                 else:
-                    # Low confidence
+
                     _, explanation, confidence, *_ = self._extract_ai_response_fields(
                         ai_result
                     )
@@ -579,7 +514,7 @@ class ClaudeCodeBridge:
                 potential_side_effects,
             ) = validation_result
 
-            # Apply fix using SafeFileModifier
+
             if not dry_run and fixed_code:
                 return await self._apply_ai_fix(
                     file_path,
@@ -592,7 +527,7 @@ class ClaudeCodeBridge:
                     dry_run,
                 )
             else:
-                # Dry-run mode or no code - just report recommendation
+
                 return self._handle_dry_run_response(confidence, changes_made, issue)
 
         except Exception as e:
@@ -610,7 +545,6 @@ class ClaudeCodeBridge:
     def create_enhanced_fix_result(
         self, base_result: FixResult, consultations: list[dict[str, t.Any]]
     ) -> FixResult:
-        """Enhance a FixResult with external agent consultations."""
         enhanced_result = FixResult(
             success=base_result.success,
             confidence=base_result.confidence,
@@ -620,7 +554,7 @@ class ClaudeCodeBridge:
             files_modified=base_result.files_modified.copy(),
         )
 
-        # Aggregate recommendations from all consultations
+
         for consultation in consultations:
             if consultation.get("status") == "success":
                 agent_name = consultation.get("agent", "unknown")
@@ -631,7 +565,7 @@ class ClaudeCodeBridge:
                     ]
                 )
 
-                # Boost confidence if external agents provided guidance
+
                 external_confidence = consultation.get("confidence", 0.0)
                 enhanced_result.confidence = max(
                     enhanced_result.confidence,

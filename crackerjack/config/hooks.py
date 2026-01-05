@@ -36,15 +36,10 @@ class HookDefinition:
     manual_stage: bool = False
     config_path: Path | None = None
     security_level: SecurityLevel = SecurityLevel.MEDIUM
-    accepts_file_paths: bool = False  # Phase 10.4.4: Can tool process individual files?
+    accepts_file_paths: bool = False
     _direct_cmd_cache: list[str] | None = field(default=None, init=False, repr=False)
 
     def get_command(self) -> list[str]:
-        """Get the command to execute this hook.
-
-        Returns:
-            List of command arguments for subprocess execution
-        """
         if self.command:
             return self.command
 
@@ -60,28 +55,9 @@ class HookDefinition:
         return self._direct_cmd_cache
 
     def build_command(self, files: list[Path] | None = None) -> list[str]:
-        """Build command with optional file paths for targeted execution.
-
-        Phase 10.4.4: Enables incremental execution on specific files when supported.
-
-        Args:
-            files: Optional list of file paths to process. If None, processes all files.
-
-        Returns:
-            Command list with file paths appended if tool accepts them.
-
-        Example:
-            >>> hook = HookDefinition(
-            ...     name="ruff-check",
-            ...     command=["ruff", "check"],
-            ...     accepts_file_paths=True,
-            ... )
-            >>> hook.build_command([Path("foo.py"), Path("bar.py")])
-            ["ruff", "check", "foo.py", "bar.py"]
-        """
         base_cmd = self.get_command().copy()
 
-        # Append file paths if tool accepts them and files are provided
+
         if files and self.accepts_file_paths:
             base_cmd.extend([str(f) for f in files])
 
@@ -103,7 +79,7 @@ FAST_HOOKS = [
         name="validate-regex-patterns",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
+        timeout=120,
         retry_on_failure=True,
         security_level=SecurityLevel.HIGH,
     ),
@@ -111,109 +87,109 @@ FAST_HOOKS = [
         name="trailing-whitespace",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
+        timeout=120,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level fixer
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="end-of-file-fixer",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 60 to handle larger codebases and prevent timeout issues
+        timeout=120,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level fixer
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-yaml",
         command=[],
-        timeout=60,  # Increased from 20 to reduce timeout issues with larger YAML files
+        timeout=60,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-toml",
         command=[],
-        timeout=150,  # Increased from 79 to reduce timeout issues with larger TOML files
+        timeout=150,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-json",
         command=[],
-        timeout=90,  # Increased from 30 to reduce timeout issues with larger JSON files
+        timeout=90,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-ast",
         command=[],
-        timeout=90,  # Increased from 30 to reduce timeout issues with larger Python files
+        timeout=90,
         security_level=SecurityLevel.HIGH,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level validator
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="format-json",
         command=[],
         is_formatting=True,
-        timeout=120,  # Increased from 45 to reduce timeout issues with larger JSON files
+        timeout=120,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level formatter
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-added-large-files",
         command=[],
-        timeout=90,  # Increased from 30 to reduce timeout issues with repositories with many files
+        timeout=90,
         security_level=SecurityLevel.HIGH,
     ),
     HookDefinition(
         name="uv-lock",
         command=[],
-        timeout=60,  # Increased from 20 to reduce timeout issues with complex dependency trees
+        timeout=60,
         security_level=SecurityLevel.HIGH,
     ),
     HookDefinition(
         name="codespell",
         command=[],
-        timeout=150,  # Increased from 45 to reduce timeout issues with large codebases
+        timeout=150,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level spell checker
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="ruff-check",
         command=[],
         is_formatting=True,
-        timeout=240,  # Increased from 120 to reduce timeout issues with large codebases
+        timeout=240,
         retry_on_failure=True,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level Python linter
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="ruff-format",
         command=[],
         is_formatting=True,
-        timeout=240,  # Increased from 120 to reduce timeout issues with large codebases
+        timeout=240,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level Python formatter
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=600,  # Increased from 300 to reduce timeout issues with larger markdown files
+        timeout=600,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level markdown formatter
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-local-links",
         command=[],
-        timeout=60,  # Fast local-only link checking
+        timeout=60,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=True,  # Can check specific markdown files
+        accepts_file_paths=True,
         description="Fast local link validation (file references and anchors only)",
     ),
 ]
@@ -222,44 +198,36 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="zuban",
         command=[],
-        timeout=240,  # Increased from 80 to reduce timeout issues with larger codebases during type checking
+        timeout=240,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
-        security_level=SecurityLevel.HIGH,  # Changed from CRITICAL to HIGH to allow other hooks to run
-        accepts_file_paths=True,  # Phase 10.5: Allow incremental execution on changed files to avoid virtual environments
+        security_level=SecurityLevel.HIGH,
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="semgrep",
         command=[],
-        timeout=480,  # Increased from 240 to reduce timeout issues with comprehensive security scans
+        timeout=480,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="pyscn",
         command=[],
-        timeout=300,  # CFG analysis, clone detection, complexity metrics
+        timeout=300,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
-        security_level=SecurityLevel.HIGH,  # Security + quality analysis
-        accepts_file_paths=True,  # Can scan specific Python files
+        security_level=SecurityLevel.HIGH,
+        accepts_file_paths=True,
     ),
-    # NOTE: Bandit replaced with Semgrep (using uvx for Python 3.13 isolation)
-    # HookDefinition(
-    #     name="bandit",
-    #     command=[],
-    #     timeout=180,  # 3 minutes for SAST scanning
-    #     stage=HookStage.COMPREHENSIVE,
-    #     manual_stage=True,
-    #     security_level=SecurityLevel.CRITICAL,
-    #     accepts_file_paths=True,  # Phase 10.4.4: File-level SAST scanner
-    # ),
+
+
     HookDefinition(
         name="gitleaks",
         command=[],
-        timeout=180,  # Increased from 45 to reduce timeout issues with comprehensive security scans
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
@@ -267,34 +235,34 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="pip-audit",
         command=[],
-        timeout=180,  # Network calls to vulnerability databases
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
-        security_level=SecurityLevel.CRITICAL,  # CVE vulnerabilities are critical
-        accepts_file_paths=False,  # Scans entire environment/requirements
+        security_level=SecurityLevel.CRITICAL,
+        accepts_file_paths=False,
     ),
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=600,  # Comprehensive dead code scanning (10 minutes) - reduced scope to package directory only
+        timeout=600,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=480,  # Increased from 240 to reduce timeout issues with comprehensive refactoring analysis
+        timeout=480,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files (240s -> ~10s)
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="creosote",
         command=[],
-        timeout=360,  # Increased from 180 to reduce timeout issues with comprehensive dependency analysis
+        timeout=360,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
@@ -302,29 +270,29 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="complexipy",
         command=[],
-        timeout=300,  # Increased from 120 to reduce timeout issues with comprehensive complexity analysis
+        timeout=300,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
-        accepts_file_paths=True,  # Phase 10.5: Incremental execution on changed files
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="check-jsonschema",
         command=[],
-        timeout=180,  # Increased from 60 to reduce timeout issues with complex schema validation
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.HIGH,
-        accepts_file_paths=True,  # Phase 10.4.4: File-level schema validator
+        accepts_file_paths=True,
     ),
     HookDefinition(
         name="linkcheckmd",
         command=[],
-        timeout=300,  # 5 minutes for comprehensive link checking (includes network calls)
+        timeout=300,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.LOW,
-        accepts_file_paths=False,  # Scans directories, not individual files
+        accepts_file_paths=False,
         description="Comprehensive link validation (local + external URLs)",
     ),
 ]
@@ -333,45 +301,30 @@ COMPREHENSIVE_HOOKS = [
 FAST_STRATEGY = HookStrategy(
     name="fast",
     hooks=FAST_HOOKS,
-    timeout=300,  # Increased from 60 to accommodate all increased hook timeouts
+    timeout=300,
     retry_policy=RetryPolicy.NONE,
-    parallel=True,  # Phase 6: Enable parallel execution for 2-3x speedup
-    max_workers=2,  # Reduced from 4 to 2 to improve stability and reduce resource contention
+    parallel=True,
+    max_workers=2,
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(
     name="comprehensive",
     hooks=COMPREHENSIVE_HOOKS,
-    timeout=1800,  # Increased from 300 to accommodate all increased hook timeouts
+    timeout=1800,
     retry_policy=RetryPolicy.NONE,
-    parallel=True,  # Phase 6: Enable parallel execution for 2x speedup
-    max_workers=2,  # Reduced from 4 to 2 to improve stability and reduce resource contention
+    parallel=True,
+    max_workers=2,
 )
 
 
 def _update_hook_timeouts_from_settings(hooks: list[HookDefinition]) -> None:
-    """Update hook timeouts from adapter_timeouts configuration.
-
-    This function modifies hook definitions in-place to apply timeout overrides
-    from pyproject.toml [tool.crackerjack] configuration. This allows projects
-    to customize hook timeouts without modifying crackerjack source code.
-
-    Args:
-        hooks: List of HookDefinition objects to update
-
-    Example:
-        >>> from crackerjack.config import CrackerjackSettings, load_settings
-        >>> settings = load_settings(CrackerjackSettings)
-        >>> _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
-        >>> # Skylos hook now uses settings.adapter_timeouts.skylos_timeout
-    """
     with suppress(Exception):
         from crackerjack.config import CrackerjackSettings, load_settings
 
-        # Load settings from pyproject.toml and YAML files
+
         settings = load_settings(CrackerjackSettings)
 
-        # Update each hook's timeout from adapter_timeouts if configured
+
         for hook in hooks:
             timeout_attr = f"{hook.name}_timeout"
             if hasattr(settings.adapter_timeouts, timeout_attr):
@@ -383,11 +336,11 @@ class HookConfigLoader:
     @staticmethod
     def load_strategy(name: str, _: Path | None = None) -> HookStrategy:
         if name == "fast":
-            # Apply timeout overrides before returning strategy
+
             _update_hook_timeouts_from_settings(FAST_HOOKS)
             return FAST_STRATEGY
         if name == "comprehensive":
-            # Apply timeout overrides before returning strategy
+
             _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
             return COMPREHENSIVE_STRATEGY
         msg = f"Unknown hook strategy: {name}"

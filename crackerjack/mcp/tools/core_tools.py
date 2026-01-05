@@ -142,25 +142,19 @@ def _validate_kwargs_argument(
 
 
 def _configure_stage_options(stage: str) -> CrackerjackSettings:
-    """Configure settings for a specific stage using dependency injection.
 
-    Note: Returns a copy of global settings with stage-specific overrides.
-    The global settings remain unchanged.
-    """
-    # Get base settings without DI
     from crackerjack.config import load_settings
 
     base_settings = load_settings(CrackerjackSettings)
 
-    # Create a new settings instance with stage-specific values
-    # We copy the base settings and override specific fields
+
     settings_dict = base_settings.model_dump()
 
     if stage in {"fast", "comprehensive"}:
         settings_dict["skip_hooks"] = False
     elif stage == "tests":
         settings_dict["run_tests"] = (
-            True  # Note: field renamed from 'test' to 'run_tests'
+            True
         )
     elif stage == "cleaning":
         settings_dict["clean"] = True
@@ -173,7 +167,7 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
 def _execute_stage(
     orchestrator: "WorkflowOrchestrator", stage: str, settings: CrackerjackSettings
 ) -> bool:
-    # Convert CrackerjackSettings to OptionsProtocol
+
     adapted_options = _adapt_settings_to_protocol(settings)
 
     if stage == "fast":
@@ -188,21 +182,15 @@ def _execute_stage(
 
 
 def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
-    """Adapt CrackerjackSettings to match OptionsProtocol."""
-    return _AdaptedOptions(settings)  # type: ignore
+    return _AdaptedOptions(settings) # type: ignore
 
 
 class _AdaptedOptions:
-    """Adapter class to convert CrackerjackSettings to OptionsProtocol.
-
-    Since CrackerjackSettings uses flat field structure, this adapter
-    is much simpler than the old nested WorkflowOptions version.
-    """
 
     def __init__(self, settings: CrackerjackSettings):
         self.settings = settings
 
-    # Git properties
+
     @property
     def commit(self) -> bool:
         return self.settings.git.commit
@@ -211,7 +199,7 @@ class _AdaptedOptions:
     def create_pr(self) -> bool:
         return self.settings.git.create_pr
 
-    # Execution properties
+
     @property
     def interactive(self) -> bool:
         return self.settings.execution.interactive
@@ -228,10 +216,10 @@ class _AdaptedOptions:
     def async_mode(self) -> bool:
         return self.settings.execution.async_mode
 
-    # Testing properties
+
     @property
     def test(self) -> bool:
-        return self.settings.testing.test  # Note: Field renamed in CrackerjackSettings
+        return self.settings.testing.test
 
     @property
     def benchmark(self) -> bool:
@@ -245,7 +233,7 @@ class _AdaptedOptions:
     def test_timeout(self) -> int:
         return self.settings.testing.test_timeout
 
-    # Publishing properties
+
     @property
     def publish(self) -> t.Any | None:
         return self.settings.publishing.publish
@@ -266,7 +254,7 @@ class _AdaptedOptions:
     def skip_version_check(self) -> bool:
         return self.settings.publishing.skip_version_check
 
-    # AI properties
+
     @property
     def ai_agent(self) -> bool:
         return self.settings.ai.ai_agent
@@ -275,7 +263,7 @@ class _AdaptedOptions:
     def start_mcp_server(self) -> bool:
         return self.settings.ai.start_mcp_server
 
-    # Hook properties
+
     @property
     def skip_hooks(self) -> bool:
         return self.settings.hooks.skip_hooks
@@ -292,17 +280,17 @@ class _AdaptedOptions:
     def enable_ty(self) -> bool:
         return self.settings.hooks.enable_ty
 
-    # Cleaning properties
+
     @property
     def clean(self) -> bool:
         return self.settings.cleaning.clean
 
-    # Progress properties
+
     @property
     def track_progress(self) -> bool:
         return self.settings.progress.track_progress
 
-    # Default/static properties (not in settings, keep defaults)
+
     @property
     def cleanup(self) -> t.Any | None:
         return None
@@ -356,7 +344,7 @@ def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
         rate_limiter = context.rate_limiter if context else None
@@ -409,7 +397,7 @@ def _detect_errors_and_suggestions(
 
 
 def register_analyze_errors_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
         context = get_context()
         if not context:

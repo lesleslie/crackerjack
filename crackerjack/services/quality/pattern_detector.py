@@ -255,10 +255,10 @@ class PatternDetector:
     ) -> list[AntiPattern]:
         anti_patterns = []
 
-        if "/tmp/" in content or "C: \\" in content:  # nosec B108
+        if "/tmp/" in content or "C: \\" in content: # nosec B108
             lines = content.split("\n")
             for i, line in enumerate(lines, 1):
-                if "/tmp/" in line or "C: \\" in line:  # nosec B108
+                if "/tmp/" in line or "C: \\" in line: # nosec B108
                     anti_patterns.append(
                         AntiPattern(
                             pattern_type="security_risks",

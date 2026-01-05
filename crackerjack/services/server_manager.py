@@ -11,7 +11,7 @@ from rich.console import Console
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
-# Module-level console instance for server management functions
+
 console = Console()
 
 
@@ -97,11 +97,7 @@ def _find_command_start_index(parts: list[str]) -> int:
     return command_start_index
 
 
-# Phase 1: find_websocket_server_processes() removed (WebSocket stack deleted)
-
-
 def find_zuban_lsp_processes() -> list[dict[str, t.Any]]:
-    """Find running zuban LSP server processes."""
     security_logger = get_security_logger()
 
     try:
@@ -125,7 +121,6 @@ def find_zuban_lsp_processes() -> list[dict[str, t.Any]]:
 
 
 def _parse_zuban_lsp_processes(stdout: str) -> list[dict[str, t.Any]]:
-    """Parse zuban LSP processes from ps output."""
     processes: list[dict[str, t.Any]] = []
 
     for line in stdout.splitlines():
@@ -190,9 +185,7 @@ def stop_mcp_server() -> bool:
     return success
 
 
-# Phase 1: stop_websocket_server() removed (WebSocket stack deleted)
 def stop_zuban_lsp() -> bool:
-    """Stop running zuban LSP server processes."""
     processes = find_zuban_lsp_processes()
 
     if not processes:
@@ -212,7 +205,7 @@ def stop_zuban_lsp() -> bool:
 
 
 def stop_all_servers() -> bool:
-    # Phase 1: stop_websocket_server() call removed (WebSocket stack deleted)
+
     mcp_success = stop_mcp_server()
     zuban_lsp_success = stop_zuban_lsp()
 
@@ -248,10 +241,10 @@ def restart_mcp_server() -> bool:
             purpose="mcp_server_restart",
         )
 
-        # Give the server a moment to start
+
         time.sleep(1)
 
-        # Display success panel with server details
+
         http_endpoint = "http://127.0.0.1:8676/mcp"
 
         ServerPanels.startup_success(
@@ -267,7 +260,6 @@ def restart_mcp_server() -> bool:
 
 
 def restart_zuban_lsp() -> bool:
-    """Restart zuban LSP server."""
     console.print("[bold cyan]🔄 Restarting Zuban LSP server...[/ bold cyan]")
 
     stop_zuban_lsp()
@@ -306,7 +298,7 @@ def list_server_status() -> None:
     console.print("[bold cyan]📊 Crackerjack Server Status[/ bold cyan]")
 
     mcp_processes = find_mcp_server_processes()
-    # Phase 1: find_websocket_server_processes() call removed (WebSocket stack deleted)
+
     zuban_lsp_processes = find_zuban_lsp_processes()
 
     if mcp_processes:
@@ -319,7 +311,6 @@ def list_server_status() -> None:
     else:
         console.print("\n[yellow]MCP Servers: None running[/ yellow]")
 
-    # Phase 1: WebSocket server status display removed (WebSocket stack deleted)
 
     if zuban_lsp_processes:
         console.print("\n[bold green]Zuban LSP Servers: [/ bold green]")
@@ -331,6 +322,6 @@ def list_server_status() -> None:
     else:
         console.print("\n[yellow]Zuban LSP Servers: None running[/ yellow]")
 
-    # Phase 1: Removed websocket_processes from empty server check (WebSocket stack deleted)
+
     if not mcp_processes and not zuban_lsp_processes:
         console.print("\n[dim]No crackerjack servers currently running[/ dim]")

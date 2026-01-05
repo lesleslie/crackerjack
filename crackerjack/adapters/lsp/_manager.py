@@ -1,4 +1,3 @@
-"""Rust tool manager for unified execution and coordination."""
 
 import asyncio
 import time
@@ -14,29 +13,25 @@ if t.TYPE_CHECKING:
 
 
 class RustToolHookManager:
-    """Manager for coordinating Rust-based analysis tools."""
 
     def __init__(self, context: "ExecutionContext") -> None:
-        """Initialize manager with execution context."""
         self.context = context
         self.adapters: dict[str, BaseRustToolAdapter] = {}
         self._initialize_adapters()
 
     def _initialize_adapters(self) -> None:
-        """Initialize available Rust tool adapters."""
-        # Dead code detection with Skylos
+
         self.adapters["skylos"] = SkylosAdapter(context=self.context)
 
-        # Type checking with Zuban
+
         self.adapters["zuban"] = ZubanAdapter(context=self.context)
 
     async def run_all_tools(
         self, target_files: list[Path] | None = None
     ) -> dict[str, ToolResult]:
-        """Run all available Rust tools in parallel."""
         target_files = target_files or []
 
-        # Filter to available tools only
+
         available_adapters = {
             name: adapter
             for name, adapter in self.adapters.items()
@@ -54,7 +49,7 @@ class RustToolHookManager:
                 )
             }
 
-        # Run tools in parallel
+
         tasks = [
             self._run_single_tool(name, adapter, target_files)
             for name, adapter in available_adapters.items()
@@ -62,7 +57,7 @@ class RustToolHookManager:
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Process results
+
         tool_results = {}
         for i, (name, _) in enumerate(available_adapters.items()):
             result = results[i]
@@ -71,7 +66,7 @@ class RustToolHookManager:
                     success=False,
                     error=f"Tool execution failed: {result}",
                 )
-            elif isinstance(result, ToolResult):  # Explicit check for mypy
+            elif isinstance(result, ToolResult):
                 tool_results[name] = result
 
         return tool_results
@@ -79,7 +74,6 @@ class RustToolHookManager:
     async def run_single_tool(
         self, tool_name: str, target_files: list[Path] | None = None
     ) -> ToolResult:
-        """Run a single Rust tool by name."""
         if tool_name not in self.adapters:
             return ToolResult(
                 success=False,
@@ -104,14 +98,13 @@ class RustToolHookManager:
     async def _run_single_tool(
         self, name: str, adapter: BaseRustToolAdapter, target_files: list[Path]
     ) -> ToolResult:
-        """Execute a single tool adapter."""
         start_time = time.time()
 
         try:
-            # Get command arguments
+
             cmd_args = adapter.get_command_args(target_files)
 
-            # Execute command
+
             process = await asyncio.create_subprocess_exec(
                 *cmd_args,
                 stdout=asyncio.subprocess.PIPE,
@@ -122,7 +115,7 @@ class RustToolHookManager:
             stdout, _ = await process.communicate()
             output = stdout.decode() if stdout else ""
 
-            # Parse output
+
             result = adapter.parse_output(output)
             result.execution_time = time.time() - start_time
 
@@ -137,7 +130,6 @@ class RustToolHookManager:
             )
 
     def get_available_tools(self) -> list[str]:
-        """Get list[t.Any] of available Rust tools."""
         return [
             name
             for name, adapter in self.adapters.items()
@@ -145,7 +137,6 @@ class RustToolHookManager:
         ]
 
     def get_tool_info(self) -> dict[str, dict[str, t.Any]]:
-        """Get information about all configured tools."""
         info: dict[str, dict[str, t.Any]] = {}
         for name, adapter in self.adapters.items():
             info[name] = {
@@ -159,7 +150,6 @@ class RustToolHookManager:
     def create_consolidated_report(
         self, results: dict[str, ToolResult]
     ) -> dict[str, t.Any]:
-        """Create a consolidated report from multiple tool results."""
         total_issues = 0
         total_errors = 0
         total_warnings = 0

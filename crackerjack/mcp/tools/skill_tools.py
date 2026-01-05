@@ -1,15 +1,3 @@
-"""
-Skill Tools for MCP Server
-
-Exposes Crackerjack's agent skills as MCP tools.
-This provides a discoverable interface to all agent capabilities.
-
-Key Features:
-- List all available skills (agent, MCP, hybrid)
-- Get detailed information about specific skills
-- Execute skills via MCP tools
-- Search skills by category, type, or query
-"""
 
 import typing as t
 from pathlib import Path
@@ -18,7 +6,6 @@ if t.TYPE_CHECKING:
     from fastmcp import FastMCP
 
 
-# Global registries (initialized during server startup)
 _skill_registries: dict[str, t.Any] = {}
 _project_path: Path | None = None
 
@@ -27,43 +14,31 @@ def initialize_skills(
     project_path: Path,
     mcp_app: "FastMCP",
 ) -> dict[str, t.Any]:
-    """
-    Initialize all skill registries.
-
-    Called during MCP server startup to set up the skill system.
-
-    Args:
-        project_path: Path to project directory
-        mcp_app: FastMCP application instance
-
-    Returns:
-        Dictionary of skill registries
-    """
     global _skill_registries, _project_path
 
     _project_path = project_path
 
     try:
-        # Import all agent modules to trigger registration
-        # This is needed because agents use lazy imports
-        import crackerjack.agents.architect_agent  # noqa: F401
-        import crackerjack.agents.documentation_agent  # noqa: F401
-        import crackerjack.agents.dry_agent  # noqa: F401
-        import crackerjack.agents.formatting_agent  # noqa: F401
-        import crackerjack.agents.import_optimization_agent  # noqa: F401
-        import crackerjack.agents.performance_agent  # noqa: F401
-        import crackerjack.agents.refactoring_agent  # noqa: F401
-        import crackerjack.agents.security_agent  # noqa: F401
-        import crackerjack.agents.semantic_agent  # noqa: F401
-        import crackerjack.agents.test_creation_agent  # noqa: F401
-        import crackerjack.agents.test_specialist_agent  # noqa: F401
+
+
+        import crackerjack.agents.architect_agent # noqa: F401
+        import crackerjack.agents.documentation_agent # noqa: F401
+        import crackerjack.agents.dry_agent # noqa: F401
+        import crackerjack.agents.formatting_agent # noqa: F401
+        import crackerjack.agents.import_optimization_agent # noqa: F401
+        import crackerjack.agents.performance_agent # noqa: F401
+        import crackerjack.agents.refactoring_agent # noqa: F401
+        import crackerjack.agents.security_agent # noqa: F401
+        import crackerjack.agents.semantic_agent # noqa: F401
+        import crackerjack.agents.test_creation_agent # noqa: F401
+        import crackerjack.agents.test_specialist_agent # noqa: F401
         from crackerjack.agents.base import AgentContext
         from crackerjack.skills import register_all_skills
 
-        # Create agent context
+
         context = AgentContext(project_path=project_path)
 
-        # Register all skills
+
         _skill_registries = register_all_skills(
             mcp_app=mcp_app,
             context=context,
@@ -75,23 +50,16 @@ def initialize_skills(
         return _skill_registries
 
     except Exception as e:
-        # Don't fail server startup if skills fail to initialize
+
         print(f"Warning: Failed to initialize skills: {e}")
         return {}
 
 
 def get_registries() -> dict[str, t.Any]:
-    """Get global skill registries."""
     return _skill_registries
 
 
 def register_skill_tools(mcp_app: "FastMCP") -> None:
-    """
-    Register skill-related MCP tools.
-
-    Args:
-        mcp_app: FastMCP application instance
-    """
     _register_list_skills(mcp_app)
     _register_get_skill_info(mcp_app)
     _register_search_skills(mcp_app)
@@ -102,7 +70,6 @@ def register_skill_tools(mcp_app: "FastMCP") -> None:
 
 
 def _register_list_skills(mcp_app: "FastMCP") -> None:
-    """Register the list_skills tool."""
 
     @mcp_app.tool(
         name="list_skills",
@@ -111,15 +78,6 @@ def _register_list_skills(mcp_app: "FastMCP") -> None:
     async def list_skills(
         skill_type: str = "all",
     ) -> dict[str, t.Any]:
-        """
-        List all available skills.
-
-        Args:
-            skill_type: Type of skills to list ("all", "agent", "mcp", "hybrid")
-
-        Returns:
-            Dictionary with skills grouped by type
-        """
         result = {}
 
         if skill_type in ("all", "agent"):
@@ -142,7 +100,6 @@ def _register_list_skills(mcp_app: "FastMCP") -> None:
 
 
 def _register_get_skill_info(mcp_app: "FastMCP") -> None:
-    """Register the get_skill_info tool."""
 
     @mcp_app.tool(
         name="get_skill_info",
@@ -152,16 +109,6 @@ def _register_get_skill_info(mcp_app: "FastMCP") -> None:
         skill_id: str,
         skill_type: str = "agent",
     ) -> dict[str, t.Any]:
-        """
-        Get detailed information about a skill.
-
-        Args:
-            skill_id: ID of the skill
-            skill_type: Type of skill ("agent", "mcp", "hybrid")
-
-        Returns:
-            Detailed skill information
-        """
         registry = _get_skill_registry(skill_type)
         if registry is None:
             return {"error": f"Unknown skill type: {skill_type}"}
@@ -174,13 +121,11 @@ def _register_get_skill_info(mcp_app: "FastMCP") -> None:
 
 
 def _get_skill_registry(skill_type: str) -> t.Any | None:
-    """Get skill registry by type."""
     registry_key = f"{skill_type}_skills"
     return _skill_registries.get(registry_key)
 
 
 def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
-    """Format skill information based on skill type."""
     if skill_type == "agent":
         return skill.get_info()
 
@@ -189,7 +134,7 @@ def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
 
     elif skill_type == "hybrid":
         info = skill.get_info()
-        # Add tool mappings
+
         if hasattr(skill, "get_tool_mappings"):
             info["tools"] = [m.to_dict() for m in skill.get_tool_mappings()]
         return info
@@ -198,7 +143,6 @@ def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
 
 
 def _register_search_skills(mcp_app: "FastMCP") -> None:
-    """Register the search_skills tool."""
 
     @mcp_app.tool(
         name="search_skills",
@@ -208,27 +152,17 @@ def _register_search_skills(mcp_app: "FastMCP") -> None:
         query: str,
         search_in: str = "all",
     ) -> dict[str, t.Any]:
-        """
-        Search for skills matching a query.
-
-        Args:
-            query: Search query
-            search_in: Where to search ("all", "names", "descriptions", "tags")
-
-        Returns:
-            List of matching skills
-        """
         results = {}
 
-        # Search agent skills
+
         if "agent_skills" in _skill_registries:
             results["agent_skills"] = _search_agent_skills(query, search_in)
 
-        # Search MCP skills
+
         if "mcp_skills" in _skill_registries:
             results["mcp_skills"] = _search_mcp_skills(query, search_in)
 
-        # Search hybrid skills
+
         if "hybrid_skills" in _skill_registries:
             results["hybrid_skills"] = _search_hybrid_skills(query, search_in)
 
@@ -236,7 +170,6 @@ def _register_search_skills(mcp_app: "FastMCP") -> None:
 
 
 def _search_agent_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
-    """Search for agent skills."""
     agent_skills = _skill_registries["agent_skills"]
 
     return [
@@ -249,18 +182,17 @@ def _search_agent_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 def _matches_search_criteria(
     metadata: dict[str, t.Any], query: str, search_in: str
 ) -> bool:
-    """Check if skill metadata matches search criteria."""
-    # Search in names
+
     if search_in in ("all", "names"):
         if query.lower() in metadata["name"].lower():
             return True
 
-    # Search in descriptions
+
     if search_in in ("all", "descriptions"):
         if query.lower() in metadata["description"].lower():
             return True
 
-    # Search in tags
+
     if search_in in ("all", "tags"):
         if _matches_tags(metadata.get("tags", []), query):
             return True
@@ -269,12 +201,10 @@ def _matches_search_criteria(
 
 
 def _matches_tags(tags: list[str], query: str) -> bool:
-    """Check if any tag matches the query."""
     return any(query.lower() in tag.lower() for tag in tags)
 
 
 def _search_mcp_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
-    """Search for MCP skills."""
     mcp_skills = _skill_registries["mcp_skills"]
     matching = mcp_skills.search_skills(
         query,
@@ -286,7 +216,6 @@ def _search_mcp_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 
 
 def _search_hybrid_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
-    """Search for hybrid skills."""
     hybrid_skills = _skill_registries["hybrid_skills"]
 
     return [
@@ -297,7 +226,6 @@ def _search_hybrid_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 
 
 def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
-    """Register the get_skills_for_issue tool."""
 
     @mcp_app.tool(
         name="get_skills_for_issue",
@@ -306,18 +234,9 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
     async def get_skills_for_issue(
         issue_type: str,
     ) -> dict[str, t.Any]:
-        """
-        Get skills that can handle a specific issue type.
-
-        Args:
-            issue_type: Type of issue (e.g., "complexity", "security", "type_error")
-
-        Returns:
-            List of skills that can handle the issue type
-        """
         from crackerjack.agents.base import IssueType
 
-        # Parse issue type
+
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -325,13 +244,13 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
 
         result = {}
 
-        # Get agent skills
+
         if "agent_skills" in _skill_registries:
             agent_skills = _skill_registries["agent_skills"]
             skills = agent_skills.get_skills_for_type(issue_enum)
             result["agent_skills"] = [s.get_info() for s in skills]
 
-        # Get hybrid skills
+
         if "hybrid_skills" in _skill_registries:
             hybrid_skills = _skill_registries["hybrid_skills"]
             skills = hybrid_skills.get_skills_for_type(issue_enum)
@@ -341,19 +260,12 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
 
 
 def _register_get_skill_statistics(mcp_app: "FastMCP") -> None:
-    """Register the get_skill_statistics tool."""
 
     @mcp_app.tool(
         name="get_skill_statistics",
         description="Get statistics about all skill registries",
     )
     async def get_skill_statistics() -> dict[str, t.Any]:
-        """
-        Get statistics about all skill registries.
-
-        Returns:
-            Dictionary with statistics for each skill type
-        """
         result = {}
 
         if "agent_skills" in _skill_registries:
@@ -372,7 +284,6 @@ def _register_get_skill_statistics(mcp_app: "FastMCP") -> None:
 
 
 def _register_execute_skill(mcp_app: "FastMCP") -> None:
-    """Register the execute_skill tool."""
 
     @mcp_app.tool(
         name="execute_skill",
@@ -384,18 +295,6 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
         issue_data: dict[str, t.Any],
         timeout: int | None = None,
     ) -> dict[str, t.Any]:
-        """
-        Execute a skill on an issue.
-
-        Args:
-            skill_id: ID of the skill to execute
-            issue_type: Type of issue
-            issue_data: Issue data (message, file_path, line_number, etc.)
-            timeout: Optional timeout in seconds
-
-        Returns:
-            Execution result
-        """
         from crackerjack.agents.base import Issue, IssueType, Priority
 
         if "hybrid_skills" not in _skill_registries:
@@ -407,7 +306,7 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
         if not skill:
             return {"error": f"Skill not found: {skill_id}"}
 
-        # Create issue
+
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -422,7 +321,7 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
             details=issue_data.get("details", []),
         )
 
-        # Execute skill
+
         try:
             result = await skill.execute(issue, timeout=timeout)
             return result.to_dict()
@@ -435,7 +334,6 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
 
 
 def _register_find_best_skill(mcp_app: "FastMCP") -> None:
-    """Register the find_best_skill tool."""
 
     @mcp_app.tool(
         name="find_best_skill",
@@ -444,15 +342,6 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
     async def find_best_skill(
         issue_type: str,
     ) -> dict[str, t.Any]:
-        """
-        Find the best skill for handling an issue.
-
-        Args:
-            issue_type: Type of issue
-
-        Returns:
-            Best skill for the issue type
-        """
         from crackerjack.agents.base import Issue, IssueType, Priority
 
         if "hybrid_skills" not in _skill_registries:
@@ -460,7 +349,7 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
 
         registry = _skill_registries["hybrid_skills"]
 
-        # Create dummy issue for matching
+
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -472,12 +361,12 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
             message="Finding best skill",
         )
 
-        # Find best skill
+
         try:
             best_skill = await registry.find_best_skill(issue)
             if best_skill:
                 info = best_skill.get_info()
-                # Add tool mappings
+
                 if hasattr(best_skill, "get_tool_mappings"):
                     info["tools"] = [
                         m.to_dict() for m in best_skill.get_tool_mappings()

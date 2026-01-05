@@ -29,7 +29,6 @@ class ConfigVersion:
 
 
 class ConfigTemplateService:
-    """Version-based configuration template management service."""
 
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
@@ -37,13 +36,11 @@ class ConfigTemplateService:
         self.templates = self._load_config_templates()
 
     def _load_config_templates(self) -> dict[str, ConfigVersion]:
-        """Load configuration templates as structured data."""
         return {
             "pyproject": self._create_pyproject_template(),
         }
 
     def _create_pyproject_template(self) -> ConfigVersion:
-        """Create pyproject.toml configuration template."""
         return ConfigVersion(
             version="1.2.0",
             description="Modern Python project configuration with Ruff and pytest",
@@ -51,14 +48,12 @@ class ConfigTemplateService:
         )
 
     def _build_pyproject_tools(self) -> dict[str, t.Any]:
-        """Build pyproject.toml tool configurations."""
         return {
             "ruff": self._build_ruff_config(),
             "pytest": self._build_pytest_config(),
         }
 
     def _build_ruff_config(self) -> dict[str, t.Any]:
-        """Build Ruff configuration."""
         return {
             "target-version": "py313",
             "line-length": 88,
@@ -75,14 +70,13 @@ class ConfigTemplateService:
         }
 
     def _build_pytest_config(self) -> dict[str, t.Any]:
-        """Build pytest configuration."""
-        # Note: Coverage package name should be detected dynamically during project setup
-        # This template uses a placeholder that should be replaced during initialization
+
+
         return {
             "ini_options": {
                 "asyncio_mode": "auto",
                 "timeout": 300,
-                "addopts": "--cov={package_name} --cov-report=term-missing:skip-covered",
+                "addopts": "--cov={package_name} --cov-report=term-missing: skip-covered",
                 "testpaths": ["tests"],
                 "markers": [
                     "unit: marks test as a unit test",
@@ -95,7 +89,6 @@ class ConfigTemplateService:
     def get_template(
         self, config_type: str, version: str | None = None
     ) -> ConfigVersion | None:
-        """Get configuration template by type and optional version."""
         if config_type not in self.templates:
             return None
 
@@ -106,7 +99,6 @@ class ConfigTemplateService:
         return template
 
     def check_updates(self, project_path: Path) -> dict[str, ConfigUpdateInfo]:
-        """Check if newer configuration versions are available."""
         updates = {}
 
         version_file = project_path / ".crackerjack-config.yaml"
@@ -133,7 +125,6 @@ class ConfigTemplateService:
         return updates
 
     def _load_current_versions(self, version_file: Path) -> dict[str, str]:
-        """Load current configuration versions from tracking file."""
         if not version_file.exists():
             return {}
 
@@ -154,7 +145,6 @@ class ConfigTemplateService:
             return {}
 
     def _version_compare(self, version1: str, version2: str) -> int:
-        """Compare two semantic versions. Returns -1, 0, or 1."""
 
         def version_tuple(v: str) -> tuple[int, ...]:
             return tuple(int(x) for x in v.split("."))
@@ -169,7 +159,6 @@ class ConfigTemplateService:
         return 0
 
     def _generate_diff_preview(self, config_type: str, project_path: Path) -> str:
-        """Generate a preview of changes that would be made."""
         if config_type == "pyproject":
             config_file = project_path / "pyproject.toml"
         else:
@@ -194,14 +183,13 @@ class ConfigTemplateService:
     def _create_config_diff(
         self, current: dict[str, t.Any], new: dict[str, t.Any]
     ) -> str:
-        """Create a simple diff between two configurations."""
         changes: list[str] = []
         self._collect_config_changes(current, new, changes)
 
         if not changes:
             return "No changes detected"
 
-        return "\n".join(changes[:10])  # Limit to first 10 changes
+        return "\n".join(changes[:10])
 
     def _collect_config_changes(
         self,
@@ -210,7 +198,6 @@ class ConfigTemplateService:
         changes: list[str],
         path: str = "",
     ) -> None:
-        """Collect configuration changes recursively."""
         self._collect_additions_and_modifications(current, new, changes, path)
         self._collect_removals(current, new, changes, path)
 
@@ -221,7 +208,6 @@ class ConfigTemplateService:
         changes: list[str],
         path: str,
     ) -> None:
-        """Collect additions and modifications in configuration."""
         for key, value in new.items():
             key_path = f"{path}.{key}" if path else key
 
@@ -239,14 +225,12 @@ class ConfigTemplateService:
         changes: list[str],
         path: str,
     ) -> None:
-        """Collect removals in configuration."""
         for key in current:
             if key not in new:
                 key_path = f"{path}.{key}" if path else key
                 changes.append(f"- Remove {key_path}")
 
     def _is_nested_dict(self, new_value: t.Any, current_value: t.Any) -> bool:
-        """Check if both values are dictionaries for nested comparison."""
         return isinstance(new_value, dict) and isinstance(current_value, dict)
 
     def apply_update(
@@ -255,7 +239,6 @@ class ConfigTemplateService:
         project_path: Path,
         interactive: bool = False,
     ) -> bool:
-        """Apply configuration update to project."""
         template = self.get_template(config_type)
         if not template:
             self.console.print(f"[red]❌[/red] Template not found: {config_type}")
@@ -276,7 +259,6 @@ class ConfigTemplateService:
     def _apply_pyproject_update(
         self, template: ConfigVersion, project_path: Path, interactive: bool
     ) -> bool:
-        """Apply pyproject.toml configuration update."""
         config_file = project_path / "pyproject.toml"
 
         if not config_file.exists():
@@ -294,19 +276,19 @@ class ConfigTemplateService:
                 return False
 
         try:
-            # Read existing config
+
             with config_file.open() as f:
                 content = f.read()
                 existing_config = tomli.loads(content)
 
-            # Merge tool sections from template
+
             if "tool" not in existing_config:
                 existing_config["tool"] = {}
 
             for tool_name, tool_config in template.config_data.get("tool", {}).items():
                 existing_config["tool"][tool_name] = tool_config
 
-            # Write back using tomli_w
+
             from tomli_w import dumps
 
             updated_content = dumps(existing_config)
@@ -325,7 +307,6 @@ class ConfigTemplateService:
             return False
 
     def _confirm_update(self) -> bool:
-        """Ask user to confirm update."""
         try:
             response = input("\nApply this update? [y/N]: ").strip().lower()
             return response in ("y", "yes")
@@ -335,7 +316,6 @@ class ConfigTemplateService:
     def _update_version_tracking(
         self, project_path: Path, config_type: str, version: str
     ) -> None:
-        """Update version tracking file."""
         version_file = project_path / ".crackerjack-config.yaml"
 
         data: dict[str, t.Any] = {"version": "1.0.0", "configs": {}}
@@ -359,12 +339,10 @@ class ConfigTemplateService:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
     def _invalidate_cache(self, project_path: Path) -> None:
-        """Invalidate cache to ensure fresh environment."""
-        # No-op in the new system - cache invalidation handled differently
+
         pass
 
     def get_config_hash(self, config_path: Path) -> str:
-        """Generate hash of configuration file for cache invalidation."""
         if not config_path.exists():
             return ""
 
@@ -375,5 +353,4 @@ class ConfigTemplateService:
             return ""
 
     def list_available_templates(self) -> dict[str, str]:
-        """List all available configuration templates."""
         return {name: template.description for name, template in self.templates.items()}

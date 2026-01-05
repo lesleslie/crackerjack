@@ -1,18 +1,3 @@
-"""Complexipy adapter for Crackerjack QA framework - code complexity analysis.
-
-Complexipy analyzes Python code complexity using multiple metrics:
-- Cyclomatic complexity (McCabe)
-- Cognitive complexity
-- Maintainability index
-- Lines of code metrics
-
-Standard Python Patterns:
-- MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No dependency injection
-- Extends BaseToolAdapter for tool execution
-- Async execution with JSON output parsing
-- Centralized output file management via AdapterOutputPaths
-"""
 
 from __future__ import annotations
 
@@ -37,63 +22,31 @@ from crackerjack.models.qa_results import QACheckType
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# Static UUID from registry (NEVER change once set)
+
 MODULE_ID = UUID("33a3f9ff-5fd2-43f5-a6c9-a43917618a17")
 MODULE_STATUS = AdapterStatus.STABLE
 
-# Module-level logger for structured logging
+
 logger = logging.getLogger(__name__)
 
 
 class ComplexipySettings(ToolAdapterSettings):
-    """Settings for Complexipy adapter."""
 
     tool_name: str = "complexipy"
     use_json_output: bool = True
-    max_complexity: int = 15  # crackerjack standard
+    max_complexity: int = 15
     include_cognitive: bool = True
     include_maintainability: bool = True
     sort_by: str = (
-        "desc"  # Valid options: asc, desc, name (sorts by complexity descending)
+        "desc"
     )
 
 
 class ComplexipyAdapter(BaseToolAdapter):
-    """Adapter for Complexipy - code complexity analyzer.
-
-    Analyzes code complexity using multiple metrics:
-    - Cyclomatic complexity (control flow branches)
-    - Cognitive complexity (how hard code is to understand)
-    - Maintainability index (overall code quality score)
-    - Lines of code (LOC, SLOC)
-
-    Features:
-    - JSON output for structured analysis
-    - Configurable complexity thresholds
-    - Multiple complexity metrics
-    - Sortable results
-
-    Example:
-        ```python
-        settings = ComplexipySettings(
-            max_complexity=15,
-            include_cognitive=True,
-            include_maintainability=True,
-        )
-        adapter = ComplexipyAdapter(settings=settings)
-        await adapter.init()
-        result = await adapter.check(files=[Path("src/")])
-        ```
-    """
 
     settings: ComplexipySettings | None = None
 
     def __init__(self, settings: ComplexipySettings | None = None) -> None:
-        """Initialize Complexipy adapter.
-
-        Args:
-            settings: Optional settings override
-        """
         super().__init__(settings=settings)
         logger.debug(
             "ComplexipyAdapter initialized",
@@ -101,9 +54,8 @@ class ComplexipyAdapter(BaseToolAdapter):
         )
 
     async def init(self) -> None:
-        """Initialize adapter with default settings."""
         if not self.settings:
-            # Load max_complexity from pyproject.toml and use it to initialize settings
+
             config_data = self._load_config_from_pyproject()
             max_complexity = config_data.get("max_complexity", 15)
             self.settings = ComplexipySettings(
@@ -128,17 +80,14 @@ class ComplexipyAdapter(BaseToolAdapter):
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         return "Complexipy (Complexity)"
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID."""
         return MODULE_ID
 
     @property
     def tool_name(self) -> str:
-        """CLI tool name."""
         return "complexipy"
 
     def build_command(
@@ -146,39 +95,24 @@ class ComplexipyAdapter(BaseToolAdapter):
         files: list[Path],
         config: QACheckConfig | None = None,
     ) -> list[str]:
-        """Build Complexipy command.
-
-        Args:
-            files: Files/directories to analyze
-            config: Optional configuration override
-
-        Returns:
-            Command as list of strings
-        """
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
         cmd = [self.tool_name]
 
-        # JSON output (complexipy creates timestamped files automatically)
-        # We'll move the file to centralized location after execution
+
         if self.settings.use_json_output:
             cmd.append("--output-json")
 
-        # Max complexity threshold (correct flag: --max-complexity-allowed, not --max-complexity)
-        # Load max_complexity from pyproject.toml configuration instead of settings
+
         config_data = self._load_config_from_pyproject()
         max_complexity = config_data.get("max_complexity", self.settings.max_complexity)
         cmd.extend(["--max-complexity-allowed", str(max_complexity)])
 
-        # NOTE: --cognitive and --maintainability flags don't exist in complexipy
-        # Complexity tool only reports cyclomatic complexity, not cognitive/maintainability
-        # These settings are kept in ComplexipySettings for backwards compatibility but ignored
 
-        # Sort results
         cmd.extend(["--sort", self.settings.sort_by])
 
-        # Add targets - files are already filtered by _get_target_files based on config
+
         cmd.extend([str(f) for f in files])
 
         logger.info(
@@ -196,19 +130,7 @@ class ComplexipyAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-        """Parse Complexipy JSON output into standardized issues.
 
-        Complexipy with --output-json saves JSON to timestamped files in the current
-        directory. We move these files to .crackerjack/outputs/complexipy/ for
-        centralized management.
-
-        Args:
-            result: Raw execution result from Complexipy
-
-        Returns:
-            List of parsed issues
-        """
-        # Move generated complexipy files to centralized location
         json_file = self._move_complexipy_results_to_output_dir()
 
         if (
@@ -234,7 +156,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 )
                 return self._parse_text_output(result.raw_output)
         else:
-            # Fall back to parsing stdout (legacy mode or if JSON file not found)
+
             if not result.raw_output:
                 logger.debug("No output to parse")
                 return []
@@ -265,21 +187,13 @@ class ComplexipyAdapter(BaseToolAdapter):
         return issues
 
     def _process_complexipy_data(self, data: list | dict) -> list[ToolIssue]:
-        """Process the complexipy JSON data to extract issues.
-
-        Args:
-            data: Parsed JSON data from complexipy (flat list or legacy nested dict)
-
-        Returns:
-            List of ToolIssue objects
-        """
         issues: list[ToolIssue] = []
 
         if not self.settings:
             logger.warning("Settings not initialized, cannot parse JSON")
             return issues
 
-        # Handle flat list structure (current complexipy format)
+
         if isinstance(data, list):
             for func in data:
                 complexity = func.get("complexity", 0)
@@ -296,7 +210,7 @@ class ComplexipyAdapter(BaseToolAdapter):
 
                 issue = ToolIssue(
                     file_path=file_path,
-                    line_number=None,  # complexipy JSON doesn't include line numbers
+                    line_number=None,
                     message=f"Function '{function_name}' - Complexity: {complexity}",
                     code="COMPLEXITY",
                     severity=severity,
@@ -305,7 +219,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 issues.append(issue)
             return issues
 
-        # Handle legacy nested structure (backwards compatibility)
+
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
             issues.extend(
@@ -316,15 +230,6 @@ class ComplexipyAdapter(BaseToolAdapter):
     def _process_file_data(
         self, file_path: Path, functions: list[dict]
     ) -> list[ToolIssue]:
-        """Process function data for a specific file.
-
-        Args:
-            file_path: Path of the file being analyzed
-            functions: List of function data from complexipy
-
-        Returns:
-            List of ToolIssue objects for this file
-        """
         issues = []
         for func in functions:
             issue = self._create_issue_if_needed(file_path, func)
@@ -333,21 +238,12 @@ class ComplexipyAdapter(BaseToolAdapter):
         return issues
 
     def _create_issue_if_needed(self, file_path: Path, func: dict) -> ToolIssue | None:
-        """Create an issue if complexity exceeds threshold.
-
-        Args:
-            file_path: Path of the file containing the function
-            func: Function data from complexipy
-
-        Returns:
-            ToolIssue if needed, otherwise None
-        """
         if not self.settings:
             return None
 
         complexity = func.get("complexity", 0)
 
-        # Only report if exceeds threshold
+
         if complexity <= self.settings.max_complexity:
             return None
 
@@ -364,15 +260,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         )
 
     def _build_issue_message(self, func: dict, complexity: int) -> str:
-        """Build the message for a complexity issue.
-
-        Args:
-            func: Function data from complexipy
-            complexity: Complexity value
-
-        Returns:
-            Formatted message string
-        """
         message_parts = [f"Complexity: {complexity}"]
 
         if self.settings and self.settings.include_cognitive:
@@ -386,14 +273,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         return f"Function '{func.get('name', 'unknown')}' - " + ", ".join(message_parts)
 
     def _determine_issue_severity(self, complexity: int) -> str:
-        """Determine the severity of the issue based on complexity.
-
-        Args:
-            complexity: Complexity value
-
-        Returns:
-            "error" or "warning" based on threshold
-        """
         if not self.settings:
             return "warning"
 
@@ -402,14 +281,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         return "warning"
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        """Parse Complexipy text output (fallback).
-
-        Args:
-            output: Text output from Complexipy
-
-        Returns:
-            List of ToolIssue objects
-        """
         issues = []
         lines = output.strip().split("\n")
         current_file: Path | None = None
@@ -431,30 +302,12 @@ class ComplexipyAdapter(BaseToolAdapter):
         return issues
 
     def _update_current_file(self, line: str, current_file: Path | None) -> Path | None:
-        """Update current file based on line content.
-
-        Args:
-            line: Current line from output
-            current_file: Current file path
-
-        Returns:
-            Updated file path
-        """
         if line.strip().startswith("File:"):
             file_str = line.strip().replace("File:", "").strip()
             return Path(file_str)
         return current_file
 
     def _parse_complexity_line(self, line: str, current_file: Path) -> ToolIssue | None:
-        """Parse a line containing complexity information.
-
-        Args:
-            line: Line from text output
-            current_file: Current file path
-
-        Returns:
-            ToolIssue if valid complexity data found, otherwise None
-        """
         if not self.settings:
             return None
 
@@ -479,14 +332,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         return None
 
     def _extract_function_data(self, line: str) -> tuple[str, int, int] | None:
-        """Extract function name, line number, and complexity from a line.
-
-        Args:
-            line: Line from text output
-
-        Returns:
-            Tuple of (function name, line number, complexity) or None
-        """
         line = line.strip()
         if "(" in line and ")" in line and "complexity" in line.lower():
             func_name = line.split("(")[0].strip()
@@ -499,18 +344,12 @@ class ComplexipyAdapter(BaseToolAdapter):
         return None
 
     def _get_check_type(self) -> QACheckType:
-        """Return complexity check type."""
         return QACheckType.COMPLEXITY
 
     def get_default_config(self) -> QACheckConfig:
-        """Get default configuration for Complexipy adapter.
-
-        Returns:
-            QACheckConfig with sensible defaults
-        """
         from crackerjack.models.qa_config import QACheckConfig
 
-        # Load configuration from pyproject.toml to get actual exclude patterns and max_complexity
+
         config_data = self._load_config_from_pyproject()
         exclude_patterns = config_data.get(
             "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
@@ -526,7 +365,7 @@ class ComplexipyAdapter(BaseToolAdapter):
             exclude_patterns=exclude_patterns,
             timeout_seconds=90,
             parallel_safe=True,
-            stage="comprehensive",  # Complexity analysis in comprehensive stage
+            stage="comprehensive",
             settings={
                 "max_complexity": max_complexity,
                 "include_cognitive": True,
@@ -536,11 +375,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         )
 
     def _load_config_from_pyproject(self) -> dict:
-        """Load complexipy configuration from pyproject.toml.
-
-        Returns:
-            Dictionary with complexipy configuration or defaults
-        """
         import tomllib
         from pathlib import Path
 
@@ -556,7 +390,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                     toml_config = tomllib.load(f)
                 complexipy_config = toml_config.get("tool", {}).get("complexipy", {})
 
-                # Load exclude patterns if specified
+
                 exclude_patterns = complexipy_config.get("exclude_patterns")
                 if exclude_patterns:
                     config["exclude_patterns"] = exclude_patterns
@@ -565,7 +399,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                         extra={"exclude_patterns": exclude_patterns},
                     )
 
-                # Load max complexity if specified
+
                 max_complexity = complexipy_config.get("max_complexity")
                 if max_complexity is not None:
                     config["max_complexity"] = max_complexity
@@ -582,31 +416,13 @@ class ComplexipyAdapter(BaseToolAdapter):
         return config
 
     def _load_exclude_patterns_from_config(self) -> list[str]:
-        """Load exclude patterns from pyproject.toml configuration.
-
-        Returns:
-            List of exclude patterns from pyproject.toml or defaults
-        """
         config = self._load_config_from_pyproject()
         return config.get(
             "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
         )
 
     def _move_complexipy_results_to_output_dir(self) -> Path | None:
-        """Move complexipy-generated result files to centralized output directory.
 
-        Complexipy creates timestamped files like:
-        complexipy_results_2025_12_09__07:08:33.json
-
-        This method:
-        1. Finds the most recent complexipy_results_*.json file in project root
-        2. Moves it to .crackerjack/outputs/complexipy/
-        3. Returns the new path
-
-        Returns:
-            Path to moved file in centralized location, or None if no file found
-        """
-        # Find all complexipy result files in project root
         project_root = Path.cwd()
         result_files = sorted(
             project_root.glob("complexipy_results_*.json"),
@@ -618,15 +434,15 @@ class ComplexipyAdapter(BaseToolAdapter):
             logger.debug("No complexipy result files found in project root")
             return None
 
-        # Get the most recent file
+
         source_file = result_files[0]
 
-        # Determine destination in centralized output directory
+
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         dest_file = output_dir / source_file.name
 
         try:
-            # Move the file to centralized location
+
             shutil.move(str(source_file), str(dest_file))
             logger.info(
                 "Moved complexipy results to centralized location",
@@ -636,7 +452,7 @@ class ComplexipyAdapter(BaseToolAdapter):
                 },
             )
 
-            # Clean up old result files (keep only latest 5)
+
             AdapterOutputPaths.cleanup_old_outputs(
                 "complexipy", "complexipy_results_*.json", keep_latest=5
             )
@@ -651,5 +467,5 @@ class ComplexipyAdapter(BaseToolAdapter):
                     "destination": str(dest_file),
                 },
             )
-            # Return source file if move fails (fallback)
+
             return source_file

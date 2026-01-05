@@ -1,4 +1,3 @@
-"""Code pattern descriptions."""
 
 import re
 

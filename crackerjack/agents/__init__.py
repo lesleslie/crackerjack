@@ -1,6 +1,4 @@
-# Lazy imports for agents to avoid loading heavy ML dependencies (numpy, transformers)
-# at package initialization time. Agents are imported when actually needed.
-# This enables fast startup for lightweight tools like check_yaml.
+
 
 from typing import Any
 
@@ -35,12 +33,7 @@ __all__ = [
 ]
 
 
-# Lazy module loader for agent modules
 def __getattr__(name: str) -> Any:
-    """Lazily import agent modules when accessed.
-
-    This prevents heavy ML dependencies from being loaded at package init time.
-    """
     agent_modules = {
         "architect_agent",
         "documentation_agent",
@@ -59,7 +52,7 @@ def __getattr__(name: str) -> Any:
         import importlib
 
         module = importlib.import_module(f".{name}", package="crackerjack.agents")
-        globals()[name] = module  # Cache for future access
+        globals()[name] = module
         return module
 
     msg = f"module '{__name__}' has no attribute '{name}'"

@@ -10,54 +10,41 @@ from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
 
 @t.runtime_checkable
 class ServiceProtocol(t.Protocol):
-    """Base protocol for services with standardized lifecycle methods."""
 
     def initialize(self) -> None:
-        """Initialize service with proper lifecycle management."""
         ...
 
     def cleanup(self) -> None:
-        """Cleanup service resources."""
         ...
 
     def health_check(self) -> bool:
-        """Perform health check for service."""
         ...
 
     def shutdown(self) -> None:
-        """Shutdown service gracefully."""
         ...
 
     def metrics(self) -> dict[str, t.Any]:
-        """Get service metrics."""
         ...
 
     def is_healthy(self) -> bool:
-        """Check if service is healthy."""
         ...
 
     def register_resource(self, resource: t.Any) -> None:
-        """Register resource for cleanup."""
         ...
 
     def cleanup_resource(self, resource: t.Any) -> None:
-        """Cleanup specific resource."""
         ...
 
     def record_error(self, error: Exception) -> None:
-        """Record service error for monitoring."""
         ...
 
     def increment_requests(self) -> None:
-        """Increment request counter."""
         ...
 
     def get_custom_metric(self, name: str) -> t.Any:
-        """Get custom service metric."""
         ...
 
     def set_custom_metric(self, name: str, value: t.Any) -> None:
-        """Set custom service metric."""
         ...
 
 
@@ -199,7 +186,7 @@ class HookManager(t.Protocol):
 
         def get_hook_count(self, suite_name: str) -> int: ...
 
-        # Progress callback attributes for PhaseCoordinator integration
+
         _progress_callback: t.Callable[[int, int], None] | None
         _progress_start_callback: t.Callable[[int, int], None] | None
 
@@ -258,7 +245,6 @@ class InitializationServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class SmartSchedulingServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for smart scheduling service."""
 
     def should_scheduled_init(self) -> bool: ...
 
@@ -283,7 +269,6 @@ class UnifiedConfigurationServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class ConfigIntegrityServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for config integrity service."""
 
     def check_config_integrity(self) -> bool: ...
 
@@ -301,7 +286,6 @@ class TestManagerProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class BoundedStatusOperationsProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for bounded status operations service."""
 
     async def execute_bounded_operation(
         self,
@@ -403,7 +387,6 @@ class HookLockManagerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class DocumentationServiceProtocol(ServiceProtocol, t.Protocol):
-    """Service for automated documentation generation and maintenance."""
 
     def extract_api_documentation(
         self, source_paths: list[Path]
@@ -422,7 +405,6 @@ class DocumentationServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class APIExtractorProtocol(t.Protocol):
-    """Protocol for extracting API documentation from source code."""
 
     def extract_from_python_files(self, files: list[Path]) -> dict[str, t.Any]: ...
 
@@ -439,7 +421,6 @@ class APIExtractorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class DocumentationGeneratorProtocol(t.Protocol):
-    """Protocol for generating documentation from extracted data."""
 
     def generate_api_reference(self, api_data: dict[str, t.Any]) -> str: ...
 
@@ -460,7 +441,6 @@ class DocumentationGeneratorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class DocumentationValidatorProtocol(t.Protocol):
-    """Protocol for validating documentation quality and consistency."""
 
     def validate_links(self, doc_content: str) -> list[dict[str, str]]: ...
 
@@ -479,7 +459,6 @@ class DocumentationValidatorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class LoggerProtocol(t.Protocol):
-    """Protocol for structured logging interface."""
 
     def info(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
@@ -494,7 +473,6 @@ class LoggerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class ConfigManagerProtocol(t.Protocol):
-    """Protocol for configuration management."""
 
     def get(self, key: str, default: t.Any = None) -> t.Any: ...
 
@@ -507,7 +485,6 @@ class ConfigManagerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class FileSystemServiceProtocol(t.Protocol):
-    """Protocol for file system operations."""
 
     def read_file(self, path: str | Path) -> str: ...
 
@@ -522,7 +499,6 @@ class FileSystemServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for enhanced file system service."""
 
     def read_file(self, path: str | Path) -> str: ...
 
@@ -557,16 +533,10 @@ class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class QAAdapterProtocol(t.Protocol):
-    """Protocol for quality assurance adapters.
 
-    All QA adapters must implement this protocol to ensure compatibility
-    with the QA orchestration system.
-    """
-
-    settings: t.Any | None  # QABaseSettings
+    settings: t.Any | None
 
     async def init(self) -> None:
-        """Initialize adapter (standard method)."""
         ...
 
     async def check(
@@ -574,355 +544,184 @@ class QAAdapterProtocol(t.Protocol):
         files: list[Path] | None = None,
         config: t.Any | None = None,
     ) -> t.Any:
-        """Execute the quality assurance check.
-
-        Args:
-            files: List of files to check (None = all matching files)
-            config: Optional configuration override for this check
-
-        Returns:
-            QAResult containing the check execution results
-        """
         ...
 
     async def validate_config(self, config: t.Any) -> bool:
-        """Validate that the provided configuration is valid.
-
-        Args:
-            config: Configuration to validate
-
-        Returns:
-            True if configuration is valid, False otherwise
-        """
         ...
 
     def get_default_config(self) -> t.Any:
-        """Get the default configuration for this adapter.
-
-        Returns:
-            QACheckConfig with sensible defaults for this check
-        """
         ...
 
     async def health_check(self) -> dict[str, t.Any]:
-        """Check adapter health (standard method).
-
-        Returns:
-            Dictionary with health status and metadata
-        """
         ...
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         ...
 
     @property
     def module_id(self) -> t.Any:
-        """Reference to module-level MODULE_ID (UUID)."""
         ...
 
 
 @t.runtime_checkable
 class QAOrchestratorProtocol(t.Protocol):
-    """Protocol for QA orchestration service.
-
-    Coordinates multiple QA adapters, handles parallel execution,
-    caching, and result aggregation.
-    """
 
     async def run_checks(
         self,
         stage: str = "fast",
         files: list[Path] | None = None,
     ) -> list[t.Any]:
-        """Run QA checks for specified stage.
-
-        Args:
-            stage: Execution stage ('fast' or 'comprehensive')
-            files: Optional list of files to check
-
-        Returns:
-            List of QAResult objects
-        """
         ...
 
     async def run_all_checks(
         self,
         files: list[Path] | None = None,
     ) -> dict[str, t.Any]:
-        """Run all registered QA checks.
-
-        Args:
-            files: Optional list of files to check
-
-        Returns:
-            Dictionary mapping adapter names to results
-        """
         ...
 
     def register_adapter(self, adapter: QAAdapterProtocol) -> None:
-        """Register a QA adapter.
-
-        Args:
-            adapter: QA adapter to register
-        """
         ...
 
     def get_adapter(self, name: str) -> QAAdapterProtocol | None:
-        """Get registered adapter by name.
-
-        Args:
-            name: Adapter name
-
-        Returns:
-            Adapter if found, None otherwise
-        """
         ...
-
-
-# ==================== Hook Orchestration Protocols (Phase 3) ====================
 
 
 @t.runtime_checkable
 class ExecutionStrategyProtocol(t.Protocol):
-    """Protocol for hook execution strategies.
-
-    Implementations:
-    - ParallelExecutionStrategy: Concurrent execution with resource limits
-    - SequentialExecutionStrategy: One-at-a-time execution for dependencies
-    """
 
     async def execute(
         self,
-        hooks: list[t.Any],  # HookDefinition
+        hooks: list[t.Any],
         max_parallel: int = 3,
         timeout: int = 300,
-    ) -> list[t.Any]:  # list[HookResult]
-        """Execute hooks according to strategy.
-
-        Args:
-            hooks: List of hook definitions to execute
-            max_parallel: Maximum concurrent executions (ignored for sequential)
-            timeout: Default timeout per hook in seconds
-
-        Returns:
-            List of HookResult objects
-        """
+    ) -> list[t.Any]:
         ...
 
     def get_execution_order(
         self,
-        hooks: list[t.Any],  # HookDefinition
-    ) -> list[list[t.Any]]:  # list[list[HookDefinition]]
-        """Return batches of hooks for execution.
-
-        Sequential strategy returns one hook per batch.
-        Parallel strategy groups independent hooks into batches.
-
-        Args:
-            hooks: List of hook definitions
-
-        Returns:
-            List of hook batches for execution
-        """
+        hooks: list[t.Any],
+    ) -> list[list[t.Any]]:
         ...
 
 
 @t.runtime_checkable
 class CacheStrategyProtocol(t.Protocol):
-    """Protocol for result caching strategies.
 
-    Implementations:
-    - ToolProxyCacheAdapter: Bridges to existing tool_proxy cache
-    - RedisCacheAdapter: Redis-backed caching (Phase 4+)
-    - MemoryCacheAdapter: In-memory LRU cache for testing
-    """
-
-    async def get(self, key: str) -> t.Any | None:  # HookResult | None
-        """Retrieve cached result.
-
-        Args:
-            key: Cache key (computed from hook + file content)
-
-        Returns:
-            Cached HookResult if found, None otherwise
-        """
+    async def get(self, key: str) -> t.Any | None:
         ...
 
     async def set(self, key: str, result: t.Any, ttl: int = 3600) -> None:
-        """Cache result with TTL.
-
-        Args:
-            key: Cache key
-            result: HookResult to cache
-            ttl: Time-to-live in seconds
-        """
         ...
 
     def compute_key(self, hook: t.Any, files: list[Path]) -> str:
-        """Compute cache key from hook and file content.
-
-        Key format: {hook_name}:{config_hash}:{content_hash}
-
-        Args:
-            hook: HookDefinition
-            files: List of files being checked
-
-        Returns:
-            Cache key string
-        """
         ...
 
 
 @t.runtime_checkable
 class HookOrchestratorProtocol(t.Protocol):
-    """Protocol for hook orchestration.
-
-    The orchestrator manages hook lifecycle, dependency resolution,
-    and execution strategies. Supports dual execution mode for migration.
-    """
 
     async def init(self) -> None:
-        """Initialize orchestrator and build dependency graph."""
         ...
 
     async def execute_strategy(
         self,
-        strategy: t.Any,  # HookStrategy
+        strategy: t.Any,
         execution_mode: str | None = None,
         execution_context: t.Any | None = None,
-    ) -> list[t.Any]:  # list[HookResult]
-        """Execute hook strategy with specified mode.
-
-        Args:
-            strategy: HookStrategy (fast or comprehensive)
-            execution_mode: Optional execution mode label.
-            execution_context: Context containing options and execution environment
-
-        Returns:
-            List of HookResult objects
-        """
+    ) -> list[t.Any]:
         ...
 
     @property
-    def module_id(self) -> t.Any:  # UUID
-        """Reference to module-level MODULE_ID."""
+    def module_id(self) -> t.Any:
         ...
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         ...
-
-
-# ==================== Performance & Quality Protocols ====================
 
 
 @t.runtime_checkable
 class PerformanceMonitorProtocol(t.Protocol):
-    """Protocol for performance monitoring."""
 
     def start_workflow(self, workflow_id: str) -> None:
-        """Start monitoring a workflow."""
         ...
 
     def end_workflow(
         self, workflow_id: str, success: bool = True
-    ) -> t.Any:  # WorkflowPerformance
-        """End workflow monitoring and return performance data."""
+    ) -> t.Any:
         ...
 
     def start_phase(self, workflow_id: str, phase_name: str) -> None:
-        """Start monitoring a phase."""
         ...
 
     def end_phase(
         self, workflow_id: str, phase_name: str, success: bool = True
-    ) -> t.Any:  # PhasePerformance
-        """End phase monitoring and return performance data."""
+    ) -> t.Any:
         ...
 
     def get_performance_summary(self, last_n_workflows: int = 10) -> dict[str, t.Any]:
-        """Get performance summary for recent workflows."""
         ...
 
     def get_benchmark_trends(self) -> dict[str, dict[str, t.Any]]:
-        """Get benchmark trend analysis."""
         ...
 
 
 @t.runtime_checkable
 class MemoryOptimizerProtocol(t.Protocol):
-    """Protocol for memory optimization."""
 
     def record_checkpoint(self, name: str = "") -> float:
-        """Record a memory checkpoint and return current usage."""
         ...
 
     def get_stats(self) -> dict[str, t.Any]:
-        """Get memory optimization statistics."""
         ...
 
 
 @t.runtime_checkable
 class PerformanceCacheProtocol(t.Protocol):
-    """Protocol for performance caching."""
 
     def get(self, key: str) -> ExecutionResult | None:
-        """Get cached value."""
         ...
 
     def set(self, key: str, value: ExecutionResult, ttl: int = 3600) -> None:
-        """Set cached value with TTL."""
         ...
 
     def invalidate(self, key: str) -> bool:
-        """Invalidate cache entry."""
         ...
 
     def clear_all(self) -> None:
-        """Clear all cache entries."""
         ...
 
 
 @t.runtime_checkable
 class QualityBaselineProtocol(t.Protocol):
-    """Protocol for quality baseline tracking."""
 
     def get_current_baseline(self) -> dict[str, t.Any]:
-        """Get current baseline metrics."""
         ...
 
     def update_baseline(self, metrics: dict[str, t.Any]) -> bool:
-        """Update baseline with new metrics."""
         ...
 
     def compare(self, current: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Compare current metrics against baseline."""
         ...
 
 
 @t.runtime_checkable
 class ParallelExecutorProtocol(t.Protocol):
-    """Protocol for parallel task execution."""
 
     async def execute_parallel(
         self,
         tasks: list[t.Any],
         max_workers: int = 3,
     ) -> list[t.Any]:
-        """Execute tasks in parallel."""
         ...
 
     def get_results(self) -> list[t.Any]:
-        """Get execution results."""
         ...
 
 
 @t.runtime_checkable
 class ParallelHookExecutorProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for parallel hook executor service."""
 
     async def execute_hooks_parallel(
         self,
@@ -933,7 +732,6 @@ class ParallelHookExecutorProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class AsyncCommandExecutorProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for async command executor service."""
 
     async def execute_command(
         self,
@@ -952,7 +750,6 @@ class AsyncCommandExecutorProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class PerformanceBenchmarkProtocol(t.Protocol):
-    """Protocol for performance benchmarking."""
 
     def run_benchmark(self, operation: str) -> dict[str, t.Any]: ...
 
@@ -967,18 +764,16 @@ class PerformanceBenchmarkProtocol(t.Protocol):
 
 @t.runtime_checkable
 class PerformanceBenchmarkServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for performance benchmark service."""
 
-    async def run_benchmark_suite(self) -> t.Any | None: ...  # BenchmarkSuite
+    async def run_benchmark_suite(self) -> t.Any | None: ...
 
     def export_results(
         self, suite: t.Any, output_path: Path
-    ) -> None: ...  # BenchmarkSuite
+    ) -> None: ...
 
 
 @t.runtime_checkable
 class DebugServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for AI agent debugging services."""
 
     def start_debug_session(self, session_id: str) -> None: ...
 
@@ -1012,81 +807,62 @@ class DebugServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class QualityIntelligenceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for quality intelligence services."""
 
     def analyze_quality_trends(self) -> dict[str, t.Any]:
-        """Analyze quality trends."""
         ...
 
     def predict_quality_issues(self) -> list[dict[str, t.Any]]:
-        """Predict potential quality issues."""
         ...
 
     def recommend_improvements(self) -> list[dict[str, t.Any]]:
-        """Recommend quality improvements."""
         ...
 
     def get_intelligence_report(self) -> dict[str, t.Any]:
-        """Get quality intelligence report."""
         ...
 
 
 @t.runtime_checkable
 class CoverageRatchetServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for coverage ratchet services."""
 
     def get_current_coverage(self) -> float:
-        """Get current test coverage percentage."""
         ...
 
     def get_coverage_history(self) -> list[dict[str, t.Any]]:
-        """Get coverage history."""
         ...
 
     def check_coverage_increase(self) -> bool:
-        """Check if coverage has increased."""
         ...
 
     def get_next_milestone(self) -> float | None:
-        """Get the next coverage milestone."""
         ...
 
     def update_coverage_baseline(self, new_baseline: float) -> bool:
-        """Update the coverage baseline."""
         ...
 
 
 @t.runtime_checkable
 class ServerManagerProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for server management services."""
 
     def find_processes(self, process_name: str) -> list[dict[str, t.Any]]:
-        """Find running processes matching name."""
         ...
 
     def start_server(self, command: list[str]) -> bool:
-        """Start a server."""
         ...
 
     def stop_server(self, process_id: int) -> bool:
-        """Stop a server."""
         ...
 
     def restart_server(self, command: list[str]) -> bool:
-        """Restart a server."""
         ...
 
     def get_server_status(self) -> dict[str, t.Any]:
-        """Get server status information."""
         ...
 
 
 @t.runtime_checkable
 class LogManagementProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for log management services."""
 
     def get_log_manager(self) -> t.Any:
-        """Get log management instance."""
         ...
 
     def setup_structured_logging(
@@ -1096,26 +872,19 @@ class LogManagementProtocol(ServiceProtocol, t.Protocol):
         json_output: bool = False,
         log_file: Path | None = None,
     ) -> None:
-        """Setup structured logging."""
         ...
 
     def write_log(self, message: str, level: str = "INFO") -> None:
-        """Write a log message."""
         ...
 
     def get_logs(
         self, filter_criteria: dict[str, t.Any] | None = None
     ) -> list[dict[str, t.Any]]:
-        """Get logs based on filter criteria."""
         ...
-
-
-# Protocol definitions for services imported directly in managers
 
 
 @t.runtime_checkable
 class RegexPatternsProtocol(t.Protocol):
-    """Protocol for regex patterns service."""
 
     def update_pyproject_version(self, content: str, new_version: str) -> str: ...
 
@@ -1128,26 +897,24 @@ class RegexPatternsProtocol(t.Protocol):
 
 @t.runtime_checkable
 class SecureStatusFormatterProtocol(t.Protocol):
-    """Protocol for secure status formatter service."""
 
     def format_status(
         self,
         status_data: dict[str, t.Any],
-        verbosity: t.Any,  # StatusVerbosity
+        verbosity: t.Any,
         user_context: str | None = None,
     ) -> dict[str, t.Any]: ...
 
     def format_error_response(
         self,
         error_message: str,
-        verbosity: t.Any,  # StatusVerbosity
+        verbosity: t.Any,
         include_details: bool = False,
     ) -> dict[str, t.Any]: ...
 
 
 @t.runtime_checkable
 class GitServiceProtocol(t.Protocol):
-    """Protocol for Git service."""
 
     def get_current_branch(self) -> str: ...
 
@@ -1170,7 +937,6 @@ class GitServiceProtocol(t.Protocol):
 
 @t.runtime_checkable
 class SmartFileFilterProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for smart file filter service."""
 
     def get_changed_files(self, since: str = "HEAD") -> list[Path]: ...
 
@@ -1195,7 +961,6 @@ class SmartFileFilterProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class SafeFileModifierProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for safe file modification service."""
 
     async def apply_fix(
         self,
@@ -1208,31 +973,28 @@ class SafeFileModifierProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class VersionAnalyzerProtocol(t.Protocol):
-    """Protocol for version analysis service."""
 
     async def recommend_version_bump(
         self, since_version: str | None = None
-    ) -> t.Any: ...  # Returns VersionBumpRecommendation
+    ) -> t.Any: ...
 
 
 @t.runtime_checkable
 class HealthMetricsServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for health metrics service."""
 
-    def collect_current_metrics(self) -> t.Any: ...  # ProjectHealth
+    def collect_current_metrics(self) -> t.Any: ...
 
     def analyze_project_health(
         self, save_metrics: bool = True
-    ) -> t.Any: ...  # ProjectHealth
+    ) -> t.Any: ...
 
-    def report_health_status(self, health: t.Any) -> None: ...  # ProjectHealth
+    def report_health_status(self, health: t.Any) -> None: ...
 
     def get_health_trend_summary(self, days: int = 30) -> dict[str, t.Any]: ...
 
 
 @t.runtime_checkable
 class ChangelogGeneratorProtocol(t.Protocol):
-    """Protocol for changelog generation service."""
 
     def generate_changelog_from_commits(
         self, changelog_path: Path, version: str, since_version: str | None = None
@@ -1241,139 +1003,60 @@ class ChangelogGeneratorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class CoverageBadgeServiceProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for coverage badge service."""
 
     def update_readme_coverage_badge(self, coverage_percent: float) -> bool: ...
 
     def should_update_badge(self, coverage_percent: float) -> bool: ...
 
 
-# ============================================================================
-# Agent System Protocols (Phase 4)
-# ============================================================================
-
-
 @t.runtime_checkable
 class AgentCoordinatorProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for agent coordination and issue handling.
-
-    The AgentCoordinator manages a pool of specialized AI agents that can
-    diagnose and fix various code quality issues. It routes issues to
-    appropriate agents, handles agent execution, and aggregates results.
-    """
 
     def initialize_agents(self) -> None:
-        """Initialize all registered agents."""
         ...
 
     async def handle_issues(
         self, issues: list[t.Any]
-    ) -> t.Any:  # list[Issue] -> FixResult
-        """Handle a batch of issues using appropriate specialist agents.
-
-        Args:
-            issues: List of Issue objects to be processed
-
-        Returns:
-            FixResult containing success status, confidence, and applied fixes
-        """
+    ) -> t.Any:
         ...
 
     async def handle_issues_proactively(
         self, issues: list[t.Any]
-    ) -> t.Any:  # list[Issue] -> FixResult
-        """Handle issues with proactive architectural planning.
-
-        Uses ArchitectAgent to create a strategic plan before applying fixes.
-
-        Args:
-            issues: List of Issue objects to be processed
-
-        Returns:
-            FixResult containing success status, confidence, and applied fixes
-        """
+    ) -> t.Any:
         ...
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
-        """Get capabilities of all registered agents.
-
-        Returns:
-            Dict mapping agent names to their supported issue types and metadata
-        """
         ...
 
     def set_proactive_mode(self, enabled: bool) -> None:
-        """Enable or disable proactive architectural planning mode.
-
-        Args:
-            enabled: Whether to use proactive planning
-        """
         ...
 
 
 @t.runtime_checkable
 class AgentTrackerProtocol(t.Protocol):
-    """Protocol for tracking agent execution and metrics.
-
-    The AgentTracker monitors agent activity, collects performance metrics,
-    and provides insights into agent effectiveness and success rates.
-    """
 
     def register_agents(self, agent_types: list[str]) -> None:
-        """Register agent types for tracking.
-
-        Args:
-            agent_types: List of agent class names
-        """
         ...
 
     def set_coordinator_status(self, status: str) -> None:
-        """Set the overall coordinator status.
-
-        Args:
-            status: Status string (e.g., 'active', 'idle', 'processing')
-        """
         ...
 
     def track_agent_processing(
         self, agent_name: str, issue: t.Any, confidence: float
-    ) -> None:  # issue: Issue
-        """Track when an agent begins processing an issue.
-
-        Args:
-            agent_name: Name of the agent
-            issue: Issue being processed
-            confidence: Agent's confidence in handling this issue (0.0-1.0)
-        """
+    ) -> None:
         ...
 
     def track_agent_complete(
         self, agent_name: str, result: t.Any
-    ) -> None:  # result: FixResult
-        """Track agent completion and results.
-
-        Args:
-            agent_name: Name of the agent
-            result: FixResult from agent execution
-        """
+    ) -> None:
         ...
 
     def get_agent_stats(self) -> dict[str, t.Any]:
-        """Get aggregate statistics for all agents.
-
-        Returns:
-            Dict containing success rates, average confidence, etc.
-        """
         ...
 
 
 @t.runtime_checkable
 class AgentDebuggerProtocol(t.Protocol):
-    """Protocol for agent debugging and activity logging.
-
-    The AgentDebugger provides detailed logging for agent activities,
-    enabling troubleshooting and performance analysis.
-    """
 
     def log_agent_activity(
         self,
@@ -1381,148 +1064,54 @@ class AgentDebuggerProtocol(t.Protocol):
         activity: str,
         **metadata: t.Any,
     ) -> None:
-        """Log an agent activity with optional metadata.
-
-        Args:
-            agent_name: Name of the agent
-            activity: Activity type (e.g., 'processing_started', 'processing_completed')
-            **metadata: Additional context (issue_id, confidence, result, etc.)
-        """
         ...
 
     def get_activity_log(
         self, agent_name: str | None = None, limit: int = 100
     ) -> list[dict[str, t.Any]]:
-        """Get recent activity log entries.
-
-        Args:
-            agent_name: Optional filter by agent name
-            limit: Maximum number of entries to return
-
-        Returns:
-            List of activity log entries
-        """
         ...
 
     def enable_verbose_mode(self, enabled: bool = True) -> None:
-        """Enable or disable verbose debugging mode.
-
-        Args:
-            enabled: Whether to enable verbose output
-        """
         ...
-
-
-# ============================================================================
-# Orchestration Protocols (Phase 4)
-# ============================================================================
 
 
 @t.runtime_checkable
 class ServiceWatchdogProtocol(ServiceProtocol, t.Protocol):
-    """Protocol for service health monitoring and restart coordination.
 
-    The ServiceWatchdog monitors long-running services (MCP server, WebSocket
-    server, LSP servers) and automatically restarts them on failure.
-    """
-
-    def register_service(self, config: t.Any) -> None:  # config: ServiceConfig
-        """Register a service for monitoring.
-
-        Args:
-            config: ServiceConfig with command, health checks, and restart policy
-        """
+    def register_service(self, config: t.Any) -> None:
         ...
 
     async def start(self) -> None:
-        """Start the watchdog monitoring loop."""
         ...
 
     async def stop(self) -> None:
-        """Stop the watchdog and shutdown monitored services."""
         ...
 
     async def restart_service(self, service_name: str) -> bool:
-        """Manually restart a specific service.
-
-        Args:
-            service_name: Name of service to restart
-
-        Returns:
-            True if restart successful
-        """
         ...
 
     def get_service_status(
         self, service_name: str
-    ) -> t.Any | None:  # ServiceStatus | None
-        """Get current status of a specific service.
-
-        Args:
-            service_name: Name of service
-
-        Returns:
-            ServiceStatus object or None if not found
-        """
+    ) -> t.Any | None:
         ...
 
-    def get_all_services_status(self) -> dict[str, t.Any]:  # dict[str, ServiceStatus]
-        """Get status of all monitored services.
-
-        Returns:
-            Dict mapping service names to ServiceStatus objects
-        """
+    def get_all_services_status(self) -> dict[str, t.Any]:
         ...
 
     async def check_service_health(self, service_name: str) -> bool:
-        """Perform health check on a specific service.
-
-        Args:
-            service_name: Name of service to check
-
-        Returns:
-            True if service is healthy
-        """
         ...
 
 
 @t.runtime_checkable
 class TimeoutManagerProtocol(t.Protocol):
-    """Protocol for timeout management and strategies.
-
-    The TimeoutManager provides centralized timeout configuration for
-    various operations (hooks, tests, service startups, etc).
-    """
 
     def get_timeout(self, operation: str) -> float:
-        """Get timeout for a specific operation type.
-
-        Args:
-            operation: Operation type (e.g., 'hook_execution', 'test_run')
-
-        Returns:
-            Timeout in seconds
-        """
         ...
 
     def set_timeout(self, operation: str, timeout: float) -> None:
-        """Set timeout for a specific operation type.
-
-        Args:
-            operation: Operation type
-            timeout: Timeout in seconds
-        """
         ...
 
-    def get_strategy(self, operation: str) -> t.Any:  # TimeoutStrategy
-        """Get timeout strategy for an operation.
-
-        Args:
-            operation: Operation type
-
-        Returns:
-            TimeoutStrategy enum value
-        """
+    def get_strategy(self, operation: str) -> t.Any:
         ...
 
     def apply_timeout(
@@ -1532,18 +1121,4 @@ class TimeoutManagerProtocol(t.Protocol):
         *args: t.Any,
         **kwargs: t.Any,
     ) -> t.Any:
-        """Apply timeout to a function execution.
-
-        Args:
-            operation: Operation type (determines timeout value)
-            func: Function to execute with timeout
-            *args: Positional arguments for function
-            **kwargs: Keyword arguments for function
-
-        Returns:
-            Function result
-
-        Raises:
-            TimeoutError: If operation exceeds timeout
-        """
         ...

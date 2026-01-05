@@ -1,4 +1,3 @@
-"""Enhanced Quality Baseline Service with trending, alerts, and export capabilities."""
 
 import json
 import typing as t
@@ -15,7 +14,6 @@ from crackerjack.services.quality.quality_baseline import (
 
 
 class TrendDirection(str, Enum):
-    """Quality trend direction."""
 
     IMPROVING = "improving"
     DECLINING = "declining"
@@ -24,7 +22,6 @@ class TrendDirection(str, Enum):
 
 
 class AlertSeverity(str, Enum):
-    """Alert severity levels."""
 
     INFO = "info"
     WARNING = "warning"
@@ -33,11 +30,10 @@ class AlertSeverity(str, Enum):
 
 @dataclass
 class QualityTrend:
-    """Quality trend analysis over time."""
 
     direction: TrendDirection
-    change_rate: float  # Points per day
-    confidence: float  # 0.0 to 1.0
+    change_rate: float
+    confidence: float
     period_days: int
     recent_scores: list[int] = field(default_factory=list)
 
@@ -47,7 +43,6 @@ class QualityTrend:
 
 @dataclass
 class QualityAlert:
-    """Quality alert for significant changes."""
 
     severity: AlertSeverity
     message: str
@@ -65,7 +60,6 @@ class QualityAlert:
 
 @dataclass
 class UnifiedMetrics:
-    """Unified metrics for real-time monitoring dashboard."""
 
     timestamp: datetime
     quality_score: int
@@ -84,9 +78,8 @@ class UnifiedMetrics:
 
 @dataclass
 class SystemHealthStatus:
-    """System health status for monitoring."""
 
-    overall_status: str  # "healthy", "warning", "critical"
+    overall_status: str
     cpu_usage: float
     memory_usage: float
     disk_usage: float
@@ -98,7 +91,6 @@ class SystemHealthStatus:
 
 @dataclass
 class DashboardState:
-    """Complete dashboard state for real-time monitoring."""
 
     current_metrics: UnifiedMetrics
     historical_data: list[UnifiedMetrics]
@@ -120,7 +112,6 @@ class DashboardState:
 
 @dataclass
 class QualityReport:
-    """Comprehensive quality report."""
 
     current_metrics: QualityMetrics | None
     trend: QualityTrend | None
@@ -143,7 +134,6 @@ class QualityReport:
 
 
 class EnhancedQualityBaselineService(QualityBaselineService):
-    """Enhanced quality baseline service with advanced analytics."""
 
     def __init__(
         self,
@@ -152,39 +142,38 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     ) -> None:
         super().__init__(cache)
         self.alert_thresholds = alert_thresholds or {
-            "quality_score_drop": 10.0,  # Alert if score drops by 10+ points
-            "coverage_drop": 5.0,  # Alert if coverage drops by 5%+
-            "test_pass_rate_drop": 10.0,  # Alert if pass rate drops by 10%+
-            "security_issues_increase": 1,  # Alert on any security issue increase
-            "type_errors_threshold": 10,  # Alert if type errors exceed 10
+            "quality_score_drop": 10.0,
+            "coverage_drop": 5.0,
+            "test_pass_rate_drop": 10.0,
+            "security_issues_increase": 1,
+            "type_errors_threshold": 10,
         }
 
     def analyze_quality_trend(
         self, days: int = 30, min_data_points: int = 5
     ) -> QualityTrend | None:
-        """Analyze quality trend over specified period."""
         baselines = self.get_recent_baselines(
             limit=days * 2
-        )  # Get more data for analysis
+        )
 
         if len(baselines) < min_data_points:
             return None
 
-        # Filter to specified period
+
         cutoff_date = datetime.now() - timedelta(days=days)
         recent_baselines = [b for b in baselines if b.timestamp >= cutoff_date]
 
         if len(recent_baselines) < min_data_points:
             return None
 
-        # Calculate trend
+
         scores = [b.quality_score for b in recent_baselines]
         timestamps = [
             (b.timestamp - cutoff_date).total_seconds() / 86400
             for b in recent_baselines
         ]
 
-        # Simple linear regression for trend
+
         n = len(scores)
         sum_x = sum(timestamps)
         sum_y = sum(scores)
@@ -196,7 +185,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         else:
             slope = (n * sum_xy - sum_x * sum_y) / (n * sum_x2 - sum_x * sum_x)
 
-        # Determine direction and confidence
+
         abs_slope = abs(slope)
 
         if abs_slope < 0.1:
@@ -206,15 +195,15 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         else:
             direction = TrendDirection.DECLINING
 
-        # Calculate volatility (standard deviation of scores)
+
         mean_score = sum(scores) / len(scores)
         variance = sum((score - mean_score) ** 2 for score in scores) / len(scores)
         volatility = variance**0.5
 
-        if volatility > 15:  # High volatility threshold
+        if volatility > 15:
             direction = TrendDirection.VOLATILE
 
-        # Confidence based on data consistency and amount
+
         confidence = min(1.0, (len(scores) / 10) * (1 / (volatility + 1)))
 
         return QualityTrend(
@@ -222,20 +211,19 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             change_rate=slope,
             confidence=confidence,
             period_days=days,
-            recent_scores=scores[-10:],  # Last 10 scores
+            recent_scores=scores[-10:],
         )
 
     def check_quality_alerts(
         self, current_metrics: dict[str, t.Any], baseline_git_hash: str | None = None
     ) -> list[QualityAlert]:
-        """Check for quality alerts based on thresholds."""
         alerts: list[QualityAlert] = []
         baseline = self.get_baseline(baseline_git_hash)
 
         if not baseline:
             return alerts
 
-        # Filter metrics to only include parameters that calculate_quality_score accepts
+
         score_metrics = {
             k: v
             for k, v in current_metrics.items()
@@ -253,7 +241,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         current_score = self.calculate_quality_score(**score_metrics)
         git_hash = self.get_current_git_hash()
 
-        # Quality score drop alert
+
         score_drop = baseline.quality_score - current_score
         if score_drop >= self.alert_thresholds["quality_score_drop"]:
             alerts.append(
@@ -271,7 +259,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 )
             )
 
-        # Coverage drop alert
+
         coverage_drop = baseline.coverage_percent - current_metrics.get(
             "coverage_percent", 0
         )
@@ -289,7 +277,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 )
             )
 
-        # Security issues increase alert
+
         security_increase = (
             current_metrics.get("security_issues", 0) - baseline.security_issues
         )
@@ -308,7 +296,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 )
             )
 
-        # Type errors threshold alert
+
         type_errors = current_metrics.get("type_errors", 0)
         if type_errors >= self.alert_thresholds["type_errors_threshold"]:
             alerts.append(
@@ -331,10 +319,9 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         trend: QualityTrend | None,
         alerts: list[QualityAlert],
     ) -> list[str]:
-        """Generate actionable recommendations."""
         recommendations: list[str] = []
 
-        # Generate different types of recommendations
+
         self._add_coverage_recommendations(current_metrics, recommendations)
         self._add_error_recommendations(current_metrics, recommendations)
         self._add_trend_recommendations(trend, recommendations)
@@ -346,7 +333,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def _add_coverage_recommendations(
         self, metrics: dict[str, t.Any], recommendations: list[str]
     ) -> None:
-        """Add coverage-based recommendations."""
         coverage = metrics.get("coverage_percent", 0)
         if coverage < 80:
             recommendations.append(
@@ -360,7 +346,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def _add_error_recommendations(
         self, metrics: dict[str, t.Any], recommendations: list[str]
     ) -> None:
-        """Add error-based recommendations."""
         type_errors = metrics.get("type_errors", 0)
         if type_errors > 0:
             recommendations.append(
@@ -376,7 +361,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def _add_trend_recommendations(
         self, trend: QualityTrend | None, recommendations: list[str]
     ) -> None:
-        """Add trend-based recommendations."""
         if not trend:
             return
 
@@ -393,7 +377,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def _add_alert_recommendations(
         self, alerts: list[QualityAlert], recommendations: list[str]
     ) -> None:
-        """Add alert-based recommendations."""
         critical_alerts = [a for a in alerts if a.severity == AlertSeverity.CRITICAL]
         if critical_alerts:
             recommendations.append(
@@ -403,7 +386,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def _add_general_recommendations(
         self, metrics: dict[str, t.Any], recommendations: list[str]
     ) -> None:
-        """Add general recommendations."""
         hook_failures = metrics.get("hook_failures", 0)
         if hook_failures > 0:
             recommendations.append(
@@ -413,13 +395,12 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def generate_comprehensive_report(
         self, current_metrics: dict[str, t.Any] | None = None, days: int = 30
     ) -> QualityReport:
-        """Generate comprehensive quality report."""
-        # Get current metrics or create from latest baseline
+
         current_baseline = None
         if current_metrics:
             git_hash = self.get_current_git_hash()
             if git_hash:
-                # Filter metrics to only include parameters that calculate_quality_score accepts
+
                 score_metrics = {
                     k: v
                     for k, v in current_metrics.items()
@@ -453,18 +434,18 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         else:
             current_baseline = self.get_baseline()
 
-        # Analyze trend
+
         trend = self.analyze_quality_trend(days=days)
 
-        # Check alerts
+
         alerts = []
         if current_metrics:
             alerts = self.check_quality_alerts(current_metrics)
 
-        # Get historical data
+
         historical_data = self.get_recent_baselines(limit=days)
 
-        # Generate recommendations
+
         metrics_dict = current_metrics or (
             {
                 "coverage_percent": current_baseline.coverage_percent,
@@ -493,7 +474,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
     def export_report(
         self, report: QualityReport, output_path: Path, format: str = "json"
     ) -> None:
-        """Export quality report to file."""
         if format.lower() == "json":
             with output_path.open("w") as f:
                 json.dump(report.to_dict(), f, indent=2, default=str)
@@ -501,18 +481,15 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             raise ValueError(f"Unsupported export format: {format}")
 
     def set_alert_threshold(self, metric: str, threshold: float) -> None:
-        """Update alert threshold for specific metric."""
         self.alert_thresholds[metric] = threshold
 
     def get_alert_thresholds(self) -> dict[str, float]:
-        """Get current alert thresholds."""
         return self.alert_thresholds.copy()
 
     def create_unified_metrics(
         self, current_metrics: dict[str, t.Any], active_job_count: int = 0
     ) -> UnifiedMetrics:
-        """Create UnifiedMetrics from current quality data."""
-        # Calculate quality score
+
         score_metrics = {
             k: v
             for k, v in current_metrics.items()
@@ -529,11 +506,11 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         }
         quality_score = self.calculate_quality_score(**score_metrics)
 
-        # Get trend direction
+
         trend = self.analyze_quality_trend(days=7)
         trend_direction = trend.direction if trend else TrendDirection.STABLE
 
-        # Calculate error count
+
         error_count = (
             current_metrics.get("hook_failures", 0)
             + current_metrics.get("security_issues", 0)
@@ -541,7 +518,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             + current_metrics.get("linting_issues", 0)
         )
 
-        # Create predictions based on trend
+
         predictions = {}
         if trend and trend.confidence > 0.5:
             days_ahead = 7
@@ -560,7 +537,6 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         )
 
     def get_system_health(self) -> SystemHealthStatus:
-        """Get current system health status."""
         import psutil
 
         try:
@@ -568,7 +544,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             memory = psutil.virtual_memory()
             disk = psutil.disk_usage("/")
 
-            # Determine overall status
+
             if cpu_percent > 90 or memory.percent > 90 or disk.percent > 95:
                 overall_status = "critical"
             elif cpu_percent > 70 or memory.percent > 80 or disk.percent > 85:
@@ -590,7 +566,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                 service_status=service_status,
             )
         except ImportError:
-            # psutil not available, return basic status
+
             return SystemHealthStatus(
                 overall_status="healthy",
                 cpu_usage=0.0,
@@ -605,38 +581,37 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         active_job_count: int = 0,
         historical_days: int = 30,
     ) -> DashboardState:
-        """Create complete dashboard state for monitoring."""
-        # Create current unified metrics
+
         unified_metrics = self.create_unified_metrics(current_metrics, active_job_count)
 
-        # Get historical data and convert to UnifiedMetrics
+
         historical_baselines = self.get_recent_baselines(limit=historical_days)
         historical_unified = [
             UnifiedMetrics(
                 timestamp=baseline.timestamp,
                 quality_score=baseline.quality_score,
                 test_coverage=baseline.coverage_percent,
-                hook_duration=0.0,  # Not tracked in baseline
-                active_jobs=0,  # Historical data
+                hook_duration=0.0,
+                active_jobs=0,
                 error_count=(
                     baseline.hook_failures
                     + baseline.security_issues
                     + baseline.type_errors
                     + baseline.linting_issues
                 ),
-                trend_direction=TrendDirection.STABLE,  # Calculate per point if needed
+                trend_direction=TrendDirection.STABLE,
                 predictions={},
             )
-            for baseline in historical_baselines[-10:]  # Last 10 data points
+            for baseline in historical_baselines[-10:]
         ]
 
-        # Get active alerts
+
         alerts = self.check_quality_alerts(current_metrics)
 
-        # Get system health
+
         system_health = self.get_system_health()
 
-        # Generate recommendations
+
         trend = self.analyze_quality_trend(days=7)
         recommendations = self.generate_recommendations(current_metrics, trend, alerts)
 

@@ -312,7 +312,7 @@ class ImportOptimizationAgent(SubAgent):
         module_imports: dict[str, list[dict[str, t.Any]]],
     ) -> None:
         if node.module is None:
-            return  # Skip relative imports without module name
+            return
 
         for alias in node.names:
             import_info = {

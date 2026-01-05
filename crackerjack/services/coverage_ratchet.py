@@ -21,7 +21,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         pkg_path: Path,
         console: Console | None = None,
     ) -> None:
-        # Normalize to pathlib.Path to avoid async path behaviors
+
         try:
             self.pkg_path = Path(str(pkg_path))
         except Exception:
@@ -98,7 +98,6 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         return t.cast(dict[str, t.Any], json.loads(self.ratchet_file.read_text()))
 
     def get_status_report(self) -> dict[str, t.Any]:
-        """Get status report for coverage ratchet service."""
         return self.get_ratchet_data()
 
     def get_baseline(self) -> float:
@@ -273,7 +272,6 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         return result
 
     def get_coverage_improvement_needed(self) -> float:
-        """Get percentage improvement needed to reach next milestone."""
         current = self.get_baseline_coverage()
         for milestone in self.MILESTONES:
             if current < milestone:

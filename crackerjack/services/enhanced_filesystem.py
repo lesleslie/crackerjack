@@ -17,7 +17,7 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.services.logging import LoggingContext
 
-# Module-level logger for structured logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -185,7 +185,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         batch_size: int = 10,
         enable_async: bool = True,
     ) -> None:
-        # Use keyword args to avoid DI/positional ambiguity
+
         self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
         self.batch_ops = BatchFileOperations(batch_size) if enable_async else None
         self.enable_async = enable_async
@@ -212,7 +212,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
     def write_file(self, path: str | Path, content: str) -> None:
         path_obj = Path(path) if isinstance(path, str) else path
-        # Validate content type before logging/length computation
+
         if not isinstance(content, str):
             raise TypeError("Content must be a string")
 
@@ -272,7 +272,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 if isinstance(result, Exception):
                     self.logger.error(f"Failed to read file path={path} error={result}")
                     results[path] = ""
-                elif isinstance(result, str):  # Explicit check for mypy
+                elif isinstance(result, str):
                     results[path] = result
 
             return results
@@ -316,7 +316,6 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
     @staticmethod
     def _validate_file_exists(path: Path) -> None:
-        """Validate that a file exists."""
         if not path.exists():
             raise FileError(
                 message=f"File does not exist: {path}",
@@ -326,7 +325,6 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
 
     @staticmethod
     def _handle_read_error(error: Exception, path: Path) -> None:
-        """Handle file read errors."""
         if isinstance(error, PermissionError):
             raise FileError(
                 message=f"Permission denied reading file: {path}",
@@ -353,7 +351,7 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
             return path.read_text(encoding="utf-8")
         except (PermissionError, UnicodeDecodeError, OSError) as e:
             EnhancedFileSystemService._handle_read_error(e, path)
-            raise  # Ensure type checker knows this doesn't return
+            raise
 
     @staticmethod
     def _write_file_direct(path: Path, content: str) -> None:
@@ -463,19 +461,10 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
             ) from e
 
     async def _on_start(self) -> None:
-        """
-        Lifecycle method called when the service is started.
-        """
         self.logger.debug("EnhancedFileSystemService started")
 
     async def _on_stop(self) -> None:
-        """
-        Lifecycle method called when the service is stopped.
-        """
         self.logger.debug("EnhancedFileSystemService stopped")
 
     async def _on_reload(self) -> None:
-        """
-        Lifecycle method called when the service is reloaded.
-        """
         self.logger.debug("EnhancedFileSystemService reloaded")

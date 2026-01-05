@@ -117,7 +117,7 @@ class InitializationService:
         }
 
     def _get_config_files(self) -> dict[str, str]:
-        # Skip pre-commit configuration to prevent hook installation
+
         return {
             "pyproject.toml": "smart_merge",
             ".gitignore": "smart_merge_gitignore",
@@ -136,7 +136,6 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        """Apply the appropriate merge strategy for the config file."""
         if merge_strategy == "smart_merge":
             self._smart_merge_config(
                 source_file,
@@ -190,7 +189,6 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        """Handle replace_if_missing strategy."""
         if not target_file.exists() or force:
             content = self._read_and_process_content(source_file, True, project_name)
             self._write_file_and_track(target_file, content, file_name, results)
@@ -206,7 +204,6 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        """Handle default copy strategy."""
         if not self._should_copy_file(target_file, force, file_name, results):
             return
         content = self._read_and_process_content(source_file, True, project_name)
@@ -225,7 +222,7 @@ class InitializationService:
             self._process_mcp_config(target_path, force, results)
             return
 
-        # Use crackerjack's project root for template files
+
         crackerjack_project_root = Path(__file__).parent.parent.parent
         source_file = crackerjack_project_root / file_name
         target_file = target_path / file_name
@@ -357,7 +354,7 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-        # Use crackerjack's project root for template files
+
         crackerjack_project_root = Path(__file__).parent.parent.parent
         source_file = crackerjack_project_root / "example.mcp.json"
 

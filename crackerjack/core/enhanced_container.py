@@ -463,8 +463,7 @@ class ServiceCollectionBuilder:
 
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
-        # Use factory without parameters to trigger @depends.inject decorator
-        # The decorator will inject all dependencies from the DI container
+
         self.container.register_transient(
             PublishManager,
             factory=PublishManagerImpl,
@@ -514,7 +513,7 @@ class ServiceCollectionBuilder:
             filesystem = FileSystemService()
             git_service = GitService(console, pkg_path)
             service = InitializationService(console, filesystem, git_service, pkg_path)
-            # Cast to protocol type to ensure correct typing
+
             return t.cast(InitializationServiceProtocol, service)
 
         self.container.register_transient(

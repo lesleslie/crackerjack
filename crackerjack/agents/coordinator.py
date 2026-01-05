@@ -77,7 +77,7 @@ class AgentCoordinator:
 
         issues_by_type = self._group_issues_by_type(issues)
 
-        # Optimization: Run ALL issue types in parallel instead of sequential
+
         tasks = list[t.Any](
             starmap(self._handle_issues_by_type, issues_by_type.items())
         )
@@ -104,18 +104,18 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
-        # Fast agent lookup using static mapping
+
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
         specialist_agents = []
 
-        # First, try to use agents from static mapping for O(1) lookup
+
         specialist_agents = [
             agent
             for agent in self.agents
             if agent.__class__.__name__ in preferred_agent_names
         ]
 
-        # Fallback: use traditional dynamic lookup if no static match
+
         if not specialist_agents:
             specialist_agents = [
                 agent
@@ -169,7 +169,6 @@ class AgentCoordinator:
     async def _score_all_specialists(
         self, specialists: list[SubAgent], issue: Issue
     ) -> list[tuple[SubAgent, float]]:
-        """Score all specialist agents for handling an issue."""
         candidates: list[tuple[SubAgent, float]] = []
 
         for agent in specialists:
@@ -184,7 +183,6 @@ class AgentCoordinator:
     def _find_highest_scoring_agent(
         self, candidates: list[tuple[SubAgent, float]]
     ) -> tuple[SubAgent | None, float]:
-        """Find the agent with the highest score."""
         best_agent = None
         best_score = 0.0
 
@@ -201,11 +199,10 @@ class AgentCoordinator:
         best_agent: SubAgent | None,
         best_score: float,
     ) -> SubAgent | None:
-        """Apply preference for built-in agents when scores are close."""
         if not best_agent or best_score <= 0:
             return best_agent
 
-        # Threshold for considering scores "close" (5% difference)
+
         CLOSE_SCORE_THRESHOLD = 0.05
 
         for agent, score in candidates:
@@ -227,7 +224,6 @@ class AgentCoordinator:
         best_score: float,
         threshold: float,
     ) -> bool:
-        """Check if a built-in agent should be preferred over the current best."""
         return (
             agent != best_agent
             and self._is_built_in_agent(agent)
@@ -242,7 +238,6 @@ class AgentCoordinator:
         best_score: float,
         score_difference: float,
     ) -> None:
-        """Log when preferring a built-in agent."""
         self.logger.info(
             f"Preferring built-in agent {agent.name} (score: {score:.2f}) "
             f"over {best_agent.name} (score: {best_score:.2f}) "
@@ -250,7 +245,6 @@ class AgentCoordinator:
         )
 
     def _is_built_in_agent(self, agent: SubAgent) -> bool:
-        """Check if agent is a built-in Crackerjack agent."""
         built_in_agent_names = {
             "ArchitectAgent",
             "DocumentationAgent",
@@ -272,10 +266,10 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling issue with {agent.name}: {issue.message[:100]}")
 
-        # Create cache key from issue content
+
         issue_hash = self._create_issue_hash(issue)
 
-        # Check cache for previous agent decision
+
         cached_decision = self._coerce_cached_decision(
             self.cache.get_agent_decision(agent.name, issue_hash)
         )
@@ -327,45 +321,41 @@ class AgentCoordinator:
         return dict(grouped)
 
     def _create_issue_hash(self, issue: Issue) -> str:
-        """Create a hash from issue content for caching decisions."""
         content = (
             f"{issue.type.value}:{issue.message}:{issue.file_path}:{issue.line_number}"
         )
         return hashlib.md5(content.encode(), usedforsecurity=False).hexdigest()
 
     def _get_cache_key(self, agent_name: str, issue: Issue) -> str:
-        """Get cache key for agent-issue combination."""
         issue_hash = self._create_issue_hash(issue)
         return f"{agent_name}:{issue_hash}"
 
     @agent_error_boundary
     async def _execute_agent(self, agent: SubAgent, issue: Issue) -> FixResult:
-        """Execute agent analysis with centralized error handling."""
         return await self._cached_analyze_and_fix(agent, issue)
 
     async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
-        """Analyze and fix issue with intelligent caching."""
         cache_key = self._get_cache_key(agent.name, issue)
 
-        # Check in-memory cache first (fastest)
+
         if cache_key in self._issue_cache:
             self.logger.debug(f"Using in-memory cache for {agent.name}")
             return self._issue_cache[cache_key]
 
-        # Check persistent cache
+
         cached_result = self._coerce_cached_decision(
             self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue))
         )
         if cached_result:
             self.logger.debug(f"Using persistent cache for {agent.name}")
-            # Store in memory cache for even faster future access
+
             self._issue_cache[cache_key] = cached_result
             return cached_result
 
-        # No cache hit - perform actual analysis
+
         result = await agent.analyze_and_fix(issue)
 
-        # Cache successful results with high confidence
+
         if result.success and result.confidence > 0.7:
             self._issue_cache[cache_key] = result
             self.cache.set_agent_decision(
@@ -436,12 +426,10 @@ class AgentCoordinator:
         )
 
     def _create_fallback_plan(self, reason: str) -> dict[str, t.Any]:
-        """Create a fallback plan when architectural planning fails."""
         self.logger.warning(reason)
         return {"strategy": "reactive_fallback", "patterns": []}
 
     def _filter_complex_issues(self, issues: list[Issue]) -> list[Issue]:
-        """Filter issues that require architectural planning."""
         complex_types = {
             IssueType.COMPLEXITY,
             IssueType.DRY_VIOLATION,
@@ -452,12 +440,11 @@ class AgentCoordinator:
     async def _generate_architectural_plan(
         self, architect: t.Any, complex_issues: list[Issue], all_issues: list[Issue]
     ) -> dict[str, t.Any]:
-        """Generate architectural plan using the architect agent."""
         primary_issue = complex_issues[0]
 
         try:
             plan = await architect.plan_before_action(primary_issue)
-            # Ensure plan is properly typed as dict[str, Any]
+
             if not isinstance(plan, dict):
                 plan = {"strategy": "default", "confidence": 0.5}
             enriched_plan = self._enrich_architectural_plan(plan, all_issues)
@@ -474,7 +461,6 @@ class AgentCoordinator:
     def _enrich_architectural_plan(
         self, plan: dict[str, t.Any], issues: list[Issue]
     ) -> dict[str, t.Any]:
-        """Enrich the architectural plan with issue metadata."""
         plan["all_issues"] = [issue.id for issue in issues]
         plan["issue_types"] = list[t.Any]({issue.type.value for issue in issues})
         return plan
@@ -495,7 +481,6 @@ class AgentCoordinator:
     async def _process_prioritized_groups(
         self, prioritized_issues: list[list[Issue]], plan: dict[str, t.Any]
     ) -> FixResult:
-        """Process prioritized issue groups according to the plan."""
         overall_result = FixResult(success=True, confidence=1.0)
 
         for issue_group in prioritized_issues:
@@ -512,13 +497,11 @@ class AgentCoordinator:
     def _should_fail_on_group_failure(
         self, group_result: FixResult, issue_group: list[Issue], plan: dict[str, t.Any]
     ) -> bool:
-        """Determine if overall process should fail when a group fails."""
         return not group_result.success and self._is_critical_group(issue_group, plan)
 
     def _mark_critical_group_failure(
         self, overall_result: FixResult, issue_group: list[Issue]
     ) -> FixResult:
-        """Mark overall result as failed due to critical group failure."""
         overall_result.success = False
         overall_result.remaining_issues.append(
             f"Critical issue group failed: {[i.id for i in issue_group]}"

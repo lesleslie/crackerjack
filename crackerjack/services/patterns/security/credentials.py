@@ -1,8 +1,3 @@
-"""Credential and secret detection patterns for security validation.
-
-This module contains patterns for detecting and masking hardcoded credentials,
-secrets, tokens, and other sensitive authentication data in code.
-"""
 
 import re
 
@@ -12,7 +7,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     "detect_hardcoded_credentials_advanced": ValidatedPattern(
         name="detect_hardcoded_credentials_advanced",
         pattern=r"(?i)\b(?:password|passwd|pwd|secret|key|token|api_key|"
-        r'apikey)\s*[:=]\s*["\'][^"\']{3,}["\']',
+        r'apikey)\s*[:=]\s*["\'][^"\']{3, }["\']',
         replacement="[HARDCODED_CREDENTIAL_DETECTED]",
         description="Detect hardcoded credentials in various formats "
         "(case insensitive)",
@@ -59,7 +54,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "mask_generic_long_token": ValidatedPattern(
         name="mask_generic_long_token",
-        pattern=r"\b[a-zA-Z0-9_-]{32,}\b",
+        pattern=r"\b[a-zA-Z0-9_-]{32, }\b",
         replacement="****",
         description="Mask generic long tokens (32+ chars, word boundaries to avoid"
         " false positives)",
@@ -85,7 +80,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "mask_github_token": ValidatedPattern(
         name="mask_github_token",
-        pattern=r"\bghp_[a-zA-Z0-9]{8,}\b",  # Adjusted to support varying token lengths (at least 8 chars after ghp_)
+        pattern=r"\bghp_[a-zA-Z0-9]{8, }\b",
         replacement="ghp_****",
         description="Mask GitHub personal access tokens (variable length after ghp_"
         " with word boundaries)",
@@ -93,7 +88,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("ghp_1234567890abcdef1234567890abcdef1234", "ghp_****"),
             (
-                "GITHUB_TOKEN=ghp_1234567890abcdefghij",  # Updated to support the test token format
+                "GITHUB_TOKEN=ghp_1234567890abcdefghij",
                 "GITHUB_TOKEN=ghp_****",
             ),
             ("ghp_short", "ghp_short"),
@@ -110,7 +105,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "mask_password_assignment": ValidatedPattern(
         name="mask_password_assignment",
-        pattern=r"(?i)\b(password\s*[=: ]\s*)['\"]([^'\"]{8,})['\"]",
+        pattern=r"(?i)\b(password\s*[=: ]\s*)['\"]([^'\"]{8, })['\"]",
         replacement=r"\1'****'",
         description="Mask password assignments in various formats (case insensitive)",
         global_replace=True,
@@ -129,7 +124,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "mask_pypi_token": ValidatedPattern(
         name="mask_pypi_token",
-        pattern=r"\bpypi-[a-zA-Z0-9_-]{12,}\b",
+        pattern=r"\bpypi-[a-zA-Z0-9_-]{12, }\b",
         replacement="pypi-****",
         description="Mask PyPI authentication tokens (word boundaries to prevent"
         " false matches)",
@@ -153,7 +148,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "mask_token_assignment": ValidatedPattern(
         name="mask_token_assignment",
-        pattern=r"(?i)\b(token\s*[=: ]\s*)['\"]([^'\"]{8,})['\"]",
+        pattern=r"(?i)\b(token\s*[=: ]\s*)['\"]([^'\"]{8, })['\"]",
         replacement=r"\1'****'",
         description="Mask token assignments in various formats (case insensitive)",
         global_replace=True,

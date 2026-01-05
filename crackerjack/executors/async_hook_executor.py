@@ -19,7 +19,7 @@ from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext
 
-# Module-level logger for structured logging
+
 logger = logging.getLogger(__name__)
 
 
@@ -81,7 +81,7 @@ class AsyncHookExecutor:
         self.logger = logger or logging.getLogger(__name__)
 
         self._semaphore = asyncio.Semaphore(max_concurrent)
-        self._running_processes: set = set()  # Track running subprocesses
+        self._running_processes: set = set()
         self._last_stdout: bytes | None = None
         self._last_stderr: bytes | None = None
 
@@ -132,7 +132,6 @@ class AsyncHookExecutor:
                 max_workers=getattr(strategy, "max_workers", self.max_concurrent),
             )
 
-            # Header is displayed by PhaseCoordinator; suppress here to avoid duplicates
 
             estimated_sequential = sum(
                 getattr(hook, "timeout", 30) for hook in strategy.hooks
@@ -189,7 +188,7 @@ class AsyncHookExecutor:
         }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-        # Intentionally no-op: PhaseCoordinator controls stage headers
+
         return None
 
     async def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
@@ -240,18 +239,15 @@ class AsyncHookExecutor:
         return results
 
     async def cleanup(self) -> None:
-        """Clean up any remaining resources before event loop closes."""
         await self._cleanup_running_processes()
         self._running_processes.clear()
         await self._cleanup_pending_tasks()
 
     async def _cleanup_running_processes(self) -> None:
-        """Terminate all running subprocesses."""
         for proc in list(self._running_processes):
             await self._terminate_single_process(proc)
 
     async def _terminate_single_process(self, proc: asyncio.subprocess.Process) -> None:
-        """Terminate a single subprocess safely."""
         with suppress(ProcessLookupError, Exception):
             if proc.returncode is None:
                 proc.kill()
@@ -260,19 +256,16 @@ class AsyncHookExecutor:
     async def _wait_for_process_termination(
         self, proc: asyncio.subprocess.Process
     ) -> None:
-        """Wait briefly for process to terminate."""
         with suppress(TimeoutError, RuntimeError):
             await asyncio.wait_for(proc.wait(), timeout=0.1)
 
     async def _cleanup_pending_tasks(self) -> None:
-        """Cancel any pending hook-related tasks."""
         with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             pending_tasks = self._get_pending_hook_tasks(loop)
             await self._cancel_tasks(pending_tasks)
 
     def _get_pending_hook_tasks(self, loop: asyncio.AbstractEventLoop) -> list:
-        """Get list of pending hook-related tasks."""
         return [
             task
             for task in asyncio.all_tasks(loop)
@@ -280,13 +273,11 @@ class AsyncHookExecutor:
         ]
 
     async def _cancel_tasks(self, tasks: list) -> None:
-        """Cancel a list of tasks safely."""
         for task in tasks:
             if not task.done():
                 await self._cancel_single_task(task)
 
     async def _cancel_single_task(self, task: asyncio.Task) -> None:
-        """Cancel a single task safely."""
         try:
             task.cancel()
             await asyncio.wait_for(task, timeout=0.1)
@@ -360,7 +351,7 @@ class AsyncHookExecutor:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-            # Track this process for cleanup
+
             self._running_processes.add(process)
 
             result = await self._execute_process_with_timeout(
@@ -369,7 +360,7 @@ class AsyncHookExecutor:
             if result is not None:
                 return result
 
-            # Process completed successfully
+
             duration = time.time() - start_time
             return await self._build_success_result(process, hook, duration)
 
@@ -385,7 +376,6 @@ class AsyncHookExecutor:
         stage: HookStage | None = None,
         command_override: list[str] | None = None,
     ) -> HookResult:
-        """Synchronous wrapper for single-hook execution (tests/utilities)."""
         if stage is not None:
             hook.stage = stage
 
@@ -406,11 +396,6 @@ class AsyncHookExecutor:
         )
 
     def _get_repo_root(self) -> Path:
-        """Determine the repository root directory.
-
-        Returns pkg_path directly to ensure hooks run in the correct project directory
-        regardless of the project name.
-        """
         return self.pkg_path
 
     async def _execute_process_with_timeout(
@@ -420,15 +405,14 @@ class AsyncHookExecutor:
         timeout_val: int,
         start_time: float,
     ) -> HookResult | None:
-        """Execute process with timeout handling. Returns HookResult on timeout, None on success."""
         try:
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(),
                 timeout=timeout_val,
             )
-            # Process completed normally - remove from tracking
+
             self._running_processes.discard(process)
-            # Store output for later use
+
             self._last_stdout = stdout
             self._last_stderr = stderr
             return None
@@ -444,7 +428,6 @@ class AsyncHookExecutor:
         timeout_val: int,
         start_time: float,
     ) -> HookResult:
-        """Handle process timeout by killing process and returning timeout result."""
         await self._terminate_process_safely(process, hook)
         duration = time.time() - start_time
 
@@ -461,9 +444,9 @@ class AsyncHookExecutor:
             status="timeout",
             duration=duration,
             issues_found=[f"Hook timed out after {duration: .1f}s"],
-            issues_count=1,  # Timeout counts as 1 issue
+            issues_count=1,
             stage=hook.stage.value,
-            exit_code=124,  # Standard timeout exit code
+            exit_code=124,
             error_message=f"Hook execution exceeded timeout of {timeout_val}s",
             is_timeout=True,
         )
@@ -473,7 +456,6 @@ class AsyncHookExecutor:
         process: asyncio.subprocess.Process,
         hook: HookDefinition,
     ) -> None:
-        """Safely terminate a process and handle termination errors."""
         try:
             process.kill()
             await asyncio.wait_for(process.wait(), timeout=0.1)
@@ -487,7 +469,6 @@ class AsyncHookExecutor:
         error: Exception,
         hook: HookDefinition,
     ) -> None:
-        """Log process termination errors appropriately."""
         error_str = str(error)
         if "Event loop is closed" in error_str:
             self._log_debug(
@@ -506,7 +487,6 @@ class AsyncHookExecutor:
         hook: HookDefinition,
         duration: float,
     ) -> HookResult:
-        """Build HookResult from successful process execution."""
         output_text = self._decode_process_output(self._last_stdout, self._last_stderr)
         return_code = process.returncode if process.returncode is not None else -1
         parsed_output = self._parse_hook_output(return_code, output_text, hook.name)
@@ -524,15 +504,15 @@ class AsyncHookExecutor:
         )
 
         issues = parsed_output.get("issues", [])
-        # If hook failed but has no parsed issues, use raw output as error details
+
         if status == "failed" and not issues and output_text:
-            # Split output into lines and take first 10 non-empty lines as issues
+
             error_lines = [
                 line.strip() for line in output_text.split("\n") if line.strip()
             ][:10]
             issues = error_lines or ["Hook failed with non-zero exit code"]
 
-        # Ensure failed hooks always have at least 1 issue count
+
         issues_count = max(len(issues), 1 if status == "failed" else 0)
 
         return HookResult(
@@ -544,15 +524,14 @@ class AsyncHookExecutor:
             issues_found=issues,
             issues_count=issues_count,
             stage=hook.stage.value,
-            exit_code=return_code,  # Include exit code for debugging
+            exit_code=return_code,
             error_message=output_text[:500]
             if status == "failed" and output_text
-            else None,  # First 500 chars of error
+            else None,
             is_timeout=False,
         )
 
     def _decode_process_output(self, stdout: bytes | None, stderr: bytes | None) -> str:
-        """Decode process stdout and stderr into a single string."""
         stdout_text = stdout.decode() if stdout else ""
         stderr_text = stderr.decode() if stderr else ""
         return stdout_text + stderr_text
@@ -563,7 +542,6 @@ class AsyncHookExecutor:
         hook: HookDefinition,
         start_time: float,
     ) -> HookResult:
-        """Handle RuntimeError during hook execution."""
         if "Event loop is closed" in str(error):
             duration = time.time() - start_time
             self._log_warning(
@@ -577,7 +555,7 @@ class AsyncHookExecutor:
                 status="error",
                 duration=duration,
                 issues_found=["Event loop closed during execution"],
-                issues_count=1,  # Error counts as 1 issue
+                issues_count=1,
                 stage=hook.stage.value,
                 exit_code=1,
                 error_message="Event loop closed during hook execution",
@@ -592,7 +570,6 @@ class AsyncHookExecutor:
         hook: HookDefinition,
         start_time: float,
     ) -> HookResult:
-        """Handle general exceptions during hook execution."""
         duration = time.time() - start_time
         self._log_exception(
             "Hook execution failed with exception",
@@ -607,7 +584,7 @@ class AsyncHookExecutor:
             status="error",
             duration=duration,
             issues_found=[str(error)],
-            issues_count=1,  # Error counts as 1 issue
+            issues_count=1,
             stage=hook.stage.value,
             exit_code=1,
             error_message=f"{type(error).__name__}: {error}",
@@ -615,35 +592,32 @@ class AsyncHookExecutor:
         )
 
     def _parse_semgrep_output_async(self, output: str) -> int:
-        """Parse Semgrep output to count files with issues, not total files scanned."""
 
-        # Try JSON parsing first
+
         json_result = self._try_parse_semgrep_json(output)
         if json_result is not None:
             return json_result
 
-        # Fall back to text pattern matching
+
         return self._parse_semgrep_text_patterns(output)
 
     def _try_parse_semgrep_json(self, output: str) -> int | None:
-        """Try to parse Semgrep JSON output."""
 
         try:
             stripped_output = output.strip()
 
-            # Try parsing entire output as JSON
+
             if stripped_output.startswith("{"):
                 count = self._extract_file_count_from_json(stripped_output)
                 if count is not None:
                     return count
 
-            # Try line-by-line JSON parsing
+
             return self._parse_semgrep_json_lines(output)
         except Exception:
             return None
 
     def _extract_file_count_from_json(self, json_str: str) -> int | None:
-        """Extract file count from JSON string."""
         import json
 
         try:
@@ -658,7 +632,6 @@ class AsyncHookExecutor:
         return None
 
     def _parse_semgrep_json_lines(self, output: str) -> int | None:
-        """Parse JSON from individual lines in output."""
 
         lines = output.splitlines()
         for line in lines:
@@ -670,7 +643,6 @@ class AsyncHookExecutor:
         return None
 
     def _parse_semgrep_text_patterns(self, output: str) -> int:
-        """Parse Semgrep text output using regex patterns."""
         import re
 
         semgrep_patterns = [
@@ -689,7 +661,6 @@ class AsyncHookExecutor:
         return 0
 
     def _process_semgrep_matches(self, matches: list, output: str) -> int | None:
-        """Process regex matches from Semgrep output."""
         for match in matches:
             if isinstance(match, tuple):
                 if len(match) == 2:
@@ -702,26 +673,18 @@ class AsyncHookExecutor:
         return None
 
     def _parse_semgrep_issues_async(self, output: str) -> list[str]:
-        """Parse semgrep JSON output to extract both findings and errors.
-
-        Semgrep returns JSON with two arrays:
-        - "results": Security/code quality findings
-        - "errors": Configuration, download, or execution errors
-
-        This method extracts issues from both arrays to provide comprehensive error reporting.
-        """
         import json
 
         issues = []
 
         try:
-            # Try to parse as JSON
+
             json_data = json.loads(output.strip())
 
-            # Extract findings from results array
+
             if "results" in json_data:
                 for result in json_data.get("results", []):
-                    # Format: "file.py:line - rule_id: message"
+
                     path = result.get("path", "unknown")
                     line_num = result.get("start", {}).get("line", "?")
                     rule_id = result.get("check_id", "unknown-rule")
@@ -730,7 +693,7 @@ class AsyncHookExecutor:
                     )
                     issues.append(f"{path}:{line_num} - {rule_id}: {message}")
 
-            # Extract errors from errors array (config errors, download failures, etc.)
+
             if "errors" in json_data:
                 for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
@@ -738,7 +701,7 @@ class AsyncHookExecutor:
                     issues.append(f"{error_type}: {error_msg}")
 
         except json.JSONDecodeError:
-            # If JSON parsing fails, return raw output (shouldn't happen with --json flag)
+
             if output.strip():
                 issues = [line.strip() for line in output.split("\n") if line.strip()][
                     :10
@@ -749,39 +712,28 @@ class AsyncHookExecutor:
     def _parse_hook_output(
         self, returncode: int, output: str, hook_name: str = ""
     ) -> dict[str, t.Any]:
-        """Parse hook output to extract file counts and other metrics.
-
-        Args:
-            returncode: Exit code from the subprocess
-            output: Raw output from the hook execution
-            hook_name: Name of the hook being executed to allow special handling
-
-        Returns:
-            Dictionary with parsed results including files_processed
-        """
         result = self._initialize_parse_result(returncode, output)
 
-        # Special handling for semgrep
+
         if hook_name == "semgrep":
             result["files_processed"] = self._parse_semgrep_output_async(output)
             result["issues"] = self._parse_semgrep_issues_async(output)
             return result
 
-        # Special handling for check-added-large-files
+
         if hook_name == "check-added-large-files":
             result["files_processed"] = self._parse_large_files_output(
                 output, returncode
             )
             return result
 
-        # General hook parsing
+
         result["files_processed"] = self._extract_file_count_from_output(output)
         return result
 
     def _initialize_parse_result(
         self, returncode: int, output: str
     ) -> dict[str, t.Any]:
-        """Initialize result dictionary with default values."""
         return {
             "hook_id": None,
             "exit_code": returncode,
@@ -791,28 +743,26 @@ class AsyncHookExecutor:
         }
 
     def _parse_large_files_output(self, output: str, returncode: int) -> int:
-        """Parse check-added-large-files output to count files exceeding size limit."""
 
         clean_output = output.replace("\\n", "\n").replace("\\t", "\t")
 
-        # Try to find explicit failure patterns
+
         failure_count = self._find_large_file_failures(clean_output)
         if failure_count is not None:
             return failure_count
 
-        # Check for "all files under limit" success case
+
         if self._is_all_files_under_limit(clean_output, returncode):
             return 0
 
-        # If hook failed but no pattern matched, assume at least 1 file failed
+
         if returncode != 0:
             return 1
 
-        # Default: no large files found
+
         return 0
 
     def _find_large_file_failures(self, clean_output: str) -> int | None:
-        """Find count of files that exceeded size limit."""
         import re
 
         failure_patterns = [
@@ -831,14 +781,12 @@ class AsyncHookExecutor:
         return None
 
     def _is_all_files_under_limit(self, clean_output: str, returncode: int) -> bool:
-        """Check if output indicates all files are under size limit."""
         import re
 
         pattern = r"All files are under size limit"
         return bool(re.search(pattern, clean_output, re.IGNORECASE) and returncode == 0)
 
     def _extract_file_count_from_output(self, output: str) -> int:
-        """Extract file count from general hook output."""
         import re
 
         clean_output = output.replace("\\n", "\n").replace("\\t", "\t")
@@ -853,7 +801,6 @@ class AsyncHookExecutor:
         return max(all_matches) if all_matches else 0
 
     def _get_file_count_patterns(self) -> list[str]:
-        """Get regex patterns for extracting file counts from hook output."""
         return [
             r"(\d+)\s+files?\s+(?:processed|checked|examined|scanned|formatted|found|affected)",
             r"found\s+(\d+)\s+files?",

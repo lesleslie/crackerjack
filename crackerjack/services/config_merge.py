@@ -230,21 +230,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path: str | t.Any,
         project_name: str,
     ) -> dict[str, t.Any]:
-        """Smart merge pre-commit configuration.
 
-        This is a placeholder implementation that returns the source content.
-        The actual merge logic should be implemented based on specific requirements.
 
-        Args:
-            source_content: Source pre-commit config content
-            target_path: Target file path
-            project_name: Name of the project
-
-        Returns:
-            Merged pre-commit configuration
-        """
-        # For now, just return the source content
-        # Actual implementation would merge with existing config if it exists
         self.logger.info(f"Smart merge pre-commit config for {project_name}")
         return source_content
 
@@ -253,12 +240,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         config: dict[str, t.Any],
         target_path: str | t.Any,
     ) -> None:
-        """Write pre-commit configuration to file.
-
-        Args:
-            config: Pre-commit configuration dictionary
-            target_path: Target file path
-        """
         import json
 
         target_path = Path(target_path)

@@ -1,4 +1,3 @@
-"""AST analysis for performance complexity detection."""
 
 import ast
 import typing as t
@@ -7,27 +6,13 @@ from ...base import AgentContext
 
 
 class PerformanceASTAnalyzer:
-    """Analyzes Python AST for performance-related complexity issues."""
 
     def __init__(self, context: AgentContext) -> None:
-        """Initialize analyzer with agent context.
-
-        Args:
-            context: AgentContext for logging and operations
-        """
         self.context = context
 
     def extract_performance_critical_functions(
         self, content: str
     ) -> list[dict[str, t.Any]]:
-        """Extract functions likely to have performance issues.
-
-        Args:
-            content: File content
-
-        Returns:
-            List of performance-critical functions
-        """
         functions: list[dict[str, t.Any]] = []
         lines = content.split("\n")
         current_function = None
@@ -56,26 +41,10 @@ class PerformanceASTAnalyzer:
 
     @staticmethod
     def _is_empty_or_comment_line(stripped: str) -> bool:
-        """Check if line is empty or comment.
-
-        Args:
-            stripped: Stripped line
-
-        Returns:
-            True if empty or comment
-        """
         return not stripped or stripped.startswith("#")
 
     @staticmethod
     def _is_function_definition(stripped: str) -> bool:
-        """Check if line is function definition.
-
-        Args:
-            stripped: Stripped line
-
-        Returns:
-            True if function definition
-        """
         return stripped.startswith("def ") and "(" in stripped
 
     def _handle_function_definition(
@@ -86,18 +55,6 @@ class PerformanceASTAnalyzer:
         indent: int,
         line_number: int,
     ) -> dict[str, t.Any]:
-        """Handle function definition line.
-
-        Args:
-            current_function: Current function being parsed
-            functions: List of functions
-            stripped: Stripped line
-            indent: Indentation level
-            line_number: Line number
-
-        Returns:
-            New function dict
-        """
         if current_function and self._is_performance_critical(current_function):
             self._finalize_function(current_function, functions, line_number)
 
@@ -119,19 +76,6 @@ class PerformanceASTAnalyzer:
         indent: int,
         line_number: int,
     ) -> dict[str, t.Any] | None:
-        """Handle line within function body.
-
-        Args:
-            current_function: Current function
-            functions: Functions list
-            line: Full line
-            stripped: Stripped line
-            indent: Indent level
-            line_number: Line number
-
-        Returns:
-            Updated current function or None
-        """
         if self._is_still_in_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
@@ -144,16 +88,6 @@ class PerformanceASTAnalyzer:
     def _is_still_in_function(
         current_function: dict[str, t.Any], indent: int, stripped: str
     ) -> bool:
-        """Check if still inside function.
-
-        Args:
-            current_function: Current function
-            indent: Indent level
-            stripped: Stripped line
-
-        Returns:
-            True if still inside
-        """
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]
             and stripped.startswith(('"', "'", "@"))
@@ -165,13 +99,6 @@ class PerformanceASTAnalyzer:
         functions: list[dict[str, t.Any]],
         end_line: int,
     ) -> None:
-        """Finalize function and add to results.
-
-        Args:
-            function: Function to finalize
-            functions: Functions list
-            end_line: End line number
-        """
         function["end_line"] = end_line
         function["body_sample"] = function["body"][:300]
         function["estimated_complexity"] = self._estimate_complexity(function["body"])
@@ -183,26 +110,11 @@ class PerformanceASTAnalyzer:
         functions: list[dict[str, t.Any]],
         total_lines: int,
     ) -> None:
-        """Handle last function in file.
-
-        Args:
-            current_function: Last function
-            functions: Functions list
-            total_lines: Total lines
-        """
         if current_function and self._is_performance_critical(current_function):
             self._finalize_function(current_function, functions, total_lines)
 
     @staticmethod
     def _is_performance_critical(function_info: dict[str, t.Any]) -> bool:
-        """Determine if function is performance-critical.
-
-        Args:
-            function_info: Function info
-
-        Returns:
-            True if performance-critical
-        """
         body = function_info.get("body", "")
         name = function_info.get("name", "")
 
@@ -229,14 +141,6 @@ class PerformanceASTAnalyzer:
 
     @staticmethod
     def _estimate_complexity(body: str) -> int:
-        """Estimate computational complexity of function.
-
-        Args:
-            body: Function body
-
-        Returns:
-            Complexity score
-        """
         complexity = 1
 
         nested_for_loops = 0
@@ -269,15 +173,6 @@ class PerformanceASTAnalyzer:
     def analyze_performance_patterns(
         self, semantic_insight: t.Any, current_func: dict[str, t.Any]
     ) -> dict[str, t.Any]:
-        """Analyze semantic patterns for performance insights.
-
-        Args:
-            semantic_insight: Semantic insight from analysis
-            current_func: Current function
-
-        Returns:
-            Analysis dict
-        """
         analysis: dict[str, t.Any] = {
             "issues_found": False,
             "optimization_suggestion": "Consider reviewing similar implementations for consistency",
@@ -310,14 +205,6 @@ class PerformanceASTAnalyzer:
         return analysis
 
     def analyze_code_metrics(self, tree: ast.AST) -> dict[str, t.Any]:
-        """Analyze code metrics from AST.
-
-        Args:
-            tree: AST tree
-
-        Returns:
-            Metrics dict
-        """
         metrics: dict[str, t.Any] = {
             "total_functions": 0,
             "total_classes": 0,
