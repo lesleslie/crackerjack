@@ -49,32 +49,32 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
 
-    # Configure logging to suppress event logs in non-debug mode
+
     import os
 
     debug_mode = os.environ.get("CRACKERJACK_DEBUG") == "1"
 
     if not debug_mode:
-        # Disable JSON event logging for clean output in production mode
+
         oneiric_settings.logging.emit_json = False
         oneiric_settings.logging.level = "WARNING"
     else:
-        # Enable full debug logging in debug mode
+
         oneiric_settings.logging.emit_json = True
         oneiric_settings.logging.level = "DEBUG"
     oneiric_settings.remote.refresh_interval = None
 
-    # Suppress verbose event logging for cleaner TUI output unless in debug mode
-    oneiric_settings.logging.level = "WARNING" if not debug_mode else "DEBUG"
-    oneiric_settings.logging.emit_json = debug_mode  # Only emit JSON in debug mode
 
-    # Set the debug flag in the app settings to control event logging
+    oneiric_settings.logging.level = "WARNING" if not debug_mode else "DEBUG"
+    oneiric_settings.logging.emit_json = debug_mode
+
+
     oneiric_settings.app.debug = debug_mode
 
-    # Configure Oneiric logging with the debug setting
+
     from oneiric.core.logging import configure_logging
 
-    # Configure logging based on debug mode
+
     configure_logging(oneiric_settings.logging)
 
     resolver = Resolver(settings=resolver_settings_from_config(oneiric_settings))
@@ -179,11 +179,11 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     if _should_run_tests(options):
         steps.append("tests")
 
-    # Add comprehensive hooks BEFORE publishing and commit
+
     if _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
 
-    # Publishing and commit come after all quality checks
+
     steps.extend(("publishing", "commit"))
 
     nodes: list[dict[str, t.Any]] = []

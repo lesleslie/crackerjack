@@ -1,8 +1,3 @@
-"""Ruff linter output parsing patterns.
-
-This module provides regex patterns for parsing Ruff static analysis tool output,
-including error messages and summary lines.
-"""
 
 from ..core import ValidatedPattern
 

@@ -213,7 +213,6 @@ class AgentRegistry:
         return agent_data
 
     def _infer_capabilities_from_agent(self, agent: SubAgent) -> set[AgentCapability]:
-        """Infer agent capabilities from class name using keyword mapping."""
         class_name = agent.__class__.__name__.lower()
         capability_mapping = self._get_agent_capability_mapping()
 
@@ -222,7 +221,7 @@ class AgentRegistry:
             if self._class_name_matches_keywords(class_name, keywords):
                 capabilities.update(caps)
 
-        # Fallback to default capability if none found
+
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 
@@ -231,7 +230,6 @@ class AgentRegistry:
     def _get_agent_capability_mapping(
         self,
     ) -> list[tuple[list[str], set[AgentCapability]]]:
-        """Get mapping of keywords to agent capabilities."""
         return [
             (
                 ["architect"],
@@ -250,7 +248,6 @@ class AgentRegistry:
     def _class_name_matches_keywords(
         self, class_name: str, keywords: list[str]
     ) -> bool:
-        """Check if class name contains any of the specified keywords."""
         return any(keyword in class_name for keyword in keywords)
 
     def _infer_capabilities_from_user_agent(

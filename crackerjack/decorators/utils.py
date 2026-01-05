@@ -1,4 +1,3 @@
-"""Shared utilities for error handling decorators."""
 
 import asyncio
 import inspect
@@ -9,14 +8,12 @@ F = t.TypeVar("F", bound=t.Callable[..., t.Any])
 
 
 def is_async_function(func: t.Callable[..., t.Any]) -> bool:
-    """Check if a function is async."""
     return asyncio.iscoroutinefunction(func)
 
 
 def preserve_signature[F: t.Callable[..., t.Any]](
     wrapper: F,
 ) -> t.Callable[[t.Callable[..., t.Any]], F]:
-    """Preserve function signature in decorators."""
 
     def decorator(func: t.Callable[..., t.Any]) -> F:
         wrapped = wrapper(func)
@@ -26,7 +23,6 @@ def preserve_signature[F: t.Callable[..., t.Any]](
 
 
 def get_function_context(func: t.Callable[..., t.Any]) -> dict[str, t.Any]:
-    """Extract context information from a function for error reporting."""
     name = getattr(func, "__name__", type(func).__name__)
     qualname = getattr(func, "__qualname__", name)
     module = getattr(
@@ -43,7 +39,6 @@ def get_function_context(func: t.Callable[..., t.Any]) -> dict[str, t.Any]:
 
 
 def format_exception_chain(exc: BaseException) -> list[str]:
-    """Format exception chain for logging."""
     chain: list[str] = []
     current: BaseException | None = exc
 
@@ -55,7 +50,6 @@ def format_exception_chain(exc: BaseException) -> list[str]:
 
 
 def get_callable_params(func: t.Callable[..., t.Any]) -> list[inspect.Parameter]:
-    """Get function parameters using inspect."""
     try:
         sig = inspect.signature(func)
         return list(sig.parameters.values())

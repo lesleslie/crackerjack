@@ -1,8 +1,3 @@
-"""Pytest output parsing patterns.
-
-This module contains patterns for parsing pytest test output, including
-test collection, results, coverage, and session information.
-"""
 
 from ..core import ValidatedPattern
 

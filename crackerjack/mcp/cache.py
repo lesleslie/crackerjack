@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
-# Phase 9.2: Module registration for dependency injection
+
 MODULE_ID: Final[UUID] = uuid4()
 MODULE_STATUS: Final[str] = "stable"
 
@@ -336,13 +336,8 @@ class ErrorCache:
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID for integration."""
         return MODULE_ID
 
     @property
     def module_status(self) -> str:
-        """Module status for integration."""
         return MODULE_STATUS
-
-
-# DI registration removed

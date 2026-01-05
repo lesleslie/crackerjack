@@ -77,7 +77,6 @@ class AdvancedSettings(Settings):
 
 
 class ConsoleSettings(Settings):
-    """Console/UI related settings."""
 
     width: int = 70
     verbose: bool = False
@@ -110,19 +109,18 @@ class GlobalLockSettings(Settings):
 
 
 class AdapterTimeouts(Settings):
-    """Timeout settings for QA adapters (in seconds)."""
 
-    zuban_lsp_timeout: float = 120.0  # Zuban LSP server
-    skylos_timeout: int = 600  # Dead code detection (default: 10 minutes)
-    refurb_timeout: int = 120  # Modern Python suggestions
-    zuban_timeout: int = 120  # Type checking
-    bandit_timeout: int = 300  # Security linting
-    semgrep_timeout: int = 300  # Security pattern matching
-    pip_audit_timeout: int = 120  # Dependency security
-    creosote_timeout: int = 120  # Unused imports
-    complexipy_timeout: int = 60  # Complexity analysis
-    pyscn_timeout: int = 60  # Code quality
-    gitleaks_timeout: int = 60  # Secret detection
+    zuban_lsp_timeout: float = 120.0
+    skylos_timeout: int = 600
+    refurb_timeout: int = 120
+    zuban_timeout: int = 120
+    bandit_timeout: int = 300
+    semgrep_timeout: int = 300
+    pip_audit_timeout: int = 120
+    creosote_timeout: int = 120
+    complexipy_timeout: int = 60
+    pyscn_timeout: int = 60
+    gitleaks_timeout: int = 60
 
 
 class CrackerjackSettings(Settings):

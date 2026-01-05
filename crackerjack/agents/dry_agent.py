@@ -18,11 +18,6 @@ from .semantic_helpers import (
 
 
 class DRYAgent(SubAgent):
-    """Agent for detecting and fixing DRY (Don't Repeat Yourself) violations.
-
-    Enhanced with semantic context to detect conceptual duplicates beyond
-    just syntactic pattern matching.
-    """
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
@@ -83,10 +78,10 @@ class DRYAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-        # Detect traditional pattern-based violations
+
         violations = self._detect_dry_violations(content, file_path)
 
-        # Enhance with semantic duplicate detection
+
         semantic_violations = await self._detect_semantic_violations(content, file_path)
         violations.extend(semantic_violations)
 
@@ -118,24 +113,24 @@ class DRYAgent(SubAgent):
                 remaining_issues=[f"Failed to write fixed file: {file_path}"],
             )
 
-        # Enhance recommendations with semantic insights and session continuity
+
         recommendations = ["Verify functionality after DRY fixes"]
         if hasattr(self, "current_semantic_insight") and self.current_semantic_insight:
             recommendations = self.semantic_enhancer.enhance_recommendations(
                 recommendations, self.current_semantic_insight
             )
-            # Log semantic context for debugging
+
             summary = self.semantic_enhancer.get_semantic_context_summary(
                 self.current_semantic_insight
             )
             self.log(f"Semantic context: {summary}")
 
-            # Store insight for session continuity
+
             await self.semantic_enhancer.store_insight_to_session(
                 self.current_semantic_insight, "DRYAgent"
             )
 
-        # Enhance with session-stored insights
+
         recommendations = await get_session_enhanced_recommendations(
             recommendations, "DRYAgent", self.context.project_path
         )
@@ -444,20 +439,19 @@ def _ensure_path(path: str | Path) -> Path:
     async def _detect_semantic_violations(
         self, content: str, file_path: Path
     ) -> list[dict[str, t.Any]]:
-        """Detect semantic code duplicates using vector similarity."""
         violations = []
 
         try:
-            # Extract key code functions for semantic analysis
+
             code_elements = self._extract_code_functions(content)
 
             for element in code_elements:
                 if element["type"] == "function" and len(element["body"]) > 50:
-                    # Search for semantically similar functions
+
                     insight = await self.semantic_enhancer.find_duplicate_patterns(
                         element["signature"]
                         + "\n"
-                        + element["body"][:200],  # Include body sample
+                        + element["body"][:200],
                         current_file=file_path,
                     )
 
@@ -468,7 +462,7 @@ def _ensure_path(path: str | Path) -> Path:
                                 "element": element,
                                 "similar_patterns": insight.related_patterns[
                                     :3
-                                ],  # Top 3 matches
+                                ],
                                 "confidence_score": insight.high_confidence_matches
                                 / insight.total_matches
                                 if insight.total_matches > 0
@@ -477,7 +471,7 @@ def _ensure_path(path: str | Path) -> Path:
                             }
                         )
 
-                        # Store insight for recommendation enhancement
+
                         self.current_semantic_insight = insight
 
         except Exception as e:
@@ -486,7 +480,6 @@ def _ensure_path(path: str | Path) -> Path:
         return violations
 
     def _extract_code_functions(self, content: str) -> list[dict[str, t.Any]]:
-        """Extract functions from code for semantic analysis."""
         functions: list[dict[str, t.Any]] = []
         lines = content.split("\n")
         current_function = None
@@ -508,7 +501,7 @@ def _ensure_path(path: str | Path) -> Path:
                     functions, current_function, line, stripped, indent, i
                 )
 
-        # Add last function if exists
+
         if current_function:
             current_function["end_line"] = len(lines)
             functions.append(current_function)
@@ -518,7 +511,6 @@ def _ensure_path(path: str | Path) -> Path:
     def _should_skip_line(
         self, stripped: str, current_function: dict[str, t.Any] | None, line: str
     ) -> bool:
-        """Check if line should be skipped during function extraction."""
         if not stripped or stripped.startswith("#"):
             if current_function:
                 current_function["body"] += line + "\n"
@@ -526,7 +518,6 @@ def _ensure_path(path: str | Path) -> Path:
         return False
 
     def _is_function_definition(self, stripped: str) -> bool:
-        """Check if line is a function definition."""
         return stripped.startswith("def ") and "(" in stripped
 
     def _handle_function_definition(
@@ -537,8 +528,7 @@ def _ensure_path(path: str | Path) -> Path:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any]:
-        """Handle a new function definition."""
-        # Save previous function if exists
+
         if current_function:
             functions.append(current_function)
 
@@ -561,13 +551,12 @@ def _ensure_path(path: str | Path) -> Path:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any] | None:
-        """Handle a line within a function body."""
-        # Check if we're still inside the function
+
         if self._is_line_inside_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
         else:
-            # Function ended
+
             current_function["end_line"] = line_index
             functions.append(current_function)
             return None
@@ -575,7 +564,6 @@ def _ensure_path(path: str | Path) -> Path:
     def _is_line_inside_function(
         self, current_function: dict[str, t.Any], indent: int, stripped: str
     ) -> bool:
-        """Check if line is still inside the current function."""
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]
             and stripped.startswith(('"', "'", "@"))

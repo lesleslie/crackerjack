@@ -1,8 +1,3 @@
-"""Tool filtering for targeted execution.
-
-Phase 10.3.3: Implements --tool and --changed-only filtering to run only
-specific tools or limit execution to changed files.
-"""
 
 import fnmatch
 from dataclasses import dataclass, field
@@ -13,17 +8,15 @@ from crackerjack.services.incremental_executor import IncrementalExecutor
 
 @dataclass
 class FilterConfig:
-    """Configuration for tool filtering."""
 
-    tool_name: str | None = None  # Specific tool to run (--tool flag)
-    changed_only: bool = False  # Run only on changed files (--changed-only flag)
-    file_patterns: list[str] = field(default_factory=list)  # File glob patterns
-    exclude_patterns: list[str] = field(default_factory=list)  # Exclusion patterns
+    tool_name: str | None = None
+    changed_only: bool = False
+    file_patterns: list[str] = field(default_factory=list)
+    exclude_patterns: list[str] = field(default_factory=list)
 
 
 @dataclass
 class FilterResult:
-    """Result of applying filters."""
 
     total_tools: int
     filtered_tools: list[str]
@@ -31,33 +24,24 @@ class FilterResult:
     total_files: int
     filtered_files: list[Path]
     skipped_files: list[Path]
-    filter_effectiveness: float  # Percentage of items filtered out
+    filter_effectiveness: float
 
     @property
     def tools_filtered_out(self) -> int:
-        """Number of tools filtered out."""
         return len(self.skipped_tools)
 
     @property
     def files_filtered_out(self) -> int:
-        """Number of files filtered out."""
         return len(self.skipped_files)
 
 
 class ToolFilter:
-    """Filters tool execution based on configuration."""
 
     def __init__(
         self,
         config: FilterConfig,
         executor: IncrementalExecutor | None = None,
     ):
-        """Initialize tool filter.
-
-        Args:
-            config: Filter configuration
-            executor: Optional incremental executor for changed file detection
-        """
         self.config = config
         self.executor = executor
 
@@ -65,25 +49,17 @@ class ToolFilter:
         self,
         available_tools: list[str],
     ) -> FilterResult:
-        """Filter list of tools based on configuration.
-
-        Args:
-            available_tools: All available tools
-
-        Returns:
-            FilterResult with filtered and skipped tools
-        """
         if self.config.tool_name:
-            # Filter to specific tool
+
             if self.config.tool_name in available_tools:
                 filtered = [self.config.tool_name]
                 skipped = [t for t in available_tools if t != self.config.tool_name]
             else:
-                # Tool not found - run nothing
+
                 filtered = []
                 skipped = available_tools.copy()
         else:
-            # No tool filter - run all
+
             filtered = available_tools.copy()
             skipped = []
 
@@ -94,7 +70,7 @@ class ToolFilter:
             total_tools=total_tools,
             filtered_tools=filtered,
             skipped_tools=skipped,
-            total_files=0,  # Updated by filter_files
+            total_files=0,
             filtered_files=[],
             skipped_files=[],
             filter_effectiveness=effectiveness,
@@ -105,25 +81,16 @@ class ToolFilter:
         tool_name: str,
         all_files: list[Path],
     ) -> FilterResult:
-        """Filter list of files based on configuration.
-
-        Args:
-            tool_name: Name of the tool being run
-            all_files: All available files
-
-        Returns:
-            FilterResult with filtered and skipped files
-        """
         filtered_files = all_files.copy()
         skipped_files: list[Path] = []
 
-        # Apply changed-only filter
+
         if self.config.changed_only and self.executor:
             changed_files = self.executor.get_changed_files(tool_name, all_files)
             skipped_files = [f for f in all_files if f not in changed_files]
             filtered_files = changed_files
 
-        # Apply file pattern filters
+
         if self.config.file_patterns:
             pattern_filtered = self._apply_patterns(
                 filtered_files,
@@ -134,7 +101,7 @@ class ToolFilter:
             skipped_files.extend(new_skipped)
             filtered_files = pattern_filtered
 
-        # Apply exclude patterns
+
         if self.config.exclude_patterns:
             exclude_filtered = self._apply_patterns(
                 filtered_files,
@@ -151,7 +118,7 @@ class ToolFilter:
         )
 
         return FilterResult(
-            total_tools=1,  # Single tool context
+            total_tools=1,
             filtered_tools=[tool_name],
             skipped_tools=[],
             total_files=total_files,
@@ -166,48 +133,30 @@ class ToolFilter:
         patterns: list[str],
         include: bool,
     ) -> list[Path]:
-        """Apply glob patterns to filter files.
-
-        Args:
-            files: Files to filter
-            patterns: Glob patterns to apply
-            include: If True, include matching files; if False, exclude them
-
-        Returns:
-            Filtered file list
-        """
 
         matching_files: set[Path] = set()
 
         for pattern in patterns:
             for file in files:
-                # Match against file name and full path
+
                 if fnmatch.fnmatch(file.name, pattern) or fnmatch.fnmatch(
                     str(file), pattern
                 ):
                     matching_files.add(file)
 
         if include:
-            # Include only matching files
+
             return [f for f in files if f in matching_files]
 
-        # Exclude matching files
+
         return [f for f in files if f not in matching_files]
 
     def should_run_tool(self, tool_name: str) -> bool:
-        """Check if a specific tool should run.
-
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            True if tool should run
-        """
         if self.config.tool_name is None:
-            # No filter - run all tools
+
             return True
 
-        # Check if this is the selected tool
+
         return tool_name == self.config.tool_name
 
     def get_filtered_files(
@@ -215,15 +164,6 @@ class ToolFilter:
         tool_name: str,
         all_files: list[Path],
     ) -> list[Path]:
-        """Get filtered file list for a tool.
-
-        Args:
-            tool_name: Name of the tool
-            all_files: All available files
-
-        Returns:
-            Filtered file list
-        """
         result = self.filter_files(tool_name, all_files)
         return result.filtered_files
 
@@ -232,17 +172,8 @@ class ToolFilter:
         tool_execution_times: dict[str, float],
         file_execution_time_per_file: float = 0.1,
     ) -> dict[str, float]:
-        """Estimate time savings from filtering.
-
-        Args:
-            tool_execution_times: Dict mapping tool names to execution times
-            file_execution_time_per_file: Average time per file (seconds)
-
-        Returns:
-            Dictionary with time savings statistics
-        """
         if not self.config.tool_name and not self.config.changed_only:
-            # No filtering - no savings
+
             return {
                 "total_time_baseline": sum(tool_execution_times.values()),
                 "total_time_filtered": sum(tool_execution_times.values()),
@@ -250,15 +181,15 @@ class ToolFilter:
                 "percent_saved": 0.0,
             }
 
-        # Calculate baseline time (all tools)
+
         baseline_time = sum(tool_execution_times.values())
 
-        # Calculate filtered time
+
         if self.config.tool_name:
-            # Only one tool runs
+
             filtered_time = tool_execution_times.get(self.config.tool_name, 0.0)
         else:
-            # All tools run (but maybe on fewer files)
+
             filtered_time = baseline_time
 
         time_saved = baseline_time - filtered_time
@@ -276,15 +207,6 @@ class ToolFilter:
         tool_result: FilterResult | None = None,
         file_result: FilterResult | None = None,
     ) -> str:
-        """Generate human-readable filter summary.
-
-        Args:
-            tool_result: Optional tool filtering result
-            file_result: Optional file filtering result
-
-        Returns:
-            Formatted summary string
-        """
         lines = ["# Filter Summary", ""]
 
         if tool_result:
@@ -302,7 +224,7 @@ class ToolFilter:
             if tool_result.filtered_tools:
                 lines.append("**Running:**")
                 for tool in tool_result.filtered_tools:
-                    lines.append(f"  - {tool}")
+                    lines.append(f" - {tool}")
                 lines.append("")
 
         if file_result:
@@ -320,18 +242,7 @@ class ToolFilter:
         return "\n".join(lines)
 
 
-# Convenience functions for common filtering scenarios
-
-
 def create_tool_only_filter(tool_name: str) -> ToolFilter:
-    """Create filter for running a single tool.
-
-    Args:
-        tool_name: Name of the tool to run
-
-    Returns:
-        Configured ToolFilter
-    """
     config = FilterConfig(tool_name=tool_name)
     return ToolFilter(config=config)
 
@@ -339,14 +250,6 @@ def create_tool_only_filter(tool_name: str) -> ToolFilter:
 def create_changed_files_filter(
     executor: IncrementalExecutor,
 ) -> ToolFilter:
-    """Create filter for running only on changed files.
-
-    Args:
-        executor: IncrementalExecutor for change detection
-
-    Returns:
-        Configured ToolFilter
-    """
     config = FilterConfig(changed_only=True)
     return ToolFilter(config=config, executor=executor)
 
@@ -355,14 +258,5 @@ def create_combined_filter(
     tool_name: str,
     executor: IncrementalExecutor,
 ) -> ToolFilter:
-    """Create filter for specific tool on changed files only.
-
-    Args:
-        tool_name: Name of the tool to run
-        executor: IncrementalExecutor for change detection
-
-    Returns:
-        Configured ToolFilter
-    """
     config = FilterConfig(tool_name=tool_name, changed_only=True)
     return ToolFilter(config=config, executor=executor)

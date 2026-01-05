@@ -1,4 +1,3 @@
-"""Configuration models for the quality assurance framework."""
 
 from __future__ import annotations
 
@@ -12,11 +11,6 @@ from crackerjack.models.qa_results import QACheckType
 
 
 class QACheckConfig(BaseModel):
-    """Configuration for a single quality assurance check.
-
-    This model defines how a QA check should be executed, including
-    file patterns, exclusions, timeouts, and check-specific settings.
-    """
 
     check_id: UUID = Field(
         ...,
@@ -43,8 +37,8 @@ class QACheckConfig(BaseModel):
         description="Glob patterns for files to exclude",
     )
     timeout_seconds: int = Field(
-        default=300,  # 5 minutes default
-        gt=0,  # Must be positive
+        default=300,
+        gt=0,
         description="Maximum execution time in seconds",
     )
     retry_on_failure: bool = Field(
@@ -70,21 +64,14 @@ class QACheckConfig(BaseModel):
 
     @property
     def is_fast_stage(self) -> bool:
-        """Check if this is a fast stage check."""
         return self.stage == "fast"
 
     @property
     def is_comprehensive_stage(self) -> bool:
-        """Check if this is a comprehensive stage check."""
         return self.stage == "comprehensive"
 
 
 class QAOrchestratorConfig(BaseModel):
-    """Configuration for the quality assurance orchestrator.
-
-    This model defines global settings for QA execution, including
-    parallelization, caching, and execution order.
-    """
 
     project_root: Path = Field(
         ...,
@@ -92,7 +79,7 @@ class QAOrchestratorConfig(BaseModel):
     )
     max_parallel_checks: int = Field(
         default=4,
-        gt=0,  # Must be positive
+        gt=0,
         description="Maximum number of checks to run in parallel",
     )
     enable_caching: bool = Field(
@@ -126,20 +113,16 @@ class QAOrchestratorConfig(BaseModel):
 
     @property
     def fast_checks(self) -> list[QACheckConfig]:
-        """Get all fast stage checks."""
         return [check for check in self.checks if check.is_fast_stage]
 
     @property
     def comprehensive_checks(self) -> list[QACheckConfig]:
-        """Get all comprehensive stage checks."""
         return [check for check in self.checks if check.is_comprehensive_stage]
 
     @property
     def formatter_checks(self) -> list[QACheckConfig]:
-        """Get all formatter checks."""
         return [check for check in self.checks if check.is_formatter]
 
     @property
     def enabled_checks(self) -> list[QACheckConfig]:
-        """Get all enabled checks."""
         return [check for check in self.checks if check.enabled]

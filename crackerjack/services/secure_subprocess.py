@@ -79,7 +79,7 @@ class SubprocessSecurityConfig:
 class SecureSubprocessExecutor:
     def __init__(self, config: SubprocessSecurityConfig | None = None):
         if config is None:
-            # When no explicit config provided, respect debug mode for logging
+
             debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
             self.config = SubprocessSecurityConfig(enable_command_logging=debug_enabled)
         else:
@@ -96,14 +96,14 @@ class SecureSubprocessExecutor:
             r"<\s*/",
         ]
 
-        # Git reference patterns that should be allowed despite containing special chars
+
         self.allowed_git_patterns = [
-            r"^@\{u\}\.\.HEAD$",  # upstream..HEAD
-            r"^@\{upstream\}\.\.HEAD$",  # upstream..HEAD (long form)
-            r"^HEAD\.\.@\{u\}$",  # HEAD..upstream
-            r"^HEAD\.\.@\{upstream\}$",  # HEAD..upstream (long form)
-            r"^@\{[0-9]+\}$",  # reflog references like @{1}
-            r"^@\{[0-9]+ (minute|hour|day|week|month|year)s? ago\}$",  # time references
+            r"^@\{u\}\.\.HEAD$",
+            r"^@\{upstream\}\.\.HEAD$",
+            r"^HEAD\.\.@\{u\}$",
+            r"^HEAD\.\.@\{upstream\}$",
+            r"^@\{[0-9]+\}$",
+            r"^@\{[0-9]+ (minute|hour|day|week|month|year)s? ago\}$",
         ]
 
         self.dangerous_env_vars = {
@@ -334,19 +334,18 @@ class SecureSubprocessExecutor:
     def _has_dangerous_patterns(
         self, arg: str, index: int, issues: list[str], command: list[str]
     ) -> bool:
-        # First check if this is an allowed git pattern
+
         if self._is_allowed_git_pattern(arg):
             return False
 
-        # Special handling for git commit messages
+
         if self._is_git_commit_message(index, command):
             return self._check_dangerous_patterns_in_commit_message(arg, index, issues)
 
-        # Check for dangerous patterns in other contexts
+
         return self._check_dangerous_patterns_in_other_contexts(arg, index, issues)
 
     def _is_allowed_git_pattern(self, arg: str) -> bool:
-        """Check if the argument matches an allowed git pattern."""
         for git_pattern in self.allowed_git_patterns:
             if re.match(git_pattern, arg):
                 return True
@@ -355,22 +354,21 @@ class SecureSubprocessExecutor:
     def _check_dangerous_patterns_in_commit_message(
         self, arg: str, index: int, issues: list[str]
     ) -> bool:
-        """Check for dangerous patterns specifically in git commit messages."""
-        # For git commit messages, only check for truly dangerous patterns
-        # Parentheses are common in commit messages and should be allowed
+
+
         safe_commit_patterns = [
-            r"[;&|`$]",  # Still dangerous in commit messages
-            r"\.\./",  # Path traversal
-            r"\$\{.*\}",  # Variable expansion
-            r"`.*`",  # Command substitution
-            r"\$\(.*\)",  # Command substitution (but allow simple parentheses)
-            r">\s*/",  # Redirection to paths
-            r"<\s*/",  # Redirection from paths
+            r"[;&|`$]",
+            r"\.\./",
+            r"\$\{.*\}",
+            r"`.*`",
+            r"\$\(.*\)",
+            r">\s*/",
+            r"<\s*/",
         ]
 
         for pattern in safe_commit_patterns:
             if re.search(pattern, arg):
-                # Allow simple parentheses that don't look like command substitution
+
                 if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
                     continue
                 issues.append(
@@ -382,7 +380,6 @@ class SecureSubprocessExecutor:
     def _check_dangerous_patterns_in_other_contexts(
         self, arg: str, index: int, issues: list[str]
     ) -> bool:
-        """Check for dangerous patterns in non-commit message contexts."""
         for pattern in self.dangerous_patterns:
             if re.search(pattern, arg):
                 issues.append(
@@ -392,8 +389,7 @@ class SecureSubprocessExecutor:
         return False
 
     def _is_git_commit_message(self, index: int, command: list[str]) -> bool:
-        """Check if the current argument is likely a git commit message."""
-        # Check if we have a git commit command structure: git commit -m <message>
+
         if (
             len(command) >= 3
             and command[0] == "git"
@@ -451,20 +447,20 @@ class SecureSubprocessExecutor:
         try:
             resolved_path = cwd_path.resolve()
 
-            # Get the original path's components to check for path traversal patterns
+
             original_path_obj = Path(cwd)
             original_parts = original_path_obj.parts
             if ".." in original_parts or any(
                 part.startswith("../") for part in original_parts
             ):
-                # Check if the resolved path is within the safe base (project directory or temp)
+
                 safe_root = (
                     Path.cwd().parent.resolve()
-                )  # Use parent of project root as broader safe root
+                )
                 try:
                     resolved_path.relative_to(safe_root)
                 except ValueError:
-                    # If relative_to raises ValueError, path is outside safe root
+
                     path_str = str(resolved_path)
                     self.security_logger.log_path_traversal_attempt(
                         attempted_path=path_str,
@@ -475,7 +471,7 @@ class SecureSubprocessExecutor:
                     )
 
             path_str = str(resolved_path)
-            # Check for system directories, including macOS /private variants
+
             if path_str.startswith(
                 (
                     "/etc",

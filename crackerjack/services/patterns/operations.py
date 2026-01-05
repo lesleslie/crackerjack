@@ -1,18 +1,16 @@
-"""Utility functions for regex pattern operations."""
 
 import re
 
-# Import for type checking - circular import avoided
+
 from typing import TYPE_CHECKING
 
 from .core import MAX_ITERATIONS, CompiledPatternCache, ValidatedPattern
 
 if TYPE_CHECKING:
-    pass  # SAFE_PATTERNS imported at runtime to avoid circular imports
+    pass
 
 
 def validate_all_patterns() -> dict[str, bool]:
-    """Validate all patterns in the registry."""
     from . import SAFE_PATTERNS
 
     results: dict[str, bool] = {}
@@ -27,14 +25,12 @@ def validate_all_patterns() -> dict[str, bool]:
 
 
 def find_pattern_for_text(text: str) -> list[str]:
-    """Find all patterns that match the given text."""
     from . import SAFE_PATTERNS
 
     return [name for name, pattern in SAFE_PATTERNS.items() if pattern.test(text)]
 
 
 def apply_safe_replacement(text: str, pattern_name: str) -> str:
-    """Apply a named pattern to text."""
     from . import SAFE_PATTERNS
 
     if pattern_name not in SAFE_PATTERNS:
@@ -44,7 +40,6 @@ def apply_safe_replacement(text: str, pattern_name: str) -> str:
 
 
 def get_pattern_description(pattern_name: str) -> str:
-    """Get description for a named pattern."""
     from . import SAFE_PATTERNS
 
     if pattern_name not in SAFE_PATTERNS:
@@ -54,14 +49,12 @@ def get_pattern_description(pattern_name: str) -> str:
 
 
 def fix_multi_word_hyphenation(text: str) -> str:
-    """Fix multi-word hyphenation iteratively."""
     from . import SAFE_PATTERNS
 
     return SAFE_PATTERNS["fix_spaced_hyphens"].apply_iteratively(text)
 
 
 def update_pyproject_version(content: str, new_version: str) -> str:
-    """Update version in pyproject.toml content."""
     from . import SAFE_PATTERNS
 
     pattern_obj = SAFE_PATTERNS["update_pyproject_version"]
@@ -82,7 +75,6 @@ def update_pyproject_version(content: str, new_version: str) -> str:
 
 
 def apply_formatting_fixes(content: str) -> str:
-    """Apply common formatting fixes to content."""
     from . import SAFE_PATTERNS
 
     pattern = SAFE_PATTERNS["remove_trailing_whitespace"]
@@ -96,7 +88,6 @@ def apply_formatting_fixes(content: str) -> str:
 
 
 def apply_security_fixes(content: str) -> str:
-    """Apply common security fixes to content."""
     from . import SAFE_PATTERNS
 
     content = SAFE_PATTERNS["fix_subprocess_run_shell"].apply(content)
@@ -114,28 +105,24 @@ def apply_security_fixes(content: str) -> str:
 
 
 def apply_test_fixes(content: str) -> str:
-    """Apply common test-related fixes to content."""
     from . import SAFE_PATTERNS
 
     return SAFE_PATTERNS["normalize_assert_statements"].apply(content)
 
 
 def is_valid_job_id(job_id: str) -> bool:
-    """Check if a job ID is valid."""
     from . import SAFE_PATTERNS
 
     return SAFE_PATTERNS["validate_job_id_alphanumeric"].test(job_id)
 
 
 def remove_coverage_fail_under(addopts: str) -> str:
-    """Remove --cov-fail-under from pytest addopts."""
     from . import SAFE_PATTERNS
 
     return SAFE_PATTERNS["remove_coverage_fail_under"].apply(addopts)
 
 
 def update_coverage_requirement(content: str, new_coverage: float) -> str:
-    """Update coverage requirement to a new value."""
     from . import SAFE_PATTERNS
 
     pattern_obj = SAFE_PATTERNS["update_coverage_requirement"]
@@ -154,7 +141,6 @@ def update_coverage_requirement(content: str, new_coverage: float) -> str:
 
 
 def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
-    """Update repository revision in content."""
     escaped_url = re.escape(repo_url)
     pattern = rf'("repo": "{escaped_url}".*?"rev": )"([^"]+)"'
     replacement = rf'\1"{new_revision}"'
@@ -163,7 +149,6 @@ def update_repo_revision(content: str, repo_url: str, new_revision: str) -> str:
 
 
 def sanitize_internal_urls(text: str) -> str:
-    """Sanitize all internal URLs in text."""
     from . import SAFE_PATTERNS
 
     url_patterns = [
@@ -186,7 +171,6 @@ def sanitize_internal_urls(text: str) -> str:
 def apply_pattern_iteratively(
     text: str, pattern_name: str, max_iterations: int = MAX_ITERATIONS
 ) -> str:
-    """Apply a pattern iteratively until no more changes."""
     from . import SAFE_PATTERNS
 
     if pattern_name not in SAFE_PATTERNS:
@@ -196,7 +180,6 @@ def apply_pattern_iteratively(
 
 
 def get_all_pattern_stats() -> dict[str, dict[str, float] | dict[str, str]]:
-    """Get performance statistics for all patterns."""
     from . import SAFE_PATTERNS
 
     test_text = "python - m crackerjack - t with pytest - hypothesis - specialist"
@@ -213,17 +196,14 @@ def get_all_pattern_stats() -> dict[str, dict[str, float] | dict[str, str]]:
 
 
 def clear_all_caches() -> None:
-    """Clear all pattern caches."""
     CompiledPatternCache.clear_cache()
 
 
 def get_cache_info() -> dict[str, int | list[str]]:
-    """Get cache statistics."""
     return CompiledPatternCache.get_cache_stats()
 
 
 def detect_path_traversal_patterns(path_str: str) -> list[str]:
-    """Detect path traversal patterns in a path string."""
     from . import SAFE_PATTERNS
 
     detected = []
@@ -244,7 +224,6 @@ def detect_path_traversal_patterns(path_str: str) -> list[str]:
 
 
 def detect_null_byte_patterns(path_str: str) -> list[str]:
-    """Detect null byte patterns in a path string."""
     from . import SAFE_PATTERNS
 
     detected = []
@@ -263,7 +242,6 @@ def detect_null_byte_patterns(path_str: str) -> list[str]:
 
 
 def detect_dangerous_directory_patterns(path_str: str) -> list[str]:
-    """Detect dangerous directory access patterns in a path string."""
     from . import SAFE_PATTERNS
 
     detected = []
@@ -288,7 +266,6 @@ def detect_dangerous_directory_patterns(path_str: str) -> list[str]:
 
 
 def detect_suspicious_path_patterns(path_str: str) -> list[str]:
-    """Detect suspicious path patterns in a path string."""
     from . import SAFE_PATTERNS
 
     detected = []
@@ -307,7 +284,6 @@ def detect_suspicious_path_patterns(path_str: str) -> list[str]:
 
 
 def validate_path_security(path_str: str) -> dict[str, list[str]]:
-    """Validate path security by checking for various attack patterns."""
     return {
         "traversal_patterns": detect_path_traversal_patterns(path_str),
         "null_bytes": detect_null_byte_patterns(path_str),
@@ -317,24 +293,16 @@ def validate_path_security(path_str: str) -> dict[str, list[str]]:
 
 
 class RegexPatternsService:
-    """Service class that implements RegexPatternsProtocol.
-
-    Wraps module-level regex pattern functions to provide a protocol-compliant interface.
-    """
 
     def update_pyproject_version(self, content: str, new_version: str) -> str:
-        """Update version in pyproject.toml content."""
         return update_pyproject_version(content, new_version)
 
     def remove_coverage_fail_under(self, content: str) -> str:
-        """Remove --cov-fail-under from pytest addopts."""
         return remove_coverage_fail_under(content)
 
     def update_version_in_changelog(self, content: str, new_version: str) -> str:
-        """Update version in changelog content."""
-        # Placeholder implementation - can be enhanced later
+
         return content
 
     def mask_tokens_in_text(self, text: str) -> str:
-        """Mask sensitive tokens in text."""
         return sanitize_internal_urls(text)

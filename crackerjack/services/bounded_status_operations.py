@@ -82,7 +82,7 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
         self._operation_history: list[OperationMetrics] = []
 
         self._circuit_states: dict[str, OperationState] = defaultdict(
-            lambda: OperationState.CLOSED  # type: ignore[misc]
+            lambda: OperationState.CLOSED # type: ignore[misc]
         )
         self._failure_counts: dict[str, int] = defaultdict(int)
         self._last_failure_times: dict[str, float] = {}

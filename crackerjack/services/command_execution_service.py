@@ -1,4 +1,3 @@
-"""Unified command execution service with consistent error handling and timeouts."""
 
 import asyncio
 import subprocess
@@ -8,15 +7,8 @@ from loguru import logger
 
 
 class CommandExecutionService:
-    """Unified command execution with consistent error handling, timeouts, and caching."""
 
     def __init__(self, default_timeout: int = 30):
-        """
-        Initialize the command execution service.
-
-        Args:
-            default_timeout: Default timeout in seconds for commands
-        """
         self.default_timeout = default_timeout
 
     async def run_command(
@@ -28,24 +20,6 @@ class CommandExecutionService:
         capture_output: bool = True,
         check: bool = True,
     ) -> subprocess.CompletedProcess:
-        """
-        Run a command with timeout and error handling.
-
-        Args:
-            cmd: Command to run as a string or list of strings
-            cwd: Working directory to run the command in
-            env: Environment variables to use
-            timeout: Timeout in seconds (uses default if not specified)
-            capture_output: Whether to capture stdout/stderr
-            check: If True, raises exception on non-zero exit code
-
-        Returns:
-            CompletedProcess instance with results
-
-        Raises:
-            subprocess.TimeoutExpired: If command times out
-            subprocess.CalledProcessError: If command fails and check=True
-        """
         timeout = timeout or self.default_timeout
         str_cmd = " ".join(cmd) if isinstance(cmd, list) else cmd
         logger.debug(f"Executing command: {str_cmd}")
@@ -64,7 +38,6 @@ class CommandExecutionService:
             raise
 
     def _get_executable(self, cmd: str | list[str]) -> str:
-        """Extract executable name from command."""
         if isinstance(cmd, list):
             return cmd[0] if cmd else ""
         else:
@@ -78,7 +51,6 @@ class CommandExecutionService:
         cwd: str | Path | None,
         env: dict[str, str] | None,
     ) -> asyncio.subprocess.Process:
-        """Create subprocess with proper configuration."""
         return await asyncio.create_subprocess_exec(
             *(cmd if isinstance(cmd, list) else cmd.split()),
             stdout=asyncio.subprocess.PIPE if capture_output else None,
@@ -96,7 +68,6 @@ class CommandExecutionService:
         check: bool,
         capture_output: bool,
     ) -> subprocess.CompletedProcess:
-        """Execute the process and handle the result."""
         try:
             stdout, stderr = await asyncio.wait_for(
                 process.communicate(), timeout=timeout
@@ -125,9 +96,9 @@ class CommandExecutionService:
             return completed_process
 
         except TimeoutError:
-            # Handle timeout
+
             process.kill()
-            await process.wait()  # Ensure process is cleaned up
+            await process.wait()
             logger.error(f"Command timed out after {timeout}s: {str_cmd}")
             raise subprocess.TimeoutExpired(cmd, timeout)
 
@@ -140,20 +111,6 @@ class CommandExecutionService:
         capture_output: bool = True,
         check: bool = True,
     ) -> subprocess.CompletedProcess:
-        """
-        Synchronous version of run_command.
-
-        Args:
-            cmd: Command to run as a string or list of strings
-            cwd: Working directory to run the command in
-            env: Environment variables to use
-            timeout: Timeout in seconds (uses default if not specified)
-            capture_output: Whether to capture stdout/stderr
-            check: If True, raises exception on non-zero exit code
-
-        Returns:
-            CompletedProcess instance with results
-        """
         timeout = timeout or self.default_timeout
         str_cmd = " ".join(cmd) if isinstance(cmd, list) else cmd
 
@@ -166,7 +123,7 @@ class CommandExecutionService:
                 env=env,
                 timeout=timeout,
                 capture_output=capture_output,
-                text=True,  # Return strings instead of bytes
+                text=True,
                 check=check,
             )
 
@@ -188,30 +145,17 @@ class CommandExecutionService:
         timeout: int | None = None,
         parallel: bool = False,
     ) -> list[subprocess.CompletedProcess]:
-        """
-        Run multiple commands sequentially or in parallel.
-
-        Args:
-            commands: List of commands to run
-            cwd: Working directory to run the commands in
-            env: Environment variables to use
-            timeout: Timeout in seconds for each command
-            parallel: If True, run commands in parallel; otherwise sequentially
-
-        Returns:
-            List of CompletedProcess instances with results
-        """
         results = []
 
         if parallel:
-            # Run commands in parallel
+
             tasks = [
                 self.run_command(cmd, cwd=cwd, env=env, timeout=timeout)
                 for cmd in commands
             ]
             results = await asyncio.gather(*tasks)
         else:
-            # Run commands sequentially
+
             for cmd in commands:
                 result = await self.run_command(cmd, cwd=cwd, env=env, timeout=timeout)
                 results.append(result)
@@ -219,17 +163,8 @@ class CommandExecutionService:
         return results
 
     async def command_exists(self, command: str) -> bool:
-        """
-        Check if a command exists in the system.
-
-        Args:
-            command: Command to check
-
-        Returns:
-            True if command exists, False otherwise
-        """
         try:
-            # Try running 'which' on Unix-like systems or 'where' on Windows
+
             import platform
 
             if platform.system() == "Windows":
@@ -240,12 +175,12 @@ class CommandExecutionService:
             result = await self.run_command(
                 check_cmd,
                 capture_output=True,
-                check=False,  # Don't raise on non-zero exit (which returns 1 if not found)
+                check=False,
             )
 
             return result.returncode == 0
         except (subprocess.CalledProcessError, FileNotFoundError):
-            # If the check command itself fails, command likely doesn't exist
+
             return False
 
     async def run_command_with_retries(
@@ -259,25 +194,9 @@ class CommandExecutionService:
         check: bool = True,
         backoff_factor: float = 1.0,
     ) -> subprocess.CompletedProcess:
-        """
-        Run a command with retry logic.
-
-        Args:
-            cmd: Command to run
-            max_retries: Maximum number of retry attempts
-            cwd: Working directory
-            env: Environment variables
-            timeout: Timeout for each attempt
-            capture_output: Whether to capture output
-            check: Whether to check return code
-            backoff_factor: Factor by which to multiply wait time between retries
-
-        Returns:
-            CompletedProcess instance with results
-        """
         for attempt in range(
             max_retries + 1
-        ):  # +1 because first attempt doesn't count as retry
+        ):
             try:
                 return await self.run_command(
                     cmd,
@@ -289,11 +208,11 @@ class CommandExecutionService:
                 )
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
                 if attempt == max_retries:
-                    # Last attempt, re-raise the exception
+
                     logger.error(f"Command failed after {max_retries} retries: {cmd}")
                     raise
                 else:
-                    # Wait before retrying with exponential backoff
+
                     wait_time = backoff_factor * (2**attempt)
                     logger.warning(
                         f"Command failed on attempt {attempt + 1}, "
@@ -301,5 +220,5 @@ class CommandExecutionService:
                     )
                     await asyncio.sleep(wait_time)
 
-        # This line should never be reached due to the loop logic
+
         raise RuntimeError("Unexpected error in run_command_with_retries")

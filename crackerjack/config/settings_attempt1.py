@@ -1,7 +1,3 @@
-"""Crackerjack server settings for Oneiric integration.
-
-Phase 3 Implementation: Replaces legacy Settings with Pydantic BaseSettings.
-"""
 
 from pathlib import Path
 
@@ -10,16 +6,7 @@ from pydantic_settings import BaseSettings
 
 
 class CrackerjackSettings(BaseSettings):
-    """Crackerjack configuration for Oneiric-integrated QA server.
 
-    This class replaces the legacy Settings-based configuration with a simpler
-    Pydantic BaseSettings approach, removing the legacy dependency while preserving
-    all necessary configuration fields for Phase 3 Oneiric integration.
-    """
-
-    # ========================================================================
-    # Server Settings (Oneiric Integration)
-    # ========================================================================
 
     server_name: str = Field(
         default="Crackerjack QA Server", description="Server display name"
@@ -35,9 +22,6 @@ class CrackerjackSettings(BaseSettings):
         default=Path.home() / ".crackerjack", description="Runtime cache directory"
     )
 
-    # ========================================================================
-    # QA-Specific Settings
-    # ========================================================================
 
     qa_mode: bool = Field(default=False, description="Enable QA analysis mode")
     test_suite_path: Path = Field(
@@ -48,9 +32,6 @@ class CrackerjackSettings(BaseSettings):
         default=False, description="Enable AI-powered code analysis agent"
     )
 
-    # ========================================================================
-    # Tool Enablement Flags
-    # ========================================================================
 
     ruff_enabled: bool = Field(default=True, description="Enable Ruff linter/formatter")
     bandit_enabled: bool = Field(
@@ -74,9 +55,6 @@ class CrackerjackSettings(BaseSettings):
         default=True, description="Enable pip-audit dependency scanning"
     )
 
-    # ========================================================================
-    # Performance Settings
-    # ========================================================================
 
     max_parallel_hooks: int = Field(
         default=4, description="Maximum parallel pre-commit hooks"
@@ -92,9 +70,6 @@ class CrackerjackSettings(BaseSettings):
         default=2.0, description="Memory per worker in GB for worker calculation"
     )
 
-    # ========================================================================
-    # Execution Settings
-    # ========================================================================
 
     verbose: bool = Field(default=False, description="Enable verbose logging")
     interactive: bool = Field(default=False, description="Enable interactive mode")
@@ -105,18 +80,12 @@ class CrackerjackSettings(BaseSettings):
         default=True, description="Enable workflow orchestration"
     )
 
-    # ========================================================================
-    # Hook Settings
-    # ========================================================================
 
     skip_hooks: bool = Field(default=False, description="Skip hook execution")
     experimental_hooks: bool = Field(
         default=False, description="Enable experimental hooks"
     )
 
-    # ========================================================================
-    # Cleanup Settings
-    # ========================================================================
 
     auto_cleanup: bool = Field(
         default=True, description="Automatically clean up temp files"
@@ -128,17 +97,11 @@ class CrackerjackSettings(BaseSettings):
         default=10, description="Number of coverage files to retain"
     )
 
-    # ========================================================================
-    # MCP Server Settings (Backward Compatibility)
-    # ========================================================================
 
     http_port: int = Field(default=8676, description="MCP HTTP server port")
     http_host: str = Field(default="127.0.0.1", description="MCP HTTP server host")
     http_enabled: bool = Field(default=False, description="Enable MCP HTTP server")
 
-    # ========================================================================
-    # Zuban LSP Settings
-    # ========================================================================
 
     zuban_lsp_enabled: bool = Field(
         default=True, description="Enable Zuban LSP integration"
@@ -151,9 +114,6 @@ class CrackerjackSettings(BaseSettings):
         default=120, description="Zuban LSP timeout in seconds"
     )
 
-    # ========================================================================
-    # Global Lock Settings
-    # ========================================================================
 
     global_lock_enabled: bool = Field(
         default=True, description="Enable global lock mechanism"
@@ -166,7 +126,6 @@ class CrackerjackSettings(BaseSettings):
     )
 
     class Config:
-        """Pydantic configuration."""
 
         env_prefix = "CRACKERJACK_"
         env_file = ".env"
@@ -175,17 +134,4 @@ class CrackerjackSettings(BaseSettings):
 
     @classmethod
     def load(cls, config_name: str = "crackerjack") -> "CrackerjackSettings":
-        """Load settings from environment variables.
-
-        Args:
-            config_name: Configuration name (for legacy Settings compatibility)
-
-        Returns:
-            CrackerjackSettings instance
-
-        Note:
-            This method provides compatibility with the legacy .load() pattern.
-            In Phase 3, we use environment variables only. YAML loading can be
-            added in future phases if needed.
-        """
         return cls()

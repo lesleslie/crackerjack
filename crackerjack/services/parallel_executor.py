@@ -41,12 +41,6 @@ class ExecutionGroup:
 
 
 class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
-    """Executes hooks in parallel or sequentially based on defined strategies.
-
-    This service manages the concurrent execution of various hooks (e.g., linting, formatting)
-    to optimize performance and provide faster feedback loops. It supports different execution
-    strategies and handles dependencies between hooks.
-    """
 
     def __init__(
         self,
@@ -62,7 +56,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         # Type: LoggerProtocol (logging.Logger is compatible)
         self._logger: LoggerProtocol = logger or logging.getLogger(
             "crackerjack.parallel_executor"
-        )  # type: ignore[assignment]
+        ) # type: ignore[assignment]
         self._cache = cache
 
     def initialize(self) -> None:
@@ -72,7 +66,6 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         pass
 
     async def async_cleanup(self) -> None:
-        """Async cleanup for any remaining tasks."""
         with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             pending_tasks = (
@@ -302,12 +295,6 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
 
 
 class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
-    """Executes shell commands asynchronously, with caching capabilities.
-
-    This service provides a robust way to run external commands without blocking
-    the main event loop, supporting parallel execution and caching of results
-    to improve performance and responsiveness.
-    """
 
     _logger: "LoggerProtocol"
 
@@ -357,7 +344,6 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         pass
 
     async def async_cleanup(self) -> None:
-        """Async cleanup for any remaining command executor tasks."""
         with suppress(RuntimeError):
             loop = asyncio.get_running_loop()
             pending_tasks = (
@@ -521,7 +507,7 @@ def get_parallel_executor(
     global _parallel_executor
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
-            # logger = logger  # Migrated from legacy runtime,
+
             cache=None,
             max_workers=max_workers,
             strategy=strategy,
@@ -533,7 +519,7 @@ def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
     global _async_executor
     if _async_executor is None:
         _async_executor = AsyncCommandExecutor(
-            # logger = logger  # Migrated from legacy runtime,
+
             cache=None,
             max_workers=max_workers,
         )

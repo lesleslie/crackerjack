@@ -1,21 +1,3 @@
-"""
-Hybrid Skills System (Option 3)
-
-Combines agent-based skills with MCP tool delegation for the best of both worlds.
-This approach provides intelligent agent capabilities with MCP tool integration.
-
-Key Concepts:
-- HybridSkill: Combines agent capabilities with MCP tool exposure
-- ToolDelegator: Delegates skill execution to appropriate MCP tools
-- HybridSkillRegistry: Manages hybrid skills with automatic tool registration
-
-Example:
-    registry = HybridSkillRegistry(mcp_app)
-    registry.register_hybrid_skill(RefactoringAgent, context)
-
-    # Skill executes via agent but exposes as MCP tool
-    result = await registry.execute_via_tool("refactoring_skill", issue)
-"""
 
 import typing as t
 from dataclasses import dataclass
@@ -35,7 +17,6 @@ from crackerjack.skills.agent_skills import (
 
 @dataclass
 class ToolMapping:
-    """Maps a skill to an MCP tool."""
 
     tool_name: str
     skill_id: str
@@ -45,7 +26,6 @@ class ToolMapping:
     output_schema: dict[str, t.Any]
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary."""
         return {
             "tool_name": self.tool_name,
             "skill_id": self.skill_id,
@@ -57,36 +37,26 @@ class ToolMapping:
 
 
 class ToolDelegator:
-    """
-    Delegates skill execution to MCP tools.
-
-    This class bridges agent-based skills with MCP tool invocations,
-    allowing skills to be exposed and executed through the MCP protocol.
-    """
 
     def __init__(self) -> None:
-        """Initialize delegator."""
         self._tool_mappings: dict[str, ToolMapping] = {}
-        self._skill_mappings: dict[str, list[str]] = {}  # skill_id -> tool_names
+        self._skill_mappings: dict[str, list[str]] = {}
 
     def register_tool_mapping(
         self,
         mapping: ToolMapping,
     ) -> None:
-        """Register a tool mapping."""
         self._tool_mappings[mapping.tool_name] = mapping
 
-        # Update skill mappings
+
         if mapping.skill_id not in self._skill_mappings:
             self._skill_mappings[mapping.skill_id] = []
         self._skill_mappings[mapping.skill_id].append(mapping.tool_name)
 
     def get_tool_mapping(self, tool_name: str) -> ToolMapping | None:
-        """Get tool mapping by tool name."""
         return self._tool_mappings.get(tool_name)
 
     def get_tools_for_skill(self, skill_id: str) -> list[ToolMapping]:
-        """Get all tool mappings for a skill."""
         tool_names = self._skill_mappings.get(skill_id, [])
         return [
             self._tool_mappings[name]
@@ -99,19 +69,10 @@ class ToolDelegator:
         skill_id: str,
         operation: str,
     ) -> str:
-        """Generate a standardized tool name."""
         return f"{skill_id}_{operation}"
 
 
 class HybridSkill(AgentSkill):
-    """
-    Enhanced agent skill with MCP tool integration.
-
-    Extends AgentSkill to add:
-    - Tool delegation capabilities
-    - MCP tool exposure
-    - Automatic tool registration
-    """
 
     def __init__(
         self,
@@ -119,7 +80,6 @@ class HybridSkill(AgentSkill):
         metadata: SkillMetadata,
         delegator: ToolDelegator | None = None,
     ) -> None:
-        """Initialize hybrid skill."""
         super().__init__(agent, metadata)
         self.delegator = delegator or ToolDelegator()
         self._tool_mappings: list[ToolMapping] = []
@@ -131,18 +91,6 @@ class HybridSkill(AgentSkill):
         input_schema: dict[str, t.Any],
         output_schema: dict[str, t.Any],
     ) -> ToolMapping:
-        """
-        Register an MCP tool for this skill.
-
-        Args:
-            operation: Operation name (e.g., "analyze", "fix")
-            description: Tool description
-            input_schema: JSON schema for input
-            output_schema: JSON schema for output
-
-        Returns:
-            Created ToolMapping
-        """
         tool_name = self.delegator.generate_tool_name(
             self.skill_id,
             operation,
@@ -163,18 +111,6 @@ class HybridSkill(AgentSkill):
         return mapping
 
     def generate_default_tools(self) -> list[ToolMapping]:
-        """
-        Generate default MCP tools for this skill.
-
-        Creates standard tools for common operations:
-        - can_handle: Check if skill can handle an issue
-        - execute: Execute the skill
-        - batch_execute: Execute on multiple issues
-        - get_info: Get skill information
-
-        Returns:
-            List of created ToolMappings
-        """
         mappings = [
             self.register_tool(
                 operation="can_handle",
@@ -286,7 +222,6 @@ class HybridSkill(AgentSkill):
         return mappings
 
     def get_tool_mappings(self) -> list[ToolMapping]:
-        """Get all tool mappings for this skill."""
         return self._tool_mappings
 
     async def execute_via_tool(
@@ -294,22 +229,12 @@ class HybridSkill(AgentSkill):
         tool_name: str,
         **kwargs: t.Any,
     ) -> t.Any:
-        """
-        Execute skill via MCP tool.
-
-        Args:
-            tool_name: Name of the tool to execute
-            **kwargs: Tool arguments
-
-        Returns:
-            Tool execution result
-        """
         mapping = self.delegator.get_tool_mapping(tool_name)
 
         if not mapping or mapping.skill_id != self.skill_id:
             raise ValueError(f"Tool {tool_name} not found in skill {self.skill_id}")
 
-        # Dispatch to appropriate method
+
         if mapping.method_name == "can_handle":
             issue = self._parse_issue(kwargs)
             confidence = await self.can_handle(issue)
@@ -337,14 +262,13 @@ class HybridSkill(AgentSkill):
             raise ValueError(f"Unknown method: {mapping.method_name}")
 
     def _parse_issue(self, data: dict[str, t.Any]) -> Issue:
-        """Parse issue from dictionary data."""
         from crackerjack.agents.base import Priority
 
         issue_type_str = data.get("issue_type", "unknown")
         try:
             issue_type = IssueType(issue_type_str)
         except ValueError:
-            issue_type = IssueType.FORMATTING  # Default
+            issue_type = IssueType.FORMATTING
 
         return Issue(
             type=issue_type,
@@ -357,23 +281,13 @@ class HybridSkill(AgentSkill):
 
 
 class HybridSkillRegistry(AgentSkillRegistry):
-    """
-    Registry for managing hybrid skills.
-
-    Extends AgentSkillRegistry to add:
-    - Tool delegation management
-    - Automatic MCP tool registration
-    - Skill execution via tools
-    """
 
     def __init__(self) -> None:
-        """Initialize registry."""
         super().__init__()
         self.delegator = ToolDelegator()
         self._mcp_app: t.Any = None
 
     def register_mcp_app(self, mcp_app: t.Any) -> None:
-        """Register MCP app for tool registration."""
         self._mcp_app = mcp_app
 
     def register_hybrid_skill(
@@ -383,36 +297,24 @@ class HybridSkillRegistry(AgentSkillRegistry):
         metadata: SkillMetadata | None = None,
         generate_tools: bool = True,
     ) -> HybridSkill:
-        """
-        Register an agent as a hybrid skill.
 
-        Args:
-            agent_class: The SubAgent subclass to register
-            context: AgentContext for agent initialization
-            metadata: Optional SkillMetadata (auto-generated if not provided)
-            generate_tools: Whether to auto-generate MCP tools
-
-        Returns:
-            The created HybridSkill
-        """
-        # Create agent instance
         agent = agent_class(context)
 
-        # Auto-generate metadata if not provided
+
         if metadata is None:
             metadata = self._generate_metadata(agent)
 
-        # Create hybrid skill with shared delegator
+
         skill = HybridSkill(agent, metadata, self.delegator)
 
-        # Register in parent registry
+
         self.register(skill)
 
-        # Generate default tools if requested
+
         if generate_tools:
             skill.generate_default_tools()
 
-        # Register tools with MCP app if available
+
         if self._mcp_app is not None:
             self._register_tools_with_mcp(skill)
 
@@ -422,15 +324,6 @@ class HybridSkillRegistry(AgentSkillRegistry):
         self,
         context: AgentContext,
     ) -> list[HybridSkill]:
-        """
-        Register all agents as hybrid skills.
-
-        Args:
-            context: AgentContext for agent initialization
-
-        Returns:
-            List of registered HybridSkill instances
-        """
         from crackerjack.agents.base import agent_registry
 
         skills = []
@@ -448,16 +341,6 @@ class HybridSkillRegistry(AgentSkillRegistry):
         tool_name: str,
         **kwargs: t.Any,
     ) -> t.Any:
-        """
-        Execute a skill via its MCP tool.
-
-        Args:
-            tool_name: Name of the tool to execute
-            **kwargs: Tool arguments
-
-        Returns:
-            Tool execution result
-        """
         mapping = self.delegator.get_tool_mapping(tool_name)
 
         if not mapping:
@@ -471,7 +354,6 @@ class HybridSkillRegistry(AgentSkillRegistry):
         return await skill.execute_via_tool(tool_name, **kwargs)
 
     def get_all_tool_mappings(self) -> list[ToolMapping]:
-        """Get all tool mappings across all skills."""
         mappings = []
         for skill in self._skills.values():
             if isinstance(skill, HybridSkill):
@@ -479,24 +361,14 @@ class HybridSkillRegistry(AgentSkillRegistry):
         return mappings
 
     def _register_tools_with_mcp(self, skill: HybridSkill) -> None:
-        """Register skill tools with MCP app.
 
-        Note: FastMCP doesn't support dynamic tool registration via add_tool() method.
-        Hybrid skills are accessible through the 8 skill management tools instead.
-        This method is a no-op but kept for API compatibility.
-        """
-        # FastMCP uses @mcp_app.tool() decorator pattern, not dynamic add_tool()
-        # Hybrid skills are accessible via:
-        # - execute_skill (can execute any hybrid skill)
-        # - list_skills (shows all hybrid skills)
-        # - get_skill_info (shows hybrid skill details with tool mappings)
+
         pass
 
     def get_tool_statistics(self) -> dict[str, t.Any]:
-        """Get tool-related statistics."""
         all_mappings = self.get_all_tool_mappings()
 
-        # Count tools by skill
+
         tools_by_skill: dict[str, int] = {}
         for mapping in all_mappings:
             tools_by_skill[mapping.skill_id] = (

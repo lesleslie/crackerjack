@@ -1,4 +1,3 @@
-"""Generic configuration loading and validation service."""
 
 import json
 from pathlib import Path
@@ -10,24 +9,9 @@ from pydantic import BaseModel, ValidationError
 
 
 class ConfigService:
-    """Generic configuration loading and validation service."""
 
     @staticmethod
     def load_config(path: str | Path) -> dict[str, Any]:
-        """
-        Load configuration file based on extension.
-
-        Args:
-            path: Path to the configuration file
-
-        Returns:
-            Dictionary with configuration data
-
-        Raises:
-            ValueError: If file extension is not supported
-            FileNotFoundError: If the file doesn't exist
-            Exception: For other file loading errors
-        """
         path = Path(path)
 
         if not path.exists():
@@ -44,20 +28,6 @@ class ConfigService:
 
     @staticmethod
     async def load_config_async(path: str | Path) -> dict[str, Any]:
-        """
-        Asynchronously load configuration file based on extension.
-
-        Args:
-            path: Path to the configuration file
-
-        Returns:
-            Dictionary with configuration data
-
-        Raises:
-            ValueError: If file extension is not supported
-            FileNotFoundError: If the file doesn't exist
-            Exception: For other file loading errors
-        """
         from crackerjack.services.file_io_service import FileIOService
 
         path = Path(path)
@@ -79,19 +49,16 @@ class ConfigService:
 
     @staticmethod
     def _load_json(path: Path) -> dict[str, Any]:
-        """Load JSON configuration."""
         with path.open(encoding="utf-8") as f:
             return json.load(f)
 
     @staticmethod
     def _load_yaml(path: Path) -> dict[str, Any]:
-        """Load YAML configuration."""
         with path.open(encoding="utf-8") as f:
             return yaml.safe_load(f)
 
     @staticmethod
     def _load_toml(path: Path) -> dict[str, Any]:
-        """Load TOML configuration."""
         with path.open("r", encoding="utf-8") as f:
             return _load_toml_from_text(f.read())
 
@@ -99,19 +66,6 @@ class ConfigService:
     def validate_config(
         config: dict[str, Any], model_class: type[BaseModel]
     ) -> BaseModel:
-        """
-        Validate configuration against a Pydantic model.
-
-        Args:
-            config: Configuration dictionary to validate
-            model_class: Pydantic model class to validate against
-
-        Returns:
-            Validated Pydantic model instance
-
-        Raises:
-            ValidationError: If the configuration doesn't match the model
-        """
         try:
             return model_class.model_validate(config)
         except ValidationError as e:
@@ -122,18 +76,10 @@ class ConfigService:
     def save_config(
         config: dict[str, Any], path: str | Path, format: str | None = None
     ) -> None:
-        """
-        Save configuration to file.
-
-        Args:
-            config: Configuration dictionary to save
-            path: Path to save the configuration to
-            format: Format to save as ('json', 'yaml', 'toml'). If None, inferred from path extension.
-        """
         path = Path(path)
         format = format or path.suffix.lower().lstrip(".")
 
-        # Create parent directories if they don't exist
+
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if format == "json":
@@ -147,19 +93,16 @@ class ConfigService:
 
     @staticmethod
     def _save_json(config: dict[str, Any], path: Path) -> None:
-        """Save configuration as JSON."""
         with path.open("w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
 
     @staticmethod
     def _save_yaml(config: dict[str, Any], path: Path) -> None:
-        """Save configuration as YAML."""
         with path.open("w", encoding="utf-8") as f:
             yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
 
     @staticmethod
     def _save_toml(config: dict[str, Any], path: Path) -> None:
-        """Save configuration as TOML."""
         with path.open("w", encoding="utf-8") as f:
             f.write(_dump_toml(config))
 
@@ -167,16 +110,6 @@ class ConfigService:
     def merge_configs(
         base_config: dict[str, Any], override_config: dict[str, Any]
     ) -> dict[str, Any]:
-        """
-        Recursively merge two configuration dictionaries.
-
-        Args:
-            base_config: Base configuration
-            override_config: Configuration to merge on top of base
-
-        Returns:
-            Merged configuration dictionary
-        """
         result = base_config.copy()
 
         for key, value in override_config.items():
@@ -196,7 +129,7 @@ def _load_toml_from_text(content: str) -> dict[str, Any]:
     try:
         import tomllib
     except ImportError:
-        tomllib = None  # type: ignore[assignment]
+        tomllib = None # type: ignore[assignment]
 
     if tomllib is not None:
         return tomllib.loads(content)
@@ -210,7 +143,7 @@ def _dump_toml(config: dict[str, Any]) -> str:
     try:
         import toml
     except ImportError:
-        toml = None  # type: ignore[assignment]
+        toml = None # type: ignore[assignment]
 
     if toml is not None:
         return toml.dumps(config)
@@ -221,7 +154,6 @@ def _dump_toml(config: dict[str, Any]) -> str:
 
 
 def emit_table(data: dict[str, Any], prefix: list[str], lines: list[str]) -> None:
-    """Emit a TOML table to the lines list."""
     scalars, tables = _separate_scalars_and_tables(data)
 
     if prefix:
@@ -234,7 +166,6 @@ def emit_table(data: dict[str, Any], prefix: list[str], lines: list[str]) -> Non
 def _separate_scalars_and_tables(
     data: dict[str, Any],
 ) -> tuple[list[tuple[str, Any]], list[tuple[str, dict[str, Any]]]]:
-    """Separate scalar values from nested tables."""
     scalars: list[tuple[str, Any]] = []
     tables: list[tuple[str, dict[str, Any]]] = []
 
@@ -248,7 +179,6 @@ def _separate_scalars_and_tables(
 
 
 def _emit_scalar_values(scalars: list[tuple[str, Any]], lines: list[str]) -> None:
-    """Emit scalar key-value pairs."""
     for key, value in scalars:
         lines.append(f"{key} = {_format_toml_value(value)}")
 
@@ -256,7 +186,6 @@ def _emit_scalar_values(scalars: list[tuple[str, Any]], lines: list[str]) -> Non
 def _emit_nested_tables(
     tables: list[tuple[str, dict[str, Any]]], prefix: list[str], lines: list[str]
 ) -> None:
-    """Emit nested tables."""
     for key, value in tables:
         if lines and lines[-1] != "":
             lines.append("")

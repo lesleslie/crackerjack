@@ -1,4 +1,3 @@
-"""Complexity detection and analysis for refactoring."""
 
 import ast
 import typing as t
@@ -7,14 +6,8 @@ from ...base import AgentContext
 
 
 class ComplexityAnalyzer:
-    """Analyzes code complexity and identifies complex functions."""
 
     def __init__(self, context: AgentContext) -> None:
-        """Initialize analyzer with agent context.
-
-        Args:
-            context: AgentContext for logging
-        """
         self.context = context
 
     def find_complex_functions(
@@ -22,15 +15,6 @@ class ComplexityAnalyzer:
         tree: ast.AST,
         content: str,
     ) -> list[dict[str, t.Any]]:
-        """Find functions with complexity > 15.
-
-        Args:
-            tree: AST tree
-            content: File content
-
-        Returns:
-            List of complex functions
-        """
         complex_functions: list[dict[str, t.Any]] = []
 
         class ComplexityVisitor(ast.NodeVisitor):
@@ -79,14 +63,6 @@ class ComplexityAnalyzer:
         self,
         node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> int:
-        """Calculate cognitive complexity of function.
-
-        Args:
-            node: Function node
-
-        Returns:
-            Complexity score
-        """
         calculator = ComplexityCalculator()
         calculator.visit(node)
         return calculator.complexity
@@ -94,14 +70,6 @@ class ComplexityAnalyzer:
     def extract_code_functions_for_semantic_analysis(
         self, content: str
     ) -> list[dict[str, t.Any]]:
-        """Extract functions with complexity for semantic analysis.
-
-        Args:
-            content: File content
-
-        Returns:
-            List of functions
-        """
         functions: list[dict[str, t.Any]] = []
         lines = content.split("\n")
         current_function = None
@@ -136,16 +104,6 @@ class ComplexityAnalyzer:
     def _should_skip_line(
         stripped: str, current_function: dict[str, t.Any] | None, line: str
     ) -> bool:
-        """Check if line should be skipped.
-
-        Args:
-            stripped: Stripped line
-            current_function: Current function
-            line: Full line
-
-        Returns:
-            True if should skip
-        """
         if not stripped or stripped.startswith("#"):
             if current_function:
                 current_function["body"] += line + "\n"
@@ -154,14 +112,6 @@ class ComplexityAnalyzer:
 
     @staticmethod
     def _is_function_definition(stripped: str) -> bool:
-        """Check if line is function definition.
-
-        Args:
-            stripped: Stripped line
-
-        Returns:
-            True if function definition
-        """
         return stripped.startswith("def ") and "(" in stripped
 
     def _handle_function_definition(
@@ -172,18 +122,6 @@ class ComplexityAnalyzer:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any]:
-        """Handle function definition.
-
-        Args:
-            functions: Functions list
-            current_function: Current function
-            stripped: Stripped line
-            indent: Indent level
-            line_index: Line index
-
-        Returns:
-            New function dict
-        """
         if current_function:
             current_function["end_line"] = line_index
             current_function["estimated_complexity"] = (
@@ -210,19 +148,6 @@ class ComplexityAnalyzer:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any] | None:
-        """Handle line in function body.
-
-        Args:
-            functions: Functions list
-            current_function: Current function
-            line: Full line
-            stripped: Stripped line
-            indent: Indent level
-            line_index: Line index
-
-        Returns:
-            Updated current function or None
-        """
         if self._is_line_inside_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
@@ -238,16 +163,6 @@ class ComplexityAnalyzer:
     def _is_line_inside_function(
         current_function: dict[str, t.Any], indent: int, stripped: str
     ) -> bool:
-        """Check if line is inside function.
-
-        Args:
-            current_function: Current function
-            indent: Indent level
-            stripped: Stripped line
-
-        Returns:
-            True if inside
-        """
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]
             and stripped.startswith(('"', "'", "@"))
@@ -255,14 +170,6 @@ class ComplexityAnalyzer:
 
     @staticmethod
     def _estimate_function_complexity(function_body: str) -> int:
-        """Estimate function complexity from body.
-
-        Args:
-            function_body: Function body
-
-        Returns:
-            Complexity score
-        """
         if not function_body:
             return 0
 
@@ -288,57 +195,45 @@ class ComplexityAnalyzer:
 
 
 class ComplexityCalculator(ast.NodeVisitor):
-    """Calculates cognitive complexity of code."""
 
     def __init__(self) -> None:
-        """Initialize calculator."""
         self.complexity = 0
 
     def visit_If(self, node: ast.If) -> None:
-        """Visit if statement."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_For(self, node: ast.For) -> None:
-        """Visit for loop."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_While(self, node: ast.While) -> None:
-        """Visit while loop."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
-        """Visit exception handler."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_With(self, node: ast.With) -> None:
-        """Visit with statement."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_BoolOp(self, node: ast.BoolOp) -> None:
-        """Visit boolean operation."""
-        # Count boolean operators for higher complexity
+
         if len(node.values) > 2:
             self.complexity += 1
         self.generic_visit(node)
 
     def visit_Lambda(self, node: ast.Lambda) -> None:
-        """Visit lambda."""
         self.complexity += 1
         self.generic_visit(node)
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        """Don't count nested functions separately."""
         self.generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node: ast.AsyncFunctionDef) -> None:
-        """Don't count nested async functions separately."""
         self.generic_visit(node)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        """Don't count nested classes separately."""
         self.generic_visit(node)

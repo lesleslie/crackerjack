@@ -1,4 +1,3 @@
-"""Pydantic models to replace dataclasses in the Crackerjack codebase."""
 
 from typing import Any
 
@@ -13,7 +12,7 @@ class CleaningConfig(BaseModel):
     auto_compress_docs: bool = False
     targets: list[str] = Field(
         default_factory=list
-    )  # Changed Path to str for validation
+    )
 
     @classmethod
     def from_settings(cls, settings: Any) -> "CleaningConfig":
@@ -269,7 +268,7 @@ class WorkflowOptions(BaseModel):
     mcp_server: MCPServerConfig = Field(default_factory=MCPServerConfig)
     zuban_lsp: ZubanLSPConfig = Field(default_factory=ZubanLSPConfig)
 
-    # Simple properties that map to nested config values
+
     @property
     def clean(self) -> bool:
         return self.cleaning.clean
@@ -328,7 +327,7 @@ class WorkflowOptions(BaseModel):
 
     @classmethod
     def from_settings(cls, settings: Any) -> "WorkflowOptions":
-        # Simplified implementation for demonstration
+
         return cls(
             cleaning=CleaningConfig.from_settings(getattr(settings, "cleaning", {})),
             hooks=HookConfig.from_settings(getattr(settings, "hooks", {})),
@@ -350,7 +349,6 @@ class WorkflowOptions(BaseModel):
         return self.model_dump()
 
 
-# Results models
 class ExecutionResult(BaseModel):
     operation_id: str
     success: bool

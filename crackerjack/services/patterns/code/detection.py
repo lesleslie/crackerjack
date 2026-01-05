@@ -1,4 +1,3 @@
-"""Code pattern descriptions."""
 
 from ..core import ValidatedPattern
 

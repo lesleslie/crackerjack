@@ -169,7 +169,6 @@ class MCPServerContext:
         self._shutdown_tasks: list[t.Callable[[], t.Awaitable[None]]] = []
 
     async def _auto_setup_git_working_directory(self) -> None:
-        """Auto-detect and setup git working directory for enhanced DX."""
         try:
             git_root = await self._detect_git_repository()
             if git_root:
@@ -179,18 +178,16 @@ class MCPServerContext:
             self._handle_git_setup_failure(e)
 
     async def _detect_git_repository(self) -> Path | None:
-        """Detect if we're in a git repository and return the root path."""
 
         current_dir = Path.cwd()
 
-        # Check if we're in a git repository
+
         if not self._is_git_repository(current_dir):
             return None
 
         return self._get_git_root_directory(current_dir)
 
     def _is_git_repository(self, current_dir: Path) -> bool:
-        """Check if the current directory is within a git repository."""
 
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
@@ -201,7 +198,6 @@ class MCPServerContext:
         return git_check.returncode == 0
 
     def _get_git_root_directory(self, current_dir: Path) -> Path | None:
-        """Get the git repository root directory."""
 
         git_root_result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
@@ -216,16 +212,14 @@ class MCPServerContext:
         return None
 
     async def _log_git_detection(self, git_root: Path) -> None:
-        """Log git repository detection to stderr and console."""
 
-        # Log to stderr for Claude to see
+
         self._log_to_stderr(git_root)
 
-        # Log to console if available
+
         self._log_to_console(git_root)
 
     def _log_to_stderr(self, git_root: Path) -> None:
-        """Log git detection messages to stderr."""
         import sys
 
         print(
@@ -238,7 +232,6 @@ class MCPServerContext:
         )
 
     def _log_to_console(self, git_root: Path) -> None:
-        """Log git detection messages to console if available."""
         if self.console:
             self.console.print(f"🔧 Auto-detected git repository: {git_root}")
             self.console.print(
@@ -246,7 +239,6 @@ class MCPServerContext:
             )
 
     def _handle_git_setup_failure(self, error: Exception) -> None:
-        """Handle git setup failure with graceful fallback."""
         if self.console:
             self.console.print(
                 f"[dim]Git auto-setup failed (non-critical): {error}[/dim]"
@@ -264,20 +256,17 @@ class MCPServerContext:
             self._handle_initialization_failure(e)
 
     async def _perform_initialization_sequence(self) -> None:
-        """Perform the complete initialization sequence."""
         self._setup_console()
         self._setup_directories()
         await self._initialize_components()
         await self._finalize_initialization()
 
     def _handle_initialization_failure(self, error: Exception) -> None:
-        """Handle initialization failure with cleanup and error propagation."""
         self._cleanup_failed_initialization()
         msg = f"Failed to initialize MCP server context: {error}"
         raise RuntimeError(msg) from error
 
     def _setup_console(self) -> None:
-        """Setup console based on configuration mode."""
         if self.config.stdio_mode:
             io.StringIO()
             self.console = Console()
@@ -285,11 +274,9 @@ class MCPServerContext:
             self.console = Console()
 
     def _setup_directories(self) -> None:
-        """Setup required directories."""
         self.progress_dir.mkdir(exist_ok=True)
 
     async def _initialize_components(self) -> None:
-        """Initialize all service components."""
         # TODO(Phase 3): Replace with Oneiric workflow integration
         self.cli_runner = None
 
@@ -306,15 +293,13 @@ class MCPServerContext:
         await self.batched_saver.start()
 
     async def _finalize_initialization(self) -> None:
-        """Complete initialization with optional setup and startup tasks."""
-        # Auto-setup git working directory for enhanced DX
+
         await self._auto_setup_git_working_directory()
 
         for task in self._startup_tasks:
             await task()
 
     def _cleanup_failed_initialization(self) -> None:
-        """Cleanup components after failed initialization."""
         self.cli_runner = None
         self.state_manager = None
         self.error_cache = None

@@ -9,13 +9,12 @@ from pydantic import BaseModel, field_validator
 def parse_bump_option_with_flag_support(
     ctx: click.Context, param: click.Parameter, value: str | None
 ) -> str | None:
-    """Parse bump option that supports both flag usage (-p) and value usage (-p patch)."""
     if value is None:
         return None
 
-    # If the value starts with a dash, it's likely another flag that typer mistakenly captured
+
     if value.startswith("-"):
-        # Map of consumed flags to their corresponding parameter names
+
         flag_mapping = {
             "-c": "commit",
             "--commit": "commit",
@@ -34,21 +33,21 @@ def parse_bump_option_with_flag_support(
             "--debug": "debug",
         }
 
-        # Handle any consumed flag
+
         if value in flag_mapping:
             param_name = flag_mapping[value]
-            # Set the parameter directly in the context
+
             if not hasattr(ctx, "params"):
                 ctx.params = {}
             ctx.params[param_name] = True
 
-            # CRITICAL FIX: Remove the consumed flag from sys.argv to prevent double processing
+
             import sys
 
             if value in sys.argv:
                 sys.argv.remove(value)
 
-        # Default to interactive mode when used as a flag
+
         return "interactive"
 
     return value
@@ -74,7 +73,7 @@ class Options(BaseModel):
     bump: BumpOption | None = None
     verbose: bool = False
     debug: bool = False
-    ai_debug: bool = False  # Enable verbose debugging for AI auto-fixing mode
+    ai_debug: bool = False
     benchmark: bool = False
     benchmark_regression: bool = False
     benchmark_regression_threshold: float = 0.1
@@ -88,10 +87,10 @@ class Options(BaseModel):
     async_mode: bool = False
     fast: bool = False
     comp: bool = False
-    fast_iteration: bool = False  # Phase 10.2.4: Skip comprehensive hooks
-    tool: str | None = None  # Phase 10.2.4: Run only specific tool
-    changed_only: bool = False  # Phase 10.2.4: Run on changed files only
-    all_files: bool = False  # Run hooks on all files (not just changed)
+    fast_iteration: bool = False
+    tool: str | None = None
+    changed_only: bool = False
+    all_files: bool = False
     experimental_hooks: bool = False
     enable_pyrefly: bool = False
     enable_ty: bool = False
@@ -130,7 +129,7 @@ class Options(BaseModel):
     thorough: bool = False
     clear_cache: bool = False
 
-    # Semantic search options
+
     index: str | None = None
     search: str | None = None
     semantic_stats: bool = False
@@ -139,18 +138,18 @@ class Options(BaseModel):
 
     refresh_cache: bool = False
 
-    # Semantic field names (new primary interface)
-    strip_code: bool | None = None  # Replaces clean
-    run_tests: bool = False  # Replaces test
-    ai_fix: bool | None = None  # Replaces ai_agent
-    dry_run: bool = False  # Preview fixes without applying
-    full_release: str | None = None  # Replaces all
-    show_progress: bool | None = None  # Replaces track_progress
-    advanced_monitor: bool | None = None  # Replaces enhanced_monitor
-    coverage_report: bool | None = None  # Replaces coverage_status
-    clean_releases: bool | None = None  # Replaces cleanup_pypi
 
-    # Documentation and changelog generation fields
+    strip_code: bool | None = None
+    run_tests: bool = False
+    ai_fix: bool | None = None
+    dry_run: bool = False
+    full_release: str | None = None
+    show_progress: bool | None = None
+    advanced_monitor: bool | None = None
+    coverage_report: bool | None = None
+    clean_releases: bool | None = None
+
+
     generate_docs: bool = False
     docs_format: str = "markdown"
     validate_docs: bool = False
@@ -163,10 +162,10 @@ class Options(BaseModel):
     version_since: str | None = None
     accept_version: bool = False
 
-    # Intelligent features
-    smart_commit: bool = True  # Default enabled for advanced services integration
 
-    # Analytics and visualization features
+    smart_commit: bool = True
+
+
     heatmap: bool = False
     heatmap_type: str = "error_frequency"
     heatmap_output: str | None = None
@@ -177,12 +176,12 @@ class Options(BaseModel):
     prediction_periods: int = 10
     analytics_dashboard: str | None = None
 
-    # Configuration management features
+
     check_config_updates: bool = False
     apply_config_updates: bool = False
     diff_config: str | None = None
     config_interactive: bool = False
-    # Advanced features
+
     advanced_optimizer: bool = False
     advanced_profile: str | None = None
     advanced_report: str | None = None
@@ -234,7 +233,7 @@ class Options(BaseModel):
         if value == "":
             return BumpOption.interactive
 
-        # Handle case where typer parsed a flag as the value (e.g., -p -c becomes value="-c")
+
         if isinstance(value, str) and value.startswith("-"):
             return BumpOption.interactive
 
@@ -584,7 +583,7 @@ CLI_OPTIONS = {
         "--cache-stats",
         help="Display cache statistics (hit rates, sizes, entries) and exit.",
     ),
-    # New semantic CLI options with backward compatibility
+
     "strip_code": typer.Option(
         None,
         "-x",
@@ -709,7 +708,7 @@ CLI_OPTIONS = {
         help="Automatically accept version bump recommendation without confirmation.",
     ),
     "smart_commit": typer.Option(
-        True,  # Now enabled by default for advanced services integration
+        True,
         "--smart-commit/--basic-commit",
         help="Generate intelligent commit messages using AI analysis (default: enabled). Use --basic-commit for simple messages.",
     ),
@@ -758,7 +757,7 @@ CLI_OPTIONS = {
         "--analytics-dashboard",
         help="Output file path for analytics dashboard (HTML format).",
     ),
-    # Advanced features
+
     "advanced_optimizer": typer.Option(
         False,
         "--advanced-optimizer",
@@ -809,7 +808,7 @@ CLI_OPTIONS = {
         "--ai-help-query",
         help="Get contextual help for specific query using AI assistant.",
     ),
-    # Configuration management features
+
     "check_config_updates": typer.Option(
         False,
         "--check-config-updates",
@@ -835,7 +834,7 @@ CLI_OPTIONS = {
         "--refresh-cache",
         help="Refresh cache to ensure fresh environment.",
     ),
-    # Semantic search options
+
     "index": typer.Option(
         None,
         "--index",
@@ -925,7 +924,7 @@ def create_options(
     predictive_analytics: bool = False,
     prediction_periods: int = 10,
     analytics_dashboard: str | None = None,
-    # Advanced features
+
     advanced_optimizer: bool = False,
     advanced_profile: str | None = None,
     advanced_report: str | None = None,
@@ -941,7 +940,7 @@ def create_options(
     diff_config: str | None = None,
     config_interactive: bool = False,
     refresh_cache: bool = False,
-    # New semantic parameters
+
     strip_code: bool | None = None,
     run_tests: bool = False,
     ai_fix: bool | None = None,
@@ -1018,7 +1017,7 @@ def create_options(
         predictive_analytics=predictive_analytics,
         prediction_periods=prediction_periods,
         analytics_dashboard=analytics_dashboard,
-        # Advanced features
+
         advanced_optimizer=advanced_optimizer,
         advanced_profile=advanced_profile,
         advanced_report=advanced_report,
@@ -1034,7 +1033,7 @@ def create_options(
         diff_config=diff_config,
         config_interactive=config_interactive,
         refresh_cache=refresh_cache,
-        # New semantic parameters
+
         strip_code=strip_code,
         run_tests=run_tests,
         ai_fix=ai_fix,

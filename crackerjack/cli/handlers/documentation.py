@@ -1,22 +1,14 @@
-"""CLI handlers for documentation generation and validation.
-
-This module contains handlers for:
-- API documentation generation
-- Documentation validation
-- MkDocs integration and site building
-"""
 
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
 
-# Module-level console instance
+
 console = Console()
 
 
 def generate_documentation(doc_service: t.Any) -> bool:
-    """Generate API documentation using documentation service."""
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
     success = doc_service.generate_full_api_documentation()
     if success:
@@ -29,7 +21,6 @@ def generate_documentation(doc_service: t.Any) -> bool:
 
 
 def validate_documentation_files(doc_service: t.Any) -> None:
-    """Validate existing documentation files for consistency."""
     console.print("🔍 [bold blue]Validating documentation...[/bold blue]")
     doc_paths = [Path("docs"), Path("README.md"), Path("CHANGELOG.md")]
     existing_docs = [p for p in doc_paths if p.exists()]
@@ -52,22 +43,12 @@ def validate_documentation_files(doc_service: t.Any) -> None:
 def handle_documentation_commands(
     generate_docs: bool, validate_docs: bool, options: t.Any
 ) -> bool:
-    """Handle documentation generation and validation commands.
-
-    Args:
-        generate_docs: Whether to generate API documentation
-        validate_docs: Whether to validate existing documentation
-        options: CLI options object with run_tests, strip_code, all, publish, comp flags
-
-    Returns:
-        True if execution should continue to other workflows
-    """
     if not (generate_docs or validate_docs):
         return True
 
     from crackerjack.services.documentation_service import DocumentationServiceImpl
 
-    # Use current working directory instead of hardcoded "crackerjack"
+
     pkg_path = Path.cwd()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
@@ -89,11 +70,7 @@ def handle_documentation_commands(
     )
 
 
-# === MkDocs Integration Handlers ===
-
-
 def create_sync_filesystem_service() -> t.Any:
-    """Create synchronous filesystem service for MkDocs integration."""
 
     class SyncFileSystemService:
         def read_file(self, path: str | Path) -> str:
@@ -115,7 +92,6 @@ def create_sync_filesystem_service() -> t.Any:
 
 
 def create_config_manager() -> t.Any:
-    """Create configuration manager for MkDocs integration."""
 
     class ConfigManager:
         def __init__(self) -> None:
@@ -137,7 +113,6 @@ def create_config_manager() -> t.Any:
 
 
 def create_logger_adapter(logger: t.Any) -> t.Any:
-    """Create logger adapter for MkDocs integration."""
 
     class LoggerAdapter:
         def __init__(self, logger: t.Any) -> None:
@@ -159,7 +134,6 @@ def create_logger_adapter(logger: t.Any) -> t.Any:
 
 
 def create_mkdocs_services() -> dict[str, t.Any]:
-    """Create MkDocs service instances (integration, builder, filesystem, config)."""
     from logging import getLogger
 
     from crackerjack.documentation.mkdocs_integration import (
@@ -181,12 +155,10 @@ def create_mkdocs_services() -> dict[str, t.Any]:
 
 
 def determine_mkdocs_output_dir(mkdocs_output: str | None) -> Path:
-    """Determine output directory for MkDocs site."""
     return Path(mkdocs_output) if mkdocs_output else Path.cwd() / "docs_site"
 
 
 def create_sample_docs_content() -> dict[str, str]:
-    """Create sample documentation content for MkDocs site."""
     return {
         "index.md": "# Project Documentation\n\nWelcome to the project documentation.",
         "getting-started.md": "# Getting Started\n\nQuick start guide for the project.",
@@ -197,7 +169,6 @@ def create_sample_docs_content() -> dict[str, str]:
 def build_mkdocs_site(
     builder: t.Any, docs_content: dict[str, str], output_dir: Path, serve: bool
 ) -> None:
-    """Build MkDocs documentation site asynchronously."""
     import asyncio
 
     asyncio.run(
@@ -213,7 +184,6 @@ def build_mkdocs_site(
 
 
 def handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
-    """Display MkDocs build results to console."""
     if site:
         console.print(
             f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}"
@@ -237,18 +207,6 @@ def handle_mkdocs_integration(
     mkdocs_theme: str,
     mkdocs_output: str | None,
 ) -> bool:
-    """Handle MkDocs integration command for documentation site generation.
-
-    Args:
-        mkdocs_integration: Whether MkDocs integration is requested
-        mkdocs_serve: Whether to serve the site locally
-        mkdocs_theme: Theme to use for MkDocs site
-        mkdocs_output: Output directory for site
-        console: Rich console for output
-
-    Returns:
-        True if execution should continue, False otherwise
-    """
     if not mkdocs_integration:
         return True
 

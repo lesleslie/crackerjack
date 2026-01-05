@@ -1,4 +1,3 @@
-"""Result models for the quality assurance framework."""
 
 from __future__ import annotations
 
@@ -12,7 +11,6 @@ from pydantic import BaseModel, Field
 
 
 class QAResultStatus(str, Enum):
-    """Status of a quality assurance check result."""
 
     SUCCESS = "success"
     FAILURE = "failure"
@@ -22,24 +20,18 @@ class QAResultStatus(str, Enum):
 
 
 class QACheckType(str, Enum):
-    """Type of quality assurance check."""
 
     LINT = "lint"
     FORMAT = "format"
-    TYPE = "type"  # Type checking (pyright, mypy, zuban)
-    SECURITY = "security"  # Secret leak prevention (gitleaks)
-    SAST = "sast"  # Static Application Security Testing (bandit, semgrep, pyscn)
-    COMPLEXITY = "complexity"  # Code complexity analysis
+    TYPE = "type"
+    SECURITY = "security"
+    SAST = "sast"
+    COMPLEXITY = "complexity"
     REFACTOR = "refactor"
     TEST = "test"
 
 
 class QAResult(BaseModel):
-    """Result of a quality assurance check execution.
-
-    This model represents the outcome of running a single QA check,
-    including timing information, file changes, and detailed messages.
-    """
 
     check_id: UUID = Field(
         ...,
@@ -96,30 +88,21 @@ class QAResult(BaseModel):
 
     @property
     def is_success(self) -> bool:
-        """Check if the result indicates success.
-
-        Warnings are considered successful - they indicate potential issues
-        but don't fail the quality check.
-        """
         return self.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
 
     @property
     def is_failure(self) -> bool:
-        """Check if the result indicates failure."""
         return self.status == QAResultStatus.FAILURE
 
     @property
     def is_warning(self) -> bool:
-        """Check if the result indicates a warning."""
         return self.status == QAResultStatus.WARNING
 
     @property
     def has_issues(self) -> bool:
-        """Check if any issues were found."""
         return self.issues_found > 0
 
     def to_summary(self) -> str:
-        """Generate a human-readable summary of the result."""
         summary_parts = [f"{self.check_name}: {self.status.value}"]
 
         if self.issues_found > 0:

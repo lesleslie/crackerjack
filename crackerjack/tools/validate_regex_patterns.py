@@ -42,7 +42,7 @@ ALLOWED_PATTERNS = {
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
-    r"\\g<[^>]*\\s+[^>]*>",  # Any whitespace inside \g<...>
+    r"\\g<[^>]*\\s+[^>]*>",
 ]
 
 
@@ -117,9 +117,9 @@ class RegexVisitor(ast.NodeVisitor):
         with suppress(OSError, UnicodeDecodeError):
             with self.file_path.open(encoding="utf-8") as f:
                 lines = f.readlines()
-                # Check current line and next 5 lines for exemption comments
-                # This handles multi-line statements
-                for offset in range(6):  # Check lines: current, +1, +2, +3, +4, +5
+
+
+                for offset in range(6):
                     check_line = line_no - 1 + offset
                     if check_line < len(lines):
                         line = lines[check_line]

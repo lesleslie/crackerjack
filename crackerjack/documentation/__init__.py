@@ -1,4 +1,3 @@
-"""AI-optimized documentation generation system for crackerjack."""
 
 from .ai_templates import AITemplateEngine, Template, TemplateContext, TemplateType
 from .dual_output_generator import DocumentationResult, DualOutputGenerator

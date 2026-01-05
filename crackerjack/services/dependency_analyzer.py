@@ -1,4 +1,3 @@
-"""Dependency analysis service for generating network graph visualizations."""
 
 import ast
 import json
@@ -13,21 +12,19 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DependencyNode:
-    """Represents a node in the dependency graph."""
 
     id: str
     name: str
-    type: str  # module, function, class, variable
+    type: str
     file_path: str
     line_number: int
-    size: int = 1  # For visual sizing
+    size: int = 1
     complexity: int = 0
     imports: list[str] = field(default_factory=list)
     exports: list[str] = field(default_factory=list)
     metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "id": self.id,
             "name": self.name,
@@ -44,16 +41,14 @@ class DependencyNode:
 
 @dataclass
 class DependencyEdge:
-    """Represents an edge (relationship) in the dependency graph."""
 
     source: str
     target: str
-    type: str  # import, call, inheritance, composition
+    type: str
     weight: float = 1.0
     metadata: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "source": self.source,
             "target": self.target,
@@ -65,7 +60,6 @@ class DependencyEdge:
 
 @dataclass
 class DependencyGraph:
-    """Complete dependency graph data structure."""
 
     nodes: dict[str, DependencyNode] = field(default_factory=dict)
     edges: list[DependencyEdge] = field(default_factory=list)
@@ -74,7 +68,6 @@ class DependencyGraph:
     generated_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "nodes": [node.to_dict() for node in self.nodes.values()],
             "edges": [edge.to_dict() for edge in self.edges],
@@ -85,22 +78,19 @@ class DependencyGraph:
 
 
 class DependencyAnalyzer:
-    """Analyzes code dependencies and generates network graph data."""
 
     def __init__(self, project_root: Path):
-        """Initialize with project root directory."""
         self.project_root = Path(project_root)
         self.python_files: list[Path] = []
         self.dependency_graph = DependencyGraph()
 
     def analyze_project(self) -> DependencyGraph:
-        """Analyze the entire project and build dependency graph."""
         logger.info(f"Starting dependency analysis for {self.project_root}")
 
-        # Discover Python files
+
         self._discover_python_files()
 
-        # Parse each file for dependencies
+
         for file_path in self.python_files:
             try:
                 self._analyze_file(file_path)
@@ -108,7 +98,7 @@ class DependencyAnalyzer:
                 logger.warning(f"Failed to analyze {file_path}: {e}")
                 continue
 
-        # Generate clusters and metrics
+
         self._generate_clusters()
         self._calculate_metrics()
 
@@ -121,10 +111,9 @@ class DependencyAnalyzer:
         return self.dependency_graph
 
     def _discover_python_files(self) -> None:
-        """Discover all Python files in the project."""
         self.python_files = list[t.Any](self.project_root.rglob("*.py"))
 
-        # Filter out common excluded directories
+
         excluded_patterns = {
             "__pycache__",
             ".git",
@@ -145,7 +134,6 @@ class DependencyAnalyzer:
         logger.info(f"Discovered {len(self.python_files)} Python files")
 
     def _analyze_file(self, file_path: Path) -> None:
-        """Analyze a single Python file for dependencies."""
         try:
             content = file_path.read_text(encoding="utf-8")
 
@@ -153,11 +141,11 @@ class DependencyAnalyzer:
             visitor = DependencyVisitor(file_path, self.project_root)
             visitor.visit(tree)
 
-            # Add nodes from this file
+
             for node in visitor.nodes:
                 self.dependency_graph.nodes[node.id] = node
 
-            # Add edges from this file
+
             self.dependency_graph.edges.extend(visitor.edges)
 
         except SyntaxError as e:
@@ -166,13 +154,12 @@ class DependencyAnalyzer:
             logger.error(f"Error analyzing {file_path}: {e}")
 
     def _generate_clusters(self) -> None:
-        """Generate clusters based on module hierarchy."""
         clusters: dict[str, list[str]] = {}
 
         for node_id, node in self.dependency_graph.nodes.items():
-            # Create clusters based on directory structure
+
             relative_path = Path(node.file_path).relative_to(self.project_root)
-            parts = relative_path.parts[:-1]  # Exclude filename
+            parts = relative_path.parts[:-1]
 
             if parts:
                 cluster_name = "/".join(parts)
@@ -180,7 +167,7 @@ class DependencyAnalyzer:
                     clusters[cluster_name] = []
                 clusters[cluster_name].append(node_id)
             else:
-                # Root level files
+
                 if "root" not in clusters:
                     clusters["root"] = []
                 clusters["root"].append(node_id)
@@ -188,11 +175,10 @@ class DependencyAnalyzer:
         self.dependency_graph.clusters = clusters
 
     def _calculate_metrics(self) -> None:
-        """Calculate graph metrics for visualization."""
         nodes = self.dependency_graph.nodes
         edges = self.dependency_graph.edges
 
-        # Basic metrics
+
         metrics: dict[str, t.Any] = {
             "total_nodes": len(nodes),
             "total_edges": len(edges),
@@ -202,7 +188,7 @@ class DependencyAnalyzer:
             else 0,
         }
 
-        # Node type distribution
+
         type_counts: dict[str, int] = {}
         complexity_sum = 0
 
@@ -213,14 +199,14 @@ class DependencyAnalyzer:
         metrics["node_types"] = type_counts
         metrics["average_complexity"] = complexity_sum / len(nodes) if nodes else 0
 
-        # Edge type distribution
+
         edge_type_counts: dict[str, int] = {}
         for edge in edges:
             edge_type_counts[edge.type] = edge_type_counts.get(edge.type, 0) + 1
 
         metrics["edge_types"] = edge_type_counts
 
-        # Find most connected nodes
+
         in_degree: dict[str, int] = {}
         out_degree: dict[str, int] = {}
 
@@ -228,7 +214,7 @@ class DependencyAnalyzer:
             out_degree[edge.source] = out_degree.get(edge.source, 0) + 1
             in_degree[edge.target] = in_degree.get(edge.target, 0) + 1
 
-        # Top 10 most connected nodes
+
         from operator import itemgetter
 
         top_in = sorted(in_degree.items(), key=itemgetter(1), reverse=True)[:10]
@@ -245,10 +231,8 @@ class DependencyAnalyzer:
 
 
 class DependencyVisitor(ast.NodeVisitor):
-    """AST visitor for extracting dependency information."""
 
     def __init__(self, file_path: Path, project_root: Path):
-        """Initialize visitor with file context."""
         self.file_path = file_path
         self.project_root = project_root
         self.relative_path = file_path.relative_to(project_root)
@@ -257,10 +241,9 @@ class DependencyVisitor(ast.NodeVisitor):
         self.nodes: list[DependencyNode] = []
         self.edges: list[DependencyEdge] = []
         self.current_class: str | None = None
-        self.imports: dict[str, str] = {}  # alias -> full_name
+        self.imports: dict[str, str] = {}
 
     def visit_Module(self, node: ast.Module) -> None:
-        """Visit module and create module node."""
         module_node = DependencyNode(
             id=f"module:{self.module_name}",
             name=self.module_name,
@@ -275,12 +258,11 @@ class DependencyVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Import(self, node: ast.Import) -> None:
-        """Handle import statements."""
         for alias in node.names:
             imported_name = alias.asname or alias.name
             self.imports[imported_name] = alias.name
 
-            # Create import edge
+
             edge = DependencyEdge(
                 source=f"module:{self.module_name}",
                 target=f"module:{alias.name}",
@@ -290,14 +272,13 @@ class DependencyVisitor(ast.NodeVisitor):
             self.edges.append(edge)
 
     def visit_ImportFrom(self, node: ast.ImportFrom) -> None:
-        """Handle from...import statements."""
         if node.module:
             for alias in node.names:
                 imported_name = alias.asname or alias.name
                 full_name = f"{node.module}.{alias.name}"
                 self.imports[imported_name] = full_name
 
-                # Create import edge
+
                 edge = DependencyEdge(
                     source=f"module:{self.module_name}",
                     target=f"symbol:{full_name}",
@@ -312,7 +293,6 @@ class DependencyVisitor(ast.NodeVisitor):
                 self.edges.append(edge)
 
     def visit_ClassDef(self, node: ast.ClassDef) -> None:
-        """Handle class definitions."""
         class_id = f"class:{self.module_name}.{node.name}"
         self.current_class = node.name
 
@@ -333,7 +313,7 @@ class DependencyVisitor(ast.NodeVisitor):
         )
         self.nodes.append(class_node)
 
-        # Handle inheritance
+
         for base in node.bases:
             if isinstance(base, ast.Name):
                 base_name = self._resolve_name(base.id)
@@ -349,7 +329,6 @@ class DependencyVisitor(ast.NodeVisitor):
         self.current_class = None
 
     def visit_FunctionDef(self, node: ast.FunctionDef) -> None:
-        """Handle function definitions."""
         if self.current_class:
             func_id = f"method:{self.module_name}.{self.current_class}.{node.name}"
             func_type = "method"
@@ -378,11 +357,10 @@ class DependencyVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call) -> None:
-        """Handle function/method calls."""
         if isinstance(node.func, ast.Name):
             called_name = self._resolve_name(node.func.id)
 
-            # Create call edge from current context
+
             source_id = self._get_current_context_id(node.lineno)
             if source_id:
                 edge = DependencyEdge(
@@ -395,7 +373,7 @@ class DependencyVisitor(ast.NodeVisitor):
                 self.edges.append(edge)
 
         elif isinstance(node.func, ast.Attribute):
-            # Handle method calls
+
             if isinstance(node.func.value, ast.Name):
                 obj_name = self._resolve_name(node.func.value.id)
                 method_name = node.func.attr
@@ -414,8 +392,7 @@ class DependencyVisitor(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _calculate_complexity(self, node: ast.AST) -> int:
-        """Calculate cyclomatic complexity of a node."""
-        complexity = 1  # Base complexity
+        complexity = 1
 
         for child in ast.walk(node):
             if isinstance(child, ast.If | ast.While | ast.For | ast.With | ast.Try):
@@ -430,31 +407,26 @@ class DependencyVisitor(ast.NodeVisitor):
         return complexity
 
     def _get_decorator_name(self, decorator: ast.AST) -> str:
-        """Get the name of a decorator."""
         if isinstance(decorator, ast.Name):
             return decorator.id
         elif isinstance(decorator, ast.Attribute):
-            return f"{decorator.value.id}.{decorator.attr}"  # type: ignore
+            return f"{decorator.value.id}.{decorator.attr}" # type: ignore
         return "unknown"
 
     def _resolve_name(self, name: str) -> str:
-        """Resolve a name through imports."""
         return self.imports.get(name, f"{self.module_name}.{name}")
 
     def _get_current_context_id(self, line_number: int) -> str | None:
-        """Get the ID of the current context (function/class/module)."""
-        # For simplicity, return module context
-        # In a more sophisticated implementation, we'd track the nested context
+
+
         return f"module:{self.module_name}"
 
 
 def analyze_project_dependencies(project_root: str | Path) -> DependencyGraph:
-    """Analyze project dependencies and return graph data."""
     analyzer = DependencyAnalyzer(Path(project_root))
     return analyzer.analyze_project()
 
 
 def export_graph_data(graph: DependencyGraph, output_path: str | Path) -> None:
-    """Export dependency graph to JSON file."""
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(graph.to_dict(), f, indent=2)

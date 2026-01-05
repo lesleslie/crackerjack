@@ -1,8 +1,3 @@
-"""Comment and code block parsing patterns.
-
-This module provides regex patterns for working with code comments,
-TODO markers, and bash/command code blocks in documentation.
-"""
 
 import re
 
@@ -41,7 +36,7 @@ PATTERNS = {
         flags=re.MULTILINE,
         test_cases=[
             ("1. First step", "**Step 1**: First step"),
-            ("  2. Indented step", "  **Step 2**: Indented step"),
+            (" 2. Indented step", " **Step 2**: Indented step"),
             ("10. Double digit step", "**Step 10**: Double digit step"),
             ("normal text", "normal text"),
         ],
@@ -57,8 +52,8 @@ PATTERNS = {
             ("# type: ignore", "# type: ignore"),
             ("# noqa: F401", "# noqa: F401"),
             (
-                "x = 1  # type: int",
-                "x = 1  # type: int",
+                "x = 1 # type: int",
+                "x = 1 # type: int",
             ),
             (
                 "# pragma: no cover",

@@ -18,23 +18,7 @@ class TestExecutor:
         self.pkg_path = pkg_path
 
     def _detect_target_project_dir(self, cmd: list[str]) -> Path:
-        """Detect the target project directory from the test command.
 
-        When running tests for a specific project, pytest should be executed from
-        that project's directory to ensure it reads the correct pyproject.toml configuration.
-
-        This method parses the test command to find the target project directory:
-        1. Look for test paths (directories or .py files) in the command
-        2. Extract the parent directory of the first test path
-        3. Fall back to pkg_path if no test paths are found
-
-        Args:
-            cmd: The test command (e.g., ['uv', 'run', 'python', '-m', 'pytest', 'tests/'])
-
-        Returns:
-            The directory where pytest should be executed
-        """
-        # Look for test paths in the command (skip 'uv', 'run', 'python', '-m', 'pytest')
         test_start_idx = -1
         for i, arg in enumerate(cmd):
             if arg == "pytest":
@@ -42,40 +26,40 @@ class TestExecutor:
                 break
 
         if test_start_idx > 0 and test_start_idx < len(cmd):
-            # Check the arguments after 'pytest' for test paths
+
             for arg in cmd[test_start_idx:]:
                 if arg.startswith("-"):
-                    continue  # Skip options like -v, -x, --cov
+                    continue
 
-                # Found a test path - get its parent directory
+
                 test_path = Path(arg)
                 if test_path.exists():
                     if test_path.is_dir():
-                        # e.g., 'tests/' -> return '.'
+
                         return test_path.parent
                     elif test_path.is_file():
-                        # e.g., 'tests/test_foo.py' -> return '.' (parent of tests/)
+
                         return test_path.parent.parent
                     else:
-                        # Path doesn't exist, use its parent
+
                         return test_path.parent
 
-        # Fall back to pkg_path if no test paths found
+
         return self.pkg_path
 
     def execute_with_progress(
         self,
         cmd: list[str],
-        timeout: int = 1800,  # Match pytest-timeout default (30 min)
+        timeout: int = 1800,
     ) -> subprocess.CompletedProcess[str]:
-        # Pre-collect tests to set the total count upfront if possible
+
         total_tests = self._pre_collect_tests(cmd)
         progress = self._initialize_progress()
         if total_tests > 0:
-            # Set the total tests but keep is_collecting as True initially to ensure
-            # the collection header appears in pytest output
+
+
             progress.update(total_tests=total_tests)
-            # Set the collection status to indicate we pre-collected
+
             progress.collection_status = (
                 f"Pre-collected {total_tests} tests, starting execution..."
             )
@@ -86,16 +70,16 @@ class TestExecutor:
         self,
         cmd: list[str],
         progress_callback: t.Callable[[dict[str, t.Any]], None],
-        timeout: int = 1800,  # Match pytest-timeout default (30 min)
+        timeout: int = 1800,
     ) -> subprocess.CompletedProcess[str]:
-        # Pre-collect tests to set the total count upfront if possible
+
         total_tests = self._pre_collect_tests(cmd)
         progress = self._initialize_progress()
         if total_tests > 0:
-            # Set the total tests but keep is_collecting as True initially to ensure
-            # the collection header appears in pytest output
+
+
             progress.update(total_tests=total_tests)
-            # Set the collection status to indicate we pre-collected
+
             progress.collection_status = (
                 f"Pre-collected {total_tests} tests, starting execution..."
             )
@@ -105,12 +89,8 @@ class TestExecutor:
         )
 
     def _pre_collect_tests(self, original_cmd: list[str]) -> int:
-        """
-        Run a preliminary collection-only pass to determine the total number of tests.
-        This allows us to show the real test count from the start.
-        """
-        # Create collection command by replacing the original command with the collect-only version
-        # Preserve the test paths and other options, but replace the main pytest command
+
+
         collect_cmd = [
             "uv",
             "run",
@@ -119,20 +99,20 @@ class TestExecutor:
             "pytest",
             "--collect-only",
             "-qq",
-        ]  # Use -qq to minimize output but still get collection info
+        ]
 
-        # Extract test paths and relevant options from original command
+
         test_path_found = False
         for i, arg in enumerate(original_cmd):
             if not arg.startswith("-") and (
                 arg.startswith("tests") or arg == "." or arg.endswith(".py")
             ):
-                # Add test paths to collection command
+
                 collect_cmd.extend(original_cmd[i:])
                 test_path_found = True
                 break
 
-        # If no test path found, use the default
+
         if not test_path_found:
             collect_cmd.append("tests" if (self.pkg_path / "tests").exists() else ".")
 
@@ -142,19 +122,19 @@ class TestExecutor:
                 cwd=self._detect_target_project_dir(collect_cmd),
                 capture_output=True,
                 text=True,
-                timeout=120,  # Increased timeout for large test suites (was 30s)
+                timeout=120,
                 env=self._setup_test_environment(),
             )
 
-            # Parse output to extract number of collected tests
+
             if result.stdout:
-                # Look for the "collected X items" pattern (with more flexible matching)
-                # Match both "collected X items" and "collected X tests"
+
+
                 match = re.search(r"collected\s+(\d+)\s+(?:item|test)s?", result.stdout)
                 if match:
                     return int(match.group(1))
 
-        return 0  # Return 0 if collection fails
+        return 0
 
     def _execute_with_live_progress(
         self, cmd: list[str], timeout: int, progress: TestProgress | None = None
@@ -191,7 +171,7 @@ class TestExecutor:
 
             self._cleanup_threads([stdout_thread, stderr_thread, monitor_thread])
 
-            # Get output from buffers (threads have already consumed the streams)
+
             stdout_str = progress.get_stdout()
             stderr_str = progress.get_stderr()
             return subprocess.CompletedProcess(
@@ -261,7 +241,7 @@ class TestExecutor:
         def read_output() -> None:
             if process.stdout:
                 for line in iter(process.stdout.readline, ""):
-                    # Always buffer output for later retrieval
+
                     progress.append_stdout(line)
                     if line.strip():
                         self._process_test_output_line(line.strip(), progress)
@@ -277,7 +257,7 @@ class TestExecutor:
         def read_stderr() -> None:
             if process.stderr:
                 for line in iter(process.stderr.readline, ""):
-                    # Always buffer output for later retrieval
+
                     progress.append_stderr(line)
                     if line.strip() and "warning" not in line.lower():
                         progress.update(current_test=f"⚠️ {line.strip()}")
@@ -323,20 +303,15 @@ class TestExecutor:
             return
 
     def _handle_collection_completion(self, line: str, progress: TestProgress) -> bool:
-        # Match collection summary lines, but avoid matching test names
-        # Valid patterns:
-        # - "collected 3680 items" / "collected 3680 tests"
-        # - "3680 tests collected"
-        # - "4 workers [3680 items]"
-        # NOT: "test_collection_pattern_parametrized[=== 5000 tests collected ===-5000]"
+
+
         if "collected" in line and ("item" in line or "test" in line):
-            # More specific regex: require "collected" word before the number,
-            # or number followed by space and "item/test" at line start/end
-            # This avoids matching test names that happen to contain these words
+
+
             match = re.search(r"(?:collected\s+)?(\d+)\s+(?:item|test)s?(?:\s+collected)?", line)
             if match:
-                # Additional validation: ensure we're not in a test function name
-                # Test names contain "::" or end with ">"
+
+
                 if "::" not in line and not line.strip().endswith(">"):
                     progress.update(
                         total_tests=int(match.group(1)),
@@ -441,7 +416,7 @@ class TestExecutor:
         env: dict[str, str],
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
-        timeout: int = 1800,  # Match pytest-timeout default (30 min)
+        timeout: int = 1800,
     ) -> subprocess.CompletedProcess[str]:
         process = subprocess.Popen(
             cmd,

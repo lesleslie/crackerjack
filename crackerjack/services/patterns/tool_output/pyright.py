@@ -1,8 +1,3 @@
-"""Pyright type checker output parsing patterns.
-
-This module provides regex patterns for parsing Pyright static type checker output,
-including errors, warnings, and summary information.
-"""
 
 from ..core import ValidatedPattern
 

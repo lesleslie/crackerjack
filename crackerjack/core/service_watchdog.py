@@ -101,7 +101,7 @@ class ServiceWatchdog:
 
     def remove_service(self, service_id: str) -> None:
         if service_id in self.services:
-            # Only call asyncio.create_task if there's a running loop
+
             from contextlib import suppress
 
             with suppress(RuntimeError):
@@ -382,11 +382,11 @@ class ServiceWatchdog:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self.stop_watchdog())
             except RuntimeError:
-                # No running loop; stop synchronously to avoid 'never awaited' warnings
+
                 try:
                     asyncio.run(self.stop_watchdog())
                 except RuntimeError:
-                    # In case we're already within a running loop context where run() is invalid
+
                     with contextlib.suppress(Exception):
                         loop = asyncio.new_event_loop()
                         try:
@@ -405,7 +405,6 @@ class ServiceWatchdog:
         return self.services.copy()
 
     async def print_status_report(self) -> None:
-        """Print detailed status report for all services."""
         await self._print_report_header()
 
         if not self.services:
@@ -418,12 +417,10 @@ class ServiceWatchdog:
         )
 
     async def _print_report_header(self) -> None:
-        """Print the status report header."""
         await self.console.aprint("\n[bold blue]🐕 Service Watchdog Status[/bold blue]")
         await self.console.aprint("=" * 50)
 
     def _create_status_table(self) -> Table:
-        """Create and populate the status table."""
         table = Table()
         table.add_column("Service")
         table.add_column("Status")
@@ -437,7 +434,6 @@ class ServiceWatchdog:
         return table
 
     def _get_service_status_display(self, service: ServiceStatus) -> str:
-        """Get formatted status display for a service."""
         status_map = {
             (ServiceState.RUNNING, True): "[green]🟢 Running[/green]",
             (ServiceState.STARTING, None): "[yellow]🟡 Starting[/yellow]",
@@ -446,16 +442,15 @@ class ServiceWatchdog:
             (ServiceState.TIMEOUT, None): "[red]⏰ Timeout[/red]",
         }
 
-        # Check for running with healthy status first
+
         if service.state == ServiceState.RUNNING and service.is_healthy:
             return status_map[(ServiceState.RUNNING, True)]
 
-        # Check other states
+
         status_key = (service.state, None)
         return status_map.get(status_key, "[dim]⚫ Stopped[/dim]")
 
     def _format_uptime(self, uptime: float) -> str:
-        """Format uptime duration for display."""
         if uptime > 3600:
             return f"{uptime / 3600: .1f}h"
         elif uptime > 60:
@@ -476,7 +471,6 @@ def get_service_watchdog(console: CrackerjackConsole | None = None) -> ServiceWa
 
 
 def uptime() -> dict[str, float]:
-    """Get uptime for all services."""
     watchdog = get_service_watchdog()
     result = {}
     for service_id, status in watchdog.get_all_services_status().items():
@@ -485,7 +479,6 @@ def uptime() -> dict[str, float]:
 
 
 def is_healthy() -> dict[str, bool]:
-    """Check if all services are healthy."""
     watchdog = get_service_watchdog()
     result = {}
     for service_id, status in watchdog.get_all_services_status().items():
@@ -494,99 +487,89 @@ def is_healthy() -> dict[str, bool]:
 
 
 def add_service(service_id: str, config: ServiceConfig) -> None:
-    """Add a service to the watchdog."""
     watchdog = get_service_watchdog()
     watchdog.add_service(service_id, config)
 
 
 def remove_service(service_id: str) -> None:
-    """Remove a service from the watchdog."""
     watchdog = get_service_watchdog()
     watchdog.remove_service(service_id)
 
 
 def start_watchdog(console: CrackerjackConsole | None = None) -> None:
-    """Start the service watchdog."""
     watchdog = get_service_watchdog(console)
     try:
-        # Try to get the running event loop
+
         loop = asyncio.get_running_loop()
-        # If we're already in a running loop, schedule the coroutine instead
+
         loop.create_task(watchdog.start_watchdog())
     except RuntimeError:
-        # No event loop running, safe to use asyncio.run
+
         asyncio.run(watchdog.start_watchdog())
 
 
 def stop_watchdog() -> None:
-    """Stop the service watchdog."""
     watchdog = get_service_watchdog()
     try:
-        # Try to get the running event loop
+
         loop = asyncio.get_running_loop()
-        # If we're already in a running loop, schedule the coroutine instead
+
         loop.create_task(watchdog.stop_watchdog())
     except RuntimeError:
-        # No event loop running, safe to use asyncio.run
+
         asyncio.run(watchdog.stop_watchdog())
 
 
 def start_service(service_id: str) -> bool:
-    """Start a specific service."""
     watchdog = get_service_watchdog()
     try:
-        # Try to get the running event loop
+
         loop = asyncio.get_running_loop()
-        # If we're already in a running loop, schedule the coroutine instead
+
         loop.create_task(watchdog.start_service(service_id))
-        # This is not ideal but for testing we return True immediately
+
         return True
     except RuntimeError:
-        # No event loop running, safe to use asyncio.run
+
         return asyncio.run(watchdog.start_service(service_id))
 
 
 def stop_service(service_id: str) -> bool:
-    """Stop a specific service."""
     watchdog = get_service_watchdog()
     try:
-        # Try to get the running event loop
+
         loop = asyncio.get_running_loop()
-        # If we're already in a running loop, schedule the coroutine instead
+
         loop.create_task(watchdog.stop_service(service_id))
-        # This is not ideal but for testing we return True immediately
+
         return True
     except RuntimeError:
-        # No event loop running, safe to use asyncio.run
+
         return asyncio.run(watchdog.stop_service(service_id))
 
 
 def get_service_status(service_id: str) -> ServiceStatus | None:
-    """Get status of a specific service."""
     watchdog = get_service_watchdog()
     return watchdog.get_service_status(service_id)
 
 
 def get_all_services_status() -> dict[str, ServiceStatus]:
-    """Get status of all services."""
     watchdog = get_service_watchdog()
     return watchdog.get_all_services_status()
 
 
 def print_status_report() -> None:
-    """Print status report for all services."""
     watchdog = get_service_watchdog()
     try:
-        # Try to get the running event loop
+
         loop = asyncio.get_running_loop()
-        # If we're already in a running loop, schedule the coroutine instead
+
         loop.create_task(watchdog.print_status_report())
     except RuntimeError:
-        # No event loop running, safe to use asyncio.run
+
         asyncio.run(watchdog.print_status_report())
 
 
 def signal_handler(signum: int, frame: object) -> None:
-    """Handle process signals."""
-    # This is a placeholder function for the test
+
     pass

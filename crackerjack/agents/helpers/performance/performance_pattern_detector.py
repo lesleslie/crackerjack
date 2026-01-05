@@ -1,4 +1,3 @@
-"""Pattern detection for performance anti-patterns in Python code."""
 
 import ast
 import typing as t
@@ -9,14 +8,8 @@ from ...base import AgentContext
 
 
 class PerformancePatternDetector:
-    """Detects performance anti-patterns in Python code using AST and pattern matching."""
 
     def __init__(self, context: AgentContext) -> None:
-        """Initialize detector with agent context.
-
-        Args:
-            context: AgentContext for file operations and logging
-        """
         self.context = context
 
     def detect_performance_issues(
@@ -24,15 +17,6 @@ class PerformancePatternDetector:
         content: str,
         file_path: t.Any,
     ) -> list[dict[str, t.Any]]:
-        """Detect all performance issues in content using pattern matching.
-
-        Args:
-            content: File content to analyze
-            file_path: Path to the file
-
-        Returns:
-            List of detected performance issues
-        """
         issues: list[dict[str, t.Any]] = []
 
         with suppress(SyntaxError):
@@ -59,38 +43,17 @@ class PerformancePatternDetector:
         return issues
 
     def _detect_nested_loops_enhanced(self, tree: ast.AST) -> list[dict[str, t.Any]]:
-        """Detect nested loops with complexity analysis.
-
-        Args:
-            tree: AST tree to analyze
-
-        Returns:
-            List of nested loop issues
-        """
         analyzer = self._create_nested_loop_analyzer()
         analyzer.visit(tree)
         return self._build_nested_loop_issues(analyzer)
 
     @staticmethod
     def _create_nested_loop_analyzer() -> "NestedLoopAnalyzer":
-        """Create AST analyzer for nested loops.
-
-        Returns:
-            NestedLoopAnalyzer instance
-        """
         return NestedLoopAnalyzer()
 
     def _build_nested_loop_issues(
         self, analyzer: "NestedLoopAnalyzer"
     ) -> list[dict[str, t.Any]]:
-        """Build issue data from nested loop analysis.
-
-        Args:
-            analyzer: NestedLoopAnalyzer instance
-
-        Returns:
-            List of issues
-        """
         if not analyzer.nested_loops:
             return []
 
@@ -111,26 +74,10 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _count_high_priority_loops(nested_loops: list[dict[str, t.Any]]) -> int:
-        """Count high priority nested loops.
-
-        Args:
-            nested_loops: List of nested loop instances
-
-        Returns:
-            Count of high priority loops
-        """
         return len([n for n in nested_loops if n["priority"] in ("high", "critical")])
 
     @staticmethod
     def _generate_nested_loop_suggestions(nested_loops: list[dict[str, t.Any]]) -> str:
-        """Generate optimization suggestions for nested loops.
-
-        Args:
-            nested_loops: List of nested loop instances
-
-        Returns:
-            Suggestion string
-        """
         suggestions = []
 
         critical_count = len(
@@ -161,15 +108,6 @@ class PerformancePatternDetector:
         content: str,
         tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
-        """Detect inefficient list operations in loops.
-
-        Args:
-            content: File content
-            tree: AST tree
-
-        Returns:
-            List of inefficient list operation issues
-        """
         analyzer = self._create_enhanced_list_op_analyzer()
         analyzer.visit(tree)
 
@@ -180,24 +118,11 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _create_enhanced_list_op_analyzer() -> "ListOpAnalyzer":
-        """Create AST analyzer for list operations.
-
-        Returns:
-            ListOpAnalyzer instance
-        """
         return ListOpAnalyzer()
 
     def _build_list_ops_issues(
         self, analyzer: "ListOpAnalyzer"
     ) -> list[dict[str, t.Any]]:
-        """Build issue data from list operation analysis.
-
-        Args:
-            analyzer: ListOpAnalyzer instance
-
-        Returns:
-            List of issues
-        """
         total_impact = sum(int(op["impact_factor"]) for op in analyzer.list_ops)
         high_impact_ops = [
             op for op in analyzer.list_ops if int(op["impact_factor"]) >= 10
@@ -215,14 +140,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _generate_list_op_suggestions(list_ops: list[dict[str, t.Any]]) -> str:
-        """Generate optimization suggestions for list operations.
-
-        Args:
-            list_ops: List of inefficient operations
-
-        Returns:
-            Suggestion string
-        """
         suggestions = []
 
         high_impact_count = len(
@@ -254,15 +171,6 @@ class PerformancePatternDetector:
         content: str,
         tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
-        """Detect repeated expensive operations in loops.
-
-        Args:
-            content: File content
-            tree: AST tree
-
-        Returns:
-            List of repeated operation issues
-        """
         lines = content.split("\n")
         repeated_calls = self._find_expensive_operations_in_loops(lines)
 
@@ -272,14 +180,6 @@ class PerformancePatternDetector:
         self,
         lines: list[str],
     ) -> list[dict[str, t.Any]]:
-        """Find expensive operations inside loops.
-
-        Args:
-            lines: File lines
-
-        Returns:
-            List of repeated operation records
-        """
         repeated_calls: list[dict[str, t.Any]] = []
         expensive_patterns = self._get_expensive_operation_patterns()
 
@@ -293,11 +193,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _get_expensive_operation_patterns() -> tuple[str, ...]:
-        """Get patterns for expensive operations.
-
-        Returns:
-            Tuple of pattern strings
-        """
         return (
             ".exists()",
             ".read_text()",
@@ -313,28 +208,10 @@ class PerformancePatternDetector:
         line: str,
         patterns: tuple[str, ...],
     ) -> bool:
-        """Check if line contains expensive operations.
-
-        Args:
-            line: Code line
-            patterns: Patterns to match
-
-        Returns:
-            True if expensive operation found
-        """
         return any(pattern in line for pattern in patterns)
 
     @staticmethod
     def _is_in_loop_context(lines: list[str], line_index: int) -> bool:
-        """Check if line is inside a loop.
-
-        Args:
-            lines: File lines
-            line_index: Index of line to check
-
-        Returns:
-            True if inside loop context
-        """
         context_start = max(0, line_index - 5)
         context_lines = lines[context_start : line_index + 1]
 
@@ -349,15 +226,6 @@ class PerformancePatternDetector:
         line_index: int,
         content: str,
     ) -> dict[str, t.Any]:
-        """Create record for operation.
-
-        Args:
-            line_index: Line number
-            content: Line content
-
-        Returns:
-            Operation record
-        """
         return {
             "line_number": line_index + 1,
             "content": content,
@@ -368,14 +236,6 @@ class PerformancePatternDetector:
     def _create_repeated_operations_issues(
         repeated_calls: list[dict[str, t.Any]],
     ) -> list[dict[str, t.Any]]:
-        """Create issues from repeated operations.
-
-        Args:
-            repeated_calls: List of repeated operation records
-
-        Returns:
-            List of issues
-        """
         if len(repeated_calls) >= 2:
             return [
                 {
@@ -389,14 +249,6 @@ class PerformancePatternDetector:
     def _detect_string_inefficiencies_enhanced(
         self, content: str
     ) -> list[dict[str, t.Any]]:
-        """Detect string building inefficiencies.
-
-        Args:
-            content: File content
-
-        Returns:
-            List of string inefficiency issues
-        """
         issues: list[dict[str, t.Any]] = []
         lines = content.split("\n")
 
@@ -466,15 +318,6 @@ class PerformancePatternDetector:
     def _analyze_string_context(
         self, lines: list[str], line_idx: int
     ) -> dict[str, t.Any]:
-        """Analyze string building context.
-
-        Args:
-            lines: File lines
-            line_idx: Line index
-
-        Returns:
-            Context information
-        """
         context = self._create_default_string_context()
         loop_context = self._find_loop_context_in_lines(lines, line_idx)
 
@@ -485,11 +328,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _create_default_string_context() -> dict[str, t.Any]:
-        """Create default string context.
-
-        Returns:
-            Default context dict
-        """
         return {
             "loop_type": "unknown",
             "loop_depth": 1,
@@ -499,15 +337,6 @@ class PerformancePatternDetector:
     def _find_loop_context_in_lines(
         self, lines: list[str], line_idx: int
     ) -> dict[str, t.Any] | None:
-        """Find loop context for a line.
-
-        Args:
-            lines: File lines
-            line_idx: Line index
-
-        Returns:
-            Loop context or None
-        """
         for i in range(max(0, line_idx - 10), line_idx):
             line = lines[i].strip()
             loop_context = self._analyze_single_line_for_loop_context(line)
@@ -518,14 +347,6 @@ class PerformancePatternDetector:
     def _analyze_single_line_for_loop_context(
         self, line: str
     ) -> dict[str, t.Any] | None:
-        """Analyze a single line for loop context.
-
-        Args:
-            line: Code line
-
-        Returns:
-            Loop context or None
-        """
         if "for " in line and " in " in line:
             return self._analyze_for_loop_context(line)
         elif "while " in line:
@@ -533,14 +354,6 @@ class PerformancePatternDetector:
         return None
 
     def _analyze_for_loop_context(self, line: str) -> dict[str, t.Any]:
-        """Analyze for loop for impact factor.
-
-        Args:
-            line: For loop line
-
-        Returns:
-            Context dict
-        """
         context = {"loop_type": "for"}
 
         if "range(" in line:
@@ -553,25 +366,12 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _analyze_while_loop_context() -> dict[str, t.Any]:
-        """Analyze while loop context.
-
-        Returns:
-            Context dict
-        """
         return {
             "loop_type": "while",
             "impact_factor": "3",
         }
 
     def _estimate_range_impact_factor(self, line: str) -> int:
-        """Estimate impact factor for range size.
-
-        Args:
-            line: Code line
-
-        Returns:
-            Impact factor
-        """
         try:
             pattern_obj = SAFE_PATTERNS["extract_range_size"]
             if not pattern_obj.test(line):
@@ -586,14 +386,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _extract_range_size_from_string(range_str: str) -> int:
-        """Extract range size from string.
-
-        Args:
-            range_str: Range string
-
-        Returns:
-            Range size
-        """
         import re
 
         number_match = re.search(r"\d+", range_str)
@@ -603,14 +395,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _calculate_impact_from_range_size(range_size: int) -> int:
-        """Calculate impact factor from range size.
-
-        Args:
-            range_size: Size of range
-
-        Returns:
-            Impact factor
-        """
         if range_size > 1000:
             return 10
         elif range_size > 100:
@@ -619,15 +403,6 @@ class PerformancePatternDetector:
 
     @staticmethod
     def _is_in_loop_context_enhanced(lines: list[str], line_index: int) -> bool:
-        """Check if line is in enhanced loop context.
-
-        Args:
-            lines: File lines
-            line_index: Line index
-
-        Returns:
-            True if in loop
-        """
         context_start = max(0, line_index - 8)
         context_lines = lines[context_start : line_index + 1]
 
@@ -648,16 +423,6 @@ class PerformancePatternDetector:
         inefficient_joins: list[dict[str, t.Any]],
         repeated_formatting: list[dict[str, t.Any]],
     ) -> str:
-        """Generate string optimization suggestions.
-
-        Args:
-            concat_patterns: String concatenation patterns
-            inefficient_joins: Inefficient join patterns
-            repeated_formatting: Repeated formatting patterns
-
-        Returns:
-            Suggestion string
-        """
         suggestions = []
 
         if concat_patterns:
@@ -685,14 +450,6 @@ class PerformancePatternDetector:
     def _detect_list_comprehension_opportunities(
         self, tree: ast.AST
     ) -> list[dict[str, t.Any]]:
-        """Detect opportunities to use list comprehensions.
-
-        Args:
-            tree: AST tree
-
-        Returns:
-            List of comprehension opportunities
-        """
         issues: list[dict[str, t.Any]] = []
 
         class ComprehensionAnalyzer(ast.NodeVisitor):
@@ -745,15 +502,6 @@ class PerformancePatternDetector:
     def _detect_inefficient_builtin_usage(
         self, tree: ast.AST, content: str
     ) -> list[dict[str, t.Any]]:
-        """Detect inefficient builtin function usage in loops.
-
-        Args:
-            tree: AST tree
-            content: File content
-
-        Returns:
-            List of inefficient builtin issues
-        """
         issues: list[dict[str, t.Any]] = []
 
         class BuiltinAnalyzer(ast.NodeVisitor):
@@ -810,28 +558,23 @@ class PerformancePatternDetector:
 
 
 class NestedLoopAnalyzer(ast.NodeVisitor):
-    """AST visitor for detecting nested loops."""
 
     def __init__(self) -> None:
-        """Initialize analyzer."""
         self.nested_loops: list[dict[str, t.Any]] = []
         self.complexity_hotspots: list[dict[str, t.Any]] = []
         self._loop_stack: list[tuple[int, str]] = []
 
     def visit_For(self, node: ast.For) -> None:
-        """Visit for loop node."""
         self._handle_loop_node(node, "for")
         self.generic_visit(node)
         self._loop_stack.pop()
 
     def visit_While(self, node: ast.While) -> None:
-        """Visit while loop node."""
         self._handle_loop_node(node, "while")
         self.generic_visit(node)
         self._loop_stack.pop()
 
     def _handle_loop_node(self, node: ast.For | ast.While, loop_type: str) -> None:
-        """Handle loop node detection."""
         self._loop_stack.append((node.lineno, loop_type))
 
         if len(self._loop_stack) > 1:
@@ -851,7 +594,6 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
 
     @staticmethod
     def _calculate_loop_complexity(depth: int) -> str:
-        """Calculate complexity string from depth."""
         if depth == 2:
             return "O(n²)"
         elif depth == 3:
@@ -862,7 +604,6 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
 
     @staticmethod
     def _determine_priority(depth: int) -> str:
-        """Determine priority from depth."""
         if depth >= 4:
             return "critical"
         elif depth == 3:
@@ -873,29 +614,24 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
 
 
 class ListOpAnalyzer(ast.NodeVisitor):
-    """AST visitor for detecting inefficient list operations."""
 
     def __init__(self) -> None:
-        """Initialize analyzer."""
         self.list_ops: list[dict[str, t.Any]] = []
         self._in_loop = False
 
     def visit_For(self, node: ast.For) -> None:
-        """Visit for loop."""
         old_in_loop = self._in_loop
         self._in_loop = True
         self.generic_visit(node)
         self._in_loop = old_in_loop
 
     def visit_While(self, node: ast.While) -> None:
-        """Visit while loop."""
         old_in_loop = self._in_loop
         self._in_loop = True
         self.generic_visit(node)
         self._in_loop = old_in_loop
 
     def visit_AugAssign(self, node: ast.AugAssign) -> None:
-        """Visit augmented assignment."""
         if self._in_loop and isinstance(node.op, ast.Add):
             if isinstance(node.value, ast.List):
                 impact = len(node.value.elts) if node.value.elts else 1

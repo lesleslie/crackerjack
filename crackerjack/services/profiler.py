@@ -1,7 +1,3 @@
-"""Performance profiling for tool execution.
-
-Phase 10.3.1: Provides baseline metrics and bottleneck identification for optimization.
-"""
 
 import time
 from collections.abc import Callable
@@ -15,7 +11,6 @@ import psutil
 
 @dataclass
 class ProfileResult:
-    """Results from profiling a single tool."""
 
     tool_name: str
     runs: int
@@ -26,38 +21,32 @@ class ProfileResult:
 
     @property
     def mean_time(self) -> float:
-        """Average execution time."""
         return mean(self.execution_times) if self.execution_times else 0.0
 
     @property
     def median_time(self) -> float:
-        """Median execution time."""
         return median(self.execution_times) if self.execution_times else 0.0
 
     @property
     def std_dev_time(self) -> float:
-        """Standard deviation of execution times."""
         return stdev(self.execution_times) if len(self.execution_times) > 1 else 0.0
 
     @property
     def mean_memory(self) -> float:
-        """Average memory usage in MB."""
         return mean(self.memory_usage) if self.memory_usage else 0.0
 
     @property
     def cache_hit_rate(self) -> float:
-        """Cache hit rate as percentage."""
         total = self.cache_hits + self.cache_misses
         return (self.cache_hits / total * 100) if total > 0 else 0.0
 
 
 @dataclass
 class Bottleneck:
-    """Identified performance bottleneck."""
 
     tool_name: str
-    metric_type: str  # 'time', 'memory', 'cache'
-    severity: str  # 'high', 'medium', 'low'
+    metric_type: str
+    severity: str
     value: float
     threshold: float
     recommendation: str
@@ -65,7 +54,6 @@ class Bottleneck:
 
 @dataclass
 class ComparisonReport:
-    """Comparison between fast and comprehensive hook phases."""
 
     fast_phase_time: float
     comprehensive_phase_time: float
@@ -75,7 +63,6 @@ class ComparisonReport:
 
     @property
     def time_ratio(self) -> float:
-        """Ratio of comprehensive to fast phase time."""
         return (
             self.comprehensive_phase_time / self.fast_phase_time
             if self.fast_phase_time > 0
@@ -84,14 +71,8 @@ class ComparisonReport:
 
 
 class ToolProfiler:
-    """Profiles tool execution for performance optimization."""
 
     def __init__(self, cache_dir: Path | None = None):
-        """Initialize profiler.
-
-        Args:
-            cache_dir: Directory for cache statistics tracking
-        """
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
         self.results: dict[str, ProfileResult] = {}
 
@@ -101,45 +82,30 @@ class ToolProfiler:
         tool_func: Callable[[], Any],
         runs: int = 10,
     ) -> ProfileResult:
-        """Profile a tool's execution performance.
-
-        Args:
-            tool_name: Name of the tool being profiled
-            tool_func: Function to execute and profile
-            runs: Number of profiling runs (default: 10)
-
-        Returns:
-            ProfileResult with timing and memory statistics
-        """
         result = ProfileResult(tool_name=tool_name, runs=runs)
         process = psutil.Process()
 
         for _ in range(runs):
-            # Memory before execution
-            mem_before = process.memory_info().rss / 1024 / 1024  # MB
 
-            # Time execution
+            mem_before = process.memory_info().rss / 1024 / 1024
+
+
             start_time = time.perf_counter()
             tool_func()
             end_time = time.perf_counter()
 
-            # Memory after execution
-            mem_after = process.memory_info().rss / 1024 / 1024  # MB
 
-            # Record metrics
+            mem_after = process.memory_info().rss / 1024 / 1024
+
+
             result.execution_times.append(end_time - start_time)
             result.memory_usage.append(mem_after - mem_before)
 
-        # Store result
+
         self.results[tool_name] = result
         return result
 
     def compare_phases(self) -> ComparisonReport:
-        """Compare fast vs comprehensive hook phase performance.
-
-        Returns:
-            ComparisonReport with phase timing comparison
-        """
         fast_tools = ["ruff-format", "ruff-isort"]
         comp_tools = ["zuban", "bandit", "complexipy"]
 
@@ -157,21 +123,16 @@ class ToolProfiler:
             tools_profiled=len(self.results),
         )
 
-        # Identify bottlenecks
+
         report.bottlenecks = self.identify_bottlenecks()
 
         return report
 
     def identify_bottlenecks(self) -> list[Bottleneck]:
-        """Identify performance bottlenecks across all profiled tools.
-
-        Returns:
-            List of identified bottlenecks ordered by severity
-        """
         bottlenecks: list[Bottleneck] = []
 
         for tool_name, result in self.results.items():
-            # Time bottlenecks (>2s mean time)
+
             if result.mean_time > 2.0:
                 severity = "high" if result.mean_time > 5.0 else "medium"
                 bottlenecks.append(
@@ -187,7 +148,7 @@ class ToolProfiler:
                     )
                 )
 
-            # Memory bottlenecks (>100MB mean usage)
+
             if result.mean_memory > 100.0:
                 severity = "high" if result.mean_memory > 500.0 else "medium"
                 bottlenecks.append(
@@ -201,7 +162,7 @@ class ToolProfiler:
                     )
                 )
 
-            # Cache bottlenecks (<50% hit rate with >10 requests)
+
             total_requests = result.cache_hits + result.cache_misses
             if total_requests > 10 and result.cache_hit_rate < 50.0:
                 bottlenecks.append(
@@ -215,21 +176,16 @@ class ToolProfiler:
                     )
                 )
 
-        # Sort by severity (high -> medium -> low)
+
         severity_order = {"high": 0, "medium": 1, "low": 2}
         bottlenecks.sort(key=lambda b: severity_order[b.severity])
 
         return bottlenecks
 
     def generate_report(self) -> str:
-        """Generate formatted performance report.
-
-        Returns:
-            Formatted report string with all profiling results
-        """
         lines = ["# Performance Profile Report", ""]
 
-        # Summary statistics
+
         if self.results:
             total_tools = len(self.results)
             total_time = sum(r.mean_time for r in self.results.values())
@@ -245,7 +201,7 @@ class ToolProfiler:
                 ]
             )
 
-        # Individual tool results
+
         lines.append("## Tool Performance")
         for tool_name, result in sorted(self.results.items()):
             lines.extend(
@@ -261,7 +217,7 @@ class ToolProfiler:
                 ]
             )
 
-        # Bottlenecks
+
         bottlenecks = self.identify_bottlenecks()
         if bottlenecks:
             lines.extend(["## Identified Bottlenecks", ""])

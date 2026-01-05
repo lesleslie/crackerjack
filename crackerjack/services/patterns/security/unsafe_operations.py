@@ -1,9 +1,3 @@
-"""Unsafe operation detection and remediation patterns.
-
-This module contains patterns for detecting and fixing unsafe operations
-including weak cryptography, insecure random usage, subprocess shell injection,
-and other dangerous programming practices.
-"""
 
 import re
 
@@ -121,7 +115,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "fix_subprocess_call_shell": ValidatedPattern(
         name="fix_subprocess_call_shell",
-        pattern=r"subprocess\.call\(([^,]+),\s*shell=True\)",
+        pattern=r"subprocess\.call\(([^, ]+), \s*shell=True\)",
         replacement=r"subprocess.call(\1.split())",
         description="Remove shell=True from subprocess.call calls",
         global_replace=True,
@@ -139,7 +133,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "fix_subprocess_popen_shell": ValidatedPattern(
         name="fix_subprocess_popen_shell",
-        pattern=r"subprocess\.Popen\(([^,]+), \s*shell=True\)",
+        pattern=r"subprocess\.Popen\(([^, ]+), \s*shell=True\)",
         replacement=r"subprocess.Popen(\1.split())",
         description="Remove shell=True from subprocess.Popen calls",
         global_replace=True,
@@ -157,7 +151,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "fix_subprocess_run_shell": ValidatedPattern(
         name="fix_subprocess_run_shell",
-        pattern=r"subprocess\.run\(([^,]+),\s*shell=True\)",
+        pattern=r"subprocess\.run\(([^, ]+), \s*shell=True\)",
         replacement=r"subprocess.run(\1.split())",
         description="Remove shell=True from subprocess.run calls",
         global_replace=True,

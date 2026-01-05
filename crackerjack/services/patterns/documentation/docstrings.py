@@ -1,8 +1,3 @@
-"""Docstring parsing and manipulation patterns.
-
-This module provides regex patterns for working with docstrings in various formats
-including triple-quoted strings, Google-style, and Sphinx-style documentation.
-"""
 
 import re
 
@@ -50,7 +45,7 @@ PATTERNS = {
         test_cases=[
             ("Returns: Simple value", "Simple value"),
             ("Return: Another form", "Another form"),
-            ("Returns: Multi-line\n    description", "Multi-line\n    description"),
+            ("Returns: Multi-line\n description", "Multi-line\n description"),
             ("Returns: Simple value\n\nArgs:", "Simple value\n\nArgs:"),
         ],
     ),

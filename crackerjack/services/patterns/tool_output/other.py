@@ -1,8 +1,3 @@
-"""Additional tool output parsing patterns.
-
-This module provides regex patterns for parsing output from various development tools
-including mypy (type checking), vulture (dead code detection), and complexipy (complexity analysis).
-"""
 
 from ..core import ValidatedPattern
 

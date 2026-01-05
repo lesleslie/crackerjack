@@ -1,8 +1,3 @@
-"""Coverage analysis helper for test creation.
-
-This module provides coverage analysis and gap detection capabilities
-for test creation. Uses AgentContext pattern (legacy, intentional).
-"""
 
 import json
 import operator
@@ -11,23 +6,17 @@ from typing import Any
 
 from crackerjack.agents.base import AgentContext
 
-# Import helper classes
+
 from .test_ast_analyzer import TestASTAnalyzer
 from .test_template_generator import TestTemplateGenerator
 
 
 class TestCoverageAnalyzer:
-    """Coverage analyzer helper for test creation.
-
-    Uses AgentContext pattern (legacy, intentional).
-    May use TestASTAnalyzer for code structure analysis.
-    """
 
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
     async def analyze_coverage(self) -> dict[str, Any]:
-        """Analyze test coverage and identify gaps."""
         try:
             coverage_data = await self._get_existing_coverage_data()
             if coverage_data:
@@ -45,7 +34,6 @@ class TestCoverageAnalyzer:
             return self._create_default_coverage_result()
 
     async def _get_existing_coverage_data(self) -> dict[str, Any] | None:
-        """Try to get existing coverage data from files."""
         try:
             project_path = Path(str(self.context.project_path))
             json_report = project_path / "coverage.json"
@@ -65,7 +53,6 @@ class TestCoverageAnalyzer:
         return None
 
     def _parse_coverage_json(self, coverage_json: dict[str, Any]) -> dict[str, Any]:
-        """Parse coverage JSON report."""
         try:
             totals = coverage_json.get("totals", {})
             current_coverage = totals.get("percent_covered", 0) / 100.0
@@ -94,18 +81,15 @@ class TestCoverageAnalyzer:
             return self._create_default_coverage_result()
 
     async def _run_coverage_command(self) -> tuple[int, str, str]:
-        """Run coverage command via context."""
-        # This would call through the context's run_command method
-        # For now, return a placeholder
+
+
         return 1, "", "Coverage command not available in helper"
 
     def _handle_coverage_command_failure(self, stderr: str) -> dict[str, Any]:
-        """Handle coverage command failure."""
         self._log(f"Coverage analysis failed: {stderr}", "WARN")
         return self._create_default_coverage_result()
 
     async def _process_coverage_results_enhanced(self) -> dict[str, Any]:
-        """Process coverage results with enhanced analysis."""
         coverage_file = self.context.project_path / ".coverage"
         if not coverage_file.exists():
             return self._create_default_coverage_result()
@@ -127,7 +111,6 @@ class TestCoverageAnalyzer:
         }
 
     async def _estimate_current_coverage(self) -> float:
-        """Estimate current test coverage."""
         try:
             source_files: list[Path] = list(
                 (self.context.project_path / "crackerjack").rglob("*.py")
@@ -153,7 +136,6 @@ class TestCoverageAnalyzer:
     def _calculate_improvement_potential(
         self, uncovered_modules: int, untested_functions: int
     ) -> dict[str, Any]:
-        """Calculate coverage improvement potential."""
         if uncovered_modules == untested_functions == 0:
             return {"percentage_points": 0, "priority": "low"}
 
@@ -178,7 +160,6 @@ class TestCoverageAnalyzer:
         }
 
     def _create_default_coverage_result(self) -> dict[str, Any]:
-        """Create default coverage result."""
         return {
             "below_threshold": True,
             "current_coverage": 0.0,
@@ -186,7 +167,6 @@ class TestCoverageAnalyzer:
         }
 
     async def _find_uncovered_modules_enhanced(self) -> list[dict[str, Any]]:
-        """Find uncovered modules with priority scoring."""
         uncovered: list[dict[str, Any]] = []
 
         project_path = Path(str(self.context.project_path))
@@ -210,7 +190,6 @@ class TestCoverageAnalyzer:
     async def _analyze_module_priority(
         self, py_file: Path, ast_analyzer: "TestASTAnalyzer"
     ) -> dict[str, Any]:
-        """Analyze module priority for testing."""
         try:
             content = self.context.get_file_content(py_file) or ""
             import ast
@@ -266,7 +245,6 @@ class TestCoverageAnalyzer:
             }
 
     def _categorize_module(self, relative_path: str) -> str:
-        """Categorize module by path."""
         if "managers/" in relative_path:
             return "manager"
         elif "services/" in relative_path:
@@ -282,7 +260,6 @@ class TestCoverageAnalyzer:
         return "utility"
 
     async def _find_untested_functions_enhanced(self) -> list[dict[str, Any]]:
-        """Find untested functions with priority scoring."""
         untested: list[dict[str, Any]] = []
 
         package_dir = self.context.project_path / "crackerjack"
@@ -306,7 +283,6 @@ class TestCoverageAnalyzer:
     async def _find_untested_functions_in_file_enhanced(
         self, py_file: Path, ast_analyzer: "TestASTAnalyzer"
     ) -> list[dict[str, Any]]:
-        """Find untested functions in file with enhanced analysis."""
         untested: list[dict[str, Any]] = []
 
         try:
@@ -324,7 +300,6 @@ class TestCoverageAnalyzer:
     async def _analyze_function_testability(
         self, func: dict[str, Any], py_file: Path
     ) -> dict[str, Any]:
-        """Analyze function testability and priority."""
         try:
             func_info = {
                 "name": func["name"],
@@ -380,7 +355,6 @@ class TestCoverageAnalyzer:
             }
 
     async def _identify_coverage_gaps(self) -> list[dict[str, Any]]:
-        """Identify coverage gaps in existing tests."""
         gaps: list[dict[str, Any]] = []
 
         try:
@@ -410,7 +384,6 @@ class TestCoverageAnalyzer:
     async def _analyze_existing_test_coverage(
         self, py_file: Path, ast_analyzer: "TestASTAnalyzer"
     ) -> dict[str, Any]:
-        """Analyze existing test coverage for file."""
         try:
             test_file_path = await ast_analyzer.generate_test_file_path(py_file)
 
@@ -459,7 +432,6 @@ class TestCoverageAnalyzer:
             }
 
     async def create_tests_for_module(self, module_path: str) -> dict[str, list[str]]:
-        """Create tests for a module."""
         fixes: list[str] = []
         files: list[str] = []
 
@@ -483,7 +455,6 @@ class TestCoverageAnalyzer:
         ast_analyzer: "TestASTAnalyzer",
         template_gen: "TestTemplateGenerator",
     ) -> dict[str, list[str]]:
-        """Generate tests for module."""
         module_file = Path(module_path)
         if not await self._is_module_valid(module_file):
             return {"fixes": [], "files": []}
@@ -499,7 +470,6 @@ class TestCoverageAnalyzer:
         )
 
     async def _is_module_valid(self, module_file: Path) -> bool:
-        """Check if module file is valid."""
         return module_file.exists()
 
     async def _create_test_artifacts(
@@ -510,7 +480,6 @@ class TestCoverageAnalyzer:
         ast_analyzer: "TestASTAnalyzer",
         template_gen: "TestTemplateGenerator",
     ) -> dict[str, list[str]]:
-        """Create test artifacts for module."""
         test_file_path = await ast_analyzer.generate_test_file_path(module_file)
         test_content = await template_gen.generate_test_content(
             module_file,
@@ -528,11 +497,9 @@ class TestCoverageAnalyzer:
         return {"fixes": [], "files": []}
 
     def _handle_test_creation_error(self, module_path: str, e: Exception) -> None:
-        """Handle test creation error."""
         self._log(f"Error creating tests for module {module_path}: {e}", "ERROR")
 
     async def create_tests_for_file(self, file_path: str) -> dict[str, list[str]]:
-        """Create tests for file."""
         ast_analyzer = TestASTAnalyzer(self.context)
         if ast_analyzer.has_corresponding_test(file_path):
             return {"fixes": [], "files": []}
@@ -540,7 +507,6 @@ class TestCoverageAnalyzer:
         return await self.create_tests_for_module(file_path)
 
     async def find_untested_functions(self) -> list[dict[str, Any]]:
-        """Find untested functions (basic version)."""
         untested: list[dict[str, Any]] = []
 
         package_dir = self.context.project_path / "crackerjack"
@@ -565,7 +531,6 @@ class TestCoverageAnalyzer:
         py_file: Path,
         ast_analyzer: "TestASTAnalyzer",
     ) -> list[dict[str, Any]]:
-        """Find untested functions in file (basic version)."""
         untested: list[dict[str, Any]] = []
 
         functions = await ast_analyzer.extract_functions_from_file(py_file)
@@ -580,7 +545,6 @@ class TestCoverageAnalyzer:
         func: dict[str, Any],
         py_file: Path,
     ) -> dict[str, Any]:
-        """Create untested function info."""
         return {
             "name": func["name"],
             "file": str(py_file),
@@ -592,7 +556,6 @@ class TestCoverageAnalyzer:
         self,
         func_info: dict[str, Any],
     ) -> dict[str, list[str]]:
-        """Create test for function."""
         fixes: list[str] = []
         files: list[str] = []
 
@@ -626,6 +589,5 @@ class TestCoverageAnalyzer:
         return {"fixes": fixes, "files": files}
 
     def _log(self, message: str, level: str = "INFO") -> None:
-        """Log message through context."""
-        # This is a helper - logging would typically go through the agent
+
         pass

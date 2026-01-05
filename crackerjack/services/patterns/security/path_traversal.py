@@ -1,8 +1,3 @@
-"""Path traversal and directory access detection patterns.
-
-This module contains patterns for detecting directory traversal attacks,
-suspicious file path patterns, and unauthorized directory access attempts.
-"""
 
 from ..core import ValidatedPattern
 
@@ -214,12 +209,12 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "detect_suspicious_temp_traversal": ValidatedPattern(
         name="detect_suspicious_temp_traversal",
-        pattern=r"/tmp/.*\.\./",  # nosec B108
+        pattern=r"/tmp/.*\.\./", # nosec B108
         replacement="[SUSPICIOUS]",
         description="Detect traversal attempts in temp directories",
         test_cases=[
-            ("/tmp/safe/../etc/passwd", "[SUSPICIOUS]etc/passwd"),  # nosec B108
-            ("/tmp/normal/file.txt", "/tmp/normal/file.txt"),  # nosec B108
+            ("/tmp/safe/../etc/passwd", "[SUSPICIOUS]etc/passwd"), # nosec B108
+            ("/tmp/normal/file.txt", "/tmp/normal/file.txt"), # nosec B108
         ],
     ),
     "detect_suspicious_var_traversal": ValidatedPattern(

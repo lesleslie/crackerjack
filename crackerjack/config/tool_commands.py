@@ -1,11 +1,3 @@
-"""Tool command registry for direct tool invocation.
-
-This module provides mappings from hook names to direct tool commands,
-replacing the legacy pre-commit wrapper approach.
-
-Each command is a list of strings that can be passed directly to subprocess.run().
-Commands use 'uv run' for Python-based tools to leverage dependency management.
-"""
 
 from __future__ import annotations
 
@@ -15,15 +7,7 @@ from pathlib import Path
 
 @lru_cache(maxsize=8)
 def _detect_package_name_cached(pkg_path_str: str) -> str:
-    """Detect the main package name from pyproject.toml or directory structure.
 
-    Args:
-        pkg_path: Path to the project root
-
-    Returns:
-        The detected package name (defaults to 'crackerjack' if detection fails)
-    """
-    # Method 1: Try to read from pyproject.toml
     pkg_path = Path(pkg_path_str)
     pyproject_path = pkg_path / "pyproject.toml"
     if pyproject_path.exists():
@@ -36,34 +20,24 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
                 data = tomllib.load(f)
                 project_name = data.get("project", {}).get("name")
                 if project_name:
-                    # Convert project name to package name (hyphens to underscores)
+
                     return project_name.replace("-", "_")
 
-    # Method 2: Look for Python packages in the project root
+
     for item in pkg_path.iterdir():
         if item.is_dir() and (item / "__init__.py").exists():
-            # Skip common non-package directories
+
             if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
                 return item.name
 
-    # Method 3: Use the directory name as the package name
-    # Convert hyphens to underscores to match Python package naming conventions
+
     return pkg_path.name.replace("-", "_")
 
 
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
-    """Build tool command registry with dynamic package name.
-
-    Args:
-        package_name: The name of the package being analyzed
-
-    Returns:
-        Dictionary mapping hook names to command lists
-    """
     return {
-        # ========================================================================
-        # CUSTOM TOOLS (crackerjack native)
-        # ========================================================================
+
+
         "validate-regex-patterns": [
             "uv",
             "run",
@@ -83,15 +57,14 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uv",
             "run",
             "zuban",
-            "mypy",  # Use mypy-compatible command as it's more likely to have expected behavior
+            "mypy",
             "--config-file",
-            "mypy.ini",  # Required: zuban v0.2.2 can't parse [tool.mypy] from pyproject.toml
-            "--no-error-summary",  # Suppress summary line (e.g., "Found N errors") to keep issue output clean
+            "mypy.ini",
+            "--no-error-summary",
             f"./{package_name}",
         ],
-        # ========================================================================
-        # PRE-COMMIT-HOOKS (native implementations in crackerjack.tools)
-        # ========================================================================
+
+
         "trailing-whitespace": [
             "uv",
             "run",
@@ -125,11 +98,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.check_added_large_files",
             "--maxkb",
-            "1000",  # 1MB limit for comprehensive frameworks with large lock files
+            "1000",
         ],
-        # ========================================================================
-        # THIRD-PARTY TOOLS (direct invocation)
-        # ========================================================================
+
+
         "uv-lock": ["uv", "lock"],
         "gitleaks": [
             "uv",
@@ -142,26 +114,26 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "uv",
             "run",
             "bandit",
-            "-r",  # Recursive scanning
+            "-r",
             "--format",
-            "json",  # JSON output for structured parsing
+            "json",
             "--severity-level",
-            "low",  # Detect all severity levels
+            "low",
             "--confidence-level",
-            "low",  # Detect all confidence levels
+            "low",
             "-x",
-            "tests",  # Exclude tests directory
-            f"./{package_name}",  # Target only the package directory
+            "tests",
+            f"./{package_name}",
         ],
         "semgrep": [
-            "uvx",  # Use uvx for isolated semgrep environment
-            "--python=3.13",  # Explicitly use Python 3.13 for match/case syntax support
+            "uvx",
+            "--python=3.13",
             "semgrep",
             "scan",
-            "--error",  # Exit with non-zero code when findings detected (CRITICAL security level)
-            "--json",  # JSON output for structured parsing
+            "--error",
+            "--json",
             "--config",
-            "p/security-audit",  # Security-focused ruleset (comprehensive)
+            "p/security-audit",
             "--exclude",
             ".pytest_cache",
             "--exclude",
@@ -170,7 +142,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "__pycache__",
             "--exclude",
             "tests",
-            f"./{package_name}",  # Target only the package directory
+            f"./{package_name}",
         ],
         "codespell": [
             "uv",
@@ -179,7 +151,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.codespell_wrapper",
         ],
-        # Ruff check in auto-fix mode for fast hooks (fixes what it can)
+
         "ruff-check": [
             "uv",
             "run",
@@ -190,7 +162,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--fix",
             f"./{package_name}",
         ],
-        # Ruff format in auto-fix mode for fast hooks (no --check)
+
         "ruff-format": [
             "uv",
             "run",
@@ -200,7 +172,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "format",
             f"./{package_name}",
         ],
-        # Mdformat in auto-fix mode for fast hooks (no --check)
+
         "mdformat": [
             "uv",
             "run",
@@ -208,7 +180,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.mdformat_wrapper",
         ],
-        # Fast local-only link checker for fast hooks
+
         "check-local-links": [
             "uv",
             "run",
@@ -216,7 +188,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.local_link_checker",
         ],
-        # Comprehensive link checker (local + external) for comprehensive hooks
+
         "linkcheckmd": [
             "uv",
             "run",
@@ -224,7 +196,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.linkcheckmd_wrapper",
         ],
-        # Use explicit project path flag; include venv discovery
+
         "creosote": [
             "uv",
             "run",
@@ -248,23 +220,23 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "run",
             "pip-audit",
             "--format",
-            "json",  # JSON output for structured parsing
-            "--desc",  # Include vulnerability descriptions
-            "--skip-editable",  # Skip editable packages in development
+            "json",
+            "--desc",
+            "--skip-editable",
             "--vulnerability-service",
-            "osv",  # Use OSV database for vulnerability data
+            "osv",
             "--ignore-vuln",
-            "CVE-2025-53000",  # Windows-only vulnerability (uncontrolled search path in nbconvert), not applicable on macOS
+            "CVE-2025-53000",
         ],
         "pyscn": [
             "uv",
             "run",
             "pyscn",
-            "check",  # Use check subcommand (fast, CI-friendly analysis)
+            "check",
             "--max-complexity",
-            "15",  # Match crackerjack's complexity threshold
+            "15",
             "--select",
-            "complexity,deadcode,deps",  # Run complexity, dead code, and dependency checks
+            "complexity, deadcode, deps",
             package_name,
         ],
     }
@@ -272,35 +244,17 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
 
 @lru_cache(maxsize=8)
 def _build_tool_commands_cached(package_name: str) -> dict[str, tuple[str, ...]]:
-    """Cached variant of tool command map returning immutable tuples.
-
-    Using tuples ensures cached structures aren’t accidentally mutated, while
-    get_tool_command converts back to lists for callers.
-    """
     raw = _build_tool_commands(package_name)
     return {k: tuple(v) for k, v in raw.items()}
 
 
-# Precompute defaults for the active working directory to avoid hot-path lookups
 _DEFAULT_CWD_STR = str(Path.cwd())
 _DEFAULT_PACKAGE_NAME = _detect_package_name_cached(_DEFAULT_CWD_STR)
 _DEFAULT_COMMANDS = _build_tool_commands_cached(_DEFAULT_PACKAGE_NAME)
 
 
 def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
-    """Get the direct command for a tool by hook name.
 
-    Args:
-        hook_name: The name of the hook (e.g., "ruff-check", "trailing-whitespace")
-        pkg_path: Optional path to the project root (for package name detection)
-
-    Returns:
-        List of command arguments for subprocess execution
-
-    Raises:
-        KeyError: If the hook name is not found in the registry
-    """
-    # Detect package name from project root
     if pkg_path is None or str(pkg_path) == _DEFAULT_CWD_STR:
         tool_commands = _DEFAULT_COMMANDS
     else:
@@ -311,41 +265,25 @@ def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-    # Return a fresh list to prevent caller mutation
+
     return list(tool_commands[hook_name])
 
 
 def list_available_tools() -> list[str]:
-    """Get list of all available tool names.
 
-    Returns:
-        Sorted list of hook names that can be executed
-    """
-    # Build with a dummy package name just to get the keys
     tool_commands = _build_tool_commands_cached("dummy")
     return sorted(tool_commands.keys())
 
 
 def is_native_tool(hook_name: str) -> bool:
-    """Check if a tool is implemented as a native crackerjack tool.
-
-    We classify only the built-in Python implementations as native. Wrappers
-    around third-party tools (e.g., codespell) are not considered native.
-
-    Args:
-        hook_name: The name of the hook
-
-    Returns:
-        True if the tool is natively implemented in crackerjack.tools, else False
-    """
     NATIVE_TOOLS: set[str] = {
-        # Native Python implementations in crackerjack.tools
+
         "trailing-whitespace",
         "end-of-file-fixer",
         "check-yaml",
         "check-toml",
         "check-added-large-files",
-        # Classified as native per tests and docs
+
         "validate-regex-patterns",
     }
     return hook_name in NATIVE_TOOLS

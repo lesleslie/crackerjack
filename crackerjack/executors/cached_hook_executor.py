@@ -58,7 +58,6 @@ class CachedHookExecutor:
         return self._build_execution_result(strategy, execution_context, start_time)
 
     def _initialize_execution_context(self, strategy: HookStrategy) -> dict[str, t.Any]:
-        """Initialize execution context for the strategy."""
         relevant_files = self._get_relevant_files_for_strategy(strategy)
         current_file_hashes = self.file_hasher.get_files_hash_list(relevant_files)
 
@@ -72,7 +71,6 @@ class CachedHookExecutor:
     def _execute_single_hook_with_cache(
         self, hook_def: HookDefinition, context: dict[str, t.Any]
     ) -> None:
-        """Execute a single hook with caching logic."""
         cached_result = self._get_cached_result(
             hook_def, context["current_file_hashes"]
         )
@@ -85,7 +83,6 @@ class CachedHookExecutor:
     def _get_cached_result(
         self, hook_def: HookDefinition, current_file_hashes: list[str]
     ) -> HookResult | None:
-        """Get cached result for a hook definition."""
         try:
             if hook_def.name in self.cache.EXPENSIVE_HOOKS:
                 tool_version = self._get_tool_version(hook_def.name)
@@ -104,7 +101,6 @@ class CachedHookExecutor:
         cached_result: HookResult,
         context: dict[str, t.Any],
     ) -> None:
-        """Handle a cache hit scenario."""
         self.logger.debug(f"Using cached result for hook: {hook_def.name}")
         context["results"].append(cached_result)
         context["cache_hits"] += 1
@@ -112,7 +108,6 @@ class CachedHookExecutor:
     def _handle_cache_miss(
         self, hook_def: HookDefinition, context: dict[str, t.Any]
     ) -> None:
-        """Handle a cache miss scenario."""
         self.logger.debug(f"Executing hook (cache miss): {hook_def.name}")
 
         hook_result = self.base_executor.execute_single_hook(hook_def)
@@ -130,7 +125,6 @@ class CachedHookExecutor:
         hook_result: HookResult,
         current_file_hashes: list[str],
     ) -> None:
-        """Cache a successful hook result."""
         try:
             if hook_def.name in self.cache.EXPENSIVE_HOOKS:
                 tool_version = self._get_tool_version(hook_def.name)
@@ -147,7 +141,6 @@ class CachedHookExecutor:
     def _build_execution_result(
         self, strategy: HookStrategy, context: dict[str, t.Any], start_time: float
     ) -> HookExecutionResult:
-        """Build the final execution result."""
         total_time = time.time() - start_time
         success = all(result.status == "passed" for result in context["results"])
 
@@ -236,11 +229,10 @@ class CachedHookExecutor:
         return self.cache.cleanup_all()
 
     def _get_tool_version(self, tool_name: str) -> str | None:
-        """Get version of a tool for cache invalidation."""
-        # This is a simplified version - in production, you might want to
-        # actually call the tool to get its version
+
+
         version_mapping = {
-            "pyright": "1.1.0",  # Could be dynamic: subprocess.run(["pyright", "--version"])
+            "pyright": "1.1.0",
             "bandit": "1.7.5",
             "vulture": "2.7.0",
             "complexipy": "0.13.0",

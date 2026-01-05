@@ -1,4 +1,3 @@
-"""Input validation patterns."""
 
 from .core import ValidatedPattern
 

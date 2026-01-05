@@ -1,27 +1,5 @@
-"""Centralized pattern registry for safe regex operations.
 
-This module provides backward compatibility with the old regex_patterns.py
-by automatically loading all patterns from domain-specific modules.
 
-The patterns are organized by domain:
-- formatting: Text formatting and spacing patterns
-- versioning: Version number extraction and updates
-- validation: Input validation patterns
-- utilities: General utility extraction patterns
-- url_sanitization: URL sanitization for localhost addresses
-- agents: Agent count management patterns
-- templates: Template processing patterns
-- code: Code-related patterns (imports, paths, performance, detection, replacement)
-- documentation: Documentation patterns (docstrings, badges, comments)
-- tool_output: Linter/checker output parsing (ruff, pyright, bandit, mypy, vulture, complexipy)
-- testing: Test output and error patterns
-- security: Security patterns (credentials, path_traversal, unsafe_operations, code_injection)
-
-For backward compatibility, the main SAFE_PATTERNS dict contains all patterns.
-"""
-
-# Import standalone modules
-# Import subdirectories
 from . import (
     agents,
     code,
@@ -45,7 +23,7 @@ from .core import (
     validate_pattern_safety,
 )
 
-# Build the complete SAFE_PATTERNS registry for backward compatibility
+
 _merged_patterns = (
     formatting.PATTERNS
     | versioning.PATTERNS
@@ -60,9 +38,9 @@ _merged_patterns = (
     | testing.PATTERNS
     | security.PATTERNS
 )
-SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns  # type: ignore[assignment]
+SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns # type: ignore[assignment]
 
-# Import utility functions for backward compatibility
+
 from .operations import (
     RegexPatternsService,
     apply_formatting_fixes,
@@ -90,18 +68,18 @@ from .operations import (
     validate_path_security,
 )
 
-# Export everything for convenience
+
 __all__ = [
-    # Core classes and utilities
+
     "ValidatedPattern",
     "CompiledPatternCache",
     "validate_pattern_safety",
     "MAX_INPUT_SIZE",
     "MAX_ITERATIONS",
     "PATTERN_CACHE_SIZE",
-    # Main registry (backward compatibility)
+
     "SAFE_PATTERNS",
-    # Module namespaces for organized access
+
     "formatting",
     "versioning",
     "validation",
@@ -114,7 +92,7 @@ __all__ = [
     "tool_output",
     "testing",
     "security",
-    # Utility functions (backward compatibility)
+
     "validate_all_patterns",
     "find_pattern_for_text",
     "apply_safe_replacement",

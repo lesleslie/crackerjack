@@ -107,11 +107,9 @@ class FileHasher:
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def invalidate_cache(self, file_path: Path | None = None) -> None:
-        # CrackerjackCache doesn't have direct access to its underlying cache,
-        # so for targeted invalidation we would need to clear all file hashes
-        # For a specific file, we can't directly invalidate just that entry
-        # since the cache key contains mtime and size that would trigger invalidation naturally
-        pass  # No direct way to clear individual cache entries in CrackerjackCache
+
+
+        pass
 
 
 class SmartFileWatcher:

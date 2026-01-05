@@ -1,4 +1,3 @@
-"""Semantic search and context analysis agent for code pattern discovery and semantic improvements."""
 
 import typing as t
 from pathlib import Path
@@ -16,12 +15,6 @@ from .base import (
 
 
 class SemanticAgent(SubAgent):
-    """AI agent specialized in semantic search and code context analysis.
-
-    This agent enhances code understanding by providing semantic context,
-    finding similar code patterns, and suggesting improvements based on
-    codebase-wide analysis using vector embeddings.
-    """
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
@@ -37,14 +30,13 @@ class SemanticAgent(SubAgent):
         return {IssueType.SEMANTIC_CONTEXT}
 
     async def can_handle(self, issue: Issue) -> float:
-        """Determine confidence level for handling semantic context issues."""
         if issue.type != IssueType.SEMANTIC_CONTEXT:
             return 0.0
 
         confidence = 0.8
         message_lower = issue.message.lower()
 
-        # Higher confidence for semantic-specific terms
+
         if any(
             pattern in message_lower
             for pattern in (
@@ -62,7 +54,6 @@ class SemanticAgent(SubAgent):
         return confidence
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        """Analyze code using semantic search and provide contextual insights."""
         self.log(f"Analyzing semantic context issue: {issue.message}")
 
         validation_result = self._validate_semantic_issue(issue)
@@ -79,16 +70,16 @@ class SemanticAgent(SubAgent):
         file_path = Path(issue.file_path)
 
         try:
-            # Initialize semantic services
+
             config = self._create_semantic_config()
             vector_store = self._get_vector_store(config)
 
-            # Perform semantic analysis
+
             result = await self._perform_semantic_analysis(
                 file_path, vector_store, issue
             )
 
-            # Update stats
+
             self._update_pattern_stats(result)
 
             return result
@@ -98,7 +89,6 @@ class SemanticAgent(SubAgent):
 
     @staticmethod
     def _validate_semantic_issue(issue: Issue) -> FixResult | None:
-        """Validate that the semantic issue can be processed."""
         if not issue.file_path:
             return FixResult(
                 success=False,
@@ -118,7 +108,6 @@ class SemanticAgent(SubAgent):
 
     @staticmethod
     def _create_semantic_config() -> SemanticConfig:
-        """Create semantic search configuration."""
         return SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -129,12 +118,10 @@ class SemanticAgent(SubAgent):
         )
 
     def _get_vector_store(self, config: SemanticConfig) -> VectorStore:
-        """Get vector store instance with persistent database."""
         db_path = self._get_persistent_db_path()
         return VectorStore(config, db_path=db_path)
 
     def _get_persistent_db_path(self) -> Path:
-        """Get the path to the persistent semantic search database."""
         db_path = self.context.project_path / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         return db_path
@@ -142,8 +129,7 @@ class SemanticAgent(SubAgent):
     async def _perform_semantic_analysis(
         self, file_path: Path, vector_store: VectorStore, issue: Issue
     ) -> FixResult:
-        """Perform comprehensive semantic analysis of the code file."""
-        # Read file content
+
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -152,19 +138,19 @@ class SemanticAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-        # Index the file if not already indexed
+
         try:
             embeddings = vector_store.index_file(file_path)
             self.log(f"Indexed {len(embeddings)} chunks from {file_path.name}")
         except Exception as e:
             self.log(f"Warning: Could not index file {file_path}: {e}")
 
-        # Perform semantic search for related patterns
+
         semantic_insights = await self._discover_semantic_patterns(
             vector_store, file_path, content, issue
         )
 
-        # Generate recommendations based on semantic analysis
+
         recommendations = self._generate_semantic_recommendations(semantic_insights)
 
         return FixResult(
@@ -176,7 +162,7 @@ class SemanticAgent(SubAgent):
                 f"Generated {len(recommendations)} semantic recommendations",
             ],
             recommendations=recommendations,
-            files_modified=[],  # Semantic agent provides insights, doesn't modify files
+            files_modified=[],
         )
 
     async def _discover_semantic_patterns(
@@ -186,7 +172,6 @@ class SemanticAgent(SubAgent):
         content: str,
         issue: Issue,
     ) -> dict[str, t.Any]:
-        """Discover semantic patterns and related code through vector search."""
         insights: dict[str, t.Any] = {
             "related_patterns": [],
             "similar_functions": [],
@@ -194,11 +179,11 @@ class SemanticAgent(SubAgent):
             "pattern_clusters": [],
         }
 
-        # Extract key functions and classes for semantic analysis
+
         code_elements = self._extract_code_elements(content)
 
         for element in code_elements:
-            # Search for similar patterns
+
             search_query = SearchQuery(
                 query=element["signature"],
                 max_results=5,
@@ -209,7 +194,7 @@ class SemanticAgent(SubAgent):
             try:
                 results = vector_store.search(search_query)
                 if results:
-                    # Filter out results from the same file
+
                     related_results = [
                         result for result in results if result.file_path != file_path
                     ]
@@ -223,11 +208,11 @@ class SemanticAgent(SubAgent):
                                         "file_path": str(result.file_path),
                                         "content": result.content[
                                             :200
-                                        ],  # Truncate for readability
+                                        ],
                                         "similarity_score": result.similarity_score,
                                         "lines": f"{result.start_line}-{result.end_line}",
                                     }
-                                    for result in related_results[:3]  # Top 3 matches
+                                    for result in related_results[:3]
                                 ],
                             }
                         )
@@ -235,7 +220,7 @@ class SemanticAgent(SubAgent):
             except Exception as e:
                 self.log(f"Warning: Semantic search failed for {element['name']}: {e}")
 
-        # Analyze issue-specific context
+
         if issue.message:
             issue_insights = await self._analyze_issue_context(vector_store, issue)
             insights["context_suggestions"].extend(issue_insights)
@@ -243,32 +228,29 @@ class SemanticAgent(SubAgent):
         return insights
 
     def _extract_docstring_from_node(self, node: t.Any) -> str:
-        """Extract docstring from AST node, handling both old and new formats."""
         import ast
 
         if not node.body or not isinstance(node.body[0], ast.Expr):
             return ""
 
         value = node.body[0].value
-        if hasattr(value, "s"):  # Old ast.Str format
+        if hasattr(value, "s"):
             return str(value.s)[:100]
         elif hasattr(value, "value") and isinstance(
             value.value, str
-        ):  # New ast.Constant format
+        ):
             return str(value.value)[:100]
         return ""
 
     def _build_function_signature(self, node: t.Any) -> str:
-        """Build function signature from AST FunctionDef node."""
         signature = f"def {node.name}("
         if node.args.args:
-            args = [arg.arg for arg in node.args.args[:3]]  # First 3 args
+            args = [arg.arg for arg in node.args.args[:3]]
             signature += ", ".join(args)
         signature += ")"
         return signature
 
     def _build_class_signature(self, node: t.Any) -> str:
-        """Build class signature from AST ClassDef node."""
         signature = f"class {node.name}"
         if node.bases:
             bases = [self._get_ast_name(base) for base in node.bases[:2]]
@@ -276,7 +258,6 @@ class SemanticAgent(SubAgent):
         return signature
 
     def _get_ast_name(self, node: t.Any) -> str:
-        """Get name from AST node."""
         import ast
 
         if isinstance(node, ast.Name):
@@ -286,7 +267,6 @@ class SemanticAgent(SubAgent):
         return "Unknown"
 
     def _extract_ast_elements(self, content: str) -> list[dict[str, t.Any]]:
-        """Extract code elements using AST parsing."""
         import ast
 
         class CodeElementExtractor(ast.NodeVisitor):
@@ -320,13 +300,12 @@ class SemanticAgent(SubAgent):
         tree = ast.parse(content)
         extractor = CodeElementExtractor(self)
         extractor.visit(tree)
-        return extractor.elements[:10]  # Limit to top 10 elements
+        return extractor.elements[:10]
 
     def _extract_text_elements(self, content: str) -> list[dict[str, t.Any]]:
-        """Extract code elements using simple text patterns."""
         elements = []
         lines = content.split("\n")
-        for i, line in enumerate(lines[:50]):  # Check first 50 lines
+        for i, line in enumerate(lines[:50]):
             stripped = line.strip()
             if stripped.startswith("def ") and "(" in stripped:
                 func_name = stripped.split("(")[0].replace("def ", "").strip()
@@ -351,7 +330,6 @@ class SemanticAgent(SubAgent):
         return elements
 
     def _extract_code_elements(self, content: str) -> list[dict[str, t.Any]]:
-        """Extract key code elements for semantic analysis."""
         try:
             return self._extract_ast_elements(content)
         except SyntaxError:
@@ -360,10 +338,9 @@ class SemanticAgent(SubAgent):
     async def _analyze_issue_context(
         self, vector_store: VectorStore, issue: Issue
     ) -> list[dict[str, t.Any]]:
-        """Analyze the specific issue context using semantic search."""
         suggestions = []
 
-        # Search for similar issues or patterns
+
         search_query = SearchQuery(
             query=issue.message,
             max_results=5,
@@ -395,7 +372,6 @@ class SemanticAgent(SubAgent):
     def _generate_semantic_recommendations(
         self, insights: dict[str, t.Any]
     ) -> list[str]:
-        """Generate actionable recommendations based on semantic analysis."""
         recommendations = []
 
         related_patterns = insights.get("related_patterns", [])
@@ -409,20 +385,19 @@ class SemanticAgent(SubAgent):
                 "Semantic analysis revealed contextual insights for code understanding"
             )
 
-        # Add general semantic recommendations
+
         recommendations.extend(self._get_general_semantic_recommendations())
 
         return recommendations
 
     def _analyze_related_patterns(self, related_patterns: list[t.Any]) -> list[str]:
-        """Analyze related patterns and generate recommendations."""
         recommendations = []
 
         recommendations.append(
             f"Found {len(related_patterns)} similar code patterns across the codebase"
         )
 
-        # Analyze pattern consistency
+
         high_similarity_count = self._count_high_similarity_patterns(related_patterns)
         if high_similarity_count > 0:
             recommendations.append(
@@ -433,7 +408,6 @@ class SemanticAgent(SubAgent):
         return recommendations
 
     def _count_high_similarity_patterns(self, related_patterns: list[t.Any]) -> int:
-        """Count patterns with high similarity scores."""
         high_similarity_count = 0
 
         for pattern in related_patterns:
@@ -449,7 +423,6 @@ class SemanticAgent(SubAgent):
         return high_similarity_count
 
     def _get_general_semantic_recommendations(self) -> list[str]:
-        """Get general semantic analysis recommendations."""
         return [
             "Consider semantic indexing of related modules for better code discovery",
             "Review similar patterns for consistency in naming and implementation",
@@ -457,14 +430,12 @@ class SemanticAgent(SubAgent):
         ]
 
     def _update_pattern_stats(self, result: FixResult) -> None:
-        """Update pattern discovery statistics."""
         if result.success:
             self.pattern_stats["patterns_discovered"] += len(result.fixes_applied)
             self.pattern_stats["semantic_suggestions"] += len(result.recommendations)
 
     @staticmethod
     def _create_semantic_error_result(error: Exception) -> FixResult:
-        """Create error result for semantic analysis failures."""
         return FixResult(
             success=False,
             confidence=0.0,
@@ -477,7 +448,6 @@ class SemanticAgent(SubAgent):
         )
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
-        """Plan semantic analysis strategy before execution."""
         return {
             "strategy": "semantic_context_analysis",
             "confidence": 0.8,
@@ -495,5 +465,4 @@ class SemanticAgent(SubAgent):
         }
 
 
-# Register the agent with the agent registry
 agent_registry.register(SemanticAgent)

@@ -127,14 +127,6 @@ def find_safe_pattern_for_text(text: str) -> list[str]:
 
 
 def _determine_suggested_name(original_pattern: str) -> str:
-    """Determine a suggested name for the pattern based on its content.
-
-    Args:
-        original_pattern: The regex pattern to analyze
-
-    Returns:
-        Suggested pattern name
-    """
     if "python.*-.*m" in original_pattern:
         return "fix_python_command_spacing"
     if r"\-\s*\-" in original_pattern:
@@ -153,15 +145,6 @@ def _determine_suggested_name(original_pattern: str) -> str:
 
 
 def _build_test_cases(original_pattern: str, sample_text: str) -> list[tuple[str, str]]:
-    """Build test cases based on pattern and sample text.
-
-    Args:
-        original_pattern: The regex pattern
-        sample_text: Optional sample text to include
-
-    Returns:
-        List of (input, expected_output) test case tuples
-    """
     test_cases = []
 
     if sample_text:

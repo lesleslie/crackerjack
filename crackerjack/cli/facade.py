@@ -7,40 +7,18 @@ from rich.console import Console
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 from crackerjack.models.protocols import OptionsProtocol
 
-# Valid semantic commands for crackerjack operations
+
 VALID_COMMANDS = {"test", "lint", "check", "format", "security", "complexity", "all"}
 
 
 def validate_command(
     command: str | None, args: str | None = None
 ) -> tuple[str, list[str]]:
-    """Validate command and detect common misuse patterns.
 
-    Args:
-        command: Semantic command name (test, lint, check, etc.)
-        args: Additional arguments as a string
-
-    Returns:
-        Tuple of (validated_command, cleaned_args_list)
-
-    Raises:
-        ValueError: If command is invalid or misused
-
-    Examples:
-        >>> validate_command("test", "")
-        ("test", [])
-        >>> validate_command("check", "--verbose")
-        ("check", ["--verbose"])
-        >>> validate_command("--ai-fix", "-t")
-        Traceback (most recent call last):
-        ...
-        ValueError: Invalid command: '--ai-fix'...
-    """
-    # CRITICAL: Check for None command first
     if command is None:
         raise ValueError("Command cannot be None")
 
-    # Detect if user put flags in command parameter
+
     if command.startswith("--") or command.startswith("-"):
         raise ValueError(
             f"Invalid command: {command!r}\n"
@@ -48,17 +26,16 @@ def validate_command(
             f"Use ai_agent_mode=True parameter for auto-fix, not --ai-fix in command"
         )
 
-    # Validate against known semantic commands
+
     if command not in VALID_COMMANDS:
         raise ValueError(
             f"Unknown command: {command!r}\n"
             f"Valid commands: {', '.join(sorted(VALID_COMMANDS))}"
         )
 
-    # Parse args and detect --ai-fix misuse
-    # Handle None gracefully by converting to empty string
+
     args_str = args if args is not None else ""
-    # Use shlex.split for proper shell argument parsing (handles quotes)
+
     parsed_args = shlex.split(args_str) if args_str else []
     if "--ai-fix" in parsed_args:
         raise ValueError(
@@ -77,8 +54,7 @@ class CrackerjackCLIFacade:
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
-        # CLI facade uses WorkflowPipeline directly for quality workflows
-        # MCP server lifecycle handled via MCPServerCLIFactory in __main__.py
+
 
     def process(self, options: OptionsProtocol) -> None:
         try:

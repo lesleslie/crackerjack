@@ -24,7 +24,6 @@ class WorkflowResult:
 
 
 class WorkflowPipeline:
-    """Oneiric-backed workflow pipeline for Crackerjack."""
 
     def __init__(
         self,
@@ -53,7 +52,7 @@ class WorkflowPipeline:
 
     async def run_complete_workflow(self, options: t.Any) -> bool:
         self._initialize_workflow_session(options)
-        self._clear_oneiric_cache()  # Clear checkpoint cache to ensure fresh execution
+        self._clear_oneiric_cache()
         runtime = build_oneiric_runtime()
         register_crackerjack_workflow(
             runtime,
@@ -84,12 +83,6 @@ class WorkflowPipeline:
         self.session.initialize_session_tracking(options)
 
     def _clear_oneiric_cache(self) -> None:
-        """Clear Oneiric checkpoint cache to ensure fresh workflow execution.
-
-        Oneiric caches workflow execution state in .oneiric_cache/workflow_checkpoints.sqlite,
-        which can cause tasks to be skipped on subsequent runs. For Crackerjack's quality
-        checks, we need to ensure all hooks run fresh every time.
-        """
         import sqlite3
 
         cache_db = self.pkg_path / ".oneiric_cache" / "workflow_checkpoints.sqlite"
@@ -100,18 +93,18 @@ class WorkflowPipeline:
             conn = sqlite3.connect(cache_db)
             cursor = conn.cursor()
 
-            # Clear all checkpoint data for crackerjack workflow
+
             cursor.execute(
                 "DELETE FROM workflow_checkpoints WHERE workflow_key = ?",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
             cursor.execute(
                 "DELETE FROM workflow_executions WHERE workflow_key = ?",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
             cursor.execute(
                 "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
 
             conn.commit()
@@ -120,7 +113,7 @@ class WorkflowPipeline:
                 "Cleared Oneiric checkpoint cache for crackerjack workflow"
             )
         except Exception as e:
-            # Log but don't fail if cache clearing fails
+
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
@@ -129,44 +122,19 @@ class WorkflowPipeline:
         return True
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
-        """Configure session cleanup handlers.
-
-        This is a placeholder for future session cleanup configuration.
-        Currently, session cleanup is handled by SessionCoordinator directly.
-        """
-        pass  # Session cleanup handled by SessionCoordinator
+        pass
 
     def _initialize_zuban_lsp(self, options: t.Any) -> None:
-        """Initialize Zuban LSP integration.
-
-        This is a placeholder for future LSP integration.
-        Currently, type checking is performed via pre-commit hooks.
-        """
-        pass  # LSP integration not yet implemented
+        pass
 
     def _configure_hook_manager_lsp(self, options: t.Any) -> None:
-        """Configure HookManager LSP integration.
-
-        This is a placeholder for future LSP-aware hook management.
-        Currently, hook execution uses standard LSPAwareHookExecutor.
-        """
-        pass  # LSP hook manager not yet implemented
+        pass
 
     def _register_lsp_cleanup_handler(self, options: t.Any) -> None:
-        """Register LSP cleanup handler.
-
-        This is a placeholder for future LSP resource cleanup.
-        Currently, cleanup is handled by standard Python context managers.
-        """
-        pass  # LSP cleanup not yet implemented
+        pass
 
     def _log_workflow_startup_info(self, options: t.Any) -> None:
-        """Log workflow startup information.
-
-        This is a placeholder for enhanced workflow logging.
-        Currently, basic logging is handled by Oneiric workflow bridge.
-        """
-        pass  # Enhanced logging not yet implemented
+        pass
 
 
 def _workflow_result_success(result: dict[str, t.Any]) -> bool:
@@ -177,5 +145,5 @@ def _workflow_result_success(result: dict[str, t.Any]) -> bool:
 
 
 def _adapt_options(options: t.Any) -> t.Any:
-    # Return options as-is since semantic attributes (strip_code, run_tests) are already available
+
     return options

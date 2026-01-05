@@ -1,8 +1,3 @@
-"""Core pattern validation classes and utilities.
-
-This module contains the base classes and utilities for safely handling
-regex patterns with validation, caching, and performance monitoring.
-"""
 
 import re
 import signal
@@ -103,13 +98,13 @@ class ValidatedPattern:
                 raise ValueError(error_msg) from e
             raise
 
-        # Check for bad replacement syntax: spaces between \g and <, or malformed \g<...>
+
         if re.search(r"\\g\s+<", self.replacement) or re.search(
             r"\\g\s*<[^>]*\s+[^>]*>", self.replacement
         ):
             raise ValueError(
                 f"Bad replacement syntax in '{self.name}': {self.replacement}. "
-                "Use \\g<1> not \\g <1>"  # REGEX OK: educational example
+                "Use \\g<1> not \\g <1>" # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)

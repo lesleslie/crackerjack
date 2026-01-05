@@ -13,7 +13,7 @@ class SecurityService(SecurityServiceProtocol):
     TOKEN_PATTERN_NAMES = [
         "mask_pypi_token",
         "mask_github_token",
-        "mask_generic_long_token",  # Changed from "mask_github_long_token" to correct name
+        "mask_generic_long_token",
         "mask_token_assignment",
         "mask_password_assignment",
     ]
@@ -189,9 +189,9 @@ class SecurityService(SecurityServiceProtocol):
         secrets = []
 
         patterns = {
-            "api_key": r"(?i)(?:api[_-]?key)[\s]*[=:][\s]*[\"']([A-Za-z0-9_-]{20,})[\"']",
-            "password": r"(?i)(?:password)[\s]*[=:][\s]*[\"']([^\"'\s]{8,})[\"']",
-            "token": r"(?i)(?:token)[\s]*[=:][\s]*[\"']([A-Za-z0-9_-]{20,})[\"']",
+            "api_key": r"(?i)(?:api[_-]?key)[\s]*[=:][\s]*[\"']([A-Za-z0-9_-]{20, })[\"']",
+            "password": r"(?i)(?:password)[\s]*[=:][\s]*[\"']([^\"'\s]{8, })[\"']",
+            "token": r"(?i)(?:token)[\s]*[=:][\s]*[\"']([A-Za-z0-9_-]{20, })[\"']",
         }
 
         import re
@@ -199,10 +199,10 @@ class SecurityService(SecurityServiceProtocol):
         for secret_type, pattern in patterns.items():
             matches = re.finditer(pattern, content)
             for match in matches:
-                # Extract the captured group (the secret value)
+
                 secret_value = match.group(1)
 
-                # Calculate line number where the match occurs
+
                 line_start_pos = match.start()
                 line_num = content[:line_start_pos].count("\n") + 1
 

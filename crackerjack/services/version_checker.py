@@ -116,7 +116,7 @@ class VersionChecker:
     @retry_api_call(max_attempts=3, delay=1.0, backoff=2.0, max_delay=30.0)
     async def _fetch_latest_version(self, tool_name: str) -> str | None:
         try:
-            # Fix URLs - remove spaces that were added
+
             pypi_urls = {
                 "ruff": "https://pypi.org/pypi/ruff/json",
                 "pyright": "https://pypi.org/pypi/pyright/json",

@@ -1,24 +1,3 @@
-"""
-Agent Skills System (Option 1)
-
-Maps Crackerjack's internal agent capabilities to a skill-based interface.
-This preserves the existing agent architecture while adding a skill discovery layer.
-
-Key Concepts:
-- AgentSkill: Wrapper around SubAgent that exposes capabilities as skills
-- AgentSkillRegistry: Manages all agent skills and provides discovery
-- SkillMetadata: Rich metadata about each skill (confidence, types, etc.)
-
-Example:
-    registry = AgentSkillRegistry()
-    registry.register_agent(RefactoringAgent)
-
-    # Discover skills by type
-    complexity_skills = registry.get_skills_for_type(IssueType.COMPLEXITY)
-
-    # Execute skill
-    result = await skill.execute(issue)
-"""
 
 import asyncio
 import operator
@@ -37,7 +16,6 @@ from crackerjack.agents.base import (
 
 
 class SkillCategory(Enum):
-    """High-level categories for agent skills."""
 
     CODE_QUALITY = "code_quality"
     TESTING = "testing"
@@ -51,7 +29,6 @@ class SkillCategory(Enum):
 
 @dataclass
 class SkillMetadata:
-    """Rich metadata about an agent skill."""
 
     name: str
     description: str
@@ -64,7 +41,6 @@ class SkillMetadata:
     tags: set[str] = field(default_factory=set)
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "name": self.name,
             "description": self.description,
@@ -80,7 +56,6 @@ class SkillMetadata:
 
 @dataclass
 class SkillExecutionResult:
-    """Result of executing a skill."""
 
     skill_name: str
     success: bool
@@ -92,7 +67,6 @@ class SkillExecutionResult:
     execution_time_ms: int = 0
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "skill_name": self.skill_name,
             "success": self.success,
@@ -106,36 +80,24 @@ class SkillExecutionResult:
 
 
 class AgentSkill:
-    """
-    Wrapper around SubAgent that exposes capabilities as a skill.
-
-    This provides a skill-based interface to existing agents without
-    modifying the underlying agent architecture.
-    """
 
     def __init__(
         self,
         agent: SubAgent,
         metadata: SkillMetadata,
     ) -> None:
-        """Initialize skill with agent and metadata."""
         self.agent = agent
         self.metadata = metadata
         self.skill_id = f"skill_{uuid4().hex[:8]}"
 
     async def can_handle(self, issue: Issue) -> float:
-        """
-        Check if this skill can handle the given issue.
-
-        Returns confidence score (0.0-1.0).
-        """
         if issue.type not in self.metadata.supported_types:
             return 0.0
 
-        # Delegate to agent's can_handle
+
         agent_confidence = await self.agent.can_handle(issue)
 
-        # Apply skill-specific threshold
+
         if agent_confidence >= self.metadata.confidence_threshold:
             return agent_confidence
 
@@ -146,22 +108,12 @@ class AgentSkill:
         issue: Issue,
         timeout: int | None = None,
     ) -> SkillExecutionResult:
-        """
-        Execute this skill on the given issue.
-
-        Args:
-            issue: The issue to handle
-            timeout: Optional timeout in seconds
-
-        Returns:
-            SkillExecutionResult with detailed execution info
-        """
         import time
 
         start_time = time.time()
 
         try:
-            # Execute with timeout if specified
+
             if timeout:
                 result = await asyncio.wait_for(
                     self.agent.analyze_and_fix(issue),
@@ -172,10 +124,10 @@ class AgentSkill:
 
             execution_time_ms = int((time.time() - start_time) * 1000)
 
-            # Update metadata
+
             self.metadata.execution_count += 1
             if result.success:
-                # Update success rate with exponential moving average
+
                 alpha = 0.1
                 self.metadata.success_rate = (
                     alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
@@ -220,29 +172,20 @@ class AgentSkill:
         self,
         issues: list[Issue],
     ) -> t.Coroutine[t.Any, t.Any, list[SkillExecutionResult]]:
-        """
-        Execute this skill on multiple issues concurrently.
-
-        Args:
-            issues: List of issues to handle
-
-        Returns:
-            List of SkillExecutionResult (one per issue)
-        """
 
         async def _batch() -> list[SkillExecutionResult]:
-            # Filter handleable issues
+
             handleable = [i for i in issues if i.type in self.metadata.supported_types]
 
-            # Execute concurrently
+
             tasks = [self.execute(issue) for issue in handleable]
             raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-            # Filter out exceptions, keep only SkillExecutionResult
+
             results: list[SkillExecutionResult] = []
             for result in raw_results:
                 if isinstance(result, BaseException):
-                    # Convert exception to error result with default values
+
                     results.append(
                         SkillExecutionResult(
                             skill_name=self.skill_id,
@@ -263,7 +206,6 @@ class AgentSkill:
         return _batch()
 
     def get_info(self) -> dict[str, t.Any]:
-        """Get skill information as dictionary."""
         return {
             "skill_id": self.skill_id,
             "metadata": self.metadata.to_dict(),
@@ -272,15 +214,8 @@ class AgentSkill:
 
 
 class AgentSkillRegistry:
-    """
-    Registry for managing agent skills.
-
-    Provides discovery, filtering, and execution capabilities for all
-    agent-based skills.
-    """
 
     def __init__(self) -> None:
-        """Initialize empty registry."""
         self._skills: dict[str, AgentSkill] = {}
         self._category_index: dict[SkillCategory, list[str]] = {
             category: [] for category in SkillCategory
@@ -293,13 +228,12 @@ class AgentSkillRegistry:
         self,
         skill: AgentSkill,
     ) -> None:
-        """Register a skill in the registry."""
         self._skills[skill.skill_id] = skill
 
-        # Update category index
+
         self._category_index[skill.metadata.category].append(skill.skill_id)
 
-        # Update type index
+
         for issue_type in skill.metadata.supported_types:
             self._type_index[issue_type].append(skill.skill_id)
 
@@ -309,25 +243,14 @@ class AgentSkillRegistry:
         context: AgentContext,
         metadata: SkillMetadata | None = None,
     ) -> AgentSkill:
-        """
-        Register an agent class as a skill.
 
-        Args:
-            agent_class: The SubAgent subclass to register
-            context: AgentContext for agent initialization
-            metadata: Optional SkillMetadata (auto-generated if not provided)
-
-        Returns:
-            The created AgentSkill
-        """
-        # Create agent instance
         agent = agent_class(context)
 
-        # Auto-generate metadata if not provided
+
         if metadata is None:
             metadata = self._generate_metadata(agent)
 
-        # Create and register skill
+
         skill = AgentSkill(agent, metadata)
         self.register(skill)
 
@@ -337,35 +260,24 @@ class AgentSkillRegistry:
         self,
         context: AgentContext,
     ) -> list[AgentSkill]:
-        """
-        Register all agents from the global agent registry.
-
-        Args:
-            context: AgentContext for agent initialization
-
-        Returns:
-            List of registered AgentSkill instances
-        """
         skills = []
         for agent_class in agent_registry._agents.values():
             try:
                 skill = self.register_agent(agent_class, context)
                 skills.append(skill)
             except Exception as e:
-                # Log but don't fail if one agent registration fails
+
                 print(f"Warning: Failed to register {agent_class.__name__}: {e}")
 
         return skills
 
     def get_skill(self, skill_id: str) -> AgentSkill | None:
-        """Get skill by ID."""
         return self._skills.get(skill_id)
 
     def get_skills_by_category(
         self,
         category: SkillCategory,
     ) -> list[AgentSkill]:
-        """Get all skills in a category."""
         skill_ids = self._category_index.get(category, [])
         return [self._skills[sid] for sid in skill_ids if sid in self._skills]
 
@@ -373,7 +285,6 @@ class AgentSkillRegistry:
         self,
         issue_type: IssueType,
     ) -> list[AgentSkill]:
-        """Get all skills that can handle a given issue type."""
         skill_ids = self._type_index.get(issue_type, [])
         return [self._skills[sid] for sid in skill_ids if sid in self._skills]
 
@@ -381,11 +292,6 @@ class AgentSkillRegistry:
         self,
         issue: Issue,
     ) -> t.Coroutine[t.Any, t.Any, AgentSkill | None]:
-        """
-        Find the best skill for handling an issue.
-
-        Returns skill with highest confidence score.
-        """
 
         async def _find() -> AgentSkill | None:
             candidates = self.get_skills_for_type(issue.type)
@@ -393,29 +299,27 @@ class AgentSkillRegistry:
             if not candidates:
                 return None
 
-            # Get confidence scores
+
             confidence_pairs = [
                 (skill, await skill.can_handle(issue)) for skill in candidates
             ]
 
-            # Filter by threshold and sort by confidence
+
             valid_pairs = [(s, c) for s, c in confidence_pairs if c > 0]
 
             if not valid_pairs:
                 return None
 
-            # Return best skill
+
             valid_pairs.sort(key=operator.itemgetter(1), reverse=True)
             return valid_pairs[0][0]
 
         return _find()
 
     def list_all_skills(self) -> list[dict[str, t.Any]]:
-        """List all registered skills with metadata."""
         return [skill.get_info() for skill in self._skills.values()]
 
     def get_statistics(self) -> dict[str, t.Any]:
-        """Get registry statistics."""
         return {
             "total_skills": len(self._skills),
             "skills_by_category": {
@@ -436,20 +340,19 @@ class AgentSkillRegistry:
         }
 
     def _generate_metadata(self, agent: SubAgent) -> SkillMetadata:
-        """Auto-generate SkillMetadata from an agent instance."""
-        # Infer category from agent name
+
         agent_name = agent.name.lower()
         category = self._infer_category(agent_name)
 
-        # Get supported types from agent
+
         supported_types = agent.get_supported_types()
 
-        # Generate description
+
         description = (
             f"{agent.name} - handles {', '.join(t.value for t in supported_types)}"
         )
 
-        # Infer tags from agent name and types
+
         tags = self._infer_tags(agent_name, supported_types)
 
         return SkillMetadata(
@@ -461,7 +364,6 @@ class AgentSkillRegistry:
         )
 
     def _infer_category(self, agent_name: str) -> SkillCategory:
-        """Infer skill category from agent name."""
         if "refactor" in agent_name or "complexity" in agent_name:
             return SkillCategory.CODE_QUALITY
         if "test" in agent_name:
@@ -479,22 +381,21 @@ class AgentSkillRegistry:
         if "proactive" in agent_name:
             return SkillCategory.PROACTIVE
 
-        return SkillCategory.CODE_QUALITY  # Default
+        return SkillCategory.CODE_QUALITY
 
     def _infer_tags(
         self,
         agent_name: str,
         supported_types: set[IssueType],
     ) -> set[str]:
-        """Infer tags from agent name and supported types."""
         tags = set()
 
-        # Add agent name components
+
         for word in agent_name.split("_"):
             if len(word) > 2:
                 tags.add(word)
 
-        # Add issue type tags
+
         tags.update(issue_type.value for issue_type in supported_types)
 
         return tags

@@ -1,26 +1,3 @@
-"""
-MCP Skills System (Option 2)
-
-Groups existing MCP tools into purpose-based skills for better discoverability.
-This layer organizes tools without changing the underlying tool implementations.
-
-Key Concepts:
-- MCPSkill: A group of related MCP tools with a shared purpose
-- MCPSkillRegistry: Manages MCP skills and provides tool discovery
-- SkillGroup: Logical grouping of tools by functionality
-
-Example:
-    registry = MCPSkillRegistry()
-
-    # Register tool groups as skills
-    registry.register_skill_group(MCP_SKILL_GROUPS["quality_checks"])
-
-    # Discover tools in a skill
-    quality_tools = registry.get_tools_in_skill("quality_checks")
-
-    # Get skill metadata
-    info = registry.get_skill_info("quality_checks")
-"""
 
 import typing as t
 from dataclasses import dataclass, field
@@ -28,7 +5,6 @@ from enum import Enum
 
 
 class SkillDomain(Enum):
-    """High-level domains for MCP skills."""
 
     EXECUTION = "execution"
     MONITORING = "monitoring"
@@ -40,7 +16,6 @@ class SkillDomain(Enum):
 
 @dataclass
 class ToolReference:
-    """Reference to an MCP tool."""
 
     name: str
     description: str
@@ -48,7 +23,6 @@ class ToolReference:
     optional_params: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary."""
         return {
             "name": self.name,
             "description": self.description,
@@ -59,12 +33,6 @@ class ToolReference:
 
 @dataclass
 class MCPSkill:
-    """
-    A skill that groups related MCP tools.
-
-    Skills provide a higher-level abstraction over individual tools,
-    making it easier to discover related functionality.
-    """
 
     skill_id: str
     name: str
@@ -81,7 +49,6 @@ class MCPSkill:
         required_params: list[str] | None = None,
         optional_params: list[str] | None = None,
     ) -> None:
-        """Add a tool to this skill."""
         self.tools.append(
             ToolReference(
                 name=tool_name,
@@ -92,7 +59,6 @@ class MCPSkill:
         )
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "skill_id": self.skill_id,
             "name": self.name,
@@ -105,31 +71,24 @@ class MCPSkill:
 
 
 class MCPSkillRegistry:
-    """
-    Registry for managing MCP skills.
-
-    Provides discovery and grouping of MCP tools into skills.
-    """
 
     def __init__(self) -> None:
-        """Initialize empty registry."""
         self._skills: dict[str, MCPSkill] = {}
         self._domain_index: dict[SkillDomain, list[str]] = {
             domain: [] for domain in SkillDomain
         }
-        self._tool_index: dict[str, str] = {}  # tool_name -> skill_id
+        self._tool_index: dict[str, str] = {}
 
     def register(
         self,
         skill: MCPSkill,
     ) -> None:
-        """Register a skill in the registry."""
         self._skills[skill.skill_id] = skill
 
-        # Update domain index
+
         self._domain_index[skill.domain].append(skill.skill_id)
 
-        # Update tool index
+
         for tool in skill.tools:
             self._tool_index[tool.name] = skill.skill_id
 
@@ -137,15 +96,6 @@ class MCPSkillRegistry:
         self,
         skill_data: dict[str, t.Any],
     ) -> MCPSkill:
-        """
-        Register a skill from a dictionary definition.
-
-        Args:
-            skill_data: Dictionary with skill definition
-
-        Returns:
-            The created MCPSkill
-        """
         skill = MCPSkill(
             skill_id=skill_data["skill_id"],
             name=skill_data["name"],
@@ -155,7 +105,7 @@ class MCPSkillRegistry:
             examples=skill_data.get("examples", []),
         )
 
-        # Add tools
+
         for tool_data in skill_data.get("tools", []):
             skill.add_tool(
                 tool_name=tool_data["name"],
@@ -168,11 +118,9 @@ class MCPSkillRegistry:
         return skill
 
     def get_skill(self, skill_id: str) -> MCPSkill | None:
-        """Get skill by ID."""
         return self._skills.get(skill_id)
 
     def get_skill_by_tool(self, tool_name: str) -> MCPSkill | None:
-        """Get skill that contains a specific tool."""
         skill_id = self._tool_index.get(tool_name)
         return self._skills.get(skill_id) if skill_id else None
 
@@ -180,20 +128,16 @@ class MCPSkillRegistry:
         self,
         domain: SkillDomain,
     ) -> list[MCPSkill]:
-        """Get all skills in a domain."""
         skill_ids = self._domain_index.get(domain, [])
         return [self._skills[sid] for sid in skill_ids if sid in self._skills]
 
     def list_all_skills(self) -> list[dict[str, t.Any]]:
-        """List all registered skills with metadata."""
         return [skill.to_dict() for skill in self._skills.values()]
 
     def get_all_tools(self) -> list[str]:
-        """Get all tool names across all skills."""
         return list(self._tool_index.keys())
 
     def get_tools_in_skill(self, skill_id: str) -> list[str]:
-        """Get all tool names in a specific skill."""
         skill = self.get_skill(skill_id)
         return [tool.name for tool in skill.tools] if skill else []
 
@@ -205,39 +149,26 @@ class MCPSkillRegistry:
         search_descriptions: bool = True,
         search_tool_names: bool = True,
     ) -> list[MCPSkill]:
-        """
-        Search for skills matching a query.
-
-        Args:
-            query: Search query
-            search_domains: Search in domain names
-            search_tags: Search in tags
-            search_descriptions: Search in descriptions
-            search_tool_names: Search in tool names
-
-        Returns:
-            List of matching skills
-        """
         query_lower = query.lower()
         matching_skills = []
 
         for skill in self._skills.values():
-            # Check domain
+
             if search_domains and query_lower in skill.domain.value:
                 matching_skills.append(skill)
                 continue
 
-            # Check tags
+
             if search_tags and any(query_lower in tag for tag in skill.tags):
                 matching_skills.append(skill)
                 continue
 
-            # Check description
+
             if search_descriptions and query_lower in skill.description.lower():
                 matching_skills.append(skill)
                 continue
 
-            # Check tool names
+
             if search_tool_names and any(
                 query_lower in tool.name for tool in skill.tools
             ):
@@ -247,7 +178,6 @@ class MCPSkillRegistry:
         return matching_skills
 
     def get_statistics(self) -> dict[str, t.Any]:
-        """Get registry statistics."""
         return {
             "total_skills": len(self._skills),
             "total_tools": len(self._tool_index),
@@ -260,7 +190,6 @@ class MCPSkillRegistry:
         }
 
 
-# Predefined skill groups based on existing MCP tools
 MCP_SKILL_GROUPS: dict[str, dict[str, t.Any]] = {
     "quality_checks": {
         "skill_id": "quality_checks",

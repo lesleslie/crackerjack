@@ -17,24 +17,17 @@ from .protocols import OptionsProtocol
 
 
 def _determine_max_iterations(options: OptionsProtocol) -> int:
-    """Determine max_iterations using effective_max_iterations if available, otherwise fallback logic.
 
-    Priority:
-    1. Use effective_max_iterations property if available (handles quick/thorough flags)
-    2. Explicit max_iterations value
-    3. Default: 5 iterations
-    """
-    # Use effective_max_iterations property if available (Options class has this)
     if hasattr(options, "effective_max_iterations"):
-        return getattr(options, "effective_max_iterations")  # type: ignore[no-any-return]
+        return getattr(options, "effective_max_iterations") # type: ignore[no-any-return]
 
-    # Fallback for other OptionsProtocol implementations
+
     if hasattr(options, "max_iterations") and getattr(
         options, "max_iterations", None
     ) not in (0, None):
-        return getattr(options, "max_iterations")  # type: ignore[no-any-return]
+        return getattr(options, "max_iterations") # type: ignore[no-any-return]
 
-    # Default to 5 iterations
+
     return 5
 
 

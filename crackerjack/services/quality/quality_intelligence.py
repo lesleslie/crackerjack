@@ -1,4 +1,3 @@
-"""Advanced ML-based quality intelligence with anomaly detection and predictive analytics."""
 
 import json
 import typing as t
@@ -17,7 +16,7 @@ from .quality_baseline_enhanced import (
     TrendDirection,
 )
 
-# Try to import scipy, but handle the case where it's not available
+
 try:
     from scipy import stats
 
@@ -28,38 +27,35 @@ except (ImportError, SyntaxError):
 
 
 class AnomalyType(str, Enum):
-    """Types of anomalies that can be detected."""
 
-    SPIKE = "spike"  # Sudden increase in metrics
-    DROP = "drop"  # Sudden decrease in metrics
-    DRIFT = "drift"  # Gradual change over time
-    OSCILLATION = "oscillation"  # Unusual fluctuation patterns
-    OUTLIER = "outlier"  # Statistical outlier
+    SPIKE = "spike"
+    DROP = "drop"
+    DRIFT = "drift"
+    OSCILLATION = "oscillation"
+    OUTLIER = "outlier"
 
 
 class PatternType(str, Enum):
-    """Types of patterns that can be identified."""
 
-    CYCLIC = "cyclic"  # Regular recurring patterns
-    SEASONAL = "seasonal"  # Time-based patterns
-    CORRELATION = "correlation"  # Metric correlation patterns
-    REGRESSION = "regression"  # Quality regression patterns
-    IMPROVEMENT = "improvement"  # Quality improvement patterns
+    CYCLIC = "cyclic"
+    SEASONAL = "seasonal"
+    CORRELATION = "correlation"
+    REGRESSION = "regression"
+    IMPROVEMENT = "improvement"
 
 
 @dataclass
 class QualityAnomaly:
-    """Detected quality anomaly with ML confidence."""
 
     anomaly_type: AnomalyType
     metric_name: str
     detected_at: datetime
-    confidence: float  # 0.0 to 1.0
+    confidence: float
     severity: AlertSeverity
     description: str
     actual_value: float
     expected_value: float
-    deviation_sigma: float  # Standard deviations from normal
+    deviation_sigma: float
     context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -80,7 +76,6 @@ class QualityAnomaly:
 
 @dataclass
 class QualityPattern:
-    """Identified quality pattern with statistical analysis."""
 
     pattern_type: PatternType
     metric_names: list[str]
@@ -88,9 +83,9 @@ class QualityPattern:
     confidence: float
     description: str
     period_days: int
-    correlation_strength: float  # For correlation patterns
+    correlation_strength: float
     trend_direction: TrendDirection
-    statistical_significance: float  # p-value
+    statistical_significance: float
     context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -110,18 +105,17 @@ class QualityPattern:
 
 @dataclass
 class QualityPrediction:
-    """Advanced quality prediction with confidence intervals."""
 
     metric_name: str
     predicted_value: float
     confidence_lower: float
     confidence_upper: float
-    confidence_level: float  # e.g., 0.95 for 95% confidence
+    confidence_level: float
     prediction_horizon_days: int
     prediction_method: str
     created_at: datetime
     factors: list[str] = field(default_factory=list)
-    risk_assessment: str = "low"  # low, medium, high
+    risk_assessment: str = "low"
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
@@ -140,14 +134,13 @@ class QualityPrediction:
 
 @dataclass
 class QualityInsights:
-    """Comprehensive quality insights with ML analysis."""
 
     anomalies: list[QualityAnomaly]
     patterns: list[QualityPattern]
     predictions: list[QualityPrediction]
     recommendations: list[str]
-    overall_health_score: float  # 0.0 to 1.0
-    risk_level: str  # low, medium, high, critical
+    overall_health_score: float
+    risk_level: str
     generated_at: datetime = field(default_factory=datetime.now)
 
     def to_dict(self) -> dict[str, t.Any]:
@@ -163,12 +156,11 @@ class QualityInsights:
 
 
 class QualityIntelligenceService(QualityIntelligenceProtocol):
-    """Advanced ML-based quality intelligence service."""
 
     def __init__(
         self,
         quality_service: EnhancedQualityBaselineService,
-        anomaly_sensitivity: float = 2.0,  # Standard deviations for anomaly detection
+        anomaly_sensitivity: float = 2.0,
         min_data_points: int = 10,
     ) -> None:
         self.quality_service = quality_service
@@ -178,9 +170,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def detect_anomalies(
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
-        """Detect anomalies in quality metrics using statistical analysis (sync version)."""
         if not SCIPY_AVAILABLE:
-            # Return empty list if scipy is not available
+
             return []
 
         metrics = self._get_default_metrics() if metrics is None else metrics
@@ -199,9 +190,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     async def detect_anomalies_async(
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
-        """Detect anomalies in quality metrics using statistical analysis (async version)."""
         if not SCIPY_AVAILABLE:
-            # Return empty list if scipy is not available
+
             return []
 
         metrics = self._get_default_metrics() if metrics is None else metrics
@@ -218,7 +208,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return anomalies
 
     def _get_default_metrics(self) -> list[str]:
-        """Get default metrics list[t.Any] for anomaly detection."""
         return [
             "quality_score",
             "coverage_percent",
@@ -231,14 +220,13 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _detect_metric_anomalies(
         self, metric_name: str, baselines: list[t.Any]
     ) -> list[QualityAnomaly]:
-        """Detect anomalies for a specific metric."""
         values, timestamps = self._extract_metric_values(metric_name, baselines)
 
         if len(values) < self.min_data_points:
             return []
 
         stats_data = self._calculate_statistical_metrics(values)
-        if stats_data is None:  # No variation
+        if stats_data is None:
             return []
 
         return self._identify_outlier_anomalies(
@@ -248,7 +236,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _extract_metric_values(
         self, metric_name: str, baselines: list[t.Any]
     ) -> tuple[list[float], list[t.Any]]:
-        """Extract metric values and timestamps from baselines."""
         values = []
         timestamps = []
 
@@ -263,7 +250,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _get_baseline_metric_value(
         self, baseline: t.Any, metric_name: str
     ) -> float | None:
-        """Get metric value from baseline object."""
         metric_mapping = {
             "quality_score": baseline.quality_score,
             "coverage_percent": baseline.coverage_percent,
@@ -277,13 +263,12 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _calculate_statistical_metrics(
         self, values: list[float]
     ) -> dict[str, t.Any] | None:
-        """Calculate statistical metrics for anomaly detection."""
         values_array = np.array(values)
         mean_val = np.mean(values_array)
         std_val = np.std(values_array)
 
         if std_val == 0:
-            return None  # No variation to detect anomalies
+            return None
 
         z_scores = np.abs((values_array - mean_val) / std_val)
 
@@ -301,7 +286,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         timestamps: list[t.Any],
         stats_data: dict[str, t.Any],
     ) -> list[QualityAnomaly]:
-        """Identify outlier anomalies based on z-scores."""
         anomalies = []
         z_scores = stats_data["z_scores"]
         mean_val = stats_data["mean"]
@@ -336,11 +320,10 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         position: int,
         data_points: int,
     ) -> QualityAnomaly:
-        """Create QualityAnomaly object from detected outlier."""
         anomaly_type, severity = self._determine_anomaly_type_and_severity(
             value, mean_val, z_score
         )
-        confidence = min(1.0, z_score / 4.0)  # Scale to 0-1
+        confidence = min(1.0, z_score / 4.0)
 
         return QualityAnomaly(
             anomaly_type=anomaly_type,
@@ -363,7 +346,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _determine_anomaly_type_and_severity(
         self, value: float, mean_val: float, z_score: float
     ) -> tuple[AnomalyType, AlertSeverity]:
-        """Determine anomaly type and severity based on value and z-score."""
         if value > mean_val:
             anomaly_type = AnomalyType.SPIKE
         else:
@@ -374,9 +356,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return anomaly_type, severity
 
     def identify_patterns(self, days: int = 60) -> list[QualityPattern]:
-        """Identify patterns in quality metrics using correlation and trend analysis (sync version)."""
         if not SCIPY_AVAILABLE:
-            # Return empty list if scipy is not available
+
             return []
 
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
@@ -387,9 +368,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return self._find_correlation_patterns(metrics_data, days)
 
     async def identify_patterns_async(self, days: int = 60) -> list[QualityPattern]:
-        """Identify patterns in quality metrics using correlation and trend analysis (async version)."""
         if not SCIPY_AVAILABLE:
-            # Return empty list if scipy is not available
+
             return []
 
         baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
@@ -400,7 +380,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return self._find_correlation_patterns(metrics_data, days)
 
     def _extract_metrics_data(self, baselines: list[t.Any]) -> dict[str, list[float]]:
-        """Extract metric data from baselines for correlation analysis."""
         metrics_data: dict[str, list[float]] = {
             "quality_score": [],
             "coverage_percent": [],
@@ -423,7 +402,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _find_correlation_patterns(
         self, metrics_data: dict[str, list[float]], days: int
     ) -> list[QualityPattern]:
-        """Find correlation patterns between metrics."""
         patterns = []
         metric_names = list[t.Any](metrics_data.keys())
 
@@ -444,9 +422,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         metrics_data: dict[str, list[float]],
         days: int,
     ) -> QualityPattern | None:
-        """Analyze correlation between two metrics."""
         if not SCIPY_AVAILABLE:
-            return None  # Skip correlation analysis if scipy is not available
+            return None
 
         values1 = np.array(metrics_data[metric1])
         values2 = np.array(metrics_data[metric2])
@@ -454,19 +431,19 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         if len(values1) < self.min_data_points:
             return None
 
-        # Handle constant input arrays that would cause correlation warnings
+
         try:
-            # Check for constant arrays (all values the same)
+
             if 0 in (np.var(values1), np.var(values2)):
-                # Cannot calculate correlation for constant arrays
+
                 return None
 
             correlation, p_value = stats.pearsonr(values1, values2)
         except (ValueError, RuntimeWarning):
-            # Handle any other correlation calculation issues
+
             return None
 
-        # Strong correlation threshold
+
         if abs(correlation) > 0.7 and p_value < 0.05:
             return self._create_correlation_pattern(
                 metric1, metric2, correlation, p_value, values1, days
@@ -483,7 +460,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         values1: np.ndarray,
         days: int,
     ) -> QualityPattern:
-        """Create a quality pattern from correlation analysis."""
         trend_dir, description = self._get_correlation_trend_and_description(
             metric1, metric2, correlation
         )
@@ -508,7 +484,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _get_correlation_trend_and_description(
         self, metric1: str, metric2: str, correlation: float
     ) -> tuple[TrendDirection, str]:
-        """Get trend direction and description for correlation."""
         if correlation > 0:
             return (
                 TrendDirection.IMPROVING,
@@ -520,7 +495,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         )
 
     def _get_correlation_strength_label(self, correlation: float) -> str:
-        """Get strength label for correlation coefficient."""
         abs_corr = abs(correlation)
         if abs_corr > 0.9:
             return "very strong"
@@ -531,9 +505,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def generate_advanced_predictions(
         self, horizon_days: int = 14, confidence_level: float = 0.95
     ) -> list[QualityPrediction]:
-        """Generate advanced predictions with confidence intervals."""
         if not SCIPY_AVAILABLE:
-            # Return empty list if scipy is not available
+
             return []
 
         baselines = self.quality_service.get_recent_baselines(limit=90)
@@ -559,7 +532,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _extract_time_series(
         self, baselines: list[t.Any], metric_name: str
     ) -> tuple[list[t.Any], list[t.Any]]:
-        """Extract time series data for specified metric."""
         values = []
         timestamps = []
 
@@ -579,7 +551,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         horizon_days: int,
         confidence_level: float,
     ) -> QualityPrediction:
-        """Create prediction for a single metric."""
         regression_results = self._perform_linear_regression(values, horizon_days)
         confidence_bounds = self._calculate_confidence_interval(
             values, regression_results, confidence_level
@@ -604,9 +575,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _perform_linear_regression(
         self, values: list[t.Any], horizon_days: int
     ) -> dict[str, t.Any]:
-        """Perform linear regression and predict future value."""
         if not SCIPY_AVAILABLE:
-            # Fallback to a simple average if scipy is not available
+
             values_array = np.array(values)
             predicted_value = float(np.mean(values_array))
 
@@ -644,7 +614,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         regression_results: dict[str, t.Any],
         confidence_level: float,
     ) -> dict[str, t.Any]:
-        """Calculate confidence interval for prediction."""
         slope = regression_results["slope"]
         intercept = regression_results["intercept"]
         time_indices = regression_results["time_indices"]
@@ -655,9 +624,9 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         residual_std = float(np.std(residuals))
 
         if not SCIPY_AVAILABLE:
-            # If scipy is not available, use a simple approach with standard deviation
-            # This is a fallback that provides a basic confidence interval
-            margin_error = 1.96 * residual_std  # Approximate 95% confidence interval
+
+
+            margin_error = 1.96 * residual_std
             return {
                 "lower": predicted_value - margin_error,
                 "upper": predicted_value + margin_error,
@@ -683,7 +652,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         future_index: int,
         time_indices: np.ndarray,
     ) -> float:
-        """Calculate margin of error for confidence interval."""
         mean_time: float = float(np.mean(time_indices))
         sum_sq_diff: float = float(np.sum((time_indices - mean_time) ** 2))
         numerator: float = (future_index - mean_time) ** 2
@@ -692,14 +660,12 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return t_value * residual_std * sqrt_term
 
     def _assess_prediction_risk(self, metric_name: str, predicted_value: float) -> str:
-        """Assess risk level based on predicted value."""
         if metric_name == "quality_score":
             return self._assess_quality_score_risk(predicted_value)
-        # coverage_percent
+
         return self._assess_coverage_risk(predicted_value)
 
     def _assess_quality_score_risk(self, predicted_value: float) -> str:
-        """Assess risk for quality score predictions."""
         if predicted_value < 70:
             return "critical"
         elif predicted_value < 80:
@@ -709,7 +675,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return "low"
 
     def _assess_coverage_risk(self, predicted_value: float) -> str:
-        """Assess risk for coverage predictions."""
         if predicted_value < 70:
             return "high"
         elif predicted_value < 85:
@@ -719,7 +684,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _generate_anomaly_recommendations(
         self, anomalies: list[QualityAnomaly]
     ) -> list[str]:
-        """Generate recommendations based on anomalies."""
         recommendations = []
 
         critical_anomalies = [
@@ -745,7 +709,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _generate_pattern_recommendations(
         self, patterns: list[QualityPattern]
     ) -> list[str]:
-        """Generate recommendations based on patterns."""
         recommendations = []
 
         declining_correlations = [
@@ -767,7 +730,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _generate_prediction_recommendations(
         self, predictions: list[QualityPrediction]
     ) -> list[str]:
-        """Generate recommendations based on predictions."""
         recommendations = []
 
         high_risk_predictions = [
@@ -792,7 +754,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _generate_general_ml_insights(
         self, anomalies: list[QualityAnomaly]
     ) -> list[str]:
-        """Generate general ML insights."""
         recommendations = []
 
         if len(anomalies) > 5:
@@ -808,7 +769,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         patterns: list[QualityPattern],
         predictions: list[QualityPrediction],
     ) -> list[str]:
-        """Generate intelligent recommendations based on ML analysis."""
         recommendations = []
 
         recommendations.extend(self._generate_anomaly_recommendations(anomalies))
@@ -826,8 +786,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def generate_comprehensive_insights(
         self, analysis_days: int = 30, prediction_days: int = 14
     ) -> QualityInsights:
-        """Generate comprehensive quality insights with ML analysis."""
-        # Collect all analysis results
+
         anomalies = self.detect_anomalies(days=analysis_days)
         patterns = self.identify_patterns(days=analysis_days * 2)
         predictions = self.generate_advanced_predictions(horizon_days=prediction_days)
@@ -835,7 +794,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
             anomalies, patterns, predictions
         )
 
-        # Calculate derived metrics
+
         health_score, risk_level = self._calculate_health_metrics(
             anomalies, predictions
         )
@@ -852,7 +811,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _calculate_health_metrics(
         self, anomalies: list[QualityAnomaly], predictions: list[QualityPrediction]
     ) -> tuple[float, str]:
-        """Calculate overall health score and risk level."""
         anomaly_counts = self._count_anomalies_by_severity(anomalies)
         risk_prediction_count = self._count_high_risk_predictions(predictions)
 
@@ -864,7 +822,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _count_anomalies_by_severity(
         self, anomalies: list[QualityAnomaly]
     ) -> dict[str, int]:
-        """Count anomalies by severity level."""
         return {
             "critical": len(
                 [a for a in anomalies if a.severity == AlertSeverity.CRITICAL]
@@ -875,7 +832,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         }
 
     def _count_high_risk_predictions(self, predictions: list[QualityPrediction]) -> int:
-        """Count predictions with high or critical risk assessment."""
         return len(
             [p for p in predictions if p.risk_assessment in ("high", "critical")]
         )
@@ -883,19 +839,17 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def _compute_health_score(
         self, anomaly_counts: dict[str, int], risk_predictions: int
     ) -> float:
-        """Compute health score based on anomalies and risk predictions."""
         health_score = 1.0
         health_score -= (
             anomaly_counts["critical"] * 0.2
-        )  # Critical anomalies heavily impact health
+        )
         health_score -= (
             anomaly_counts["warning"] * 0.1
-        )  # Warning anomalies moderately impact health
-        health_score -= risk_predictions * 0.15  # High-risk predictions impact health
+        )
+        health_score -= risk_predictions * 0.15
         return max(0.0, min(1.0, health_score))
 
     def _determine_risk_level(self, health_score: float) -> str:
-        """Determine overall risk level based on health score."""
         if health_score < 0.5:
             return "critical"
         elif health_score < 0.7:
@@ -905,14 +859,12 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return "low"
 
     def export_insights(self, insights: QualityInsights, output_path: Path) -> None:
-        """Export quality insights to JSON file."""
         with output_path.open("w") as f:
             json.dump(insights.to_dict(), f, indent=2, default=str)
 
-    # Protocol methods required by QualityIntelligenceProtocol
+
     def analyze_quality_trends(self) -> dict[str, t.Any]:
-        """Analyze quality trends."""
-        # Use existing identify_patterns method to analyze trends
+
         patterns = self.identify_patterns()
         trend_analysis = {
             "total_patterns": len(patterns),
@@ -964,7 +916,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         return trend_analysis
 
     def predict_quality_issues(self) -> list[dict[str, t.Any]]:
-        """Predict potential quality issues."""
         predictions = self.generate_advanced_predictions()
 
         return [
@@ -984,8 +935,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         ]
 
     def recommend_improvements(self) -> list[dict[str, t.Any]]:
-        """Recommend quality improvements."""
-        # Generate basic analysis to get data for recommendations
+
         anomalies = self.detect_anomalies()
         patterns = self.identify_patterns()
         predictions = self.generate_advanced_predictions()
@@ -994,10 +944,9 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
             anomalies, patterns, predictions
         )
 
-        # Convert to required format
+
         return [{"message": rec} for rec in recommendations]
 
     def get_intelligence_report(self) -> dict[str, t.Any]:
-        """Get quality intelligence report."""
         insights = self.generate_comprehensive_insights()
         return insights.to_dict()

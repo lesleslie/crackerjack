@@ -13,10 +13,10 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
-    # Get context first
+
     context = get_context()
 
-    # Initialize progress immediately
+
     _update_progress(
         job_id,
         {"status": "started", "args": args, "timestamp": time.time()},
@@ -29,10 +29,10 @@ async def execute_crackerjack_workflow(
         "Crackerjack execution started",
     )
 
-    # Start execution in background - no timeout!
+
     asyncio.create_task(_execute_crackerjack_background(job_id, args, kwargs, context))
 
-    # Return job_id immediately for progress monitoring
+
     return {
         "job_id": job_id,
         "status": "running",
@@ -47,11 +47,10 @@ async def _execute_crackerjack_background(
     kwargs: dict[str, t.Any],
     context: t.Any,
 ) -> None:
-    """Execute crackerjack workflow in background with progress updates."""
     try:
         result = await _execute_crackerjack_sync(job_id, args, kwargs, context)
 
-        # Update final progress with result
+
         _update_progress(
             job_id,
             {
@@ -71,7 +70,7 @@ async def _execute_crackerjack_background(
     except Exception as e:
         import traceback
 
-        # Update progress with error
+
         _update_progress(
             job_id,
             {
@@ -128,7 +127,6 @@ async def _initialize_execution(
         context,
     )
 
-    # Phase 1: _ensure_websocket_server_running() call removed (WebSocket stack deleted)
 
     working_dir = kwargs.get("working_directory", ".")
     from pathlib import Path
@@ -241,8 +239,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
         factory=lambda: TestManagementImpl(console, working_dir),
     )
 
-    # Use factory without parameters to trigger @depends.inject decorator
-    # The decorator will inject all dependencies from the DI container
+
     container.register_singleton(
         PublishManager,
         factory=PublishManagerImpl,
@@ -425,11 +422,11 @@ async def _execute_single_iteration(
         method_name = _detect_orchestrator_method(orchestrator)
         result = _invoke_orchestrator_method(orchestrator, method_name, options)
 
-        # Sync methods return directly, async methods need await
+
         if method_name == "run":
             return result
 
-        # Async methods - validate and await
+
         _validate_awaitable_result(result, method_name, orchestrator)
         return await result
     except Exception as e:
@@ -439,7 +436,6 @@ async def _execute_single_iteration(
 
 
 def _detect_orchestrator_method(orchestrator: t.Any) -> str:
-    """Detect which workflow method the orchestrator supports."""
     method_priority = [
         "run_complete_workflow_async",
         "run_complete_workflow",
@@ -461,7 +457,6 @@ def _detect_orchestrator_method(orchestrator: t.Any) -> str:
 def _invoke_orchestrator_method(
     orchestrator: t.Any, method_name: str, options: t.Any
 ) -> t.Any:
-    """Invoke the detected orchestrator method with options."""
     method = getattr(orchestrator, method_name)
     result = method(options)
 
@@ -477,7 +472,6 @@ def _invoke_orchestrator_method(
 def _validate_awaitable_result(
     result: t.Any, method_name: str, orchestrator: t.Any
 ) -> None:
-    """Validate that async method result is awaitable."""
     if not hasattr(result, "__await__"):
         raise ValueError(
             f"Method {method_name} returned non-awaitable object: {type(result).__name__}. "
@@ -663,6 +657,3 @@ def _create_failure_result(
         "timestamp": time.time(),
         "success": False,
     }
-
-
-# Phase 1: _ensure_websocket_server_running() function removed (WebSocket stack deleted)

@@ -1,4 +1,3 @@
-"""Version number extraction and update patterns."""
 
 import re
 

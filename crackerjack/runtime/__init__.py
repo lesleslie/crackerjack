@@ -1,8 +1,3 @@
-"""Runtime health snapshot infrastructure for Oneiric integration.
-
-Provides file-based health snapshots in .oneiric_cache/ for process monitoring
-and orchestration integration without requiring live HTTP endpoints.
-"""
 
 from .health_snapshot import (
     RuntimeHealthSnapshot,

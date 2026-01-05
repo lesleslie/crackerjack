@@ -1,9 +1,3 @@
-"""Crackerjack logging compatibility layer using the legacy logger.
-
-This module provides backward compatibility with Crackerjack's logging API
-while delegating to the legacy logger system. It maintains the same public API
-for LoggingContext, get_logger(), and other utilities.
-"""
 
 from __future__ import annotations
 
@@ -77,12 +71,10 @@ def _configure_structlog(
 
 
 def _generate_correlation_id() -> str:
-    """Generate a unique correlation ID."""
     return uuid.uuid4().hex[:8]
 
 
 def get_correlation_id() -> str:
-    """Get or create correlation ID for current context."""
     correlation = _correlation_id_var.get()
     if correlation is None:
         correlation = _generate_correlation_id()
@@ -91,7 +83,6 @@ def get_correlation_id() -> str:
 
 
 def set_correlation_id(correlation_id: str) -> None:
-    """Set correlation ID for current context."""
     _correlation_id_var.set(correlation_id)
 
 
@@ -101,7 +92,6 @@ def setup_structured_logging(
     json_output: bool = False,
     log_file: Path | None = None,
 ) -> None:
-    """Setup structured logging for Crackerjack."""
     global _configured
 
     root_logger = logging.getLogger()
@@ -124,7 +114,6 @@ def setup_structured_logging(
 
 
 def get_logger(name: str) -> Any:
-    """Get a structlog logger bound to a specific name."""
     if not _configured or not _processors:
         setup_structured_logging()
 
@@ -145,10 +134,6 @@ def get_logger(name: str) -> Any:
 
 
 class LoggingContext:
-    """Context manager for operation logging with correlation IDs.
-
-    Uses the legacy logger internally while maintaining Crackerjack's API.
-    """
 
     def __init__(self, operation: str, **kwargs: Any) -> None:
         self.operation = operation
@@ -192,10 +177,6 @@ def log_performance(
     operation: str,
     **kwargs: Any,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Decorator for performance logging using the legacy logger.
-
-    Maintains Crackerjack's API while delegating to the legacy logger.
-    """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args: Any, **func_kwargs: Any) -> Any:
@@ -233,7 +214,6 @@ def log_performance(
     return decorator
 
 
-# Module-level logger instances using the legacy logger
 hook_logger = get_logger("crackerjack.hooks")
 test_logger = get_logger("crackerjack.tests")
 config_logger = get_logger("crackerjack.config")

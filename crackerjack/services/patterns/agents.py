@@ -1,4 +1,3 @@
-"""Agent count and configuration patterns."""
 
 import re
 

@@ -21,11 +21,6 @@ from .semantic_helpers import (
 
 
 class PerformanceAgent(SubAgent):
-    """Agent for detecting and fixing performance issues.
-
-    Enhanced with semantic context to detect performance patterns across
-    the codebase and find similar bottlenecks that may not be immediately visible.
-    """
 
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
@@ -40,7 +35,7 @@ class PerformanceAgent(SubAgent):
             "comprehensions_applied": 0,
         }
 
-        # Initialize helper modules
+
         self._pattern_detector = PerformancePatternDetector(context)
         self._ast_analyzer = PerformanceASTAnalyzer(context)
         self._recommender = PerformanceRecommender(context)
@@ -152,7 +147,7 @@ class PerformanceAgent(SubAgent):
         content: str,
         issues: list[dict[str, t.Any]],
     ) -> FixResult:
-        # Delegate to recommender helper
+
         optimized_content = self._apply_performance_optimizations(content, issues)
 
         if optimized_content == content:
@@ -166,7 +161,7 @@ class PerformanceAgent(SubAgent):
                 remaining_issues=[f"Failed to write optimized file: {file_path}"],
             )
 
-        # Get summary from recommender
+
         stats_summary = self._recommender.generate_optimization_summary()
         self.optimization_stats = self._recommender.optimization_stats.copy()
 
@@ -224,11 +219,10 @@ class PerformanceAgent(SubAgent):
     async def _detect_semantic_performance_issues(
         self, content: str, file_path: Path
     ) -> list[dict[str, t.Any]]:
-        """Detect performance issues using semantic analysis of similar code patterns."""
         issues = []
 
         try:
-            # Delegate to AST analyzer helper
+
             critical_functions = (
                 self._ast_analyzer.extract_performance_critical_functions(content)
             )
@@ -236,8 +230,8 @@ class PerformanceAgent(SubAgent):
             for func in critical_functions:
                 if (
                     func["estimated_complexity"] > 2
-                ):  # Focus on potentially complex functions
-                    # Search for similar performance patterns
+                ):
+
                     insight = await self.semantic_enhancer.find_similar_patterns(
                         f"performance {func['signature']} {func['body_sample']}",
                         current_file=file_path,
@@ -246,7 +240,7 @@ class PerformanceAgent(SubAgent):
                     )
 
                     if insight.total_matches > 1:
-                        # Delegate analysis to AST analyzer helper
+
                         analysis = self._ast_analyzer.analyze_performance_patterns(
                             insight, func
                         )
@@ -263,7 +257,7 @@ class PerformanceAgent(SubAgent):
                                 }
                             )
 
-                            # Store insight for recommendation enhancement
+
                             self.semantic_insights[func["name"]] = insight
 
         except Exception as e:
@@ -272,7 +266,6 @@ class PerformanceAgent(SubAgent):
         return issues
 
     def _generate_optimization_summary(self) -> str:
-        """Generate a summary of optimization results."""
         total_files = len(self.performance_metrics)
         total_optimizations = sum(
             metrics.get("optimizations_applied", 0)
@@ -296,14 +289,13 @@ class PerformanceAgent(SubAgent):
     async def _generate_enhanced_recommendations(
         self, issues: list[dict[str, t.Any]]
     ) -> list[str]:
-        """Generate enhanced recommendations including semantic insights."""
         recommendations = ["Test performance improvements with benchmarks"]
         for issue in issues:
             suggestion = issue.get("suggestion")
             if suggestion:
                 recommendations.append(str(suggestion))
 
-        # Add semantic insights
+
         semantic_issues = [
             issue for issue in issues if issue["type"] == "semantic_performance_pattern"
         ]
@@ -313,28 +305,28 @@ class PerformanceAgent(SubAgent):
                 "across codebase - consider applying optimizations consistently"
             )
 
-            # Store insights for session continuity
+
             for issue in semantic_issues:
                 if "semantic_insight" in issue:
                     await self.semantic_enhancer.store_insight_to_session(
                         issue["semantic_insight"], "PerformanceAgent"
                     )
 
-        # Enhance with session-stored insights
+
         recommendations = await get_session_enhanced_recommendations(
             recommendations, "PerformanceAgent", self.context.project_path
         )
 
-        # Add insights from stored semantic analysis
+
         for func_name, insight in self.semantic_insights.items():
             if insight.high_confidence_matches > 0:
                 enhanced_recs = self.semantic_enhancer.enhance_recommendations(
-                    [],  # Start with empty list to get just semantic recommendations
+                    [],
                     insight,
                 )
                 recommendations.extend(enhanced_recs)
 
-                # Log semantic context for debugging
+
                 summary = self.semantic_enhancer.get_semantic_context_summary(insight)
                 self.log(f"Performance semantic context for {func_name}: {summary}")
 

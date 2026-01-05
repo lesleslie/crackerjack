@@ -1,18 +1,3 @@
-"""Pyrefly adapter for Crackerjack QA framework - Python type checking tool.
-
-Pyrefly is a Python type checking tool that provides static type analysis
-for Python code. It offers:
-- Static type checking
-- Type inference
-- Generic type validation
-- Protocol compliance checking
-
-Standard Python Patterns:
-- MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No dependency injection
-- Extends BaseToolAdapter for tool execution
-- Async execution with JSON output parsing
-"""
 
 from __future__ import annotations
 
@@ -34,69 +19,36 @@ from crackerjack.models.qa_results import QACheckType
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# Static UUID from registry (NEVER change once set)
-MODULE_ID = UUID("25e1e5cf-d1f8-485e-85ab-01c8b540734a")
-MODULE_STATUS = AdapterStatus.BETA  # Note: Was "experimental", now standardized
 
-# Module-level logger for structured logging
+MODULE_ID = UUID("25e1e5cf-d1f8-485e-85ab-01c8b540734a")
+MODULE_STATUS = AdapterStatus.BETA
+
+
 logger = logging.getLogger(__name__)
 
 
 class PyreflySettings(ToolAdapterSettings):
-    """Settings for Pyrefly adapter."""
 
     tool_name: str = "pyrefly"
     use_json_output: bool = True
     strict_mode: bool = False
     ignore_missing_imports: bool = False
-    follow_imports: str = "normal"  # normal, skip, silent
+    follow_imports: str = "normal"
     incremental: bool = True
     warn_unused_ignores: bool = True
 
 
 class PyreflyAdapter(BaseToolAdapter):
-    """Adapter for Pyrefly - Python type checking tool.
-
-    Performs static type analysis with:
-    - Type checking for Python code
-    - Type inference and validation
-    - Generic type support
-    - Protocol compliance checking
-
-    Features:
-    - JSON output for structured error reporting
-    - Incremental type checking
-    - Strict mode for enhanced type safety
-    - Import following configuration
-
-    Example:
-        ```python
-        settings = PyreflySettings(
-            strict_mode=True,
-            follow_imports="normal",
-            incremental=True,
-        )
-        adapter = PyreflyAdapter(settings=settings)
-        await adapter.init()
-        result = await adapter.check(files=[Path("src/")])
-        ```
-    """
 
     settings: PyreflySettings | None = None
 
     def __init__(self, settings: PyreflySettings | None = None) -> None:
-        """Initialize Pyrefly adapter.
-
-        Args:
-            settings: Optional settings override
-        """
         super().__init__(settings=settings)
         logger.debug(
             "PyreflyAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
-        """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = PyreflySettings(
                 timeout_seconds=180,
@@ -115,17 +67,14 @@ class PyreflyAdapter(BaseToolAdapter):
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         return "Pyrefly (Type Check)"
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID."""
         return MODULE_ID
 
     @property
     def tool_name(self) -> str:
-        """CLI tool name."""
         return "pyrefly"
 
     def build_command(
@@ -133,36 +82,27 @@ class PyreflyAdapter(BaseToolAdapter):
         files: list[Path],
         config: QACheckConfig | None = None,
     ) -> list[str]:
-        """Build Pyrefly command.
-
-        Args:
-            files: Files/directories to type check
-            config: Optional configuration override
-
-        Returns:
-            Command as list of strings
-        """
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
         cmd = [self.tool_name]
 
-        # JSON output
+
         if self.settings.use_json_output:
             cmd.extend(["--format", "json"])
 
-        # Strict mode
+
         if self.settings.strict_mode:
             cmd.append("--strict")
 
-        # Ignore missing imports
+
         if self.settings.ignore_missing_imports:
             cmd.append("--ignore-missing-imports")
 
-        # Follow imports
+
         cmd.extend(["--follow-imports", self.settings.follow_imports])
 
-        # Incremental checking
+
         if self.settings.incremental:
             cmd.append("--incremental")
 
@@ -170,7 +110,7 @@ class PyreflyAdapter(BaseToolAdapter):
         if self.settings.warn_unused_ignores:
             cmd.append("--warn-unused-ignores")
 
-        # Add targets
+
         cmd.extend([str(f) for f in files])
 
         logger.info(
@@ -188,14 +128,6 @@ class PyreflyAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-        """Parse Pyrefly JSON output into standardized issues.
-
-        Args:
-            result: Raw execution result from Pyrefly
-
-        Returns:
-            List of parsed issues
-        """
         if not result.raw_output:
             logger.debug("No output to parse")
             return []
@@ -215,23 +147,6 @@ class PyreflyAdapter(BaseToolAdapter):
 
         issues = []
 
-        # Pyrefly JSON format (similar to mypy):
-        # {
-        #   "files": [
-        #     {
-        #       "path": "path/to/file.py",
-        #       "errors": [
-        #         {
-        #           "line": 42,
-        #           "column": 10,
-        #           "message": "Incompatible types...",
-        #           "severity": "error",
-        #           "code": "assignment"
-        #         }
-        #       ]
-        #     }
-        #   ]
-        # }
 
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
@@ -259,19 +174,11 @@ class PyreflyAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        """Parse Pyrefly text output (fallback).
-
-        Args:
-            output: Text output from Pyrefly
-
-        Returns:
-            List of ToolIssue objects
-        """
         issues = []
         lines = output.strip().split("\n")
 
         for line in lines:
-            # Pyrefly text format: "file.py:10:5: error: Incompatible types..."
+
             if ":" not in line:
                 continue
 
@@ -289,14 +196,6 @@ class PyreflyAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_line(self, line: str) -> ToolIssue | None:
-        """Parse a single text output line.
-
-        Args:
-            line: Line of text output
-
-        Returns:
-            ToolIssue if parsing successful, None otherwise
-        """
         parts = line.split(":", maxsplit=4)
         if len(parts) < 4:
             return None
@@ -326,14 +225,6 @@ class PyreflyAdapter(BaseToolAdapter):
             return None
 
     def _parse_severity(self, severity_and_message: str) -> str:
-        """Parse severity from text line.
-
-        Args:
-            severity_and_message: Part containing severity
-
-        Returns:
-            Severity level (error or warning)
-        """
         if severity_and_message.lower().startswith("warning"):
             return "warning"
         return "error"
@@ -341,42 +232,26 @@ class PyreflyAdapter(BaseToolAdapter):
     def _extract_message(
         self, severity_and_message: str, message: str, severity: str
     ) -> str:
-        """Extract message from text line.
-
-        Args:
-            severity_and_message: Part containing severity and possibly message
-            message: Explicit message if present
-            severity: Parsed severity level
-
-        Returns:
-            Extracted message
-        """
         if message:
             return message
 
-        # Extract from severity_and_message
+
         if severity_and_message.lower().startswith(severity):
             return severity_and_message[len(severity) :].strip()
 
         return severity_and_message
 
     def _get_check_type(self) -> QACheckType:
-        """Return type check type."""
         return QACheckType.TYPE
 
     def get_default_config(self) -> QACheckConfig:
-        """Get default configuration for Pyrefly adapter.
-
-        Returns:
-            QACheckConfig with sensible defaults
-        """
         from crackerjack.models.qa_config import QACheckConfig
 
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.TYPE,
-            enabled=False,  # Disabled by default as beta
+            enabled=False,
             file_patterns=["**/*.py"],
             exclude_patterns=[
                 "**/.venv/**",
@@ -384,9 +259,9 @@ class PyreflyAdapter(BaseToolAdapter):
                 "**/build/**",
                 "**/dist/**",
             ],
-            timeout_seconds=180,  # Type checking can be slower
+            timeout_seconds=180,
             parallel_safe=True,
-            stage="comprehensive",  # Type checking in comprehensive stage
+            stage="comprehensive",
             settings={
                 "strict_mode": False,
                 "incremental": True,

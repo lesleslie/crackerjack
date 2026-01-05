@@ -1,4 +1,3 @@
-"""CLI handlers for semantic search operations."""
 
 from pathlib import Path
 from textwrap import dedent
@@ -15,21 +14,16 @@ from crackerjack.services.vector_store import VectorStore
 
 
 def handle_semantic_index(file_path: str) -> None:
-    """Handle indexing a file for semantic search.
-
-    Args:
-        file_path: Path to the file or directory to index
-    """
     try:
         console.print(f"[cyan]Indexing file for semantic search:[/cyan] {file_path}")
 
-        # Validate path
+
         path_obj = Path(file_path)
         if not path_obj.exists():
             console.print(f"[red]Error:[/red] File does not exist: {file_path}")
             return
 
-        # Create default configuration
+
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -39,23 +33,23 @@ def handle_semantic_index(file_path: str) -> None:
             embedding_dimension=384,
         )
 
-        # Initialize vector store with persistent database
+
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
 
         if path_obj.is_file():
-            # Index single file
+
             embeddings = vector_store.index_file(path_obj)
             console.print(
                 f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]"
             )
         else:
-            # Index directory (recursively)
+
             total_files = 0
             total_chunks = 0
 
-            for file in path_obj.rglob("*.py"):  # Index Python files
+            for file in path_obj.rglob("*.py"):
                 try:
                     embeddings = vector_store.index_file(file)
                     total_files += 1
@@ -72,7 +66,7 @@ def handle_semantic_index(file_path: str) -> None:
                 f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]"
             )
 
-        # Show index stats
+
         stats = vector_store.get_stats()
         console.print(
             f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
@@ -85,15 +79,10 @@ def handle_semantic_index(file_path: str) -> None:
 
 
 def handle_semantic_search(query: str) -> None:
-    """Handle semantic search across indexed files.
-
-    Args:
-        query: The search query text
-    """
     try:
         console.print(f"[cyan]Performing semantic search for:[/cyan] {query}")
 
-        # Create default configuration
+
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -103,14 +92,14 @@ def handle_semantic_search(query: str) -> None:
             embedding_dimension=384,
         )
 
-        # Create search query
+
         search_query = SearchQuery(
             query=query,
             max_results=10,
-            min_similarity=0.3,  # Lower threshold for CLI to show more results
+            min_similarity=0.3,
         )
 
-        # Initialize vector store with persistent database
+
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
@@ -122,7 +111,7 @@ def handle_semantic_search(query: str) -> None:
             )
             return
 
-        # Display results in a table
+
         table = Table(title=f"Semantic Search Results for: '{query}'")
         table.add_column("File", style="cyan", no_wrap=True)
         table.add_column("Lines", style="magenta", justify="center")
@@ -130,7 +119,7 @@ def handle_semantic_search(query: str) -> None:
         table.add_column("Content Preview", style="white")
 
         for result in results:
-            # Truncate content for display
+
             content_preview = (
                 result.content[:80] + "..."
                 if len(result.content) > 80
@@ -138,7 +127,7 @@ def handle_semantic_search(query: str) -> None:
             )
             content_preview = content_preview.replace("\n", " ").strip()
 
-            # Escape Rich markup in content to prevent rendering issues
+
             content_preview = content_preview.replace("[", "\\[").replace("]", "\\]")
 
             table.add_row(
@@ -152,10 +141,10 @@ def handle_semantic_search(query: str) -> None:
             Panel(table, title="Semantic Search Results", border_style="cyan")
         )
 
-        # Show detailed content for top result
+
         if results:
             top_result = results[0]
-            # Escape Rich markup in the detailed content
+
             escaped_content = (
                 top_result.content.strip().replace("[", "\\[").replace("]", "\\]")
             )
@@ -182,11 +171,10 @@ def handle_semantic_search(query: str) -> None:
 
 
 def handle_semantic_stats() -> None:
-    """Handle displaying semantic search index statistics."""
     try:
         console.print("[cyan]Retrieving semantic search index statistics...[/cyan]")
 
-        # Create default configuration
+
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -196,13 +184,13 @@ def handle_semantic_stats() -> None:
             embedding_dimension=384,
         )
 
-        # Initialize vector store with persistent database
+
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
         stats = vector_store.get_stats()
 
-        # Create stats table
+
         table = Table(title="Semantic Search Index Statistics")
         table.add_column("Metric", style="cyan", no_wrap=True)
         table.add_column("Value", style="green")
@@ -211,14 +199,14 @@ def handle_semantic_stats() -> None:
         table.add_row("Total Chunks", str(stats.total_chunks))
         table.add_row("Index Size", f"{stats.index_size_mb:.2f} MB")
 
-        # Calculate average chunks per file
+
         avg_chunks = (
             stats.total_chunks / stats.total_files if stats.total_files > 0 else 0.0
         )
         table.add_row("Average Chunks per File", f"{avg_chunks:.1f}")
 
         table.add_row("Embedding Model", config.embedding_model)
-        table.add_row("Embedding Dimension", "384")  # ONNX fallback uses 384 dimensions
+        table.add_row("Embedding Dimension", "384")
 
         if stats.last_updated:
             table.add_row(
@@ -243,20 +231,15 @@ def handle_semantic_stats() -> None:
 
 
 def handle_remove_from_semantic_index(file_path: str) -> None:
-    """Handle removing a file from the semantic search index.
-
-    Args:
-        file_path: Path to the file to remove
-    """
     try:
         console.print(
             f"[cyan]Removing file from semantic search index:[/cyan] {file_path}"
         )
 
-        # Validate path
+
         path_obj = Path(file_path)
 
-        # Create default configuration
+
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -266,7 +249,7 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
             embedding_dimension=384,
         )
 
-        # Initialize vector store with persistent database
+
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
@@ -281,7 +264,7 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
                 f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index"
             )
 
-        # Show updated stats
+
         stats = vector_store.get_stats()
         console.print(
             f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"

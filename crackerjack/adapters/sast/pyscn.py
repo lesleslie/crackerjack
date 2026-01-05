@@ -1,18 +1,3 @@
-"""Pyscn adapter for Crackerjack QA framework - Python security static analysis.
-
-Pyscn is a Python static code analyzer for security that detects:
-- Security vulnerabilities in Python code
-- Common security anti-patterns
-- Potential injection attacks
-- Insecure cryptography usage
-- Authentication and authorization issues
-
-Standard Python Patterns:
-- MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No dependency injection
-- Extends BaseToolAdapter for tool execution
-- Async execution with JSON output parsing
-"""
 
 from __future__ import annotations
 
@@ -36,21 +21,20 @@ from crackerjack.models.qa_results import QACheckType
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
 
-# Static UUID from registry (NEVER change once set)
-MODULE_ID = UUID("658dfd25-e475-4e28-9945-23ff31c30b0a")
-MODULE_STATUS = AdapterStatus.STABLE  # Note: Was "experimental", now standardized
 
-# Module-level logger for structured logging
+MODULE_ID = UUID("658dfd25-e475-4e28-9945-23ff31c30b0a")
+MODULE_STATUS = AdapterStatus.STABLE
+
+
 logger = logging.getLogger(__name__)
 
 
 class PyscnSettings(ToolAdapterSettings):
-    """Settings for Pyscn adapter."""
 
     tool_name: str = "pyscn"
     use_json_output: bool = True
-    severity_threshold: str = "low"  # low, medium, high, critical
-    confidence_threshold: str = "low"  # low, medium, high
+    severity_threshold: str = "low"
+    confidence_threshold: str = "low"
     exclude_rules: list[str] = Field(default_factory=list)
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
@@ -58,51 +42,16 @@ class PyscnSettings(ToolAdapterSettings):
 
 
 class PyscnAdapter(BaseToolAdapter):
-    """Adapter for Pyscn - Python security static analyzer.
-
-    Performs static security analysis to detect vulnerabilities in Python code:
-    - Security anti-patterns and insecure practices
-    - Potential injection vulnerabilities
-    - Weak cryptography implementations
-    - Authentication/authorization flaws
-    - Privilege escalation risks
-    - Data exposure issues
-
-    Features:
-    - JSON output for structured issue reporting
-    - Configurable severity and confidence thresholds
-    - Rule inclusion/exclusion filtering
-    - Recursive directory scanning with depth control
-
-    Example:
-        ```python
-        settings = PyscnSettings(
-            severity_threshold="medium",
-            confidence_threshold="medium",
-            exclude_rules=["SCN001"],
-            recursive=True,
-        )
-        adapter = PyscnAdapter(settings=settings)
-        await adapter.init()
-        result = await adapter.check(files=[Path("src/")])
-        ```
-    """
 
     settings: PyscnSettings | None = None
 
     def __init__(self, settings: PyscnSettings | None = None) -> None:
-        """Initialize Pyscn adapter.
-
-        Args:
-            settings: Optional settings override
-        """
         super().__init__(settings=settings)
         logger.debug(
             "PyscnAdapter initialized", extra={"has_settings": settings is not None}
         )
 
     async def init(self) -> None:
-        """Initialize adapter with default settings."""
         if not self.settings:
             self.settings = PyscnSettings(
                 timeout_seconds=120,
@@ -121,17 +70,14 @@ class PyscnAdapter(BaseToolAdapter):
 
     @property
     def adapter_name(self) -> str:
-        """Human-readable adapter name."""
         return "Pyscn (Security Analysis)"
 
     @property
     def module_id(self) -> UUID:
-        """Reference to module-level MODULE_ID."""
         return MODULE_ID
 
     @property
     def tool_name(self) -> str:
-        """CLI tool name."""
         return "pyscn"
 
     def build_command(
@@ -139,47 +85,38 @@ class PyscnAdapter(BaseToolAdapter):
         files: list[Path],
         config: QACheckConfig | None = None,
     ) -> list[str]:
-        """Build Pyscn command.
-
-        Args:
-            files: Files/directories to scan
-            config: Optional configuration override
-
-        Returns:
-            Command as list of strings
-        """
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
         cmd = [self.tool_name]
 
-        # JSON output
+
         if self.settings.use_json_output:
             cmd.extend(["--format", "json"])
 
-        # Severity threshold
+
         cmd.extend(["--severity", self.settings.severity_threshold])
 
-        # Confidence threshold
+
         cmd.extend(["--confidence", self.settings.confidence_threshold])
 
-        # Exclude rules
+
         for rule in self.settings.exclude_rules:
             cmd.extend(["--exclude", rule])
 
-        # Include rules
+
         for rule in self.settings.include_rules:
             cmd.extend(["--include", rule])
 
-        # Recursive scanning
+
         if self.settings.recursive:
             cmd.append("--recursive")
 
-        # Max depth
+
         if self.settings.max_depth is not None:
             cmd.extend(["--max-depth", str(self.settings.max_depth)])
 
-        # Add targets
+
         cmd.extend([str(f) for f in files])
 
         logger.info(
@@ -197,14 +134,6 @@ class PyscnAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-        """Parse Pyscn JSON output into standardized issues.
-
-        Args:
-            result: Raw execution result from Pyscn
-
-        Returns:
-            List of parsed issues
-        """
         if not result.raw_output:
             logger.debug("No output to parse")
             return []
@@ -224,21 +153,6 @@ class PyscnAdapter(BaseToolAdapter):
 
         issues = []
 
-        # Pyscn JSON format:
-        # {
-        #   "issues": [
-        #     {
-        #       "file": "path/to/file.py",
-        #       "line": 42,
-        #       "column": 10,
-        #       "message": "Potential security vulnerability...",
-        #       "severity": "high",
-        #       "confidence": "medium",
-        #       "rule_id": "SCN123",
-        #       "rule_name": "insecure_crypto"
-        #     }
-        #   ]
-        # }
 
         for issue_data in data.get("issues", []):
             issue = ToolIssue(
@@ -263,19 +177,11 @@ class PyscnAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
-        """Parse Pyscn text output (fallback).
-
-        Args:
-            output: Text output from Pyscn
-
-        Returns:
-            List of ToolIssue objects
-        """
         issues = []
         lines = output.strip().split("\n")
 
         for line in lines:
-            # Pyscn text format: "file.py:10:5: error: Potential security vulnerability..."
+
             if ":" not in line:
                 continue
 
@@ -293,14 +199,6 @@ class PyscnAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_line(self, line: str) -> ToolIssue | None:
-        """Parse a single text output line.
-
-        Args:
-            line: Line of text output
-
-        Returns:
-            ToolIssue if parsing successful, None otherwise
-        """
         parts = line.split(":", maxsplit=4)
         if len(parts) < 4:
             return None
@@ -330,15 +228,6 @@ class PyscnAdapter(BaseToolAdapter):
             return None
 
     def _parse_severity(self, severity_and_message: str, message: str) -> str:
-        """Parse severity from text line.
-
-        Args:
-            severity_and_message: Part containing severity
-            message: Explicit message if present
-
-        Returns:
-            Severity level (error or warning)
-        """
         if severity_and_message.lower().startswith("warning"):
             return "warning"
         return "error"
@@ -346,42 +235,26 @@ class PyscnAdapter(BaseToolAdapter):
     def _extract_message(
         self, severity_and_message: str, message: str, severity: str
     ) -> str:
-        """Extract message from text line.
-
-        Args:
-            severity_and_message: Part containing severity and possibly message
-            message: Explicit message if present
-            severity: Parsed severity level
-
-        Returns:
-            Extracted message
-        """
         if message:
             return message
 
-        # Extract from severity_and_message
+
         if severity_and_message.lower().startswith(severity):
             return severity_and_message[len(severity) :].strip()
 
         return severity_and_message
 
     def _get_check_type(self) -> QACheckType:
-        """Return SAST check type."""
         return QACheckType.SAST
 
     def get_default_config(self) -> QACheckConfig:
-        """Get default configuration for Pyscn adapter.
-
-        Returns:
-            QACheckConfig with sensible defaults
-        """
         from crackerjack.models.qa_config import QACheckConfig
 
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.SAST,
-            enabled=False,  # Disabled by default as experimental
+            enabled=False,
             file_patterns=["**/*.py"],
             exclude_patterns=[
                 "**/.venv/**",
@@ -389,9 +262,9 @@ class PyscnAdapter(BaseToolAdapter):
                 "**/build/**",
                 "**/dist/**",
             ],
-            timeout_seconds=120,  # Security scanning can be slower
+            timeout_seconds=120,
             parallel_safe=True,
-            stage="comprehensive",  # Security checks in comprehensive stage
+            stage="comprehensive",
             settings={
                 "severity_threshold": "medium",
                 "confidence_threshold": "medium",

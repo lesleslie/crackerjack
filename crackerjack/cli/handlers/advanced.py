@@ -1,11 +1,10 @@
-"""CLI handlers for advanced optimization features"""
 
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
 
-# Module-level console instance
+
 console = Console()
 
 

@@ -584,7 +584,7 @@ class TestCreationAgent(SubAgent):
             module_file, self._ast_analyzer
         )
 
-        # Normalize public function count to top-level only for legacy expectations
+
         with suppress(Exception):
             import ast
 

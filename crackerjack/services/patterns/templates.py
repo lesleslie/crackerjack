@@ -1,4 +1,3 @@
-"""Template parsing and processing patterns."""
 
 import re
 
@@ -24,7 +23,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         description="Extract section names from {% section name %} patterns",
         test_cases=[
             ("{% section intro %}", "intro"),
-            ("{%  section  main_content  %}", "main_content"),
+            ("{% section main_content %}", "main_content"),
             ("text {% section footer %} more", "text footer more"),
             ("{% section header_1 %}", "header_1"),
         ],
@@ -37,7 +36,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         flags=re.DOTALL,
         test_cases=[
             ("{% block title %}Hello{% endblock %}", "title"),
-            ("{%  block  content  %}Text content{% endblock %}", "content"),
+            ("{% block content %}Text content{% endblock %}", "content"),
             ("{% block main %}Multi\nline{% endblock %}", "main"),
             (
                 "prefix {% block nav %}nav content{% endblock %} suffix",
@@ -54,7 +53,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("{% block BLOCK_NAME %}old{% endblock %}", "REPLACEMENT_CONTENT"),
             (
-                "{%  block  BLOCK_NAME  %}old content{% endblock %}",
+                "{% block BLOCK_NAME %}old content{% endblock %}",
                 "REPLACEMENT_CONTENT",
             ),
         ],

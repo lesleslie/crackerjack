@@ -1,8 +1,3 @@
-"""Code injection detection patterns for SQL, Python, and system commands.
-
-This module contains patterns for detecting SQL injection, code evaluation
-injection, dynamic code execution, and system command injection attacks.
-"""
 
 import re
 
@@ -78,7 +73,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "validate_sql_comment_patterns": ValidatedPattern(
         name="validate_sql_comment_patterns",
-        pattern=r"(-{2,}|\/\*|\*\/)",
+        pattern=r"(-{2, }|\/\*|\*\/)",
         replacement="[SQL_COMMENT]",
         description="Detect SQL comment patterns in input validation",
         global_replace=True,

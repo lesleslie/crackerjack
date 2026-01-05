@@ -42,16 +42,16 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+except Exception: # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any # type: ignore[assignment]
+    GitOperationCache = t.Any # type: ignore[assignment]
 from crackerjack.services.parallel_executor import (
     AsyncCommandExecutor,
     ParallelHookExecutor,
 )
 
 if t.TYPE_CHECKING:
-    pass  # All imports moved to top-level for runtime availability
+    pass
 
 
 class PhaseCoordinator:
@@ -138,7 +138,7 @@ class PhaseCoordinator:
         )
         self.console.print()
 
-        # Track if fast hooks have already started in this session to prevent duplicates
+
         self._fast_hooks_started: bool = False
 
     @property
@@ -149,31 +149,22 @@ class PhaseCoordinator:
     def logger(self, value: logging.Logger) -> None:
         self._logger = value
 
-    # --- Output/formatting helpers -------------------------------------------------
+
     @staticmethod
     def _strip_ansi(text: str) -> str:
-        """Remove ANSI escape sequences (SGR and cursor controls).
-
-        This is more comprehensive than stripping only color codes ending with 'm'.
-        """
         ansi_re = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
         return ansi_re.sub("", text)
 
     def _is_plain_output(self) -> bool:
-        """Detect if we should avoid rich formatting entirely.
-
-        Leverages console plain-mode flag when available and falls back
-        to Rich Console properties when not.
-        """
         try:
             if bool(getattr(self.console, "_plain_mode", False)):
                 return True
-            # Fallback on Rich Console capabilities
+
             is_tty = bool(getattr(self.console, "is_terminal", True))
             color_system = getattr(self.console, "color_system", None)
             return (not is_tty) or (color_system in (None, "null"))
         except Exception:
-            # Prefer plain in ambiguous environments
+
             return True
 
     @handle_errors
@@ -213,27 +204,26 @@ class PhaseCoordinator:
             self.console.print("[yellow]⚠️[/yellow] Skipping fast hooks (--skip-hooks)")
             return True
 
-        # Prevent multiple fast-hook runs in a single workflow session unless
-        # explicitly reset by post-cleaning sanity check.
+
         if getattr(self, "_fast_hooks_started", False):
             self.logger.debug("Duplicate fast hooks invocation detected; skipping")
             return True
 
-        # Mark fast hooks as started immediately to prevent duplicate calls in case of failures
+
         self._fast_hooks_started = True
         self.session.track_task("hooks_fast", "Fast quality checks")
 
-        # Fast hooks get 2 attempts (auto-fix on failure), comprehensive hooks run once
+
         max_attempts = 2
         attempt = 0
 
         while attempt < max_attempts:
             attempt += 1
 
-            # Display stage header for each attempt
+
             if attempt > 1:
                 self.console.print(
-                    f"\n[yellow]♻️[/yellow]  Verification Retry {attempt}/{max_attempts}\n"
+                    f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n"
                 )
 
             self._display_hook_phase_header(
@@ -241,7 +231,7 @@ class PhaseCoordinator:
                 "Formatters, import sorting, and quick static analysis",
             )
 
-            # Run hooks (now configured to run in fix mode by default)
+
             success = self._execute_hooks_once(
                 "fast", self.hook_manager.run_fast_hooks, options, attempt
             )
@@ -249,11 +239,11 @@ class PhaseCoordinator:
             if success:
                 break
 
-            # Fast iteration mode intentionally avoids retries
+
             if getattr(options, "fast_iteration", False):
                 break
 
-            # If we have more attempts, continue to retry to verify fixes worked
+
             if attempt < max_attempts:
                 self._display_hook_failures("fast", self._last_hook_results, options)
 
@@ -265,7 +255,7 @@ class PhaseCoordinator:
         else:
             self.session.fail_task("hooks_fast", "Fast hook failures detected")
 
-        # Ensure fast hooks output is fully rendered before comprehensive hooks start
+
         self.console.print()
 
         return success
@@ -283,7 +273,7 @@ class PhaseCoordinator:
             "Type, security, and complexity checking",
         )
 
-        # Comprehensive hooks run once (no retry)
+
         success = self._execute_hooks_once(
             "comprehensive",
             self.hook_manager.run_comprehensive_hooks,
@@ -349,17 +339,16 @@ class PhaseCoordinator:
         if not options.commit:
             return True
 
-        # Skip if publishing phase already handled commits
-        # (Publishing phase handles both pre-publish and version-bump commits when -c is used)
+
         version_type = self._determine_version_type(options)
         if version_type:
-            # Publishing workflow already committed everything
+
             self.console.print(
                 "[dim]ℹ️ Commit phase skipped (handled by publish workflow)[/dim]"
             )
             return True
 
-        # Display commit & push header
+
         self._display_commit_push_header()
         self.session.track_task("commit", "Git commit and push")
         changed_files = self.git_service.get_changed_files()
@@ -375,7 +364,6 @@ class PhaseCoordinator:
         options: OptionsProtocol,
         attempt: int,
     ) -> bool:
-        """Execute a hook suite once with progress bar (no retry logic - retry is handled at stage level)."""
         self._last_hook_summary = None
         self._last_hook_results = []
 
@@ -393,7 +381,6 @@ class PhaseCoordinator:
         return self._process_hook_results(suite_name, elapsed_time, attempt)
 
     def _create_progress_bar(self) -> Progress:
-        """Create compact progress bar for hook execution."""
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[cyan]{task.description}[/cyan]"),
@@ -407,7 +394,6 @@ class PhaseCoordinator:
     def _setup_progress_callbacks(
         self, progress: Progress
     ) -> dict[str, t.Callable[[int, int], None] | None | dict[str, t.Any]]:
-        """Setup progress callbacks and store originals for restoration."""
         task_id_holder = {"task_id": None}
 
         def update_progress(completed: int, total: int) -> None:
@@ -443,7 +429,6 @@ class PhaseCoordinator:
         attempt: int,
         callbacks: dict[str, t.Any],
     ) -> float | None:
-        """Run hooks with progress tracking, return elapsed time or None on error."""
         try:
             with progress:
                 task_id = progress.add_task(
@@ -470,7 +455,6 @@ class PhaseCoordinator:
     def _handle_hook_execution_error(
         self, suite_name: str, exc: Exception, attempt: int
     ) -> None:
-        """Handle errors during hook execution."""
         self.console.print(
             f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
         )
@@ -481,14 +465,12 @@ class PhaseCoordinator:
         )
 
     def _restore_progress_callbacks(self, callbacks: dict[str, t.Any]) -> None:
-        """Restore original progress callbacks."""
         self.hook_manager._progress_callback = callbacks["original"]
         self.hook_manager._progress_start_callback = callbacks["original_started"]
 
     def _process_hook_results(
         self, suite_name: str, elapsed_time: float, attempt: int
     ) -> bool:
-        """Process hook results and determine success."""
         summary = self.hook_manager.get_hook_summary(
             self._last_hook_results, elapsed_time=elapsed_time
         )
@@ -512,7 +494,7 @@ class PhaseCoordinator:
     def _display_hook_phase_header(self, title: str, description: str) -> None:
         sep = make_separator("-")
         self.console.print("\n" + sep)
-        # Combine title and description into a single line with leading icon
+
         pretty_title = title.title()
         message = (
             f"[bold bright_cyan]🔍 {pretty_title}[/bold bright_cyan][bold bright_white]"
@@ -547,7 +529,7 @@ class PhaseCoordinator:
 
         if failed or errors:
             self.console.print(f"\n[red]❌[/red] {base_message}\n")
-            # Always show a results table to aid debugging when there are failures
+
             self._render_hook_results_table(suite_name, results)
         else:
             self.console.print(f"\n[green]✅[/green] {base_message}\n")
@@ -569,7 +551,6 @@ class PhaseCoordinator:
     def _render_plain_hook_results(
         self, suite_name: str, results: list[HookResult]
     ) -> None:
-        """Render hook results in plain text format."""
         self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
 
         stats = self._calculate_hook_statistics(results)
@@ -584,7 +565,6 @@ class PhaseCoordinator:
         self.console.print()
 
     def _calculate_hook_statistics(self, results: list[HookResult]) -> dict[str, t.Any]:
-        """Calculate statistics from hook results."""
         passed_hooks = [r for r in results if r.status.lower() in {"passed", "success"}]
         failed_hooks = [
             r for r in results if r.status.lower() in {"failed", "error", "timeout"}
@@ -596,24 +576,22 @@ class PhaseCoordinator:
             not in {"passed", "success", "failed", "error", "timeout"}
         ]
 
-        # Calculate total issues using issues_count (which may be larger than len(issues_found))
-        # Passed hooks always contribute 0 issues
-        # Config errors (is_config_error=True) are counted separately
+
         total_issues = 0
         config_errors = 0
         for r in results:
             if r.status == "passed":
                 continue
-            # Count config errors separately - they're not code quality issues
+
             if hasattr(r, "is_config_error") and r.is_config_error:
                 config_errors += 1
                 continue
-            # Use issues_count directly (don't fall back to len(issues_found))
-            # because issues_found may contain error detail lines, not actual issues
+
+
             if hasattr(r, "issues_count"):
                 total_issues += r.issues_count
             elif r.issues_found:
-                # Legacy fallback for old HookResults without issues_count
+
                 total_issues += len(r.issues_found)
 
         return {
@@ -629,41 +607,38 @@ class PhaseCoordinator:
         }
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
-        """Print a single hook result in plain format."""
         name = self._strip_ansi(result.name)
         status = result.status.upper()
         duration = f"{result.duration:.2f}s"
 
-        # Determine issues display (matches Rich table logic)
+
         if result.status == "passed":
             issues = "0"
         elif hasattr(result, "is_config_error") and result.is_config_error:
-            # Config/tool error - show simple symbol instead of misleading count
+
             issues = "[yellow]![/yellow]"
         else:
-            # For failed hooks with code violations, use issues_count
-            # Don't fall back to len(issues_found) - it may contain error detail lines
+
+
             issues = str(result.issues_count if hasattr(result, "issues_count") else 0)
 
         self.console.print(
-            f"  - {name} :: {status} | {duration} | issues={issues}",
+            f" - {name} :: {status} | {duration} | issues={issues}",
         )
 
     def _print_plain_summary(self, stats: dict[str, t.Any]) -> None:
-        """Print summary statistics in plain format."""
         issues_text = f"{stats['total_issues_found']} issues found"
         if stats.get("config_errors", 0) > 0:
             issues_text += f" ({stats['config_errors']} config)"
 
         self.console.print(
-            f"  Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, {issues_text}",
+            f" Summary: {stats['total_passed']}/{stats['total_hooks']} hooks passed, {issues_text}",
             highlight=False,
         )
 
     def _render_rich_hook_results(
         self, suite_name: str, results: list[HookResult]
     ) -> None:
-        """Render hook results in Rich format."""
         stats = self._calculate_hook_statistics(results)
         summary_text = self._build_summary_text(stats)
         table = self._build_results_table(results)
@@ -671,13 +646,13 @@ class PhaseCoordinator:
 
         self.console.print(panel)
 
-        # Add legend if any config errors are present
+
         has_config_errors = any(
             hasattr(r, "is_config_error") and r.is_config_error for r in results
         )
         if has_config_errors:
             self.console.print(
-                "  [dim][yellow]![/yellow] = Configuration or tool error (not code "
+                " [dim][yellow]![/yellow] = Configuration or tool error (not code "
                 "issues)[/dim]"
             )
 
@@ -685,7 +660,6 @@ class PhaseCoordinator:
 
     @staticmethod
     def _build_summary_text(stats: dict[str, t.Any]) -> str:
-        """Build summary text for Rich display."""
         summary_text = (
             f"Total: [white]{stats['total_hooks']}[/white] | Passed:"
             f" [green]{stats['total_passed']}[/green] | Failed: [red]{stats['total_failed']}[/red]"
@@ -693,7 +667,7 @@ class PhaseCoordinator:
         if stats["total_other"] > 0:
             summary_text += f" | Other: [yellow]{stats['total_other']}[/yellow]"
 
-        # Show issues found with config count in parentheses if present
+
         issues_text = f"[white]{stats['total_issues_found']}[/white]"
         if stats.get("config_errors", 0) > 0:
             issues_text += f" [dim]({stats['config_errors']} config)[/dim]"
@@ -701,7 +675,6 @@ class PhaseCoordinator:
         return summary_text
 
     def _build_results_table(self, results: list[HookResult]) -> Table:
-        """Build Rich table from hook results."""
         table = Table(
             box=box.SIMPLE,
             header_style="bold bright_white",
@@ -714,17 +687,16 @@ class PhaseCoordinator:
 
         for result in results:
             status_style = self._status_style(result.status)
-            # Passed hooks always show 0 issues (files processed != issues found)
+
             if result.status == "passed":
                 issues_display = "0"
             elif hasattr(result, "is_config_error") and result.is_config_error:
-                # Config/tool error - show simple symbol instead of misleading count
-                # Using "!" instead of emoji to avoid width issues in terminal
+
+
                 issues_display = "[yellow]![/yellow]"
             else:
-                # For failed hooks with code violations, use issues_count
-                # IMPORTANT: Use issues_count directly, don't fall back to len(issues_found)
-                # because issues_found may contain display messages that aren't actual issues
+
+
                 issues_display = str(
                     result.issues_count if hasattr(result, "issues_count") else 0
                 )
@@ -738,7 +710,6 @@ class PhaseCoordinator:
         return table
 
     def _format_issues(self, issues: list[str]) -> list[dict[str, str | int | None]]:
-        """Format hook issues into structured dictionaries."""
 
         def _format_single_issue(issue):
             if hasattr(issue, "file_path") and hasattr(issue, "line_number"):
@@ -763,19 +734,6 @@ class PhaseCoordinator:
         return [_format_single_issue(issue) for issue in issues]
 
     def to_json(self, results: list[HookResult], suite_name: str = "") -> dict:
-        """Export hook results as structured JSON for automation.
-
-        Args:
-            results: List of HookResult objects to export
-            suite_name: Optional suite name (fast/comprehensive)
-
-        Returns:
-            Dictionary with structured results data
-
-        Example:
-            >>> json_data = coordinator.to_json(results, "comprehensive")
-            >>> print(json.dumps(json_data, indent=2))
-        """
         return {
             "suite": suite_name,
             "summary": self._calculate_hook_statistics(results),
@@ -798,7 +756,6 @@ class PhaseCoordinator:
     def _build_results_panel(
         self, suite_name: str, table: Table, summary_text: str
     ) -> Panel:
-        """Build Rich panel containing results table."""
         return Panel(
             table,
             title=f"[bold]{suite_name.title()} Hook Results[/bold]",
@@ -812,11 +769,6 @@ class PhaseCoordinator:
     def _format_failing_hooks(
         self, suite_name: str, results: list[HookResult]
     ) -> list[HookResult]:
-        """Get list of failing hooks and print header.
-
-        Returns:
-            List of failing hook results
-        """
         failing = [
             result
             for result in results
@@ -831,45 +783,40 @@ class PhaseCoordinator:
         return failing
 
     def _display_issue_details(self, result: HookResult) -> None:
-        """Display specific issue details if found."""
         if not result.issues_found:
             return
 
         for issue in result.issues_found:
-            self.console.print(f"      - {self._strip_ansi(issue)}", highlight=False)
+            self.console.print(f" - {self._strip_ansi(issue)}", highlight=False)
 
     def _display_timeout_info(self, result: HookResult) -> None:
-        """Display timeout information."""
         if result.is_timeout:
             self.console.print(
-                "      - Hook timed out during execution", highlight=False
+                " - Hook timed out during execution", highlight=False
             )
 
     def _display_exit_code_info(self, result: HookResult) -> None:
-        """Display exit code with helpful context."""
         if result.exit_code is not None and result.exit_code != 0:
             exit_msg = f"Exit code: {result.exit_code}"
-            # Add helpful context for common exit codes
+
             if result.exit_code == 137:
                 exit_msg += " (killed - possibly timeout or out of memory)"
             elif result.exit_code == 139:
                 exit_msg += " (segmentation fault)"
             elif result.exit_code in {126, 127}:
                 exit_msg += " (command not found or not executable)"
-            self.console.print(f"      - {exit_msg}", highlight=False)
+            self.console.print(f" - {exit_msg}", highlight=False)
 
     def _display_error_message(self, result: HookResult) -> None:
-        """Display error message preview."""
         if result.error_message:
-            # Show first line or first 200 chars of error
+
             error_preview = result.error_message.split("\n")[0][:200]
-            self.console.print(f"      - Error: {error_preview}", highlight=False)
+            self.console.print(f" - Error: {error_preview}", highlight=False)
 
     def _display_generic_failure(self, result: HookResult) -> None:
-        """Display generic failure message if no specific details available."""
         if not result.is_timeout and not result.exit_code and not result.error_message:
             self.console.print(
-                "      - Hook failed with no detailed error information",
+                " - Hook failed with no detailed error information",
                 highlight=False,
             )
 
@@ -879,7 +826,7 @@ class PhaseCoordinator:
         results: list[HookResult],
         options: OptionsProtocol,
     ) -> None:
-        # Show detailed failures if --verbose or --ai-debug flag is set
+
         if not (options.verbose or getattr(options, "ai_debug", False)):
             return
 
@@ -887,16 +834,15 @@ class PhaseCoordinator:
         if not failing:
             return
 
-        # Process each failing hook
+
         for result in failing:
             self._print_single_hook_failure(result)
 
         self.console.print()
 
     def _print_single_hook_failure(self, result: HookResult) -> None:
-        """Print details of a single hook failure."""
         self.console.print(
-            f"  - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
+            f" - [red]{self._strip_ansi(result.name)}[/red] ({result.status})",
             highlight=False,
         )
 
@@ -906,15 +852,13 @@ class PhaseCoordinator:
             self._display_failure_reasons(result)
 
     def _print_hook_issues(self, result: HookResult) -> None:
-        """Print issues found for a hook."""
-        # Type assertion: issues_found is never None after __post_init__
+
         assert result.issues_found is not None
         for issue in result.issues_found:
-            # Show the issue with consistent formatting
-            self.console.print(f"      - {self._strip_ansi(issue)}", highlight=False)
+
+            self.console.print(f" - {self._strip_ansi(issue)}", highlight=False)
 
     def _display_failure_reasons(self, result: HookResult) -> None:
-        """Display reasons why a hook failed."""
         self._display_timeout_info(result)
         self._display_exit_code_info(result)
         self._display_error_message(result)
@@ -966,41 +910,40 @@ class PhaseCoordinator:
     def _execute_publishing_workflow(
         self, options: OptionsProtocol, version_type: str
     ) -> bool:
-        # Store reference to current HEAD to allow rollback if needed
+
         original_head = (
             self.git_service.get_current_commit_hash()
             if hasattr(self.git_service, "get_current_commit_hash")
             else None
         )
 
-        # STAGE 0: Pre-publish commit if needed
+
         if not self._handle_pre_publish_commit(options):
             return False
 
-        # STAGE 1: Version bump
+
         new_version = self._perform_version_bump(version_type)
         if not new_version:
             return False
 
-        # STAGE 2: Commit, tag, and push changes
+
         current_commit_hash = self._commit_version_changes(new_version)
         if not current_commit_hash:
             return False
 
-        # STAGE 3: Publish to PyPI
+
         if not self._publish_to_pypi(
             options, new_version, original_head, current_commit_hash
         ):
             return False
 
-        # Finalize publishing
+
         self._finalize_publishing(options, new_version)
 
         self.session.complete_task("publishing", f"Published version {new_version}")
         return True
 
     def _handle_pre_publish_commit(self, options: OptionsProtocol) -> bool:
-        """Handle committing existing changes before version bump if needed."""
         if not options.commit:
             return True
 
@@ -1022,7 +965,6 @@ class PhaseCoordinator:
         return True
 
     def _perform_version_bump(self, version_type: str) -> str | None:
-        """Perform the version bump operation."""
         self._display_version_bump_header()
 
         new_version = self.publish_manager.bump_version(version_type)
@@ -1037,10 +979,9 @@ class PhaseCoordinator:
         return new_version
 
     def _commit_version_changes(self, new_version: str) -> str | None:
-        """Commit the version changes to git."""
         self._display_commit_push_header()
 
-        # Stage changes
+
         changed_files = self.git_service.get_changed_files()
         if not changed_files:
             self.console.print("[yellow]⚠️[/yellow] No changes to stage")
@@ -1052,7 +993,7 @@ class PhaseCoordinator:
             return None
         self.console.print(f"[green]✅[/green] Staged {len(changed_files)} files")
 
-        # Commit
+
         commit_message = f"chore: bump version to {new_version}"
         if not self.git_service.commit(commit_message):
             self.session.fail_task("publishing", "Failed to commit changes")
@@ -1071,42 +1012,39 @@ class PhaseCoordinator:
         original_head: str | None,
         current_commit_hash: str | None,
     ) -> bool:
-        """Publish the package to PyPI."""
         self._display_publish_header()
 
-        # Build and publish package
+
         if not self.publish_manager.publish_package():
             self.session.fail_task("publishing", "Package publishing failed")
-            # Attempt to rollback the version bump commit if publishing fails
+
             if current_commit_hash and original_head:
                 self._attempt_rollback_version_bump(original_head, current_commit_hash)
             return False
         return True
 
     def _finalize_publishing(self, options: OptionsProtocol, new_version: str) -> None:
-        """Finalize the publishing process after successful PyPI publishing."""
-        # Create git tag and push only after successful PyPI publishing
+
         if not options.no_git_tags:
             if not self.publish_manager.create_git_tag_local(new_version):
                 self.console.print(
                     f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}"
                 )
 
-        # Push commit and tag together in single operation only after successful PyPI publishing
+
         if not self.git_service.push_with_tags():
             self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
-            # Not failing the whole workflow for a push failure
+
 
     def _attempt_rollback_version_bump(
         self, original_head: str, current_commit_hash: str
     ) -> bool:
-        """Attempt to undo the version bump commit if publishing fails."""
         try:
             self.console.print(
                 "[yellow]🔄 Attempting to rollback version bump commit...[/yellow]"
             )
 
-            # Reset to the original HEAD (before version bump commit)
+
             result = self.git_service.reset_hard(original_head)
 
             if result:
@@ -1166,7 +1104,7 @@ class PhaseCoordinator:
     def _display_commit_suggestions(self, suggestions: list[str]) -> None:
         self.console.print("\n[bold]Commit message suggestions:[/bold]")
         for i, suggestion in enumerate(suggestions, 1):
-            self.console.print(f"  [cyan]{i}[/cyan]: {suggestion}")
+            self.console.print(f" [cyan]{i}[/cyan]: {suggestion}")
 
     @staticmethod
     def _process_commit_choice(choice: str, suggestions: list[str]) -> str:
@@ -1187,7 +1125,7 @@ class PhaseCoordinator:
             return False
         if not self.git_service.push():
             self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
-            # Not failing the whole workflow for a push failure
+
         self.session.complete_task("commit", "Committed and pushed changes")
         return True
 
@@ -1221,5 +1159,3 @@ class PhaseCoordinator:
         if normalized == "timeout":
             return "yellow"
         return "bright_white"
-
-    # (All printing is handled by the console, which supports robust I/O.)

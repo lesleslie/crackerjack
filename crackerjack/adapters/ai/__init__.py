@@ -1,4 +1,3 @@
-"""AI adapters for code fixing and analysis."""
 
 from .claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
 

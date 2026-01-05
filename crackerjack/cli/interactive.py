@@ -459,17 +459,16 @@ class InteractiveCLI:
             "🧪 Run tests?", default=getattr(options, "run_tests", False)
         )
 
-        # Only ask about commit if not explicitly set via command line
-        # Check if commit was explicitly provided by looking at original vs default
+
         from ..cli.options import Options
 
         default_options = Options()
         if options.commit != default_options.commit:
-            # Command line flag was used, preserve it
+
             self.console.print(f"📝 Using command line flag: --commit={options.commit}")
-            updated_options.commit = options.commit  # Preserve the command line value
+            updated_options.commit = options.commit
         else:
-            # No command line flag, ask user
+
             updated_options.commit = Confirm.ask(
                 "📝 Commit changes to git?",
                 default=options.commit,

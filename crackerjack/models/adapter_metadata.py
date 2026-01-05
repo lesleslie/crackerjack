@@ -1,8 +1,3 @@
-"""Adapter metadata and status definitions.
-
-Provides type-safe enums and metadata structures for QA adapters,
-replacing the legacy adapter metadata with Crackerjack-specific implementations.
-"""
 
 from __future__ import annotations
 
@@ -13,32 +8,15 @@ from uuid import UUID
 
 
 class AdapterStatus(StrEnum):
-    """Adapter lifecycle status.
 
-    Indicates the stability and readiness level of an adapter.
-    """
-
-    STABLE = "stable"  # Production-ready, well-tested
-    BETA = "beta"  # Functional but may have rough edges
-    ALPHA = "alpha"  # Early development, experimental
-    DEPRECATED = "deprecated"  # Scheduled for removal
+    STABLE = "stable"
+    BETA = "beta"
+    ALPHA = "alpha"
+    DEPRECATED = "deprecated"
 
 
 @dataclass
 class AdapterMetadata:
-    """Metadata for QA adapter registration.
-
-    Contains descriptive information about an adapter for discovery,
-    documentation, and health monitoring.
-
-    Attributes:
-        module_id: Static UUID7 uniquely identifying this adapter
-        name: Human-readable adapter name
-        category: Adapter category (format, lint, sast, type, security, etc.)
-        version: Semantic version string
-        status: Lifecycle status (stable, beta, alpha, deprecated)
-        description: Brief description of adapter functionality
-    """
 
     module_id: UUID
     name: str
@@ -47,20 +25,10 @@ class AdapterMetadata:
     status: AdapterStatus
     description: str = ""
 
-    def dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
-        """Convert to dictionary for serialization (Pydantic compatibility).
-
-        Returns:
-            Dictionary representation suitable for JSON serialization
-        """
+    def dict(self) -> dict[str, t.Any]: # type: ignore[valid-type]
         return self.to_dict()
 
-    def to_dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
-        """Convert to dictionary for serialization.
-
-        Returns:
-            Dictionary representation suitable for JSON serialization
-        """
+    def to_dict(self) -> dict[str, t.Any]: # type: ignore[valid-type]
         return {
             "module_id": str(self.module_id),
             "name": self.name,
@@ -71,7 +39,6 @@ class AdapterMetadata:
         }
 
     def __str__(self) -> str:
-        """Human-readable string representation."""
         return f"{self.name} v{self.version} ({self.status.value})"
 
 

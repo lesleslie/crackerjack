@@ -1,8 +1,3 @@
-"""Badge and markdown link parsing patterns.
-
-This module provides regex patterns for working with markdown syntax,
-particularly coverage badges and links in README files.
-"""
 
 import re
 

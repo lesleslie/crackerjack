@@ -1,4 +1,3 @@
-"""Semantic search data models for crackerjack vector store functionality."""
 
 import typing as t
 from datetime import datetime
@@ -8,7 +7,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class EmbeddingVector(BaseModel):
-    """Represents a single embedding vector with metadata."""
 
     file_path: Path = Field(..., description="Path to the source file")
     chunk_id: str = Field(..., description="Unique identifier for this chunk")
@@ -30,17 +28,14 @@ class EmbeddingVector(BaseModel):
 
     @field_serializer("file_path")
     def serialize_path(self, value: Path) -> str:
-        """Serialize Path to string."""
         return str(value)
 
     @field_serializer("created_at")
     def serialize_datetime(self, value: datetime) -> str:
-        """Serialize datetime to ISO format."""
         return value.isoformat()
 
 
 class SearchResult(BaseModel):
-    """Represents a semantic search result with similarity score."""
 
     file_path: Path = Field(..., description="Path to the matching file")
     chunk_id: str = Field(..., description="Identifier of the matching chunk")
@@ -57,12 +52,10 @@ class SearchResult(BaseModel):
 
     @field_serializer("file_path")
     def serialize_path(self, value: Path) -> str:
-        """Serialize Path to string."""
         return str(value)
 
 
 class IndexStats(BaseModel):
-    """Statistics about the semantic index."""
 
     total_files: int = Field(..., description="Total number of indexed files")
     total_chunks: int = Field(..., description="Total number of text chunks")
@@ -76,12 +69,10 @@ class IndexStats(BaseModel):
 
     @field_serializer("last_updated")
     def serialize_datetime(self, value: datetime) -> str:
-        """Serialize datetime to ISO format."""
         return value.isoformat()
 
 
 class SearchQuery(BaseModel):
-    """Represents a semantic search query with parameters."""
 
     query: str = Field(..., min_length=1, description="The search query text")
     max_results: int = Field(
@@ -104,7 +95,6 @@ class SearchQuery(BaseModel):
 
 
 class IndexingProgress(BaseModel):
-    """Progress information for indexing operations."""
 
     current_file: Path = Field(..., description="Currently processing file")
     files_processed: int = Field(..., ge=0, description="Number of files processed")
@@ -117,19 +107,16 @@ class IndexingProgress(BaseModel):
 
     @property
     def progress_percentage(self) -> float:
-        """Calculate progress as a percentage."""
         if self.total_files == 0:
             return 0.0
         return min(100.0, (self.files_processed / self.total_files) * 100.0)
 
     @field_serializer("current_file")
     def serialize_path(self, value: Path) -> str:
-        """Serialize Path to string."""
         return str(value)
 
 
 class SemanticConfig(BaseModel):
-    """Configuration for semantic search functionality."""
 
     embedding_model: str = Field(
         default="all-MiniLM-L6-v2", description="Sentence transformer model name"
@@ -194,7 +181,6 @@ class SemanticConfig(BaseModel):
 
 
 class FileChangeEvent(BaseModel):
-    """Represents a file system change event for incremental indexing."""
 
     file_path: Path = Field(..., description="Path to the changed file")
     event_type: t.Literal["created", "modified", "deleted"] = Field(
@@ -209,17 +195,14 @@ class FileChangeEvent(BaseModel):
 
     @field_serializer("file_path")
     def serialize_path(self, value: Path) -> str:
-        """Serialize Path to string."""
         return str(value)
 
     @field_serializer("timestamp")
     def serialize_datetime(self, value: datetime) -> str:
-        """Serialize datetime to ISO format."""
         return value.isoformat()
 
 
 class SemanticContext(BaseModel):
-    """Context information for AI agents using semantic search."""
 
     query: str = Field(..., description="The query that generated this context")
     related_files: list[SearchResult] = Field(
@@ -236,7 +219,6 @@ class SemanticContext(BaseModel):
     )
 
 
-# Type aliases for better code readability
 EmbeddingMatrix = list[list[float]]
 SimilarityMatrix = list[list[float]]
 FilePathSet = set[Path]

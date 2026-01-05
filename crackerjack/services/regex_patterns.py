@@ -1,32 +1,14 @@
-"""Backward compatibility wrapper for refactored patterns module.
 
-This module re-exports everything from the new patterns/ directory structure
-to maintain backward compatibility with existing code that imports from
-crackerjack.services.regex_patterns.
 
-The actual implementation has been split into domain-specific modules:
-- patterns/core.py - Base classes and utilities
-- patterns/formatting.py - Formatting patterns
-- patterns/security/ - Security-related patterns
-- patterns/testing/ - Test-related patterns
-- patterns/code/ - Code analysis patterns
-- patterns/documentation/ - Documentation patterns
-- patterns/tool_output/ - Tool output parsing patterns
-- And more...
-
-All imports should work exactly as before.
-"""
-
-# Import specific items from the patterns module to avoid F405 errors
 from .patterns import (
-    # Core classes and utilities
+
     MAX_INPUT_SIZE,
     MAX_ITERATIONS,
     PATTERN_CACHE_SIZE,
-    # Main registry
+
     SAFE_PATTERNS,
     CompiledPatternCache,
-    # Utility functions
+
     RegexPatternsService,
     ValidatedPattern,
     apply_formatting_fixes,
@@ -56,16 +38,16 @@ from .patterns import (
 )
 
 __all__ = [
-    # Core classes
+
     "ValidatedPattern",
     "CompiledPatternCache",
     "validate_pattern_safety",
     "MAX_INPUT_SIZE",
     "MAX_ITERATIONS",
     "PATTERN_CACHE_SIZE",
-    # Main registry
+
     "SAFE_PATTERNS",
-    # Utility functions
+
     "validate_all_patterns",
     "find_pattern_for_text",
     "apply_safe_replacement",

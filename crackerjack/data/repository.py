@@ -1,4 +1,3 @@
-"""Data repositories backed by an in-memory query adapter."""
 
 from __future__ import annotations
 
@@ -31,14 +30,12 @@ class _InMemorySimpleOps:
         return self._create_new(data)
 
     def _find_existing_by_key(self, key_field: str, key_value: Any) -> Any | None:
-        """Find existing entity by key field."""
         for existing in self._store:
             if getattr(existing, key_field, None) == key_value:
                 return existing
         return None
 
     def _update_existing(self, existing: Any, data: dict[str, Any]) -> Any:
-        """Update an existing entity."""
         if hasattr(existing, "update_from_dict"):
             existing.update_from_dict(data)
         else:
@@ -46,13 +43,11 @@ class _InMemorySimpleOps:
         return existing
 
     def _update_entity_fields(self, existing: Any, data: dict[str, Any]) -> None:
-        """Update entity fields from data dictionary."""
         for key, value in data.items():
             if hasattr(existing, key):
                 setattr(existing, key, value)
 
     def _create_new(self, data: dict[str, Any]) -> Any:
-        """Create a new entity and add it to the store."""
         instance = self._model(**data)
         self._store.append(instance)
         return instance

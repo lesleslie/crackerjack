@@ -6,10 +6,9 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-# Repository pattern uses in-memory storage via cache system
-# See: crackerjack.services.cache.CrackerjackCache
+
 if TYPE_CHECKING:
-    pass  # No external dependencies needed
+    pass
 
 from crackerjack.models.protocols import QualityBaselineProtocol
 from crackerjack.services.cache import CrackerjackCache
@@ -17,7 +16,6 @@ from crackerjack.services.cache import CrackerjackCache
 
 @dataclass
 class QualityMetrics:
-    """Quality metrics for a specific commit/session."""
 
     git_hash: str
     timestamp: datetime
@@ -29,7 +27,7 @@ class QualityMetrics:
     security_issues: int
     type_errors: int
     linting_issues: int
-    quality_score: int  # Overall score 0-100
+    quality_score: int
 
     def to_dict(self) -> dict[str, t.Any]:
         data = asdict(self)
@@ -45,20 +43,18 @@ class QualityMetrics:
 
 
 class QualityBaselineService(QualityBaselineProtocol):
-    """Service for tracking and persisting quality baselines across sessions."""
 
     def __init__(
         self,
         cache: CrackerjackCache | None = None,
-        repository: Any = None,  # Repository pattern disabled
+        repository: Any = None,
     ) -> None:
         self.cache = cache or CrackerjackCache()
         self._logger = logging.getLogger(__name__)
-        # Repository pattern uses in-memory cache storage
-        self._repository: Any = None  # Not needed - using cache system
+
+        self._repository: Any = None
 
     def get_current_git_hash(self) -> str | None:
-        """Get current git commit hash."""
         try:
             result = subprocess.run(
                 ["git", "rev-parse", "HEAD"],
@@ -80,20 +76,19 @@ class QualityBaselineService(QualityBaselineProtocol):
         type_errors: int,
         linting_issues: int,
     ) -> int:
-        """Calculate overall quality score (0-100)."""
-        # Base score from coverage and tests
+
         base_score = (coverage_percent * 0.4) + (test_pass_rate * 0.3)
 
-        # Penalty for issues (each issue type has different weight)
+
         penalties = (
-            hook_failures * 2.0  # Hook failures are serious
-            + complexity_violations * 1.5  # Complexity is important
-            + security_issues * 3.0  # Security is critical
-            + type_errors * 2.0  # Type errors are serious
-            + linting_issues * 0.5  # Linting is less critical
+            hook_failures * 2.0
+            + complexity_violations * 1.5
+            + security_issues * 3.0
+            + type_errors * 2.0
+            + linting_issues * 0.5
         )
 
-        # Apply penalties with diminishing returns
+
         penalty_score = max(0, 30 - (penalties * 0.8))
 
         return max(0, min(100, int(base_score + penalty_score)))
@@ -109,7 +104,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         type_errors: int = 0,
         linting_issues: int = 0,
     ) -> QualityMetrics | None:
-        """Synchronous wrapper for asynchronous baseline recording."""
         return self._run_async(
             self.arecord_baseline(
                 coverage_percent=coverage_percent,
@@ -134,7 +128,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         type_errors: int = 0,
         linting_issues: int = 0,
     ) -> QualityMetrics | None:
-        """Record quality baseline for current commit."""
         git_hash = self.get_current_git_hash()
         if not git_hash:
             return None
@@ -163,20 +156,18 @@ class QualityBaselineService(QualityBaselineProtocol):
             quality_score=quality_score,
         )
 
-        # Store in cache for persistence across sessions
+
         self.cache.set_quality_baseline(git_hash, metrics.to_dict())
         await self._persist_metrics(metrics)
         return metrics
 
     def get_baseline(self, git_hash: str | None = None) -> QualityMetrics | None:
-        """Synchronous wrapper around asynchronous baseline retrieval."""
         return self._run_async(self.aget_baseline(git_hash=git_hash))
 
     async def aget_baseline(
         self,
         git_hash: str | None = None,
     ) -> QualityMetrics | None:
-        """Get quality baseline for specific commit (or current commit)."""
         if not git_hash:
             git_hash = self.get_current_git_hash()
 
@@ -201,7 +192,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         current_metrics: dict[str, t.Any],
         baseline_git_hash: str | None = None,
     ) -> dict[str, t.Any]:
-        """Compare current metrics with baseline."""
         baseline = self.get_baseline(baseline_git_hash)
         if not baseline:
             return {
@@ -224,7 +214,6 @@ class QualityBaselineService(QualityBaselineProtocol):
     def _identify_improvements(
         self, baseline: QualityMetrics, current: dict[str, t.Any]
     ) -> list[str]:
-        """Identify areas that improved since baseline."""
         improvements = []
 
         if current["coverage_percent"] > baseline.coverage_percent:
@@ -247,7 +236,6 @@ class QualityBaselineService(QualityBaselineProtocol):
     def _identify_regressions(
         self, baseline: QualityMetrics, current: dict[str, t.Any]
     ) -> list[str]:
-        """Identify areas that regressed since baseline."""
         regressions = []
 
         if current["coverage_percent"] < baseline.coverage_percent:
@@ -268,11 +256,9 @@ class QualityBaselineService(QualityBaselineProtocol):
         return regressions
 
     def get_recent_baselines(self, limit: int = 10) -> list[QualityMetrics]:
-        """Synchronous wrapper around asynchronous baseline listing."""
         return self._run_async(self.aget_recent_baselines(limit=limit))
 
     async def aget_recent_baselines(self, limit: int = 10) -> list[QualityMetrics]:
-        """Get recent baselines (requires git log parsing since cache is keyed by hash)."""
         if self._repository:
             records = await self._repository.list_recent(limit=limit)
             return [self._record_to_metrics(record) for record in records]
@@ -297,9 +283,7 @@ class QualityBaselineService(QualityBaselineProtocol):
         except (subprocess.CalledProcessError, FileNotFoundError):
             return []
 
-    # ------------------------------------------------------------------ #
-    # Internal helpers
-    # ------------------------------------------------------------------ #
+
     async def _persist_metrics(self, metrics: QualityMetrics) -> None:
         if not self._repository:
             return
@@ -320,7 +304,7 @@ class QualityBaselineService(QualityBaselineProtocol):
                     "quality_score": metrics.quality_score,
                 }
             )
-        except Exception as exc:  # pragma: no cover - defensive
+        except Exception as exc: # pragma: no cover - defensive
             self._logger.debug(
                 "Failed to persist quality baseline record",
                 exc_info=exc,
@@ -328,7 +312,7 @@ class QualityBaselineService(QualityBaselineProtocol):
 
     def _record_to_metrics(
         self, record: Any
-    ) -> QualityMetrics:  # QualityBaselineRecord when enabled
+    ) -> QualityMetrics:
         return QualityMetrics(
             git_hash=record.git_hash,
             timestamp=record.recorded_at,
@@ -344,7 +328,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         )
 
     def _run_async(self, coro: t.Coroutine[t.Any, t.Any, t.Any]) -> t.Any:
-        """Run coroutine synchronously, creating event loop if needed."""
         try:
             asyncio.get_running_loop()
         except RuntimeError:
@@ -355,18 +338,16 @@ class QualityBaselineService(QualityBaselineProtocol):
         )
         raise RuntimeError(msg)
 
-    # Protocol methods
+
     def get_current_baseline(self) -> dict[str, t.Any]:
-        """Protocol method for getting baseline metrics."""
-        baseline = self.get_baseline()  # Call the existing method
+        baseline = self.get_baseline()
         if baseline:
             return baseline.to_dict()
         return {}
 
     def update_baseline(self, metrics: dict[str, t.Any]) -> bool:
-        """Protocol method for updating baseline metrics."""
         try:
-            # Extract required values from metrics dict
+
             coverage_percent = metrics.get("coverage_percent", 0.0)
             test_count = metrics.get("test_count", 0)
             test_pass_rate = metrics.get("test_pass_rate", 0.0)
@@ -391,5 +372,4 @@ class QualityBaselineService(QualityBaselineProtocol):
             return False
 
     def compare(self, current: dict[str, t.Any]) -> dict[str, t.Any]:
-        """Protocol method for comparing current metrics against baseline."""
         return self.compare_with_baseline(current)

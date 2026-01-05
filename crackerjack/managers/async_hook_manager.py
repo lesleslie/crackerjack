@@ -31,7 +31,6 @@ class AsyncHookManager:
         self._config_path = config_path
 
     def get_hook_count(self, suite_name: str) -> int:
-        """Get the number of hooks in a suite."""
         strategy = self.config_loader.load_strategy(suite_name)
         return len(strategy.hooks)
 
@@ -68,11 +67,6 @@ class AsyncHookManager:
         return asyncio.run(self.run_comprehensive_hooks_async())
 
     async def install_hooks_async(self) -> bool:
-        """Install git hooks (async version).
-
-        Phase 8.5: This method is deprecated. Direct tool invocation doesn't require
-        pre-commit hook installation. Returns True with informational message.
-        """
         self.console.print(
             "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
         )
@@ -82,11 +76,6 @@ class AsyncHookManager:
         return asyncio.run(self.install_hooks_async())
 
     async def update_hooks_async(self) -> bool:
-        """Update hooks to latest versions (async version).
-
-        Phase 8.5: This method is deprecated. Direct tool invocation uses UV for
-        dependency management. Returns True with informational message.
-        """
         self.console.print(
             "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
         )
@@ -99,17 +88,6 @@ class AsyncHookManager:
     def get_hook_summary(
         results: list[HookResult], elapsed_time: float | None = None
     ) -> dict[str, t.Any]:
-        """Calculate summary statistics for hook execution results.
-
-        Args:
-            results: List of hook execution results
-            elapsed_time: Optional wall-clock elapsed time in seconds.
-                         If provided, used as total_duration (critical for parallel execution).
-                         If None, falls back to sum of individual durations (sequential mode).
-
-        Returns:
-            Dictionary with execution statistics
-        """
         if not results:
             return {
                 "total": 0,
@@ -124,7 +102,7 @@ class AsyncHookManager:
         failed = sum(1 for r in results if r.status == "failed")
         errors = sum(1 for r in results if r.status in ("timeout", "error"))
 
-        # Use wall-clock time if provided (parallel execution), else sum durations (sequential)
+
         total_duration = (
             elapsed_time
             if elapsed_time is not None

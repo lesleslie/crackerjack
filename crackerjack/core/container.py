@@ -78,8 +78,7 @@ class DependencyContainer:
 
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
-        # Use factory without parameters to trigger @depends.inject decorator
-        # The decorator will inject all dependencies from the DI container
+
         self.register_transient(
             PublishManager,
             PublishManagerImpl,

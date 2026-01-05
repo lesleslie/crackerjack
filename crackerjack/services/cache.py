@@ -10,14 +10,13 @@ from crackerjack.models.task import HookResult
 
 logger = logging.getLogger(__name__)
 
-# Cache adapter removed with legacy runtime - using in-memory caching only
+
 Cache: Any | None = None
 _cache_import_error: Exception | None = None
 
 
 @dataclass
 class CacheStats:
-    """Cache statistics compatible with legacy cache implementation."""
 
     hits: int = 0
     misses: int = 0
@@ -40,56 +39,54 @@ class CacheStats:
 
 
 def get_cache() -> Any:
-    """Return the configured cache backend (legacy adapter removed)."""
     return None
 
 
 class CrackerjackCache:
-    """Cache adapter with in-memory fallback when backend is unavailable."""
 
     EXPENSIVE_HOOKS = {
-        # Type checking and analysis
-        "pyright",  # Legacy, keep for backward compatibility
-        "zuban",  # Fast Rust-based type checking
-        "skylos",  # Rust-based dead code detection
-        # Security and vulnerability scanning
-        "bandit",  # Python security linter
-        "gitleaks",  # Secret scanning
-        "semgrep",  # SAST scanning
-        "pyscn",  # Security scanning
-        "pip-audit",  # Dependency vulnerability scanning
-        # Code quality and complexity
-        "vulture",  # Dead code detection (Python)
-        "complexipy",  # Complexity analysis
-        "refurb",  # Python code modernization
-        # Schema and data validation
-        "check-jsonschema",  # JSON schema validation (8466+ files)
-        # Text and formatting
-        "codespell",  # Spell checking across entire codebase
-        "ruff-check",  # Comprehensive Python linting
-        "mdformat",  # Markdown formatting
+
+        "pyright",
+        "zuban",
+        "skylos",
+
+        "bandit",
+        "gitleaks",
+        "semgrep",
+        "pyscn",
+        "pip-audit",
+
+        "vulture",
+        "complexipy",
+        "refurb",
+
+        "check-jsonschema",
+
+        "codespell",
+        "ruff-check",
+        "mdformat",
     }
 
     HOOK_DISK_TTLS = {
-        # Type checking - daily updates as code changes
-        "pyright": 86400,  # 1 day
-        "zuban": 86400,  # 1 day
-        "skylos": 86400 * 2,  # 2 days - dead code analysis less volatile
-        # Security - longer TTLs, check periodically for new vulnerabilities
-        "bandit": 86400 * 3,  # 3 days
-        "gitleaks": 86400 * 7,  # 7 days - secrets rarely change once clean
-        "semgrep": 86400 * 3,  # 3 days - security rules change occasionally
-        "pyscn": 86400 * 3,  # 3 days
-        "pip-audit": 86400,  # 1 day - check daily for new CVEs
-        # Code quality
-        "vulture": 86400 * 2,  # 2 days
-        "complexipy": 86400,  # 1 day
-        "refurb": 86400,  # 1 day
-        # Validation and formatting - longest TTLs
-        "check-jsonschema": 86400 * 7,  # 7 days - schemas rarely change
-        "codespell": 86400 * 7,  # 7 days - spelling errors are rare
-        "ruff-check": 86400,  # 1 day - linting rules can change
-        "mdformat": 86400 * 7,  # 7 days - markdown style rarely changes
+
+        "pyright": 86400,
+        "zuban": 86400,
+        "skylos": 86400 * 2,
+
+        "bandit": 86400 * 3,
+        "gitleaks": 86400 * 7,
+        "semgrep": 86400 * 3,
+        "pyscn": 86400 * 3,
+        "pip-audit": 86400,
+
+        "vulture": 86400 * 2,
+        "complexipy": 86400,
+        "refurb": 86400,
+
+        "check-jsonschema": 86400 * 7,
+        "codespell": 86400 * 7,
+        "ruff-check": 86400,
+        "mdformat": 86400 * 7,
     }
 
     AGENT_VERSION = "1.0.0"
@@ -107,11 +104,11 @@ class CrackerjackCache:
         if backend is not None:
             self._backend = backend
         else:
-            # Try to get cache backend, fallback to None if unavailable
+
             try:
                 self._backend = get_cache()
             except RuntimeError:
-                # Cache backend not available - use in-memory fallback
+
                 logger.info("Cache backend unavailable, using in-memory cache")
                 self._backend = None
 
@@ -309,7 +306,7 @@ class CrackerjackCache:
     @staticmethod
     def _get_hook_cache_key(hook_name: str, file_hashes: list[str]) -> str:
         hash_signature = hashlib.md5(
-            ",".join(sorted(file_hashes)).encode(),
+            ", ".join(sorted(file_hashes)).encode(),
             usedforsecurity=False,
         ).hexdigest()
         return f"hook_result:{hook_name}:{hash_signature}"

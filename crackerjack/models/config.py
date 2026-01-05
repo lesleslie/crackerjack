@@ -327,7 +327,6 @@ class WorkflowOptions:
         mcp_server: MCPServerConfig | None,
         zuban_lsp: ZubanLSPConfig | None,
     ) -> None:
-        """Initialize all configuration attributes."""
         self.cleaning = cleaning or CleaningConfig()
         self.hooks = hooks or HookConfig()
         self.testing = testing or TestConfig()
@@ -342,7 +341,6 @@ class WorkflowOptions:
         self.zuban_lsp = zuban_lsp or ZubanLSPConfig()
 
     def _set_default_overrides(self, kwargs: dict[str, Any]) -> None:
-        """Set default overrides for specific attributes."""
         self._DEFAULT_OVERRIDES = {
             "clean": None,
             "test": False,
@@ -361,7 +359,6 @@ class WorkflowOptions:
                 setattr(self, attr, value)
 
     def _should_skip_override(self, attr: str, kwargs: dict[str, Any]) -> bool:
-        """Check if an override attribute should be skipped."""
         if attr in {"commit", "create_pr"} and "git" in kwargs:
             return True
         if attr == "clean" and "cleaning" in kwargs:
@@ -375,7 +372,6 @@ class WorkflowOptions:
         return False
 
     def _set_kwargs_attributes(self, kwargs: dict[str, Any]) -> None:
-        """Set attributes based on provided kwargs."""
         for attr, value in kwargs.items():
             if hasattr(self.__class__, attr):
                 setattr(self, attr, value)
@@ -399,7 +395,7 @@ class WorkflowOptions:
         zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
-        # Initialize all configuration attributes with defaults
+
         self.cleaning = cleaning or CleaningConfig(clean=None)
         self.hooks = hooks or HookConfig()
         self.testing = testing or TestConfig(test=False)
@@ -438,12 +434,12 @@ class WorkflowOptions:
             enabled=True, auto_start=True, port=8677, mode="stdio", timeout=30
         )
 
-        # Set any additional attributes from kwargs
+
         for attr, value in kwargs.items():
             if hasattr(self, attr):
                 setattr(self, attr, value)
 
-    # Convenience property mappings
+
     @property
     def clean(self) -> bool:
         return self.cleaning.clean
@@ -751,13 +747,13 @@ class WorkflowOptions:
 
     @classmethod
     def from_args(cls, args: Any) -> WorkflowOptions:
-        # Get attributes from args object
+
         attrs = vars(args) if hasattr(args, "__dict__") else {}
 
-        # Create a default instance first to get the default configs
+
         default_instance = cls()
 
-        # Prepare individual config objects based on defaults and provided attributes
+
         cleaning_kwargs = default_instance.cleaning.__dict__.copy()
         if "strip_code" in attrs:
             cleaning_kwargs["clean"] = attrs["strip_code"]
@@ -793,7 +789,7 @@ class WorkflowOptions:
             execution_kwargs["dry_run"] = attrs["dry_run"]
         execution_config = ExecutionConfig(**execution_kwargs)
 
-        # Return new instance with updated configs
+
         return cls(
             cleaning=cleaning_config,
             testing=testing_config,

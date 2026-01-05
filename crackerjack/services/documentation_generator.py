@@ -1,4 +1,3 @@
-"""Service for generating documentation from extracted API data."""
 
 import typing as t
 from pathlib import Path
@@ -9,13 +8,11 @@ from ..models.protocols import DocumentationGeneratorProtocol
 
 
 class MarkdownTemplateRenderer:
-    """Simple template renderer for markdown documentation."""
 
     def __init__(self) -> None:
         self.built_in_templates = self._init_builtin_templates()
 
     def _init_builtin_templates(self) -> dict[str, Template]:
-        """Initialize built-in template strings."""
         return {
             "api_reference": Template(self._get_api_reference_template()),
             "function_doc": Template(self._get_function_doc_template()),
@@ -25,12 +22,11 @@ class MarkdownTemplateRenderer:
         }
 
     def render_template(self, template_name: str, context: dict[str, t.Any]) -> str:
-        """Render a template with the given context."""
         if template_name in self.built_in_templates:
             template = self.built_in_templates[template_name]
             return template.safe_substitute(context)
 
-        # Try to load external template file
+
         template_path = Path(f"templates/{template_name}")
         if template_path.exists():
             content = template_path.read_text(encoding="utf-8")
@@ -40,26 +36,24 @@ class MarkdownTemplateRenderer:
         raise ValueError(f"Template '{template_name}' not found")
 
     def _get_api_reference_template(self) -> str:
-        """Get the API reference template."""
         return """# API Reference
 
-## Overview
+
 $overview
 
-## Protocols
+
 $protocols_section
 
-## Services
+
 $services_section
 
-## Managers
+
 $managers_section
 
-## Generated on: $timestamp
+
 """
 
     def _get_function_doc_template(self) -> str:
-        """Get the function documentation template."""
         return """### $name
 
 $description
@@ -77,44 +71,37 @@ $example
 """
 
     def _get_class_doc_template(self) -> str:
-        """Get the class documentation template."""
         return """## $name
 
 $description
 
 **Base Classes:** $base_classes
 
-### Methods
 
 $methods
 
 """
 
     def _get_protocol_doc_template(self) -> str:
-        """Get the protocol documentation template."""
         return """## $name (Protocol)
 
 $description
 
 **Runtime Checkable:** $runtime_checkable
 
-### Required Methods
 
 $methods
 
 """
 
     def _get_module_doc_template(self) -> str:
-        """Get the module documentation template."""
         return """# $module_name
 
 $description
 
-## Classes
 
 $classes
 
-## Functions
 
 $functions
 
@@ -122,14 +109,12 @@ $functions
 
 
 class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
-    """Implementation of documentation generation from extracted API data."""
 
     def __init__(self) -> None:
         self.console = CrackerjackConsole()
         self.renderer = MarkdownTemplateRenderer()
 
     def generate_api_reference(self, api_data: dict[str, t.Any]) -> str:
-        """Generate complete API reference documentation."""
         overview = self._generate_overview(api_data)
         protocols_section = self._generate_protocols_section(
             api_data.get("protocols", {})
@@ -152,16 +137,15 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return self.renderer.render_template("api_reference", context)
 
     def generate_user_guide(self, template_context: dict[str, t.Any]) -> str:
-        """Generate user guide documentation."""
         sections: list[str] = []
 
-        # Generate getting started section
+
         if "installation" in template_context:
             sections.extend(
                 ("## Getting Started\n", template_context["installation"], "\n")
             )
 
-        # Generate usage examples
+
         if "examples" in template_context:
             sections.append("## Usage Examples\n")
             for example in template_context["examples"]:
@@ -175,7 +159,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     sections.append(f"```bash\n{example['code']}\n```\n")
                 sections.append("\n")
 
-        # Generate configuration section
+
         if "configuration" in template_context:
             sections.extend(
                 ("## Configuration\n", template_context["configuration"], "\n")
@@ -184,14 +168,13 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(sections)
 
     def generate_changelog_update(self, version: str, changes: dict[str, t.Any]) -> str:
-        """Generate changelog entry for a version."""
         from datetime import datetime
 
         today = datetime.now().strftime("%Y-%m-%d")
 
         lines = [f"## [{version}] - {today}\n"]
 
-        # Order sections by importance
+
         section_order = [
             ("Added", "added"),
             ("Changed", "changed"),
@@ -211,7 +194,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(lines)
 
     def render_template(self, template_path: Path, context: dict[str, t.Any]) -> str:
-        """Render a template file with the given context."""
         if not template_path.exists():
             raise FileNotFoundError(f"Template not found: {template_path}")
 
@@ -222,17 +204,16 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def generate_cross_references(
         self, api_data: dict[str, t.Any]
     ) -> dict[str, list[str]]:
-        """Generate cross-reference mappings for API components."""
         cross_refs = {}
 
-        # Extract all API names
+
         all_names = set()
 
-        # Add protocol names
+
         protocols = api_data.get("protocols", {})
         all_names.update(protocols.keys())
 
-        # Add class names from modules
+
         modules = api_data.get("modules", {})
         for module_data in modules.values():
             all_names.update(
@@ -242,7 +223,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                 func_info["name"] for func_info in module_data.get("functions", [])
             )
 
-        # Generate cross-references by finding mentions
+
         for name in all_names:
             refs = self._find_references_to_name(name, api_data)
             if refs:
@@ -251,7 +232,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return cross_refs
 
     def _generate_overview(self, api_data: dict[str, t.Any]) -> str:
-        """Generate overview section for API documentation."""
         stats = self._calculate_api_stats(api_data)
 
         overview_lines = [
@@ -265,7 +245,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(overview_lines)
 
     def _generate_protocols_section(self, protocols: dict[str, t.Any]) -> str:
-        """Generate the protocols section of API documentation."""
         if not protocols:
             return "No protocols found.\n"
 
@@ -286,7 +265,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(sections)
 
     def _generate_services_section(self, services: dict[str, t.Any]) -> str:
-        """Generate the services section of API documentation."""
         if not services:
             return "No services found.\n"
 
@@ -305,7 +283,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     sections.append(f"- {protocol}\n")
                 sections.append("\n")
 
-            # Add classes from this service
+
             for class_info in service_info.get("classes", []):
                 context = {
                     "name": class_info["name"],
@@ -321,12 +299,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(sections)
 
     def _generate_managers_section(self, managers: dict[str, t.Any]) -> str:
-        """Generate the managers section of API documentation."""
-        # Similar to services but focused on manager-specific functionality
-        return self._generate_services_section(managers)  # Reuse services logic for now
+
+        return self._generate_services_section(managers)
 
     def _format_methods(self, methods: list[dict[str, t.Any]]) -> str:
-        """Format method information for documentation."""
         if not methods:
             return "No methods defined.\n"
 
@@ -334,13 +310,13 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         for method in methods:
             method_lines = [f"#### `{method['name']}`\n"]
 
-            # Add description
+
             description = method.get("docstring", {}).get(
                 "description", "No description provided."
             )
             method_lines.append(f"{description}\n")
 
-            # Add parameters
+
             parameters = method.get("parameters", [])
             if parameters:
                 method_lines.append("**Parameters:**\n")
@@ -351,7 +327,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                         f"- `{param['name']}` ({param_type}): {param_desc}\n"
                     )
 
-            # Add return type
+
             return_annotation = method.get("return_annotation", "")
             if return_annotation:
                 method_lines.append(f"**Returns:** {return_annotation}\n")
@@ -362,14 +338,13 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(formatted_methods)
 
     def _calculate_api_stats(self, api_data: dict[str, t.Any]) -> dict[str, int]:
-        """Calculate statistics about the API data."""
         stats = {"protocols": 0, "classes": 0, "functions": 0, "modules": 0}
 
-        # Count protocols
+
         protocols = api_data.get("protocols", {})
         stats["protocols"] = len(protocols)
 
-        # Count modules, classes, and functions
+
         modules = api_data.get("modules", {})
         stats["modules"] = len(modules)
 
@@ -382,16 +357,15 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_references_to_name(
         self, name: str, api_data: dict[str, t.Any]
     ) -> list[str]:
-        """Find all places where an API component is referenced."""
         references = []
 
-        # Search in protocols
+
         protocol_refs = self._find_protocol_references(
             name, api_data.get("protocols", {})
         )
         references.extend(protocol_refs)
 
-        # Search in modules/classes
+
         module_refs = self._find_module_references(name, api_data.get("modules", {}))
         references.extend(module_refs)
 
@@ -400,7 +374,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_protocol_references(
         self, name: str, protocols: dict[str, t.Any]
     ) -> list[str]:
-        """Find references in protocol definitions."""
         references = []
 
         for protocol_name, protocol_info in protocols.items():
@@ -414,11 +387,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_protocol_method_references(
         self, name: str, protocol_name: str, methods: list[dict[str, t.Any]]
     ) -> list[str]:
-        """Find references in protocol method signatures."""
         references = []
 
         for method in methods:
-            # Check parameters
+
             param_refs = self._find_method_parameter_references(
                 name,
                 f"{protocol_name}.{method['name']}()",
@@ -426,7 +398,7 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
             )
             references.extend(param_refs)
 
-            # Check return type
+
             if name in method.get("return_annotation", ""):
                 references.append(f"{protocol_name}.{method['name']}() return type")
 
@@ -435,7 +407,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_module_references(
         self, name: str, modules: dict[str, t.Any]
     ) -> list[str]:
-        """Find references in module class definitions."""
         references = []
 
         for module_data in modules.values():
@@ -449,15 +420,14 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_class_references(
         self, name: str, classes: list[dict[str, t.Any]]
     ) -> list[str]:
-        """Find references in class definitions."""
         references = []
 
         for class_info in classes:
-            # Check base classes
+
             if name in class_info.get("base_classes", []):
                 references.append(f"{class_info['name']} base class")
 
-            # Check method signatures
+
             method_refs = self._find_class_method_references(
                 name, class_info["name"], class_info.get("methods", [])
             )
@@ -468,7 +438,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_class_method_references(
         self, name: str, class_name: str, methods: list[dict[str, t.Any]]
     ) -> list[str]:
-        """Find references in class method signatures."""
         references = []
 
         for method in methods:
@@ -482,7 +451,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _find_method_parameter_references(
         self, name: str, method_name: str, parameters: list[dict[str, t.Any]]
     ) -> list[str]:
-        """Find references in method parameters."""
         return [
             f"{method_name} parameter"
             for param in parameters

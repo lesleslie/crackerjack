@@ -1,8 +1,3 @@
-"""Incremental execution with intelligent caching.
-
-Phase 10.3.2: Implements file hash tracking and persistent caching to skip
-unchanged files and reuse previous results.
-"""
 
 import hashlib
 import json
@@ -17,7 +12,6 @@ from crackerjack.services.profiler import ToolProfiler
 
 @dataclass
 class FileHash:
-    """File hash metadata."""
 
     path: str
     hash: str
@@ -27,7 +21,6 @@ class FileHash:
 
 @dataclass
 class CacheEntry:
-    """Cached execution result."""
 
     tool_name: str
     file_hash: FileHash
@@ -39,7 +32,6 @@ class CacheEntry:
 
 @dataclass
 class ExecutionResult:
-    """Result of incremental execution."""
 
     tool_name: str
     files_processed: int
@@ -51,26 +43,17 @@ class ExecutionResult:
 
     @property
     def cache_effective(self) -> bool:
-        """Whether caching was effective (>50% hit rate)."""
         return self.cache_hit_rate >= 50.0
 
 
 class IncrementalExecutor:
-    """Executes tools incrementally with intelligent caching."""
 
     def __init__(
         self,
         cache_dir: Path | None = None,
-        ttl_seconds: int = 86400,  # 24 hours
+        ttl_seconds: int = 86400,
         profiler: ToolProfiler | None = None,
     ):
-        """Initialize incremental executor.
-
-        Args:
-            cache_dir: Directory for cache storage
-            ttl_seconds: Time-to-live for cache entries (default: 24 hours)
-            profiler: Optional profiler for performance tracking
-        """
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl_seconds = ttl_seconds
@@ -80,14 +63,6 @@ class IncrementalExecutor:
         self._load_cache()
 
     def _compute_file_hash(self, file_path: Path) -> FileHash:
-        """Compute hash for a file.
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            FileHash with metadata
-        """
         try:
             content = file_path.read_bytes()
             hash_value = hashlib.sha256(content).hexdigest()
@@ -100,7 +75,7 @@ class IncrementalExecutor:
                 modified_time=stat.st_mtime,
             )
         except OSError:
-            # Return empty hash for files that can't be read
+
             return FileHash(
                 path=str(file_path),
                 hash="",
@@ -109,19 +84,9 @@ class IncrementalExecutor:
             )
 
     def _cache_key(self, tool_name: str, file_hash: FileHash) -> str:
-        """Generate cache key.
-
-        Args:
-            tool_name: Name of the tool
-            file_hash: File hash metadata
-
-        Returns:
-            Cache key string
-        """
         return f"{tool_name}:{file_hash.hash}"
 
     def _load_cache(self) -> None:
-        """Load cache from disk."""
         cache_file = self.cache_dir / "incremental_cache.json"
         if not cache_file.exists():
             return
@@ -133,7 +98,7 @@ class IncrementalExecutor:
             current_time = time.time()
 
             for entry_data in data.get("entries", []):
-                # Skip expired entries
+
                 if current_time - entry_data["timestamp"] > self.ttl_seconds:
                     continue
 
@@ -150,11 +115,10 @@ class IncrementalExecutor:
                 key = self._cache_key(entry.tool_name, file_hash)
                 self._cache[key] = entry
         except (json.JSONDecodeError, KeyError, OSError):
-            # Corrupted cache - start fresh
+
             self._cache = {}
 
     def _save_cache(self) -> None:
-        """Save cache to disk."""
         cache_file = self.cache_dir / "incremental_cache.json"
 
         data = {
@@ -186,17 +150,6 @@ class IncrementalExecutor:
         tool_func: Callable[[Path], Any],
         force_rerun: bool = False,
     ) -> ExecutionResult:
-        """Execute tool incrementally with caching.
-
-        Args:
-            tool_name: Name of the tool
-            files: List of files to process
-            tool_func: Function to execute on each file
-            force_rerun: Skip cache and rerun all files
-
-        Returns:
-            ExecutionResult with statistics
-        """
         import time
 
         start_time = time.perf_counter()
@@ -206,21 +159,21 @@ class IncrementalExecutor:
         results: dict[str, Any] = {}
 
         for file_path in files:
-            # Compute current hash
+
             current_hash = self._compute_file_hash(file_path)
             cache_key = self._cache_key(tool_name, current_hash)
 
-            # Check cache
+
             if not force_rerun and cache_key in self._cache:
                 cached_entry = self._cache[cache_key]
                 results[str(file_path)] = cached_entry.result
                 files_cached += 1
 
-                # Update profiler cache stats
+
                 if self.profiler and tool_name in self.profiler.results:
                     self.profiler.results[tool_name].cache_hits += 1
             else:
-                # Execute tool
+
                 try:
                     result = tool_func(file_path)
                     success = True
@@ -233,11 +186,11 @@ class IncrementalExecutor:
                 results[str(file_path)] = result
                 files_changed += 1
 
-                # Update profiler cache stats
+
                 if self.profiler and tool_name in self.profiler.results:
                     self.profiler.results[tool_name].cache_misses += 1
 
-                # Store in cache
+
                 entry = CacheEntry(
                     tool_name=tool_name,
                     file_hash=current_hash,
@@ -248,12 +201,12 @@ class IncrementalExecutor:
                 )
                 self._cache[cache_key] = entry
 
-        # Calculate statistics
+
         total_files = len(files)
         cache_hit_rate = (files_cached / total_files * 100) if total_files > 0 else 0.0
         execution_time = time.perf_counter() - start_time
 
-        # Save cache
+
         self._save_cache()
 
         return ExecutionResult(
@@ -271,40 +224,23 @@ class IncrementalExecutor:
         tool_name: str,
         files: list[Path],
     ) -> list[Path]:
-        """Get list of files that have changed since last execution.
-
-        Args:
-            tool_name: Name of the tool
-            files: List of files to check
-
-        Returns:
-            List of changed files
-        """
         changed_files: list[Path] = []
 
         for file_path in files:
             current_hash = self._compute_file_hash(file_path)
             cache_key = self._cache_key(tool_name, current_hash)
 
-            # If not in cache or hash differs, it's changed
+
             if cache_key not in self._cache:
                 changed_files.append(file_path)
 
         return changed_files
 
     def invalidate_file(self, file_path: Path) -> int:
-        """Invalidate all cache entries for a file.
-
-        Args:
-            file_path: Path to file
-
-        Returns:
-            Number of entries invalidated
-        """
         file_str = str(file_path)
         invalidated = 0
 
-        # Remove all cache entries for this file
+
         keys_to_remove = [
             key
             for key, entry in self._cache.items()
@@ -321,20 +257,12 @@ class IncrementalExecutor:
         return invalidated
 
     def clear_cache(self, tool_name: str | None = None) -> int:
-        """Clear cache entries.
-
-        Args:
-            tool_name: Optional tool name to clear (clears all if None)
-
-        Returns:
-            Number of entries cleared
-        """
         if tool_name is None:
-            # Clear all
+
             count = len(self._cache)
             self._cache = {}
         else:
-            # Clear specific tool
+
             keys_to_remove = [
                 key
                 for key, entry in self._cache.items()
@@ -350,11 +278,6 @@ class IncrementalExecutor:
         return count
 
     def get_cache_stats(self) -> dict[str, Any]:
-        """Get cache statistics.
-
-        Returns:
-            Dictionary with cache statistics
-        """
         total_entries = len(self._cache)
         tools = {entry.tool_name for entry in self._cache.values()}
         success_count = sum(1 for entry in self._cache.values() if entry.success)
@@ -369,11 +292,6 @@ class IncrementalExecutor:
         }
 
     def _estimate_cache_size(self) -> float:
-        """Estimate cache size in MB.
-
-        Returns:
-            Estimated size in megabytes
-        """
         cache_file = self.cache_dir / "incremental_cache.json"
         if cache_file.exists():
             return cache_file.stat().st_size / 1024 / 1024
