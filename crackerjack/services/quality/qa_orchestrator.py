@@ -2,9 +2,9 @@
 
 This service coordinates multiple QA adapters, handles parallel execution,
 caching, and result aggregation. It replaces the pre-commit hook orchestration
-with native ACB-based quality checks.
+with native adapter-based quality checks.
 
-ACB Patterns:
+Design notes:
 - Service implements QAOrchestratorProtocol from models.protocols
 - Async execution throughout
 - Proper error handling and logging
@@ -489,4 +489,4 @@ class QAOrchestrator:
         }
 
 
-# ACB DI registration removed
+# DI registration removed

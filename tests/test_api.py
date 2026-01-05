@@ -1,3 +1,5 @@
+import os
+
 import pytest
 from crackerjack.api import (
     run_quality_checks,
@@ -5,6 +7,20 @@ from crackerjack.api import (
     run_tests,
     publish_package,
 )
+
+
+pytestmark = [
+    pytest.mark.integration,
+    pytest.mark.slow,
+    pytest.mark.external,
+]
+
+
+if os.getenv("CRACKERJACK_API_INTEGRATION") != "1":
+    pytest.skip(
+        "API integration tests are opt-in (set CRACKERJACK_API_INTEGRATION=1).",
+        allow_module_level=True,
+    )
 
 
 def test_run_quality_checks_basic():

@@ -6,7 +6,7 @@ Crackerjack is an advanced AI-driven Python development platform that transforms
 
 ## Core Architecture
 
-The project is built on the **ACB (Asynchronous Component Base)** framework, providing:
+The project is built on the **legacy DI framework** framework, providing:
 
 - Advanced-grade dependency injection
 - Intelligent caching mechanisms
@@ -92,7 +92,7 @@ python -m crackerjack --start-mcp-server
 
 ### Architecture Patterns
 
-- ACB dependency injection with `@depends.inject` and `Inject[Protocol]`
+- dependency injection with `@depends.inject` and `Inject[Protocol]`
 - Asynchronous adapters for quality tools
 - Centralized configuration management
 - Type-safe protocols across components

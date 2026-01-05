@@ -3,8 +3,9 @@ import subprocess
 import time
 import typing as t
 from pathlib import Path
-from rich.console import Console
+
 from rich import box
+from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
@@ -63,7 +64,7 @@ class TestManager:
         self.executor = TestExecutor(console, self.pkg_path)
         self.command_builder = command_builder
 
-        # Services injected via ACB DI
+        # Services injected via legacy DI
         self.coverage_ratchet = coverage_ratchet
         self._coverage_badge_service = coverage_badge
         self._lsp_client = lsp_client
@@ -418,8 +419,6 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        self.console.print(f"[red]❌[/red] Tests failed in {duration:.1f}s")
-
         # Parse and display test statistics panel (use stdout for stats)
         combined_output = stdout + "\n" + stderr
         clean_output = self._strip_ansi_codes(combined_output)
@@ -438,18 +437,10 @@ class TestManager:
                 self._render_banner("Key Test Failures", line_style="red")
 
                 for failure in failure_lines:
-                    self.console.print(f"[red]• {failure}[/red]")
+                    # Use plain print() for proper wrapping
+                    print(f"• {failure}")
             else:
                 self._last_test_failures = []
-
-            # Enhanced error reporting in verbose mode
-            if options.verbose or getattr(options, "ai_debug", False):
-                self._render_banner(
-                    "Full Test Output (Enhanced)",
-                    line_style="red",
-                )
-                # Use Rich-formatted output instead of raw dump
-                self._render_formatted_output(clean_output, options, already_clean=True)
         else:
             # Show some information even when there's no output
             border_line = "-" * getattr(options, "column_width", 70)
@@ -474,6 +465,11 @@ class TestManager:
             )
             self.console.print(border_line)
             self._last_test_failures = []
+
+        # Enhanced error reporting (detailed sections) only in verbose or debug mode
+        if (options.verbose or getattr(options, "ai_debug", False)) and clean_output.strip():
+            # Use Rich-formatted output instead of raw dump
+            self._render_formatted_output(clean_output, options, already_clean=True)
 
         return False
 
@@ -924,14 +920,60 @@ class TestManager:
         )
 
     def _extract_failure_lines(self, output: str) -> list[str]:
+        """Extract failed test names from pytest output.
+
+        Looks for the 'short test summary' section which has the cleanest format:
+        FAILED tests/test_file.py::TestClass::test_method - Error message
+
+        Returns:
+            List of failed test names (up to 10)
+        """
+        import re
+
         failures = []
+
+        # Look for short summary section (most reliable source)
+        in_summary = False
         lines = output.split("\n")
 
         for line in lines:
-            if any(
-                keyword in line for keyword in ("FAILED", "ERROR", "AssertionError")
-            ):
-                failures.append(line.strip())
+            # Start of short summary section
+            if "short test summary" in line.lower():
+                in_summary = True
+                continue
+
+            # End of summary section
+            if in_summary and line.strip().startswith("="):
+                break
+
+            # Extract FAILED lines from summary
+            if in_summary and line.strip().startswith("FAILED"):
+                # Extract test name from: "FAILED tests/test_foo.py::TestClass::test_method - Error"
+                # Match everything after "FAILED" and before " - "
+                match = re.search(r"FAILED\s+(.+?)\s+-", line)
+                if match:
+                    test_name = match.group(1).strip()
+                    failures.append(test_name)
+                elif "FAILED" in line:
+                    # Fallback: just take the line after FAILED
+                    parts = line.split("FAILED", 1)
+                    if len(parts) > 1:
+                        test_name = parts[1].strip().split(" - ")[0].strip()
+                        if test_name:
+                            failures.append(test_name)
+
+        # If no failures found in summary, try searching entire output
+        if not failures:
+            for line in lines:
+                if "::" in line and "FAILED" in line.upper():
+                    # Extract test path
+                    test_match = re.search(r'([a-zA-Z_/]+::.*?)(?:\s+|$)', line)
+                    if test_match:
+                        test_name = test_match.group(1).strip()
+                        if test_name and test_name not in failures:
+                            failures.append(test_name)
+                            if len(failures) >= 10:
+                                break
 
         return failures[:10]
 
@@ -1052,27 +1094,32 @@ class TestManager:
             output: Raw pytest output text
             options: Test options (for verbosity level)
         """
-        from rich.panel import Panel
 
         clean_output = output if already_clean else self._strip_ansi_codes(output)
 
         # Try structured parsing first (Phase 2)
-        if self._try_structured_rendering(clean_output):
+        if self._try_structured_rendering(clean_output, options):
             return
 
         # Fallback to Phase 1 rendering if parsing fails
         self._render_fallback_sections(clean_output, options)
 
-    def _try_structured_rendering(self, clean_output: str) -> bool:
+    def _try_structured_rendering(self, clean_output: str, options: OptionsProtocol) -> bool:
         """Try to render output using structured failure parser.
+
+        Args:
+            clean_output: Cleaned pytest output
+            options: Test options (for verbosity level)
 
         Returns:
             True if structured rendering succeeded, False otherwise
         """
         try:
             failures = self._extract_structured_failures(clean_output)
+            # Even if initially empty, enrichment may have populated the list
+            # So check the list AFTER extraction completes
             if failures:
-                self._render_structured_failures_with_summary(clean_output, failures)
+                self._render_structured_failures_with_summary(clean_output, failures, options)
                 return True
             return False
         except Exception as e:
@@ -1080,34 +1127,33 @@ class TestManager:
             return False
 
     def _render_structured_failures_with_summary(
-        self, clean_output: str, failures: list["TestFailure"]
+        self, clean_output: str, failures: list["TestFailure"], options: OptionsProtocol
     ) -> None:
-        """Render structured failures with summary section."""
-        from rich.panel import Panel
+        """Render structured failures with summary section.
 
-        self._render_banner(
-            "Detailed Failure Analysis",
-            line_style="red",
-            char="═",
-        )
+        Args:
+            clean_output: Cleaned pytest output
+            failures: List of TestFailure objects
+            options: Test options (for verbosity level)
+        """
+        # Categorize failures by status
+        failed_tests = [f for f in failures if f.status == "FAILED"]
+        error_tests = [f for f in failures if f.status == "ERROR"]
+        skipped_tests = [f for f in failures if f.status == "SKIPPED"]
 
-        self._render_structured_failure_panels(failures)
+        # Always render failures if any
+        if failed_tests:
+            self._render_structured_failure_panels(failed_tests)
 
-        # Show summary section
-        sections = self._split_output_sections(clean_output)
-        for section_type, section_content in sections:
-            if section_type == "summary":
-                panel = Panel(
-                    section_content.strip(),
-                    title="[bold yellow]📋 Test Summary[/bold yellow]",
-                    border_style="yellow",
-                    width=get_console_width(),
-                )
-                self.console.print(panel)
-            elif section_type == "footer":
-                self.console.print(
-                    f"\n[cyan]{section_content.strip()}[/cyan]\n"
-                )
+        # Render errors only in verbose or debug mode
+        is_verbose = getattr(options, "verbose", False)
+        is_debug = getattr(options, "ai_debug", False)
+        if error_tests and (is_verbose or is_debug):
+            self._render_structured_failure_panels(error_tests)
+
+        # Render skipped only in debug mode
+        if skipped_tests and is_debug:
+            self._render_structured_failure_panels(skipped_tests)
 
     def _render_parsing_error_message(self, error: Exception) -> None:
         """Render error message when structured parsing fails."""
@@ -1182,12 +1228,34 @@ class TestManager:
 
         from crackerjack.models.test_models import TestFailure
 
-        failure_match = re.match(r"^(.+?)\s+(FAILED|ERROR)\s*(?:\[(.+?)\])?", line)
+        # Match format: "test_path STATUS [whitespace] [progress%]"
+        # Progress markers like "[ 14%]" should be stripped from test name
+        # Status can be: FAILED, ERROR, SKIPPED, SKIP
+        failure_match = re.match(r"^(.+?)\s+(FAILED|ERROR|SKIPPED|SKIP)", line)
         if failure_match:
-            test_path, status, params = failure_match.groups()
+            test_path, status = failure_match.groups()
+            # Strip progress markers like "[ 14%]" from end of test path
+            test_path = re.sub(r"\s*\[[\s\d]+%\]$", "", test_path).strip()
+
+            # Skip pytest-xdist worker markers and other garbage
+            # Real test paths contain "::" or ".py::" or ".py:" at minimum
+            if not (
+                "::" in test_path
+                or ".py::" in test_path
+                or ".py:" in test_path
+                or "/" in test_path
+                or "\\" in test_path
+            ):
+                # This is likely garbage output like "[gw0]" - skip it
+                # The real test names will come from the short test summary
+                return current_failure, False
+
+            # Normalize SKIP to SKIPPED
+            normalized_status = "SKIPPED" if status == "SKIP" else status
+
             new_failure = TestFailure(
-                test_name=test_path + (f"[{params}]" if params else ""),
-                status=status,
+                test_name=test_path,
+                status=normalized_status,
                 location=test_path,
             )
             return new_failure, True
@@ -1263,11 +1331,20 @@ class TestManager:
         """Extract structured failure information from pytest output.
 
         This parser handles pytest's standard output format and extracts:
-        - Test names and locations
+        - Test names and locations (from short test summary)
         - Full tracebacks
         - Assertion errors
         - Captured output (stdout/stderr)
         - Duration (if available)
+
+        IMPORTANT: With pytest-xdist, test names are ONLY reliably available in the
+        short test summary section at the end. Individual failure sections may have
+        inconsistent formatting (progress indicators, underlined headers, etc.).
+
+        Strategy:
+        1. Parse short test summary to get ALL test names and error messages
+        2. Parse individual failure sections for tracebacks and captured output
+        3. Merge by matching test names
 
         Args:
             output: Raw pytest output text
@@ -1275,7 +1352,9 @@ class TestManager:
         Returns:
             List of TestFailure objects
         """
-        failures = []
+        from crackerjack.models.test_models import TestFailure
+
+        failures: list["TestFailure"] = []
         lines = output.split("\n")
 
         current_failure = None
@@ -1287,6 +1366,11 @@ class TestManager:
             result = self._parse_failure_line(
                 line, lines, i, current_failure, in_traceback, in_captured, capture_type
             )
+
+            # Stop parsing if we hit short summary section
+            # This prevents assertion accumulation during initial parsing
+            if result.get("stop_parsing"):
+                break
 
             # Handle state updates from parsing
             if result.get("new_failure"):
@@ -1308,7 +1392,194 @@ class TestManager:
         if current_failure:
             failures.append(current_failure)
 
+        # CRITICAL: Parse short test summary to populate test names
+        # This ensures all TestFailure objects have correct test_name field
+        self._enrich_failures_from_short_summary(failures, output)
+
         return failures
+
+    def _enrich_failures_from_short_summary(
+        self, failures: list["TestFailure"], output: str
+    ) -> None:
+        """Parse short summary section to enrich/create failure objects with test names and assertion errors.
+
+        The short summary section appears at the end of pytest output and contains
+        one-line summaries of each failure with the assertion error message.
+
+        Format: "FAILED test_path - AssertionError: message"
+
+        This method:
+        1. Creates TestFailure objects if none exist (when individual parsing failed)
+        2. Populates test_name if it's empty or a placeholder
+        3. Adds assertion error messages from the summary
+
+        Args:
+            failures: List of TestFailure objects to enrich or populate
+            output: Full pytest output containing short summary section
+        """
+        import re
+
+        from crackerjack.models.test_models import TestFailure
+
+        # Find short summary section
+        lines = output.split("\n")
+        in_summary = False
+        summary_failures: list[dict[str, str]] = []
+
+        # First pass: collect all failures from summary with their order
+        for line in lines:
+            # Detect start of short summary section
+            if "short test summary" in line.lower():
+                in_summary = True
+                continue
+
+            # Exit when we hit the footer
+            if in_summary and line.startswith("="):
+                break
+
+            # Parse FAILED lines in summary section
+            if in_summary and line.strip().startswith("FAILED"):
+                # Format: "FAILED test_path - error_message"
+                # Note: error message may be truncated with "..." at the end
+                match = re.match(r"^FAILED\s+(.+?)\s+-\s+(.+)$", line.strip())
+                if match:
+                    test_path, error_message = match.groups()
+                    # Remove trailing "..." if present
+                    error_message = re.sub(r'\.\.\.$', '', error_message).strip()
+                    summary_failures.append(
+                        {"test_path": test_path, "error_message": error_message}
+                    )
+                else:
+                    # Try alternative pattern for truncated/missing error messages
+                    match2 = re.search(r"FAILED\s+(.+?)\s+-", line.strip())
+                    if match2:
+                        test_path = match2.group(1)
+                        error_msg = "Error: see full output above"
+                        summary_failures.append(
+                            {"test_path": test_path, "error_message": error_msg}
+                        )
+
+        # If no failures were parsed from individual sections, create them from summary
+        if not failures and summary_failures:
+            for summary_failure in summary_failures:
+                error_message = summary_failure["error_message"]
+                # Determine status based on exception type
+                # AssertionError → FAILED, other exceptions → ERROR
+                # In pytest short summary:
+                #   - Assertion errors show as: "assert 1 == 2" (no prefix)
+                #   - Other errors show as: "TypeError: message", "KeyError: message", etc.
+                if any(
+                    error_message.startswith(f"{error_type}:")
+                    for error_type in [
+                        "TypeError",
+                        "KeyError",
+                        "AttributeError",
+                        "IndexError",
+                        "ValueError",
+                        "RuntimeError",
+                        "NameError",
+                        "ImportError",
+                        "FileNotFoundError",
+                        "UnboundLocalError",
+                    ]
+                ):
+                    status = "ERROR"
+                else:
+                    status = "FAILED"
+
+                failures.append(
+                    TestFailure(
+                        test_name=summary_failure["test_path"],
+                        status=status,
+                        location=summary_failure["test_path"],
+                        assertion=error_message,
+                    )
+                )
+            return
+
+        # Second pass: match summary failures to parsed failure objects
+        for i, summary_failure in enumerate(summary_failures):
+            test_path = summary_failure["test_path"]
+            error_message = summary_failure["error_message"]
+
+            # Determine status based on exception type
+            # Assertion errors show as: "assert 1 == 2" (no prefix)
+            # Other errors show as: "TypeError: message", "KeyError: message", etc.
+            if any(
+                error_message.startswith(f"{error_type}:")
+                for error_type in [
+                    "TypeError",
+                    "KeyError",
+                    "AttributeError",
+                    "IndexError",
+                    "ValueError",
+                    "RuntimeError",
+                    "NameError",
+                    "ImportError",
+                    "FileNotFoundError",
+                    "UnboundLocalError",
+                ]
+            ):
+                status = "ERROR"
+            else:
+                status = "FAILED"
+
+            # Try to find a matching failure object by test_name
+            matched = False
+            for failure in failures:
+                if failure.test_name == test_path:
+                    # Found exact match - add assertion if missing and update status
+                    if not failure.assertion:
+                        failure.assertion = error_message
+                    failure.status = status
+                    matched = True
+                    break
+
+            # If no exact match, try to find a failure with empty/placeholder test_name
+            if not matched:
+                for failure in failures:
+                    if not failure.test_name or failure.test_name in (
+                        "",
+                        "unknown",
+                        "N/A",
+                    ):
+                        # Populate the missing test name and set status
+                        failure.test_name = test_path
+                        if not failure.assertion:
+                            failure.assertion = error_message
+                        failure.status = status
+                        matched = True
+                        break
+
+        # Final pass: if we still have failures without test names, assign them by position
+        # This handles cases where the number of failures matches but names couldn't be correlated
+        unnamed_failures = [f for f in failures if not f.test_name or f.test_name in ("", "unknown", "N/A")]
+        if unnamed_failures and len(unnamed_failures) <= len(summary_failures):
+            for i, failure in enumerate(unnamed_failures):
+                if i < len(summary_failures):
+                    failure.test_name = summary_failures[i]["test_path"]
+                    error_message = summary_failures[i]["error_message"]
+                    if not failure.assertion:
+                        failure.assertion = error_message
+                    # Update status based on exception type
+                    if any(
+                        error_message.startswith(f"{error_type}:")
+                        for error_type in [
+                            "TypeError",
+                            "KeyError",
+                            "AttributeError",
+                            "IndexError",
+                            "ValueError",
+                            "RuntimeError",
+                            "NameError",
+                            "ImportError",
+                            "FileNotFoundError",
+                            "UnboundLocalError",
+                        ]
+                    ):
+                        failure.status = "ERROR"
+                    else:
+                        failure.status = "FAILED"
 
     def _parse_failure_line(
         self,
@@ -1329,8 +1600,15 @@ class TestManager:
             - in_traceback: bool if currently in traceback
             - in_captured: bool if currently in captured output
             - capture_type: str if capture type changed
+            - stop_parsing: bool if we should stop parsing (e.g., hit short summary)
         """
         result: dict[str, t.Any] = {}
+
+        # Stop parsing when we hit the short summary section
+        # This section will be handled separately by enrichment
+        if "short test summary" in line.lower():
+            result["stop_parsing"] = True
+            return result
 
         # Check for new failure header
         new_failure, header_found = self._parse_failure_header(line, current_failure)
@@ -1371,34 +1649,83 @@ class TestManager:
         return result
 
     def _render_structured_failure_panels(self, failures: list["TestFailure"]) -> None:
-        """Render failures as Rich panels with tables and syntax highlighting.
+        """Render failures in a simplified, clear format.
 
-        Each failure is rendered in a panel containing:
-        - Summary table (test name, location, status)
-        - Assertion details (if present)
-        - Syntax-highlighted traceback
-        - Captured output (if any)
+        Shows essential information without complex parsing:
+        - Test names and locations
+        - Failure reasons
+        - First few lines of tracebacks
 
         Args:
             failures: List of TestFailure objects
         """
-        from rich import box
-        from rich.console import Group
-        from rich.panel import Panel
-        from rich.syntax import Syntax
-        from rich.table import Table
 
         if not failures:
             return
 
-        # Group failures by file for better organization
-        failures_by_file = self._group_failures_by_file(failures)
+        # Determine title and styling based on first failure's status
+        # (all failures in list should have same status due to categorization)
+        first_status = failures[0].status
+        if first_status == "FAILED":
+            title = f"❌ Failed Tests ({len(failures)} total)"
+            style = "red"
+        elif first_status == "ERROR":
+            title = f"💥 Errored Tests ({len(failures)} total)"
+            style = "bright_red"
+        elif first_status == "SKIPPED":
+            title = f"⏭ Skipped Tests ({len(failures)} total)"
+            style = "yellow"
+        else:
+            title = f"❓ Test Issues ({len(failures)} total)"
+            style = "white"
 
-        # Render each file group
-        for file_path, file_failures in failures_by_file.items():
-            self._render_file_failure_header(file_path, file_failures)
-            for i, failure in enumerate(file_failures, 1):
-                self._render_single_failure_panel(failure, i, len(file_failures))
+        # Print header
+        console_width = get_console_width()
+        self.console.print()
+        self.console.print(f"[bold {style}]{'━' * console_width}[/bold {style}]")
+        self.console.print(f"[bold {style}]{title}[/bold {style}]")
+        self.console.print(f"[bold {style}]{'━' * console_width}[/bold {style}]")
+        self.console.print()
+
+        # Print each failure directly without Panel wrapping
+        for failure in failures:
+            # Use plain print() to avoid Rich markup parsing and wrapping issues
+            print(f"• {failure.test_name}")
+
+            if failure.location and failure.location != failure.test_name:
+                print(f"   → {failure.location}")
+            print(f"   Status: {failure.status}")
+            if failure.short_summary:
+                print(f"   {failure.short_summary}")
+            elif failure.assertion:
+                first_line = failure.assertion.split("\n")[0]
+                print(f"   {first_line}")
+            print()
+
+    def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
+        """Build a simple text list of failures."""
+        lines = []
+
+        for i, failure in enumerate(failures, 1):
+            # Test name and location - inline format
+            lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
+            if failure.location and failure.location != failure.test_name:
+                lines.append(f"[dim]   → {failure.location}[/dim]")
+
+            # Status
+            lines.append(f"[red]   Status: {failure.status}[/red]")
+
+            # Short summary or first line of assertion
+            if failure.short_summary:
+                lines.append(f"[yellow]   {failure.short_summary}[/yellow]")
+            elif failure.assertion:
+                # Just show first line, truncate if too long
+                first_line = failure.assertion.split("\n")[0]
+                if len(first_line) > 100:
+                    first_line = first_line[:97] + "..."
+                lines.append(f"[yellow]   {first_line}[/yellow]")
+
+        return "\n".join(lines)
 
     def _group_failures_by_file(
         self, failures: list["TestFailure"]
@@ -1426,10 +1753,6 @@ class TestManager:
         """Render a single failure panel with all details."""
         from rich.console import Group
         from rich.panel import Panel
-        from rich.syntax import Syntax
-        from rich.table import Table
-
-        from rich import box
 
         # Create details table
         table = self._create_failure_details_table(failure)
@@ -1450,9 +1773,8 @@ class TestManager:
 
     def _create_failure_details_table(self, failure: "TestFailure") -> "Table":
         """Create summary table for failure details."""
-        from rich.table import Table
-
         from rich import box
+        from rich.table import Table
 
         table = Table(
             show_header=False,

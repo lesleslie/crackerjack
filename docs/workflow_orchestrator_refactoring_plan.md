@@ -2,16 +2,16 @@
 
 ## Problem
 
-The `_setup_acb_services` method in `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py` has a complexity of 32, exceeding the project's maximum of 15.
+The `_setup_legacy_services` method in `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py` has a complexity of 32, exceeding the project's maximum of 15.
 
 ## Current State Analysis
 
-**Method**: `WorkflowOrchestrator._setup_acb_services()`
+**Method**: `WorkflowOrchestrator._setup_legacy_services()`
 
 - **Lines**: 142 lines (lines 2642-2783)
 - **Complexity**: 32
 - **Issues**:
-  - Single monolithic method handling all ACB service registration
+  - Single monolithic method handling all legacy service registration
   - Multiple import blocks throughout the method
   - Mixed concerns: filesystem, git, hooks, testing, publishing, security, monitoring, events
   - No logical grouping of related services
@@ -20,11 +20,11 @@ The `_setup_acb_services` method in `/Users/les/Projects/crackerjack/crackerjack
 
 ### 1. Extract Helper Methods by Service Category
 
-Break down `_setup_acb_services` into focused helper methods:
+Break down `_setup_legacy_services` into focused helper methods:
 
 ```python
-def _setup_acb_services(self) -> None:
-    """Setup all services using ACB dependency injection."""
+def _setup_legacy_services(self) -> None:
+    """Setup all services using dependency injection."""
     self._register_core_services()
     self._register_filesystem_and_git_services()
     self._register_manager_services()
@@ -101,7 +101,7 @@ def _setup_acb_services(self) -> None:
 
 | Method | Current | Target |
 |--------|---------|--------|
-| `_setup_acb_services` | 32 | ≤10 |
+| `_setup_legacy_services` | 32 | ≤10 |
 | `_register_core_services` | - | ≤5 |
 | `_register_filesystem_and_git_services` | - | ≤3 |
 | `_register_manager_services` | - | ≤4 |
@@ -123,7 +123,7 @@ def _setup_acb_services(self) -> None:
 ## Preservation Requirements
 
 1. **Functionality**: No changes to service behavior or registration
-1. **Dependencies**: All ACB DI patterns remain intact
+1. **Dependencies**: All DI patterns remain intact
 1. **Order**: Maintain service registration order (dependencies matter)
 1. **Async**: Keep async/await patterns unchanged
 1. **Error Handling**: Preserve existing error handling behavior

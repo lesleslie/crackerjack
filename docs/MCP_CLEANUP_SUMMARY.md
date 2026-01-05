@@ -12,7 +12,7 @@ ______________________________________________________________________
 **16 project-specific `.mcp.json` files removed**:
 
 ```bash
-✅ /Users/les/Projects/acb/.mcp.json
+✅ /Users/les/Projects/legacy/.mcp.json
 ✅ /Users/les/Projects/crackerjack/.mcp.json
 ✅ /Users/les/Projects/excalidraw-mcp/.mcp.json
 ✅ /Users/les/Projects/fastblocks/.mcp.json

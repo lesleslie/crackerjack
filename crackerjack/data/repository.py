@@ -165,17 +165,18 @@ class HealthMetricsRepository:
 
     async def upsert(
         self,
-        project_root: str,
+        project_name: str,
         data: dict[str, Any],
     ) -> ProjectHealthRecord:
+        data = {"project_name": project_name, **data}
         result = await self.query.for_model(
             ProjectHealthRecord
-        ).simple.create_or_update(data, "project_root")
+        ).simple.create_or_update(data, "project_name")
         return t.cast(ProjectHealthRecord, result)
 
-    async def get(self, project_root: str) -> ProjectHealthRecord | None:
+    async def get(self, project_name: str) -> ProjectHealthRecord | None:
         result = await self.query.for_model(ProjectHealthRecord).simple.find(
-            project_root=project_root
+            project_name=project_name
         )
         return t.cast(ProjectHealthRecord | None, result)
 

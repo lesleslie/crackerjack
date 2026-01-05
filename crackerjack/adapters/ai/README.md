@@ -2,12 +2,12 @@
 
 # AI Adapter
 
-Claude-powered code fixing and AI helpers following ACB adapter patterns. The built-in adapter focuses on safe, validated code fixes using Anthropic’s Claude models.
+Claude-powered code fixing and AI helpers following adapter patterns. The built-in adapter focuses on safe, validated code fixes using Anthropic’s Claude models.
 
 ## Overview
 
 - Secure AI integration: validates generated code (regex + AST), sanitizes errors, enforces file-size and key format limits
-- ACB-style initialization: async `init()`, typed settings, metadata, and DI via `depends`
+- legacy-style initialization: async `init()`, typed settings, metadata, and DI via `depends`
 - Designed to fit end-to-end QA flows and orchestrations
 
 ## Built-in Implementation
@@ -33,7 +33,7 @@ Values are typically sourced from `Config` via `depends.get(Config)` during `ini
 ## Basic Usage
 
 ```python
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.adapters.ai.claude import ClaudeCodeFixer
 
 

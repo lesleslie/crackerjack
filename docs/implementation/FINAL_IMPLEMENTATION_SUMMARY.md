@@ -171,10 +171,10 @@ tests/unit/orchestration/test_issue_count_fix.py::TestIssueCountEdgeCases::test_
 
 ### Integration Testing
 
-Run in ../acb project to verify:
+Run in ../legacy project to verify:
 
 ```bash
-cd /Users/les/Projects/acb
+cd /Users/les/Projects/legacy
 python -m crackerjack run
 ```
 
@@ -214,7 +214,7 @@ Expected results:
 
 1. ✅ **Fix Applied** - All code changes complete
 1. ✅ **Tests Passing** - All 9 unit tests pass
-1. ⏳ **User Verification** - Test in ../acb to confirm fix works
+1. ⏳ **User Verification** - Test in ../legacy to confirm fix works
 1. ⏳ **Complexipy Investigation** - If complexipy still shows issues, investigate further
 
 ## Summary

@@ -217,7 +217,7 @@ For tools with LSP support:
 
 import sys
 from pathlib import Path
-from acb.console import Console
+from legacy.console import Console
 from crackerjack.services.lsp_client import LSPClient
 
 
@@ -270,7 +270,7 @@ repos:
 
 ```python
 from crackerjack.executors import HookExecutor
-from acb.depends import depends
+from legacy.depends import depends
 
 executor = depends.get(HookExecutor)
 
@@ -311,7 +311,7 @@ result = await executor.execute_hooks_on_files(
 
 ## Configuration
 
-Hooks are configured through ACB Settings:
+Hooks are configured through settings:
 
 ```yaml
 # settings/crackerjack.yaml

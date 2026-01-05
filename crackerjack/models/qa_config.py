@@ -1,4 +1,4 @@
-"""Configuration models for ACB Quality Assurance framework."""
+"""Configuration models for the quality assurance framework."""
 
 from __future__ import annotations
 

@@ -2,7 +2,7 @@
 
 ## Problem
 
-The ACB and session-mgmt-mcp projects were failing with `[Errno 7] Argument list too long` errors for multiple hooks (ruff-format, ruff-check, codespell, complexipy), while crackerjack itself ran successfully.
+The legacy and session-mgmt-mcp projects were failing with `[Errno 7] Argument list too long` errors for multiple hooks (ruff-format, ruff-check, codespell, complexipy), while crackerjack itself ran successfully.
 
 **Example Error**:
 
@@ -22,7 +22,7 @@ Details for failing hooks:
 
 ### File Count Investigation
 
-**ACB Project**:
+**legacy Project**:
 
 - Total .py files found: **26,254**
 - Files in standard exclude directories: **25,800**
@@ -58,7 +58,7 @@ Details for failing hooks:
 
    - Crackerjack has explicit `exclude_patterns` in its hook configurations
    - These patterns happened to exclude most problematic directories
-   - ACB/session-mgmt-mcp relied on defaults, which had empty `exclude_patterns`
+   - legacy/session-mgmt-mcp relied on defaults, which had empty `exclude_patterns`
 
 ### The Problematic Code
 
@@ -178,7 +178,7 @@ async def _get_target_files(
 
 ## Expected Behavior After Fix
 
-### Before (ACB Project)
+### Before (legacy Project)
 
 **Fast Hooks**:
 
@@ -212,7 +212,7 @@ Details for failing hooks:
       - Tool execution failed: [Errno 7] Argument list too long
 ```
 
-### After (ACB Project)
+### After (legacy Project)
 
 **Fast Hooks**:
 
@@ -269,12 +269,12 @@ Comprehensive Hook Results:
 
 ## File Count Reduction
 
-**ACB Project - Before Fix**:
+**legacy Project - Before Fix**:
 
 - Files passed to tools: **26,254** (including .venv, __pycache__, etc.)
 - Command line arguments: **~26,254 × 50 chars = 1,312,700 bytes** (exceeds ARG_MAX)
 
-**ACB Project - After Fix**:
+**legacy Project - After Fix**:
 
 - Files passed to tools: **~454** (only legitimate source files)
 - Command line arguments: **~454 × 50 chars = 22,700 bytes** (well within ARG_MAX)
@@ -286,12 +286,12 @@ Comprehensive Hook Results:
 ### 1. Reliability
 
 - ✅ No more `[Errno 7]` errors regardless of project size
-- ✅ Works consistently across projects (crackerjack, ACB, session-mgmt-mcp)
+- ✅ Works consistently across projects (crackerjack, legacy, session-mgmt-mcp)
 - ✅ Prevents system limit issues
 
 ### 2. Performance
 
-- ✅ 98% reduction in files scanned for ACB
+- ✅ 98% reduction in files scanned for legacy
 - ✅ Faster tool execution (less overhead)
 - ✅ Reduced memory usage
 
@@ -313,10 +313,10 @@ Comprehensive Hook Results:
 
 ### Manual Verification
 
-**ACB Project**:
+**legacy Project**:
 
 ```bash
-cd /Users/les/Projects/acb
+cd /Users/les/Projects/legacy
 python -m crackerjack run
 ```
 
@@ -364,7 +364,7 @@ The fix is:
 - ✅ **Minimal**: Only 1 file changed, ~20 lines added
 - ✅ **Safe**: Backward compatible, follows industry standards
 - ✅ **Effective**: 98% reduction in files scanned for large projects
-- ✅ **Universal**: Works across all projects (crackerjack, ACB, session-mgmt-mcp)
+- ✅ **Universal**: Works across all projects (crackerjack, legacy, session-mgmt-mcp)
 - ✅ **Production-ready**: No breaking changes, existing tests pass
 
 All five fixes work together to provide a complete, accurate, and robust hook execution system.

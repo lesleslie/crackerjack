@@ -1,7 +1,7 @@
 """Tests for Zuban type checking adapter.
 
 Zuban is a Rust-based ultra-fast Python type checker (20-200x faster than pyright).
-These tests validate the ACB adapter integration and type checking functionality.
+These tests validate adapter integration and type checking functionality.
 """
 
 import json

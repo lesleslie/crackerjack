@@ -26,7 +26,7 @@ ______________________________________________________________________
 | Project | Primary Purpose | Config Files Found | Consolidation Opportunity |
 |---------|----------------|-------------------|---------------------------|
 | **crackerjack** | Python dev tool | 5 files | ✅ High (mypy.ini, simplify pyproject.toml) |
-| **acb** | Async Component Base | 4+ files | ✅ High (mypy.ini) |
+| **legacy** | Async Component Base | 4+ files | ✅ High (mypy.ini) |
 | **session-mgmt-mcp** | MCP session mgmt | 7+ files | ✅ **HIGHEST** (mypy.ini, .semgrep.yml, complexipy.json, ignore files) |
 | **fastblocks** | HTMX web framework | 5+ files | ✅ High (mypy.ini, complexipy.json) |
 | **starlette-async-jinja** | Jinja integration | 4+ files | ✅ Medium (mypy.ini) |
@@ -55,7 +55,7 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
-### 2. acb (Async Component Base)
+### 2. legacy (Async Component Base)
 
 **Config Files Found:**
 
@@ -79,7 +79,7 @@ disallow_untyped_defs = true
 incremental = true
 cache_dir = .mypy_cache
 
-exclude = tests/.*|test_.*\.py|.*_test\.py|acb/mcp/.*|acb/events/.*|acb/testing/.*
+exclude = tests/.*|test_.*\.py|.*_test\.py|legacy/mcp/.*|legacy/events/.*|legacy/testing/.*
 ```
 
 **Consolidation Opportunity:**
@@ -102,9 +102,9 @@ module = [
     "tests.*",
     "test_*",
     "*_test",
-    "acb.mcp.*",
-    "acb.events.*",
-    "acb.testing.*",
+    "legacy.mcp.*",
+    "legacy.events.*",
+    "legacy.testing.*",
 ]
 ignore_errors = true
 ```
@@ -113,7 +113,7 @@ ignore_errors = true
 
 - [ ] Move mypy.ini content to pyproject.toml
 - [ ] Update any CI/CD scripts that reference mypy.ini
-- [ ] Test mypy still works: `uv run mypy acb/`
+- [ ] Test mypy still works: `uv run mypy legacy/`
 - [ ] Delete mypy.ini
 
 **Lines Saved:** ~18 lines, 1 file eliminated
@@ -416,7 +416,7 @@ ignore_errors = true
 # migrate_mypy_configs.sh
 
 PROJECTS=(
-    "acb"
+    "legacy"
     "session-mgmt-mcp"
     "fastblocks"
     "starlette-async-jinja"
@@ -531,9 +531,9 @@ ______________________________________________________________________
 1. Test thoroughly
 1. Document lessons learned
 
-### Phase 2: ACB (Week 2)
+### Phase 2: legacy (Week 2)
 
-**Target:** acb (critical dependency for other projects)
+**Target:** legacy (critical dependency for other projects)
 
 1. Apply mypy.ini consolidation
 1. Test with all dependent projects
@@ -761,7 +761,7 @@ ______________________________________________________________________
 | Project | Config Files | Total Lines |
 |---------|-------------|-------------|
 | crackerjack | 5 | ~500 |
-| acb | 4+ | ~150 |
+| legacy | 4+ | ~150 |
 | session-mgmt-mcp | 7+ | ~200 |
 | fastblocks | 5+ | ~150 |
 | starlette-async-jinja | 4+ | ~120 |
@@ -773,7 +773,7 @@ ______________________________________________________________________
 | Project | Config Files | Total Lines | Savings |
 |---------|-------------|-------------|---------|
 | crackerjack | 4 | ~420 | -80 lines, -1 file |
-| acb | 3 | ~140 | -10 lines, -1 file |
+| legacy | 3 | ~140 | -10 lines, -1 file |
 | session-mgmt-mcp | 4 | ~150 | -50 lines, -3 files |
 | fastblocks | 4 | ~140 | -10 lines, -1 file |
 | starlette-async-jinja | 3 | ~110 | -10 lines, -1 file |
@@ -795,7 +795,7 @@ ______________________________________________________________________
 1. **Review this audit** with the team
 1. **Approve consolidation plan**
 1. **Start with crackerjack** (Phase 1 - already in progress)
-1. **Roll out to ACB** (Phase 2 - affects all other projects)
+1. **Roll out to legacy** (Phase 2 - affects all other projects)
 1. **Batch migrate remaining projects** (Phases 3-4)
 1. **Create shared templates** (Phase 5)
 1. **Add CI validation** to prevent regression

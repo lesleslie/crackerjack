@@ -2,20 +2,20 @@
 
 ## Summary
 
-**🎉 MIGRATION COMPLETE** - Crackerjack has successfully completed the full migration from ACB to Oneiric + mcp-common architecture.
+**🎉 MIGRATION COMPLETE** - Crackerjack has successfully completed the full migration from legacy to Oneiric + mcp-common architecture.
 
-- **Phase 5**: Final ACB Cleanup ✅ (Completed Dec 28, 2024)
+- **Phase 5**: Final legacy Cleanup ✅ (Completed Dec 28, 2024)
 - **Phase 6**: Oneiric/mcp-common Completion ✅ (Completed Dec 28, 2024)
 - **Phase 7**: Validation & Documentation ✅ (Completed Dec 28, 2024)
 
 ## Objectives Achieved
 
-### ✅ Zero ACB Dependencies Remaining
+### ✅ Zero legacy Dependencies Remaining
 
-- **0 ACB imports** in production Python code
-- **0 ACB dependencies** in pyproject.toml
-- **Backup files removed**: `__main___acb_backup.py` deleted
-- **ACB comments cleaned**: Updated to reflect modern architecture
+- **0 legacy imports** in production Python code
+- **0 legacy dependencies** in pyproject.toml
+- **Backup files removed**: `__main___legacy_backup.py` deleted
+- **legacy comments cleaned**: Updated to reflect modern architecture
 
 ### ✅ All Workflow Type Hints Restored
 
@@ -28,13 +28,13 @@
 - **YAGNI Principle Applied**: Removed unused query adapter infrastructure
 - Updated `data/__init__.py` to reflect in-memory storage pattern
 - Simplified `quality_baseline.py` to use cache system
-- Removed ACB query adapter references and TODOs
+- Removed legacy query adapter references and TODOs
 
 ### ✅ CLI Facade Fully Refactored
 
 - Updated CLI facade to use WorkflowPipeline directly
 - MCP server lifecycle managed via MCPServerCLIFactory in `__main__.py`
-- Removed outdated ACB pattern references
+- Removed outdated legacy pattern references
 - All CLI commands working: `start`, `stop`, `restart`, `status`, `health`, `run`
 
 ### ✅ mcp-common Integration Validated
@@ -54,17 +54,17 @@
 
 ## Files Modified
 
-### Phase 5 (ACB Cleanup)
+### Phase 5 (legacy Cleanup)
 
-- `crackerjack/adapters/__init__.py` - Removed ACB comments
+- `crackerjack/adapters/__init__.py` - Removed legacy comments
 - `crackerjack/adapters/complexity/__init__.py` - Updated comments
 - `crackerjack/adapters/format/__init__.py` - Updated comments
 - `crackerjack/adapters/lint/__init__.py` - Updated comments
 - `crackerjack/adapters/refactor/__init__.py` - Updated comments
 - `crackerjack/adapters/type/__init__.py` - Updated comments
 - `crackerjack/adapters/utility/__init__.py` - Updated comments
-- `crackerjack/__main___acb_backup.py` - **DELETED**
-- `crackerjack/__init__.py` - Removed ACB logger suppression
+- `crackerjack/__main___legacy_backup.py` - **DELETED**
+- `crackerjack/__init__.py` - Removed legacy logger suppression
 - `crackerjack/config/loader.py` - Updated docstring
 
 ### Phase 6 (Oneiric Completion)
@@ -75,7 +75,7 @@
 - `crackerjack/services/quality/quality_baseline.py` - Removed query adapter TODOs
 - `crackerjack/utils/dependency_guard.py` - **DELETED**
 - `crackerjack/cli/facade.py` - Updated comments
-- `crackerjack/config/mcp_settings_adapter.py` - Updated ACB references to Pydantic
+- `crackerjack/config/mcp_settings_adapter.py` - Updated legacy references to Pydantic
 
 ### Phase 7 (Documentation)
 
@@ -85,7 +85,7 @@
 
 ## Architecture Status
 
-### Final Architecture State (100% ACB-Free)
+### Final Architecture State (100% legacy-Free)
 
 | Component | Status | Details |
 |-----------|--------|---------|
@@ -102,14 +102,14 @@
 ### Key Architecture Improvements
 
 1. **Protocol-Based Design**: All components use protocol-based typing
-1. **Constructor Injection**: Replaced ACB DI with standard Python patterns
+1. **Constructor Injection**: Replaced DI with standard Python patterns
 1. **Oneiric Integration**: Full workflow and lifecycle management
 1. **mcp-common Integration**: Complete server lifecycle management
-1. **Zero ACB Dependencies**: 100% ACB-free codebase
+1. **Zero legacy Dependencies**: 100% legacy-free codebase
 
 ## Migration Timeline
 
-- **Phase 2**: Complete ACB dependency removal (Dec 27, 2024)
+- **Phase 2**: Complete legacy dependency removal (Dec 27, 2024)
 - **Phase 3**: Adapter base classes (Dec 27, 2024)
 - **Phase 4**: Individual adapters & server (Dec 27, 2024)
 - **Phase 5-7**: Final cleanup & Oneiric completion (Dec 28, 2024)
@@ -120,9 +120,9 @@
 
 **Phase 5**:
 
-- [x] Zero ACB imports in production code
+- [x] Zero legacy imports in production code
 - [x] Backup files deleted
-- [x] All ACB comments cleaned up
+- [x] All legacy comments cleaned up
 - [x] Documentation updated
 - [x] Tests passing
 
@@ -159,22 +159,22 @@ python -m crackerjack run           # Quality workflow
 ### ✅ Code Quality Validation
 
 ```bash
-# Zero ACB imports
-git grep "from acb\|import acb" -- "*.py" | grep -v test_ | grep -v archive/
-# Returns: (empty - no ACB imports)
+# Zero legacy imports
+git grep "from legacy\|import legacy" -- "*.py" | grep -v test_ | grep -v archive/
+# Returns: (empty - no legacy imports)
 
-# Zero ACB in dependencies
-grep "acb" pyproject.toml
-# Returns: (empty - no ACB dependency)
+# Zero legacy in dependencies
+grep "legacy" pyproject.toml
+# Returns: (empty - no legacy dependency)
 ```
 
 ## Conclusion
 
-🎉 **Crackerjack has successfully completed the full migration from ACB to Oneiric + mcp-common architecture.**
+🎉 **Crackerjack has successfully completed the full migration from legacy to Oneiric + mcp-common architecture.**
 
 The codebase is now:
 
-- ✅ **100% ACB-free** with modern, protocol-based dependency injection patterns
+- ✅ **100% legacy-free** with modern, protocol-based dependency injection patterns
 - ✅ **Fully integrated** with Oneiric runtime and mcp-common CLI patterns
 - ✅ **Production-ready** with all tests passing and documentation updated
 - ✅ **Maintainable** with clean architecture and proper type hints

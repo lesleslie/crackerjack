@@ -28,7 +28,7 @@ def start_handler() -> None:
     """Start Crackerjack MCP server with Oneiric lifecycle management.
 
     This handler:
-    1. Loads CrackerjackSettings (ACB-based app config)
+    1. Loads CrackerjackSettings (legacy app config)
     2. Starts the actual MCP server with mcp-common integration
 
     Example:

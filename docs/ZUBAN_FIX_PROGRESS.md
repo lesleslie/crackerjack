@@ -135,7 +135,7 @@ Currently running `python -m crackerjack run --ai-fix --run-tests` to automatica
 ## Lessons Learned
 
 1. **Protocol Gaps** - Many errors stemmed from incomplete protocol definitions
-1. **ACB Migration** - Several undefined console references from ACB→Oneiric migration
+1. **legacy Migration** - Several undefined console references from legacy→Oneiric migration
 1. **Config Types** - Pydantic Settings need proper construction, not dict unpacking
 1. **Union Types** - Type narrowing annotations resolve many union-attr errors
 1. **Systematic Approach** - Categorizing and fixing errors by type is efficient

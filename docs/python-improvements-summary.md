@@ -35,15 +35,15 @@ ______________________________________________________________________
 
 ```python
 # BAD
-if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
-    del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
+if "legacy_DISABLE_STRUCTURED_STDERR" in os.environ:
+    del os.environ["legacy_DISABLE_STRUCTURED_STDERR"]
 ```
 
 **Solution**: Use `.pop()` for safe deletion
 
 ```python
 # GOOD
-os.environ.pop("ACB_DISABLE_STRUCTURED_STDERR", None)  # Safe, no KeyError
+os.environ.pop("legacy_DISABLE_STRUCTURED_STDERR", None)  # Safe, no KeyError
 ```
 
 ______________________________________________________________________
@@ -54,7 +54,7 @@ ______________________________________________________________________
 
 ```python
 # BAD - Not thread-safe
-os.environ["ACB_LOG_LEVEL"] = "WARNING"
+os.environ["legacy_LOG_LEVEL"] = "WARNING"
 os.environ["CRACKERJACK_DEBUG"] = "1"
 ```
 
@@ -83,9 +83,9 @@ ______________________________________________________________________
 
 ```python
 # BAD - Repeated everywhere
-from acb.logger import Logger as ACBLogger
+from legacy.logger import Logger as legacyLogger
 
-fresh_logger = ACBLogger()
+fresh_logger = legacyLogger()
 depends.set(Logger, fresh_logger)
 ```
 
@@ -94,9 +94,9 @@ depends.set(Logger, fresh_logger)
 ```python
 # GOOD
 def _create_and_register_logger() -> Logger:
-    from acb.logger import Logger as ACBLogger
+    from legacy.logger import Logger as legacyLogger
 
-    fresh_logger = ACBLogger()
+    fresh_logger = legacyLogger()
     depends.set(Logger, fresh_logger)
     return fresh_logger
 
@@ -114,7 +114,7 @@ ______________________________________________________________________
 ```python
 # BAD
 if "--debug" not in sys.argv:
-    os.environ["ACB_LOG_LEVEL"] = "WARNING"
+    os.environ["legacy_LOG_LEVEL"] = "WARNING"
 ```
 
 **Solution**: Proper argparse-compatible detection
@@ -137,14 +137,14 @@ ______________________________________________________________________
 def logger_verbosity(*, debug: bool = False) -> Iterator[None]:
     """Temporary logger configuration with automatic restoration."""
     original_state = {
-        "ACB_LOG_LEVEL": os.environ.get("ACB_LOG_LEVEL"),
+        "legacy_LOG_LEVEL": os.environ.get("legacy_LOG_LEVEL"),
         "CRACKERJACK_DEBUG": os.environ.get("CRACKERJACK_DEBUG"),
     }
 
     try:
         # Apply new config
         if debug:
-            os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+            os.environ["legacy_LOG_LEVEL"] = "DEBUG"
             os.environ["CRACKERJACK_DEBUG"] = "1"
         yield
     finally:
@@ -169,7 +169,7 @@ from crackerjack.models.protocols import LoggerProtocol
 
 @depends.inject
 def configure_logger(logger: Inject[LoggerProtocol] = None) -> None:
-    """Perfect ACB integration."""
+    """Perfect legacy integration."""
     logger.info("Configured successfully")
 ```
 
@@ -185,7 +185,7 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR"]
 
 def configure_logger(*, level: LogLevel = "WARNING") -> None:
     """Type-safe log level configuration."""
-    os.environ["ACB_LOG_LEVEL"] = level
+    os.environ["legacy_LOG_LEVEL"] = level
 
 
 # Constants should be Final
@@ -198,13 +198,13 @@ ______________________________________________________________________
 
 ```python
 # Setting (idempotent)
-os.environ.setdefault("ACB_LOG_LEVEL", "WARNING")
+os.environ.setdefault("legacy_LOG_LEVEL", "WARNING")
 
 # Getting (with default)
 debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
 
 # Deleting (safe, no KeyError)
-os.environ.pop("ACB_DISABLE_STRUCTURED_STDERR", None)
+os.environ.pop("legacy_DISABLE_STRUCTURED_STDERR", None)
 
 # Checking existence
 if "CRACKERJACK_DEBUG" in os.environ:
@@ -327,9 +327,9 @@ match instance:
 ```python
 # Use lazy imports (only if needed)
 def _create_logger() -> Logger:
-    from acb.logger import Logger as ACBLogger  # Lazy
+    from legacy.logger import Logger as legacyLogger  # Lazy
 
-    return ACBLogger()
+    return legacyLogger()
 ```
 
 ______________________________________________________________________

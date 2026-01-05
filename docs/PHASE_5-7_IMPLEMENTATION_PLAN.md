@@ -9,21 +9,21 @@ ______________________________________________________________________
 
 ## Executive Summary
 
-Complete the ACB → Oneiric migration by removing final ACB remnants and finishing mcp-common integration. The codebase is already **95% complete** - this plan addresses the remaining 5%.
+Complete the legacy → Oneiric migration by removing final legacy remnants and finishing mcp-common integration. The codebase is already **95% complete** - this plan addresses the remaining 5%.
 
 **Key Insight**: Most work is cleanup and type hint restoration, not architectural changes.
 
 ______________________________________________________________________
 
-## Phase 5: Final ACB Cleanup (1-2 hours)
+## Phase 5: Final legacy Cleanup (1-2 hours)
 
 ### Goal
 
-Remove all remaining ACB references from the codebase.
+Remove all remaining legacy references from the codebase.
 
 ### Tasks
 
-#### 5.1 Remove Functional ACB Code (30 min)
+#### 5.1 Remove Functional legacy Code (30 min)
 
 **File**: `crackerjack/adapters/_tool_adapter_base.py`
 
@@ -31,14 +31,14 @@ Remove all remaining ACB references from the codebase.
 
 ```python
 # Line ~X: Remove depends.set() registration
-from acb.depends import depends
+from legacy.depends import depends
 ...
 depends.set(RuffAdapter)
 ```
 
 **Action**:
 
-- Remove `from acb.depends import depends` import
+- Remove `from legacy.depends import depends` import
 - Remove `depends.set(RuffAdapter)` call
 - Adapters are already registered via constructor in `server.py:_init_qa_adapters()`
 - No replacement needed - registration happens at server initialization
@@ -52,37 +52,37 @@ git grep "depends.set" crackerjack/
 
 #### 5.2 Delete Backup Files (5 min)
 
-**File**: `crackerjack/__main___acb_backup.py`
+**File**: `crackerjack/__main___legacy_backup.py`
 
 **Action**:
 
 ```bash
-git rm crackerjack/__main___acb_backup.py
+git rm crackerjack/__main___legacy_backup.py
 ```
 
 **Rationale**: Git history preserves the backup; no need to keep obsolete file.
 
-#### 5.3 Clean Up ACB Comments (15 min)
+#### 5.3 Clean Up legacy Comments (15 min)
 
 **File**: `crackerjack/adapters/__init__.py` (lines 14, 26)
 
 **Current Comments**:
 
 ```python
-# Line 14: Reference to ACB auto-discovery (outdated)
+# Line 14: Reference to legacy auto-discovery (outdated)
 # Line 26: Reference to depends.set() pattern (outdated)
 ```
 
 **Action**:
 
-- Replace ACB references with "Pydantic Settings" or "Protocol-based DI"
+- Replace legacy references with "Pydantic Settings" or "Protocol-based DI"
 - Update docstrings to reflect current architecture (Phase 4 patterns)
 
 **Example**:
 
 ```python
 # Before:
-"""ACB-based adapter auto-discovery and registration."""
+"""adapter-based adapter auto-discovery and registration."""
 
 # After:
 """Protocol-based adapter registration via server initialization."""
@@ -92,21 +92,21 @@ git rm crackerjack/__main___acb_backup.py
 
 **Files to Update**:
 
-- `crackerjack/config/settings.py` - Docstrings referencing "ACB Settings"
-- `crackerjack/config/loader.py` - Comments about ACB migration
+- `crackerjack/config/settings.py` - Docstrings referencing "settings"
+- `crackerjack/config/loader.py` - Comments about legacy migration
 - `docs/PHASE_4_COMPLETION.md` - Already complete, verify accuracy
 - `docs/MIGRATION_GUIDE_0.47.0.md` - Already complete, verify accuracy
 
 **Action**:
 
-- Global search-replace: "ACB Settings" → "Pydantic Settings"
-- Update any "TODO(ACB)" comments to reflect completion
-- Verify no misleading ACB references remain
+- Global search-replace: "settings" → "Pydantic Settings"
+- Update any "TODO(legacy)" comments to reflect completion
+- Verify no misleading legacy references remain
 
 **Validation**:
 
 ```bash
-git grep -i "acb" -- "*.py" "*.md" | grep -v "# Archive" | grep -v "test_"
+git grep -i "legacy" -- "*.py" "*.md" | grep -v "# Archive" | grep -v "test_"
 # Review remaining references (should be minimal/historical)
 ```
 
@@ -115,11 +115,11 @@ git grep -i "acb" -- "*.py" "*.md" | grep -v "# Archive" | grep -v "test_"
 **Validation Commands**:
 
 ```bash
-# 1. Zero ACB imports in production code
-git grep "from acb\|import acb" -- "*.py" | grep -v test_ | grep -v archive/
+# 1. Zero legacy imports in production code
+git grep "from legacy\|import legacy" -- "*.py" | grep -v test_ | grep -v archive/
 
-# 2. Zero ACB dependency
-grep "acb" pyproject.toml
+# 2. Zero legacy dependency
+grep "legacy" pyproject.toml
 
 # 3. Run quality checks
 python -m crackerjack run --ai-fix -t
@@ -127,12 +127,12 @@ python -m crackerjack run --ai-fix -t
 
 **Success Criteria**:
 
-- ✅ Zero ACB imports in production code (`git grep "from acb"` returns nothing)
-- ✅ Zero ACB in dependencies (`grep "acb" pyproject.toml` returns nothing)
+- ✅ Zero legacy imports in production code (`git grep "from legacy"` returns nothing)
+- ✅ Zero legacy in dependencies (`grep "legacy" pyproject.toml` returns nothing)
 - ✅ All tests passing (100% pass rate)
 - ✅ Coverage maintained (≥21.6%)
 - ✅ Backup files deleted
-- ✅ All ACB comments cleaned up
+- ✅ All legacy comments cleaned up
 - ✅ Documentation updated
 
 ______________________________________________________________________
@@ -191,7 +191,7 @@ def track_workflow_task(
 - `crackerjack/data/__init__.py` - Repository functionality disabled
 - `crackerjack/services/quality/quality_baseline.py` - Query adapters need replacement
 
-**Current Issue**: ACB query adapters removed, no replacement implemented
+**Current Issue**: legacy query adapters removed, no replacement implemented
 
 **Action Plan**:
 
@@ -221,13 +221,13 @@ git grep -n "query\|Query" crackerjack/services/quality/quality_baseline.py
    - Replace with simple file-based operations if needed
 1. Update docstrings to reflect removal
 
-**Rationale**: Query adapters were ACB-specific and appear unused in current codebase. Following YAGNI principle, remove rather than replace. If functionality is needed later, implement with simpler patterns.
+**Rationale**: Query adapters were legacy-specific and appear unused in current codebase. Following YAGNI principle, remove rather than replace. If functionality is needed later, implement with simpler patterns.
 
 #### 6.3 Remove Legacy Dependency Guard (15 min)
 
 **File**: `crackerjack/utils/dependency_guard.py`
 
-**Current Status**: Legacy ACB dependency tracking module
+**Current Status**: Legacy legacy dependency tracking module
 
 **Action**:
 
@@ -254,14 +254,14 @@ git grep "dependency_guard" crackerjack/
 
 **File**: `crackerjack/cli/facade.py`
 
-**Current Issue**: CLI facade still references ACB patterns (outdated)
+**Current Issue**: CLI facade still references legacy patterns (outdated)
 
 **Action**:
 
-- Review facade for any ACB pattern references
+- Review facade for any legacy pattern references
 - Update to use `MCPServerCLIFactory` patterns from `mcp_common.cli`
 - Ensure proper Oneiric lifecycle integration
-- Remove any ACB-style factory methods
+- Remove any legacy-style factory methods
 
 **Pattern to Follow** (from `__main__.py`):
 
@@ -283,7 +283,7 @@ app = factory.create_app()
 
 - CLI commands work: `start`, `stop`, `restart`, `status`, `health`
 - MCP server lifecycle managed correctly
-- No ACB references in facade
+- No legacy references in facade
 
 #### 6.5 Validate mcp-common Integration (30 min)
 
@@ -394,12 +394,12 @@ python -m crackerjack run --all patch
 # Phase 5-7 Completion Report: Final Oneiric Migration
 
 ## Summary
-- Phase 5: Final ACB Cleanup ✅
+- Phase 5: Final legacy Cleanup ✅
 - Phase 6: Oneiric/mcp-common Completion ✅
 - Phase 7: Validation & Documentation ✅
 
 ## Objectives Achieved
-1. ✅ Zero ACB dependencies remaining
+1. ✅ Zero legacy dependencies remaining
 2. ✅ All workflow type hints restored
 3. ✅ Query adapters replaced/removed
 4. ✅ CLI facade fully refactored
@@ -413,13 +413,13 @@ python -m crackerjack run --all patch
 [Final architecture state table]
 
 ## Migration Timeline
-- Phase 2: Complete ACB dependency removal (Dec 27, 2024)
+- Phase 2: Complete legacy dependency removal (Dec 27, 2024)
 - Phase 3: Adapter base classes (Dec 27, 2024)
 - Phase 4: Individual adapters & server (Dec 27, 2024)
 - Phase 5-7: Final cleanup & Oneiric completion (Dec 28, 2024)
 
 ## Conclusion
-Crackerjack has successfully completed the full migration from ACB to Oneiric + mcp-common architecture. The codebase is now 100% ACB-free with modern, protocol-based dependency injection patterns throughout.
+Crackerjack has successfully completed the full migration from legacy to Oneiric + mcp-common architecture. The codebase is now 100% legacy-free with modern, protocol-based dependency injection patterns throughout.
 ```
 
 ______________________________________________________________________
@@ -428,10 +428,10 @@ ______________________________________________________________________
 
 ### Files to Modify
 
-**Phase 5 (ACB Cleanup)**:
+**Phase 5 (legacy Cleanup)**:
 
 - `crackerjack/adapters/_tool_adapter_base.py` - Remove depends.set()
-- `crackerjack/__main___acb_backup.py` - DELETE
+- `crackerjack/__main___legacy_backup.py` - DELETE
 - `crackerjack/adapters/__init__.py` - Clean comments (lines 14, 26)
 - `crackerjack/config/settings.py` - Update docstrings
 - `crackerjack/config/loader.py` - Update comments
@@ -490,9 +490,9 @@ ______________________________________________________________________
 
 ### Phase 5
 
-- [ ] Zero ACB imports in production code (`git grep "from acb"` returns nothing)
+- [ ] Zero legacy imports in production code (`git grep "from legacy"` returns nothing)
 - [ ] Backup files deleted
-- [ ] All ACB comments cleaned up
+- [ ] All legacy comments cleaned up
 - [ ] Documentation updated
 - [ ] Tests passing
 
@@ -590,7 +590,7 @@ ______________________________________________________________________
 ## Next Steps After Plan Approval
 
 1. Create feature branch: `git checkout -b feature/phase5-7-completion`
-1. Execute Phase 5 (ACB cleanup)
+1. Execute Phase 5 (legacy cleanup)
 1. Commit Phase 5 changes
 1. Investigate query adapter usage (Phase 6 decision point)
 1. Execute Phase 6 (based on query adapter decision)

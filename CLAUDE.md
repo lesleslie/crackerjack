@@ -198,7 +198,7 @@ logger = logging.getLogger(__name__)
 
 **🎉 FULLY COMPLETE** - All Components (Phase 5-7 Completion)
 
-Based on Phase 2-7 refactoring audit (100% ACB-free):
+Based on Phase 2-7 refactoring audit (100% legacy-free):
 
 - **CLI Handlers** (100% compliant): Entry points, option processing
 
@@ -211,13 +211,13 @@ Based on Phase 2-7 refactoring audit (100% ACB-free):
 
   - ✅ All Phase 3 refactored services follow standards
   - ✅ Constructor consistency, lifecycle management
-  - ✅ ACB references removed (Phase 5)
+  - ✅ legacy references removed (Phase 5)
 
 - **Managers** (100% compliant): Hook execution (fast→comprehensive), test management, publishing
 
   - ✅ All managers use protocol-based typing
   - ✅ Constructor injection standard
-  - ✅ ACB patterns replaced (Phase 5)
+  - ✅ legacy patterns replaced (Phase 5)
 
 - **Coordinators** (100% compliant): Session/phase coordination, async workflows, parallel execution
 
@@ -236,12 +236,12 @@ Based on Phase 2-7 refactoring audit (100% ACB-free):
   - ✅ All agents use protocol-based design
   - ✅ `AgentContext` pattern for agent isolation
   - ✅ Protocols defined and implemented
-  - ✅ No ACB dependencies remaining
+  - ✅ No legacy dependencies remaining
 
 - **Adapters** (100% compliant): 18 QA adapters + AI adapters
 
   - ✅ All adapters use constructor injection (Phase 4)
-  - ✅ ACB `depends.set()` patterns removed (Phase 5)
+  - ✅ legacy `depends.set()` patterns removed (Phase 5)
   - ✅ Protocol-based registration via server initialization
 
 - **MCP Integration** (100% compliant): mcp-common integration
@@ -258,7 +258,7 @@ Based on Phase 2-7 refactoring audit (100% ACB-free):
 - Easy testing with mock implementations
 - Clear interface contracts
 - Runtime type checking via `@runtime_checkable`
-- No framework lock-in (ACB removed, pure Python patterns)
+- No framework lock-in (legacy removed, pure Python patterns)
 
 **Why AgentContext Pattern for Agents?**
 

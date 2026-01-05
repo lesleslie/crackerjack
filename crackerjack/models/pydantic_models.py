@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class CleaningConfig(BaseModel):
@@ -26,6 +26,14 @@ class CleaningConfig(BaseModel):
             targets=[str(p) for p in getattr(settings, "targets", [])],
         )
 
+    @property
+    def strip_code(self) -> bool:
+        return self.clean
+
+    @strip_code.setter
+    def strip_code(self, value: bool) -> None:
+        self.clean = value
+
 
 class HookConfig(BaseModel):
     skip_hooks: bool = False
@@ -43,6 +51,22 @@ class HookConfig(BaseModel):
             enable_ty=getattr(settings, "enable_ty", False),
             enable_lsp_optimization=getattr(settings, "enable_lsp_optimization", False),
         )
+
+    @field_validator(
+        "skip_hooks",
+        "experimental_hooks",
+        "enable_pyrefly",
+        "enable_ty",
+        "enable_lsp_optimization",
+        mode="before",
+    )
+    @classmethod
+    def _coerce_bool(cls, value: Any) -> bool:
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+        return bool(value)
 
 
 class TestConfig(BaseModel):
@@ -67,6 +91,14 @@ class TestConfig(BaseModel):
             test_workers=getattr(settings, "test_workers", 0),
             test_timeout=getattr(settings, "test_timeout", 0),
         )
+
+    @property
+    def run_tests(self) -> bool:
+        return self.test
+
+    @run_tests.setter
+    def run_tests(self, value: bool) -> None:
+        self.test = value
 
 
 class PublishConfig(BaseModel):
@@ -119,6 +151,14 @@ class AIConfig(BaseModel):
             start_mcp_server=getattr(settings, "start_mcp_server", False),
             max_iterations=getattr(settings, "max_iterations", 5),
         )
+
+    @property
+    def ai_fix(self) -> bool:
+        return self.ai_agent
+
+    @ai_fix.setter
+    def ai_fix(self, value: bool) -> None:
+        self.ai_agent = value
 
 
 class ExecutionConfig(BaseModel):
@@ -245,6 +285,30 @@ class WorkflowOptions(BaseModel):
     @test.setter
     def test(self, value: bool) -> None:
         self.testing.test = value
+
+    @property
+    def strip_code(self) -> bool:
+        return self.cleaning.strip_code
+
+    @strip_code.setter
+    def strip_code(self, value: bool) -> None:
+        self.cleaning.strip_code = value
+
+    @property
+    def run_tests(self) -> bool:
+        return self.testing.run_tests
+
+    @run_tests.setter
+    def run_tests(self, value: bool) -> None:
+        self.testing.run_tests = value
+
+    @property
+    def ai_fix(self) -> bool:
+        return self.ai.ai_fix
+
+    @ai_fix.setter
+    def ai_fix(self, value: bool) -> None:
+        self.ai.ai_fix = value
 
     @property
     def publish(self) -> str | None:

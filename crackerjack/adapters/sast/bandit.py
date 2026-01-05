@@ -10,7 +10,7 @@ It performs static analysis to identify potential vulnerabilities like:
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with JSON output parsing
 """

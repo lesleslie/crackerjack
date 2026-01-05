@@ -1081,8 +1081,8 @@ ______________________________________________________________________
 
 ### Added
 
-- **BREAKING:** di: Migrate WorkflowOrchestrator to ACB dependency injection
-- Complete ACB cache migration - remove old cache.py
+- **BREAKING:** di: Migrate WorkflowOrchestrator to dependency injection
+- Complete legacy cache migration - remove old cache.py
 - Implement centralized error handling decorators
 - workflows: Complete Level 3.5 and HookManager registration
 - workflows: Complete Level 4 + 4.5 manager registration
@@ -1090,9 +1090,9 @@ ______________________________________________________________________
 
 ### Changed
 
-- **BREAKING:** Complete Phase 3 ACB DI migration and remove enhanced_container
-- Apply linter formatting to core_tools and acb_cache_adapter
-- Complete ACB DI migration for core orchestration
+- **BREAKING:** Complete Phase 3 DI migration and remove enhanced_container
+- Apply linter formatting to core_tools and legacy_cache_adapter
+- Complete DI migration for core orchestration
 - Crackerjack (quality: 65/100) - 2025-10-11 06:02:33
 - Crackerjack (quality: 65/100) - 2025-10-25 21:39:23
 - Crackerjack (quality: 65/100) - 2025-10-26 02:51:53
@@ -1144,10 +1144,10 @@ ______________________________________________________________________
 - agents: Implement lazy imports to avoid loading heavy ML dependencies
 - hook-manager: Implement config loading priority system
 - hook-manager: Use instance properties in get_execution_info()
-- phase3: Complete ACB DI test fixes - config priority, orchestrator settings, parallelism
-- Resolve event loop conflicts in ACB cache adapter
+- phase3: Complete DI test fixes - config priority, orchestrator settings, parallelism
+- Resolve event loop conflicts in legacy cache adapter
 - Resolve hook failures and reduce decorator complexity
-- Resolve test failures found during ACB DI migration
+- Resolve test failures found during DI migration
 - tests: Update 4 files
 
 ### Documentation
@@ -1162,7 +1162,7 @@ ______________________________________________________________________
 
 - Add cache isolation fixture for regex pattern tests
 - Fix 6 failing Phase 3 service tests
-- Update tests for ACB DI migration
+- Update tests for DI migration
 
 ### Internal
 
@@ -1233,18 +1233,18 @@ ______________________________________________________________________
 
 ### Added
 
-- feat(workflows): complete ACB workflow migration with commit and publish support
+- feat(workflows): complete orchestrated workflow migration with commit and publish support
   - Added `run_commit_phase` action handler for git commit/push functionality
   - Added `run_publish_phase` action handler for version bump and PyPI publishing
   - Created `COMMIT_WORKFLOW` definition (quality checks + commit)
   - Created `PUBLISH_WORKFLOW` definition (tests + quality checks + commit + publish)
   - Updated `select_workflow_for_options()` to route `-c`, `-t`, `-p` flags correctly
   - Registered new actions in `ACTION_REGISTRY` for automatic discovery
-  - ACB workflow engine now feature-complete with legacy orchestrator parity
+  - orchestrated workflow engine now feature-complete with legacy orchestrator parity
 
 ### Fixed
 
-- fix(workflows): commit and publish stages now execute with ACB workflow engine
+- fix(workflows): commit and publish stages now execute with orchestrated workflow engine
   - Resolves issue where `-c -t -p patch` flags were ignored in Phase 4.2
   - Eliminates need for `--use-legacy-orchestrator` flag for commit/publish workflows
 
@@ -1302,15 +1302,15 @@ ______________________________________________________________________
 
 ### Changed
 
-- **BREAKING**: ACB workflows are now the default execution path (Phase 4.2 complete)
+- **BREAKING**: orchestrated workflows are now the default execution path (Phase 4.2 complete)
   - Use `--use-legacy-orchestrator` to opt out and use the legacy orchestrator
-  - Removed opt-in `--use-acb-workflows` requirement (ACB is now default)
+  - Removed opt-in `--use-legacy-workflows` requirement (legacy is now default)
   - Real-time console output streaming during workflow execution
   - Non-blocking async execution with `asyncio.to_thread()` pattern
 
 ### Added
 
-- Added `--use-legacy-orchestrator` flag for opting out of ACB workflows
+- Added `--use-legacy-orchestrator` flag for opting out of orchestrated workflows
 - Added `/--no-use-legacy-orchestrator` toggle flag syntax support
 - Real-time progress indicators during hook execution
 - Phase 4.2 completion documentation (docs/PHASE-4.2-COMPLETION.md)

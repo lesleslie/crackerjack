@@ -4,7 +4,7 @@
 
 Hooks were showing misleading "1 issue" in the issues column when they failed due to configuration or tool errors, even though there were 0 actual code quality issues. This was causing confusion for users who thought there were code problems when the actual issue was a misconfiguration.
 
-**User Report** (from ../acb project):
+**User Report** (from ../legacy project):
 
 - ruff-format: Showed "1 issue" but had 0 actual issues (config error)
 - codespell: Showed "1 issue" but had 0 actual issues (config error)
@@ -165,9 +165,9 @@ Created three analysis documents:
 
 ## Verification Steps
 
-To verify the fix works in the user's ../acb project:
+To verify the fix works in the user's ../legacy project:
 
-1. Run `python -m crackerjack run` in the acb directory
+1. Run `python -m crackerjack run` in the legacy directory
 1. Check the hook results table:
    - ruff-format should show **0 issues** if config error
    - codespell should show **0 issues** if config error
@@ -207,7 +207,7 @@ This semantic distinction was already present in the codebase via the `QAResultS
 ## Next Steps
 
 1. ✅ Fix implemented and tested
-1. ⏳ User verification in ../acb project (awaiting feedback)
+1. ⏳ User verification in ../legacy project (awaiting feedback)
 1. ⏳ Consider if other display logic needs similar fixes
 1. ⏳ Update documentation if needed
 

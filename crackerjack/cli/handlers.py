@@ -177,7 +177,7 @@ def handle_standard_mode(
     Will be reimplemented with Oneiric integration.
     """
     raise NotImplementedError(
-        "Workflow orchestration removed in Phase 2 (ACB removal). "
+        "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
     )
 

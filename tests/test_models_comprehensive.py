@@ -33,35 +33,35 @@ class TestWorkflowOptions:
     def test_cleaning_config_defaults(self) -> None:
         config = CleaningConfig()
 
-        assert config.strip_code is True
+        assert config.clean is True
         assert config.update_docs is False
 
     def test_cleaning_config_with_values(self) -> None:
         config = CleaningConfig(
-            strip_code=False,
+            clean=False,
             update_docs=True,
         )
 
-        assert config.strip_code is False
+        assert config.clean is False
         assert config.update_docs is True
 
     def test_testing_config_defaults(self) -> None:
         config = TestConfig()
 
-        assert config.run_tests is False
+        assert config.test is False
         assert config.test_workers == 0
         assert config.test_timeout == 0
         assert config.benchmark is False
 
     def test_testing_config_with_values(self) -> None:
         config = TestConfig(
-            run_tests=True,
+            test=True,
             test_workers=4,
             test_timeout=300,
             benchmark=True,
         )
 
-        assert config.run_tests is True
+        assert config.test is True
         assert config.test_workers == 4
         assert config.test_timeout == 300
         assert config.benchmark is True
@@ -91,11 +91,11 @@ class TestWorkflowOptions:
     def test_workflow_options_nested_access(self) -> None:
         options = WorkflowOptions()
 
-        options.cleaning.strip_code = False
-        options.testing.run_tests = True
+        options.cleaning.clean = False
+        options.testing.test = True
 
-        assert options.cleaning.strip_code is False
-        assert options.testing.run_tests is True
+        assert options.cleaning.clean is False
+        assert options.testing.test is True
 
 
 class TestTaskModels:

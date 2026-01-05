@@ -375,9 +375,11 @@ class TestCommandBuilder:
     def build_specific_test_command(self, test_pattern: str) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest", "-v"]  # Always use verbose mode
 
+        # Use detected package name instead of hardcoded crackerjack
+        package_name = self._detect_package_name()
         cmd.extend(
             [
-                "--cov=crackerjack",
+                f"--cov={package_name}",
                 "--cov-report=term-missing",
             ]
         )

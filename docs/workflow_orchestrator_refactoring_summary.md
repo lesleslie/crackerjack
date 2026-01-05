@@ -3,7 +3,7 @@
 ## Completed Refactoring
 
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py`
-**Method**: `WorkflowOrchestrator._setup_acb_services()`
+**Method**: `WorkflowOrchestrator._setup_legacy_services()`
 **Original Complexity**: 32
 **Target Complexity**: ≤15
 
@@ -12,8 +12,8 @@
 ### 1. Main Method Refactored
 
 ```python
-def _setup_acb_services(self) -> None:
-    """Setup all services using ACB dependency injection."""
+def _setup_legacy_services(self) -> None:
+    """Setup all services using dependency injection."""
     self._register_filesystem_and_git_services()
     self._register_manager_services()
     self._register_core_services()
@@ -69,7 +69,7 @@ def _setup_acb_services(self) -> None:
 
 | Method | Complexity | Status |
 |--------|-----------|--------|
-| `_setup_acb_services` | ~8 | ✅ Within limit (≤15) |
+| `_setup_legacy_services` | ~8 | ✅ Within limit (≤15) |
 | `_register_filesystem_and_git_services` | ~3 | ✅ Well below limit |
 | `_register_manager_services` | ~4 | ✅ Well below limit |
 | `_register_core_services` | ~9 | ✅ Within limit |
@@ -135,7 +135,7 @@ uv run python -c "from crackerjack.core.workflow_orchestrator import WorkflowOrc
 
 ## Architecture Compliance
 
-✅ **Protocol-Based DI**: All ACB patterns maintained
+✅ **Protocol-Based DI**: All legacy patterns maintained
 ✅ **Service Registration Order**: Dependencies preserved
 ✅ **Error Handling**: Unchanged
 ✅ **Async/Await Patterns**: Unchanged
@@ -155,4 +155,4 @@ uv run python -c "from crackerjack.core.workflow_orchestrator import WorkflowOrc
 
 ## Conclusion
 
-The `_setup_acb_services` method has been successfully refactored to meet the project's complexity threshold of ≤15. The refactoring maintains all functionality while significantly improving code organization, readability, and maintainability.
+The `_setup_legacy_services` method has been successfully refactored to meet the project's complexity threshold of ≤15. The refactoring maintains all functionality while significantly improving code organization, readability, and maintainability.

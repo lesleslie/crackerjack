@@ -182,7 +182,7 @@ All fixes maintain Crackerjack's protocol-based dependency injection pattern:
 
 ### Phase 5-7 Standards ✅
 
-- No ACB dependencies (all removed)
+- No legacy dependencies (all removed)
 - Constructor injection pattern maintained
 - Protocol-based typing throughout
 - No breaking changes to existing functionality

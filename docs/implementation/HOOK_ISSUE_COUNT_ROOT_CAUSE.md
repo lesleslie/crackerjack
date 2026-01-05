@@ -2,7 +2,7 @@
 
 ## Problem Statement
 
-From user testing in `../acb` project:
+From user testing in `../legacy` project:
 
 - **ruff-check**: Correctly shows 95 E402 violations ✅
 - **ruff-format**: Shows "1 issue" but has 0 actual issues (config error) ❌

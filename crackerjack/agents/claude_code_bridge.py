@@ -318,7 +318,7 @@ class ClaudeCodeBridge:
         """
         if not self._ai_available:
             raise RuntimeError(
-                "Claude AI adapter not available - install ACB with 'uv add acb[ai]'"
+                "Claude AI adapter not available - install optional AI dependencies"
             )
 
         if self.ai_fixer is None:

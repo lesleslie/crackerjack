@@ -54,7 +54,7 @@ Services (95% compliant) + Adapters (varies)
 External Tools (ruff, zuban, pytest, etc.)
 ```
 
-### ACB Compliance Status
+### legacy Compliance Status
 
 Based on Phase 2-4 refactoring audit:
 
@@ -72,10 +72,10 @@ Based on Phase 2-4 refactoring audit:
 
 ### Dependency Injection Pattern
 
-Managers use ACB dependency injection:
+Managers use dependency injection:
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.models.protocols import Console, TestManagerProtocol
 
 
@@ -100,7 +100,7 @@ class HookManager:
 
 ```python
 from crackerjack.managers.hook_manager import HookManager
-from acb.depends import depends
+from legacy.depends import depends
 
 # Create manager with DI
 manager = depends.get(HookManager)
@@ -359,7 +359,7 @@ manager.max_concurrent = 1
 
 ## Future Enhancements
 
-- [ ] Complete migration to ACB dependency injection (remove manual instantiation)
+- [ ] Complete migration to dependency injection (remove manual instantiation)
 - [ ] Standardize async/sync patterns
 - [ ] Add manager health checks and metrics
 - [ ] Implement circuit breaker for external services

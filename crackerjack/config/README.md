@@ -2,15 +2,15 @@
 
 # Config
 
-Configuration management using ACB Settings with YAML-based configuration, type validation, and dependency injection.
+Configuration management using settings with YAML-based configuration, type validation, and dependency injection.
 
 ## Overview
 
-The config package provides centralized configuration management for Crackerjack using the ACB Settings framework. Configuration is loaded from YAML files with a priority system, validated using Pydantic models, and integrated with the dependency injection system for seamless access throughout the application.
+The config package provides centralized configuration management for Crackerjack using the settings framework. Configuration is loaded from YAML files with a priority system, validated using Pydantic models, and integrated with the dependency injection system for seamless access throughout the application.
 
 ## Core Components
 
-- **settings.py**: ACB Settings definitions with Pydantic validation
+- **settings.py**: settings definitions with Pydantic validation
 - **loader.py**: Configuration loading and merging logic
 - **hooks.py**: Hook definitions and metadata configuration
 - **tool_commands.py**: Tool command definitions and execution parameters
@@ -38,7 +38,7 @@ Configuration is loaded with the following priority (highest to lowest):
 
 ```python
 from crackerjack.config import CrackerjackSettings
-from acb.depends import depends
+from legacy.depends import depends
 
 # Option 1: Load directly (synchronous)
 settings = CrackerjackSettings.load()
@@ -75,7 +75,7 @@ class CrackerjackSettings(Settings):
 
     # Orchestration settings
     enable_orchestration: bool = True
-    orchestration_mode: str = "acb"
+    orchestration_mode: str = "legacy"
     enable_caching: bool = True
     cache_backend: str = "memory"
     cache_ttl: int = 3600
@@ -159,7 +159,7 @@ class GlobalLockSettings(Settings):
 ### Accessing Settings
 
 ```python
-from acb.depends import depends, Inject
+from legacy.depends import depends, Inject
 from crackerjack.config import CrackerjackSettings
 
 
@@ -353,7 +353,7 @@ execution:
   verbose: false
   async_mode: true
 
-orchestration_mode: "acb"
+orchestration_mode: "legacy"
 enable_caching: true
 max_parallel_hooks: 11
 stop_on_critical_failure: true
@@ -403,8 +403,8 @@ from crackerjack.config import get_config
 
 config = get_config()
 
-# ✅ New approach (ACB Settings)
-from acb.depends import depends, Inject
+# ✅ New approach (settings)
+from legacy.depends import depends, Inject
 from crackerjack.config import CrackerjackSettings
 
 
@@ -433,7 +433,7 @@ python -m crackerjack --debug
 
 ```python
 # Verify DI container has settings
-from acb.depends import depends
+from legacy.depends import depends
 from crackerjack.config import CrackerjackSettings
 
 settings = depends.get(CrackerjackSettings)
@@ -442,7 +442,7 @@ print(settings.model_dump_json(indent=2))
 
 ### Unknown Fields Warning
 
-ACB Settings silently ignores unknown fields in YAML files. Check for typos:
+settings silently ignores unknown fields in YAML files. Check for typos:
 
 ```yaml
 # ❌ Will be ignored (typo)
@@ -460,7 +460,7 @@ testing:
 - [Services](../services/README.md) — Services access configuration via DI
 - [Managers](../managers/README.md) — Managers configure orchestration
 - [Main README](../../README.md) — Configuration examples
-- [CLAUDE.md](../../docs/guides/CLAUDE.md) — ACB Settings integration overview
+- [CLAUDE.md](../../docs/guides/CLAUDE.md) — settings integration overview
 
 ## Future Enhancements
 

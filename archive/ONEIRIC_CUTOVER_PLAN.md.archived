@@ -1,12 +1,12 @@
 # Crackerjack Oneiric Cutover Plan
 
-Goal: fully remove ACB and Crackerjack-specific monitoring/health dashboards, and replace lifecycle/status/health with Oneiric + mcp-common standards. Keep only minimal MCP status tooling that reads Oneiric runtime snapshots and remains globally reusable across MCP servers. Port Crackerjack QA tooling/adapters into Oneiric equivalents.
+Goal: fully remove legacy and Crackerjack-specific monitoring/health dashboards, and replace lifecycle/status/health with Oneiric + mcp-common standards. Keep only minimal MCP status tooling that reads Oneiric runtime snapshots and remains globally reusable across MCP servers. Port Crackerjack QA tooling/adapters into Oneiric equivalents.
 
 ## Decision Summary
 
 - Drop WebSocket progress server, dashboards, and all monitoring UI/endpoints.
 - Replace Crackerjack quality metrics with Oneiric telemetry + external dashboards.
-- Remove ACB completely (DI, adapters, workflows, events, config, logging).
+- Remove legacy completely (DI, adapters, workflows, events, config, logging).
 - Port Crackerjack QA tooling/adapters to Oneiric lifecycle/resolver equivalents.
 - Keep minimal MCP status/health tool as a thin snapshot reader using Oneiric runtime files.
 
@@ -29,14 +29,14 @@ Goal: fully remove ACB and Crackerjack-specific monitoring/health dashboards, an
 - Remove: `crackerjack/monitoring/*`
 - Remove: `crackerjack/cli/handlers/monitoring.py`
 
-### ACB Core + Adapters
+### legacy Core + Adapters
 
-- Remove dependency: `acb` from `pyproject.toml`
-- Remove or rewrite all ACB imports across `crackerjack/` (DI, console, logger, workflows, events)
-- Remove ACB adapters: `crackerjack/adapters/*`
-- Remove ACB workflow engines: `crackerjack/workflows/*`, `crackerjack/core/workflow_orchestrator.py`, `crackerjack/core/async_workflow_orchestrator.py`
-- Remove ACB event bus: `crackerjack/events/*`
-- Remove ACB orchestration: `crackerjack/orchestration/*`
+- Remove dependency: `legacy` from `pyproject.toml`
+- Remove or rewrite all legacy imports across `crackerjack/` (DI, console, logger, workflows, events)
+- Remove adapters: `crackerjack/adapters/*`
+- Remove orchestrated workflow engines: `crackerjack/workflows/*`, `crackerjack/core/workflow_orchestrator.py`, `crackerjack/core/async_workflow_orchestrator.py`
+- Remove legacy event bus: `crackerjack/events/*`
+- Remove legacy orchestration: `crackerjack/orchestration/*`
 
 ### QA Tooling Port to Oneiric
 
@@ -73,12 +73,12 @@ Goal: fully remove ACB and Crackerjack-specific monitoring/health dashboards, an
 - Remove monitoring handlers and any MCP tools that depend on these services.
 - Update docs to point to Oneiric observability stack.
 
-3. **Remove ACB dependency and surface**
+3. **Remove legacy dependency and surface**
 
-- Drop `acb` from `pyproject.toml` and any other config references.
-- Delete ACB adapters and ACB workflow engines from Crackerjack; replace them in Oneiric.
-- Remove ACB DI wiring in CLI, services, and MCP tools.
-- Delete tests that exist solely for ACB features.
+- Drop `legacy` from `pyproject.toml` and any other config references.
+- Delete adapters and orchestrated workflow engines from Crackerjack; replace them in Oneiric.
+- Remove DI wiring in CLI, services, and MCP tools.
+- Delete tests that exist solely for legacy features.
 
 4. **Integrate Oneiric CLI factory + snapshots**
 
@@ -96,11 +96,11 @@ Goal: fully remove ACB and Crackerjack-specific monitoring/health dashboards, an
 
 - Update `README.md` and MCP docs to remove websocket/dashboard references.
 - Update CLI docs to show Oneiric-standard flags only.
-- Remove or re-scope tests for deleted monitoring and ACB functionality.
+- Remove or re-scope tests for deleted monitoring and legacy functionality.
 
 ## Deliverables
 
-- Crackerjack runs without ACB dependency.
+- Crackerjack runs without legacy dependency.
 - MCP lifecycle and health commands use Oneiric/mcp-common standard flags.
 - Minimal MCP status tool returns Oneiric snapshot data.
 - No WebSocket server, dashboards, or monitoring endpoints in Crackerjack.

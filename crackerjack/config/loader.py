@@ -224,10 +224,10 @@ async def load_settings_async[T: BaseSettings](
     settings_class: type[T],
     settings_dir: Path | None = None,
 ) -> T:
-    """Load settings asynchronously with full ACB initialization.
+    """Load settings asynchronously with full legacy initialization.
 
     This function provides the same configuration loading as load_settings()
-    but uses ACB's async initialization which includes secret loading and
+    but uses legacy async initialization which includes secret loading and
     other async setup operations.
 
     Args:

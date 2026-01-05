@@ -1,6 +1,6 @@
 # Crackerjack 0.48.0 Migration Guide
 
-**Migration Type:** Complete Architecture Modernization (ACB → Oneiric + mcp-common)
+**Migration Type:** Complete Architecture Modernization (legacy → Oneiric + mcp-common)
 **Breaking Changes:** Yes (CLI commands, adapter APIs)
 **Estimated Migration Time:** 10-15 minutes
 **Risk Level:** Low (comprehensive testing completed)
@@ -10,7 +10,7 @@ ______________________________________________________________________
 
 ## Overview
 
-Version 0.47.0 represents a fundamental modernization of Crackerjack's architecture, migrating from ACB (Architecture Component Base) to Oneiric runtime management. While this is a significant internal change, the migration path for users is straightforward and well-tested.
+Version 0.47.0 represents a fundamental modernization of Crackerjack's architecture, migrating from legacy (Architecture Component Base) to Oneiric runtime management. While this is a significant internal change, the migration path for users is straightforward and well-tested.
 
 **Key Benefits:**
 
@@ -19,7 +19,7 @@ Version 0.47.0 represents a fundamental modernization of Crackerjack's architect
 - Streamlined dependency management
 - Simpler, more intuitive CLI commands
 - Better integration with modern Python tooling
-- 100% ACB-free architecture
+- 100% legacy-free architecture
 - Complete Oneiric + mcp-common integration
 
 ______________________________________________________________________
@@ -57,15 +57,15 @@ Legacy flags remain available under `python -m crackerjack run`, but prefer the 
 
 **Only affects custom adapter developers:**
 
-- Adapters now use constructor injection instead of ACB DI
-- All ACB `depends.set()` patterns removed
+- Adapters now use constructor injection instead of DI
+- All legacy `depends.set()` patterns removed
 - Protocol-based registration via server initialization
 
 ### 4. Phase 5-7 Completion (No Impact)
 
 **Internal cleanup completed:**
 
-- ✅ Phase 5: Final ACB cleanup (comments, imports, backup files)
+- ✅ Phase 5: Final legacy cleanup (comments, imports, backup files)
 - ✅ Phase 6: Oneiric/mcp-common completion (type hints, query adapters, CLI facade)
 - ✅ Phase 7: Validation & documentation
 - `MODULE_STATUS` must use `AdapterStatus` enum (not strings)
@@ -236,7 +236,7 @@ python -m crackerjack run --run-tests
 python -m crackerjack start --verbose
 # (Ctrl+C to stop)
 
-# 4. Check no ACB dependencies remain
+# 4. Check no legacy dependencies remain
 python -c "import crackerjack; print('✓ Import successful')"
 ```
 
@@ -343,12 +343,12 @@ ______________________________________________________________________
 
 ### Changes Required:
 
-1. **Remove ACB Dependency Injection:**
+1. **Remove legacy Dependency Injection:**
 
    **Before (v0.46.x):**
 
    ```python
-   from acb.depends import depends, Inject
+   from legacy.depends import depends, Inject
 
 
    @depends.inject
@@ -393,8 +393,8 @@ ______________________________________________________________________
    **Before (v0.46.x):**
 
    ```python
-   from acb.console import Console
-   from acb.config import Settings
+   from legacy.console import Console
+   from legacy.config import Settings
    ```
 
    **After (v0.47.0):**

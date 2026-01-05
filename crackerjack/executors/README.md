@@ -385,7 +385,7 @@ class HookExecutionResult:
 
 ## Configuration
 
-Executors are configured through ACB Settings:
+Executors are configured through settings:
 
 ```yaml
 # settings/crackerjack.yaml
@@ -513,7 +513,7 @@ result = executor.execute_hook(custom_hook)
 
 ## Integration with Workflows
 
-Executors integrate seamlessly with ACB workflows:
+Executors integrate seamlessly with orchestrated workflows:
 
 ```python
 from crackerjack.workflows import CrackerjackWorkflowEngine

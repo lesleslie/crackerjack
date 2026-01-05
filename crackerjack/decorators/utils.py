@@ -19,20 +19,25 @@ def preserve_signature[F: t.Callable[..., t.Any]](
     """Preserve function signature in decorators."""
 
     def decorator(func: t.Callable[..., t.Any]) -> F:
-        wrapped = wraps(func)(wrapper)
-        # Preserve signature metadata
-        wrapped.__wrapped__ = func  # type: ignore[attr-defined]
-        return t.cast(F, wrapped)
+        wrapped = wrapper(func)
+        return t.cast(F, wraps(func)(wrapped))
 
     return decorator
 
 
 def get_function_context(func: t.Callable[..., t.Any]) -> dict[str, t.Any]:
     """Extract context information from a function for error reporting."""
+    name = getattr(func, "__name__", type(func).__name__)
+    qualname = getattr(func, "__qualname__", name)
+    module = getattr(
+        func,
+        "__module__",
+        getattr(getattr(func, "__objclass__", None), "__module__", "builtins"),
+    )
     return {
-        "function_name": func.__name__,
-        "module": func.__module__,
-        "qualname": func.__qualname__,
+        "function_name": name,
+        "module": module,
+        "qualname": qualname,
         "is_async": is_async_function(func),
     }
 

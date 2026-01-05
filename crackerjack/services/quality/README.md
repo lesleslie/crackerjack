@@ -74,7 +74,7 @@ Coordinate quality checks across tools:
 
 ```python
 from crackerjack.services.quality import QualityBaselineEnhanced
-from acb.depends import depends
+from legacy.depends import depends
 
 baseline = depends.get(QualityBaselineEnhanced)
 
@@ -109,7 +109,7 @@ else:
 ```python
 from crackerjack.services.quality import PatternDetector
 from pathlib import Path
-from acb.depends import depends
+from legacy.depends import depends
 
 detector = depends.get(PatternDetector)
 
@@ -141,7 +141,7 @@ for error in error_patterns:
 
 ```python
 from crackerjack.services.quality import AnomalyDetector
-from acb.depends import depends
+from legacy.depends import depends
 
 detector = depends.get(AnomalyDetector)
 
@@ -176,7 +176,7 @@ if anomalies:
 
 ```python
 from crackerjack.services.quality import PatternCache
-from acb.depends import depends
+from legacy.depends import depends
 
 cache = depends.get(PatternCache)
 
@@ -205,7 +205,7 @@ print(f"Cache size: {stats.size} entries")
 
 ```python
 from crackerjack.services.quality import QAOrchestrator
-from acb.depends import depends
+from legacy.depends import depends
 
 orchestrator = depends.get(QAOrchestrator)
 
@@ -235,7 +235,7 @@ for tool_result in results.tool_results:
 
 ## Configuration
 
-Quality services are configured through ACB Settings:
+Quality services are configured through settings:
 
 ```yaml
 # settings/crackerjack.yaml
@@ -285,7 +285,7 @@ max_parallel_tools: 8  # More parallel tools on dev machine
 ```python
 from crackerjack.services.quality import QualityBaselineEnhanced
 from crackerjack.services.coverage_ratchet import CoverageRatchet
-from acb.depends import depends
+from legacy.depends import depends
 
 baseline = depends.get(QualityBaselineEnhanced)
 ratchet = depends.get(CoverageRatchet)
@@ -309,7 +309,7 @@ else:
 ```python
 from crackerjack.services.quality import PatternDetector
 from crackerjack.intelligence import AgentOrchestrator
-from acb.depends import depends
+from legacy.depends import depends
 
 detector = depends.get(PatternDetector)
 orchestrator = depends.get(AgentOrchestrator)
@@ -336,7 +336,7 @@ for pattern in patterns:
 ```python
 from crackerjack.services.quality import QAOrchestrator
 from crackerjack.workflows import CrackerjackWorkflowEngine
-from acb.depends import depends
+from legacy.depends import depends
 
 orchestrator = depends.get(QAOrchestrator)
 engine = depends.get(CrackerjackWorkflowEngine)

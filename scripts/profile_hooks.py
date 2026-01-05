@@ -1,15 +1,6 @@
-"""Profile all hooks to establish data-driven timeout values.
-
-Phase 10.4.1: Timeout Calibration
-
-This script uses ToolProfiler to collect execution time data for all hooks,
-then calculates 95th percentile times and recommends timeouts (3x P95 for safety).
-"""
-
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -17,39 +8,25 @@ from crackerjack.config.hooks import COMPREHENSIVE_HOOKS, FAST_HOOKS
 
 
 def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
-    """Estimate execution times based on hook characteristics and historical data.
-
-    This uses a combination of:
-    1. Tool category (formatting vs analysis vs type checking)
-    2. Codebase size (~6000 lines)
-    3. Known tool performance characteristics
-
-    Returns:
-        Dict mapping hook names to estimated statistics
-    """
-    # Empirical estimates based on tool characteristics
-    # Format: (mean_time, variance_factor)
     HOOK_ESTIMATES = {
-        # FAST HOOKS - Formatting & Quick Checks (~0.5-3s)
-        "validate-regex-patterns": (0.5, 0.1),  # Custom validator, very fast
-        "uv-lock": (1.5, 0.3),  # Dependency resolution
-        "trailing-whitespace": (0.3, 0.05),  # Native implementation
-        "end-of-file-fixer": (0.3, 0.05),  # Native implementation
-        "check-yaml": (0.4, 0.08),  # YAML parsing
-        "check-added-large-files": (0.2, 0.04),  # File size check
-        "ruff-format": (1.2, 0.2),  # Rust-based formatter
-        "ruff-isort": (0.8, 0.15),  # Import sorting
-        "ruff-check": (2.5, 0.4),  # Comprehensive linting
-        "mdformat": (0.6, 0.12),  # Markdown formatting
-        "codespell": (1.0, 0.2),  # Spell checking
-        "gitleaks": (3.0, 0.5),  # Secret scanning
-        # COMPREHENSIVE HOOKS - Deep Analysis (~5-30s)
-        "zuban": (8.5, 1.5),  # Rust type checker (20x faster than mypy)
-        "skylos": (2.1, 0.4),  # Rust dead code detector (20x faster than vulture)
-        "bandit": (5.2, 0.8),  # Security scanning (Python)
-        "refurb": (4.0, 0.7),  # Modernization suggestions (Rust)
-        "complexipy": (3.5, 0.6),  # Complexity analysis
-        "creosote": (2.8, 0.5),  # Dependency analysis
+        "validate-regex-patterns": (0.5, 0.1),
+        "uv-lock": (1.5, 0.3),
+        "trailing-whitespace": (0.3, 0.05),
+        "end-of-file-fixer": (0.3, 0.05),
+        "check-yaml": (0.4, 0.08),
+        "check-added-large-files": (0.2, 0.04),
+        "ruff-format": (1.2, 0.2),
+        "ruff-isort": (0.8, 0.15),
+        "ruff-check": (2.5, 0.4),
+        "mdformat": (0.6, 0.12),
+        "codespell": (1.0, 0.2),
+        "gitleaks": (3.0, 0.5),
+        "zuban": (8.5, 1.5),
+        "skylos": (2.1, 0.4),
+        "bandit": (5.2, 0.8),
+        "refurb": (4.0, 0.7),
+        "complexipy": (3.5, 0.6),
+        "creosote": (2.8, 0.5),
     }
 
     results: dict[str, dict[str, float]] = {}
@@ -60,22 +37,18 @@ def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
 
     for hook in all_hooks:
         if hook.name not in HOOK_ESTIMATES:
-            print(f"⚠️  No estimate for {hook.name}, using current timeout")
-            # Use current timeout as basis
-            mean_time = hook.timeout / 3  # Assume current timeout is 3x mean
+            print(f"⚠️ No estimate for {hook.name}, using current timeout")
+
+            mean_time = hook.timeout / 3
             variance = mean_time * 0.2
         else:
             mean_time, variance = HOOK_ESTIMATES[hook.name]
 
-        # Simulate variance for P95 calculation
-        # P95 is approximately mean + 1.645 * std_dev
         std_dev = variance
         p95_time = mean_time + (1.645 * std_dev)
 
-        # Recommended timeout: 3x P95 for safety margin
         recommended_timeout = int(p95_time * 3)
 
-        # Ensure minimum timeout of 10s
         recommended_timeout = max(recommended_timeout, 10)
 
         results[hook.name] = {
@@ -89,21 +62,13 @@ def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
         }
 
         print(f"{hook.name}:")
-        print(f"  Mean: {mean_time:.2f}s, P95: {p95_time:.2f}s")
-        print(f"  Recommended: {recommended_timeout}s (current: {hook.timeout}s)\n")
+        print(f" Mean: {mean_time:.2f}s, P95: {p95_time:.2f}s")
+        print(f" Recommended: {recommended_timeout}s (current: {hook.timeout}s)\n")
 
     return results
 
 
 def generate_report(results: dict[str, dict[str, float]]) -> str:
-    """Generate markdown report with timeout recommendations.
-
-    Args:
-        results: Profiling results from profile_all_hooks()
-
-    Returns:
-        Markdown-formatted report
-    """
     lines = [
         "# Hook Timeout Calibration Report",
         "",
@@ -122,7 +87,6 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
         recommended = stats["recommended_timeout"]
         current = stats["current_timeout"]
 
-        # Calculate change
         if recommended > current:
             change = f"+{recommended - current}s ⚠️"
         elif recommended < current:
@@ -142,7 +106,6 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
         ]
     )
 
-    # Identify hooks that need timeout adjustments
     needs_increase = [
         name
         for name, stats in results.items()
@@ -199,7 +162,7 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
         recommended = stats["recommended_timeout"]
         p95 = stats["p95"]
         lines.append(
-            f"timeout={recommended},  # Phase 10.4.1: Profiled P95={p95:.2f}s, safety=3x"
+            f"timeout={recommended}, # Phase 10.4.1: Profiled P95={p95:.2f}s, safety=3x"
         )
 
     lines.extend(
@@ -213,23 +176,19 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
 
 
 def main():
-    """Main entry point."""
     print("=" * 80)
     print("Phase 10.4.1: Hook Timeout Calibration")
     print("=" * 80)
     print()
 
-    # Estimate execution times for all hooks
     results = estimate_hook_execution_times()
 
     if not results:
         print("❌ No estimation results collected. Exiting.")
         sys.exit(1)
 
-    # Generate report
     report = generate_report(results)
 
-    # Save report
     report_path = project_root / "docs" / "HOOK-TIMEOUT-CALIBRATION.md"
     report_path.write_text(report)
 

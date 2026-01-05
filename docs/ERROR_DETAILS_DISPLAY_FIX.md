@@ -169,7 +169,7 @@ Details for failing hooks:
           exec_result = await self._execute_tool(command, target_files, start_time)
         File ".../adapters/complexity/complexipy.py", line 109, in init
           self.settings = ComplexipySettings(max_complexity=max_complexity)
-        File ".../acb/config.py", line 45, in __init__
+        File ".../legacy/config.py", line 45, in __init__
           raise RuntimeError("Settings require async initialization...")
       RuntimeError: Settings require async initialization. Use 'await Settings.create_async()' instead.
 ```
@@ -233,7 +233,7 @@ Now complexipy (and all other tools) will show:
 Run crackerjack in a project with tool failures:
 
 ```bash
-cd /Users/les/Projects/acb
+cd /Users/les/Projects/legacy
 python -m crackerjack run --verbose
 ```
 

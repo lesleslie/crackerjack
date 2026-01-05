@@ -136,14 +136,14 @@ class QAAdapterBase:
     def __init__(self) -> None:
         """Initialize adapter instance.
 
-        Note: ACB pattern is to do minimal work here. Use async init()
+        Note: The pattern is to do minimal work here. Use async init()
         for expensive setup operations.
         """
         self._initialized = False
         self._semaphore: asyncio.Semaphore | None = None
 
     async def init(self) -> None:
-        """ACB standard initialization method.
+        """Standard initialization method.
 
         Called lazily before first check. Override in subclasses to:
         - Load settings
@@ -230,7 +230,7 @@ class QAAdapterBase:
         )
 
     async def health_check(self) -> dict[str, t.Any]:
-        """ACB standard health check method.
+        """Standard health check method.
 
         Provides basic health status. Override for more detailed checks.
 
@@ -272,7 +272,7 @@ class QAAdapterBase:
 
     @asynccontextmanager
     async def _lifecycle(self) -> t.AsyncIterator[QAAdapterBase]:
-        """ACB pattern for resource lifecycle management.
+        """Pattern for resource lifecycle management.
 
         Use this context manager for proper setup/teardown:
 

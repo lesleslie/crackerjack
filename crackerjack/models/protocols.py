@@ -1,6 +1,7 @@
 import subprocess
 import typing as t
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from crackerjack.config.hooks import HookDefinition
 from crackerjack.config.settings import CrackerjackSettings
@@ -9,7 +10,7 @@ from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
 
 @t.runtime_checkable
 class ServiceProtocol(t.Protocol):
-    """Base protocol for ACB services with standardized lifecycle methods."""
+    """Base protocol for services with standardized lifecycle methods."""
 
     def initialize(self) -> None:
         """Initialize service with proper lifecycle management."""
@@ -126,7 +127,9 @@ class ConsoleInterface(t.Protocol):
 
     def input(self, _: str = "") -> str: ...
 
-    async def aprint(self, *args: t.Any, **kwargs: t.Any) -> None: ...
+    if TYPE_CHECKING:
+
+        async def aprint(self, *args: t.Any, **kwargs: t.Any) -> None: ...
 
 
 @t.runtime_checkable
@@ -146,32 +149,36 @@ class GitInterface(t.Protocol):
 
     def get_changed_files(self) -> list[str]: ...
 
-    def get_staged_files(self) -> list[str]: ...
-
-    def get_changed_files_by_extension(
-        self,
-        extensions: list[str],
-        include_staged: bool = True,
-        include_unstaged: bool = True,
-    ) -> list[Path]: ...
-
     def commit(self, message: str) -> bool: ...
 
     def push(self) -> bool: ...
-
-    def push_with_tags(self) -> bool: ...
 
     def add_files(self, files: list[str]) -> bool: ...
 
     def add_all_files(self) -> bool: ...
 
-    def get_commit_message_suggestions(self, changed_files: list[str]) -> list[str]: ...
+    if TYPE_CHECKING:
 
-    def get_unpushed_commit_count(self) -> int: ...
+        def get_staged_files(self) -> list[str]: ...
 
-    def get_current_commit_hash(self) -> str | None: ...
+        def get_changed_files_by_extension(
+            self,
+            extensions: list[str],
+            include_staged: bool = True,
+            include_unstaged: bool = True,
+        ) -> list[Path]: ...
 
-    def reset_hard(self, commit_hash: str) -> bool: ...
+        def push_with_tags(self) -> bool: ...
+
+        def get_commit_message_suggestions(
+            self, changed_files: list[str]
+        ) -> list[str]: ...
+
+        def get_unpushed_commit_count(self) -> int: ...
+
+        def get_current_commit_hash(self) -> str | None: ...
+
+        def reset_hard(self, commit_hash: str) -> bool: ...
 
 
 @t.runtime_checkable
@@ -188,11 +195,13 @@ class HookManager(t.Protocol):
         self, results: t.Any, elapsed_time: float | None = None
     ) -> t.Any: ...
 
-    def get_hook_count(self, suite_name: str) -> int: ...
+    if TYPE_CHECKING:
 
-    # Progress callback attributes for PhaseCoordinator integration
-    _progress_callback: t.Callable[[int, int], None] | None
-    _progress_start_callback: t.Callable[[int, int], None] | None
+        def get_hook_count(self, suite_name: str) -> int: ...
+
+        # Progress callback attributes for PhaseCoordinator integration
+        _progress_callback: t.Callable[[int, int], None] | None
+        _progress_start_callback: t.Callable[[int, int], None] | None
 
 
 @t.runtime_checkable
@@ -548,7 +557,7 @@ class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class QAAdapterProtocol(t.Protocol):
-    """Protocol for quality assurance adapters (ACB-based).
+    """Protocol for quality assurance adapters.
 
     All QA adapters must implement this protocol to ensure compatibility
     with the QA orchestration system.
@@ -557,7 +566,7 @@ class QAAdapterProtocol(t.Protocol):
     settings: t.Any | None  # QABaseSettings
 
     async def init(self) -> None:
-        """Initialize adapter (ACB standard method)."""
+        """Initialize adapter (standard method)."""
         ...
 
     async def check(
@@ -596,7 +605,7 @@ class QAAdapterProtocol(t.Protocol):
         ...
 
     async def health_check(self) -> dict[str, t.Any]:
-        """Check adapter health (ACB standard method).
+        """Check adapter health (standard method).
 
         Returns:
             Dictionary with health status and metadata

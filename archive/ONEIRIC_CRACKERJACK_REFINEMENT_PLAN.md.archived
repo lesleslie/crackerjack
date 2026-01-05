@@ -12,7 +12,7 @@ ______________________________________________________________________
 This plan covers two parallel workstreams:
 
 1. **Specification Refinement** - 8 refinements to `ONEIRIC_CLI_FACTORY_IMPLEMENTATION.md` based on user decisions and spec review findings
-1. **Crackerjack Migration Plan** - Detailed 5-phase migration from ACB to Oneiric+mcp-common (Week 2, ~30 hours)
+1. **Crackerjack Migration Plan** - Detailed 5-phase migration from legacy to Oneiric+mcp-common (Week 2, ~30 hours)
 
 Both plans are designed to support the grand Oneiric migration strategy across all MCP servers.
 
@@ -525,12 +525,12 @@ ______________________________________________________________________
 
 ### Overview
 
-Migrate crackerjack from ACB-based architecture to Oneiric+mcp-common in 5 phases over Week 2.
+Migrate crackerjack from adapter-based architecture to Oneiric+mcp-common in 5 phases over Week 2.
 
 **Scope:**
 
 - Remove 55 MCP files (WebSocket/monitoring/dashboard)
-- Remove 310 ACB imports
+- Remove 310 legacy imports
 - Port 38 QA adapters to Oneiric
 - Integrate Oneiric CLI factory
 - Preserve all QA tooling functionality
@@ -573,7 +573,7 @@ crackerjack benchmark       # @app.command() - Custom
 **Migration Path:**
 
 ```python
-# Old (ACB):
+# Old (legacy):
 crackerjack --start-mcp-server --verbose
 
 # New (Oneiric):
@@ -619,7 +619,7 @@ ______________________________________________________________________
 ```bash
 # Environment variable controls migration
 export USE_ONEIRIC_CLI=true   # Use new Oneiric CLI
-export USE_ONEIRIC_CLI=false  # Rollback to ACB CLI
+export USE_ONEIRIC_CLI=false  # Rollback to legacy CLI
 
 # Test both paths
 USE_ONEIRIC_CLI=true crackerjack start
@@ -643,10 +643,10 @@ ______________________________________________________________________
 
 **Tasks:**
 
-1. Inventory ACB usage across codebase
+1. Inventory legacy usage across codebase
 
-   - Count: 310 ACB imports identified
-   - Map: `grep -r "from acb" crackerjack/` → categorize by module
+   - Count: 310 legacy imports identified
+   - Map: `grep -r "from legacy" crackerjack/` → categorize by module
 
 1. Categorize 38 QA adapters
 
@@ -672,7 +672,7 @@ ______________________________________________________________________
 
 **Success Criteria:**
 
-- [ ] All ACB imports catalogued
+- [ ] All legacy imports catalogued
 - [ ] Adapter categorization complete
 - [ ] CLI mapping documented
 - [ ] Rollback strategy defined
@@ -746,16 +746,16 @@ grep -r "websocket" crackerjack/ --exclude-dir=.git
 
 ______________________________________________________________________
 
-#### Phase 2: Remove ACB Dependency (Day 2, 6 hours)
+#### Phase 2: Remove legacy Dependency (Day 2, 6 hours)
 
-**Goal:** Complete ACB removal from codebase
+**Goal:** Complete legacy removal from codebase
 
 **Step 1: Remove from pyproject.toml (5 min)**
 
 ```toml
 # Before:
 dependencies = [
-    "acb>=0.31.19",
+    "legacy>=0.31.19",
     ...
 ]
 
@@ -767,14 +767,14 @@ dependencies = [
 ]
 ```
 
-**Step 2: Replace ACB Logger (310 files, 3 hours)**
+**Step 2: Replace legacy Logger (310 files, 3 hours)**
 
 **Pattern:**
 
 ```python
-# Before (ACB):
-from acb.adapters.logger import LoggerProtocol
-from acb.depends import Inject
+# Before (legacy):
+from legacy.adapters.logger import LoggerProtocol
+from legacy.depends import Inject
 
 
 @depends.inject
@@ -803,9 +803,9 @@ from pathlib import Path
 def migrate_file(file_path):
     content = file_path.read_text()
 
-    # Remove ACB logger imports
-    content = re.sub(r"from acb\.adapters\.logger import .*\n", "", content)
-    content = re.sub(r"from acb\.depends import .*\n", "", content)
+    # Remove legacy logger imports
+    content = re.sub(r"from legacy\.adapters\.logger import .*\n", "", content)
+    content = re.sub(r"from legacy\.depends import .*\n", "", content)
 
     # Replace Inject[LoggerProtocol]
     content = re.sub(
@@ -826,7 +826,7 @@ for file in Path("crackerjack").rglob("*.py"):
     migrate_file(file)
 ```
 
-**Step 3: Remove ACB DI (@depends.inject, 2 hours)**
+**Step 3: Remove DI (@depends.inject, 2 hours)**
 
 **Pattern:**
 
@@ -842,7 +842,7 @@ def setup_ai_agent_env(ai_agent: bool):
     ...
 ```
 
-**Step 4: Remove ACB Workflows/Events (1 hour)**
+**Step 4: Remove legacy Workflows/Events (1 hour)**
 
 ```bash
 # Remove workflow engines
@@ -855,8 +855,8 @@ rm crackerjack/core/async_workflow_orchestrator.py
 **Validation:**
 
 ```bash
-# Verify no ACB imports remain
-grep -r "from acb" crackerjack/ --exclude-dir=.git
+# Verify no legacy imports remain
+grep -r "from legacy" crackerjack/ --exclude-dir=.git
 # Expected: 0 results
 
 # Verify no @depends.inject
@@ -866,9 +866,9 @@ grep -r "@depends.inject" crackerjack/
 
 **Success Criteria:**
 
-- [ ] ACB removed from pyproject.toml
+- [ ] legacy removed from pyproject.toml
 - [ ] 310 files updated (logging migration)
-- [ ] 0 ACB imports remain
+- [ ] 0 legacy imports remain
 - [ ] 0 @depends.inject decorators remain
 
 **Rollback:** `git checkout main -- pyproject.toml crackerjack/`
@@ -1044,9 +1044,9 @@ ______________________________________________________________________
 **Pattern (12 adapters):**
 
 ```python
-# Before (ACB pattern - non-compliant):
+# Before (legacy pattern - non-compliant):
 from uuid import uuid4
-from acb.adapters import AdapterBase
+from legacy.adapters import AdapterBase
 
 MODULE_ID = uuid4()  # ISSUE: Not static
 MODULE_STATUS = "stable"  # ISSUE: Not enum
@@ -1149,14 +1149,14 @@ ______________________________________________________________________
 
 **Issues:**
 
-- ACB DI removal breaks test mocks
+- DI removal breaks test mocks
 - Adapter pattern changes require test updates
 - WebSocket/monitoring tests removed
 
 **Strategy:**
 
 ```python
-# Before (ACB DI mocks):
+# Before (DI mocks):
 @pytest.fixture
 def mock_logger():
     mock = MockLogger()
@@ -1230,7 +1230,7 @@ ______________________________________________________________________
 
 ### Risk Mitigation
 
-#### Risk 1: ACB Removal Breaks Critical Functionality
+#### Risk 1: legacy Removal Breaks Critical Functionality
 
 **Probability:** MEDIUM
 **Impact:** HIGH
@@ -1248,7 +1248,7 @@ ______________________________________________________________________
 git checkout main -- crackerjack/
 git checkout main -- pyproject.toml
 
-# Reinstall ACB
+# Reinstall legacy
 uv sync
 ```
 
@@ -1291,7 +1291,7 @@ ______________________________________________________________________
 
 ```python
 # Skip failing tests temporarily
-@pytest.mark.skip(reason="ACB migration in progress, see issue #124")
+@pytest.mark.skip(reason="legacy migration in progress, see issue #124")
 def test_workflow_orchestration(): ...
 ```
 
@@ -1334,7 +1334,7 @@ ______________________________________________________________________
 
 **Must Have:**
 
-- [ ] 0 ACB imports (`grep -r "from acb" crackerjack/` → empty)
+- [ ] 0 legacy imports (`grep -r "from legacy" crackerjack/` → empty)
 - [ ] 0 @depends.inject (`grep -r "@depends.inject"` → empty)
 - [ ] 12/12 complex adapters ported (100%)
 - [ ] 95%+ test pass rate (95/100 tests)
@@ -1350,7 +1350,7 @@ ______________________________________________________________________
 **Day-by-Day Checkpoints:**
 
 - [ ] **Day 1 End:** Audit complete (2h), WebSocket removed (3h) - 5 hours total
-- [ ] **Day 2 End:** ACB removed (6h) - 11 hours total
+- [ ] **Day 2 End:** legacy removed (6h) - 11 hours total
 - [ ] **Day 3 End:** Oneiric integrated (3h), 6 adapters ported (3h) - 17 hours total
 - [ ] **Day 4 End:** 12 adapters ported (7h) - 24 hours total
 - [ ] **Day 5 End:** Tests fixed (3h), docs updated (1.5h), validation (0.5h) - 29 hours total
@@ -1374,7 +1374,7 @@ ______________________________________________________________________
 1. `/Users/les/Projects/crackerjack/crackerjack/config/settings.py` - New CrackerjackSettings
 1. `/Users/les/Projects/crackerjack/crackerjack/server.py` - New CrackerjackServer
 1. `/Users/les/Projects/crackerjack/crackerjack/adapters/*.py` - 38 adapters to port
-1. `/Users/les/Projects/crackerjack/pyproject.toml` - Remove ACB, add Oneiric
+1. `/Users/les/Projects/crackerjack/pyproject.toml` - Remove legacy, add Oneiric
 1. `/Users/les/Projects/crackerjack/README.md` - Update CLI docs
 1. `/Users/les/Projects/crackerjack/MIGRATION_GUIDE.md` - New migration guide
 

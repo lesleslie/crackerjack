@@ -332,6 +332,6 @@ Details for failing fast hooks:
 ## Notes
 
 - The issue affects **both fast and comprehensive hooks**
-- All hooks using ACB adapters are affected
+- All hooks using adapters are affected
 - Subprocess-based hooks (via `_run_subprocess`) work correctly
 - The fix should be applied to the orchestrator, not individual adapters

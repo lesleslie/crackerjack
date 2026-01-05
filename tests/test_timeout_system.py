@@ -72,10 +72,10 @@ class TestTimeoutManager:
         manager = AsyncTimeoutManager()
 
         async def quick_operation():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.02)
             return "success"
 
-        async with manager.timeout_context("test_op", timeout=1.0):
+        async with manager.timeout_context("test_op", timeout=0.2):
             result = await quick_operation()
             assert result == "success"
 
@@ -85,11 +85,11 @@ class TestTimeoutManager:
         manager = AsyncTimeoutManager()
 
         async def slow_operation():
-            await asyncio.sleep(2.0)
+            await asyncio.sleep(0.3)
             return "should not reach here"
 
         with pytest.raises(TimeoutError) as exc_info:
-            async with manager.timeout_context("test_op", timeout=0.5):
+            async with manager.timeout_context("test_op", timeout=0.05):
                 await slow_operation()
 
         assert exc_info.value.operation == "test_op"
@@ -101,7 +101,7 @@ class TestTimeoutManager:
         manager = AsyncTimeoutManager()
 
         async def quick_operation():
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.02)
             return "completed"
 
         result = await manager.with_timeout(
@@ -118,14 +118,14 @@ class TestTimeoutManager:
         manager = AsyncTimeoutManager()
 
         async def slow_operation():
-            await asyncio.sleep(1.0)
+            await asyncio.sleep(0.3)
             return "should not complete"
 
         with pytest.raises(TimeoutError):
             await manager.with_timeout(
                 "test_op",
                 slow_operation(),
-                timeout=0.2,
+                timeout=0.05,
                 strategy=TimeoutStrategy.FAIL_FAST,
             )
 
@@ -196,7 +196,7 @@ class TestPerformanceMonitor:
         monitor = AsyncPerformanceMonitor()
 
         start_time = monitor.record_operation_start("test_op")
-        time.sleep(0.1)  # Simulate work
+        time.sleep(0.01)  # Simulate work
         monitor.record_operation_success("test_op", start_time)
 
         metrics = monitor.get_operation_metrics("test_op")
@@ -212,7 +212,7 @@ class TestPerformanceMonitor:
         monitor = AsyncPerformanceMonitor()
 
         start_time = monitor.record_operation_start("test_op")
-        time.sleep(0.1)
+        time.sleep(0.01)
         monitor.record_operation_failure("test_op", start_time)
 
         metrics = monitor.get_operation_metrics("test_op")
@@ -227,7 +227,7 @@ class TestPerformanceMonitor:
         monitor = AsyncPerformanceMonitor()
 
         start_time = monitor.record_operation_start("test_op")
-        time.sleep(0.1)
+        time.sleep(0.01)
         monitor.record_operation_timeout("test_op", start_time, 5.0, "Test timeout")
 
         metrics = monitor.get_operation_metrics("test_op")
@@ -419,13 +419,13 @@ class TestAsyncWorkflowIntegration:
 @pytest.mark.asyncio
 async def test_comprehensive_timeout_prevention():
     """Integration test to verify timeout prevention works end-to-end."""
-    manager = AsyncTimeoutManager(TimeoutConfig(default_timeout=1.0))
+    manager = AsyncTimeoutManager(TimeoutConfig(default_timeout=0.1))
 
     # Test that hanging operations are prevented
     start_time = time.time()
 
     async def hanging_task():
-        await asyncio.sleep(10)  # Would hang for 10 seconds
+        await asyncio.sleep(0.5)  # Would hang without timeout
         return "should not complete"
 
     with pytest.raises(TimeoutError):
@@ -438,7 +438,7 @@ async def test_comprehensive_timeout_prevention():
     elapsed = time.time() - start_time
 
     # Should complete in around 1 second (timeout), not 10 seconds
-    assert elapsed < 2.0, f"Operation took {elapsed:.2f}s, should have timed out in ~1s"
+    assert elapsed < 0.3, f"Operation took {elapsed:.2f}s, should have timed out quickly"
 
     # Verify metrics were recorded
     monitor = manager.performance_monitor

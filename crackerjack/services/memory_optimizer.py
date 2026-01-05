@@ -368,7 +368,7 @@ def lazy_property(factory: t.Callable[[], t.Any]) -> property:
 
         if not hasattr(self, attr_name):
             # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-            # logger = logger  # Migrated from ACB
+            # logger = logger  # Migrated from legacy runtime
             loader = LazyLoader(factory, logger=logger, name=factory.__name__)
             setattr(self, attr_name, loader)
 
@@ -406,7 +406,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
 
 def create_lazy_service(factory: Callable[[], Any], name: str) -> LazyLoader:
     # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-    # logger = logger  # Migrated from ACB
+    # logger = logger  # Migrated from legacy runtime
     return LazyLoader(factory, logger=logger, name=name)
 
 
@@ -416,7 +416,7 @@ def create_resource_pool(
     name: str = "unnamed",
 ) -> ResourcePool:
     # Get logger from DI instead of MemoryOptimizer to avoid circular dependency
-    # logger = logger  # Migrated from ACB
+    # logger = logger  # Migrated from legacy runtime
     pool = ResourcePool(factory, logger=logger, max_size=max_size, name=name)
     MemoryOptimizer.get_instance().register_resource_pool(name, pool)
     return pool

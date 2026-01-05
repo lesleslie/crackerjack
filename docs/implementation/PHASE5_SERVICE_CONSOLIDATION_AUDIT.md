@@ -5,7 +5,7 @@
 This audit identified **significant duplication** across quality baseline and performance monitoring services. The codebase has evolved through multiple refactoring phases, creating parallel implementations at different levels. Two critical patterns emerge:
 
 1. **Quality Services**: Root-level versions are deprecated; refactored versions in `/services/quality/` are canonical
-1. **Performance Services**: Root-level versions use legacy logging; monitoring subdirectory versions use ACB DI (newer pattern)
+1. **Performance Services**: Root-level versions use legacy logging; monitoring subdirectory versions use DI (newer pattern)
 
 **Total Consolidation Opportunity**: ~3,000+ lines of duplicated code that can be safely removed
 
@@ -38,7 +38,7 @@ ______________________________________________________________________
   - **Type**: Refactored base with async support
   - **Key Improvements**:
     - ✅ Implements `QualityBaselineProtocol`
-    - ✅ Uses ACB DI with `@depends.inject`
+    - ✅ Uses DI with `@depends.inject`
     - ✅ Optional DB persistence via `QualityBaselineRepository`
     - ✅ Async methods: `arecord_baseline()`, `aget_baseline()`, `aget_recent_baselines()`
     - ✅ Synchronous wrappers using `_run_async()` helper
@@ -139,11 +139,11 @@ ______________________________________________________________________
   - Pattern: Legacy logging pattern
   - Factory: `get_performance_monitor()` returns singleton
 
-**Monitoring Subdir (CANONICAL - ACB DI)**
+**Monitoring Subdir (CANONICAL - DI)**
 
 - `/home/user/crackerjack/crackerjack/services/monitoring/performance_monitor.py` (569 lines)
   - Uses: `@depends.inject` decorator, `Inject[Logger]`
-  - Pattern: ACB dependency injection
+  - Pattern: dependency injection
   - Factory: `get_performance_monitor()` calls `depends.get_sync(Logger)`
   - **Differences**: Identical functionality, only DI pattern differs
 
@@ -164,7 +164,7 @@ ______________________________________________________________________
   - Features: TTL, LRU eviction, invalidation keys, async cleanup
   - Helper classes: `GitOperationCache`, `FileSystemCache`, `CommandResultCache`
 
-**Monitoring Subdir (CANONICAL - ACB DI)**
+**Monitoring Subdir (CANONICAL - DI)**
 
 - `/home/user/crackerjack/crackerjack/services/monitoring/performance_cache.py` (388 lines)
   - Uses: `@depends.inject` decorator, `Inject[Logger]`
@@ -237,7 +237,7 @@ from crackerjack.services.logging import get_logger
 logger = get_logger("service_name")
 
 # Monitoring version (CANONICAL)
-from acb.depends import Inject, depends
+from legacy.depends import Inject, depends
 
 
 @depends.inject
@@ -268,8 +268,8 @@ def get_git_cache():
 | **DELETE** | `/services/performance_monitor.py` | Legacy logging; replaced by monitoring version |
 | **DELETE** | `/services/performance_cache.py` | Legacy logging; replaced by monitoring version |
 | **DELETE** | `/services/performance_benchmarks.py` | Old imports; monitoring version is enhanced |
-| **KEEP** | `/services/monitoring/performance_monitor.py` | Canonical with ACB DI |
-| **KEEP** | `/services/monitoring/performance_cache.py` | Canonical with ACB DI |
+| **KEEP** | `/services/monitoring/performance_monitor.py` | Canonical with DI |
+| **KEEP** | `/services/monitoring/performance_cache.py` | Canonical with DI |
 | **KEEP** | `/services/monitoring/performance_benchmarks.py` | Enhanced benchmark suite |
 | **KEEP** | `/core/performance_monitor.py` | Different abstraction (operation metrics) |
 | **AUDIT** | `/tests/conftest.py` | May need import updates |

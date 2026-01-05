@@ -26,16 +26,16 @@ The execution flow is:
 1. `WorkflowOrchestrator._run_fast_hooks_phase()` → calls phases
 1. `PhaseCoordinator.run_fast_hooks_only()` → shows header, calls hook_manager
 1. `HookManager.run_fast_hooks()` → detects orchestration enabled, calls orchestrator
-1. `HookOrchestrator.execute_strategy()` → executes in ACB mode (no progress output)
+1. `HookOrchestrator.execute_strategy()` → executes in legacy mode (no progress output)
 1. `PhaseCoordinator._report_hook_results()` → shows final summary
 
-**The gap**: Steps 4 (ACB orchestrator) doesn't display any progress during execution.
+**The gap**: Steps 4 (legacy orchestrator) doesn't display any progress during execution.
 
 ### Architecture Context
 
-**ACB Mode (Current):**
+**legacy Mode (Current):**
 
-- `crackerjack/orchestration/hook_orchestrator.py:351` - `_execute_acb_mode()`
+- `crackerjack/orchestration/hook_orchestrator.py:351` - `_execute_legacy_mode()`
 - Uses `AdaptiveExecutionStrategy` for dependency-aware parallel execution
 - Calls hooks directly via adapters (not pre-commit CLI)
 - **No console output during execution** (only logging)
@@ -68,7 +68,7 @@ Running ruff-check... ✅ 0.18s
 
 **Difficulty**: HARD - Requires significant refactoring
 
-- ACB orchestrator uses async batch execution with adaptive strategies
+- legacy orchestrator uses async batch execution with adaptive strategies
 - Hooks can run in parallel (dependency-aware batching)
 - Real-time line-by-line output conflicts with parallel execution model
 - Would need to add callback system to orchestrator to report progress
@@ -99,11 +99,11 @@ Running ruff-check... ✅ 0.18s
 
 - Progress bar respects console width automatically (Rich built-in)
 - Already has implementation in `ProgressHookExecutor`
-- Needs integration with ACB orchestrator's async execution
+- Needs integration with legacy orchestrator's async execution
 
 **Implementation Path**:
 
-1. Add progress callback to `HookOrchestrator._execute_acb_mode()`
+1. Add progress callback to `HookOrchestrator._execute_legacy_mode()`
 1. Use Rich `Progress` with console width from settings
 1. Update progress in callbacks from adaptive strategy
 1. Estimated effort: 2-3 hours
@@ -162,7 +162,7 @@ def separator(char: str = "-", width: int | None = None) -> str:
 
 - Rich `Progress` automatically respects the `Console` width setting
 - `PhaseCoordinator` already has the console with proper width
-- No changes needed in ACB - it's purely a Crackerjack configuration
+- No changes needed in legacy - it's purely a Crackerjack configuration
 
 ### Configuration Files
 
@@ -195,11 +195,11 @@ Users can override console width in:
 
 ### Why?
 
-1. **Clean integration**: Works naturally with ACB's async execution
+1. **Clean integration**: Works naturally with legacy's async execution
 1. **Console width**: Already respects configured width (70 chars)
 1. **User experience**: Better than nothing, good enough for most users
 1. **Implementation**: Moderate effort, clean code
-1. **No ACB changes**: Purely Crackerjack-side implementation
+1. **No legacy changes**: Purely Crackerjack-side implementation
 
 ### What it Won't Do
 
@@ -223,7 +223,7 @@ Users can override console width in:
 Add optional progress callback parameter:
 
 ```python
-async def _execute_acb_mode(
+async def _execute_legacy_mode(
     self,
     strategy: HookStrategy,
     progress_callback: Callable[[int, int], None] | None = None,

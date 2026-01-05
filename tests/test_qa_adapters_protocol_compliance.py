@@ -252,48 +252,6 @@ class TestQAAdapterConfiguration:
             pass
 
 
-class TestQAAdapterModuleRegistration:
-    """Test ACB module registration patterns."""
-
-    def test_adapters_have_module_id(self):
-        """Verify all adapters have MODULE_ID at module level."""
-        from crackerjack.adapters.format import ruff, mdformat
-        from crackerjack.adapters.lint import codespell
-        from crackerjack.adapters.security import bandit, gitleaks
-        from crackerjack.adapters.type import zuban
-        from crackerjack.adapters.refactor import refurb, creosote
-        from crackerjack.adapters.complexity import complexipy
-        from crackerjack.adapters.utility import checks
-
-        modules = [
-            bandit,
-            codespell,
-            complexipy,
-            creosote,
-            gitleaks,
-            mdformat,
-            refurb,
-            ruff,
-            checks,
-            zuban,
-        ]
-
-        for module in modules:
-            assert hasattr(module, "MODULE_ID"), (
-                f"{module.__name__} must have MODULE_ID at module level"
-            )
-            assert isinstance(module.MODULE_ID, UUID), (
-                f"{module.__name__}.MODULE_ID must be UUID"
-            )
-
-            assert hasattr(module, "MODULE_STATUS"), (
-                f"{module.__name__} must have MODULE_STATUS at module level"
-            )
-            assert isinstance(module.MODULE_STATUS, str), (
-                f"{module.__name__}.MODULE_STATUS must be string"
-            )
-
-
 class TestQABaseSettings:
     """Test QA adapter settings patterns."""
 

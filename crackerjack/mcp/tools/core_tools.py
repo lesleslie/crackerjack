@@ -142,7 +142,7 @@ def _validate_kwargs_argument(
 
 
 def _configure_stage_options(stage: str) -> CrackerjackSettings:
-    """Configure settings for a specific stage using ACB dependency injection.
+    """Configure settings for a specific stage using dependency injection.
 
     Note: Returns a copy of global settings with stage-specific overrides.
     The global settings remain unchanged.
@@ -366,7 +366,7 @@ def register_core_tools(mcp_app: t.Any) -> None:
             return validation_error
 
         # TODO(Phase 3): Replace with Oneiric workflow execution
-        return '{"error": "Workflow orchestration removed in Phase 2 (ACB removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'
+        return '{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'
 
 
 def _get_error_patterns() -> list[tuple[str, str]]:

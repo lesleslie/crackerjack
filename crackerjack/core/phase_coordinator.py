@@ -162,7 +162,7 @@ class PhaseCoordinator:
     def _is_plain_output(self) -> bool:
         """Detect if we should avoid rich formatting entirely.
 
-        Leverages ACB Console's plain-mode flag when available and falls back
+        Leverages console plain-mode flag when available and falls back
         to Rich Console properties when not.
         """
         try:
@@ -1222,4 +1222,4 @@ class PhaseCoordinator:
             return "yellow"
         return "bright_white"
 
-    # (All printing is handled by acb.console.Console which supports robust I/O.)
+    # (All printing is handled by the console, which supports robust I/O.)

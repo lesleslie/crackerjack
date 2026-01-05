@@ -9,7 +9,7 @@ requirements.txt) that are not actually used in the codebase, helping to:
 
 Standard Python Patterns:
 - MODULE_ID and MODULE_STATUS at module level (static UUID)
-- No ACB dependency injection
+- No dependency injection
 - Extends BaseToolAdapter for tool execution
 - Async execution with output parsing
 """

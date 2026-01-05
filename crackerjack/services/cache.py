@@ -10,7 +10,7 @@ from crackerjack.models.task import HookResult
 
 logger = logging.getLogger(__name__)
 
-# Cache adapter removed with ACB - using in-memory caching only
+# Cache adapter removed with legacy runtime - using in-memory caching only
 Cache: Any | None = None
 _cache_import_error: Exception | None = None
 
@@ -40,12 +40,12 @@ class CacheStats:
 
 
 def get_cache() -> Any:
-    """Return the configured cache backend (ACB removed)."""
+    """Return the configured cache backend (legacy adapter removed)."""
     return None
 
 
 class CrackerjackCache:
-    """ACB-backed cache adapter with in-memory fallback when adapter missing."""
+    """Cache adapter with in-memory fallback when backend is unavailable."""
 
     EXPENSIVE_HOOKS = {
         # Type checking and analysis
@@ -107,12 +107,12 @@ class CrackerjackCache:
         if backend is not None:
             self._backend = backend
         else:
-            # Try to get ACB cache adapter, fallback to None if unavailable
+            # Try to get cache backend, fallback to None if unavailable
             try:
                 self._backend = get_cache()
             except RuntimeError:
-                # ACB cache adapter not available - use in-memory fallback
-                logger.info("ACB cache adapter unavailable, using in-memory cache")
+                # Cache backend not available - use in-memory fallback
+                logger.info("Cache backend unavailable, using in-memory cache")
                 self._backend = None
 
     @staticmethod
@@ -290,7 +290,7 @@ class CrackerjackCache:
     @staticmethod
     def invalidate_hook_cache(hook_name: str | None = None) -> None:
         logger.warning(
-            "ACB cache fallback does not support selective invalidation (hook=%s).",
+            "Cache fallback does not support selective invalidation (hook=%s).",
             hook_name,
         )
 
@@ -304,7 +304,7 @@ class CrackerjackCache:
         }
 
     def get_cache_stats(self) -> dict[str, Any]:
-        return {"acb_cache": self.stats.to_dict()}
+        return {"cache": self.stats.to_dict()}
 
     @staticmethod
     def _get_hook_cache_key(hook_name: str, file_hashes: list[str]) -> str:

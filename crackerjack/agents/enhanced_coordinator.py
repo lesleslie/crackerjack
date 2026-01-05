@@ -70,27 +70,33 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
         self.logger.info(f"Enhanced proactive handling of {len(issues)} issues")
 
-        # Pre-analyze issues for external consultation opportunities
-        strategic_consultations = await self._pre_consult_for_strategy(issues)
+        try:
+            # Pre-analyze issues for external consultation opportunities
+            strategic_consultations = await self._pre_consult_for_strategy(issues)
 
-        # Create enhanced architectural plan incorporating external guidance
-        architectural_plan = await self._create_enhanced_architectural_plan(
-            issues, strategic_consultations
-        )
+            # Create enhanced architectural plan incorporating external guidance
+            architectural_plan = await self._create_enhanced_architectural_plan(
+                issues, strategic_consultations
+            )
 
-        # Apply fixes with enhanced strategy
-        overall_result = await self._apply_enhanced_fixes_with_plan(
-            issues, architectural_plan, strategic_consultations
-        )
+            # Apply fixes with enhanced strategy
+            overall_result = await self._apply_enhanced_fixes_with_plan(
+                issues, architectural_plan, strategic_consultations
+            )
 
-        # Post-process with external validation if needed
-        validated_result = await self._validate_with_external_agents(
-            overall_result, architectural_plan
-        )
+            # Post-process with external validation if needed
+            validated_result = await self._validate_with_external_agents(
+                overall_result, architectural_plan
+            )
 
-        self._update_consultation_stats(strategic_consultations, validated_result)
+            self._update_consultation_stats(strategic_consultations, validated_result)
 
-        return validated_result
+            return validated_result
+        except Exception:
+            self.logger.exception(
+                "Enhanced proactive handling failed; falling back to base coordinator",
+            )
+            return await super().handle_issues_proactively(issues)
 
     async def _pre_consult_for_strategy(self, issues: list[Issue]) -> dict[str, t.Any]:
         """Pre-consult with external agents for strategic guidance."""

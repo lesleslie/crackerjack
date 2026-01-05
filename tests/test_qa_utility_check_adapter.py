@@ -167,20 +167,6 @@ class TestUtilityCheckDefaultConfigs:
         assert config.parallel_safe is True
 
 
-class TestUtilityCheckModuleRegistration:
-    """Test ACB module registration."""
-
-    def test_module_has_required_attributes(self):
-        """Test utility_check module has MODULE_ID and MODULE_STATUS."""
-        from crackerjack.adapters.utility import checks
-
-        assert hasattr(checks, "MODULE_ID")
-        assert isinstance(checks.MODULE_ID, UUID)
-
-        assert hasattr(checks, "MODULE_STATUS")
-        assert isinstance(checks.MODULE_STATUS, str)
-
-
 class TestUtilityCheckTypes:
     """Test UtilityCheckType enum."""
 

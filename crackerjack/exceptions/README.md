@@ -72,7 +72,7 @@ except ToolExecutionError as e:
 **Rich Formatting:**
 
 ```python
-from acb.console import Console
+from legacy.console import Console
 
 console = Console()
 
@@ -196,8 +196,8 @@ def run_tool(tool: str, args: list[str], cwd: Path) -> bool:
 
 ```python
 from crackerjack.exceptions import ToolExecutionError
-from acb.console import Console
-from acb.depends import depends
+from legacy.console import Console
+from legacy.depends import depends
 
 
 @depends.inject

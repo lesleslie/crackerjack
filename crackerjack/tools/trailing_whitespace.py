@@ -56,11 +56,12 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
         for line in lines:
             if has_trailing_whitespace(line):
                 # Remove trailing whitespace but preserve newline
-                stripped = line.rstrip()
-                if line.endswith("\n"):
-                    stripped += "\n"
-                elif line.endswith("\r\n"):
+                line_body = line.rstrip("\r\n")
+                stripped = line_body.rstrip()
+                if line.endswith("\r\n"):
                     stripped += "\r\n"
+                elif line.endswith("\n"):
+                    stripped += "\n"
                 new_lines.append(stripped)
                 modified = True
             else:

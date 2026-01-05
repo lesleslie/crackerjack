@@ -43,7 +43,11 @@ class OptionsAdapter:
     def from_options_protocol(options: OptionsProtocol) -> WorkflowOptions:
         return WorkflowOptions(
             cleaning=CleaningConfig(
-                clean=getattr(options, "clean", True),
+                clean=getattr(
+                    options,
+                    "clean",
+                    getattr(options, "strip_code", True),
+                ),
                 update_docs=getattr(options, "update_docs", False),
                 force_update_docs=getattr(options, "force_update_docs", False),
                 compress_docs=getattr(options, "compress_docs", False),
@@ -57,7 +61,11 @@ class OptionsAdapter:
                 enable_lsp_optimization=getattr(options, "enable_lsp_hooks", False),
             ),
             testing=TestConfig(
-                test=getattr(options, "test", False),
+                test=getattr(
+                    options,
+                    "test",
+                    getattr(options, "run_tests", False),
+                ),
                 benchmark=getattr(options, "benchmark", False),
                 benchmark_regression=getattr(options, "benchmark_regression", False),
                 benchmark_regression_threshold=getattr(
@@ -82,8 +90,16 @@ class OptionsAdapter:
                 create_pr=getattr(options, "create_pr", False),
             ),
             ai=AIConfig(
-                ai_agent=getattr(options, "ai_agent", False),
-                autofix=getattr(options, "autofix", True),
+                ai_agent=getattr(
+                    options,
+                    "ai_agent",
+                    getattr(options, "ai_fix", False),
+                ),
+                autofix=getattr(
+                    options,
+                    "autofix",
+                    getattr(options, "ai_fix", True),
+                ),
                 ai_agent_autofix=getattr(options, "ai_agent_autofix", False),
                 start_mcp_server=getattr(options, "start_mcp_server", False),
                 max_iterations=_determine_max_iterations(options),

@@ -1,6 +1,6 @@
 """Crackerjack server settings for Oneiric integration.
 
-Phase 3 Implementation: Replaces ACB Settings with Pydantic BaseSettings.
+Phase 3 Implementation: Replaces legacy Settings with Pydantic BaseSettings.
 """
 
 from pathlib import Path
@@ -12,8 +12,8 @@ from pydantic_settings import BaseSettings
 class CrackerjackSettings(BaseSettings):
     """Crackerjack configuration for Oneiric-integrated QA server.
 
-    This class replaces the ACB Settings-based configuration with a simpler
-    Pydantic BaseSettings approach, removing the ACB dependency while preserving
+    This class replaces the legacy Settings-based configuration with a simpler
+    Pydantic BaseSettings approach, removing the legacy dependency while preserving
     all necessary configuration fields for Phase 3 Oneiric integration.
     """
 
@@ -178,13 +178,13 @@ class CrackerjackSettings(BaseSettings):
         """Load settings from environment variables.
 
         Args:
-            config_name: Configuration name (for ACB Settings compatibility)
+            config_name: Configuration name (for legacy Settings compatibility)
 
         Returns:
             CrackerjackSettings instance
 
         Note:
-            This method provides compatibility with ACB Settings .load() pattern.
+            This method provides compatibility with the legacy .load() pattern.
             In Phase 3, we use environment variables only. YAML loading can be
             added in future phases if needed.
         """

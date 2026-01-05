@@ -4,7 +4,7 @@
 
 **Problem**: Hooks showing "1 issue" with generic message "Hook failed with no detailed output" instead of actual issue details from adapters.
 
-**Affected Hooks**: All ACB adapter-based hooks (ruff-format, codespell, ruff-check, complexipy, zuban, refurb, etc.)
+**Affected Hooks**: All adapter-based hooks (ruff-format, codespell, ruff-check, complexipy, zuban, refurb, etc.)
 
 ## Root Cause
 

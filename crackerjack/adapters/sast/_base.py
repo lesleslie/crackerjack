@@ -14,7 +14,7 @@ Protocol-based design ensures:
 - Type safety via runtime_checkable protocol
 - Loose coupling for testing and mocking
 - Consistent interface across all SAST tools
-- Integration with ACB dependency injection
+- Integration with dependency injection
 """
 
 from __future__ import annotations
@@ -78,7 +78,7 @@ class SASTAdapterProtocol(Protocol):
         """Unique module identifier.
 
         Returns:
-            UUID7 for reproducible module identity (ACB registration)
+            UUID7 for reproducible module identity (module registration)
         """
         ...
 

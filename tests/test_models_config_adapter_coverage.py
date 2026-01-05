@@ -12,7 +12,7 @@ class TestOptionsAdapter:
     def mock_options(self):
         options = Mock(spec=OptionsProtocol)
 
-        options.strip_code = True
+        options.clean = True
         options.update_docs = False
         options.force_update_docs = True
         options.compress_docs = False
@@ -23,7 +23,7 @@ class TestOptionsAdapter:
         options.enable_pyrefly = True
         options.enable_ty = False
 
-        options.run_tests = True
+        options.test = True
         options.benchmark = False
         options.benchmark_regression = True
         options.benchmark_regression_threshold = 0.2
@@ -41,7 +41,8 @@ class TestOptionsAdapter:
         options.commit = True
         options.create_pr = False
 
-        options.ai_fix = True
+        options.ai_agent = True
+        options.autofix = True
         options.start_mcp_server = False
 
         options.interactive = False
@@ -59,8 +60,8 @@ class TestOptionsAdapter:
     def minimal_options(self):
         class MinimalOptions:
             def __init__(self) -> None:
-                self.strip_code = False
-                self.run_tests = True
+                self.clean = False
+                self.test = True
                 self.verbose = False
 
         return MinimalOptions()
@@ -68,7 +69,7 @@ class TestOptionsAdapter:
     def test_from_options_protocol_comprehensive(self, mock_options) -> None:
         workflow_options = OptionsAdapter.from_options_protocol(mock_options)
 
-        assert workflow_options.cleaning.strip_code is True
+        assert workflow_options.cleaning.clean is True
         assert workflow_options.cleaning.update_docs is False
         assert workflow_options.cleaning.force_update_docs is True
         assert workflow_options.cleaning.compress_docs is False
@@ -79,7 +80,7 @@ class TestOptionsAdapter:
         assert workflow_options.hooks.enable_pyrefly is True
         assert workflow_options.hooks.enable_ty is False
 
-        assert workflow_options.testing.run_tests is True
+        assert workflow_options.testing.test is True
         assert workflow_options.testing.benchmark is False
         assert workflow_options.testing.benchmark_regression is True
         assert workflow_options.testing.benchmark_regression_threshold == 0.2
@@ -97,7 +98,8 @@ class TestOptionsAdapter:
         assert workflow_options.git.commit is True
         assert workflow_options.git.create_pr is False
 
-        assert workflow_options.ai.ai_fix is True
+        assert workflow_options.ai.ai_agent is True
+        assert workflow_options.ai.autofix is True
         assert workflow_options.ai.start_mcp_server is False
 
         assert workflow_options.execution.interactive is False
@@ -112,13 +114,13 @@ class TestOptionsAdapter:
     def test_from_options_protocol_with_defaults(self, minimal_options) -> None:
         workflow_options = OptionsAdapter.from_options_protocol(minimal_options)
 
-        assert workflow_options.cleaning.strip_code is False
+        assert workflow_options.cleaning.clean is False
         assert workflow_options.cleaning.update_docs is False
         assert workflow_options.cleaning.force_update_docs is False
         assert workflow_options.cleaning.compress_docs is False
         assert workflow_options.cleaning.auto_compress_docs is False
 
-        assert workflow_options.testing.run_tests is True
+        assert workflow_options.testing.test is True
         assert workflow_options.testing.benchmark is False
         assert workflow_options.testing.benchmark_regression is False
         assert workflow_options.testing.benchmark_regression_threshold == 0.1
@@ -142,11 +144,12 @@ class TestOptionsAdapter:
 class TestIntegrationBothDirections:
     def test_round_trip_conversion(self) -> None:
         original_options = Mock(spec=OptionsProtocol)
-        original_options.strip_code = True
-        original_options.run_tests = False
+        original_options.clean = True
+        original_options.test = False
         original_options.verbose = True
         original_options.commit = False
-        original_options.ai_fix = True
+        original_options.ai_agent = True
+        original_options.autofix = True
         original_options.interactive = False
         original_options.track_progress = True
         original_options.skip_hooks = False
@@ -161,11 +164,12 @@ class TestIntegrationBothDirections:
         result = OptionsAdapter.to_options_protocol(workflow_options)
 
         # Verify that the workflow_options has the expected values
-        assert result.cleaning.strip_code == original_options.strip_code
-        assert result.testing.run_tests == original_options.run_tests
+        assert result.cleaning.clean == original_options.clean
+        assert result.testing.test == original_options.test
         assert result.execution.verbose == original_options.verbose
         assert result.git.commit == original_options.commit
-        assert result.ai.ai_fix == original_options.ai_fix
+        assert result.ai.ai_agent == original_options.ai_agent
+        assert result.ai.autofix == original_options.autofix
         assert result.execution.interactive == original_options.interactive
         assert result.progress.track_progress == original_options.track_progress
         assert result.hooks.skip_hooks == original_options.skip_hooks
@@ -220,21 +224,21 @@ class TestEdgeCasesAndDefaults:
 
         workflow_options = OptionsAdapter.from_options_protocol(empty_options)
 
-        assert workflow_options.cleaning.strip_code is True
-        assert workflow_options.testing.run_tests is False
+        assert workflow_options.cleaning.clean is True
+        assert workflow_options.testing.test is False
         assert workflow_options.execution.verbose is False
 
     def test_default_value_consistency(self) -> None:
         class MinimalOptions:
             def __init__(self) -> None:
-                self.strip_code = False
+                self.clean = False
                 self.verbose = True
 
         minimal_options = MinimalOptions()
 
         workflow_options = OptionsAdapter.from_options_protocol(minimal_options)
 
-        assert workflow_options.cleaning.strip_code is False
+        assert workflow_options.cleaning.clean is False
         assert workflow_options.execution.verbose is True
 
         assert workflow_options.cleaning.update_docs is False
@@ -244,15 +248,15 @@ class TestEdgeCasesAndDefaults:
     def test_boolean_type_safety(self) -> None:
         options = Mock(spec=OptionsProtocol)
 
-        options.strip_code = 1
-        options.run_tests = 0
+        options.clean = 1
+        options.test = 0
         options.verbose = ""
         options.interactive = "yes"
 
         workflow_options = OptionsAdapter.from_options_protocol(options)
         result = OptionsAdapter.to_options_protocol(workflow_options)
 
-        assert result.cleaning.strip_code == 1
-        assert result.testing.run_tests == 0
+        assert result.cleaning.clean == 1
+        assert result.testing.test == 0
         assert result.execution.verbose == ""
         assert result.execution.interactive == "yes"

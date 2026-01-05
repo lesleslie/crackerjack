@@ -1,15 +1,13 @@
 #!/usr/bin/env python
-"""Validate that all crackerjack modules can be imported successfully."""
 
 import importlib
 import sys
 from pathlib import Path
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
-# Critical modules that must import successfully
+
 CRITICAL_MODULES = [
     "crackerjack.cli.facade",
     "crackerjack.cli.interactive",
@@ -27,7 +25,6 @@ CRITICAL_MODULES = [
 
 
 def validate_imports():
-    """Validate that all critical modules can be imported."""
     failed = []
     succeeded = []
 
@@ -49,7 +46,7 @@ def validate_imports():
     if failed:
         print(f"\n🔴 {len(failed)} Import Errors:")
         for module, error in failed:
-            print(f"  ❌ {module}: {error}")
+            print(f" ❌ {module}: {error}")
         return False
 
     print("\n✅ All critical modules imported successfully!")

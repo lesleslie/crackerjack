@@ -1,7 +1,7 @@
-"""Crackerjack logging compatibility layer using ACB's logger.
+"""Crackerjack logging compatibility layer using the legacy logger.
 
 This module provides backward compatibility with Crackerjack's logging API
-while delegating to ACB's logger system. It maintains the same public API
+while delegating to the legacy logger system. It maintains the same public API
 for LoggingContext, get_logger(), and other utilities.
 """
 
@@ -147,7 +147,7 @@ def get_logger(name: str) -> Any:
 class LoggingContext:
     """Context manager for operation logging with correlation IDs.
 
-    Uses ACB's logger internally while maintaining Crackerjack's API.
+    Uses the legacy logger internally while maintaining Crackerjack's API.
     """
 
     def __init__(self, operation: str, **kwargs: Any) -> None:
@@ -192,9 +192,9 @@ def log_performance(
     operation: str,
     **kwargs: Any,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-    """Decorator for performance logging using ACB's logger.
+    """Decorator for performance logging using the legacy logger.
 
-    Maintains Crackerjack's API while delegating to ACB's logger.
+    Maintains Crackerjack's API while delegating to the legacy logger.
     """
 
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
@@ -233,7 +233,7 @@ def log_performance(
     return decorator
 
 
-# Module-level logger instances using ACB's logger
+# Module-level logger instances using the legacy logger
 hook_logger = get_logger("crackerjack.hooks")
 test_logger = get_logger("crackerjack.tests")
 config_logger = get_logger("crackerjack.config")

@@ -185,7 +185,7 @@ Integration layer connecting intelligence system to crackerjack:
 
 **Features:**
 
-- **Workflow Integration** - Integrates agents with ACB workflows
+- **Workflow Integration** - Integrates agents with orchestrated workflows
 - **Error Routing** - Routes errors to appropriate agents
 - **Result Processing** - Processes agent results for display
 - **Configuration Management** - Manages agent system configuration
@@ -437,7 +437,7 @@ async def ai_fix_error(error_message: str, file_path: Path) -> bool:
 
 ## Configuration
 
-Intelligence system configuration through ACB Settings:
+Intelligence system configuration through settings:
 
 ```yaml
 # settings/crackerjack.yaml
@@ -477,7 +477,7 @@ agent_config:
 
 ## Integration with Workflows
 
-Intelligence system integrates with ACB workflows for automated fixing:
+Intelligence system integrates with orchestrated workflows for automated fixing:
 
 ```python
 from crackerjack.workflows import CrackerjackWorkflowEngine

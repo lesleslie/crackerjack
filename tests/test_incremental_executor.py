@@ -448,10 +448,10 @@ class TestIncrementalExecutor:
         def tool_func(file_path: Path) -> str:
             return "ok"
 
-        # Create executor with 1 second TTL
+        # Create executor with short TTL
         executor = IncrementalExecutor(
             cache_dir=tmp_path / "cache",
-            ttl_seconds=1,
+            ttl_seconds=0.05,
         )
 
         # Populate cache
@@ -462,12 +462,12 @@ class TestIncrementalExecutor:
         )
 
         # Wait for expiration
-        time.sleep(1.1)
+        time.sleep(0.06)
 
         # New executor should not load expired cache
         executor2 = IncrementalExecutor(
             cache_dir=tmp_path / "cache",
-            ttl_seconds=1,
+            ttl_seconds=0.05,
         )
 
         assert len(executor2._cache) == 0

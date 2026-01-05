@@ -169,19 +169,16 @@ def main(file_paths: list[str]) -> int:
 
 
 def _should_validate_file(file_path: Path) -> bool:
-    """Check if file should be validated."""
     return file_path.suffix == ".py" and file_path.exists()
 
 
 def _report_file_issues(file_path: Path, issues: list[tuple[int, str]]) -> None:
-    """Report validation issues for a file."""
     print(f"\n❌ {file_path}:")
     for line_no, message in issues:
         print(f" Line {line_no}: {message}")
 
 
 def _print_validation_result(exit_code: int) -> None:
-    """Print validation result summary."""
     if exit_code == 0:
         print("✅ All regex patterns validated successfully!")
     else:
@@ -189,7 +186,6 @@ def _print_validation_result(exit_code: int) -> None:
 
 
 def _print_failure_instructions() -> None:
-    """Print instructions for fixing validation failures."""
     print("\n" + "=" * 70)
     print("REGEX VALIDATION FAILED")
     print("=" * 70)

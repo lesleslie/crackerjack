@@ -86,6 +86,7 @@ class TaskStatusData:
     duration: float | None = None
     details: str | None = None
     error_message: str | None = None
+    progress: int | None = None
     files_changed: list[str] | None = None
     hook_results: list[t.Any] | None = None
 
@@ -96,6 +97,30 @@ class TaskStatusData:
             self.hook_results = []
         if self.start_time is not None and self.end_time is not None:
             self.duration = self.end_time - self.start_time
+
+    @property
+    def task_id(self) -> str:
+        return self.id
+
+    @task_id.setter
+    def task_id(self, value: str) -> None:
+        self.id = value
+
+    @property
+    def description(self) -> str:
+        return self.name
+
+    @description.setter
+    def description(self, value: str) -> None:
+        self.name = value
+
+    @property
+    def error(self) -> str | None:
+        return self.error_message
+
+    @error.setter
+    def error(self, value: str | None) -> None:
+        self.error_message = value
 
 
 class SessionTracker(BaseModel, arbitrary_types_allowed=True):

@@ -210,10 +210,10 @@ This is the **fourth and final fix** in the issue count display system:
 
 ### Manual Verification
 
-Run in a project with config errors (like ../acb):
+Run in a project with config errors (like ../legacy):
 
 ```bash
-cd /Users/les/Projects/acb
+cd /Users/les/Projects/legacy
 python -m crackerjack run
 ```
 

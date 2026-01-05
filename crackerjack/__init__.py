@@ -1,22 +1,16 @@
-"""Crackerjack - Opinionated Python project management tool."""
-
 import logging
 import sys
 import typing as t
 
-# CRITICAL: Suppress logger startup messages for clean UX
-# This must be the FIRST thing we do to prevent verbose logging
 _EARLY_DEBUG_MODE = any(
     arg in ("--debug", "-d", "--ai-debug") or arg.startswith("--debug=")
     for arg in sys.argv[1:]
 )
 
 if not _EARLY_DEBUG_MODE:
-    # Suppress verbose logging for clean default UX
     crackerjack_logger = logging.getLogger("crackerjack")
     crackerjack_logger.setLevel(logging.WARNING)
 
-    # Suppress other framework loggers that might be verbose
     for logger_name in (
         "uvicorn",
         "fastapi",

@@ -296,6 +296,12 @@ class SecureSubprocessExecutor:
         return validated_command
 
     def _validate_command_structure(self, command: list[str]) -> None:
+        if not isinstance(command, list):
+            raise CommandValidationError("Command must be a list")
+
+        if not all(isinstance(arg, str) for arg in command):
+            raise CommandValidationError("Command arguments must be strings")
+
         if not command:
             raise CommandValidationError("Command cannot be empty")
 

@@ -78,8 +78,8 @@ assert result is not None or result is None
 
 **Complete Test Classes Skipped**:
 
-- `test_async_hook_executor.py` - "Requires complex nested ACB DI setup"
-- `test_api_comprehensive.py` - "Requires complex nested ACB DI setup"
+- `test_async_hook_executor.py` - "Requires complex nested DI setup"
+- `test_api_comprehensive.py` - "Requires complex nested DI setup"
 
 **Solution**: Either implement properly using DI patterns or delete if obsolete.
 
@@ -517,7 +517,7 @@ def complex_function(x):
 - ❌ Async tests: 277 tests
 - ❌ Test organization: Poor (147+ files in root)
 - ❌ Security test coverage: ~0%
-- ✅ Good patterns exist: ACB settings, regex patterns, orchestration
+- ✅ Good patterns exist: legacy settings, regex patterns, orchestration
 
 ### Target State (End of Phase 5)
 

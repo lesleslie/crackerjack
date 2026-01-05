@@ -53,8 +53,8 @@ class TestInteractiveModules:
     def test_workflow_options_defaults(self) -> None:
         options = WorkflowOptions()
 
-        assert options.strip_code is None
-        assert options.run_tests is False
+        assert options.clean is None
+        assert options.test is False
         assert options.publish is None
         assert options.bump is None
         assert options.commit is False
@@ -63,16 +63,16 @@ class TestInteractiveModules:
 
     def test_workflow_options_with_values(self) -> None:
         options = WorkflowOptions(
-            strip_code=True,
-            run_tests=True,
+            clean=True,
+            test=True,
             publish="patch",
             bump="minor",
             commit=True,
             dry_run=True,
         )
 
-        assert options.strip_code is True
-        assert options.run_tests is True
+        assert options.clean is True
+        assert options.test is True
         assert options.publish == "patch"
         assert options.bump == "minor"
         assert options.commit is True
@@ -80,15 +80,15 @@ class TestInteractiveModules:
 
     def test_workflow_options_from_args(self) -> None:
         mock_args = Mock()
-        mock_args.strip_code = True
-        mock_args.run_tests = False
+        mock_args.clean = True
+        mock_args.test = False
         mock_args.publish = "patch"
         mock_args.bump = None
 
         options = WorkflowOptions.from_args(mock_args)
 
-        assert options.strip_code is True
-        assert options.run_tests is False
+        assert options.clean is True
+        assert options.test is False
         assert options.publish == "patch"
         assert options.bump is None
 

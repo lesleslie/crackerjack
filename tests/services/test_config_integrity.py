@@ -17,7 +17,7 @@ def mock_console() -> MagicMock:
 def config_integrity_service(tmp_path: Path, mock_console: MagicMock) -> ConfigIntegrityService:
     # Ensure the cache directory is within tmp_path for isolated testing
     with patch("pathlib.Path.home", return_value=tmp_path):
-        # Disable ACB dependency injection for testing by calling __init__ directly
+        # Bypass dependency injection for testing by calling __init__ directly
         service = object.__new__(ConfigIntegrityService)
         service.console = mock_console
         service.project_path = tmp_path

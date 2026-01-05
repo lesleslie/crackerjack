@@ -29,7 +29,7 @@ async def test_async_hook_executor_process_tracking():
 
     # Create a simple subprocess to track
     proc = await asyncio.create_subprocess_exec(
-        "python", "-c", "import time; time.sleep(0.1)",
+        "python", "-c", "import time; time.sleep(0.05)",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -61,7 +61,7 @@ async def test_async_hook_executor_cleanup():
 
     # Create a subprocess that will run for a bit
     proc = await asyncio.create_subprocess_exec(
-        "python", "-c", "import time; time.sleep(1)",
+        "python", "-c", "import time; time.sleep(0.2)",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )

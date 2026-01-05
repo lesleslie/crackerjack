@@ -1,19 +1,25 @@
-"""CLI handlers module for Crackerjack.
+"""CLI handlers module for Crackerjack."""
 
-This module contains all the command handlers for the Crackerjack CLI.
-"""
+from __future__ import annotations
+
+import logging
 
 # Import main handler functions that coordinate the core CLI workflows
 from .main_handlers import (
+    console,
     handle_config_updates,
     handle_interactive_mode,
     handle_standard_mode,
     setup_ai_agent_env,
 )
 
+logger = logging.getLogger(__name__)
+
 __all__ = [
+    "console",
     "handle_config_updates",
     "handle_interactive_mode",
     "handle_standard_mode",
+    "logger",
     "setup_ai_agent_env",
 ]

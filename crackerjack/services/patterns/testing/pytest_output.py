@@ -9,7 +9,7 @@ from ..core import ValidatedPattern
 PATTERNS: dict[str, ValidatedPattern] = {
     "pytest_test_start": ValidatedPattern(
         name="pytest_test_start",
-        pattern=r"^(.+?):: ?(.+?):: ?(.+?) (PASSED|FAILED|SKIPPED|ERROR)$",
+        pattern=r"^([^\s]+):: ?([^\s]+):: ?([^\s]+) (PASSED|FAILED|SKIPPED|ERROR)$",
         replacement=r"\1::\2::\3",
         description="Parse pytest test start line with file, class, and method "
         "(3-part format)",

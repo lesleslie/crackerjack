@@ -7,7 +7,6 @@ from rich.console import Console
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 
 # TODO(Phase 3): Replace with Oneiric workflow integration
-# from .core.workflow_orchestrator import WorkflowOrchestrator
 from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI, InteractiveWorkflowOptions
 from .models.config import WorkflowOptions
