@@ -17,6 +17,52 @@ class TestExecutor:
         self.console = console
         self.pkg_path = pkg_path
 
+    def _detect_target_project_dir(self, cmd: list[str]) -> Path:
+        """Detect the target project directory from the test command.
+
+        When running tests for a specific project, pytest should be executed from
+        that project's directory to ensure it reads the correct pyproject.toml configuration.
+
+        This method parses the test command to find the target project directory:
+        1. Look for test paths (directories or .py files) in the command
+        2. Extract the parent directory of the first test path
+        3. Fall back to pkg_path if no test paths are found
+
+        Args:
+            cmd: The test command (e.g., ['uv', 'run', 'python', '-m', 'pytest', 'tests/'])
+
+        Returns:
+            The directory where pytest should be executed
+        """
+        # Look for test paths in the command (skip 'uv', 'run', 'python', '-m', 'pytest')
+        test_start_idx = -1
+        for i, arg in enumerate(cmd):
+            if arg == "pytest":
+                test_start_idx = i + 1
+                break
+
+        if test_start_idx > 0 and test_start_idx < len(cmd):
+            # Check the arguments after 'pytest' for test paths
+            for arg in cmd[test_start_idx:]:
+                if arg.startswith("-"):
+                    continue  # Skip options like -v, -x, --cov
+
+                # Found a test path - get its parent directory
+                test_path = Path(arg)
+                if test_path.exists():
+                    if test_path.is_dir():
+                        # e.g., 'tests/' -> return '.'
+                        return test_path.parent
+                    elif test_path.is_file():
+                        # e.g., 'tests/test_foo.py' -> return '.' (parent of tests/)
+                        return test_path.parent.parent
+                    else:
+                        # Path doesn't exist, use its parent
+                        return test_path.parent
+
+        # Fall back to pkg_path if no test paths found
+        return self.pkg_path
+
     def execute_with_progress(
         self,
         cmd: list[str],
@@ -93,7 +139,7 @@ class TestExecutor:
         with suppress(Exception):
             result = subprocess.run(
                 collect_cmd,
-                cwd=self.pkg_path,
+                cwd=self._detect_target_project_dir(collect_cmd),
                 capture_output=True,
                 text=True,
                 timeout=120,  # Increased timeout for large test suites (was 30s)
@@ -123,7 +169,7 @@ class TestExecutor:
 
             process = subprocess.Popen(
                 cmd,
-                cwd=self.pkg_path,
+                cwd=self._detect_target_project_dir(cmd),
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -399,7 +445,7 @@ class TestExecutor:
     ) -> subprocess.CompletedProcess[str]:
         process = subprocess.Popen(
             cmd,
-            cwd=self.pkg_path,
+            cwd=self._detect_target_project_dir(cmd),
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
