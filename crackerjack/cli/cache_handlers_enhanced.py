@@ -1,4 +1,3 @@
-
 import typing as t
 from dataclasses import asdict, dataclass
 from datetime import datetime
@@ -14,7 +13,6 @@ from crackerjack.services.cache import CrackerjackCache
 
 @dataclass
 class CacheAnalytics:
-
     total_requests: int
     cache_hits: int
     cache_misses: int
@@ -33,7 +31,6 @@ class CacheAnalytics:
 
 @dataclass
 class CacheOptimizationSuggestion:
-
     type: str
     priority: str
     description: str
@@ -42,7 +39,6 @@ class CacheOptimizationSuggestion:
 
 
 class EnhancedCacheHandlers:
-
     def __init__(self, cache: CrackerjackCache | None = None):
         self.cache = cache or CrackerjackCache()
 
@@ -52,15 +48,11 @@ class EnhancedCacheHandlers:
                 self._handle_selective_clear(console)
                 return
 
-
             pre_clear_stats = self.cache.get_cache_stats()
-
 
             cleanup_results = self.cache.cleanup_all()
 
-
             total_cleared = sum(cleanup_results.values())
-
 
             table = Table(
                 title="🧹 Cache Cleared Successfully",
@@ -74,12 +66,10 @@ class EnhancedCacheHandlers:
 
             total_size_freed = 0.0
             for cache_type, count in cleanup_results.items():
-
                 size_freed = pre_clear_stats.get(cache_type, {}).get(
                     "total_size_mb", 0.0
                 )
                 total_size_freed += size_freed
-
 
                 if count > 100:
                     impact = "High speedup expected"
@@ -121,22 +111,17 @@ class EnhancedCacheHandlers:
             cache_stats = self.cache.get_cache_stats()
             analytics = self._generate_cache_analytics(cache_stats)
 
-
             main_table = self._create_main_stats_table(cache_stats)
-
 
             if detailed:
                 analytics_table = self._create_analytics_table(analytics)
                 console.print()
                 console.print(analytics_table)
 
-
             insights_panel = self._create_insights_panel(analytics)
-
 
             suggestions = self._generate_optimization_suggestions(analytics)
             suggestions_panel = self._create_suggestions_panel(suggestions)
-
 
             console.print()
             console.print(main_table)
@@ -149,7 +134,6 @@ class EnhancedCacheHandlers:
                 console.print()
                 console.print(suggestions_panel)
 
-
             self._show_cache_directory_info(console)
 
         except Exception as e:
@@ -159,7 +143,6 @@ class EnhancedCacheHandlers:
         self, console: Console, target_operations: list[str] | None = None
     ) -> None:
         console.print("🔥 Starting cache warming process...")
-
 
         if not target_operations:
             target_operations = [
@@ -200,7 +183,6 @@ class EnhancedCacheHandlers:
 
     def handle_cache_optimize(self, console: Console) -> None:
         console.print("⚙️ Starting cache optimization...")
-
 
         stats = self.cache.get_cache_stats()
         analytics = self._generate_cache_analytics(stats)
@@ -266,19 +248,15 @@ class EnhancedCacheHandlers:
                 return
 
             if selection == str(len(choices) + 1):
-
                 self.handle_clear_cache(console, selective=False)
                 return
-
 
             selected_indices = [int(x.strip()) - 1 for x in selection.split(", ")]
             selected_caches = [
                 choices[i] for i in selected_indices if 0 <= i < len(choices)
             ]
 
-
             for cache_name in selected_caches:
-
                 console.print(f"✅ Cleared {cache_name.replace('_', ' ').title()}")
 
         except (ValueError, IndexError):
@@ -298,7 +276,6 @@ class EnhancedCacheHandlers:
         total_entries = sum(
             cache_stats.get("total_entries", 0) for cache_stats in stats.values()
         )
-
 
         efficiency_score = min(100, hit_rate * 0.7 + (100 / (total_size + 1)) * 0.3)
 
@@ -345,7 +322,6 @@ class EnhancedCacheHandlers:
             entries = cache_stats.get("total_entries", 0)
             size_mb = cache_stats.get("total_size_mb", 0.0)
 
-
             if hit_rate > 80:
                 status = "🚀 Excellent"
                 status_style = "green"
@@ -373,7 +349,6 @@ class EnhancedCacheHandlers:
             total_misses += misses
             total_entries += entries
             total_size += size_mb
-
 
         overall_hit_rate = (
             (total_hits / (total_hits + total_misses) * 100)
@@ -411,7 +386,6 @@ class EnhancedCacheHandlers:
         table.add_column("Metric", style="cyan")
         table.add_column("Value", justify="right", style="yellow")
         table.add_column("Assessment", style="green")
-
 
         if analytics.cache_efficiency_score > 80:
             efficiency_assessment = "Excellent - cache is highly optimized"
@@ -481,7 +455,6 @@ class EnhancedCacheHandlers:
     ) -> list[CacheOptimizationSuggestion]:
         suggestions = []
 
-
         if analytics.hit_rate_percent < 60:
             suggestions.append(
                 CacheOptimizationSuggestion(
@@ -493,7 +466,6 @@ class EnhancedCacheHandlers:
                 )
             )
 
-
         if analytics.cache_size_mb > 100:
             suggestions.append(
                 CacheOptimizationSuggestion(
@@ -504,7 +476,6 @@ class EnhancedCacheHandlers:
                     action_required="Configure TTL and LRU policies",
                 )
             )
-
 
         if analytics.cache_efficiency_score < 70:
             suggestions.append(
@@ -561,12 +532,10 @@ class EnhancedCacheHandlers:
                 cache_files = list[t.Any](cache_dir.rglob("*.cache"))
                 disk_files_count = len(cache_files)
 
-
                 total_size = sum(f.stat().st_size for f in cache_files if f.exists())
                 size_mb = total_size / (1024 * 1024)
 
                 cache_dir_info += f" ({disk_files_count} files, {size_mb:.2f} MB)"
-
 
                 if cache_files:
                     newest_file = max(cache_files, key=lambda f: f.stat().st_mtime)
@@ -582,25 +551,20 @@ class EnhancedCacheHandlers:
             console.print(cache_dir_info)
 
     def _warm_hook_results_cache(self) -> None:
-
         pass
 
     def _warm_file_hashes_cache(self) -> None:
-
         pass
 
     def _warm_agent_decisions_cache(self) -> None:
-
         pass
 
     def _warm_test_results_cache(self) -> None:
-
         pass
 
     def _apply_optimization_suggestion(
         self, suggestion: CacheOptimizationSuggestion
     ) -> bool:
-
         return True
 
 

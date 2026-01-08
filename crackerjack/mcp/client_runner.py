@@ -51,9 +51,7 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
     try:
         Path(__file__).parent.parent / "__main__.py"
 
-
         # stdio_client( # type: ignore
-
 
         class MockSession:
             async def __aenter__(self):
@@ -67,8 +65,6 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
 
         async with MockSession():
             try:
-
-
                 console.print(
                     f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]"
                 )

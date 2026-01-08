@@ -491,9 +491,7 @@ class ContextualAIAssistant:
     def get_quick_help(self, query: str) -> str:
         query_lower = query.lower()
 
-
         help_mapping = self._get_help_keyword_mapping()
-
 
         for keywords, response in help_mapping:
             if self._query_contains_keywords(query_lower, keywords):
@@ -529,7 +527,6 @@ class ContextualAIAssistant:
             ),
             (
                 ["dashboard", "monitor"],
-
                 "Start monitoring dashboard: python -m crackerjack --dashboard",
             ),
         ]

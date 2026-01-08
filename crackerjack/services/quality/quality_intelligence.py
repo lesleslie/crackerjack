@@ -1,4 +1,3 @@
-
 import json
 import typing as t
 from dataclasses import dataclass, field
@@ -16,7 +15,6 @@ from .quality_baseline_enhanced import (
     TrendDirection,
 )
 
-
 try:
     from scipy import stats
 
@@ -27,7 +25,6 @@ except (ImportError, SyntaxError):
 
 
 class AnomalyType(str, Enum):
-
     SPIKE = "spike"
     DROP = "drop"
     DRIFT = "drift"
@@ -36,7 +33,6 @@ class AnomalyType(str, Enum):
 
 
 class PatternType(str, Enum):
-
     CYCLIC = "cyclic"
     SEASONAL = "seasonal"
     CORRELATION = "correlation"
@@ -46,7 +42,6 @@ class PatternType(str, Enum):
 
 @dataclass
 class QualityAnomaly:
-
     anomaly_type: AnomalyType
     metric_name: str
     detected_at: datetime
@@ -76,7 +71,6 @@ class QualityAnomaly:
 
 @dataclass
 class QualityPattern:
-
     pattern_type: PatternType
     metric_names: list[str]
     detected_at: datetime
@@ -105,7 +99,6 @@ class QualityPattern:
 
 @dataclass
 class QualityPrediction:
-
     metric_name: str
     predicted_value: float
     confidence_lower: float
@@ -134,7 +127,6 @@ class QualityPrediction:
 
 @dataclass
 class QualityInsights:
-
     anomalies: list[QualityAnomaly]
     patterns: list[QualityPattern]
     predictions: list[QualityPrediction]
@@ -156,7 +148,6 @@ class QualityInsights:
 
 
 class QualityIntelligenceService(QualityIntelligenceProtocol):
-
     def __init__(
         self,
         quality_service: EnhancedQualityBaselineService,
@@ -171,7 +162,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
         if not SCIPY_AVAILABLE:
-
             return []
 
         metrics = self._get_default_metrics() if metrics is None else metrics
@@ -191,7 +181,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, days: int = 30, metrics: list[str] | None = None
     ) -> list[QualityAnomaly]:
         if not SCIPY_AVAILABLE:
-
             return []
 
         metrics = self._get_default_metrics() if metrics is None else metrics
@@ -357,7 +346,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     def identify_patterns(self, days: int = 60) -> list[QualityPattern]:
         if not SCIPY_AVAILABLE:
-
             return []
 
         baselines = self.quality_service.get_recent_baselines(limit=days * 2)
@@ -369,7 +357,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
 
     async def identify_patterns_async(self, days: int = 60) -> list[QualityPattern]:
         if not SCIPY_AVAILABLE:
-
             return []
 
         baselines = await self.quality_service.aget_recent_baselines(limit=days * 2)
@@ -431,18 +418,13 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         if len(values1) < self.min_data_points:
             return None
 
-
         try:
-
             if 0 in (np.var(values1), np.var(values2)):
-
                 return None
 
             correlation, p_value = stats.pearsonr(values1, values2)
         except (ValueError, RuntimeWarning):
-
             return None
-
 
         if abs(correlation) > 0.7 and p_value < 0.05:
             return self._create_correlation_pattern(
@@ -506,7 +488,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, horizon_days: int = 14, confidence_level: float = 0.95
     ) -> list[QualityPrediction]:
         if not SCIPY_AVAILABLE:
-
             return []
 
         baselines = self.quality_service.get_recent_baselines(limit=90)
@@ -576,7 +557,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, values: list[t.Any], horizon_days: int
     ) -> dict[str, t.Any]:
         if not SCIPY_AVAILABLE:
-
             values_array = np.array(values)
             predicted_value = float(np.mean(values_array))
 
@@ -624,8 +604,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         residual_std = float(np.std(residuals))
 
         if not SCIPY_AVAILABLE:
-
-
             margin_error = 1.96 * residual_std
             return {
                 "lower": predicted_value - margin_error,
@@ -786,14 +764,12 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
     def generate_comprehensive_insights(
         self, analysis_days: int = 30, prediction_days: int = 14
     ) -> QualityInsights:
-
         anomalies = self.detect_anomalies(days=analysis_days)
         patterns = self.identify_patterns(days=analysis_days * 2)
         predictions = self.generate_advanced_predictions(horizon_days=prediction_days)
         recommendations = self.generate_ml_recommendations(
             anomalies, patterns, predictions
         )
-
 
         health_score, risk_level = self._calculate_health_metrics(
             anomalies, predictions
@@ -840,12 +816,8 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         self, anomaly_counts: dict[str, int], risk_predictions: int
     ) -> float:
         health_score = 1.0
-        health_score -= (
-            anomaly_counts["critical"] * 0.2
-        )
-        health_score -= (
-            anomaly_counts["warning"] * 0.1
-        )
+        health_score -= anomaly_counts["critical"] * 0.2
+        health_score -= anomaly_counts["warning"] * 0.1
         health_score -= risk_predictions * 0.15
         return max(0.0, min(1.0, health_score))
 
@@ -862,9 +834,7 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         with output_path.open("w") as f:
             json.dump(insights.to_dict(), f, indent=2, default=str)
 
-
     def analyze_quality_trends(self) -> dict[str, t.Any]:
-
         patterns = self.identify_patterns()
         trend_analysis = {
             "total_patterns": len(patterns),
@@ -935,7 +905,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         ]
 
     def recommend_improvements(self) -> list[dict[str, t.Any]]:
-
         anomalies = self.detect_anomalies()
         patterns = self.identify_patterns()
         predictions = self.generate_advanced_predictions()
@@ -943,7 +912,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
         recommendations = self.generate_ml_recommendations(
             anomalies, patterns, predictions
         )
-
 
         return [{"message": rec} for rec in recommendations]
 

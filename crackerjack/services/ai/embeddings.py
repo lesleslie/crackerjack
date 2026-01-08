@@ -1,8 +1,5 @@
-
 import hashlib
 import logging
-
-
 import os
 import sys
 import typing as t
@@ -12,7 +9,6 @@ from pathlib import Path
 
 import numpy as np
 import onnxruntime as ort
-
 
 _original_stderr = sys.stderr
 sys.stderr = StringIO()
@@ -25,7 +21,6 @@ try:
         warnings.filterwarnings("ignore", category=UserWarning)
         from transformers import AutoTokenizer
 finally:
-
     sys.stderr = _original_stderr
 
 from crackerjack.models.semantic_models import SemanticConfig
@@ -34,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
-
     def __init__(self, config: SemanticConfig) -> None:
         self.config = config
         self._session: ort.InferenceSession | None = None
@@ -63,15 +57,12 @@ class EmbeddingService:
         try:
             logger.info(f"Loading ONNX embedding model: {self.config.embedding_model}")
 
-
             model_name = self.config.embedding_model
-
 
             self._tokenizer = AutoTokenizer.from_pretrained(
                 model_name,
-                revision="main", # nosec B615
+                revision="main",  # nosec B615
             )
-
 
             self._session = None
             self._model_loaded = True
@@ -97,8 +88,6 @@ class EmbeddingService:
             raise ValueError(msg)
 
         try:
-
-
             embedding = self._generate_fallback_embedding(text)
             return embedding
 
@@ -107,18 +96,13 @@ class EmbeddingService:
             raise RuntimeError(f"Embedding generation failed: {e}") from e
 
     def _generate_fallback_embedding(self, text: str) -> list[float]:
-
         text_hash = hashlib.sha256(text.encode()).hexdigest()
 
-
         embedding = []
-        for i in range(
-            0, min(len(text_hash), 96), 2
-        ):
+        for i in range(0, min(len(text_hash), 96), 2):
             hex_pair = text_hash[i : i + 2]
             value = int(hex_pair, 16) / 255.0
             embedding.extend([value] * 8)
-
 
         while len(embedding) < 384:
             embedding.append(0.0)
@@ -129,7 +113,6 @@ class EmbeddingService:
         if not texts:
             msg = "Cannot generate embeddings for empty text list"
             raise ValueError(msg)
-
 
         valid_texts = []
         valid_indices = []
@@ -145,7 +128,6 @@ class EmbeddingService:
 
         try:
             logger.debug(f"Generating embeddings for {len(valid_texts)} texts")
-
 
             result: list[list[float]] = [[] for _ in texts]
 
@@ -174,10 +156,8 @@ class EmbeddingService:
             raise ValueError(msg)
 
         try:
-
             vec1 = np.array(embedding1, dtype=np.float32)
             vec2 = np.array(embedding2, dtype=np.float32)
-
 
             dot_product = np.dot(vec1, vec2)
             norm1 = np.linalg.norm(vec1)
@@ -187,7 +167,6 @@ class EmbeddingService:
                 return 0.0
 
             similarity = dot_product / (norm1 * norm2)
-
 
             return max(0.0, min(1.0, float(similarity)))
 
@@ -207,21 +186,17 @@ class EmbeddingService:
             raise ValueError(msg)
 
         try:
-
             query_vec = np.array(query_embedding, dtype=np.float32)
             embedding_matrix = np.array(embeddings, dtype=np.float32)
-
 
             dot_products = np.dot(embedding_matrix, query_vec)
             query_norm = np.linalg.norm(query_vec)
             embedding_norms = np.linalg.norm(embedding_matrix, axis=1)
 
-
             if query_norm == 0:
                 return [0.0] * len(embeddings)
 
             similarities = dot_products / (query_norm * embedding_norms)
-
 
             similarities = np.nan_to_num(similarities, nan=0.0)
             similarities = np.clip(similarities, 0.0, 1.0)
@@ -240,14 +215,12 @@ class EmbeddingService:
             content = file_path.read_text(encoding="utf-8")
             return self.get_text_hash(content)
         except UnicodeDecodeError:
-
             content_bytes = file_path.read_bytes()
             return hashlib.sha256(content_bytes).hexdigest()
 
     def chunk_text(self, text: str) -> list[str]:
         if not text.strip():
             return []
-
 
         sentences = self._split_into_sentences(text)
         chunks = []
@@ -256,16 +229,13 @@ class EmbeddingService:
         overlap_sentences: list[str] = []
 
         for sentence in sentences:
-
             potential_chunk = current_chunk + sentence
 
             if len(potential_chunk) <= self.config.chunk_size:
                 current_chunk = potential_chunk
             else:
-
                 if current_chunk.strip():
                     chunks.append(current_chunk.strip())
-
 
                 overlap_text = (
                     "".join(overlap_sentences[-2:]) if overlap_sentences else ""
@@ -274,25 +244,20 @@ class EmbeddingService:
 
             overlap_sentences.append(sentence)
 
-
         if current_chunk.strip():
             chunks.append(current_chunk.strip())
 
         return chunks
 
     def _split_into_sentences(self, text: str) -> list[str]:
-
-
         sentences = []
         current_sentence = ""
 
         for char in text:
             current_sentence += char
             if char in ".!?" and len(current_sentence.strip()) > 1:
-
                 sentences.append(current_sentence.strip())
                 current_sentence = ""
-
 
         if current_sentence.strip():
             sentences.append(current_sentence.strip())
@@ -302,7 +267,6 @@ class EmbeddingService:
     def is_model_available(self) -> bool:
         if not self._model_loaded:
             try:
-
                 self._load_model()
             except Exception:
                 return False
@@ -319,7 +283,6 @@ class EmbeddingService:
             }
 
         try:
-
             test_embedding = self._generate_fallback_embedding("test")
             return {
                 "model_name": self.config.embedding_model,

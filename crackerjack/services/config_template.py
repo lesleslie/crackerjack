@@ -29,7 +29,6 @@ class ConfigVersion:
 
 
 class ConfigTemplateService:
-
     def __init__(self, console: Console, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -70,8 +69,6 @@ class ConfigTemplateService:
         }
 
     def _build_pytest_config(self) -> dict[str, t.Any]:
-
-
         return {
             "ini_options": {
                 "asyncio_mode": "auto",
@@ -145,7 +142,6 @@ class ConfigTemplateService:
             return {}
 
     def _version_compare(self, version1: str, version2: str) -> int:
-
         def version_tuple(v: str) -> tuple[int, ...]:
             return tuple(int(x) for x in v.split("."))
 
@@ -276,18 +272,15 @@ class ConfigTemplateService:
                 return False
 
         try:
-
             with config_file.open() as f:
                 content = f.read()
                 existing_config = tomli.loads(content)
-
 
             if "tool" not in existing_config:
                 existing_config["tool"] = {}
 
             for tool_name, tool_config in template.config_data.get("tool", {}).items():
                 existing_config["tool"][tool_name] = tool_config
-
 
             from tomli_w import dumps
 
@@ -339,7 +332,6 @@ class ConfigTemplateService:
                 yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
     def _invalidate_cache(self, project_path: Path) -> None:
-
         pass
 
     def get_config_hash(self, config_path: Path) -> str:

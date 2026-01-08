@@ -12,24 +12,24 @@ from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
 from crackerjack.models.task import HookResult
 
 try:
-    from crackerjack.services.git import GitService # type: ignore
-except ModuleNotFoundError: # pragma: no cover - optional dependency
-    GitService = None # type: ignore
+    from crackerjack.services.git import GitService  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    GitService = None  # type: ignore
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig # type: ignore
-except ModuleNotFoundError: # pragma: no cover - optional dependency
-    OrchestrationConfig = None # type: ignore
+    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    OrchestrationConfig = None  # type: ignore
     orchestration_available = False
 else:
     orchestration_available = OrchestrationConfig is not None
 
 try:
-    from crackerjack.orchestration.hook_orchestrator import ( # type: ignore
+    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
         HookOrchestratorSettings,
     )
-except ModuleNotFoundError: # pragma: no cover - optional dependency
-    HookOrchestratorSettings = None # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    HookOrchestratorSettings = None  # type: ignore
     orchestration_available = False
 else:
     orchestration_available = HookOrchestratorSettings is not None
@@ -71,17 +71,15 @@ class HookManagerImpl:
                 git_service=git_service,
             )
         else:
-
-
             if not debug and not use_incremental and git_service is None:
-                self.executor = HookExecutor( # type: ignore[assignment]
+                self.executor = HookExecutor(  # type: ignore[assignment]
                     self.console,
                     pkg_path,
                     verbose,
                     quiet,
                 )
             else:
-                self.executor = HookExecutor( # type: ignore[assignment]
+                self.executor = HookExecutor(  # type: ignore[assignment]
                     self.console,
                     pkg_path,
                     verbose,
@@ -127,7 +125,6 @@ class HookManagerImpl:
         enable_caching: bool,
         cache_backend: str,
     ) -> None:
-
         try:
             from crackerjack.orchestration.hook_orchestrator import (
                 HookOrchestratorSettings,
@@ -135,8 +132,6 @@ class HookManagerImpl:
 
             orchestration_available = True
         except ModuleNotFoundError:
-
-
             orchestration_available = False
             HookOrchestratorSettings = None
 
@@ -164,7 +159,6 @@ class HookManagerImpl:
                 cache_backend=cache_backend,
             )
 
-
         self.orchestration_enabled = (
             bool(enable_orchestration)
             if enable_orchestration is not None
@@ -188,10 +182,7 @@ class HookManagerImpl:
         if self._settings is None:
             self._settings = CrackerjackSettings()
 
-
         if orchestration_config:
-
-
             self._orchestration_config = orchestration_config
             self.orchestration_enabled = getattr(
                 orchestration_config, "enable_orchestration", False
@@ -222,7 +213,6 @@ class HookManagerImpl:
         enable_lsp_optimization: bool = False,
         enable_tool_proxy: bool = True,
         use_incremental: bool = False,
-
         orchestration_config: t.Any = None,
         enable_orchestration: bool | None = None,
         orchestration_mode: str | None = None,
@@ -235,12 +225,9 @@ class HookManagerImpl:
         self.debug = debug
         self._settings = settings
 
-
         self.console = console or Console()
 
-
         git_service = self._setup_git_service(use_incremental, pkg_path)
-
 
         self._setup_executor(
             pkg_path,
@@ -269,7 +256,6 @@ class HookManagerImpl:
 
         self._orchestrator: HookOrchestratorAdapter | None = None
 
-
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
 
@@ -281,7 +267,6 @@ class HookManagerImpl:
             return
 
         if not self.orchestration_enabled:
-
             return
 
         try:
@@ -289,11 +274,8 @@ class HookManagerImpl:
                 HookOrchestratorSettings,
             )
         except ModuleNotFoundError:
-
-
             self.orchestration_enabled = False
             return
-
 
         execution_mode = getattr(
             self._orchestration_config,
@@ -328,7 +310,6 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
 
-
         getattr(self, "_progress_callback", None)
 
         return await self._orchestrator.execute_strategy(
@@ -347,7 +328,6 @@ class HookManagerImpl:
             for hook in strategy.hooks:
                 hook.config_path = self._config_path
 
-
         getattr(self, "_progress_callback", None)
 
         return await self._orchestrator.execute_strategy(
@@ -357,16 +337,13 @@ class HookManagerImpl:
         )
 
     def run_fast_hooks(self) -> list[HookResult]:
-
         if self.orchestration_enabled:
             import asyncio
-
 
             try:
                 asyncio.get_running_loop()
 
                 import concurrent.futures
-
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
@@ -374,9 +351,7 @@ class HookManagerImpl:
                     )
                     return future.result()
             except RuntimeError:
-
                 return asyncio.run(self._run_fast_hooks_orchestrated())
-
 
         strategy = self.config_loader.load_strategy("fast")
 
@@ -394,16 +369,13 @@ class HookManagerImpl:
         return execution_result.results
 
     def run_comprehensive_hooks(self) -> list[HookResult]:
-
         if self.orchestration_enabled:
             import asyncio
-
 
             try:
                 asyncio.get_running_loop()
 
                 import concurrent.futures
-
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
@@ -411,9 +383,7 @@ class HookManagerImpl:
                     )
                     return future.result()
             except RuntimeError:
-
                 return asyncio.run(self._run_comprehensive_hooks_orchestrated())
-
 
         strategy = self.config_loader.load_strategy("comprehensive")
 
@@ -440,14 +410,11 @@ class HookManagerImpl:
         return fast_results + comp_results
 
     def run_hooks(self) -> list[HookResult]:
-
-
         enable_parallelism = getattr(
             self._orchestration_config, "enable_strategy_parallelism", True
         )
         if self.orchestration_enabled and enable_parallelism:
             import asyncio
-
 
             try:
                 asyncio.get_running_loop()
@@ -458,9 +425,7 @@ class HookManagerImpl:
                     future = executor.submit(asyncio.run, self._run_hooks_parallel())
                     return future.result()
             except RuntimeError:
-
                 return asyncio.run(self._run_hooks_parallel())
-
 
         fast_results = self.run_fast_hooks()
         comprehensive_results = self.run_comprehensive_hooks()
@@ -470,9 +435,8 @@ class HookManagerImpl:
         if enable == self.lsp_optimization_enabled:
             return
 
-
         if enable:
-            self.executor = LSPAwareHookExecutor( # type: ignore[assignment]
+            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -480,7 +444,7 @@ class HookManagerImpl:
                 use_tool_proxy=self.tool_proxy_enabled,
             )
         else:
-            self.executor = HookExecutor( # type: ignore[assignment]
+            self.executor = HookExecutor(  # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -489,9 +453,7 @@ class HookManagerImpl:
 
         self.lsp_optimization_enabled = enable
 
-
         if self._config_path:
-
             pass
 
     def configure_tool_proxy(self, enable: bool) -> None:
@@ -499,7 +461,6 @@ class HookManagerImpl:
             return
 
         self.tool_proxy_enabled = enable
-
 
         try:
             is_lsp_executor = isinstance(self.executor, LSPAwareHookExecutor)
@@ -515,7 +476,6 @@ class HookManagerImpl:
                 use_tool_proxy=enable,
             )
 
-
             if self._config_path:
                 pass
 
@@ -530,7 +490,6 @@ class HookManagerImpl:
             "lsp_optimization_enabled": self.lsp_optimization_enabled,
             "tool_proxy_enabled": self.tool_proxy_enabled,
             "executor_type": type(self.executor).__name__,
-
             "orchestration_enabled": self.orchestration_enabled,
             "orchestration_mode": (
                 self.orchestration_mode if self.orchestration_enabled else None
@@ -546,7 +505,6 @@ class HookManagerImpl:
                 else None
             ),
         }
-
 
         if hasattr(self.executor, "get_execution_mode_summary"):
             info.update(self.executor.get_execution_mode_summary())
@@ -593,7 +551,6 @@ class HookManagerImpl:
         passed = sum(1 for r in results if r.status == "passed")
         failed = sum(1 for r in results if r.status == "failed")
         errors = sum(1 for r in results if r.status in ("timeout", "error"))
-
 
         total_duration = (
             elapsed_time

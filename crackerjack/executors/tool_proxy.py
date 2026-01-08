@@ -12,7 +12,6 @@ from rich.console import Console
 
 @dataclass
 class ToolHealthStatus:
-
     is_healthy: bool
     last_check: float
     consecutive_failures: int = 0
@@ -22,12 +21,10 @@ class ToolHealthStatus:
 
 @dataclass
 class CircuitBreakerState:
-
     is_open: bool = False
     failure_count: int = 0
     last_failure_time: float = 0
     next_retry_time: float = 0
-
 
     failure_threshold: int = 3
     retry_timeout: float = 120
@@ -35,7 +32,6 @@ class CircuitBreakerState:
     def should_attempt(self) -> bool:
         if not self.is_open:
             return True
-
 
         return time.time() >= self.next_retry_time
 
@@ -54,12 +50,10 @@ class CircuitBreakerState:
 
 
 class ToolProxy:
-
     def __init__(self, console: Console | None = None):
         self.console = console or Console()
         self.health_status: dict[str, ToolHealthStatus] = {}
         self.circuit_breakers: dict[str, CircuitBreakerState] = {}
-
 
         self.tool_adapters = {
             "zuban": self._create_zuban_adapter,
@@ -67,7 +61,6 @@ class ToolProxy:
             "ruff": self._create_ruff_adapter,
             "bandit": self._create_bandit_adapter,
         }
-
 
         self.fallback_tools = {
             "zuban": ["pyright", "mypy"],
@@ -78,19 +71,16 @@ class ToolProxy:
 
     def execute_tool(self, tool_name: str, args: list[str]) -> int:
         try:
-
             circuit_breaker = self._get_circuit_breaker(tool_name)
 
             if not circuit_breaker.should_attempt():
                 self._handle_circuit_breaker_open(tool_name)
                 return self._try_fallback_tools(tool_name, args)
 
-
             if not self._check_tool_health(tool_name):
                 self._handle_unhealthy_tool(tool_name)
                 circuit_breaker.record_failure()
                 return self._try_fallback_tools(tool_name, args)
-
 
             result = self._execute_through_adapter(tool_name, args)
 
@@ -114,12 +104,10 @@ class ToolProxy:
     def _check_tool_health(self, tool_name: str) -> bool:
         current_time = time.time()
 
-
         if tool_name in self.health_status:
             status = self.health_status[tool_name]
             if current_time - status.last_check < 30:
                 return status.is_healthy
-
 
         is_healthy = self._perform_health_check(tool_name)
 
@@ -134,17 +122,14 @@ class ToolProxy:
     def _perform_health_check(self, tool_name: str) -> bool:
         try:
             if tool_name in self.tool_adapters:
-
                 adapter = self.tool_adapters[tool_name]()
                 if adapter and hasattr(adapter, "check_tool_health"):
                     return bool(adapter.check_tool_health())
-
 
             if tool_name == "zuban":
                 return self._check_zuban_health()
             elif tool_name == "skylos":
                 return self._check_skylos_health()
-
 
             import subprocess
 
@@ -164,7 +149,6 @@ class ToolProxy:
         import tempfile
 
         try:
-
             result = subprocess.run(
                 ["uv", "run", "zuban", "--version"],
                 capture_output=True,
@@ -174,11 +158,9 @@ class ToolProxy:
             if result.returncode != 0:
                 return False
 
-
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_file = Path(temp_dir) / "test.py"
                 temp_file.write_text("x: int = 1\n")
-
 
                 result = subprocess.run(
                     ["uv", "run", "zuban", "check", str(temp_file)],
@@ -188,11 +170,9 @@ class ToolProxy:
                     cwd=Path.cwd(),
                 )
 
-
                 return result.returncode in (0, 1)
 
         except (subprocess.TimeoutExpired, subprocess.CalledProcessError):
-
             return False
         except Exception:
             return False
@@ -214,7 +194,6 @@ class ToolProxy:
     def _execute_through_adapter(self, tool_name: str, args: list[str]) -> int:
         if tool_name in self.tool_adapters:
             try:
-
                 return asyncio.run(self._execute_adapter_async(tool_name, args))
             except Exception as e:
                 self.console.print(
@@ -223,13 +202,11 @@ class ToolProxy:
 
                 pass
 
-
         return self._execute_direct(tool_name, args)
 
     async def _execute_adapter_async(self, tool_name: str, args: list[str]) -> int:
         adapter_factory = self.tool_adapters[tool_name]
         adapter = adapter_factory()
-
 
         target_files = self._args_to_file_paths(args)
 
@@ -261,7 +238,6 @@ class ToolProxy:
             Path(arg) for arg in args if not arg.startswith("-") and Path(arg).exists()
         ]
 
-
         if not file_paths:
             file_paths = [Path()]
 
@@ -282,7 +258,6 @@ class ToolProxy:
 
         for fallback in fallbacks:
             try:
-
                 if self._check_tool_health(fallback):
                     result = self._execute_direct(fallback, args)
                     if result == 0:
@@ -320,7 +295,6 @@ class ToolProxy:
 
             settings = load_settings(CrackerjackSettings)
 
-
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
 
             options = _adapt_settings_to_protocol(settings)
@@ -337,7 +311,6 @@ class ToolProxy:
 
             settings = load_settings(CrackerjackSettings)
 
-
             from crackerjack.mcp.tools.core_tools import _adapt_settings_to_protocol
 
             options = _adapt_settings_to_protocol(settings)
@@ -347,11 +320,9 @@ class ToolProxy:
             return None
 
     def _create_ruff_adapter(self) -> t.Any | None:
-
         return None
 
     def _create_bandit_adapter(self) -> t.Any | None:
-
         return None
 
     def get_tool_status(self) -> dict[str, dict[str, t.Any]]:

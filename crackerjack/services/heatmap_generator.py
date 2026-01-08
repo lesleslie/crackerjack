@@ -1,4 +1,3 @@
-
 import json
 import logging
 import typing as t
@@ -14,7 +13,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class HeatMapCell:
-
     x: int
     y: int
     value: float
@@ -25,7 +23,6 @@ class HeatMapCell:
 
 @dataclass
 class HeatMapData:
-
     title: str
     cells: list[HeatMapCell]
     x_labels: list[str]
@@ -57,11 +54,9 @@ class HeatMapData:
 
 
 class HeatMapGenerator:
-
     def __init__(self) -> None:
         self.error_data: dict[str, list[dict[str, t.Any]]] = defaultdict(list)
         self.metric_data: dict[str, dict[str, t.Any]] = {}
-
 
         self.color_schemes = {
             "error_intensity": {
@@ -196,7 +191,7 @@ class HeatMapGenerator:
         from collections import defaultdict
 
         error_matrix: dict[str, t.Any] = defaultdict(
-            lambda: defaultdict(int) # type: ignore[call-overload]
+            lambda: defaultdict(int)  # type: ignore[call-overload]
         )
 
         for file_path, errors in self.error_data.items():
@@ -473,7 +468,6 @@ class HeatMapGenerator:
 
     def _calculate_quality_score(self, metric_type: str, intensity: float) -> float:
         if metric_type in ("complexity_score", "duplication_ratio"):
-
             return 1.0 - min(1.0, intensity)
 
         return intensity
@@ -618,9 +612,7 @@ class HeatMapGenerator:
             with open(output_path, "w", newline="", encoding="utf-8") as f:
                 writer = csv.writer(f)
 
-
                 writer.writerow(["x", "y", "value", "label", "intensity"])
-
 
                 for cell in heatmap.cells:
                     writer.writerow(
@@ -669,10 +661,8 @@ class HeatMapGenerator:
 </html>
         """
 
-
         cells_html = ""
         for cell in heatmap.cells:
-
             intensity = int(255 * (1 - cell.color_intensity))
             color = f"rgb({255}, {intensity}, {intensity})"
 
@@ -682,7 +672,6 @@ class HeatMapGenerator:
                     {cell.value:.1f}
                 </div>
             """
-
 
         legend_html = ""
         for level, color in heatmap.color_scale.items():

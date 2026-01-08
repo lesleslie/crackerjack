@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -11,23 +10,18 @@ from ._git_utils import get_files_by_extension
 
 def format_json_file(file_path: Path) -> tuple[bool, str | None]:
     try:
-
         with file_path.open(encoding="utf-8") as f:
             content = f.read().strip()
             if not content:
                 return True, "File is empty, nothing to format"
 
-
         data = json.loads(content)
-
 
         formatted_content = json.dumps(
             data, indent=2, ensure_ascii=False, sort_keys=True
         )
 
-
         formatted_content += "\n"
-
 
         with file_path.open("w", encoding="utf-8") as f:
             f.write(formatted_content)
@@ -53,43 +47,37 @@ def main(argv: list[str] | None = None) -> int:
 
     args = parser.parse_args(argv)
 
-
     if not args.files:
-
         files = get_files_by_extension([".json"])
         if not files:
-
             files = list(Path.cwd().rglob("*.json"))
     else:
         files = args.files
 
-
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No JSON files to format") # noqa: T201
+        print("No JSON files to format")  # noqa: T201
         return 0
-
 
     error_count = 0
     for file_path in files:
         is_success, error_msg = format_json_file(file_path)
 
         if not is_success:
-            print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
+            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
             error_count += 1
         else:
             if error_msg:
-                print(f"→ {file_path}: {error_msg}") # noqa: T201
+                print(f"→ {file_path}: {error_msg}")  # noqa: T201
             else:
-                print(f"✓ {file_path}: Formatted successfully") # noqa: T201
-
+                print(f"✓ {file_path}: Formatted successfully")  # noqa: T201
 
     if error_count > 0:
-        print(f"\n{error_count} JSON file(s) failed to format", file=sys.stderr) # noqa: T201
+        print(f"\n{error_count} JSON file(s) failed to format", file=sys.stderr)  # noqa: T201
         return 1
 
-    print(f"\nAll {len(files)} JSON file(s) formatted successfully") # noqa: T201
+    print(f"\nAll {len(files)} JSON file(s) formatted successfully")  # noqa: T201
     return 0
 
 

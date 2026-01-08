@@ -395,7 +395,6 @@ class WorkflowOptions:
         zuban_lsp: ZubanLSPConfig | None = None,
         **kwargs: Any,
     ) -> None:
-
         self.cleaning = cleaning or CleaningConfig(clean=None)
         self.hooks = hooks or HookConfig()
         self.testing = testing or TestConfig(test=False)
@@ -434,11 +433,9 @@ class WorkflowOptions:
             enabled=True, auto_start=True, port=8677, mode="stdio", timeout=30
         )
 
-
         for attr, value in kwargs.items():
             if hasattr(self, attr):
                 setattr(self, attr, value)
-
 
     @property
     def clean(self) -> bool:
@@ -747,12 +744,9 @@ class WorkflowOptions:
 
     @classmethod
     def from_args(cls, args: Any) -> WorkflowOptions:
-
-        attrs = vars(args) if hasattr(args, "__dict__") else {}
-
+        attrs: dict[str, Any] = vars(args) if hasattr(args, "__dict__") else {}
 
         default_instance = cls()
-
 
         cleaning_kwargs = default_instance.cleaning.__dict__.copy()
         if "strip_code" in attrs:
@@ -788,7 +782,6 @@ class WorkflowOptions:
         if "dry_run" in attrs:
             execution_kwargs["dry_run"] = attrs["dry_run"]
         execution_config = ExecutionConfig(**execution_kwargs)
-
 
         return cls(
             cleaning=cleaning_config,

@@ -1,4 +1,3 @@
-
 import typing as t
 from pathlib import Path
 from string import Template
@@ -8,7 +7,6 @@ from ..models.protocols import DocumentationGeneratorProtocol
 
 
 class MarkdownTemplateRenderer:
-
     def __init__(self) -> None:
         self.built_in_templates = self._init_builtin_templates()
 
@@ -25,7 +23,6 @@ class MarkdownTemplateRenderer:
         if template_name in self.built_in_templates:
             template = self.built_in_templates[template_name]
             return template.safe_substitute(context)
-
 
         template_path = Path(f"templates/{template_name}")
         if template_path.exists():
@@ -109,7 +106,6 @@ $functions
 
 
 class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
-
     def __init__(self) -> None:
         self.console = CrackerjackConsole()
         self.renderer = MarkdownTemplateRenderer()
@@ -139,12 +135,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def generate_user_guide(self, template_context: dict[str, t.Any]) -> str:
         sections: list[str] = []
 
-
         if "installation" in template_context:
             sections.extend(
                 ("## Getting Started\n", template_context["installation"], "\n")
             )
-
 
         if "examples" in template_context:
             sections.append("## Usage Examples\n")
@@ -159,7 +153,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     sections.append(f"```bash\n{example['code']}\n```\n")
                 sections.append("\n")
 
-
         if "configuration" in template_context:
             sections.extend(
                 ("## Configuration\n", template_context["configuration"], "\n")
@@ -173,7 +166,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         today = datetime.now().strftime("%Y-%m-%d")
 
         lines = [f"## [{version}] - {today}\n"]
-
 
         section_order = [
             ("Added", "added"),
@@ -206,13 +198,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     ) -> dict[str, list[str]]:
         cross_refs = {}
 
-
         all_names = set()
-
 
         protocols = api_data.get("protocols", {})
         all_names.update(protocols.keys())
-
 
         modules = api_data.get("modules", {})
         for module_data in modules.values():
@@ -222,7 +211,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
             all_names.update(
                 func_info["name"] for func_info in module_data.get("functions", [])
             )
-
 
         for name in all_names:
             refs = self._find_references_to_name(name, api_data)
@@ -283,7 +271,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     sections.append(f"- {protocol}\n")
                 sections.append("\n")
 
-
             for class_info in service_info.get("classes", []):
                 context = {
                     "name": class_info["name"],
@@ -299,7 +286,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         return "".join(sections)
 
     def _generate_managers_section(self, managers: dict[str, t.Any]) -> str:
-
         return self._generate_services_section(managers)
 
     def _format_methods(self, methods: list[dict[str, t.Any]]) -> str:
@@ -310,12 +296,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         for method in methods:
             method_lines = [f"#### `{method['name']}`\n"]
 
-
             description = method.get("docstring", {}).get(
                 "description", "No description provided."
             )
             method_lines.append(f"{description}\n")
-
 
             parameters = method.get("parameters", [])
             if parameters:
@@ -326,7 +310,6 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
                     method_lines.append(
                         f"- `{param['name']}` ({param_type}): {param_desc}\n"
                     )
-
 
             return_annotation = method.get("return_annotation", "")
             if return_annotation:
@@ -340,10 +323,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     def _calculate_api_stats(self, api_data: dict[str, t.Any]) -> dict[str, int]:
         stats = {"protocols": 0, "classes": 0, "functions": 0, "modules": 0}
 
-
         protocols = api_data.get("protocols", {})
         stats["protocols"] = len(protocols)
-
 
         modules = api_data.get("modules", {})
         stats["modules"] = len(modules)
@@ -359,12 +340,10 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
     ) -> list[str]:
         references = []
 
-
         protocol_refs = self._find_protocol_references(
             name, api_data.get("protocols", {})
         )
         references.extend(protocol_refs)
-
 
         module_refs = self._find_module_references(name, api_data.get("modules", {}))
         references.extend(module_refs)
@@ -390,14 +369,12 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         references = []
 
         for method in methods:
-
             param_refs = self._find_method_parameter_references(
                 name,
                 f"{protocol_name}.{method['name']}()",
                 method.get("parameters", []),
             )
             references.extend(param_refs)
-
 
             if name in method.get("return_annotation", ""):
                 references.append(f"{protocol_name}.{method['name']}() return type")
@@ -423,10 +400,8 @@ class DocumentationGeneratorImpl(DocumentationGeneratorProtocol):
         references = []
 
         for class_info in classes:
-
             if name in class_info.get("base_classes", []):
                 references.append(f"{class_info['name']} base class")
-
 
             method_refs = self._find_class_method_references(
                 name, class_info["name"], class_info.get("methods", [])

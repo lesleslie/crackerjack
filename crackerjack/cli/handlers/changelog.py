@@ -1,9 +1,7 @@
-
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
-
 
 console = Console()
 if t.TYPE_CHECKING:
@@ -199,7 +197,6 @@ def setup_debug_and_verbose_flags(
     if debug:
         verbose = True
         options.verbose = True
-
 
     if ai_fix or ai_debug:
         from crackerjack.services.logging import setup_structured_logging

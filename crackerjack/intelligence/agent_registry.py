@@ -221,7 +221,6 @@ class AgentRegistry:
             if self._class_name_matches_keywords(class_name, keywords):
                 capabilities.update(caps)
 
-
         if not capabilities:
             capabilities.add(AgentCapability.CODE_ANALYSIS)
 

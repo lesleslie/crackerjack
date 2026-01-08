@@ -124,11 +124,9 @@ class SecurityLogger:
     def _setup_security_logger(self) -> None:
         debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
 
-
         if debug_enabled:
             self.logger.setLevel(logging.DEBUG)
         else:
-
             self.logger.setLevel(logging.CRITICAL + 10)
 
         if not self.logger.handlers:
@@ -137,7 +135,6 @@ class SecurityLogger:
             if debug_enabled:
                 console_handler.setLevel(logging.DEBUG)
             else:
-
                 console_handler.setLevel(logging.CRITICAL + 10)
 
             formatter = logging.Formatter(

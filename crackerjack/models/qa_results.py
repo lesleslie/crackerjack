@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -11,7 +10,6 @@ from pydantic import BaseModel, Field
 
 
 class QAResultStatus(str, Enum):
-
     SUCCESS = "success"
     FAILURE = "failure"
     WARNING = "warning"
@@ -20,7 +18,6 @@ class QAResultStatus(str, Enum):
 
 
 class QACheckType(str, Enum):
-
     LINT = "lint"
     FORMAT = "format"
     TYPE = "type"
@@ -32,7 +29,6 @@ class QACheckType(str, Enum):
 
 
 class QAResult(BaseModel):
-
     check_id: UUID = Field(
         ...,
         description="Unique identifier for the check that produced this result",

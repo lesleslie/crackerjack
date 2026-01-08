@@ -477,7 +477,7 @@ class MetricsCollector:
             FROM jobs
             WHERE DATE(start_time) = ?
         """,
-            (date, ),
+            (date,),
         ).fetchone()
 
         error_stats = conn.execute(
@@ -491,7 +491,7 @@ class MetricsCollector:
             FROM errors
             WHERE DATE(timestamp) = ?
         """,
-            (date, ),
+            (date,),
         ).fetchone()
 
         orchestration_stats = conn.execute(

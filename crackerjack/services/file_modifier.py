@@ -1,4 +1,3 @@
-
 import difflib
 import os
 import shutil
@@ -15,8 +14,6 @@ from crackerjack.models.protocols import SafeFileModifierProtocol, ServiceProtoc
 
 
 class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
-
-
     FORBIDDEN_PATTERNS = [
         ".env*",
         ".git/*",
@@ -102,25 +99,20 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
     ) -> dict[str, t.Any]:
         path = Path(file_path)
 
-
         result: dict[str, t.Any] = self._validate_fix_inputs(path, fixed_content)
         if not result["success"]:
             return result
-
 
         result = self._read_original_content(path)
         if not result["success"]:
             return result
         original_content = result["content"]
 
-
         assert isinstance(original_content, str)
         diff = self._generate_diff(original_content, fixed_content, file_path)
 
-
         if dry_run:
             return self._create_dry_run_result(diff)
-
 
         assert isinstance(original_content, str)
         result = self._handle_backup(path, original_content, create_backup, diff)
@@ -129,7 +121,6 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         backup_path = result.get("backup_path")
 
         assert backup_path is None or isinstance(backup_path, Path)
-
 
         return self._atomic_write_fix(path, fixed_content, diff, backup_path, file_path)
 
@@ -324,7 +315,6 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
             resolved_path = path.resolve()
             project_root = Path.cwd().resolve()
 
-
             resolved_path.relative_to(project_root)
 
         except ValueError:
@@ -346,41 +336,33 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return {"valid": True, "error": ""}
 
     def _validate_file_path(self, path: Path) -> dict[str, bool | str]:
-
         result = self._check_file_exists(path)
         if not result["valid"]:
             return result
-
 
         result = self._check_is_symlink(path)
         if not result["valid"]:
             return result
 
-
         result = self._check_is_file(path)
         if not result["valid"]:
             return result
-
 
         result = self._check_forbidden_patterns(path)
         if not result["valid"]:
             return result
 
-
         result = self._check_file_size(path)
         if not result["valid"]:
             return result
-
 
         result = self._check_file_writable(path)
         if not result["valid"]:
             return result
 
-
         result = self._check_path_traversal(path)
         if not result["valid"]:
             return result
-
 
         return self._check_symlinks_in_path_chain(path)
 
@@ -392,7 +374,6 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_name = f"{file_path.name}_{timestamp}.bak"
         backup_path = self._backup_dir / backup_name
-
 
         backup_path.write_text(content, encoding="utf-8")
 

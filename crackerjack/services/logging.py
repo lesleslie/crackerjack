@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -134,7 +133,6 @@ def get_logger(name: str) -> Any:
 
 
 class LoggingContext:
-
     def __init__(self, operation: str, **kwargs: Any) -> None:
         self.operation = operation
         self.kwargs = kwargs
@@ -177,7 +175,6 @@ def log_performance(
     operation: str,
     **kwargs: Any,
 ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
-
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         def wrapper(*args: Any, **func_kwargs: Any) -> Any:
             logger = get_logger(f"crackerjack.perf.{func.__name__}")

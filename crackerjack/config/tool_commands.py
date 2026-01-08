@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from functools import lru_cache
@@ -7,7 +6,6 @@ from pathlib import Path
 
 @lru_cache(maxsize=8)
 def _detect_package_name_cached(pkg_path_str: str) -> str:
-
     pkg_path = Path(pkg_path_str)
     pyproject_path = pkg_path / "pyproject.toml"
     if pyproject_path.exists():
@@ -20,24 +18,18 @@ def _detect_package_name_cached(pkg_path_str: str) -> str:
                 data = tomllib.load(f)
                 project_name = data.get("project", {}).get("name")
                 if project_name:
-
                     return project_name.replace("-", "_")
-
 
     for item in pkg_path.iterdir():
         if item.is_dir() and (item / "__init__.py").exists():
-
             if item.name not in {"tests", "docs", ".venv", "venv", "build", "dist"}:
                 return item.name
-
 
     return pkg_path.name.replace("-", "_")
 
 
 def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
     return {
-
-
         "validate-regex-patterns": [
             "uv",
             "run",
@@ -63,8 +55,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--no-error-summary",
             f"./{package_name}",
         ],
-
-
         "trailing-whitespace": [
             "uv",
             "run",
@@ -100,8 +90,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--maxkb",
             "1000",
         ],
-
-
         "uv-lock": ["uv", "lock"],
         "gitleaks": [
             "uv",
@@ -151,7 +139,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.codespell_wrapper",
         ],
-
         "ruff-check": [
             "uv",
             "run",
@@ -162,7 +149,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--fix",
             f"./{package_name}",
         ],
-
         "ruff-format": [
             "uv",
             "run",
@@ -172,7 +158,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "format",
             f"./{package_name}",
         ],
-
         "mdformat": [
             "uv",
             "run",
@@ -180,7 +165,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.mdformat_wrapper",
         ],
-
         "check-local-links": [
             "uv",
             "run",
@@ -188,7 +172,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.local_link_checker",
         ],
-
         "linkcheckmd": [
             "uv",
             "run",
@@ -196,7 +179,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "-m",
             "crackerjack.tools.linkcheckmd_wrapper",
         ],
-
         "creosote": [
             "uv",
             "run",
@@ -235,8 +217,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "check",
             "--max-complexity",
             "15",
-            "--select",
-            "complexity, deadcode, deps",
+            "--skip-clones",
             package_name,
         ],
     }
@@ -254,7 +235,6 @@ _DEFAULT_COMMANDS = _build_tool_commands_cached(_DEFAULT_PACKAGE_NAME)
 
 
 def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
-
     if pkg_path is None or str(pkg_path) == _DEFAULT_CWD_STR:
         tool_commands = _DEFAULT_COMMANDS
     else:
@@ -265,25 +245,21 @@ def get_tool_command(hook_name: str, pkg_path: Path | None = None) -> list[str]:
         msg = f"Unknown hook name: {hook_name}"
         raise KeyError(msg)
 
-
     return list(tool_commands[hook_name])
 
 
 def list_available_tools() -> list[str]:
-
     tool_commands = _build_tool_commands_cached("dummy")
     return sorted(tool_commands.keys())
 
 
 def is_native_tool(hook_name: str) -> bool:
     NATIVE_TOOLS: set[str] = {
-
         "trailing-whitespace",
         "end-of-file-fixer",
         "check-yaml",
         "check-toml",
         "check-added-large-files",
-
         "validate-regex-patterns",
     }
     return hook_name in NATIVE_TOOLS

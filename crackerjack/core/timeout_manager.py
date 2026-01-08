@@ -236,14 +236,12 @@ class AsyncTimeoutManager:
         timeout_value: float,
         strategy: TimeoutStrategy,
     ) -> tuple[bool, Exception | None]:
-
         if isinstance(error, TimeoutError):
             result = self._handle_custom_timeout_exception(
                 operation, start_time, timeout_value, strategy, error
             )
             should_yield = self._should_yield_on_graceful_degradation(result)
             return should_yield, (None if should_yield else error)
-
 
         if isinstance(error, builtins.TimeoutError):
             result = self._handle_asyncio_timeout_exception(
@@ -255,7 +253,6 @@ class AsyncTimeoutManager:
             )
             return should_yield, (None if should_yield else reraise_error)
 
-
         if isinstance(error, asyncio.CancelledError):
             result = self._handle_cancelled_exception(
                 operation, start_time, timeout_value, strategy
@@ -265,7 +262,6 @@ class AsyncTimeoutManager:
                 operation, timeout_value, time.time() - start_time
             )
             return should_yield, (None if should_yield else reraise_error)
-
 
         self._handle_generic_exception(operation, start_time, strategy)
         return False, error

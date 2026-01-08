@@ -1,4 +1,3 @@
-
 import typing as t
 from dataclasses import dataclass
 from datetime import datetime
@@ -15,7 +14,6 @@ from ..models.protocols import (
 
 @dataclass
 class MkDocsConfig:
-
     site_name: str
     site_description: str
     site_author: str
@@ -31,7 +29,6 @@ class MkDocsConfig:
 
 @dataclass
 class DocumentationSite:
-
     config: MkDocsConfig
     pages: dict[str, str]
     assets: dict[str, bytes]
@@ -40,7 +37,6 @@ class DocumentationSite:
 
 
 class MkDocsIntegrationService:
-
     def __init__(
         self,
         config_manager: ConfigManagerProtocol,
@@ -60,13 +56,11 @@ class MkDocsIntegrationService:
     ) -> DocumentationSite:
         self.logger.info(f"Generating MkDocs site: {config.site_name}")
 
-
         site_dir = output_dir / "site"
         docs_dir = site_dir / "docs"
 
         self.filesystem.ensure_directory(site_dir)
         self.filesystem.ensure_directory(docs_dir)
-
 
         mkdocs_config = self._create_mkdocs_config(config, docs_content)
         config_path = site_dir / "mkdocs.yml"
@@ -75,14 +69,12 @@ class MkDocsIntegrationService:
             yaml.dump(mkdocs_config, default_flow_style=False, sort_keys=False),
         )
 
-
         pages = {}
         for file_path, content in docs_content.items():
             doc_path = docs_dir / file_path
             self.filesystem.ensure_directory(doc_path.parent)
             self.filesystem.write_file(doc_path, content)
             pages[file_path] = content
-
 
         assets = await self._copy_theme_assets(site_dir, config.theme)
 
@@ -103,11 +95,9 @@ class MkDocsIntegrationService:
             return False
 
         try:
-
             build_cmd = ["mkdocs", "build"]
             if serve:
                 build_cmd = ["mkdocs", "serve", "--dev-addr", "127.0.0.1:8000"]
-
 
             import subprocess
 
@@ -172,7 +162,6 @@ class MkDocsIntegrationService:
             mkdocs_config["repo_url"] = config.repo_url
             mkdocs_config["repo_name"] = self._extract_repo_name(config.repo_url)
 
-
         if config.theme == "material":
             mkdocs_config["theme"] = {
                 "name": "material",
@@ -207,21 +196,17 @@ class MkDocsIntegrationService:
         else:
             mkdocs_config["theme"] = {"name": config.theme}
 
-
         nav = config.nav_structure or self._generate_nav_from_content(docs_content)
         if nav:
             mkdocs_config["nav"] = nav
-
 
         plugins = config.plugins or self._get_default_plugins()
         if plugins:
             mkdocs_config["plugins"] = plugins
 
-
         extensions = config.markdown_extensions or self._get_default_extensions()
         if extensions:
             mkdocs_config["markdown_extensions"] = extensions
-
 
         if config.extra_css:
             mkdocs_config["extra_css"] = config.extra_css
@@ -284,9 +269,7 @@ class MkDocsIntegrationService:
     ) -> list[dict[str, str]]:
         nav = []
 
-
         sorted_files = sorted(docs_content.keys())
-
 
         priority_files = ["index.md", "README.md", "getting-started.md"]
         regular_files = [f for f in sorted_files if f not in priority_files]
@@ -303,13 +286,10 @@ class MkDocsIntegrationService:
         return nav
 
     def _file_to_title(self, file_path: str) -> str:
-
         name = Path(file_path).stem
-
 
         if name in ("index", "README"):
             return "Home"
-
 
         title = name.replace("_", " ").replace("-", " ")
         title = " ".join(word.capitalize() for word in title.split())
@@ -327,7 +307,6 @@ class MkDocsIntegrationService:
         theme: str,
     ) -> dict[str, bytes]:
         assets = {}
-
 
         if theme == "material":
             custom_css_content = self._get_material_custom_css()
@@ -371,7 +350,6 @@ class MkDocsIntegrationService:
 
 
 class MkDocsSiteBuilder:
-
     def __init__(self, integration_service: MkDocsIntegrationService) -> None:
         self.integration = integration_service
 
@@ -386,7 +364,6 @@ class MkDocsSiteBuilder:
         serve: bool = False,
     ) -> DocumentationSite | None:
         try:
-
             config = self.integration.create_config_from_project(
                 project_name=project_name,
                 project_description=project_description,
@@ -394,13 +371,11 @@ class MkDocsSiteBuilder:
                 repo_url=repo_url,
             )
 
-
             site = await self.integration.generate_site(
                 docs_content=documentation_content,
                 config=config,
                 output_dir=output_dir,
             )
-
 
             success = await self.integration.build_site(site, serve=serve)
 

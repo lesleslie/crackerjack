@@ -55,11 +55,11 @@ class TestSkylosAdapter:
     async def test_skylos_adapter_init(self):
         """Test SkylosAdapter init method."""
         adapter = SkylosAdapter()
-        
+
         # Mock the parent init and timeout method
         with patch.object(adapter, '_get_timeout_from_settings', return_value=300):
             await adapter.init()
-        
+
         assert adapter.settings is not None
         assert adapter.settings.confidence_threshold == 86  # Default value
         assert adapter.settings.timeout_seconds == 300
@@ -68,10 +68,10 @@ class TestSkylosAdapter:
         """Test SkylosAdapter build_command method."""
         settings = SkylosSettings(confidence_threshold=85, use_json_output=True)
         adapter = SkylosAdapter(settings=settings)
-        
+
         files = [Path("test.py"), Path("main.py")]
         command = adapter.build_command(files)
-        
+
         assert "uv" in command
         assert "run" in command
         assert "skylos" in command
@@ -85,26 +85,26 @@ class TestSkylosAdapter:
         """Test SkylosAdapter build_command with no files."""
         settings = SkylosSettings()
         adapter = SkylosAdapter(settings=settings)
-        
+
         # Mock the package detection methods
         with patch.object(adapter, '_detect_package_name', return_value="test_package"):
             command = adapter.build_command([])
-        
+
         assert "test_package" in command
 
     def test_skylos_adapter_detect_package_name(self):
         """Test SkylosAdapter package name detection."""
         adapter = SkylosAdapter()
-        
+
         # Test with pyproject.toml
         with patch('tomllib.load') as mock_toml, \
              patch('pathlib.Path.exists', return_value=True), \
              patch('pathlib.Path.open', mock_open(read_data='{"project": {"name": "test-package"}}')):
-            
+
             mock_toml.return_value = {"project": {"name": "test-package"}}
             result = adapter._read_package_from_toml(Path("/test"))
             assert result == "test_package"
-        
+
         # Test fallback to directory search
         with patch('pathlib.Path.iterdir') as mock_iterdir:
             mock_dir = Mock()
@@ -112,18 +112,18 @@ class TestSkylosAdapter:
             mock_dir.is_dir.return_value = True
             (mock_dir / "__init__.py").exists.return_value = True
             mock_iterdir.return_value = [mock_dir]
-            
+
             result = adapter._find_package_directory(Path("/test"))
             assert result == "test_package"
 
     def test_skylos_adapter_get_default_config(self):
         """Test SkylosAdapter get_default_config method."""
         adapter = SkylosAdapter()
-        
+
         # Mock package detection
         with patch.object(adapter, '_detect_package_directory', return_value="test_package"):
             config = adapter.get_default_config()
-        
+
         assert isinstance(config, QACheckConfig)
         assert config.check_type == QACheckType.REFACTOR
         assert config.enabled is True
@@ -135,13 +135,13 @@ class TestSkylosAdapter:
     async def test_skylos_adapter_parse_json_output(self):
         """Test SkylosAdapter JSON output parsing."""
         adapter = SkylosAdapter()
-        
+
         # Mock execution result
         mock_result = Mock()
         mock_result.raw_output = '{"dead_code": [{"file": "test.py", "line": 10, "type": "function", "name": "unused_func", "confidence": 95}]}'
-        
+
         issues = await adapter.parse_output(mock_result)
-        
+
         assert len(issues) == 1
         assert issues[0].file_path == Path("test.py")
         assert issues[0].line_number == 10
@@ -152,13 +152,13 @@ class TestSkylosAdapter:
     async def test_skylos_adapter_parse_text_output(self):
         """Test SkylosAdapter text output parsing."""
         adapter = SkylosAdapter()
-        
+
         # Mock execution result with text output
         mock_result = Mock()
         mock_result.raw_output = "test.py:15: Unused variable: old_var (confidence: 88%)"
-        
+
         issues = await adapter.parse_output(mock_result)
-        
+
         assert len(issues) == 1
         assert issues[0].file_path == Path("test.py")
         assert issues[0].line_number == 15
@@ -168,10 +168,10 @@ class TestSkylosAdapter:
     async def test_skylos_adapter_parse_empty_output(self):
         """Test SkylosAdapter with empty output."""
         adapter = SkylosAdapter()
-        
+
         mock_result = Mock()
         mock_result.raw_output = ""
-        
+
         issues = await adapter.parse_output(mock_result)
         assert len(issues) == 0
 
@@ -188,7 +188,7 @@ class TestSkylosAdapter:
         assert settings.confidence_threshold == 80
         assert settings.use_json_output is True
         assert settings.web_dashboard_port == 5090
-        
+
         # Test custom settings
         custom_settings = SkylosSettings(
             confidence_threshold=95,

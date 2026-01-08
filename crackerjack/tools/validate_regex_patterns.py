@@ -118,7 +118,6 @@ class RegexVisitor(ast.NodeVisitor):
             with self.file_path.open(encoding="utf-8") as f:
                 lines = f.readlines()
 
-
                 for offset in range(6):
                     check_line = line_no - 1 + offset
                     if check_line < len(lines):

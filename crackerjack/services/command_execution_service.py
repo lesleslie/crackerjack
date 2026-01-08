@@ -1,4 +1,3 @@
-
 import asyncio
 import subprocess
 from pathlib import Path
@@ -7,7 +6,6 @@ from loguru import logger
 
 
 class CommandExecutionService:
-
     def __init__(self, default_timeout: int = 30):
         self.default_timeout = default_timeout
 
@@ -96,7 +94,6 @@ class CommandExecutionService:
             return completed_process
 
         except TimeoutError:
-
             process.kill()
             await process.wait()
             logger.error(f"Command timed out after {timeout}s: {str_cmd}")
@@ -148,14 +145,12 @@ class CommandExecutionService:
         results = []
 
         if parallel:
-
             tasks = [
                 self.run_command(cmd, cwd=cwd, env=env, timeout=timeout)
                 for cmd in commands
             ]
             results = await asyncio.gather(*tasks)
         else:
-
             for cmd in commands:
                 result = await self.run_command(cmd, cwd=cwd, env=env, timeout=timeout)
                 results.append(result)
@@ -164,7 +159,6 @@ class CommandExecutionService:
 
     async def command_exists(self, command: str) -> bool:
         try:
-
             import platform
 
             if platform.system() == "Windows":
@@ -180,7 +174,6 @@ class CommandExecutionService:
 
             return result.returncode == 0
         except (subprocess.CalledProcessError, FileNotFoundError):
-
             return False
 
     async def run_command_with_retries(
@@ -194,9 +187,7 @@ class CommandExecutionService:
         check: bool = True,
         backoff_factor: float = 1.0,
     ) -> subprocess.CompletedProcess:
-        for attempt in range(
-            max_retries + 1
-        ):
+        for attempt in range(max_retries + 1):
             try:
                 return await self.run_command(
                     cmd,
@@ -208,17 +199,14 @@ class CommandExecutionService:
                 )
             except (subprocess.TimeoutExpired, subprocess.CalledProcessError) as e:
                 if attempt == max_retries:
-
                     logger.error(f"Command failed after {max_retries} retries: {cmd}")
                     raise
                 else:
-
                     wait_time = backoff_factor * (2**attempt)
                     logger.warning(
                         f"Command failed on attempt {attempt + 1}, "
                         f"retrying in {wait_time}s: {cmd}. Error: {e}"
                     )
                     await asyncio.sleep(wait_time)
-
 
         raise RuntimeError("Unexpected error in run_command_with_retries")

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import os
@@ -54,7 +53,6 @@ def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
         )
         console.print(" • Structured logging enabled for debugging")
 
-
     if ai_agent or debug_mode:
         from crackerjack.services.logging import setup_structured_logging
 
@@ -67,7 +65,7 @@ def handle_interactive_mode(options: Options) -> None:
     from ..interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options) # type: ignore[arg-type]
+    launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
 
 
 def handle_standard_mode(
@@ -77,7 +75,7 @@ def handle_standard_mode(
     from crackerjack.cli.facade import CrackerjackCLIFacade
 
     runner = CrackerjackCLIFacade(console=console)
-    runner.process(options) # type: ignore[arg-type]
+    runner.process(options)  # type: ignore[arg-type]
 
 
 def handle_config_updates(options: Options) -> None:

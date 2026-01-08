@@ -1,4 +1,3 @@
-
 import logging
 import statistics
 import typing as t
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MetricPoint:
-
     timestamp: datetime
     value: float
     metric_type: str
@@ -21,7 +19,6 @@ class MetricPoint:
 
 @dataclass
 class AnomalyDetection:
-
     timestamp: datetime
     metric_type: str
     value: float
@@ -34,7 +31,6 @@ class AnomalyDetection:
 
 @dataclass
 class BaselineModel:
-
     metric_type: str
     mean: float
     std_dev: float
@@ -46,7 +42,6 @@ class BaselineModel:
 
 
 class AnomalyDetector:
-
     def __init__(
         self,
         baseline_window: int = 100,
@@ -57,13 +52,11 @@ class AnomalyDetector:
         self.sensitivity = sensitivity
         self.min_samples = min_samples
 
-
         self.metric_history: dict[str, deque[MetricPoint]] = defaultdict(
             lambda: deque[MetricPoint](maxlen=baseline_window)
         )
         self.baselines: dict[str, BaselineModel] = {}
         self.anomalies: list[AnomalyDetection] = []
-
 
         self.metric_configs = {
             "test_pass_rate": {"critical_threshold": 0.8, "direction": "both"},
@@ -93,10 +86,8 @@ class AnomalyDetector:
 
         self.metric_history[metric_type].append(point)
 
-
         if len(self.metric_history[metric_type]) >= self.min_samples:
             self._update_baseline(metric_type)
-
 
             anomaly = self._detect_anomaly(point)
             if anomaly:
@@ -107,12 +98,10 @@ class AnomalyDetector:
         history = list[t.Any](self.metric_history[metric_type])
         values = [point.value for point in history]
 
-
         mean = statistics.mean(values)
         std_dev = statistics.stdev(values) if len(values) > 1 else 0
         min_val = min(values)
         max_val = max(values)
-
 
         seasonal_patterns = self._detect_seasonal_patterns(history)
 
@@ -133,12 +122,10 @@ class AnomalyDetector:
         if len(history) < 24:
             return patterns
 
-
         hourly_values = defaultdict(list)
         for point in history:
             hour = point.timestamp.hour
             hourly_values[hour].append(point.value)
-
 
         for hour, values in hourly_values.items():
             if len(values) >= 3:
@@ -153,28 +140,22 @@ class AnomalyDetector:
         if not baseline:
             return None
 
-
         lower_bound = baseline.mean - (self.sensitivity * baseline.std_dev)
         upper_bound = baseline.mean + (self.sensitivity * baseline.std_dev)
-
 
         seasonal_adjustment = self._get_seasonal_adjustment(point, baseline)
         if seasonal_adjustment:
             lower_bound += seasonal_adjustment
             upper_bound += seasonal_adjustment
 
-
         is_anomaly = point.value < lower_bound or point.value > upper_bound
 
         if not is_anomaly:
             return None
 
-
         severity = self._calculate_severity(point, baseline, lower_bound, upper_bound)
 
-
         confidence = self._calculate_confidence(point, baseline)
-
 
         description = self._generate_anomaly_description(
             point, baseline, lower_bound, upper_bound, severity
@@ -212,10 +193,8 @@ class AnomalyDetector:
         if baseline.std_dev == 0:
             return "medium"
 
-
         if self._is_critical_threshold_breached(point):
             return "critical"
-
 
         z_score = self._calculate_z_score(point, baseline, lower_bound, upper_bound)
         return self._severity_from_z_score(z_score)
@@ -268,14 +247,11 @@ class AnomalyDetector:
     def _calculate_confidence(
         self, point: MetricPoint, baseline: BaselineModel
     ) -> float:
-
         sample_factor = min(baseline.sample_count / 50, 1.0)
-
 
         if baseline.std_dev == 0:
             std_factor = 0.5
         else:
-
             cv = baseline.std_dev / abs(baseline.mean) if baseline.mean != 0 else 1
             std_factor = max(0.1, min(1.0, 1.0 - cv))
 
@@ -307,7 +283,6 @@ class AnomalyDetector:
     ) -> list[AnomalyDetection]:
         anomalies = self.anomalies
 
-
         if metric_type:
             anomalies = [a for a in anomalies if a.metric_type == metric_type]
 
@@ -316,7 +291,6 @@ class AnomalyDetector:
 
         if since:
             anomalies = [a for a in anomalies if a.timestamp >= since]
-
 
         anomalies.sort(key=lambda x: x.timestamp, reverse=True)
         return anomalies[:limit]

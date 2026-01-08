@@ -463,7 +463,6 @@ class ServiceCollectionBuilder:
 
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
-
         self.container.register_transient(
             PublishManager,
             factory=PublishManagerImpl,

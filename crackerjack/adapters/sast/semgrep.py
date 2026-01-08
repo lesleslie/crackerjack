@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class SemgrepSettings(ToolAdapterSettings):
-
     tool_name: str = "semgrep"
     use_json_output: bool = True
     config: str = "p/python"
@@ -37,7 +35,6 @@ class SemgrepSettings(ToolAdapterSettings):
 
 
 class SemgrepAdapter(BaseToolAdapter):
-
     settings: SemgrepSettings | None = None
 
     def __init__(self, settings: SemgrepSettings | None = None) -> None:
@@ -84,13 +81,10 @@ class SemgrepAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name, "scan"]
 
-
         if self.settings.use_json_output:
             cmd.append("--json")
 
-
         cmd.extend(["--config", self.settings.config])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -158,7 +152,6 @@ class SemgrepAdapter(BaseToolAdapter):
 
         current_dir = Path.cwd()
 
-
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -168,23 +161,18 @@ class SemgrepAdapter(BaseToolAdapter):
                     data = tomllib.load(f)
 
                 if "project" in data and "name" in data["project"]:
-
                     package_name = str(data["project"]["name"]).replace("-", "_")
-
 
                     if (current_dir / package_name).exists():
                         return package_name
 
-
         if (current_dir / current_dir.name).exists():
             return current_dir.name
-
 
         return "src"
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         package_dir = self._detect_package_directory()
 

@@ -41,7 +41,6 @@ class ExecutionGroup:
 
 
 class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
-
     def __init__(
         self,
         logger: "LoggerProtocol | None" = None,
@@ -56,7 +55,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         # Type: LoggerProtocol (logging.Logger is compatible)
         self._logger: LoggerProtocol = logger or logging.getLogger(
             "crackerjack.parallel_executor"
-        ) # type: ignore[assignment]
+        )  # type: ignore[assignment]
         self._cache = cache
 
     def initialize(self) -> None:
@@ -295,7 +294,6 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
 
 
 class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
-
     _logger: "LoggerProtocol"
 
     def __init__(
@@ -507,7 +505,6 @@ def get_parallel_executor(
     global _parallel_executor
     if _parallel_executor is None:
         _parallel_executor = ParallelHookExecutor(
-
             cache=None,
             max_workers=max_workers,
             strategy=strategy,
@@ -519,7 +516,6 @@ def get_async_executor(max_workers: int = 4) -> AsyncCommandExecutor:
     global _async_executor
     if _async_executor is None:
         _async_executor = AsyncCommandExecutor(
-
             cache=None,
             max_workers=max_workers,
         )

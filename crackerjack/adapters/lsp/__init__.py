@@ -1,4 +1,3 @@
-
 from ._base import BaseRustToolAdapter, Issue, RustToolAdapter, ToolResult
 from ._client import ZubanLSPClient
 from ._manager import RustToolHookManager

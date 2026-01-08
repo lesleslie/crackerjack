@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -10,7 +9,6 @@ logger = logging.getLogger("crackerjack.lsp_client")
 
 
 class ZubanLSPClient:
-
     def __init__(self, host: str = "127.0.0.1", port: int = 8677) -> None:
         self.host = host
         self.port = port
@@ -26,7 +24,6 @@ class ZubanLSPClient:
 
     async def connect(self, timeout: float = 5.0) -> bool:
         try:
-
             self._reader, self._writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), timeout=timeout
             )
@@ -41,7 +38,6 @@ class ZubanLSPClient:
     async def disconnect(self) -> None:
         if self._writer:
             try:
-
                 if self._initialized:
                     await self._send_request("shutdown")
                     await self._send_notification("exit")
@@ -84,7 +80,6 @@ class ZubanLSPClient:
 
         response = await self._send_request("initialize", params)
         if response and not response.get("error"):
-
             await self._send_notification("initialized")
             self._initialized = True
             logger.info("LSP client initialized successfully")
@@ -136,8 +131,6 @@ class ZubanLSPClient:
         await self._send_notification("textDocument/didClose", params)
 
     async def get_diagnostics(self, timeout: float = 2.0) -> list[dict[str, t.Any]]:
-
-
         return []
 
     async def _send_request(
@@ -157,9 +150,7 @@ class ZubanLSPClient:
             request["params"] = params
 
         try:
-
             await self._send_message(request)
-
 
             response = await asyncio.wait_for(
                 self._read_response(request_id), timeout=timeout
@@ -200,7 +191,6 @@ class ZubanLSPClient:
         content_bytes = json.dumps(message).encode("utf-8")
         content_length = len(content_bytes)
 
-
         header = f"Content-Length: {content_length}\r\n\r\n"
         full_message = header.encode("ascii") + content_bytes
 
@@ -213,10 +203,8 @@ class ZubanLSPClient:
             if not message:
                 return None
 
-
             if message.get("id") == expected_id:
                 return message
-
 
             if "id" in message:
                 logger.debug(
@@ -232,7 +220,6 @@ class ZubanLSPClient:
             return None
 
         try:
-
             header_line = await self._reader.readline()
             header_str = header_line.decode("ascii").strip()
 
@@ -242,11 +229,9 @@ class ZubanLSPClient:
 
             content_length = int(header_str.split(":", 1)[1].strip())
 
-
             separator = await self._reader.readline()
             if separator.strip():
                 logger.warning("Expected empty separator line")
-
 
             content_bytes = await self._reader.readexactly(content_length)
             content = content_bytes.decode()

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import typing as t
@@ -163,7 +162,7 @@ class HealthMetricsRepository:
         project_name: str,
         data: dict[str, Any],
     ) -> ProjectHealthRecord:
-        data = {"project_name": project_name, **data}
+        data = {"project_name": project_name} | data
         result = await self.query.for_model(
             ProjectHealthRecord
         ).simple.create_or_update(data, "project_name")

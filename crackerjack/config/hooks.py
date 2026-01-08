@@ -57,7 +57,6 @@ class HookDefinition:
     def build_command(self, files: list[Path] | None = None) -> list[str]:
         base_cmd = self.get_command().copy()
 
-
         if files and self.accepts_file_paths:
             base_cmd.extend([str(f) for f in files])
 
@@ -222,8 +221,6 @@ COMPREHENSIVE_HOOKS = [
         security_level=SecurityLevel.HIGH,
         accepts_file_paths=True,
     ),
-
-
     HookDefinition(
         name="gitleaks",
         command=[],
@@ -321,9 +318,7 @@ def _update_hook_timeouts_from_settings(hooks: list[HookDefinition]) -> None:
     with suppress(Exception):
         from crackerjack.config import CrackerjackSettings, load_settings
 
-
         settings = load_settings(CrackerjackSettings)
-
 
         for hook in hooks:
             timeout_attr = f"{hook.name}_timeout"
@@ -336,11 +331,9 @@ class HookConfigLoader:
     @staticmethod
     def load_strategy(name: str, _: Path | None = None) -> HookStrategy:
         if name == "fast":
-
             _update_hook_timeouts_from_settings(FAST_HOOKS)
             return FAST_STRATEGY
         if name == "comprehensive":
-
             _update_hook_timeouts_from_settings(COMPREHENSIVE_HOOKS)
             return COMPREHENSIVE_STRATEGY
         msg = f"Unknown hook strategy: {name}"

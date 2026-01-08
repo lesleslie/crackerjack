@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +10,6 @@ from crackerjack.models.qa_results import QACheckType
 
 
 class QACheckConfig(BaseModel):
-
     check_id: UUID = Field(
         ...,
         description="Unique identifier for this check",
@@ -72,7 +70,6 @@ class QACheckConfig(BaseModel):
 
 
 class QAOrchestratorConfig(BaseModel):
-
     project_root: Path = Field(
         ...,
         description="Root directory of the project being checked",

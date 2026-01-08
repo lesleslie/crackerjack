@@ -11,7 +11,6 @@ from rich.console import Console
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
 
-
 console = Console()
 
 
@@ -205,7 +204,6 @@ def stop_zuban_lsp() -> bool:
 
 
 def stop_all_servers() -> bool:
-
     mcp_success = stop_mcp_server()
     zuban_lsp_success = stop_zuban_lsp()
 
@@ -241,9 +239,7 @@ def restart_mcp_server() -> bool:
             purpose="mcp_server_restart",
         )
 
-
         time.sleep(1)
-
 
         http_endpoint = "http://127.0.0.1:8676/mcp"
 
@@ -311,7 +307,6 @@ def list_server_status() -> None:
     else:
         console.print("\n[yellow]MCP Servers: None running[/ yellow]")
 
-
     if zuban_lsp_processes:
         console.print("\n[bold green]Zuban LSP Servers: [/ bold green]")
         for proc in zuban_lsp_processes:
@@ -321,7 +316,6 @@ def list_server_status() -> None:
             console.print(f" Command: {proc['command']}")
     else:
         console.print("\n[yellow]Zuban LSP Servers: None running[/ yellow]")
-
 
     if not mcp_processes and not zuban_lsp_processes:
         console.print("\n[dim]No crackerjack servers currently running[/ dim]")

@@ -1,4 +1,3 @@
-
 import typing as t
 from pathlib import Path
 
@@ -15,7 +14,6 @@ from .base import (
 
 
 class SemanticAgent(SubAgent):
-
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.semantic_insights: dict[str, t.Any] = {}
@@ -35,7 +33,6 @@ class SemanticAgent(SubAgent):
 
         confidence = 0.8
         message_lower = issue.message.lower()
-
 
         if any(
             pattern in message_lower
@@ -70,15 +67,12 @@ class SemanticAgent(SubAgent):
         file_path = Path(issue.file_path)
 
         try:
-
             config = self._create_semantic_config()
             vector_store = self._get_vector_store(config)
-
 
             result = await self._perform_semantic_analysis(
                 file_path, vector_store, issue
             )
-
 
             self._update_pattern_stats(result)
 
@@ -129,7 +123,6 @@ class SemanticAgent(SubAgent):
     async def _perform_semantic_analysis(
         self, file_path: Path, vector_store: VectorStore, issue: Issue
     ) -> FixResult:
-
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -138,18 +131,15 @@ class SemanticAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-
         try:
             embeddings = vector_store.index_file(file_path)
             self.log(f"Indexed {len(embeddings)} chunks from {file_path.name}")
         except Exception as e:
             self.log(f"Warning: Could not index file {file_path}: {e}")
 
-
         semantic_insights = await self._discover_semantic_patterns(
             vector_store, file_path, content, issue
         )
-
 
         recommendations = self._generate_semantic_recommendations(semantic_insights)
 
@@ -179,11 +169,9 @@ class SemanticAgent(SubAgent):
             "pattern_clusters": [],
         }
 
-
         code_elements = self._extract_code_elements(content)
 
         for element in code_elements:
-
             search_query = SearchQuery(
                 query=element["signature"],
                 max_results=5,
@@ -194,7 +182,6 @@ class SemanticAgent(SubAgent):
             try:
                 results = vector_store.search(search_query)
                 if results:
-
                     related_results = [
                         result for result in results if result.file_path != file_path
                     ]
@@ -206,9 +193,7 @@ class SemanticAgent(SubAgent):
                                 "related_code": [
                                     {
                                         "file_path": str(result.file_path),
-                                        "content": result.content[
-                                            :200
-                                        ],
+                                        "content": result.content[:200],
                                         "similarity_score": result.similarity_score,
                                         "lines": f"{result.start_line}-{result.end_line}",
                                     }
@@ -219,7 +204,6 @@ class SemanticAgent(SubAgent):
 
             except Exception as e:
                 self.log(f"Warning: Semantic search failed for {element['name']}: {e}")
-
 
         if issue.message:
             issue_insights = await self._analyze_issue_context(vector_store, issue)
@@ -236,9 +220,7 @@ class SemanticAgent(SubAgent):
         value = node.body[0].value
         if hasattr(value, "s"):
             return str(value.s)[:100]
-        elif hasattr(value, "value") and isinstance(
-            value.value, str
-        ):
+        elif hasattr(value, "value") and isinstance(value.value, str):
             return str(value.value)[:100]
         return ""
 
@@ -340,7 +322,6 @@ class SemanticAgent(SubAgent):
     ) -> list[dict[str, t.Any]]:
         suggestions = []
 
-
         search_query = SearchQuery(
             query=issue.message,
             max_results=5,
@@ -385,7 +366,6 @@ class SemanticAgent(SubAgent):
                 "Semantic analysis revealed contextual insights for code understanding"
             )
 
-
         recommendations.extend(self._get_general_semantic_recommendations())
 
         return recommendations
@@ -396,7 +376,6 @@ class SemanticAgent(SubAgent):
         recommendations.append(
             f"Found {len(related_patterns)} similar code patterns across the codebase"
         )
-
 
         high_similarity_count = self._count_high_similarity_patterns(related_patterns)
         if high_similarity_count > 0:

@@ -1,4 +1,3 @@
-
 import fnmatch
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -8,7 +7,6 @@ from crackerjack.services.incremental_executor import IncrementalExecutor
 
 @dataclass
 class FilterConfig:
-
     tool_name: str | None = None
     changed_only: bool = False
     file_patterns: list[str] = field(default_factory=list)
@@ -17,7 +15,6 @@ class FilterConfig:
 
 @dataclass
 class FilterResult:
-
     total_tools: int
     filtered_tools: list[str]
     skipped_tools: list[str]
@@ -36,7 +33,6 @@ class FilterResult:
 
 
 class ToolFilter:
-
     def __init__(
         self,
         config: FilterConfig,
@@ -50,16 +46,13 @@ class ToolFilter:
         available_tools: list[str],
     ) -> FilterResult:
         if self.config.tool_name:
-
             if self.config.tool_name in available_tools:
                 filtered = [self.config.tool_name]
                 skipped = [t for t in available_tools if t != self.config.tool_name]
             else:
-
                 filtered = []
                 skipped = available_tools.copy()
         else:
-
             filtered = available_tools.copy()
             skipped = []
 
@@ -84,12 +77,10 @@ class ToolFilter:
         filtered_files = all_files.copy()
         skipped_files: list[Path] = []
 
-
         if self.config.changed_only and self.executor:
             changed_files = self.executor.get_changed_files(tool_name, all_files)
             skipped_files = [f for f in all_files if f not in changed_files]
             filtered_files = changed_files
-
 
         if self.config.file_patterns:
             pattern_filtered = self._apply_patterns(
@@ -100,7 +91,6 @@ class ToolFilter:
             new_skipped = [f for f in filtered_files if f not in pattern_filtered]
             skipped_files.extend(new_skipped)
             filtered_files = pattern_filtered
-
 
         if self.config.exclude_patterns:
             exclude_filtered = self._apply_patterns(
@@ -133,29 +123,23 @@ class ToolFilter:
         patterns: list[str],
         include: bool,
     ) -> list[Path]:
-
         matching_files: set[Path] = set()
 
         for pattern in patterns:
             for file in files:
-
                 if fnmatch.fnmatch(file.name, pattern) or fnmatch.fnmatch(
                     str(file), pattern
                 ):
                     matching_files.add(file)
 
         if include:
-
             return [f for f in files if f in matching_files]
-
 
         return [f for f in files if f not in matching_files]
 
     def should_run_tool(self, tool_name: str) -> bool:
         if self.config.tool_name is None:
-
             return True
-
 
         return tool_name == self.config.tool_name
 
@@ -173,7 +157,6 @@ class ToolFilter:
         file_execution_time_per_file: float = 0.1,
     ) -> dict[str, float]:
         if not self.config.tool_name and not self.config.changed_only:
-
             return {
                 "total_time_baseline": sum(tool_execution_times.values()),
                 "total_time_filtered": sum(tool_execution_times.values()),
@@ -181,15 +164,11 @@ class ToolFilter:
                 "percent_saved": 0.0,
             }
 
-
         baseline_time = sum(tool_execution_times.values())
 
-
         if self.config.tool_name:
-
             filtered_time = tool_execution_times.get(self.config.tool_name, 0.0)
         else:
-
             filtered_time = baseline_time
 
         time_saved = baseline_time - filtered_time

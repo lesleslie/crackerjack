@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from pydantic import Field
@@ -6,8 +5,6 @@ from pydantic_settings import BaseSettings
 
 
 class CrackerjackSettings(BaseSettings):
-
-
     server_name: str = Field(
         default="Crackerjack QA Server", description="Server display name"
     )
@@ -22,7 +19,6 @@ class CrackerjackSettings(BaseSettings):
         default=Path.home() / ".crackerjack", description="Runtime cache directory"
     )
 
-
     qa_mode: bool = Field(default=False, description="Enable QA analysis mode")
     test_suite_path: Path = Field(
         default=Path("tests"), description="Test suite directory path"
@@ -31,7 +27,6 @@ class CrackerjackSettings(BaseSettings):
     ai_agent: bool = Field(
         default=False, description="Enable AI-powered code analysis agent"
     )
-
 
     ruff_enabled: bool = Field(default=True, description="Enable Ruff linter/formatter")
     bandit_enabled: bool = Field(
@@ -55,7 +50,6 @@ class CrackerjackSettings(BaseSettings):
         default=True, description="Enable pip-audit dependency scanning"
     )
 
-
     max_parallel_hooks: int = Field(
         default=4, description="Maximum parallel pre-commit hooks"
     )
@@ -70,7 +64,6 @@ class CrackerjackSettings(BaseSettings):
         default=2.0, description="Memory per worker in GB for worker calculation"
     )
 
-
     verbose: bool = Field(default=False, description="Enable verbose logging")
     interactive: bool = Field(default=False, description="Enable interactive mode")
     async_mode: bool = Field(
@@ -80,12 +73,10 @@ class CrackerjackSettings(BaseSettings):
         default=True, description="Enable workflow orchestration"
     )
 
-
     skip_hooks: bool = Field(default=False, description="Skip hook execution")
     experimental_hooks: bool = Field(
         default=False, description="Enable experimental hooks"
     )
-
 
     auto_cleanup: bool = Field(
         default=True, description="Automatically clean up temp files"
@@ -97,11 +88,9 @@ class CrackerjackSettings(BaseSettings):
         default=10, description="Number of coverage files to retain"
     )
 
-
     http_port: int = Field(default=8676, description="MCP HTTP server port")
     http_host: str = Field(default="127.0.0.1", description="MCP HTTP server host")
     http_enabled: bool = Field(default=False, description="Enable MCP HTTP server")
-
 
     zuban_lsp_enabled: bool = Field(
         default=True, description="Enable Zuban LSP integration"
@@ -114,7 +103,6 @@ class CrackerjackSettings(BaseSettings):
         default=120, description="Zuban LSP timeout in seconds"
     )
 
-
     global_lock_enabled: bool = Field(
         default=True, description="Enable global lock mechanism"
     )
@@ -126,7 +114,6 @@ class CrackerjackSettings(BaseSettings):
     )
 
     class Config:
-
         env_prefix = "CRACKERJACK_"
         env_file = ".env"
         env_file_encoding = "utf-8"

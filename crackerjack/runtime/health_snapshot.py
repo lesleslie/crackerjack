@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -9,7 +8,6 @@ from pathlib import Path
 
 @dataclass
 class RuntimeHealthSnapshot:
-
     orchestrator_pid: int
     watchers_running: bool
     lifecycle_state: dict[str, t.Any] = field(default_factory=dict)

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class TySettings(ToolAdapterSettings):
-
     tool_name: str = "ty"
     use_json_output: bool = True
     strict_mode: bool = False
@@ -39,7 +37,6 @@ class TySettings(ToolAdapterSettings):
 
 
 class TyAdapter(BaseToolAdapter):
-
     settings: TySettings | None = None
 
     def __init__(self, settings: TySettings | None = None) -> None:
@@ -87,21 +84,16 @@ class TyAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.use_json_output:
             cmd.extend(["--format", "json"])
-
 
         if self.settings.strict_mode:
             cmd.append("--strict")
 
-
         if self.settings.ignore_missing_imports:
             cmd.append("--ignore-missing-imports")
 
-
         cmd.extend(["--follow-imports", self.settings.follow_imports])
-
 
         if self.settings.incremental:
             cmd.append("--incremental")
@@ -109,7 +101,6 @@ class TyAdapter(BaseToolAdapter):
         # Warn about unused type: ignore comments
         if self.settings.warn_unused_ignores:
             cmd.append("--warn-unused-ignores")
-
 
         cmd.extend([str(f) for f in files])
 
@@ -147,7 +138,6 @@ class TyAdapter(BaseToolAdapter):
 
         issues = []
 
-
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
 
@@ -178,7 +168,6 @@ class TyAdapter(BaseToolAdapter):
         lines = output.strip().split("\n")
 
         for line in lines:
-
             if ":" not in line:
                 continue
 
@@ -234,7 +223,6 @@ class TyAdapter(BaseToolAdapter):
     ) -> str:
         if message:
             return message
-
 
         if severity_and_message.lower().startswith(severity):
             return severity_and_message[len(severity) :].strip()

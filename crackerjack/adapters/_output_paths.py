@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -9,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class AdapterOutputPaths:
-
-
     OUTPUTS_DIR = ".crackerjack/outputs"
 
     @classmethod
@@ -21,7 +18,6 @@ class AdapterOutputPaths:
             output_dir = base_dir / adapter_name
         else:
             output_dir = base_dir
-
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -37,7 +33,6 @@ class AdapterOutputPaths:
         output_dir = cls.get_output_dir(adapter_name)
 
         if timestamped:
-
             stem = Path(filename).stem
             suffix = Path(filename).suffix
             timestamp = datetime.now().strftime("%Y_%m_%d__%H:%M:%S")
@@ -79,7 +74,6 @@ class AdapterOutputPaths:
             key=lambda p: p.stat().st_mtime,
             reverse=True,
         )
-
 
         files_to_delete = files[keep_latest:]
         deleted_count = 0

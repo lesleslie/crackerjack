@@ -13,9 +13,7 @@ async def execute_crackerjack_workflow(
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
-
     context = get_context()
-
 
     _update_progress(
         job_id,
@@ -29,9 +27,7 @@ async def execute_crackerjack_workflow(
         "Crackerjack execution started",
     )
 
-
     asyncio.create_task(_execute_crackerjack_background(job_id, args, kwargs, context))
-
 
     return {
         "job_id": job_id,
@@ -49,7 +45,6 @@ async def _execute_crackerjack_background(
 ) -> None:
     try:
         result = await _execute_crackerjack_sync(job_id, args, kwargs, context)
-
 
         _update_progress(
             job_id,
@@ -69,7 +64,6 @@ async def _execute_crackerjack_background(
         )
     except Exception as e:
         import traceback
-
 
         _update_progress(
             job_id,
@@ -126,7 +120,6 @@ async def _initialize_execution(
         },
         context,
     )
-
 
     working_dir = kwargs.get("working_directory", ".")
     from pathlib import Path
@@ -238,7 +231,6 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
         TestManagerProtocol,
         factory=lambda: TestManagementImpl(console, working_dir),
     )
-
 
     container.register_singleton(
         PublishManager,
@@ -422,10 +414,8 @@ async def _execute_single_iteration(
         method_name = _detect_orchestrator_method(orchestrator)
         result = _invoke_orchestrator_method(orchestrator, method_name, options)
 
-
         if method_name == "run":
             return result
-
 
         _validate_awaitable_result(result, method_name, orchestrator)
         return await result

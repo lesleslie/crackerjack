@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -30,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 
 class UtilityCheckType(str, Enum):
-
     TEXT_PATTERN = "text_pattern"
     SYNTAX_VALIDATION = "syntax_validation"
     SIZE_CHECK = "size_check"
@@ -39,7 +37,6 @@ class UtilityCheckType(str, Enum):
 
 
 class UtilityCheckSettings(QABaseSettings):
-
     check_type: UtilityCheckType = Field(
         ...,
         description="Type of utility check to perform",
@@ -71,7 +68,6 @@ class UtilityCheckSettings(QABaseSettings):
     def validate_pattern(cls, v: str | None) -> str | None:
         if v is not None:
             try:
-
                 CompiledPatternCache.get_compiled_pattern(v)
             except ValueError as e:
                 raise ValueError(f"Invalid regex pattern: {e}")
@@ -86,7 +82,6 @@ class UtilityCheckSettings(QABaseSettings):
 
 
 class UtilityCheckAdapter(QAAdapterBase):
-
     settings: UtilityCheckSettings | None = None
 
     def __init__(self, settings: UtilityCheckSettings | None = None) -> None:
@@ -96,8 +91,6 @@ class UtilityCheckAdapter(QAAdapterBase):
 
     async def init(self) -> None:
         if not self.settings:
-
-
             self.settings = UtilityCheckSettings(
                 check_type=UtilityCheckType.TEXT_PATTERN,
                 pattern=r"\s+$",
@@ -133,12 +126,10 @@ class UtilityCheckAdapter(QAAdapterBase):
 
         start_time = asyncio.get_event_loop().time()
 
-
         target_files = await self._get_target_files(files, config)
 
         if not target_files:
             return self._create_skipped_result("No files to check", start_time)
-
 
         check_type = self.settings.check_type
 
@@ -189,17 +180,14 @@ class UtilityCheckAdapter(QAAdapterBase):
         if not self.settings:
             return []
 
-
         patterns = config.file_patterns if config else self.settings.file_patterns
         exclude_patterns = (
             config.exclude_patterns if config else self.settings.exclude_patterns
         )
 
-
         target_files: list[Path] = []
         for pattern in patterns:
             target_files.extend(Path.cwd().glob(pattern))
-
 
         if exclude_patterns:
             target_files = self._apply_exclude_filters(target_files, exclude_patterns)
@@ -218,7 +206,6 @@ class UtilityCheckAdapter(QAAdapterBase):
             if pattern.search(line):
                 issues_count += 1
                 if self.settings and self.settings.auto_fix:
-
                     fixed_lines.append(pattern.sub("", line))
                 else:
                     fixed_lines.append(line)
@@ -279,7 +266,6 @@ class UtilityCheckAdapter(QAAdapterBase):
         if not self.settings or not self.settings.pattern:
             raise ValueError("Pattern not configured")
 
-
         pattern = CompiledPatternCache.get_compiled_pattern(self.settings.pattern)
         issues_found = 0
         issues_fixed = 0
@@ -299,7 +285,6 @@ class UtilityCheckAdapter(QAAdapterBase):
                     issues_fixed += file_issues
 
             except Exception as e:
-
                 logger.warning(
                     "Failed to check file for pattern violations",
                     extra={
@@ -337,7 +322,6 @@ class UtilityCheckAdapter(QAAdapterBase):
                         issues_fixed += 1
                         files_modified.append(file_path)
             except Exception as e:
-
                 logger.warning(
                     "Failed to check file for EOF newline",
                     extra={
@@ -477,7 +461,6 @@ class UtilityCheckAdapter(QAAdapterBase):
                         f"{file_path} ({size_mb:.2f} MB > {max_mb:.2f} MB)"
                     )
             except Exception as e:
-
                 logger.warning(
                     "Failed to check file size",
                     extra={
@@ -628,19 +611,16 @@ class UtilityCheckAdapter(QAAdapterBase):
         if check_type == UtilityCheckType.DEPENDENCY_LOCK:
             return (["uv.lock", "requirements.lock"], "fast", False)
 
-
         return (["**/*.py"], "fast", False)
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         if self.settings and self.settings.check_type:
             file_patterns, stage, is_formatter = self._get_config_for_check_type(
                 self.settings.check_type
             )
         else:
-
             file_patterns = ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json"]
             stage = "fast"
             is_formatter = False

@@ -1,5 +1,3 @@
-
-
 from typing import Any
 
 from .base import AgentContext, FixResult, Issue, IssueType, Priority, SubAgent

@@ -1,11 +1,9 @@
-
 import typing as t
 from dataclasses import dataclass, field
 from enum import Enum
 
 
 class SkillDomain(Enum):
-
     EXECUTION = "execution"
     MONITORING = "monitoring"
     INTELLIGENCE = "intelligence"
@@ -16,7 +14,6 @@ class SkillDomain(Enum):
 
 @dataclass
 class ToolReference:
-
     name: str
     description: str
     required_params: list[str] = field(default_factory=list)
@@ -33,7 +30,6 @@ class ToolReference:
 
 @dataclass
 class MCPSkill:
-
     skill_id: str
     name: str
     description: str
@@ -71,7 +67,6 @@ class MCPSkill:
 
 
 class MCPSkillRegistry:
-
     def __init__(self) -> None:
         self._skills: dict[str, MCPSkill] = {}
         self._domain_index: dict[SkillDomain, list[str]] = {
@@ -85,9 +80,7 @@ class MCPSkillRegistry:
     ) -> None:
         self._skills[skill.skill_id] = skill
 
-
         self._domain_index[skill.domain].append(skill.skill_id)
-
 
         for tool in skill.tools:
             self._tool_index[tool.name] = skill.skill_id
@@ -104,7 +97,6 @@ class MCPSkillRegistry:
             tags=set(skill_data.get("tags", [])),
             examples=skill_data.get("examples", []),
         )
-
 
         for tool_data in skill_data.get("tools", []):
             skill.add_tool(
@@ -153,21 +145,17 @@ class MCPSkillRegistry:
         matching_skills = []
 
         for skill in self._skills.values():
-
             if search_domains and query_lower in skill.domain.value:
                 matching_skills.append(skill)
                 continue
-
 
             if search_tags and any(query_lower in tag for tag in skill.tags):
                 matching_skills.append(skill)
                 continue
 
-
             if search_descriptions and query_lower in skill.description.lower():
                 matching_skills.append(skill)
                 continue
-
 
             if search_tool_names and any(
                 query_lower in tool.name for tool in skill.tools

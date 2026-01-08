@@ -1,4 +1,4 @@
-import subprocess # nosec B404
+import subprocess  # nosec B404
 import typing as t
 from pathlib import Path
 
@@ -42,7 +42,7 @@ class GitService(GitInterface):
             pkg_path = console
             console = None
 
-        self.console: Console = console or Console() # type: ignore[assignment]
+        self.console: Console = console or Console()  # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(
@@ -367,13 +367,11 @@ class GitService(GitInterface):
                 if unstaged_result.stdout.strip():
                     all_changed.update(unstaged_result.stdout.strip().split("\n"))
 
-
             filtered = [
                 self.pkg_path / f
                 for f in all_changed
                 if f and any(f.endswith(ext) for ext in extensions)
             ]
-
 
             return [f for f in filtered if f.exists()]
 

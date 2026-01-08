@@ -1,4 +1,3 @@
-
 import asyncio
 import time
 import typing as t
@@ -13,16 +12,13 @@ if t.TYPE_CHECKING:
 
 
 class RustToolHookManager:
-
     def __init__(self, context: "ExecutionContext") -> None:
         self.context = context
         self.adapters: dict[str, BaseRustToolAdapter] = {}
         self._initialize_adapters()
 
     def _initialize_adapters(self) -> None:
-
         self.adapters["skylos"] = SkylosAdapter(context=self.context)
-
 
         self.adapters["zuban"] = ZubanAdapter(context=self.context)
 
@@ -30,7 +26,6 @@ class RustToolHookManager:
         self, target_files: list[Path] | None = None
     ) -> dict[str, ToolResult]:
         target_files = target_files or []
-
 
         available_adapters = {
             name: adapter
@@ -49,14 +44,12 @@ class RustToolHookManager:
                 )
             }
 
-
         tasks = [
             self._run_single_tool(name, adapter, target_files)
             for name, adapter in available_adapters.items()
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
 
         tool_results = {}
         for i, (name, _) in enumerate(available_adapters.items()):
@@ -101,9 +94,7 @@ class RustToolHookManager:
         start_time = time.time()
 
         try:
-
             cmd_args = adapter.get_command_args(target_files)
-
 
             process = await asyncio.create_subprocess_exec(
                 *cmd_args,
@@ -114,7 +105,6 @@ class RustToolHookManager:
 
             stdout, _ = await process.communicate()
             output = stdout.decode() if stdout else ""
-
 
             result = adapter.parse_output(output)
             result.execution_time = time.time() - start_time

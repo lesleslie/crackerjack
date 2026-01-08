@@ -1,4 +1,3 @@
-
 import typing as t
 from fnmatch import fnmatch
 from pathlib import Path
@@ -11,7 +10,6 @@ from crackerjack.models.protocols import (
 
 
 class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
-
     def __init__(
         self,
         git_service: GitServiceProtocol,
@@ -75,9 +73,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         ]
 
     def filter_by_tool(self, files: list[Path], tool: str) -> list[Path]:
-
         tool_patterns = {
-
             "ruff-check": ["*.py"],
             "ruff-format": ["*.py"],
             "zuban": ["*.py"],
@@ -86,16 +82,12 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
             "refurb": ["*.py"],
             "complexipy": ["*.py"],
             "creosote": ["*.py"],
-
             "mdformat": ["*.md"],
-
             "check-yaml": ["*.yaml", "*.yml"],
             "check-toml": ["*.toml"],
-
             "trailing-whitespace": ["*"],
             "end-of-file-fixer": ["*"],
             "codespell": ["*"],
-
             "validate-regex-patterns": ["*.py"],
             "gitleaks": ["*"],
             "uv-lock": ["pyproject.toml"],
@@ -104,11 +96,9 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
 
         patterns = tool_patterns.get(tool, ["*"])
 
-
         filtered = []
         for pattern in patterns:
             filtered.extend(self.filter_by_pattern(files, pattern))
-
 
         seen = set()
         result = []
@@ -129,7 +119,6 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
     def filter_by_extensions(
         self, files: list[Path], extensions: list[str]
     ) -> list[Path]:
-
         normalized = [ext if ext.startswith(".") else f".{ext}" for ext in extensions]
 
         return [file_path for file_path in files if file_path.suffix in normalized]

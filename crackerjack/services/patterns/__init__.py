@@ -1,5 +1,3 @@
-
-
 from . import (
     agents,
     code,
@@ -23,7 +21,6 @@ from .core import (
     validate_pattern_safety,
 )
 
-
 _merged_patterns = (
     formatting.PATTERNS
     | versioning.PATTERNS
@@ -38,7 +35,7 @@ _merged_patterns = (
     | testing.PATTERNS
     | security.PATTERNS
 )
-SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns # type: ignore[assignment]
+SAFE_PATTERNS: dict[str, ValidatedPattern] = _merged_patterns  # type: ignore[assignment]
 
 
 from .operations import (
@@ -68,18 +65,14 @@ from .operations import (
     validate_path_security,
 )
 
-
 __all__ = [
-
     "ValidatedPattern",
     "CompiledPatternCache",
     "validate_pattern_safety",
     "MAX_INPUT_SIZE",
     "MAX_ITERATIONS",
     "PATTERN_CACHE_SIZE",
-
     "SAFE_PATTERNS",
-
     "formatting",
     "versioning",
     "validation",
@@ -92,7 +85,6 @@ __all__ = [
     "tool_output",
     "testing",
     "security",
-
     "validate_all_patterns",
     "find_pattern_for_text",
     "apply_safe_replacement",

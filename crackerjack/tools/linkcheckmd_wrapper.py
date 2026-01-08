@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import subprocess
@@ -10,7 +9,6 @@ from ._git_utils import get_git_tracked_files
 
 def _get_scan_paths(files: list[Path], repo_root: Path) -> list[Path]:
     dirs = {f.parent for f in files}
-
 
     if len(dirs) <= 5:
         return sorted(dirs)
@@ -43,13 +41,11 @@ def _process_scan_results(
         try:
             result = _run_linkcheckmd(path, repo_root)
 
-
             if result.stdout:
                 all_results.append(result.stdout)
 
             if result.stderr:
                 print(result.stderr, file=sys.stderr, end="")
-
 
             if result.returncode == 22:
                 continue
@@ -76,7 +72,6 @@ def _process_scan_results(
 def main(argv: list[str] | None = None) -> int:
     repo_root = Path.cwd()
 
-
     md_files = get_git_tracked_files("*.md")
     markdown_files = get_git_tracked_files("*.markdown")
     files = md_files + markdown_files
@@ -88,17 +83,13 @@ def main(argv: list[str] | None = None) -> int:
     scan_paths = _get_scan_paths(files, repo_root)
     print(f"Checking links in {len(files)} markdown files...")
 
-
     all_results, exit_code = _process_scan_results(scan_paths, repo_root)
-
 
     if exit_code != 0:
         return exit_code
 
-
     for output in all_results:
         print(output, end="")
-
 
     if _check_broken_links(all_results):
         print("\n✗ Found broken links (see above)")

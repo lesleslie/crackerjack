@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 
@@ -6,7 +5,6 @@ from ...base import AgentContext
 
 
 class PerformanceASTAnalyzer:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 

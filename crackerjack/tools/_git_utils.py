@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import subprocess
@@ -24,25 +23,20 @@ def get_git_tracked_files(pattern: str | None = None) -> list[Path]:
         ]
 
     except subprocess.CalledProcessError:
-
         return []
     except FileNotFoundError:
-
         return []
 
 
 def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[Path]:
     if not use_git:
-
         files = []
         for ext in extensions:
             files.extend(Path.cwd().rglob(f"*{ext}"))
         return [f for f in files if f.is_file()]
 
-
     files = []
     for ext in extensions:
-
         pattern = f"*{ext}"
         git_files = get_git_tracked_files(pattern)
         if git_files:
@@ -50,7 +44,6 @@ def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[
 
     if files:
         return files
-
 
     result = []
     for ext in extensions:

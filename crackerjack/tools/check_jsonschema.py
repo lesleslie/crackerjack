@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -62,21 +61,17 @@ def _check_parent_dir_schemas(json_file: Path) -> Path | None:
 
 
 def find_schema_for_json(json_file: Path) -> Path | None:
-
     result = _check_filename_pattern_schema(json_file)
     if result:
         return result
-
 
     result = _check_internal_schema_ref(json_file)
     if result:
         return result
 
-
     result = _check_same_dir_schema(json_file)
     if result:
         return result
-
 
     return _check_parent_dir_schemas(json_file)
 
@@ -86,13 +81,12 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
         with schema_path.open(encoding="utf-8") as f:
             schema = json.load(f)
 
-
         if not isinstance(schema, dict):
             return None
 
         return schema
     except (OSError, json.JSONDecodeError) as e:
-        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr) # noqa: T201
+        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr)  # noqa: T201
         return None
 
 
@@ -100,31 +94,24 @@ def validate_json_against_schema(
     json_file: Path, schema_path: Path
 ) -> tuple[bool, str | None]:
     try:
-
         schema = load_schema(schema_path)
         if not schema:
             return False, f"Could not load schema: {schema_path}"
 
-
         with json_file.open(encoding="utf-8") as f:
             data = json.load(f)
 
-
         import jsonschema
-
 
         validator_class = jsonschema.Draft7Validator
         if hasattr(validator_class, "check_schema"):
-
             validator_class.check_schema(schema)
 
         validator = validator_class(schema)
         errors = list(validator.iter_errors(data))
 
         if errors:
-            error_messages = [
-                f" {error.message}" for error in errors[:5]
-            ]
+            error_messages = [f" {error.message}" for error in errors[:5]]
             if len(errors) > 5:
                 error_messages.append(f" ... and {len(errors) - 5} more errors")
             return False, "Schema validation failed:\n" + "\n".join(error_messages)
@@ -165,14 +152,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def _get_json_files(args: argparse.Namespace) -> list[Path]:
     if not args.files:
-
         files = get_files_by_extension([".json"])
         if not files:
-
             files = list(Path.cwd().rglob("*.json"))
     else:
         files = args.files
-
 
     return [f for f in files if f.is_file()]
 
@@ -180,19 +164,19 @@ def _get_json_files(args: argparse.Namespace) -> list[Path]:
 def _process_file(file_path: Path, schema_path: Path | None, strict: bool) -> int:
     if not schema_path:
         if strict:
-            print(f"✗ {file_path}: No schema found", file=sys.stderr) # noqa: T201
+            print(f"✗ {file_path}: No schema found", file=sys.stderr)  # noqa: T201
             return 1
         else:
-            print(f"→ {file_path}: No schema found, skipping validation") # noqa: T201
+            print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
             return 0
 
     is_valid, error_msg = validate_json_against_schema(file_path, schema_path)
 
     if not is_valid:
-        print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
+        print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
         return 1
     else:
-        print(f"✓ {file_path}: Valid against {schema_path.name}") # noqa: T201
+        print(f"✓ {file_path}: Valid against {schema_path.name}")  # noqa: T201
         return 0
 
 
@@ -202,23 +186,21 @@ def main(argv: list[str] | None = None) -> int:
     files = _get_json_files(args)
 
     if not files:
-        print("No JSON files to validate") # noqa: T201
+        print("No JSON files to validate")  # noqa: T201
         return 0
-
 
     error_count = 0
     for file_path in files:
         schema_path = find_schema_for_json(file_path)
         error_count += _process_file(file_path, schema_path, args.strict)
 
-
     if error_count > 0:
-        print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr) # noqa: T201
+        print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr)  # noqa: T201
         return 1
 
     print(
         f"\nAll {len([f for f in files if find_schema_for_json(f)])} JSON file(s) passed schema validation"
-    ) # noqa: T201
+    )  # noqa: T201
     return 0
 
 

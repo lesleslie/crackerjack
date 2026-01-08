@@ -1,4 +1,3 @@
-
 from ..core import ValidatedPattern
 from .detection import PATTERNS as DETECTION_PATTERNS
 from .imports import PATTERNS as IMPORT_PATTERNS

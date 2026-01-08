@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -16,7 +15,6 @@ logger = logging.getLogger("crackerjack.zuban_lsp")
 
 
 class ZubanLSPService:
-
     def __init__(
         self,
         port: int = 8677,
@@ -50,14 +48,10 @@ class ZubanLSPService:
         try:
             self.console.print("[cyan]🚀 Starting Zuban LSP server...[/cyan]")
 
-
             if self.mode == "tcp":
-
-
                 cmd = ["uv", "run", "zuban", "server"]
             else:
                 cmd = ["uv", "run", "zuban", "server"]
-
 
             self.process = subprocess.Popen(
                 cmd,
@@ -71,15 +65,12 @@ class ZubanLSPService:
             self.start_time = time.time()
             self._health_check_failures = 0
 
-
             self.security_logger.log_subprocess_execution(
                 command=cmd,
                 purpose="zuban_lsp_server_start",
             )
 
-
             await asyncio.sleep(1.0)
-
 
             if not self.is_running:
                 error_output = ""
@@ -110,9 +101,7 @@ class ZubanLSPService:
         self.console.print("[yellow]🛑 Stopping Zuban LSP server...[/yellow]")
 
         try:
-
             self.process.terminate()
-
 
             try:
                 self.process.wait(timeout=5.0)
@@ -120,7 +109,6 @@ class ZubanLSPService:
                     "[green]✅ Zuban LSP server stopped gracefully[/green]"
                 )
             except subprocess.TimeoutExpired:
-
                 self.process.kill()
                 self.process.wait(timeout=2.0)
                 self.console.print("[yellow]⚠️ Zuban LSP server force stopped[/yellow]")
@@ -138,11 +126,9 @@ class ZubanLSPService:
             return False
 
         try:
-
             if self.mode == "stdio":
                 return self._check_stdio_health()
             else:
-
                 return self._check_tcp_health()
 
         except Exception as e:
@@ -153,7 +139,6 @@ class ZubanLSPService:
     def _check_stdio_health(self) -> bool:
         if not self.process:
             return False
-
 
         return self.process.poll() is None
 
@@ -211,16 +196,13 @@ class ZubanLSPService:
             request_json = json.dumps(request)
             content_length = len(request_json.encode())
 
-
             message = f"Content-Length: {content_length}\r\n\r\n{request_json}"
 
             self.process.stdin.write(message.encode())
             self.process.stdin.flush()
 
-
             if method.startswith("textDocument/did"):
                 return {"status": "notification_sent", "id": request_id}
-
 
             try:
                 response = await self._read_lsp_response(request_id, timeout=5.0)
@@ -240,7 +222,6 @@ class ZubanLSPService:
             return None
 
         try:
-
             response_data = await asyncio.wait_for(
                 self._read_message_from_stdout(), timeout=timeout
             )
@@ -251,10 +232,8 @@ class ZubanLSPService:
             response = json.loads(response_data)
             typed_response = t.cast(dict[str, t.Any], response)
 
-
             if typed_response.get("id") == expected_id:
                 return typed_response
-
 
             logger.debug(
                 f"Received response for ID {typed_response.get('id')}, expected {expected_id}"
@@ -272,19 +251,15 @@ class ZubanLSPService:
             return None
 
         try:
-
             header_line = await self._read_line_async()
             if not header_line or not header_line.startswith("Content-Length:"):
                 return None
 
-
             content_length = int(header_line.split(":", 1)[1].strip())
-
 
             empty_line = await self._read_line_async()
             if empty_line.strip():
                 logger.warning("Expected empty line after Content-Length header")
-
 
             content_bytes = await self._read_bytes_async(content_length)
             return content_bytes.decode("utf-8")
@@ -297,9 +272,8 @@ class ZubanLSPService:
         if not self.process or not self.process.stdout:
             return ""
 
-
         loop = asyncio.get_event_loop()
-        line = await loop.run_in_executor(None, self.process.stdout.readline) # type: ignore[call-arg]
+        line = await loop.run_in_executor(None, self.process.stdout.readline)  # type: ignore[call-arg]
         return line.decode("utf-8").rstrip("\r\n")
 
     async def _read_bytes_async(self, count: int) -> bytes:
@@ -307,7 +281,7 @@ class ZubanLSPService:
             return b""
 
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, self.process.stdout.read, count) # type: ignore[call-arg]
+        data = await loop.run_in_executor(None, self.process.stdout.read, count)  # type: ignore[call-arg]
         return data
 
 

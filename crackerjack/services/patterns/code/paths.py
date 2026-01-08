@@ -1,4 +1,3 @@
-
 from ..core import ValidatedPattern
 
 PATTERNS: dict[str, ValidatedPattern] = {
@@ -74,12 +73,12 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "detect_hardcoded_temp_paths_basic": ValidatedPattern(
         name="detect_hardcoded_temp_paths_basic",
-        pattern=r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)", # nosec B108
+        pattern=r"(?:/tmp/|/temp/|C:\\temp\\|C:\\tmp\\)",  # nosec B108
         replacement="[TEMP_PATH]/",
         description="Detect hardcoded temporary directory paths",
         global_replace=True,
         test_cases=[
-            ("/tmp/myfile.txt", "[TEMP_PATH]/myfile.txt"), # nosec B108
+            ("/tmp/myfile.txt", "[TEMP_PATH]/myfile.txt"),  # nosec B108
             (r"C:\tmp\data.log", "[TEMP_PATH]/data.log"),
             ("/temp/cache", "[TEMP_PATH]/cache"),
             (r"C:\temp\work", "[TEMP_PATH]/work"),

@@ -1,4 +1,3 @@
-
 import logging
 import statistics
 import typing as t
@@ -11,13 +10,11 @@ logger = logging.getLogger(__name__)
 
 
 class PredictorProtocol(t.Protocol):
-
     def predict(self, values: list[float], periods: int = 1) -> list[float]: ...
 
 
 @dataclass
 class TrendAnalysis:
-
     metric_type: str
     trend_direction: str
     trend_strength: float
@@ -29,7 +26,6 @@ class TrendAnalysis:
 
 @dataclass
 class Prediction:
-
     metric_type: str
     predicted_at: datetime
     predicted_for: datetime
@@ -42,7 +38,6 @@ class Prediction:
 
 @dataclass
 class CapacityForecast:
-
     resource_type: str
     current_usage: float
     predicted_usage: list[tuple[datetime, float]]
@@ -53,7 +48,6 @@ class CapacityForecast:
 
 
 class MovingAveragePredictor:
-
     def __init__(self, window_size: int = 10):
         self.window_size = window_size
 
@@ -68,16 +62,13 @@ class MovingAveragePredictor:
 
 
 class LinearTrendPredictor:
-
     def predict(self, values: list[float], periods: int = 1) -> list[float]:
         if len(values) < 2:
             return [values[-1]] * periods if values else [0.0] * periods
 
-
         n = len(values)
         x = list[t.Any](range(n))
         y = values
-
 
         x_mean = statistics.mean(x)
         y_mean = statistics.mean(y)
@@ -91,7 +82,6 @@ class LinearTrendPredictor:
         slope = numerator / denominator
         intercept = y_mean - slope * x_mean
 
-
         predictions = []
         for i in range(1, periods + 1):
             future_x = n + i - 1
@@ -102,7 +92,6 @@ class LinearTrendPredictor:
 
 
 class SeasonalPredictor:
-
     def __init__(self, season_length: int = 24):
         self.season_length = season_length
 
@@ -112,7 +101,6 @@ class SeasonalPredictor:
 
         predictions = []
         for i in range(periods):
-
             season_index = (len(values) + i) % self.season_length
             if season_index < len(values):
                 seasonal_value = values[-(self.season_length - season_index)]
@@ -124,15 +112,12 @@ class SeasonalPredictor:
 
 
 class PredictiveAnalyticsEngine:
-
     def __init__(self, history_limit: int = 1000):
         self.history_limit = history_limit
-
 
         self.metric_history: dict[str, deque[tuple[datetime, float]]] = defaultdict(
             lambda: deque[tuple[datetime, float]](maxlen=history_limit)
         )
-
 
         self.predictors: dict[str, PredictorProtocol] = {
             "moving_average": MovingAveragePredictor(window_size=10),
@@ -140,10 +125,8 @@ class PredictiveAnalyticsEngine:
             "seasonal": SeasonalPredictor(season_length=24),
         }
 
-
         self.trend_analyses: dict[str, TrendAnalysis] = {}
         self.predictions_cache: dict[str, list[Prediction]] = defaultdict(list)
-
 
         self.metric_configs = {
             "test_pass_rate": {
@@ -181,7 +164,6 @@ class PredictiveAnalyticsEngine:
 
         self.metric_history[metric_type].append((timestamp, value))
 
-
         if len(self.metric_history[metric_type]) >= 10:
             self._update_trend_analysis(metric_type)
 
@@ -190,12 +172,10 @@ class PredictiveAnalyticsEngine:
         values = [point[1] for point in history]
         timestamps = [point[0] for point in history]
 
-
         trend_direction, trend_strength = self._calculate_trend(values)
 
-
         config = self.metric_configs.get(metric_type, {})
-        predictor_name: str = config.get("predictor", "moving_average") # type: ignore[assignment]
+        predictor_name: str = config.get("predictor", "moving_average")  # type: ignore[assignment]
         predictor = self.predictors[predictor_name]
 
         predicted_values = predictor.predict(values, periods=24)
@@ -217,7 +197,6 @@ class PredictiveAnalyticsEngine:
         if len(values) < 3:
             return "stable", 0.0
 
-
         n = len(values)
         x: list[int] = list(range(n))
         y = values
@@ -233,7 +212,6 @@ class PredictiveAnalyticsEngine:
 
         slope = numerator / denominator
 
-
         y_pred = [slope * xi + (y_mean - slope * x_mean) for xi in x]
         ss_res = sum((y[i] - y_pred[i]) ** 2 for i in range(n))
         ss_tot = sum((y[i] - y_mean) ** 2 for i in range(n))
@@ -241,14 +219,12 @@ class PredictiveAnalyticsEngine:
         r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 0
         trend_strength = max(0.0, min(1.0, r_squared))
 
-
         if abs(slope) < 0.01:
             direction = "stable"
         elif slope > 0:
             direction = "increasing"
         else:
             direction = "decreasing"
-
 
         if trend_strength < 0.3:
             recent_std = statistics.stdev(values[-10:]) if len(values) >= 10 else 0
@@ -263,7 +239,6 @@ class PredictiveAnalyticsEngine:
     ) -> list[tuple[float, float]]:
         if len(historical) < 2:
             return [(pred, pred) for pred in predictions]
-
 
         std_dev = statistics.stdev(historical)
         confidence_multiplier = 1.96
@@ -289,7 +264,6 @@ class PredictiveAnalyticsEngine:
         values = [point[1] for point in history]
         last_timestamp = history[-1][0] if history else datetime.now()
 
-
         if predictor_name is None:
             config = self.metric_configs.get(metric_type, {})
             predictor_name = t.cast(str, config.get("predictor", "moving_average"))
@@ -297,14 +271,11 @@ class PredictiveAnalyticsEngine:
         predictor = self.predictors[predictor_name]
         predicted_values = predictor.predict(values, periods_ahead)
 
-
         confidence_intervals = self._calculate_confidence_intervals(
             values, predicted_values
         )
 
-
         accuracy = self._calculate_model_accuracy(metric_type, predictor_name)
-
 
         predictions = []
         for i, (pred_value, conf_interval) in enumerate(
@@ -324,7 +295,6 @@ class PredictiveAnalyticsEngine:
             )
             predictions.append(prediction)
 
-
         self.predictions_cache[metric_type] = predictions
 
         return predictions
@@ -336,22 +306,18 @@ class PredictiveAnalyticsEngine:
         history: list[tuple[datetime, float]] = list(self.metric_history[metric_type])
         values = [point[1] for point in history]
 
-
         train_data = values[:-10]
         validation_data = values[-10:]
 
         if len(train_data) < 5:
             return 0.5
 
-
         predictor = self.predictors[predictor_name]
         predictions = predictor.predict(train_data, periods=len(validation_data))
-
 
         mae = statistics.mean(
             abs(pred - actual) for pred, actual in zip(predictions, validation_data)
         )
-
 
         if mae == 0:
             return 1.0
@@ -375,13 +341,11 @@ class PredictiveAnalyticsEngine:
                 confidence=0.0,
             )
 
-
         predictions = self.predict_metric(resource_type, periods_ahead=24 * 30)
 
         predicted_usage = [
             (pred.predicted_for, pred.predicted_value) for pred in predictions
         ]
-
 
         estimated_exhaustion = None
         for timestamp, usage in predicted_usage:
@@ -389,11 +353,9 @@ class PredictiveAnalyticsEngine:
                 estimated_exhaustion = timestamp
                 break
 
-
         recommendations = self._generate_capacity_recommendations(
             resource_type, current_usage, threshold, estimated_exhaustion
         )
-
 
         avg_accuracy = statistics.mean(pred.model_accuracy for pred in predictions)
 

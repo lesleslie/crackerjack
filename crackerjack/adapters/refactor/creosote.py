@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class CreosoteSettings(ToolAdapterSettings):
-
     tool_name: str = "creosote"
     use_json_output: bool = False
     config_file: Path | None = None
@@ -38,7 +36,6 @@ class CreosoteSettings(ToolAdapterSettings):
 
 
 class CreosoteAdapter(BaseToolAdapter):
-
     settings: CreosoteSettings | None = None
 
     def __init__(self, settings: CreosoteSettings | None = None) -> None:
@@ -82,7 +79,6 @@ class CreosoteAdapter(BaseToolAdapter):
         if files:
             return files
 
-
         pyproject = Path.cwd() / "pyproject.toml"
         return [pyproject] if pyproject.exists() else []
 
@@ -96,15 +92,12 @@ class CreosoteAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.config_file and self.settings.config_file.exists():
             cmd.extend(["--deps-file", str(self.settings.config_file)])
-
 
         if self.settings.exclude_deps:
             for dep in self.settings.exclude_deps:
                 cmd.extend(["--exclude", dep])
-
 
         if self.settings.paths:
             for path in self.settings.paths:
@@ -124,7 +117,6 @@ class CreosoteAdapter(BaseToolAdapter):
         return "unused" in line.lower() and "dependenc" in line.lower()
 
     def _process_dependency_line(self, line: str) -> str | None:
-
         dep_name = line.lstrip("- ").strip()
 
         if dep_name:
@@ -154,7 +146,6 @@ class CreosoteAdapter(BaseToolAdapter):
         lines = result.raw_output.strip().split("\n")
         logger.debug("Parsing Creosote text output", extra={"line_count": len(lines)})
 
-
         parsing_unused = False
         config_file = (
             self.settings.config_file if self.settings else Path("pyproject.toml")
@@ -163,16 +154,13 @@ class CreosoteAdapter(BaseToolAdapter):
         for line in lines:
             line = line.strip()
 
-
             if self._is_unused_deps_section_start(line):
                 parsing_unused = True
                 continue
 
-
             if not line:
                 parsing_unused = False
                 continue
-
 
             if parsing_unused and line:
                 dep_name = self._process_dependency_line(line)
@@ -207,7 +195,6 @@ class CreosoteAdapter(BaseToolAdapter):
             settings={
                 "config_file": "pyproject.toml",
                 "exclude_deps": [
-
                     "pytest",
                     "black",
                     "ruff",

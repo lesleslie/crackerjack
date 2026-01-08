@@ -16,13 +16,12 @@ from crackerjack.runtime import (
     write_runtime_health,
 )
 
-
 console = Console()
 
 try:
     import tomli
 except ImportError:
-    tomli = None # type: ignore[assignment]
+    tomli = None  # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -30,7 +29,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None # type: ignore[misc, assignment, no-redef]
+    FastMCP = None  # type: ignore[misc, assignment, no-redef]
 
 
 try:
@@ -136,7 +135,6 @@ def create_mcp_server(config: dict[str, t.Any] | None = None) -> t.Any | None:
         config = {"http_port": 8676, "http_host": "127.0.0.1"}
 
     mcp_app = FastMCP("crackerjack-mcp-server", streamable_http_path="/mcp")
-
 
     if RATE_LIMITING_AVAILABLE:
         rate_limiter = RateLimitingMiddleware(
@@ -347,14 +345,12 @@ def _show_server_startup_info(
 ) -> None:
     _print_server_info(project_path, mcp_config, http_mode)
 
-
     if mcp_config.get("http_enabled", False) or http_mode:
         http_endpoint = (
             f"http://{mcp_config['http_host']}:{mcp_config['http_port']}/mcp"
         )
     else:
         http_endpoint = None
-
 
     ServerPanels.startup_success(
         server_name="Crackerjack MCP",
@@ -370,7 +366,6 @@ def main(
     if not MCP_AVAILABLE:
         return
 
-
     runtime_dir = Path(".oneiric_cache")
 
     try:
@@ -384,7 +379,6 @@ def main(
         if not mcp_app:
             return
 
-
         console.print("[cyan]Initializing skill system...[/ cyan]")
         try:
             initialize_skills(project_path, mcp_app)
@@ -395,9 +389,7 @@ def main(
                 f"[yellow]⚠️ Skill system initialization failed: {e}[/ yellow]"
             )
 
-
         _show_server_startup_info(project_path, mcp_config, http_mode)
-
 
         pid = os.getpid()
         snapshot = RuntimeHealthSnapshot(
@@ -423,7 +415,6 @@ def main(
 
         traceback.print_exc()
     finally:
-
         with suppress(Exception):
             snapshot = RuntimeHealthSnapshot(
                 orchestrator_pid=os.getpid(),

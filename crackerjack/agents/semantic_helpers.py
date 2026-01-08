@@ -1,4 +1,3 @@
-
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -9,7 +8,6 @@ from ..services.vector_store import VectorStore
 
 @dataclass
 class SemanticInsight:
-
     query: str
     related_patterns: list[dict[str, t.Any]]
     similarity_threshold: float
@@ -31,7 +29,6 @@ class SemanticInsight:
 
 
 class SemanticEnhancer:
-
     def __init__(self, project_path: Path) -> None:
         self.project_path = project_path
         self._vector_store: VectorStore | None = None
@@ -79,17 +76,14 @@ class SemanticEnhancer:
         try:
             results = vector_store.search(search_query)
 
-
             if current_file:
                 results = [
                     result for result in results if result.file_path != current_file
                 ]
 
-
             high_confidence = [
                 result for result in results if result.similarity_score >= 0.8
             ]
-
 
             patterns = [
                 {
@@ -114,7 +108,6 @@ class SemanticEnhancer:
             )
 
         except Exception:
-
             return SemanticInsight(
                 query=query,
                 related_patterns=[],
@@ -132,7 +125,6 @@ class SemanticEnhancer:
             min_similarity=0.75,
             max_results=8,
         )
-
 
         await self.store_insight_to_session(insight, "DuplicateDetection")
         return insight
@@ -165,20 +157,17 @@ class SemanticEnhancer:
         enhanced = base_recommendations.copy()
 
         if semantic_insight.total_matches > 0:
-
             if semantic_insight.high_confidence_matches > 0:
                 enhanced.append(
                     f"Semantic analysis found {semantic_insight.high_confidence_matches} "
                     f"highly similar patterns - consider consolidation"
                 )
 
-
             if semantic_insight.total_matches >= 3:
                 enhanced.append(
                     f"Found {semantic_insight.total_matches} related patterns "
                     f"across codebase - review for consistency"
                 )
-
 
             high_conf_files = {
                 pattern["file_path"]
@@ -214,9 +203,7 @@ class SemanticEnhancer:
         self, insight: SemanticInsight, agent_type: str
     ) -> bool:
         try:
-
             session_key = f"{agent_type}_{hash(insight.query)}"
-
 
             self._session_insights[session_key] = insight
 
@@ -235,7 +222,6 @@ async def get_session_enhanced_recommendations(
     try:
         enhancer = create_semantic_enhancer(project_path)
 
-
         session_insights = [
             insight
             for key, insight in enhancer._session_insights.items()
@@ -247,7 +233,6 @@ async def get_session_enhanced_recommendations(
 
         enhanced = base_recommendations.copy()
 
-
         total_patterns = sum(insight.total_matches for insight in session_insights)
         if total_patterns > 5:
             enhanced.append(
@@ -258,5 +243,4 @@ async def get_session_enhanced_recommendations(
         return enhanced
 
     except Exception:
-
         return base_recommendations

@@ -1,4 +1,3 @@
-
 import logging
 import subprocess
 import threading
@@ -11,7 +10,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ProcessMetrics:
-
     pid: int
     cpu_percent: float
     memory_mb: float
@@ -21,7 +19,6 @@ class ProcessMetrics:
 
 
 class ProcessMonitor:
-
     def __init__(
         self,
         check_interval: float = 30.0,
@@ -68,10 +65,8 @@ class ProcessMonitor:
         while not self._stop_event.is_set():
             elapsed = time.time() - start_time
 
-
             if self._should_stop_monitoring(process, hook_name, elapsed, timeout):
                 return
-
 
             if time.time() - last_cpu_check >= self.check_interval:
                 consecutive_zero_cpu = self._perform_health_check(
@@ -83,7 +78,6 @@ class ProcessMonitor:
                 )
                 last_cpu_check = time.time()
 
-
             time.sleep(min(5.0, self.check_interval / 6))
 
     def _should_stop_monitoring(
@@ -93,11 +87,9 @@ class ProcessMonitor:
         elapsed: float,
         timeout: int,
     ) -> bool:
-
         if process.poll() is not None:
             logger.debug(f"{hook_name}: Process completed, stopping monitor")
             return True
-
 
         if elapsed > timeout:
             logger.warning(
@@ -122,7 +114,6 @@ class ProcessMonitor:
 
         self._log_metrics(hook_name, metrics)
 
-
         return self._check_cpu_activity(
             hook_name, metrics, consecutive_zero_cpu, on_stall
         )
@@ -141,13 +132,11 @@ class ProcessMonitor:
         consecutive_zero_cpu: int,
         on_stall: Callable[[str, ProcessMetrics], None] | None,
     ) -> int:
-
         if metrics.cpu_percent < self.cpu_threshold:
             consecutive_zero_cpu += 1
             return self._handle_potential_stall(
                 hook_name, metrics, consecutive_zero_cpu, on_stall
             )
-
 
         return 0
 
@@ -161,10 +150,8 @@ class ProcessMonitor:
         stall_duration = consecutive_zero_cpu * self.check_interval
 
         if stall_duration >= self.stall_timeout:
-
             if on_stall:
                 on_stall(hook_name, metrics)
-
 
             return 0
 
@@ -172,7 +159,6 @@ class ProcessMonitor:
 
     def _get_process_metrics(self, pid: int, elapsed: float) -> ProcessMetrics | None:
         try:
-
             result = subprocess.run(
                 ["ps", "-p", str(pid), "-o", "%cpu, %mem"],
                 capture_output=True,
@@ -184,7 +170,6 @@ class ProcessMonitor:
             if result.returncode != 0:
                 return None
 
-
             lines = result.stdout.strip().split("\n")
             if len(lines) < 2:
                 return None
@@ -195,7 +180,6 @@ class ProcessMonitor:
 
             cpu_percent = float(values[0])
             mem_percent = float(values[1])
-
 
             memory_mb = mem_percent * 16384 / 100
 

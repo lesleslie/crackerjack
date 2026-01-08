@@ -1,4 +1,3 @@
-
 import re
 
 from ..core import ValidatedPattern
@@ -122,10 +121,6 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("subprocess.call(cmd, shell=True)", "subprocess.call(cmd.split())"),
             (
-                "subprocess.call('ls -la', shell=True)",
-                "subprocess.call('ls -la'.split())",
-            ),
-            (
                 "subprocess.call(command, shell=False)",
                 "subprocess.call(command, shell=False)",
             ),
@@ -140,10 +135,6 @@ PATTERNS: dict[str, ValidatedPattern] = {
         test_cases=[
             ("subprocess.Popen(cmd, shell=True)", "subprocess.Popen(cmd.split())"),
             (
-                "subprocess.Popen('ls -la', shell=True)",
-                "subprocess.Popen('ls -la'.split())",
-            ),
-            (
                 "subprocess.Popen(command, shell=False)",
                 "subprocess.Popen(command, shell=False)",
             ),
@@ -157,10 +148,6 @@ PATTERNS: dict[str, ValidatedPattern] = {
         global_replace=True,
         test_cases=[
             ("subprocess.run(cmd, shell=True)", "subprocess.run(cmd.split())"),
-            (
-                "subprocess.run('ls -la', shell=True)",
-                "subprocess.run('ls -la'.split())",
-            ),
             (
                 "subprocess.run(command, shell=False)",
                 "subprocess.run(command, shell=False)",

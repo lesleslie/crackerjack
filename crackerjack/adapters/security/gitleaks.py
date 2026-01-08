@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class GitleaksSettings(ToolAdapterSettings):
-
     tool_name: str = "gitleaks"
     use_json_output: bool = True
     scan_mode: str = "detect"
@@ -40,7 +38,6 @@ class GitleaksSettings(ToolAdapterSettings):
 
 
 class GitleaksAdapter(BaseToolAdapter):
-
     settings: GitleaksSettings | None = None
 
     def __init__(self, settings: GitleaksSettings | None = None) -> None:
@@ -89,40 +86,30 @@ class GitleaksAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         cmd.append(self.settings.scan_mode)
 
-
         if files:
-
             if self.settings.scan_mode == "protect":
                 cmd.extend(["--source", str(files[0].parent if files else Path.cwd())])
             else:
-
                 cmd.extend(["--source", str(Path.cwd())])
-
 
         if self.settings.use_json_output:
             cmd.extend(["--report-format", "json"])
 
             cmd.extend(["--report-path", "/dev/stdout"])
 
-
         if self.settings.config_file and self.settings.config_file.exists():
             cmd.extend(["--config", str(self.settings.config_file)])
-
 
         if self.settings.baseline_file and self.settings.baseline_file.exists():
             cmd.extend(["--baseline-path", str(self.settings.baseline_file)])
 
-
         if self.settings.no_git:
             cmd.append("--no-git")
 
-
         if self.settings.redact:
             cmd.append("--redact")
-
 
         if self.settings.verbose:
             cmd.append("--verbose")
@@ -163,10 +150,8 @@ class GitleaksAdapter(BaseToolAdapter):
 
         issues = []
 
-
         for finding in findings:
             file_path = Path(finding.get("File", ""))
-
 
             description = finding.get("Description", "Secret detected")
             rule_id = finding.get("RuleID", "")
@@ -179,7 +164,6 @@ class GitleaksAdapter(BaseToolAdapter):
                 message_parts.append(f"[{', '.join(tags)}]")
 
             message = " ".join(message_parts)
-
 
             entropy = finding.get("Entropy", 0.0)
             severity = "error" if entropy > 4.0 else "warning"

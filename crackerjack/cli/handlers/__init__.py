@@ -1,8 +1,6 @@
-
 from __future__ import annotations
 
 import logging
-
 
 from .main_handlers import (
     console,

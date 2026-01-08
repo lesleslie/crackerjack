@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -49,20 +48,17 @@ def _merge_config_data(config_files: list[Path]) -> dict[str, t.Any]:
 def _extract_adapter_timeouts(crackerjack_config: dict[str, t.Any]) -> None:
     adapter_timeouts_data: dict[str, t.Any] = {}
 
-
     for key, value in list(crackerjack_config.items()):
         if key.endswith("_timeout"):
             adapter_timeouts_data[key] = value
 
             del crackerjack_config[key]
 
-
     if adapter_timeouts_data:
         crackerjack_config["adapter_timeouts"] = adapter_timeouts_data
 
 
 def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
-
     pyproject_path = settings_dir.parent / "pyproject.toml"
 
     if not pyproject_path.exists():
@@ -75,7 +71,6 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         with pyproject_path.open("rb") as f:
             data = tomllib.load(f)
 
-
         crackerjack_config = data.get("tool", {}).get("crackerjack", {})
 
         if crackerjack_config:
@@ -85,7 +80,6 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
         return crackerjack_config
 
     except ImportError:
-
         try:
             import tomli
 
@@ -117,24 +111,19 @@ def load_settings[T: BaseSettings](
     if settings_dir is None:
         settings_dir = Path.cwd() / "settings"
 
-
     config_files = [
         settings_dir / "crackerjack.yaml",
         settings_dir / "local.yaml",
     ]
 
-
     merged_data = _merge_config_data(config_files)
-
 
     pyproject_data = _load_pyproject_toml(settings_dir)
     merged_data.update(pyproject_data)
 
-
     relevant_data = {
         k: v for k, v in merged_data.items() if k in settings_class.model_fields
     }
-
 
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
@@ -146,7 +135,6 @@ def load_settings[T: BaseSettings](
         f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}"
     )
 
-
     return settings_class(**relevant_data)
 
 
@@ -157,24 +145,19 @@ async def load_settings_async[T: BaseSettings](
     if settings_dir is None:
         settings_dir = Path.cwd() / "settings"
 
-
     config_files = [
         settings_dir / "crackerjack.yaml",
         settings_dir / "local.yaml",
     ]
 
-
     merged_data = await _load_yaml_data(config_files)
-
 
     pyproject_data = _load_pyproject_toml(settings_dir)
     merged_data.update(pyproject_data)
 
-
     relevant_data = _filter_relevant_data(merged_data, settings_class)
     _log_filtered_fields(merged_data, relevant_data)
     _log_load_info(settings_class, relevant_data)
-
 
     return settings_class(**relevant_data)
 

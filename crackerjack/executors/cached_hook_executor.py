@@ -229,8 +229,6 @@ class CachedHookExecutor:
         return self.cache.cleanup_all()
 
     def _get_tool_version(self, tool_name: str) -> str | None:
-
-
         version_mapping = {
             "pyright": "1.1.0",
             "bandit": "1.7.5",

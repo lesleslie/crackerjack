@@ -12,9 +12,7 @@ def parse_bump_option_with_flag_support(
     if value is None:
         return None
 
-
     if value.startswith("-"):
-
         flag_mapping = {
             "-c": "commit",
             "--commit": "commit",
@@ -33,7 +31,6 @@ def parse_bump_option_with_flag_support(
             "--debug": "debug",
         }
 
-
         if value in flag_mapping:
             param_name = flag_mapping[value]
 
@@ -41,12 +38,10 @@ def parse_bump_option_with_flag_support(
                 ctx.params = {}
             ctx.params[param_name] = True
 
-
             import sys
 
             if value in sys.argv:
                 sys.argv.remove(value)
-
 
         return "interactive"
 
@@ -129,7 +124,6 @@ class Options(BaseModel):
     thorough: bool = False
     clear_cache: bool = False
 
-
     index: str | None = None
     search: str | None = None
     semantic_stats: bool = False
@@ -137,7 +131,6 @@ class Options(BaseModel):
     cache_stats: bool = False
 
     refresh_cache: bool = False
-
 
     strip_code: bool | None = None
     run_tests: bool = False
@@ -148,7 +141,6 @@ class Options(BaseModel):
     advanced_monitor: bool | None = None
     coverage_report: bool | None = None
     clean_releases: bool | None = None
-
 
     generate_docs: bool = False
     docs_format: str = "markdown"
@@ -162,9 +154,7 @@ class Options(BaseModel):
     version_since: str | None = None
     accept_version: bool = False
 
-
     smart_commit: bool = True
-
 
     heatmap: bool = False
     heatmap_type: str = "error_frequency"
@@ -175,7 +165,6 @@ class Options(BaseModel):
     predictive_analytics: bool = False
     prediction_periods: int = 10
     analytics_dashboard: str | None = None
-
 
     check_config_updates: bool = False
     apply_config_updates: bool = False
@@ -232,7 +221,6 @@ class Options(BaseModel):
             return None
         if value == "":
             return BumpOption.interactive
-
 
         if isinstance(value, str) and value.startswith("-"):
             return BumpOption.interactive
@@ -583,7 +571,6 @@ CLI_OPTIONS = {
         "--cache-stats",
         help="Display cache statistics (hit rates, sizes, entries) and exit.",
     ),
-
     "strip_code": typer.Option(
         None,
         "-x",
@@ -757,7 +744,6 @@ CLI_OPTIONS = {
         "--analytics-dashboard",
         help="Output file path for analytics dashboard (HTML format).",
     ),
-
     "advanced_optimizer": typer.Option(
         False,
         "--advanced-optimizer",
@@ -808,7 +794,6 @@ CLI_OPTIONS = {
         "--ai-help-query",
         help="Get contextual help for specific query using AI assistant.",
     ),
-
     "check_config_updates": typer.Option(
         False,
         "--check-config-updates",
@@ -834,7 +819,6 @@ CLI_OPTIONS = {
         "--refresh-cache",
         help="Refresh cache to ensure fresh environment.",
     ),
-
     "index": typer.Option(
         None,
         "--index",
@@ -924,7 +908,6 @@ def create_options(
     predictive_analytics: bool = False,
     prediction_periods: int = 10,
     analytics_dashboard: str | None = None,
-
     advanced_optimizer: bool = False,
     advanced_profile: str | None = None,
     advanced_report: str | None = None,
@@ -940,7 +923,6 @@ def create_options(
     diff_config: str | None = None,
     config_interactive: bool = False,
     refresh_cache: bool = False,
-
     strip_code: bool | None = None,
     run_tests: bool = False,
     ai_fix: bool | None = None,
@@ -1017,7 +999,6 @@ def create_options(
         predictive_analytics=predictive_analytics,
         prediction_periods=prediction_periods,
         analytics_dashboard=analytics_dashboard,
-
         advanced_optimizer=advanced_optimizer,
         advanced_profile=advanced_profile,
         advanced_report=advanced_report,
@@ -1033,7 +1014,6 @@ def create_options(
         diff_config=diff_config,
         config_interactive=config_interactive,
         refresh_cache=refresh_cache,
-
         strip_code=strip_code,
         run_tests=run_tests,
         ai_fix=ai_fix,

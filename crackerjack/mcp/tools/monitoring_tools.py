@@ -128,7 +128,6 @@ async def _determine_next_action(state_manager: t.Any) -> dict[str, t.Any]:
 
 
 async def _build_server_stats(context: t.Any) -> dict[str, t.Any]:
-
     return {
         "server_info": {
             "project_path": str(context.config.project_path),
@@ -277,7 +276,7 @@ def register_monitoring_tools(mcp_app: t.Any) -> None:
 
 
 def _register_stage_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_stage_status() -> str:
         client_id = "mcp_client"
 
@@ -314,7 +313,7 @@ async def _build_stage_status(state_manager: t.Any) -> dict[str, t.Any]:
 
 
 def _register_next_action_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_next_action() -> str:
         client_id = "mcp_client"
 
@@ -343,7 +342,7 @@ def _register_next_action_tool(mcp_app: t.Any) -> None:
 
 
 def _register_server_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc] # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc] # type: ignore[misc]
     async def get_server_stats() -> str:
         client_id = "mcp_client"
 
@@ -397,7 +396,7 @@ async def _build_server_stats_secure(context: t.Any) -> dict[str, t.Any]:
 
 
 def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_comprehensive_status() -> str:
         client_id = "mcp_client"
         client_ip = "127.0.0.1"
@@ -432,7 +431,7 @@ def _register_comprehensive_status_tool(mcp_app: t.Any) -> None:
 
 
 def _register_command_help_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def list_slash_commands() -> str:
         try:
             commands = {
@@ -441,7 +440,6 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "Up to 10 iterations of quality improvement",
-
                         "Advanced orchestrator with adaptive strategies",
                         "Automatic service management",
                         "Debug mode support",
@@ -452,7 +450,6 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     "usage": "Direct execution-no parameters needed",
                     "features": [
                         "MCP server health monitoring",
-
                         "Active job tracking",
                         "Resource usage metrics",
                         "Error counts and progress data",
@@ -505,7 +502,6 @@ def _validate_status_components(components: str) -> tuple[set[str], str | None]:
 
 
 def _get_services_status() -> dict[str, t.Any]:
-
     from crackerjack.services.server_manager import (
         find_mcp_server_processes,
     )
@@ -551,7 +547,7 @@ async def _build_filtered_status(
 
 
 def _register_filtered_status_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_filtered_status(components: str = "all") -> str:
         client_id = "mcp_client"
 

@@ -1,4 +1,3 @@
-
 from .lsp._base import (
     Issue,
     RustToolAdapter,
@@ -7,7 +6,6 @@ from .lsp._base import (
 from .lsp._manager import RustToolHookManager
 from .lsp.skylos import DeadCodeIssue, SkylosAdapter
 from .lsp.zuban import TypeIssue, ZubanAdapter
-
 
 __all__ = [
     "RustToolAdapter",

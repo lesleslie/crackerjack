@@ -18,7 +18,6 @@ from .semantic_helpers import (
 
 
 class DRYAgent(SubAgent):
-
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
         self.semantic_enhancer = create_semantic_enhancer(context.project_path)
@@ -78,9 +77,7 @@ class DRYAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-
         violations = self._detect_dry_violations(content, file_path)
-
 
         semantic_violations = await self._detect_semantic_violations(content, file_path)
         violations.extend(semantic_violations)
@@ -113,7 +110,6 @@ class DRYAgent(SubAgent):
                 remaining_issues=[f"Failed to write fixed file: {file_path}"],
             )
 
-
         recommendations = ["Verify functionality after DRY fixes"]
         if hasattr(self, "current_semantic_insight") and self.current_semantic_insight:
             recommendations = self.semantic_enhancer.enhance_recommendations(
@@ -125,11 +121,9 @@ class DRYAgent(SubAgent):
             )
             self.log(f"Semantic context: {summary}")
 
-
             await self.semantic_enhancer.store_insight_to_session(
                 self.current_semantic_insight, "DRYAgent"
             )
-
 
         recommendations = await get_session_enhanced_recommendations(
             recommendations, "DRYAgent", self.context.project_path
@@ -442,16 +436,12 @@ def _ensure_path(path: str | Path) -> Path:
         violations = []
 
         try:
-
             code_elements = self._extract_code_functions(content)
 
             for element in code_elements:
                 if element["type"] == "function" and len(element["body"]) > 50:
-
                     insight = await self.semantic_enhancer.find_duplicate_patterns(
-                        element["signature"]
-                        + "\n"
-                        + element["body"][:200],
+                        element["signature"] + "\n" + element["body"][:200],
                         current_file=file_path,
                     )
 
@@ -460,9 +450,7 @@ def _ensure_path(path: str | Path) -> Path:
                             {
                                 "type": "semantic_duplicate",
                                 "element": element,
-                                "similar_patterns": insight.related_patterns[
-                                    :3
-                                ],
+                                "similar_patterns": insight.related_patterns[:3],
                                 "confidence_score": insight.high_confidence_matches
                                 / insight.total_matches
                                 if insight.total_matches > 0
@@ -470,7 +458,6 @@ def _ensure_path(path: str | Path) -> Path:
                                 "suggestion": "Consider extracting common functionality to shared utility",
                             }
                         )
-
 
                         self.current_semantic_insight = insight
 
@@ -501,7 +488,6 @@ def _ensure_path(path: str | Path) -> Path:
                     functions, current_function, line, stripped, indent, i
                 )
 
-
         if current_function:
             current_function["end_line"] = len(lines)
             functions.append(current_function)
@@ -528,7 +514,6 @@ def _ensure_path(path: str | Path) -> Path:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any]:
-
         if current_function:
             functions.append(current_function)
 
@@ -551,12 +536,10 @@ def _ensure_path(path: str | Path) -> Path:
         indent: int,
         line_index: int,
     ) -> dict[str, t.Any] | None:
-
         if self._is_line_inside_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
         else:
-
             current_function["end_line"] = line_index
             functions.append(current_function)
             return None

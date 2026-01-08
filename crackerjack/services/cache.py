@@ -17,7 +17,6 @@ _cache_import_error: Exception | None = None
 
 @dataclass
 class CacheStats:
-
     hits: int = 0
     misses: int = 0
     evictions: int = 0
@@ -43,46 +42,36 @@ def get_cache() -> Any:
 
 
 class CrackerjackCache:
-
     EXPENSIVE_HOOKS = {
-
         "pyright",
         "zuban",
         "skylos",
-
         "bandit",
         "gitleaks",
         "semgrep",
         "pyscn",
         "pip-audit",
-
         "vulture",
         "complexipy",
         "refurb",
-
         "check-jsonschema",
-
         "codespell",
         "ruff-check",
         "mdformat",
     }
 
     HOOK_DISK_TTLS = {
-
         "pyright": 86400,
         "zuban": 86400,
         "skylos": 86400 * 2,
-
         "bandit": 86400 * 3,
         "gitleaks": 86400 * 7,
         "semgrep": 86400 * 3,
         "pyscn": 86400 * 3,
         "pip-audit": 86400,
-
         "vulture": 86400 * 2,
         "complexipy": 86400,
         "refurb": 86400,
-
         "check-jsonschema": 86400 * 7,
         "codespell": 86400 * 7,
         "ruff-check": 86400,
@@ -104,11 +93,9 @@ class CrackerjackCache:
         if backend is not None:
             self._backend = backend
         else:
-
             try:
                 self._backend = get_cache()
             except RuntimeError:
-
                 logger.info("Cache backend unavailable, using in-memory cache")
                 self._backend = None
 

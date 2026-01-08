@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -31,7 +30,6 @@ logger = logging.getLogger(__name__)
 
 
 class BanditSettings(ToolAdapterSettings):
-
     tool_name: str = "bandit"
     use_json_output: bool = True
     severity_level: str = "low"
@@ -40,13 +38,10 @@ class BanditSettings(ToolAdapterSettings):
     skip_rules: list[str] = Field(default_factory=list)
     tests_to_run: list[str] = Field(default_factory=list)
     recursive: bool = True
-    timeout_seconds: int = (
-        1200
-    )
+    timeout_seconds: int = 1200
 
 
 class BanditAdapter(BaseToolAdapter):
-
     settings: BanditSettings | None = None
 
     def __init__(self, settings: BanditSettings | None = None) -> None:
@@ -94,22 +89,17 @@ class BanditAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.recursive:
             cmd.append("-r")
-
 
         cmd.extend(["-lll"])
         cmd.extend(["-iii"])
 
-
         skip_rules = ["B101", "B110", "B112", "B311", "B404", "B603", "B607"]
         cmd.extend(["-s", ", ".join(skip_rules)])
 
-
         if self.settings.use_json_output:
             cmd.extend(["-f", "json"])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -140,7 +130,6 @@ class BanditAdapter(BaseToolAdapter):
                 extra={"results_count": len(data.get("results", []))},
             )
         except json.JSONDecodeError as e:
-
             logger.debug(
                 "JSON parse failed, falling back to text parsing",
                 extra={"error": str(e), "output_preview": result.raw_output[:200]},
@@ -149,10 +138,8 @@ class BanditAdapter(BaseToolAdapter):
 
         issues = []
 
-
         for item in data.get("results", []):
             file_path = Path(item.get("filename", ""))
-
 
             severity_mapping = {
                 "HIGH": "error",
@@ -193,14 +180,12 @@ class BanditAdapter(BaseToolAdapter):
         for line in lines:
             line = line.strip()
 
-
             if line.startswith(">>"):
                 try:
                     file_str = line.split(">>")[1].strip()
                     current_file = Path(file_str)
                 except (IndexError, ValueError):
                     continue
-
 
             elif line.startswith("Issue:") and current_file:
                 message = line.replace("Issue:", "").strip()
@@ -211,7 +196,6 @@ class BanditAdapter(BaseToolAdapter):
                     severity="warning",
                 )
                 issues.append(issue)
-
 
             elif "Line:" in line:
                 with suppress(IndexError, ValueError):
@@ -237,7 +221,6 @@ class BanditAdapter(BaseToolAdapter):
 
         current_dir = Path.cwd()
 
-
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -247,23 +230,18 @@ class BanditAdapter(BaseToolAdapter):
                     data = tomllib.load(f)
 
                 if "project" in data and "name" in data["project"]:
-
                     package_name = str(data["project"]["name"]).replace("-", "_")
-
 
                     if (current_dir / package_name).exists():
                         return package_name
 
-
         if (current_dir / current_dir.name).exists():
             return current_dir.name
-
 
         return "src"
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         package_dir = self._detect_package_directory()
 
@@ -272,9 +250,7 @@ class BanditAdapter(BaseToolAdapter):
             check_name=self.adapter_name,
             check_type=QACheckType.SAST,
             enabled=True,
-            file_patterns=[
-                f"{package_dir}/**/*.py"
-            ],
+            file_patterns=[f"{package_dir}/**/*.py"],
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",

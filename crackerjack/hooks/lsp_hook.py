@@ -13,7 +13,6 @@ def main(console: Console | None = None) -> int:
 
     files_to_check = sys.argv[1:] if len(sys.argv) > 1 else []
 
-
     if not files_to_check:
         files_to_check = _get_project_files()
 
@@ -23,10 +22,8 @@ def main(console: Console | None = None) -> int:
 
     lsp_client = LSPClient()
 
-
     if not lsp_client.is_server_running():
         return _fallback_to_zuban_check(console, files_to_check)
-
 
     return _check_files_with_lsp(console, lsp_client, files_to_check)
 
@@ -66,13 +63,10 @@ def _check_files_with_lsp(
     if server_info:
         console.print(f"🔍 Using Zuban LSP server (PID: {server_info['pid']})")
 
-
     diagnostics = lsp_client.check_files(files_to_check)
-
 
     output = lsp_client.format_diagnostics(diagnostics)
     console.print(output)
-
 
     has_errors = any(diags for diags in diagnostics.values())
     return 1 if has_errors else 0

@@ -340,7 +340,6 @@ class IndividualHookExecutor:
                 hook_lock_manager as default_manager,
             )
 
-
             self.hook_lock_manager = t.cast(HookLockManagerProtocol, default_manager)
         else:
             self.hook_lock_manager = hook_lock_manager
@@ -379,7 +378,6 @@ class IndividualHookExecutor:
         for hook in strategy.hooks:
             await self._execute_single_hook_in_strategy(hook, execution_state)
 
-
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in execution_state["hook_results"])
 
@@ -388,7 +386,6 @@ class IndividualHookExecutor:
             execution_state["hook_results"],
             execution_state["hook_progress"],
         )
-
 
         return HookExecutionResult(
             strategy_name=strategy.name,
@@ -464,11 +461,10 @@ class IndividualHookExecutor:
         if self.progress_callback:
             self.progress_callback(progress)
 
-
         cmd = hook.get_command()
 
         try:
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name): # type: ignore[attr-defined]
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore[attr-defined]
                 result = await self._run_command_with_streaming(
                     cmd, hook.timeout, progress
                 )
@@ -553,8 +549,6 @@ class IndividualHookExecutor:
         return self._create_completed_process(cmd, process, stdout_lines, stderr_lines)
 
     async def _create_subprocess(self, cmd: list[str]) -> asyncio.subprocess.Process:
-
-
         return await asyncio.create_subprocess_exec(
             *cmd,
             cwd=self.pkg_path,
@@ -683,7 +677,6 @@ class IndividualHookExecutor:
         progress: HookProgress,
     ) -> None:
         status_icon = "✅" if result.status == "passed" else "❌"
-
 
         max_width = get_console_width()
         content_width = max_width - 4

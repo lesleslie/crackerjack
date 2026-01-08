@@ -76,10 +76,8 @@ def _process_file_for_cleanup(
     if not should_clean:
         return [], 0
 
-
     cleaned_files = [str(file)]
     total_size = file_size
-
 
     if not dry_run:
         file.unlink()
@@ -287,7 +285,6 @@ def _register_config_tool(mcp_app: t.Any) -> None:
             elif action == "get" and len(args_parts) > 1:
                 result = getattr(config, args_parts[1], None)
             elif action == "validate":
-
                 result = {"status": "valid"}
             else:
                 return _create_error_response(
@@ -303,8 +300,6 @@ def _register_config_tool(mcp_app: t.Any) -> None:
 async def analyze_project(
     scope: str = "all", report_format: str = "summary"
 ) -> dict[str, t.Any]:
-
-
     return {
         "scope": scope,
         "report_format": report_format,

@@ -7,6 +7,26 @@ from rich.console import Console
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
 
+
+def parse_pytest_addopts(addopts: str | list) -> list[str]:
+    """Parse pytest addopts into a list of arguments.
+
+    Args:
+        addopts: Either a string or list of pytest addopts
+
+    Returns:
+        List of individual pytest arguments
+    """
+    if isinstance(addopts, list):
+        return addopts
+
+    import shlex
+
+    try:
+        return shlex.split(addopts)
+    except Exception:
+        return addopts.split()
+
 class TestCommandBuilder:
     def __init__(
         self,
@@ -226,33 +246,158 @@ class TestCommandBuilder:
             ]
         )
 
+    def _check_project_disabled_xdist(self) -> bool:
+        """Check if project has disabled pytest-xdist in configuration.
+
+        Reads pyproject.toml or pytest.ini to check if -p no:xdist is set in addopts.
+        This respects project-specific configuration that may disable xdist for
+        technical reasons (e.g., DuckDB locking, coverage issues).
+
+        Returns:
+            True if project has explicitly disabled xdist, False otherwise
+        """
+        try:
+            pyproject_path = self.pkg_path / "pyproject.toml"
+
+            if not pyproject_path.exists():
+                return False
+
+            addopts = self._load_pytest_addopts(pyproject_path)
+            if addopts:
+                return self._addopts_disables_xdist(addopts)
+
+            return False
+
+        except Exception:
+            return False
+
+    def _load_pytest_addopts(self, pyproject_path: Path) -> str | None:
+        """Load pytest addopts from pyproject.toml.
+
+        Args:
+            pyproject_path: Path to pyproject.toml file
+
+        Returns:
+            Addopts string or None
+        """
+        import tomllib
+
+        with pyproject_path.open("rb") as f:
+            data = tomllib.load(f)
+
+        # Check both [tool.pytest] and [tool.pytest.ini_options] formats
+        pytest_config = data.get("tool", {}).get("pytest", {})
+
+        # Try ini_options first (pytest.ini_options format)
+        ini_options = pytest_config.get("ini_options", {})
+        addopts = ini_options.get("addopts")
+
+        # If not in ini_options, try direct pytest config format
+        if addopts is None:
+            addopts = pytest_config.get("addopts")
+
+        return addopts
+
+    def _addopts_disables_xdist(self, addopts: str) -> bool:
+        """Check if addopts string disables xdist.
+
+        Args:
+            addopts: Addopts string from pytest config
+
+        Returns:
+            True if -p no:xdist is found
+        """
+        parsed_opts = parse_pytest_addopts(addopts)
+
+        # Check for -p no:xdist in various forms
+        if "-p" in parsed_opts:
+            idx = parsed_opts.index("-p")
+            if idx + 1 < len(parsed_opts) and parsed_opts[idx + 1] == "no:xdist":
+                return True
+
+        # Also check for compact form "-pno:xdist"
+        return self._has_compact_no_xdist_flag(parsed_opts)
+
+    def _has_compact_no_xdist_flag(self, parsed_opts: list[str]) -> bool:
+        """Check for compact -pno:xdist flag in parsed options.
+
+        Args:
+            parsed_opts: List of parsed command-line options
+
+        Returns:
+            True if -pno:xdist or similar flag is found
+        """
+        for opt in parsed_opts:
+            if opt.startswith("-p") and "no:xdist" in opt:
+                return True
+        return False
+
     def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
+        """Add pytest-xdist worker options to command if appropriate.
+
+        Args:
+            cmd: Command list to modify
+            options: Test command options
+        """
+        # Check if project has explicitly disabled xdist
+        if self._check_project_disabled_xdist():
+            self._print_xdist_disabled_message()
+            return
+
+        # Skip xdist for benchmarks (parallel execution skews results)
+        if self._should_skip_xdist_for_benchmark(options):
+            return
+
         workers = self.get_optimal_workers(options)
+        self._add_worker_count_options(cmd, workers)
 
+    def _print_xdist_disabled_message(self) -> None:
+        """Print message explaining xdist is disabled by project config."""
+        if self.console:
+            self.console.print(
+                "[yellow]⚠️ Project has disabled pytest-xdist in configuration[/yellow]"
+            )
+            self.console.print(
+                "[cyan]🧪 Tests running sequentially (respecting project config)[/cyan]"
+            )
 
+    def _should_skip_xdist_for_benchmark(self, options: OptionsProtocol) -> bool:
+        """Check if xdist should be skipped for benchmark tests.
+
+        Args:
+            options: Test command options
+
+        Returns:
+            True if benchmarks are running
+        """
         if hasattr(options, "benchmark") and options.benchmark:
             if self.console:
                 self.console.print(
                     "[yellow]⚠️ Benchmarks running sequentially (parallel execution skews results)[/yellow]"
                 )
-            return
+            return True
+        return False
 
+    def _add_worker_count_options(self, cmd: list[str], workers: str | int) -> None:
+        """Add worker count options to command.
+
+        Args:
+            cmd: Command list to modify
+            workers: Number of workers or 'auto'
+        """
         if workers == "auto":
-
             cmd.extend(["-n", "auto", "--dist=loadfile"])
             if self.console:
                 self.console.print(
                     "[cyan]🚀 Tests running with auto-detected workers (--dist=loadfile)[/cyan]"
                 )
         elif isinstance(workers, int) and workers > 1:
-
             cmd.extend(["-n", str(workers), "--dist=loadfile"])
             if self.console:
                 self.console.print(
                     f"[cyan]🚀 Tests running with {workers} workers (--dist=loadfile)[/cyan]"
                 )
         else:
-
             if self.console:
                 self.console.print("[cyan]🧪 Tests running sequentially[/cyan]")
 

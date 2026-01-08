@@ -17,16 +17,13 @@ from .protocols import OptionsProtocol
 
 
 def _determine_max_iterations(options: OptionsProtocol) -> int:
-
     if hasattr(options, "effective_max_iterations"):
-        return getattr(options, "effective_max_iterations") # type: ignore[no-any-return]
-
+        return getattr(options, "effective_max_iterations")  # type: ignore[no-any-return]
 
     if hasattr(options, "max_iterations") and getattr(
         options, "max_iterations", None
     ) not in (0, None):
-        return getattr(options, "max_iterations") # type: ignore[no-any-return]
-
+        return getattr(options, "max_iterations")  # type: ignore[no-any-return]
 
     return 5
 

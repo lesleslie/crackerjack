@@ -1,4 +1,3 @@
-
 from .core import ValidatedPattern
 
 PATTERNS: dict[str, ValidatedPattern] = {

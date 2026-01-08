@@ -78,7 +78,6 @@ class DependencyContainer:
 
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
-
         self.register_transient(
             PublishManager,
             PublishManagerImpl,

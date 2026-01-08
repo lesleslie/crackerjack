@@ -29,7 +29,6 @@ class HookLockManager:
             "complexipy",
         }
 
-
         self._hook_locks: dict[str, asyncio.Lock] = {
             hook_name: asyncio.Lock() for hook_name in self._hooks_requiring_locks
         }
@@ -241,8 +240,6 @@ class HookLockManager:
             temp_path.chmod(0o600)
 
             try:
-
-
                 os.link(str(temp_path), str(lock_path))
                 self.logger.debug(f"Successfully created global lock file: {lock_path}")
             except FileExistsError:
@@ -506,7 +503,6 @@ class HookLockManager:
         self._global_lock_enabled = enabled
 
         if hasattr(self._global_config._settings, "enabled"):
-
             new_settings = self._global_config._settings.model_copy(
                 update={"enabled": enabled}
             )
@@ -546,8 +542,6 @@ class HookLockManager:
     def _process_lock_file(
         self, lock_file: Path, max_age_hours: float, current_time: float
     ) -> int:
-
-
         return self._cleanup_stale_lock_file(lock_file, max_age_hours, current_time)
 
     def _cleanup_stale_lock_file(

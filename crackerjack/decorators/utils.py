@@ -1,4 +1,3 @@
-
 import asyncio
 import inspect
 import typing as t
@@ -14,7 +13,6 @@ def is_async_function(func: t.Callable[..., t.Any]) -> bool:
 def preserve_signature[F: t.Callable[..., t.Any]](
     wrapper: F,
 ) -> t.Callable[[t.Callable[..., t.Any]], F]:
-
     def decorator(func: t.Callable[..., t.Any]) -> F:
         wrapped = wrapper(func)
         return t.cast(F, wraps(func)(wrapped))

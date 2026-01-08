@@ -1,4 +1,3 @@
-
 import typing as t
 from pathlib import Path
 
@@ -14,7 +13,6 @@ from .documentation_generator import DocumentationGeneratorImpl
 
 
 class DocumentationServiceImpl(DocumentationServiceProtocol):
-
     def __init__(
         self,
         pkg_path: Path,
@@ -26,12 +24,10 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self.doc_generator = doc_generator or DocumentationGeneratorImpl()
         self.console = Console()
 
-
         self.docs_dir = pkg_path / "docs"
         self.generated_docs_dir = self.docs_dir / "generated"
         self.api_docs_dir = self.generated_docs_dir / "api"
         self.guides_dir = self.generated_docs_dir / "guides"
-
 
         self._ensure_directories()
 
@@ -58,7 +54,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     ) -> dict[str, t.Any]:
         api_data = {}
 
-
         if categorized_files["protocol"]:
             for protocol_file in categorized_files["protocol"]:
                 protocol_data = self.api_extractor.extract_protocol_definitions(
@@ -66,13 +61,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 )
                 api_data.update(protocol_data)
 
-
         if categorized_files["service"]:
             service_data = self.api_extractor.extract_service_interfaces(
                 categorized_files["service"]
             )
             api_data.update(service_data)
-
 
         if categorized_files["manager"]:
             manager_data = self.api_extractor.extract_service_interfaces(
@@ -81,11 +74,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             if "services" in manager_data:
                 api_data["managers"] = manager_data["services"]
 
-
         if categorized_files["cli"]:
             cli_data = self.api_extractor.extract_cli_commands(categorized_files["cli"])
             api_data.update(cli_data)
-
 
         if categorized_files["mcp"]:
             mcp_data = self.api_extractor.extract_mcp_tools(categorized_files["mcp"])
@@ -101,13 +92,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         categorized_files = self._categorize_source_files(source_paths)
         api_data = {}
 
-
         if categorized_files["python"]:
             python_data = self.api_extractor.extract_from_python_files(
                 categorized_files["python"]
             )
             api_data.update(python_data)
-
 
         api_data.update(self._extract_specialized_apis(categorized_files))
 
@@ -122,7 +111,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         try:
             return self.doc_generator.render_template(Path(template_name), context)
         except (FileNotFoundError, ValueError):
-
             return self.doc_generator.generate_api_reference(context)
 
     def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, str]]:
@@ -142,14 +130,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             try:
                 content = doc_path.read_text(encoding="utf-8")
 
-
                 broken_links = self._check_internal_links(content, doc_path)
                 issues.extend(broken_links)
 
-
                 empty_sections = self._check_empty_sections(content, doc_path)
                 issues.extend(empty_sections)
-
 
                 outdated_refs = self._check_version_references(content, doc_path)
                 issues.extend(outdated_refs)
@@ -169,7 +154,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         try:
             index_path = self.docs_dir / "INDEX.md"
 
-
             api_docs = (
                 list[t.Any](self.api_docs_dir.glob("*.md"))
                 if self.api_docs_dir.exists()
@@ -186,11 +170,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 if f.name not in ("INDEX.md", "README.md")
             ]
 
-
             index_content = self._generate_index_content(
                 api_docs, guide_docs, root_docs
             )
-
 
             index_path.write_text(index_content, encoding="utf-8")
 
@@ -206,15 +188,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             return False
 
     def get_documentation_coverage(self) -> dict[str, t.Any]:
-
         source_files = self._find_source_files()
-
 
         api_data = self.extract_api_documentation(source_files)
 
-
         total_items, documented_items = self._count_documentation_items(api_data)
-
 
         coverage_percentage = (
             (documented_items / total_items * 100) if total_items > 0 else 0.0
@@ -237,13 +215,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         total_items = 0
         documented_items = 0
 
-
         protocol_total, protocol_documented = self._count_protocol_items(
             api_data.get("protocols", {})
         )
         total_items += protocol_total
         documented_items += protocol_documented
-
 
         module_total, module_documented = self._count_module_items(
             api_data.get("modules", {})
@@ -258,11 +234,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         documented_items = 0
 
         for protocol_info in protocols.values():
-
             total_items += 1
             if protocol_info.get("docstring", {}).get("description"):
                 documented_items += 1
-
 
             method_total, method_documented = self._count_method_items(
                 protocol_info.get("methods", [])
@@ -277,13 +251,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         documented_items = 0
 
         for module_data in modules.values():
-
             class_total, class_documented = self._count_class_items(
                 module_data.get("classes", [])
             )
             total_items += class_total
             documented_items += class_documented
-
 
             func_total, func_documented = self._count_function_items(
                 module_data.get("functions", [])
@@ -298,11 +270,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         documented_items = 0
 
         for class_info in classes:
-
             total_items += 1
             if class_info.get("docstring", {}).get("description"):
                 documented_items += 1
-
 
             method_total, method_documented = self._count_method_items(
                 class_info.get("methods", [])
@@ -336,7 +306,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 "[cyan]📚[/cyan] Generating complete API documentation..."
             )
 
-
             source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
             source_files = [
                 f
@@ -344,14 +313,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 if not any(part.startswith(".") for part in f.parts)
             ]
 
-
             api_data = self.extract_api_documentation(source_files)
-
 
             api_reference = self.doc_generator.generate_api_reference(api_data)
             api_ref_path = self.api_docs_dir / "API_REFERENCE.md"
             api_ref_path.write_text(api_reference, encoding="utf-8")
-
 
             if "protocols" in api_data:
                 protocol_docs = self._generate_protocol_documentation(
@@ -360,7 +326,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 protocol_path = self.api_docs_dir / "PROTOCOLS.md"
                 protocol_path.write_text(protocol_docs, encoding="utf-8")
 
-
             if "services" in api_data:
                 service_docs = self._generate_service_documentation(
                     api_data["services"]
@@ -368,19 +333,16 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 service_path = self.api_docs_dir / "SERVICES.md"
                 service_path.write_text(service_docs, encoding="utf-8")
 
-
             if "commands" in api_data:
                 cli_docs = self._generate_cli_documentation(api_data["commands"])
                 cli_path = self.api_docs_dir / "CLI_REFERENCE.md"
                 cli_path.write_text(cli_docs, encoding="utf-8")
-
 
             cross_refs = self.doc_generator.generate_cross_references(api_data)
             if cross_refs:
                 cross_ref_path = self.api_docs_dir / "CROSS_REFERENCES.md"
                 cross_ref_content = self._format_cross_references(cross_refs)
                 cross_ref_path.write_text(cross_ref_content, encoding="utf-8")
-
 
             self.update_documentation_index()
 
@@ -413,14 +375,12 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         issues = []
 
-
         link_pattern = SAFE_PATTERNS["extract_markdown_links"]._get_compiled_pattern()
         matches = link_pattern.findall(content)
 
         for link_text, link_path in matches:
             if link_path.startswith(("http://", "https://", "mailto:")):
                 continue
-
 
             if link_path.startswith("/"):
                 target_path = self.pkg_path / link_path.lstrip("/")
@@ -445,8 +405,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         issues = []
 
-
-        empty_section_pattern = re.compile( # REGEX OK: markdown section parsing
+        empty_section_pattern = re.compile(  # REGEX OK: markdown section parsing
             r"(#{1, 6}\s+[^\n]+)\n\s*(#{1, 6}\s+[^\n]+)", re.MULTILINE
         )
         matches = empty_section_pattern.findall(content)
@@ -469,12 +428,10 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         issues = []
 
-
         version_pattern = SAFE_PATTERNS[
             "extract_version_numbers"
         ]._get_compiled_pattern()
         matches = version_pattern.findall(content)
-
 
         for version in matches:
             if version != "1.0.0":
@@ -545,7 +502,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                     )
                     lines.append(f"{method_desc}\n\n")
 
-
                     params = method.get("parameters", [])
                     param_strings = []
                     for param in params:
@@ -583,13 +539,11 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             )
         )
 
-
         if service_info.get("protocols_implemented"):
             protocol_lines = self._generate_protocols_implemented(
                 service_info["protocols_implemented"]
             )
             lines.extend(protocol_lines)
-
 
         class_lines = self._generate_service_classes(service_info.get("classes", []))
         lines.extend(class_lines)
@@ -612,7 +566,6 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 "description", "No description provided."
             )
             lines.append(f"{description}\n\n")
-
 
             public_method_lines = self._generate_public_methods(
                 class_info.get("methods", [])

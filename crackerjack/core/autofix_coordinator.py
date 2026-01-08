@@ -18,11 +18,10 @@ class AutofixCoordinator:
         pkg_path: Path | None = None,
         logger: "LoggerProtocol | None" = None,
     ) -> None:
-
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
 
-        self.logger = logger or logging.getLogger("crackerjack.autofix") # type: ignore[assignment]
+        self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:

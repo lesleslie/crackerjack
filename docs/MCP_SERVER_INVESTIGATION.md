@@ -152,7 +152,7 @@ Instead, it reads MCP servers from:
 16\. ❌ mailgun (localhost:3039) - MISSING
 17\. ❌ raindropio (localhost:3034) - MISSING
 18\. ❌ unifi (localhost:3038) - MISSING
-19\. ⚠️ sentry (https://mcp.sentry.dev/mcp) - IN PLUGIN but needs auth
+19\. ⚠️ sentry (https://mcp.sentry.dev/mcp) - IN PLUGIN but needs auth (requires Sentry credentials)
 
 ## Z.ai Integration
 
