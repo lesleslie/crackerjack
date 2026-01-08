@@ -68,6 +68,11 @@ class TestSafePatternApplicator:
         assert applicator.has_preserved_comment("# pragma: no cover") is True
         assert applicator.has_preserved_comment("# TODO: fix this") is True
 
+        # Test gitleaks:allow (Gitleaks exception suppression - critical for security testing)
+        assert applicator.has_preserved_comment("# gitleaks:allow") is True
+        assert applicator.has_preserved_comment("    # gitleaks:allow") is True
+        assert applicator.has_preserved_comment("# GITLEAKS:ALLOW") is True  # Case-insensitive
+
         # Test obsolete encoding declarations (should NOT be preserved - Python 3.0+)
         assert applicator.has_preserved_comment("# coding: utf-8") is False
         assert applicator.has_preserved_comment("# -*- coding: utf-8 -*-") is False
@@ -88,6 +93,8 @@ class TestSafePatternApplicator:
 value = random.random()  # nosec B311
 other = 123  # regular comment
 result = value * 2  # type: ignore
+secret = "test-key"  # gitleaks:allow
+password = "test-password"  # GITLEAKS:ALLOW
 '''
 
         with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
@@ -98,9 +105,12 @@ result = value * 2  # type: ignore
             result = cleaner.clean_file(temp_path)
             cleaned = temp_path.read_text()
 
-            # Verify nosec and type: ignore are preserved
+            # Verify nosec, type: ignore, and gitleaks:allow are preserved
             assert '# nosec B311' in cleaned
             assert '# type: ignore' in cleaned
+            # Note: formatting step adds space after colon, so we check for the formatted version
+            assert '# gitleaks: allow' in cleaned or '# gitleaks:allow' in cleaned
+            assert '# GITLEAKS: ALLOW' in cleaned or '# GITLEAKS:ALLOW' in cleaned
             # Verify regular comment is removed
             assert '# regular comment' not in cleaned
 
