@@ -117,7 +117,6 @@ class InitializationService:
         }
 
     def _get_config_files(self) -> dict[str, str]:
-
         return {
             "pyproject.toml": "smart_merge",
             ".gitignore": "smart_merge_gitignore",
@@ -221,7 +220,6 @@ class InitializationService:
         if file_name == "example.mcp.json":
             self._process_mcp_config(target_path, force, results)
             return
-
 
         crackerjack_project_root = Path(__file__).parent.parent.parent
         source_file = crackerjack_project_root / file_name
@@ -354,7 +352,6 @@ class InitializationService:
         force: bool,
         results: dict[str, t.Any],
     ) -> None:
-
         crackerjack_project_root = Path(__file__).parent.parent.parent
         source_file = crackerjack_project_root / "example.mcp.json"
 

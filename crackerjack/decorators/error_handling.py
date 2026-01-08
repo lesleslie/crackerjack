@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -55,7 +54,7 @@ def _safe_console_print(
             if include_traceback:
                 console.print_exception()
             return
-        except (BlockingIOError, BrokenPipeError, OSError) as e: # pragma: no cover
+        except (BlockingIOError, BrokenPipeError, OSError) as e:  # pragma: no cover
             if _is_would_block_error(e) and attempt < retries:
                 time.sleep(retry_delay)
                 continue
@@ -73,15 +72,13 @@ def _handle_exception(
 ) -> t.Any:
     context = get_function_context(func)
 
-
     _safe_console_print(
         console,
         f"[red]❌ Error in {context['function_name']}: {type(e).__name__}: {e}[/red]",
     )
 
-
     if transform_to:
-        transformed = transform_to( # type: ignore[call-arg]
+        transformed = transform_to(  # type: ignore[call-arg]
             message=str(e),
             details={
                 "original_error": type(e).__name__,
@@ -92,10 +89,8 @@ def _handle_exception(
         if not suppress:
             raise transformed from e
 
-
     if fallback is not None:
         return fallback() if callable(fallback) else fallback
-
 
     if not suppress:
         raise
@@ -116,7 +111,7 @@ def handle_errors(
     | t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]
 ):
     _console = console or Console()
-    _error_types = tuple(error_types) if error_types else (Exception, )
+    _error_types = tuple(error_types) if error_types else (Exception,)
 
     def decorator(inner_func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         target = inner_func
@@ -225,7 +220,6 @@ def _create_async_retry_wrapper(
     retry_exceptions: tuple[type[Exception], ...],
     backoff: float,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         attempt = 0
@@ -249,7 +243,6 @@ def _create_sync_retry_wrapper(
     retry_exceptions: tuple[type[Exception], ...],
     backoff: float,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         attempt = 0
@@ -276,7 +269,7 @@ def retry(
     if max_attempts < 1:
         raise ValueError("max_attempts must be >= 1")
 
-    retry_exceptions = tuple(exceptions) if exceptions else (Exception, )
+    retry_exceptions = tuple(exceptions) if exceptions else (Exception,)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
@@ -293,7 +286,6 @@ def with_timeout(
     seconds: float,
     error_message: str | None = None,
 ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
-
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
 
@@ -329,7 +321,7 @@ def _execute_single_validator(
 ) -> None:
     try:
         result = validate(value)
-    except Exception as exc: # pragma: no cover - defensive
+    except Exception as exc:  # pragma: no cover - defensive
         raise ValidationError(
             message=f"Validator for '{param}' raised {type(exc).__name__}: {exc}",
         ) from exc
@@ -345,7 +337,7 @@ def _check_type_annotation_against_signature(
     parameter = signature.parameters.get(name)
     if not parameter or parameter.annotation is inspect.Signature.empty:
         return
-    if not isinstance(value, parameter.annotation): # type: ignore[arg-type]
+    if not isinstance(value, parameter.annotation):  # type: ignore[arg-type]
         raise ValidationError(
             message=(
                 f"Parameter '{name}' expected "
@@ -359,7 +351,6 @@ def _create_async_validation_wrapper(
     signature: inspect.Signature,
     validate_fn: t.Callable[[inspect.BoundArguments], None],
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         bound = signature.bind_partial(*args, **kwargs)
@@ -375,7 +366,6 @@ def _create_sync_validation_wrapper(
     signature: inspect.Signature,
     validate_fn: t.Callable[[inspect.BoundArguments], None],
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         bound = signature.bind_partial(*args, **kwargs)
@@ -391,8 +381,8 @@ def _normalize_validators(
     funcs: t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
 ) -> list[t.Callable[[t.Any], bool]]:
     if isinstance(funcs, (list, tuple, set)):
-        return list(funcs) # type: ignore[arg-type]
-    return [funcs] # type: ignore[list-item]
+        return list(funcs)  # type: ignore[arg-type]
+    return [funcs]  # type: ignore[list-item]
 
 
 def _create_validator_runner(
@@ -400,7 +390,6 @@ def _create_validator_runner(
         str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
     ],
 ) -> t.Callable[[str, t.Any], None]:
-
     def _run_validators(param: str, value: t.Any) -> None:
         funcs = validator_map.get(param)
         if not funcs:
@@ -468,7 +457,6 @@ def _create_async_degradation_wrapper(
     warn: bool,
     console: Console,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:
@@ -485,7 +473,6 @@ def _create_sync_degradation_wrapper(
     warn: bool,
     console: Console,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:

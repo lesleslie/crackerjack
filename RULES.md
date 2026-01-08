@@ -51,7 +51,7 @@
 
   - Structure projects with clear separation of concerns
   - Follow standard package layout conventions
-  - Use [pyproject.toml](https://github.com/lesleslie/crackerjack/blob/main/pyproject.toml) for all configuration
+  - Use [pyproject.toml](./pyproject.toml) for all configuration
   - **Modular Architecture**: Use protocol-based dependency injection
     - Core orchestration layer: `WorkflowOrchestrator`, `AsyncWorkflowOrchestrator`
     - Coordinator layer: `SessionCoordinator`, `PhaseCoordinator`

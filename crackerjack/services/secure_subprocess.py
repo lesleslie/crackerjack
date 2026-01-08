@@ -79,7 +79,6 @@ class SubprocessSecurityConfig:
 class SecureSubprocessExecutor:
     def __init__(self, config: SubprocessSecurityConfig | None = None):
         if config is None:
-
             debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
             self.config = SubprocessSecurityConfig(enable_command_logging=debug_enabled)
         else:
@@ -95,7 +94,6 @@ class SecureSubprocessExecutor:
             r">\s*/",
             r"<\s*/",
         ]
-
 
         self.allowed_git_patterns = [
             r"^@\{u\}\.\.HEAD$",
@@ -334,14 +332,11 @@ class SecureSubprocessExecutor:
     def _has_dangerous_patterns(
         self, arg: str, index: int, issues: list[str], command: list[str]
     ) -> bool:
-
         if self._is_allowed_git_pattern(arg):
             return False
 
-
         if self._is_git_commit_message(index, command):
             return self._check_dangerous_patterns_in_commit_message(arg, index, issues)
-
 
         return self._check_dangerous_patterns_in_other_contexts(arg, index, issues)
 
@@ -354,8 +349,6 @@ class SecureSubprocessExecutor:
     def _check_dangerous_patterns_in_commit_message(
         self, arg: str, index: int, issues: list[str]
     ) -> bool:
-
-
         safe_commit_patterns = [
             r"[;&|`$]",
             r"\.\./",
@@ -368,7 +361,6 @@ class SecureSubprocessExecutor:
 
         for pattern in safe_commit_patterns:
             if re.search(pattern, arg):
-
                 if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
                     continue
                 issues.append(
@@ -389,7 +381,6 @@ class SecureSubprocessExecutor:
         return False
 
     def _is_git_commit_message(self, index: int, command: list[str]) -> bool:
-
         if (
             len(command) >= 3
             and command[0] == "git"
@@ -447,20 +438,15 @@ class SecureSubprocessExecutor:
         try:
             resolved_path = cwd_path.resolve()
 
-
             original_path_obj = Path(cwd)
             original_parts = original_path_obj.parts
             if ".." in original_parts or any(
                 part.startswith("../") for part in original_parts
             ):
-
-                safe_root = (
-                    Path.cwd().parent.resolve()
-                )
+                safe_root = Path.cwd().parent.resolve()
                 try:
                     resolved_path.relative_to(safe_root)
                 except ValueError:
-
                     path_str = str(resolved_path)
                     self.security_logger.log_path_traversal_attempt(
                         attempted_path=path_str,

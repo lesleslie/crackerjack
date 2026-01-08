@@ -16,7 +16,6 @@ if t.TYPE_CHECKING:
 
 
 class SessionCoordinator:
-
     def __init__(
         self,
         console: Console | None = None,
@@ -75,7 +74,6 @@ class SessionCoordinator:
         self.session_tracker.metadata["current_session"] = task_name
 
     def end_session(self, success: bool) -> None:
-
         self.end_time = time.time()
         if self.session_tracker:
             self.session_tracker.metadata["completed_at"] = self.end_time
@@ -116,40 +114,121 @@ class SessionCoordinator:
         error_message: str | None = None,
         progress: int | None = None,
     ) -> None:
-        if self.session_tracker is None:
+        """Update task status and details in session tracker.
 
+        Args:
+            task_id: Unique task identifier
+            status: Task status (completed, failed, in_progress, etc.)
+            details: Optional task description
+            files_changed: Optional list of modified files
+            error_message: Optional error message for failed tasks
+            progress: Optional progress percentage (0-100)
+        """
+        self._ensure_session_tracker()
+
+        normalized = status.lower()
+
+        if normalized == "completed":
+            self._update_completed_task(task_id, details, files_changed)
+        elif normalized == "failed":
+            self._update_failed_task(task_id, error_message, details)
+        elif normalized == "in_progress":
+            self._update_in_progress_task(task_id, details, progress)
+        else:
+            self._update_generic_task(task_id, normalized, details, progress)
+
+    def _ensure_session_tracker(self) -> None:
+        """Ensure session tracker is initialized."""
+        if self.session_tracker is None:
             self.session_tracker = SessionTracker(
                 session_id=self.session_id, start_time=self.start_time
             )
             self.tasks = self.session_tracker.tasks
             self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
 
-        normalized = status.lower()
-        if normalized == "completed":
-            self.session_tracker.complete_task(task_id, details, files_changed)
-            return
-        if normalized == "failed":
-            self.session_tracker.fail_task(
-                task_id, error_message or "Task failed", details
-            )
-            return
-        if normalized == "in_progress":
+    def _update_completed_task(
+        self,
+        task_id: str,
+        details: str | None,
+        files_changed: list[str] | None,
+    ) -> None:
+        """Update task as completed.
 
-            if task_id not in self.session_tracker.tasks:
-                self.session_tracker.start_task(task_id, task_id, details)
-            else:
-                task = self.session_tracker.tasks[task_id]
-                task.status = "in_progress"
-                if details:
-                    task.details = details
-                if progress is not None:
-                    task.progress = progress
-            return
+        Args:
+            task_id: Task identifier
+            details: Optional completion details
+            files_changed: Optional list of modified files
+        """
+        assert (
+            self.session_tracker is not None
+        )  # Guaranteed by _ensure_session_tracker()
+        self.session_tracker.complete_task(task_id, details, files_changed)
 
+    def _update_failed_task(
+        self,
+        task_id: str,
+        error_message: str | None,
+        details: str | None,
+    ) -> None:
+        """Update task as failed.
 
+        Args:
+            task_id: Task identifier
+            error_message: Error description
+            details: Optional failure details
+        """
+        assert (
+            self.session_tracker is not None
+        )  # Guaranteed by _ensure_session_tracker()
+        self.session_tracker.fail_task(task_id, error_message or "Task failed", details)
+
+    def _update_in_progress_task(
+        self,
+        task_id: str,
+        details: str | None,
+        progress: int | None,
+    ) -> None:
+        """Update task as in progress.
+
+        Args:
+            task_id: Task identifier
+            details: Optional progress details
+            progress: Optional progress percentage
+        """
+        assert (
+            self.session_tracker is not None
+        )  # Guaranteed by _ensure_session_tracker()
+        if task_id not in self.session_tracker.tasks:
+            self.session_tracker.start_task(task_id, task_id, details)
+        else:
+            task = self.session_tracker.tasks[task_id]
+            task.status = "in_progress"
+            if details:
+                task.details = details
+            if progress is not None:
+                task.progress = progress
+
+    def _update_generic_task(
+        self,
+        task_id: str,
+        status: str,
+        details: str | None,
+        progress: int | None,
+    ) -> None:
+        """Update task with generic status.
+
+        Args:
+            task_id: Task identifier
+            status: Task status
+            details: Optional task details
+            progress: Optional progress percentage
+        """
+        assert (
+            self.session_tracker is not None
+        )  # Guaranteed by _ensure_session_tracker()
         if task_id in self.session_tracker.tasks:
             task = self.session_tracker.tasks[task_id]
-            task.status = normalized or task.status
+            task.status = status or task.status
             if details:
                 task.details = details
             if progress is not None:
@@ -206,7 +285,7 @@ class SessionCoordinator:
         for handler in self.cleanup_handlers.copy():
             try:
                 handler()
-            except Exception as exc: # pragma: no cover - defensive
+            except Exception as exc:  # pragma: no cover - defensive
                 self.console.print(
                     f"[red]Cleanup handler error:[/ red] {type(exc).__name__}: {exc}",
                 )
@@ -264,7 +343,6 @@ class SessionCoordinator:
 
 
 class SessionController:
-
     def __init__(self, pipeline: WorkflowPipeline) -> None:
         self._pipeline = pipeline
 

@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 
@@ -6,7 +5,6 @@ from ...base import AgentContext
 
 
 class ComplexityAnalyzer:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
@@ -195,7 +193,6 @@ class ComplexityAnalyzer:
 
 
 class ComplexityCalculator(ast.NodeVisitor):
-
     def __init__(self) -> None:
         self.complexity = 0
 
@@ -220,7 +217,6 @@ class ComplexityCalculator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def visit_BoolOp(self, node: ast.BoolOp) -> None:
-
         if len(node.values) > 2:
             self.complexity += 1
         self.generic_visit(node)

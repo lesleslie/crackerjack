@@ -1,4 +1,3 @@
-
 import json
 from pathlib import Path
 
@@ -7,7 +6,6 @@ from loguru import logger
 
 
 class FileIOService:
-
     @staticmethod
     async def read_text_file(path: str | Path, encoding: str = "utf-8") -> str:
         try:

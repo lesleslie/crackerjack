@@ -499,7 +499,7 @@ Crackerjack is built on the **legacy DI framework** framework, providing advance
 
 ### What is legacy?
 
-[legacy](https://github.com/lesleslie/legacy) is a lightweight dependency injection framework that enables:
+[legacy](https://github.com/lesleslie/crackerjack) is a lightweight dependency injection framework that enables:
 
 - **Module-level registration** via `depends.set()` for clean dependency management
 - **Runtime-checkable protocols** ensuring type safety across all components

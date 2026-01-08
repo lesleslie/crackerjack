@@ -6,7 +6,6 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING, Any
 
-
 if TYPE_CHECKING:
     pass
 
@@ -16,7 +15,6 @@ from crackerjack.services.cache import CrackerjackCache
 
 @dataclass
 class QualityMetrics:
-
     git_hash: str
     timestamp: datetime
     coverage_percent: float
@@ -43,7 +41,6 @@ class QualityMetrics:
 
 
 class QualityBaselineService(QualityBaselineProtocol):
-
     def __init__(
         self,
         cache: CrackerjackCache | None = None,
@@ -76,9 +73,7 @@ class QualityBaselineService(QualityBaselineProtocol):
         type_errors: int,
         linting_issues: int,
     ) -> int:
-
         base_score = (coverage_percent * 0.4) + (test_pass_rate * 0.3)
-
 
         penalties = (
             hook_failures * 2.0
@@ -87,7 +82,6 @@ class QualityBaselineService(QualityBaselineProtocol):
             + type_errors * 2.0
             + linting_issues * 0.5
         )
-
 
         penalty_score = max(0, 30 - (penalties * 0.8))
 
@@ -155,7 +149,6 @@ class QualityBaselineService(QualityBaselineProtocol):
             linting_issues=linting_issues,
             quality_score=quality_score,
         )
-
 
         self.cache.set_quality_baseline(git_hash, metrics.to_dict())
         await self._persist_metrics(metrics)
@@ -283,7 +276,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         except (subprocess.CalledProcessError, FileNotFoundError):
             return []
 
-
     async def _persist_metrics(self, metrics: QualityMetrics) -> None:
         if not self._repository:
             return
@@ -304,15 +296,13 @@ class QualityBaselineService(QualityBaselineProtocol):
                     "quality_score": metrics.quality_score,
                 }
             )
-        except Exception as exc: # pragma: no cover - defensive
+        except Exception as exc:  # pragma: no cover - defensive
             self._logger.debug(
                 "Failed to persist quality baseline record",
                 exc_info=exc,
             )
 
-    def _record_to_metrics(
-        self, record: Any
-    ) -> QualityMetrics:
+    def _record_to_metrics(self, record: Any) -> QualityMetrics:
         return QualityMetrics(
             git_hash=record.git_hash,
             timestamp=record.recorded_at,
@@ -338,7 +328,6 @@ class QualityBaselineService(QualityBaselineProtocol):
         )
         raise RuntimeError(msg)
 
-
     def get_current_baseline(self) -> dict[str, t.Any]:
         baseline = self.get_baseline()
         if baseline:
@@ -347,7 +336,6 @@ class QualityBaselineService(QualityBaselineProtocol):
 
     def update_baseline(self, metrics: dict[str, t.Any]) -> bool:
         try:
-
             coverage_percent = metrics.get("coverage_percent", 0.0)
             test_count = metrics.get("test_count", 0)
             test_pass_rate = metrics.get("test_pass_rate", 0.0)

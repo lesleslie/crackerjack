@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -27,7 +26,6 @@ logger = logging.getLogger(__name__)
 
 
 class ZubanSettings(ToolAdapterSettings):
-
     tool_name: str = "zuban"
     use_json_output: bool = False
     strict_mode: bool = False
@@ -39,7 +37,6 @@ class ZubanSettings(ToolAdapterSettings):
 
 
 class ZubanAdapter(BaseToolAdapter):
-
     settings: ZubanSettings | None = None
 
     def __init__(self, settings: ZubanSettings | None = None) -> None:
@@ -86,30 +83,23 @@ class ZubanAdapter(BaseToolAdapter):
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
-
         cmd = [self.tool_name, "mypy", "--config-file", "mypy.ini"]
-
 
         if self.settings.strict_mode:
             cmd.append("--strict")
 
-
         if self.settings.ignore_missing_imports:
             cmd.append("--ignore-missing-imports")
-
 
         if self.settings.follow_imports == "normal":
             pass
         elif self.settings.follow_imports == "skip":
             cmd.append("--follow-untyped-imports")
         elif self.settings.follow_imports == "silent":
-
             pass
-
 
         if self.settings.cache_dir:
             cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -138,7 +128,6 @@ class ZubanAdapter(BaseToolAdapter):
             extra={"output_length": len(result.raw_output)},
         )
 
-
         return self._parse_text_output(result.raw_output)
 
     def _check_has_column(self, parts: list[str]) -> tuple[bool, int | None]:
@@ -155,10 +144,8 @@ class ZubanAdapter(BaseToolAdapter):
         line_number = int(line_str)
         column_number = int(line_str)
 
-
         severity_and_message = parts[2].strip() if len(parts) > 2 else ""
         message_with_code = parts[3].strip() if len(parts) > 3 else severity_and_message
-
 
         message, code = self._extract_message_and_code(message_with_code)
 
@@ -183,10 +170,8 @@ class ZubanAdapter(BaseToolAdapter):
         file_path = Path(file_path_str)
         line_number = int(line_str)
 
-
         severity_and_message = parts[2].strip()
         message_with_code = parts[3].strip() if len(parts) > 3 else severity_and_message
-
 
         message, code = self._extract_message_and_code(message_with_code)
 
@@ -195,10 +180,8 @@ class ZubanAdapter(BaseToolAdapter):
     def _extract_parts_from_line(
         self, line: str
     ) -> tuple[Path, int, int | None, str, str] | None:
-
         if ":" not in line:
             return None
-
 
         parts = line.split(":", maxsplit=3)
         if len(parts) < 3:
@@ -209,12 +192,9 @@ class ZubanAdapter(BaseToolAdapter):
             line_str = parts[1].strip()
 
             if not line_str:
-
-
                 if len(parts) >= 4:
                     line_str = parts[1].strip()
                     int(line_str)
-
 
                     result = self._parse_with_column_format(
                         file_path_str, line_str, parts
@@ -222,27 +202,23 @@ class ZubanAdapter(BaseToolAdapter):
                     if result is not None:
                         return result
 
-
                     return self._parse_without_column_format(
                         file_path_str, line_str, parts
                     )
                 else:
                     return None
             else:
-
                 return self._parse_standard_format(file_path_str, line_str, parts)
         except (ValueError, IndexError):
             return None
 
     def _extract_message_and_code(self, message_and_code_str: str) -> tuple[str, str]:
-
         if " error: " in message_and_code_str:
             _, message_part = message_and_code_str.split(" error: ", 1)
         elif " warning: " in message_and_code_str:
             _, message_part = message_and_code_str.split(" warning: ", 1)
         else:
             message_part = message_and_code_str
-
 
         code = ""
         if " [" in message_part and "]" in message_part:
@@ -253,12 +229,8 @@ class ZubanAdapter(BaseToolAdapter):
                 and end_bracket != -1
                 and end_bracket > start_bracket
             ):
-                code = message_part[
-                    start_bracket + 2 : end_bracket
-                ]
-                message_part = message_part[
-                    :start_bracket
-                ].strip()
+                code = message_part[start_bracket + 2 : end_bracket]
+                message_part = message_part[:start_bracket].strip()
 
         return message_part.strip(), code
 
@@ -269,7 +241,6 @@ class ZubanAdapter(BaseToolAdapter):
         parts: list[str],
         original_message: str,
     ) -> tuple[str, str]:
-
         severity = "error"
         message = original_message
 
@@ -294,10 +265,8 @@ class ZubanAdapter(BaseToolAdapter):
         lines = output.strip().split("\n")
 
         for line in lines:
-
             if ":" not in line or ("error:" not in line and "warning:" not in line):
                 continue
-
 
             if (
                 "Found" in line
@@ -305,7 +274,6 @@ class ZubanAdapter(BaseToolAdapter):
                 and "file" in line
             ):
                 continue
-
 
             parts_result = self._extract_parts_from_line(line)
             if parts_result is None:
@@ -318,7 +286,6 @@ class ZubanAdapter(BaseToolAdapter):
                 message,
                 code,
             ) = parts_result
-
 
             severity = "error" if "error:" in line else "warning"
 
@@ -349,7 +316,6 @@ class ZubanAdapter(BaseToolAdapter):
 
         current_dir = Path.cwd()
 
-
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -359,23 +325,18 @@ class ZubanAdapter(BaseToolAdapter):
                     data = tomllib.load(f)
 
                 if "project" in data and "name" in data["project"]:
-
                     package_name = str(data["project"]["name"]).replace("-", "_")
-
 
                     if (current_dir / package_name).exists():
                         return package_name
 
-
         if (current_dir / current_dir.name).exists():
             return current_dir.name
-
 
         return "src"
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         package_dir = self._detect_package_directory()
 
@@ -384,9 +345,7 @@ class ZubanAdapter(BaseToolAdapter):
             check_name=self.adapter_name,
             check_type=QACheckType.TYPE,
             enabled=True,
-            file_patterns=[
-                f"{package_dir}/**/*.py"
-            ],
+            file_patterns=[f"{package_dir}/**/*.py"],
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",

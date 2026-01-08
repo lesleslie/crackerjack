@@ -49,31 +49,24 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
     oneiric_settings.profile.remote_enabled = False
     oneiric_settings.remote.enabled = False
 
-
     import os
 
     debug_mode = os.environ.get("CRACKERJACK_DEBUG") == "1"
 
     if not debug_mode:
-
         oneiric_settings.logging.emit_json = False
         oneiric_settings.logging.level = "WARNING"
     else:
-
         oneiric_settings.logging.emit_json = True
         oneiric_settings.logging.level = "DEBUG"
     oneiric_settings.remote.refresh_interval = None
 
-
     oneiric_settings.logging.level = "WARNING" if not debug_mode else "DEBUG"
     oneiric_settings.logging.emit_json = debug_mode
 
-
     oneiric_settings.app.debug = debug_mode
 
-
     from oneiric.core.logging import configure_logging
-
 
     configure_logging(oneiric_settings.logging)
 
@@ -179,10 +172,8 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     if _should_run_tests(options):
         steps.append("tests")
 
-
     if _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
-
 
     steps.extend(("publishing", "commit"))
 

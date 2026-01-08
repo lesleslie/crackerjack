@@ -1,4 +1,3 @@
-
 import re
 import typing as t
 from datetime import datetime
@@ -8,7 +7,6 @@ from rich.console import Console
 
 
 class ChangelogEntry:
-
     def __init__(
         self,
         entry_type: str,
@@ -27,7 +25,6 @@ class ChangelogEntry:
 
 
 class ChangelogGenerator:
-
     def __init__(
         self,
         console: Console | None = None,
@@ -35,7 +32,6 @@ class ChangelogGenerator:
     ) -> None:
         self.console = console or Console()
         self.git = git_service
-
 
         self.type_mappings = {
             "feat": "Added",
@@ -51,13 +47,12 @@ class ChangelogGenerator:
             "revert": "Reverted",
         }
 
-
-        self.conventional_commit_pattern = re.compile( # REGEX OK: conventional commit parsing
+        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$"
         )
 
         self.breaking_change_pattern = (
-            re.compile( # REGEX OK: breaking change detection
+            re.compile(  # REGEX OK: breaking change detection
                 r"BREAKING\s*CHANGE[:]\s*(.+)", re.IGNORECASE | re.MULTILINE
             )
         )
@@ -65,15 +60,12 @@ class ChangelogGenerator:
     def parse_commit_message(
         self, commit_message: str, commit_hash: str = ""
     ) -> ChangelogEntry | None:
-
         lines = commit_message.strip().split("\n")
         header = lines[0].strip()
         body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
 
-
         match = self.conventional_commit_pattern.match(header)
         if not match:
-
             return self._parse_non_conventional_commit(header, body, commit_hash)
 
         commit_type = match.group("type").lower()
@@ -81,13 +73,10 @@ class ChangelogGenerator:
         breaking_marker = match.group("breaking") == "!"
         description = match.group("description").strip()
 
-
         breaking_in_body = bool(self.breaking_change_pattern.search(body))
         breaking_change = breaking_marker or breaking_in_body
 
-
         changelog_section = self.type_mappings.get(commit_type, "Changed")
-
 
         formatted_description = self._format_description(
             description, scope, commit_type
@@ -103,7 +92,6 @@ class ChangelogGenerator:
     def _parse_non_conventional_commit(
         self, header: str, body: str, commit_hash: str
     ) -> ChangelogEntry | None:
-
         header_lower = header.lower()
 
         if any(
@@ -126,7 +114,6 @@ class ChangelogGenerator:
         else:
             entry_type = "Changed"
 
-
         breaking_change = bool(self.breaking_change_pattern.search(body))
 
         return ChangelogEntry(
@@ -139,12 +126,9 @@ class ChangelogGenerator:
     def _format_description(
         self, description: str, scope: str, commit_type: str
     ) -> str:
-
         description = description[0].upper() + description[1:] if description else ""
 
-
         if scope:
-
             if scope.lower() not in description.lower():
                 description = f"{scope}: {description}"
 
@@ -154,11 +138,9 @@ class ChangelogGenerator:
         self, since_version: str | None = None, target_file: Path | None = None
     ) -> dict[str, list[ChangelogEntry]]:
         try:
-
             git_result = self._get_git_commits(since_version)
             if not git_result:
                 return {}
-
 
             return self._parse_commits_to_entries(git_result)
 
@@ -167,9 +149,7 @@ class ChangelogGenerator:
             return {}
 
     def _get_git_commits(self, since_version: str | None = None) -> str | None:
-
         git_command = self._build_git_log_command(since_version)
-
 
         result = self.git._run_git_command(git_command)
         if result.returncode != 0:
@@ -207,7 +187,6 @@ class ChangelogGenerator:
         return entries_by_type
 
     def _process_commit_line(self, line: str) -> ChangelogEntry | None:
-
         parts = line.strip().split(" ", 1)
         if len(parts) < 2:
             return None
@@ -215,9 +194,7 @@ class ChangelogGenerator:
         commit_hash = parts[0]
         commit_message = parts[1]
 
-
         full_message = self._get_full_commit_message(commit_hash, commit_message)
-
 
         return self.parse_commit_message(full_message, commit_hash)
 
@@ -253,17 +230,13 @@ class ChangelogGenerator:
                 self.console.print("[yellow]ℹ️[/yellow] No new changelog entries to add")
                 return True
 
-
             existing_content = ""
             if changelog_path.exists():
                 existing_content = changelog_path.read_text(encoding="utf-8")
 
-
             new_section = self._generate_changelog_section(new_version, entries_by_type)
 
-
             updated_content = self._insert_new_section(existing_content, new_section)
-
 
             changelog_path.write_text(updated_content, encoding="utf-8")
 
@@ -281,7 +254,6 @@ class ChangelogGenerator:
     ) -> str:
         today = datetime.now().strftime("%Y-%m-%d")
         section_lines = [f"## [{version}] - {today}", ""]
-
 
         section_order = [
             "Added",
@@ -304,7 +276,6 @@ class ChangelogGenerator:
                 if entries:
                     section_lines.extend((f"### {section_name}", ""))
 
-
                     entries.sort(
                         key=lambda e: (not e.breaking_change, e.description.lower())
                     )
@@ -317,7 +288,6 @@ class ChangelogGenerator:
 
     def _insert_new_section(self, existing_content: str, new_section: str) -> str:
         if not existing_content.strip():
-
             header = """# Changelog
 
 All notable changes to this project will be documented in this file.
@@ -328,19 +298,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 """
             return header + new_section
 
-
         lines = existing_content.split("\n")
         insert_index = 0
-
 
         for i, line in enumerate(lines):
             if line.strip().startswith("## ["):
                 insert_index = i
                 break
         else:
-
             insert_index = len(lines)
-
 
         new_lines = (
             lines[:insert_index] + new_section.split("\n") + lines[insert_index:]
@@ -358,7 +324,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         if not entries:
             self.console.print("[yellow]ℹ️[/yellow] No changelog entries generated")
             return True
-
 
         self._display_changelog_preview(entries)
 

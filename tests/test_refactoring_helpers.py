@@ -27,7 +27,7 @@ def simple_function():
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Simple function should have low complexity
         assert calculator.complexity >= 0
 
@@ -42,7 +42,7 @@ def function_with_if(x):
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Should have complexity from if statement
         assert calculator.complexity > 0
 
@@ -59,7 +59,7 @@ def nested_if_function(x, y):
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Nested if should increase complexity
         base_complexity = calculator.complexity
         assert base_complexity > 1
@@ -77,7 +77,7 @@ def function_with_loop(items):
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Loop and nested if should contribute to complexity
         assert calculator.complexity > 1
 
@@ -93,7 +93,7 @@ def function_with_try():
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Try-except should contribute to complexity
         assert calculator.complexity > 0
 
@@ -108,7 +108,7 @@ def function_with_bool(x, y):
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Boolean operations should contribute to complexity
         assert calculator.complexity > 0
 
@@ -123,7 +123,7 @@ def function_with_comprehension():
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Comprehension should contribute to complexity
         assert calculator.complexity > 0
 
@@ -132,7 +132,7 @@ def function_with_comprehension():
         code = """
 def complex_function(data):
     result = []
-    
+
     for item in data:
         try:
             if item['value'] > 0 and item['active']:
@@ -143,13 +143,13 @@ def complex_function(data):
             continue
         except ValueError as e:
             log_error(e)
-    
+
     return result if result else None
 """
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Complex function should have higher complexity
         assert calculator.complexity > 5
 
@@ -162,7 +162,7 @@ def empty_function():
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Empty function should have minimal complexity
         assert calculator.complexity >= 0
 
@@ -180,42 +180,42 @@ def complex_function(x):
         tree = ast.parse(code)
         calculator = ComplexityCalculator()
         calculator.visit(tree)
-        
+
         # Should calculate complexity for all functions
         assert calculator.complexity > 0
 
     def test_complexity_calculator_nesting_level(self):
         """Test that nesting level is tracked correctly."""
         calculator = ComplexityCalculator()
-        
+
         # Test simple nesting
         calculator.nesting_level = 0
         calculator.complexity = 0
-        
+
         # Simulate visiting nested structures
         calculator.nesting_level += 1
         calculator.complexity += 1 + calculator.nesting_level
-        
+
         assert calculator.nesting_level == 1
         assert calculator.complexity == 2
 
     def test_complexity_calculator_binary_sequences(self):
         """Test that binary sequences are tracked."""
         calculator = ComplexityCalculator()
-        
+
         # Test binary sequence tracking
         calculator.binary_sequences = 0
         calculator.complexity = 0
-        
+
         # Simulate binary sequence detection
         calculator.binary_sequences += 1
-        
+
         assert calculator.binary_sequences == 1
 
     def test_complexity_calculator_visit_methods(self):
         """Test that visit methods exist and are callable."""
         calculator = ComplexityCalculator()
-        
+
         # Test that all expected visit methods exist
         assert hasattr(calculator, 'visit_If')
         assert hasattr(calculator, 'visit_For')
@@ -231,7 +231,7 @@ def complex_function(x):
     def test_complexity_calculator_private_methods(self):
         """Test that private processing methods exist."""
         calculator = ComplexityCalculator()
-        
+
         # Test that private methods exist
         assert hasattr(calculator, '_process_conditional_node')
         assert hasattr(calculator, '_process_loop_node')
@@ -247,7 +247,7 @@ def complex_function(x):
         simple_tree = ast.parse(simple_code)
         simple_calc = ComplexityCalculator()
         simple_calc.visit(simple_tree)
-        
+
         # Complex function
         complex_code = """
 def complex_func(x, y, z):
@@ -263,7 +263,7 @@ def complex_func(x, y, z):
         complex_tree = ast.parse(complex_code)
         complex_calc = ComplexityCalculator()
         complex_calc.visit(complex_tree)
-        
+
         # Complex function should have higher complexity
         assert complex_calc.complexity > simple_calc.complexity
 
@@ -275,13 +275,13 @@ def complex_func(x, y, z):
     def test_complexity_calculator_visit_implementation(self):
         """Test that visit methods are properly implemented."""
         calculator = ComplexityCalculator()
-        
+
         # Create a simple AST node
         code = "x = 1 if y > 0 else 0"
         tree = ast.parse(code)
-        
+
         # Should not raise exceptions
         calculator.visit(tree)
-        
+
         # Complexity should be calculated
         assert calculator.complexity >= 0

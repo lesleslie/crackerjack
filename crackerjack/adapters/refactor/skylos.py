@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class SkylosSettings(ToolAdapterSettings):
-
     tool_name: str = "skylos"
     use_json_output: bool = True
     confidence_threshold: int = 86
@@ -36,7 +34,6 @@ class SkylosSettings(ToolAdapterSettings):
 
 
 class SkylosAdapter(BaseToolAdapter):
-
     settings: SkylosSettings | None = None
 
     def __init__(self, settings: SkylosSettings | None = None) -> None:
@@ -47,7 +44,6 @@ class SkylosAdapter(BaseToolAdapter):
 
     async def init(self) -> None:
         if not self.settings:
-
             timeout_seconds = self._get_timeout_from_settings()
 
             self.settings = SkylosSettings(
@@ -86,13 +82,10 @@ class SkylosAdapter(BaseToolAdapter):
 
         cmd = ["uv", "run", "skylos"]
 
-
         cmd.extend(["--confidence", str(self.settings.confidence_threshold)])
-
 
         if self.settings.use_json_output:
             cmd.append("--json")
-
 
         if files:
             cmd.extend([str(f) for f in files])
@@ -112,9 +105,7 @@ class SkylosAdapter(BaseToolAdapter):
 
     def _determine_scan_target(self, files: list[Path]) -> str:
         if files:
-
             return " ".join(str(f) for f in files)
-
 
         package_name = self._detect_package_name()
         return f"./{package_name}"
@@ -122,16 +113,13 @@ class SkylosAdapter(BaseToolAdapter):
     def _detect_package_name(self) -> str:
         cwd = Path.cwd()
 
-
         package_name = self._read_package_from_toml(cwd)
         if package_name:
             return package_name
 
-
         package_name = self._find_package_directory(cwd)
         if package_name:
             return package_name
-
 
         return "crackerjack"
 
@@ -156,7 +144,24 @@ class SkylosAdapter(BaseToolAdapter):
         return None
 
     def _find_package_directory(self, cwd: Path) -> str | None:
-        excluded = {"tests", "docs", ".venv", "venv", "build", "dist"}
+        excluded = {
+            "tests",
+            "docs",
+            "scripts",
+            "examples",
+            "archive",
+            "assets",
+            "templates",
+            "tools",
+            "worktrees",
+            "settings",
+            ".venv",
+            "venv",
+            "build",
+            "dist",
+            "htmlcov",
+            "logs",
+        }
 
         for item in cwd.iterdir():
             if item.is_dir() and (item / "__init__.py").exists():
@@ -172,7 +177,6 @@ class SkylosAdapter(BaseToolAdapter):
         if not result.raw_output:
             logger.debug("No output to parse")
             return []
-
 
         try:
             issues = self._parse_json_output(result.raw_output)
@@ -242,7 +246,6 @@ class SkylosAdapter(BaseToolAdapter):
 
     def _parse_text_line(self, line: str) -> ToolIssue | None:
         try:
-
             parts = line.split(":", 2)
             if len(parts) < 3:
                 return None
@@ -277,59 +280,35 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start: conf_end].strip()
+            return message_part[conf_start:conf_end].strip()
 
         return "unknown"
 
     def _get_check_type(self) -> QACheckType:
         return QACheckType.REFACTOR
 
-    def _detect_package_directory(self) -> str:
-        from contextlib import suppress
-
-        current_dir = Path.cwd()
-
-
-        pyproject_path = current_dir / "pyproject.toml"
-        if pyproject_path.exists():
-            with suppress(Exception):
-                import tomllib
-
-                with pyproject_path.open("rb") as f:
-                    data = tomllib.load(f)
-
-                if "project" in data and "name" in data["project"]:
-
-                    package_name = str(data["project"]["name"]).replace("-", "_")
-
-
-                    if (current_dir / package_name).exists():
-                        return package_name
-
-
-        if (current_dir / current_dir.name).exists():
-            return current_dir.name
-
-
-        return "src"
-
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
 
-
-        package_dir = self._detect_package_directory()
+        package_dir = self._detect_package_directory(Path.cwd())
 
         return QACheckConfig(
             check_id=MODULE_ID,
             check_name=self.adapter_name,
             check_type=QACheckType.REFACTOR,
             enabled=True,
-            file_patterns=[
-                f"{package_dir}/**/*.py"
-            ],
+            file_patterns=[f"{package_dir}/**/*.py"],
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",
+                "**/scripts/**",
+                "**/examples/**",
+                "**/archive/**",
+                "**/assets/**",
+                "**/templates/**",
+                "**/tools/**",
+                "**/worktrees/**",
+                "**/settings/**",
                 "**/.venv/**",
                 "**/venv/**",
                 "**/build/**",
@@ -340,6 +319,7 @@ class SkylosAdapter(BaseToolAdapter):
                 "**/.tox/**",
                 "**/.pytest_cache/**",
                 "**/htmlcov/**",
+                "**/logs/**",
                 "**/.coverage*",
             ],
             timeout_seconds=300,

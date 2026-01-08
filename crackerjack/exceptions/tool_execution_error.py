@@ -1,4 +1,3 @@
-
 from pathlib import Path
 
 from rich.console import Console
@@ -6,7 +5,6 @@ from rich.panel import Panel
 
 
 class ToolExecutionError(Exception):
-
     def __init__(
         self,
         tool: str,
@@ -25,7 +23,6 @@ class ToolExecutionError(Exception):
         self.cwd = cwd
         self.duration = duration
 
-
         message = f"Tool '{tool}' failed with exit code {exit_code}"
         if duration is not None:
             message += f" after {duration:.1f}s"
@@ -33,9 +30,7 @@ class ToolExecutionError(Exception):
         super().__init__(message)
 
     def format_rich(self, console: Console | None = None) -> Panel:
-
         content_parts = []
-
 
         content_parts.extend(
             (
@@ -44,16 +39,13 @@ class ToolExecutionError(Exception):
             )
         )
 
-
         if self.duration is not None:
             content_parts.append(
                 f"[bold yellow]Duration:[/bold yellow] {self.duration:.2f}s"
             )
 
-
         if self.cwd:
             content_parts.append(f"[bold cyan]Directory:[/bold cyan] {self.cwd}")
-
 
         if self.command:
             cmd_str = " ".join(self.command)
@@ -61,7 +53,6 @@ class ToolExecutionError(Exception):
             if len(cmd_str) > 100:
                 cmd_str = cmd_str[:97] + "..."
             content_parts.append(f"[bold cyan]Command:[/bold cyan] {cmd_str}")
-
 
         if self.stderr:
             content_parts.append("\n[bold yellow]Error Output:[/bold yellow]")
@@ -72,7 +63,6 @@ class ToolExecutionError(Exception):
                 stderr_lines = stderr_lines[-20:]
             content_parts.append(self._format_output(stderr_lines))
 
-
         elif self.stdout:
             content_parts.append("\n[bold yellow]Output:[/bold yellow]")
             stdout_lines = self.stdout.split("\n")
@@ -81,10 +71,8 @@ class ToolExecutionError(Exception):
                 stdout_lines = stdout_lines[-20:]
             content_parts.append(self._format_output(stdout_lines))
 
-
         else:
             content_parts.append("\n[dim]No error output available[/dim]")
-
 
         content = "\n".join(content_parts)
 
@@ -96,15 +84,12 @@ class ToolExecutionError(Exception):
         )
 
     def _format_output(self, lines: list[str]) -> str:
-
         import re
-
 
         ansi_escape = re.compile(r"\x1b\[[0-9;]*m")
 
         formatted_lines = []
         for line in lines:
-
             clean_line = ansi_escape.sub("", line)
 
             if clean_line.strip():
@@ -136,7 +121,7 @@ class ToolExecutionError(Exception):
         }
 
         for patterns, suggestion in error_patterns.items():
-            patterns_list = patterns if isinstance(patterns, tuple) else (patterns, )
+            patterns_list = patterns if isinstance(patterns, tuple) else (patterns,)
             if any(pattern in combined_output for pattern in patterns_list):
                 return suggestion
 
@@ -144,7 +129,6 @@ class ToolExecutionError(Exception):
 
     def get_actionable_message(self) -> str:
         messages = [f"Tool '{self.tool}' failed with exit code {self.exit_code}"]
-
 
         combined_output = f"{self.stderr} {self.stdout}".lower()
         suggestion = self._get_error_suggestion(combined_output)

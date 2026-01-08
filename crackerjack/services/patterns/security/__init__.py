@@ -1,4 +1,3 @@
-
 from ..core import ValidatedPattern
 from .code_injection import PATTERNS as CODE_INJECTION_PATTERNS
 from .credentials import PATTERNS as CREDENTIAL_PATTERNS

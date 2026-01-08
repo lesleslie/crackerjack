@@ -1,4 +1,3 @@
-
 import json
 import re
 import typing as t
@@ -14,7 +13,6 @@ from ..services.regex_patterns import SAFE_PATTERNS
 
 
 class TemplateType(Enum):
-
     AI_REFERENCE = "ai_reference"
     USER_GUIDE = "user_guide"
     API_REFERENCE = "api_reference"
@@ -26,21 +24,16 @@ class TemplateType(Enum):
 
 @dataclass
 class TemplateContext:
-
-
     project_name: str
     project_description: str
     version: str
     author: str
 
-
     generated_at: datetime = field(default_factory=datetime.now)
     template_type: TemplateType | None = None
 
-
     variables: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     sections: dict[str, str] = field(default_factory=dict[str, t.Any])
-
 
     ai_optimization_level: str = "standard"
     target_audience: str = "developers"
@@ -60,7 +53,6 @@ class TemplateContext:
 
 @dataclass
 class Template:
-
     name: str
     content: str
     template_type: TemplateType
@@ -70,12 +62,10 @@ class Template:
     ai_optimizations: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
 
     def extract_placeholders(self) -> tuple[list[str], list[str]]:
-
         var_pattern = SAFE_PATTERNS[
             "extract_template_variables"
         ]._get_compiled_pattern()
         variables = var_pattern.findall(self.content)
-
 
         section_pattern = SAFE_PATTERNS[
             "extract_template_sections"
@@ -86,7 +76,6 @@ class Template:
 
 
 class AITemplateEngine:
-
     def __init__(
         self,
         config_manager: ConfigManagerProtocol,
@@ -96,7 +85,6 @@ class AITemplateEngine:
         self.logger = logger
         self.templates: dict[str, Template] = {}
         self.template_cache: dict[str, str] = {}
-
 
         self._load_builtin_templates()
 
@@ -110,25 +98,19 @@ class AITemplateEngine:
 
         template = self.templates[template_name]
 
-
         content = self._apply_inheritance(template, context)
-
 
         content = self._apply_ai_optimizations(content, template, context)
 
-
         content = self._render_variables(content, context)
 
-
         content = self._render_sections(content, context)
-
 
         content = self._post_process_content(content, context)
 
         return content
 
     def register_template(self, template: Template) -> None:
-
         variables, sections = template.extract_placeholders()
         template.variables = variables
         template.sections = sections
@@ -178,7 +160,6 @@ class AITemplateEngine:
         return self.render_template("user_guide_base", context)
 
     def _load_builtin_templates(self) -> None:
-
         ai_ref_template = Template(
             name="ai_reference_base",
             template_type=TemplateType.AI_REFERENCE,
@@ -192,7 +173,6 @@ class AITemplateEngine:
         )
         self.register_template(ai_ref_template)
 
-
         user_guide_template = Template(
             name="user_guide_base",
             template_type=TemplateType.USER_GUIDE,
@@ -205,7 +185,6 @@ class AITemplateEngine:
         )
         self.register_template(user_guide_template)
 
-
         readme_template = Template(
             name="readme_base",
             template_type=TemplateType.README,
@@ -217,7 +196,6 @@ class AITemplateEngine:
             },
         )
         self.register_template(readme_template)
-
 
         changelog_template = Template(
             name="changelog_base",
@@ -242,21 +220,17 @@ class AITemplateEngine:
             )
             return template.content
 
-
         parent_content = parent.content
-
 
         block_pattern = SAFE_PATTERNS["extract_template_blocks"]._get_compiled_pattern()
         blocks = block_pattern.findall(template.content)
 
-
         for block_name, block_content in blocks:
-
             dynamic_pattern = SAFE_PATTERNS["replace_template_block"].pattern.replace(
                 "BLOCK_NAME", block_name
             )
             parent_content = (
-                re.sub( # REGEX OK: safe dynamic pattern from SAFE_PATTERNS
+                re.sub(  # REGEX OK: safe dynamic pattern from SAFE_PATTERNS
                     dynamic_pattern,
                     block_content.strip(),
                     parent_content,
@@ -274,18 +248,14 @@ class AITemplateEngine:
     ) -> str:
         optimizations = template.ai_optimizations
 
-
         if optimizations.get("structured_data"):
             content = self._optimize_for_structured_data(content, context)
-
 
         if optimizations.get("decision_trees"):
             content = self._optimize_for_decision_trees(content, context)
 
-
         if optimizations.get("command_matrices"):
             content = self._optimize_for_command_matrices(content, context)
-
 
         if optimizations.get("step_by_step"):
             content = self._optimize_for_step_by_step(content, context)
@@ -293,7 +263,6 @@ class AITemplateEngine:
         return content
 
     def _render_variables(self, content: str, context: TemplateContext) -> str:
-
         replacements = {
             "project_name": context.project_name,
             "project_description": context.project_description,
@@ -302,15 +271,12 @@ class AITemplateEngine:
             "generated_at": context.generated_at.strftime("%Y-%m-%d %H:%M:%S"),
         }
 
-
         replacements.update(context.variables)
-
 
         for var_name, value in replacements.items():
             placeholder = f"{{{{{var_name}}}}}"
 
             if isinstance(value, dict | list):
-
                 value_str = json.dumps(value, indent=2)
             else:
                 value_str = value
@@ -320,7 +286,6 @@ class AITemplateEngine:
         return content
 
     def _render_sections(self, content: str, context: TemplateContext) -> str:
-
         section_pattern = SAFE_PATTERNS[
             "extract_template_sections"
         ]._get_compiled_pattern()
@@ -334,15 +299,12 @@ class AITemplateEngine:
         return section_pattern.sub(replace_section, content)
 
     def _post_process_content(self, content: str, context: TemplateContext) -> str:
-
         lines = content.split("\n")
         processed_lines = []
 
         for line in lines:
-
             line = line.rstrip()
             processed_lines.append(line)
-
 
         content = "\n".join(processed_lines)
         content = SAFE_PATTERNS["normalize_multiple_newlines"].apply(content)
@@ -352,7 +314,6 @@ class AITemplateEngine:
     def _optimize_for_structured_data(
         self, content: str, context: TemplateContext
     ) -> str:
-
         metadata = f"""<!-- AI-Optimized Documentation -->
 <!-- Generated: {context.generated_at.isoformat()} -->
 <!-- Target Audience: {context.target_audience} -->
@@ -364,8 +325,6 @@ class AITemplateEngine:
     def _optimize_for_decision_trees(
         self, content: str, context: TemplateContext
     ) -> str:
-
-
         decision_markers = {
             "if": "🔄 **Decision Point**:",
             "when": "⚡ **Trigger Condition**:",
@@ -374,9 +333,8 @@ class AITemplateEngine:
         }
 
         for marker, prefix in decision_markers.items():
-
             pattern = rf"^(\s*)(.*{re.escape(marker)}.*)$"
-            content = re.sub( # REGEX OK: escaped marker pattern, safe dynamic
+            content = re.sub(  # REGEX OK: escaped marker pattern, safe dynamic
                 pattern, rf"\1{prefix} \2", content, flags=re.MULTILINE | re.IGNORECASE
             )
 
@@ -385,8 +343,6 @@ class AITemplateEngine:
     def _optimize_for_command_matrices(
         self, content: str, context: TemplateContext
     ) -> str:
-
-
         def enhance_command_block(match: t.Any) -> str:
             command = match.group(1).strip()
             return f"""```bash
@@ -400,7 +356,6 @@ class AITemplateEngine:
         return command_pattern.sub(enhance_command_block, content)
 
     def _optimize_for_step_by_step(self, content: str, context: TemplateContext) -> str:
-
         step_pattern = SAFE_PATTERNS["extract_step_numbers"]._get_compiled_pattern()
 
         def enhance_step(match: t.Any) -> str:

@@ -1,4 +1,3 @@
-
 import typing as t
 from datetime import datetime
 from pathlib import Path
@@ -7,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_serializer
 
 
 class EmbeddingVector(BaseModel):
-
     file_path: Path = Field(..., description="Path to the source file")
     chunk_id: str = Field(..., description="Unique identifier for this chunk")
     content: str = Field(..., description="The text content that was embedded")
@@ -36,7 +34,6 @@ class EmbeddingVector(BaseModel):
 
 
 class SearchResult(BaseModel):
-
     file_path: Path = Field(..., description="Path to the matching file")
     chunk_id: str = Field(..., description="Identifier of the matching chunk")
     content: str = Field(..., description="The matching text content")
@@ -56,7 +53,6 @@ class SearchResult(BaseModel):
 
 
 class IndexStats(BaseModel):
-
     total_files: int = Field(..., description="Total number of indexed files")
     total_chunks: int = Field(..., description="Total number of text chunks")
     index_size_mb: float = Field(..., description="Index size in megabytes")
@@ -73,7 +69,6 @@ class IndexStats(BaseModel):
 
 
 class SearchQuery(BaseModel):
-
     query: str = Field(..., min_length=1, description="The search query text")
     max_results: int = Field(
         default=10, ge=1, le=100, description="Maximum number of results"
@@ -95,7 +90,6 @@ class SearchQuery(BaseModel):
 
 
 class IndexingProgress(BaseModel):
-
     current_file: Path = Field(..., description="Currently processing file")
     files_processed: int = Field(..., ge=0, description="Number of files processed")
     total_files: int = Field(..., ge=0, description="Total files to process")
@@ -117,7 +111,6 @@ class IndexingProgress(BaseModel):
 
 
 class SemanticConfig(BaseModel):
-
     embedding_model: str = Field(
         default="all-MiniLM-L6-v2", description="Sentence transformer model name"
     )
@@ -181,7 +174,6 @@ class SemanticConfig(BaseModel):
 
 
 class FileChangeEvent(BaseModel):
-
     file_path: Path = Field(..., description="Path to the changed file")
     event_type: t.Literal["created", "modified", "deleted"] = Field(
         ..., description="Type of change"
@@ -203,7 +195,6 @@ class FileChangeEvent(BaseModel):
 
 
 class SemanticContext(BaseModel):
-
     query: str = Field(..., description="The query that generated this context")
     related_files: list[SearchResult] = Field(
         ..., description="Semantically related files"

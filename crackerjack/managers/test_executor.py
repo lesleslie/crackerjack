@@ -18,34 +18,68 @@ class TestExecutor:
         self.pkg_path = pkg_path
 
     def _detect_target_project_dir(self, cmd: list[str]) -> Path:
+        """Detect target project directory from pytest command.
 
-        test_start_idx = -1
-        for i, arg in enumerate(cmd):
-            if arg == "pytest":
-                test_start_idx = i + 1
-                break
+        Args:
+            cmd: Command arguments list
+
+        Returns:
+            Detected project directory path
+        """
+        test_start_idx = self._find_pytest_index(cmd)
 
         if test_start_idx > 0 and test_start_idx < len(cmd):
-
-            for arg in cmd[test_start_idx:]:
-                if arg.startswith("-"):
-                    continue
-
-
-                test_path = Path(arg)
-                if test_path.exists():
-                    if test_path.is_dir():
-
-                        return test_path.parent
-                    elif test_path.is_file():
-
-                        return test_path.parent.parent
-                    else:
-
-                        return test_path.parent
-
+            return self._find_project_from_test_args(cmd[test_start_idx:])
 
         return self.pkg_path
+
+    def _find_pytest_index(self, cmd: list[str]) -> int:
+        """Find index of pytest command in args list.
+
+        Args:
+            cmd: Command arguments list
+
+        Returns:
+            Index after 'pytest' or -1 if not found
+        """
+        for i, arg in enumerate(cmd):
+            if arg == "pytest":
+                return i + 1
+        return -1
+
+    def _find_project_from_test_args(self, test_args: list[str]) -> Path:
+        """Find project directory from test arguments.
+
+        Args:
+            test_args: Arguments after 'pytest' command
+
+        Returns:
+            Detected project directory path
+        """
+        for arg in test_args:
+            if arg.startswith("-"):
+                continue
+
+            test_path = Path(arg)
+            if test_path.exists():
+                return self._get_project_dir_from_path(test_path)
+
+        return self.pkg_path
+
+    def _get_project_dir_from_path(self, test_path: Path) -> Path:
+        """Determine project directory from test path.
+
+        Args:
+            test_path: Path to test file or directory
+
+        Returns:
+            Project directory path
+        """
+        if test_path.is_dir():
+            return test_path.parent
+        if test_path.is_file():
+            return test_path.parent.parent
+        return test_path.parent
 
     def execute_with_progress(
         self,

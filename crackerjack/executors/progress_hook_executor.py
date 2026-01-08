@@ -1,4 +1,3 @@
-
 import time
 import typing as t
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -22,7 +21,6 @@ from crackerjack.models.task import HookResult
 
 
 class ProgressHookExecutor(HookExecutor):
-
     def __init__(
         self,
         console: Console,
@@ -46,12 +44,9 @@ class ProgressHookExecutor(HookExecutor):
         self._print_strategy_header(strategy)
 
         if not self.show_progress:
-
             return super().execute_strategy(strategy)
 
-
         with self._create_progress_bar() as progress:
-
             main_task = progress.add_task(
                 f"[cyan]Running {len(strategy.hooks)} hooks...",
                 total=len(strategy.hooks),
@@ -66,7 +61,6 @@ class ProgressHookExecutor(HookExecutor):
                     strategy, progress, main_task
                 )
 
-
         if strategy.retry_policy != RetryPolicy.NONE:
             if not self.quiet:
                 self.console.print("\n[yellow]Retrying failed hooks...[/yellow]")
@@ -74,7 +68,6 @@ class ProgressHookExecutor(HookExecutor):
 
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in results)
-
 
         performance_gain = 0.0
         if not self.quiet:
@@ -110,7 +103,6 @@ class ProgressHookExecutor(HookExecutor):
         results: list[HookResult] = []
 
         for hook in strategy.hooks:
-
             progress.update(
                 main_task,
                 description=f"[cyan]Running {hook.name}...",
@@ -118,7 +110,6 @@ class ProgressHookExecutor(HookExecutor):
 
             result = self.execute_single_hook(hook)
             results.append(result)
-
 
             status_icon = "✅" if result.status == "passed" else "❌"
             progress.update(
@@ -137,10 +128,8 @@ class ProgressHookExecutor(HookExecutor):
     ) -> list[HookResult]:
         results: list[HookResult] = []
 
-
         formatting_hooks = [h for h in strategy.hooks if h.is_formatting]
         other_hooks = [h for h in strategy.hooks if not h.is_formatting]
-
 
         for hook in formatting_hooks:
             progress.update(
@@ -157,7 +146,6 @@ class ProgressHookExecutor(HookExecutor):
                 advance=1,
                 description=f"[cyan]Completed {hook.name} {status_icon}",
             )
-
 
         if other_hooks:
             progress.update(
@@ -205,7 +193,5 @@ class ProgressHookExecutor(HookExecutor):
         return results
 
     def _display_hook_result(self, result: HookResult) -> None:
-
-
         if not self.show_progress:
             super()._display_hook_result(result)

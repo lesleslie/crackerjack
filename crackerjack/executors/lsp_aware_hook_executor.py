@@ -10,15 +10,13 @@ from crackerjack.executors.hook_executor import HookExecutionResult, HookExecuto
 from crackerjack.models.task import HookResult
 from crackerjack.services.lsp_client import LSPClient
 
-
 try:
     from crackerjack.executors.tool_proxy import ToolProxy
 except ImportError:
-    ToolProxy = None # type: ignore
+    ToolProxy = None  # type: ignore
 
 
 class LSPAwareHookExecutor(HookExecutor):
-
     def __init__(
         self,
         console: Console,
@@ -42,9 +40,7 @@ class LSPAwareHookExecutor(HookExecutor):
         start_time = time.time()
         results = []
 
-
         lsp_available = self._check_lsp_availability()
-
 
         for hook in strategy.hooks:
             self._handle_progress_start(len(strategy.hooks))
@@ -89,25 +85,23 @@ class LSPAwareHookExecutor(HookExecutor):
         with suppress(Exception):
             callback = getattr(self, "_progress_start_callback", None)
             if callback:
-
-                self._started_hooks += 1 # type: ignore[attr-defined]
-                total = self._total_hooks or total_hooks # type: ignore[attr-defined]
+                self._started_hooks += 1  # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
                 if total:
-                    callback(self._started_hooks, total) # type: ignore[attr-defined]
+                    callback(self._started_hooks, total)  # type: ignore[attr-defined]
 
     def _handle_progress_completion(self, total_hooks: int | None = None) -> None:
         with suppress(Exception):
             callback = getattr(self, "_progress_callback", None)
             if callback:
-                self._completed_hooks += 1 # type: ignore[attr-defined]
-                total = self._total_hooks or total_hooks # type: ignore[attr-defined]
+                self._completed_hooks += 1  # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
                 if total:
-                    callback(self._completed_hooks, total) # type: ignore[attr-defined]
+                    callback(self._completed_hooks, total)  # type: ignore[attr-defined]
 
     def _should_use_lsp_for_hook(
         self, hook: HookDefinition, lsp_available: bool
     ) -> bool:
-
         return (
             lsp_available
             and hook.name == "zuban"
@@ -130,7 +124,6 @@ class LSPAwareHookExecutor(HookExecutor):
                 f"🚀 Using LSP-optimized execution for {hook.name}", style="cyan"
             )
 
-
         diagnostics, summary = self.lsp_client.check_project_with_feedback(
             self.pkg_path, show_progress=not self.quiet
         )
@@ -140,7 +133,6 @@ class LSPAwareHookExecutor(HookExecutor):
         output = self._format_lsp_output(diagnostics, duration)
 
         self._display_lsp_results(hook, has_errors, output, summary)
-
 
         return self._create_lsp_hook_result(
             hook, duration, has_errors, output, diagnostics
@@ -154,7 +146,6 @@ class LSPAwareHookExecutor(HookExecutor):
         output: str,
         diagnostics: dict,
     ) -> HookResult:
-
         issues_found = [output] if has_errors else []
         issues_count = max(len(issues_found), 1 if has_errors else 0)
 
@@ -201,7 +192,6 @@ class LSPAwareHookExecutor(HookExecutor):
         if not self.use_tool_proxy or not self.tool_proxy:
             return False
 
-
         fragile_tools = {"zuban", "skylos", "bandit"}
         return hook.name in fragile_tools
 
@@ -221,9 +211,7 @@ class LSPAwareHookExecutor(HookExecutor):
                 f"🛡️ Using resilient execution for {hook.name}", style="blue"
             )
 
-
         tool_name, args = self._parse_hook_entry(hook)
-
 
         if self.tool_proxy is not None:
             exit_code = self.tool_proxy.execute_tool(tool_name, args)
@@ -233,14 +221,12 @@ class LSPAwareHookExecutor(HookExecutor):
         duration = time.time() - start_time
         status = "passed" if exit_code == 0 else "failed"
 
-
         tool_status = (
             self.tool_proxy.get_tool_status().get(tool_name, {})
             if self.tool_proxy is not None
             else {}
         )
         output = self._format_proxy_output(tool_name, tool_status, duration)
-
 
         issues_found = [output] if status == "failed" else []
         issues_count = max(len(issues_found), 1 if status == "failed" else 0)
@@ -265,7 +251,6 @@ class LSPAwareHookExecutor(HookExecutor):
             self.console.print(f"❌ {hook.name} (proxy): {error_msg}", style="red")
             self.console.print(f"🔄 Falling back to regular {hook.name} execution")
 
-
         return self.execute_single_hook(hook)
 
     def _parse_hook_entry(self, hook: HookDefinition) -> tuple[str, list[str]]:
@@ -275,12 +260,10 @@ class LSPAwareHookExecutor(HookExecutor):
         if len(entry_parts) < 3:
             raise ValueError(f"Invalid hook entry format: {entry_str}")
 
-
         if entry_parts[0] == "uv" and entry_parts[1] == "run":
             tool_name = entry_parts[2]
             args = entry_parts[3:] if len(entry_parts) > 3 else []
         else:
-
             tool_name = entry_parts[0]
             args = entry_parts[1:]
 
@@ -319,7 +302,6 @@ class LSPAwareHookExecutor(HookExecutor):
             if self.use_tool_proxy
             else [],
         }
-
 
         if self.tool_proxy:
             summary["tool_status"] = self.tool_proxy.get_tool_status()

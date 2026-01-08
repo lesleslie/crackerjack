@@ -19,7 +19,6 @@ from crackerjack.models.protocols import HookLockManagerProtocol
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -132,7 +131,6 @@ class AsyncHookExecutor:
                 max_workers=getattr(strategy, "max_workers", self.max_concurrent),
             )
 
-
             estimated_sequential = sum(
                 getattr(hook, "timeout", 30) for hook in strategy.hooks
             )
@@ -188,7 +186,6 @@ class AsyncHookExecutor:
         }
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-
         return None
 
     async def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
@@ -351,7 +348,6 @@ class AsyncHookExecutor:
                 stderr=asyncio.subprocess.PIPE,
             )
 
-
             self._running_processes.add(process)
 
             result = await self._execute_process_with_timeout(
@@ -359,7 +355,6 @@ class AsyncHookExecutor:
             )
             if result is not None:
                 return result
-
 
             duration = time.time() - start_time
             return await self._build_success_result(process, hook, duration)
@@ -506,12 +501,10 @@ class AsyncHookExecutor:
         issues = parsed_output.get("issues", [])
 
         if status == "failed" and not issues and output_text:
-
             error_lines = [
                 line.strip() for line in output_text.split("\n") if line.strip()
             ][:10]
             issues = error_lines or ["Hook failed with non-zero exit code"]
-
 
         issues_count = max(len(issues), 1 if status == "failed" else 0)
 
@@ -592,26 +585,20 @@ class AsyncHookExecutor:
         )
 
     def _parse_semgrep_output_async(self, output: str) -> int:
-
-
         json_result = self._try_parse_semgrep_json(output)
         if json_result is not None:
             return json_result
 
-
         return self._parse_semgrep_text_patterns(output)
 
     def _try_parse_semgrep_json(self, output: str) -> int | None:
-
         try:
             stripped_output = output.strip()
-
 
             if stripped_output.startswith("{"):
                 count = self._extract_file_count_from_json(stripped_output)
                 if count is not None:
                     return count
-
 
             return self._parse_semgrep_json_lines(output)
         except Exception:
@@ -632,7 +619,6 @@ class AsyncHookExecutor:
         return None
 
     def _parse_semgrep_json_lines(self, output: str) -> int | None:
-
         lines = output.splitlines()
         for line in lines:
             line = line.strip()
@@ -678,13 +664,10 @@ class AsyncHookExecutor:
         issues = []
 
         try:
-
             json_data = json.loads(output.strip())
-
 
             if "results" in json_data:
                 for result in json_data.get("results", []):
-
                     path = result.get("path", "unknown")
                     line_num = result.get("start", {}).get("line", "?")
                     rule_id = result.get("check_id", "unknown-rule")
@@ -693,7 +676,6 @@ class AsyncHookExecutor:
                     )
                     issues.append(f"{path}:{line_num} - {rule_id}: {message}")
 
-
             if "errors" in json_data:
                 for error in json_data.get("errors", []):
                     error_type = error.get("type", "SemgrepError")
@@ -701,7 +683,6 @@ class AsyncHookExecutor:
                     issues.append(f"{error_type}: {error_msg}")
 
         except json.JSONDecodeError:
-
             if output.strip():
                 issues = [line.strip() for line in output.split("\n") if line.strip()][
                     :10
@@ -714,19 +695,16 @@ class AsyncHookExecutor:
     ) -> dict[str, t.Any]:
         result = self._initialize_parse_result(returncode, output)
 
-
         if hook_name == "semgrep":
             result["files_processed"] = self._parse_semgrep_output_async(output)
             result["issues"] = self._parse_semgrep_issues_async(output)
             return result
-
 
         if hook_name == "check-added-large-files":
             result["files_processed"] = self._parse_large_files_output(
                 output, returncode
             )
             return result
-
 
         result["files_processed"] = self._extract_file_count_from_output(output)
         return result
@@ -743,22 +721,17 @@ class AsyncHookExecutor:
         }
 
     def _parse_large_files_output(self, output: str, returncode: int) -> int:
-
         clean_output = output.replace("\\n", "\n").replace("\\t", "\t")
-
 
         failure_count = self._find_large_file_failures(clean_output)
         if failure_count is not None:
             return failure_count
 
-
         if self._is_all_files_under_limit(clean_output, returncode):
             return 0
 
-
         if returncode != 0:
             return 1
-
 
         return 0
 

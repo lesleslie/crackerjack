@@ -1,4 +1,3 @@
-
 import json
 import typing as t
 from pathlib import Path
@@ -25,14 +24,13 @@ def register_semantic_tools(mcp_app: t.Any) -> None:
 
 
 def _register_index_file_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def index_file_semantic(
         file_path: str,
         config_json: str = "",
     ) -> str:
         try:
             validator = get_input_validator()
-
 
             path_result = validator.validate_file_path(file_path)
             if not path_result.valid:
@@ -46,14 +44,11 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
 
             file_path_obj = Path(path_result.sanitized_value or file_path)
 
-
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
 
-
             vector_store = VectorStore(config, db_path=_get_persistent_db_path())
-
 
             embeddings = vector_store.index_file(file_path_obj)
 
@@ -78,7 +73,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
 
 
 def _register_search_semantic_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def search_semantic(
         query: str,
         max_results: int = 10,
@@ -87,7 +82,6 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
         config_json: str = "",
     ) -> str:
         try:
-
             sanitized_query, query_error = _validate_search_query(query)
             if query_error:
                 return _create_error_response(
@@ -95,17 +89,14 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
                     validation_type="query_validation",
                 )
 
-
             param_error = _validate_search_parameters(max_results, min_similarity)
             if param_error:
                 return _create_error_response(param_error)
-
 
             file_types_list = _parse_file_types(file_types)
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
-
 
             search_query = SearchQuery(
                 query=sanitized_query,
@@ -116,7 +107,6 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
 
             vector_store = VectorStore(config, db_path=_get_persistent_db_path())
             results = vector_store.search(search_query)
-
 
             response_data = _format_search_results(
                 results, sanitized_query, max_results, min_similarity
@@ -131,14 +121,12 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
 
 
 def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_semantic_stats(config_json: str = "") -> str:
         try:
-
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
-
 
             vector_store = VectorStore(config, db_path=_get_persistent_db_path())
             stats = vector_store.get_stats()
@@ -172,14 +160,13 @@ def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
 
 
 def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def remove_file_from_semantic_index(
         file_path: str,
         config_json: str = "",
     ) -> str:
         try:
             validator = get_input_validator()
-
 
             path_result = validator.validate_file_path(file_path)
             if not path_result.valid:
@@ -193,11 +180,9 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
 
             file_path_obj = Path(path_result.sanitized_value or file_path)
 
-
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
-
 
             vector_store = VectorStore(config, db_path=_get_persistent_db_path())
             success = vector_store.remove_file(file_path_obj)
@@ -221,22 +206,19 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
 
 
 def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def get_embeddings(
         texts: str,
         config_json: str = "",
     ) -> str:
         try:
-
             texts_list, parse_error = _parse_texts_input(texts)
             if parse_error:
                 return parse_error
 
-
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
-
 
             embeddings = _generate_embeddings_for_texts(texts_list, config)
 
@@ -252,14 +234,13 @@ def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
 
 
 def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def calculate_similarity_semantic(
         embedding1: str,
         embedding2: str,
         config_json: str = "",
     ) -> str:
         try:
-
             try:
                 emb1 = json.loads(embedding1)
                 emb2 = json.loads(embedding2)
@@ -279,11 +260,9 @@ def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
                     }
                 )
 
-
             config = _parse_semantic_config(config_json)
             if isinstance(config, str):
                 return config
-
 
             embedding_service = EmbeddingService(config)
             similarity = embedding_service.calculate_similarity(emb1, emb2)
@@ -416,7 +395,6 @@ def _format_embeddings_response(texts_list: list[str], embeddings: list) -> str:
 
 def _parse_semantic_config(config_json: str) -> SemanticConfig | str:
     if not config_json.strip():
-
         return SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,

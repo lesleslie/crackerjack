@@ -1,7 +1,4 @@
-
 import re
-
-
 from typing import TYPE_CHECKING
 
 from .core import MAX_ITERATIONS, CompiledPatternCache, ValidatedPattern
@@ -292,7 +289,6 @@ def validate_path_security(path_str: str) -> dict[str, list[str]]:
 
 
 class RegexPatternsService:
-
     def update_pyproject_version(self, content: str, new_version: str) -> str:
         return update_pyproject_version(content, new_version)
 
@@ -300,7 +296,6 @@ class RegexPatternsService:
         return remove_coverage_fail_under(content)
 
     def update_version_in_changelog(self, content: str, new_version: str) -> str:
-
         return content
 
     def mask_tokens_in_text(self, text: str) -> str:

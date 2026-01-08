@@ -1,4 +1,3 @@
-
 import hashlib
 import json
 from collections.abc import Callable
@@ -12,7 +11,6 @@ from crackerjack.services.profiler import ToolProfiler
 
 @dataclass
 class FileHash:
-
     path: str
     hash: str
     size: int
@@ -21,7 +19,6 @@ class FileHash:
 
 @dataclass
 class CacheEntry:
-
     tool_name: str
     file_hash: FileHash
     result: Any
@@ -32,7 +29,6 @@ class CacheEntry:
 
 @dataclass
 class ExecutionResult:
-
     tool_name: str
     files_processed: int
     files_cached: int
@@ -47,7 +43,6 @@ class ExecutionResult:
 
 
 class IncrementalExecutor:
-
     def __init__(
         self,
         cache_dir: Path | None = None,
@@ -75,7 +70,6 @@ class IncrementalExecutor:
                 modified_time=stat.st_mtime,
             )
         except OSError:
-
             return FileHash(
                 path=str(file_path),
                 hash="",
@@ -98,7 +92,6 @@ class IncrementalExecutor:
             current_time = time.time()
 
             for entry_data in data.get("entries", []):
-
                 if current_time - entry_data["timestamp"] > self.ttl_seconds:
                     continue
 
@@ -115,7 +108,6 @@ class IncrementalExecutor:
                 key = self._cache_key(entry.tool_name, file_hash)
                 self._cache[key] = entry
         except (json.JSONDecodeError, KeyError, OSError):
-
             self._cache = {}
 
     def _save_cache(self) -> None:
@@ -159,21 +151,17 @@ class IncrementalExecutor:
         results: dict[str, Any] = {}
 
         for file_path in files:
-
             current_hash = self._compute_file_hash(file_path)
             cache_key = self._cache_key(tool_name, current_hash)
-
 
             if not force_rerun and cache_key in self._cache:
                 cached_entry = self._cache[cache_key]
                 results[str(file_path)] = cached_entry.result
                 files_cached += 1
 
-
                 if self.profiler and tool_name in self.profiler.results:
                     self.profiler.results[tool_name].cache_hits += 1
             else:
-
                 try:
                     result = tool_func(file_path)
                     success = True
@@ -186,10 +174,8 @@ class IncrementalExecutor:
                 results[str(file_path)] = result
                 files_changed += 1
 
-
                 if self.profiler and tool_name in self.profiler.results:
                     self.profiler.results[tool_name].cache_misses += 1
-
 
                 entry = CacheEntry(
                     tool_name=tool_name,
@@ -201,11 +187,9 @@ class IncrementalExecutor:
                 )
                 self._cache[cache_key] = entry
 
-
         total_files = len(files)
         cache_hit_rate = (files_cached / total_files * 100) if total_files > 0 else 0.0
         execution_time = time.perf_counter() - start_time
-
 
         self._save_cache()
 
@@ -230,7 +214,6 @@ class IncrementalExecutor:
             current_hash = self._compute_file_hash(file_path)
             cache_key = self._cache_key(tool_name, current_hash)
 
-
             if cache_key not in self._cache:
                 changed_files.append(file_path)
 
@@ -239,7 +222,6 @@ class IncrementalExecutor:
     def invalidate_file(self, file_path: Path) -> int:
         file_str = str(file_path)
         invalidated = 0
-
 
         keys_to_remove = [
             key
@@ -258,11 +240,9 @@ class IncrementalExecutor:
 
     def clear_cache(self, tool_name: str | None = None) -> int:
         if tool_name is None:
-
             count = len(self._cache)
             self._cache = {}
         else:
-
             keys_to_remove = [
                 key
                 for key, entry in self._cache.items()

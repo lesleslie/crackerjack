@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from pathlib import Path
@@ -11,7 +10,6 @@ if TYPE_CHECKING:
 
 
 class CrackerjackMCPSettings(MCPServerSettings):
-
     @classmethod
     def from_crackerjack_settings(
         cls,

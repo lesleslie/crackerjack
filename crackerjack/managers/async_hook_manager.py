@@ -102,7 +102,6 @@ class AsyncHookManager:
         failed = sum(1 for r in results if r.status == "failed")
         errors = sum(1 for r in results if r.status in ("timeout", "error"))
 
-
         total_duration = (
             elapsed_time
             if elapsed_time is not None

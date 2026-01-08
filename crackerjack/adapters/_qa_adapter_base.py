@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -9,8 +8,6 @@ from pathlib import Path
 from pydantic import BaseModel, Field, field_validator
 
 from crackerjack.models.adapter_metadata import AdapterMetadata
-
-
 from crackerjack.models.protocols import QAAdapterProtocol
 
 if t.TYPE_CHECKING:
@@ -21,7 +18,6 @@ if t.TYPE_CHECKING:
 
 
 class QABaseSettings(BaseModel):
-
     enabled: bool = True
     timeout_seconds: int = Field(300, ge=1, le=7200)
     file_patterns: list[str] = Field(default_factory=lambda: ["**/*.py"])
@@ -48,7 +44,6 @@ class QABaseSettings(BaseModel):
 
 
 class QAAdapterBase:
-
     settings: QABaseSettings | None = None
     metadata: AdapterMetadata | None = None
 
@@ -62,7 +57,6 @@ class QAAdapterBase:
                 timeout_seconds=300,
                 max_workers=4,
             )
-
 
         max_workers = self.settings.max_workers
         self._semaphore = asyncio.Semaphore(max_workers)
@@ -107,14 +101,12 @@ class QAAdapterBase:
         }
 
     def _should_check_file(self, file_path: Path, config: QACheckConfig) -> bool:
-
         matches_include = any(
             file_path.match(pattern) for pattern in config.file_patterns
         )
 
         if not matches_include:
             return False
-
 
         matches_exclude = any(
             file_path.match(pattern) for pattern in config.exclude_patterns
@@ -132,7 +124,6 @@ class QAAdapterBase:
             await self._cleanup()
 
     async def _cleanup(self) -> None:
-
         self._semaphore = None
 
 

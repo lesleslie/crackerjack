@@ -1,4 +1,3 @@
-
 import json
 from pathlib import Path
 from typing import Any
@@ -9,7 +8,6 @@ from pydantic import BaseModel, ValidationError
 
 
 class ConfigService:
-
     @staticmethod
     def load_config(path: str | Path) -> dict[str, Any]:
         path = Path(path)
@@ -79,7 +77,6 @@ class ConfigService:
         path = Path(path)
         format = format or path.suffix.lower().lstrip(".")
 
-
         path.parent.mkdir(parents=True, exist_ok=True)
 
         if format == "json":
@@ -129,7 +126,7 @@ def _load_toml_from_text(content: str) -> dict[str, Any]:
     try:
         import tomllib
     except ImportError:
-        tomllib = None # type: ignore[assignment]
+        tomllib = None  # type: ignore[assignment]
 
     if tomllib is not None:
         return tomllib.loads(content)
@@ -143,7 +140,7 @@ def _dump_toml(config: dict[str, Any]) -> str:
     try:
         import toml
     except ImportError:
-        toml = None # type: ignore[assignment]
+        toml = None  # type: ignore[assignment]
 
     if toml is not None:
         return toml.dumps(config)

@@ -95,7 +95,6 @@ class HookExecutor:
     def execute_strategy(self, strategy: HookStrategy) -> HookExecutionResult:
         start_time = time.time()
 
-
         results = self._execute_hooks(strategy)
 
         results = self._apply_retries_if_needed(strategy, results)
@@ -151,7 +150,6 @@ class HookExecutor:
         )
 
     def _print_strategy_header(self, strategy: HookStrategy) -> None:
-
         return None
 
     def _execute_sequential(self, strategy: HookStrategy) -> list[HookResult]:
@@ -186,10 +184,8 @@ class HookExecutor:
         formatting_hooks = [h for h in strategy.hooks if h.is_formatting]
         other_hooks = [h for h in strategy.hooks if not h.is_formatting]
 
-
         for hook in formatting_hooks:
             self._execute_single_hook_with_progress(hook, results)
-
 
         if other_hooks:
             self._execute_parallel_hooks(other_hooks, strategy, results)
@@ -221,8 +217,6 @@ class HookExecutor:
         strategy: HookStrategy,
         results: list[HookResult],
     ) -> None:
-
-
         run_hook_func = self._create_run_hook_func(results, other_hooks)
 
         with ThreadPoolExecutor(max_workers=strategy.max_workers) as executor:
@@ -236,7 +230,6 @@ class HookExecutor:
     def _create_run_hook_func(
         self, results: list[HookResult], other_hooks: list[HookDefinition]
     ) -> t.Callable[[HookDefinition], HookResult]:
-
         def _run_with_start(h: HookDefinition) -> HookResult:
             if self._progress_start_callback:
                 with suppress(Exception):
@@ -303,7 +296,6 @@ class HookExecutor:
         if not self.git_service:
             return None
 
-
         extension_map = {
             "ruff-check": [".py"],
             "ruff-format": [".py"],
@@ -329,7 +321,6 @@ class HookExecutor:
 
         changed_files = self.git_service.get_changed_files_by_extension(extensions)
 
-
         return changed_files or None
 
     def _run_hook_subprocess(
@@ -340,9 +331,7 @@ class HookExecutor:
         try:
             repo_root = self.pkg_path
 
-
             changed_files = self._get_changed_files_for_hook(hook)
-
 
             command = (
                 hook.build_command(changed_files)
@@ -350,10 +339,8 @@ class HookExecutor:
                 else hook.get_command()
             )
 
-
             if hook.timeout > 120:
                 return self._run_with_monitoring(command, hook, repo_root, clean_env)
-
 
             return subprocess.run(
                 command,
@@ -388,7 +375,6 @@ class HookExecutor:
             ProcessMonitor,
         )
 
-
         process = subprocess.Popen(
             command,
             cwd=cwd,
@@ -398,13 +384,11 @@ class HookExecutor:
             text=True,
         )
 
-
         monitor = ProcessMonitor(
             check_interval=30.0,
             cpu_threshold=0.1,
             stall_timeout=180.0,
         )
-
 
         def on_stall(hook_name: str, metrics: ProcessMetrics) -> None:
             self.console.print(
@@ -412,11 +396,9 @@ class HookExecutor:
                 f"(CPU < 0.1% for 3+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]"
             )
 
-
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
 
         try:
-
             stdout, stderr = process.communicate(timeout=hook.timeout)
             returncode = process.returncode
 
@@ -428,19 +410,16 @@ class HookExecutor:
             )
 
         except subprocess.TimeoutExpired:
-
             process.kill()
             stdout, stderr = process.communicate()
             raise
 
         finally:
-
             monitor.stop_monitoring()
 
     def _display_hook_output_if_needed(
         self, result: subprocess.CompletedProcess[str], hook_name: str = ""
     ) -> None:
-
         if hook_name == "complexipy" and not self.debug:
             return
 
@@ -458,28 +437,21 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> HookResult:
-
         status = self._determine_initial_status(hook, result)
 
-
         issues_found = self._extract_issues_from_process_output(hook, result, status)
-
 
         status = self._update_status_for_reporting_tools(
             hook, status, issues_found, result
         )
 
-
         parsed_output = self._parse_hook_output(result, hook.name)
 
-
         exit_code, error_message = self._determine_exit_code_and_error(status, result)
-
 
         issues_found = self._handle_no_issues_for_failed_hook(
             status, issues_found, result
         )
-
 
         issues_count = self._calculate_issues_count(status, issues_found)
 
@@ -515,7 +487,6 @@ class HookExecutor:
             else:
                 return "failed"
         else:
-
             return "passed" if result.returncode == 0 else "failed"
 
     def _update_status_for_reporting_tools(
@@ -529,7 +500,6 @@ class HookExecutor:
 
         if hook.name in reporting_tools and issues_found:
             status = "failed"
-
 
         if hook.name in reporting_tools and self.debug and result:
             self.console.print(
@@ -545,7 +515,6 @@ class HookExecutor:
         exit_code = result.returncode if status == "failed" else None
         error_message = None
         if status == "failed" and result.stderr.strip():
-
             error_message = result.stderr.strip()[:500]
         return exit_code, error_message
 
@@ -558,7 +527,6 @@ class HookExecutor:
         if status == "failed" and not issues_found:
             output_text = (result.stdout + result.stderr).strip()
             if output_text:
-
                 error_lines = [
                     line.strip() for line in output_text.split("\n") if line.strip()
                 ][:10]
@@ -576,7 +544,6 @@ class HookExecutor:
     ) -> list[str]:
         error_output = (result.stdout + result.stderr).strip()
 
-
         reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
 
         if self.debug and hook.name in reporting_tools:
@@ -585,14 +552,11 @@ class HookExecutor:
                 f"output_len={len(error_output)}[/yellow]"
             )
 
-
         if hook.name == "semgrep":
             return self._parse_semgrep_issues(error_output)
 
-
         if hook.name in reporting_tools:
             return self._extract_issues_for_reporting_tools(hook, error_output)
-
 
         return self._extract_issues_for_regular_tools(
             hook, error_output, status, result
@@ -601,7 +565,6 @@ class HookExecutor:
     def _extract_issues_for_reporting_tools(
         self, hook: HookDefinition, error_output: str
     ) -> list[str]:
-
         if hook.name == "complexipy":
             return self._parse_complexipy_issues(error_output)
         if hook.name == "refurb":
@@ -619,7 +582,6 @@ class HookExecutor:
         status: str,
         result: subprocess.CompletedProcess[str],
     ) -> list[str]:
-
         if status == "passed":
             return []
 
@@ -644,14 +606,11 @@ class HookExecutor:
         import re
         from collections import Counter
 
-
         path_pattern = r"\./([a-z_][a-z0-9_]*)/[a-z_]"
         matches = re.findall(path_pattern, output, re.IGNORECASE)
 
         if matches:
-
             return Counter(matches).most_common(1)[0][0]
-
 
         from crackerjack.config.tool_commands import _detect_package_name_cached
 
@@ -661,16 +620,12 @@ class HookExecutor:
         return "│" in line and package_name in line
 
     def _parse_complexipy_issues(self, output: str) -> list[str]:
-
         package_name = self._detect_package_from_output(output)
 
         issues = []
         for line in output.split("\n"):
-
             if self._should_include_line(line, package_name):
-
                 if not self._is_header_or_separator_line(line):
-
                     parts = [p.strip() for p in line.split("│") if p.strip()]
                     complexity = self._extract_complexity_from_parts(parts)
 
@@ -686,7 +641,6 @@ class HookExecutor:
             if "[FURB" not in line or ":" not in line:
                 continue
 
-
             match = re.search(
                 r"(.+?):\s*(\d+):\s*\d+\s+\[(\w+)\]:\s*(.+)", line.strip()
             )
@@ -694,53 +648,40 @@ class HookExecutor:
             if match:
                 file_path, line_num, error_code, message = match.groups()
 
-
                 short_path = self._shorten_path(file_path)
-
 
                 formatted = f"{short_path}:{line_num} [{error_code}] {message.strip()}"
                 issues.append(formatted)
             else:
-
                 issues.append(line.strip())
 
         return issues
 
     def _shorten_path(self, path: str) -> str:
         try:
-
             file_path = Path(path)
-
 
             if file_path.is_absolute():
                 try:
                     relative = file_path.relative_to(self.pkg_path)
                     return str(relative).replace("\\", "/")
                 except ValueError:
-
                     return file_path.name
-
 
             clean_path = str(file_path).lstrip("./")
             return clean_path.replace("\\", "/")
 
         except Exception:
-
             return path
 
     def _parse_gitleaks_issues(self, output: str) -> list[str]:
-
         if "no leaks found" in output.lower():
             return []
         return [
             line.strip()
             for line in output.split("\n")
-            if not (
-                "WRN" in line and "Invalid .gitleaksignore" in line
-            )
-            and any(
-                x in line.lower() for x in ("leak", "secret", "credential", "api")
-            )
+            if not ("WRN" in line and "Invalid .gitleaksignore" in line)
+            and any(x in line.lower() for x in ("leak", "secret", "credential", "api"))
             and "found" not in line.lower()
         ]
 
@@ -754,7 +695,6 @@ class HookExecutor:
                 parsing_unused = True
                 continue
             if parsing_unused and line.strip() and not line.strip().startswith("["):
-
                 dep_name = line.strip().lstrip("- ")
                 if dep_name:
                     issues.append(f"Unused dependency: {dep_name}")
@@ -766,20 +706,16 @@ class HookExecutor:
         import json
 
         try:
-
             json_data = json.loads(output.strip())
             issues = []
 
-
             issues.extend(self._extract_semgrep_results(json_data))
-
 
             issues.extend(self._extract_semgrep_errors(json_data))
 
             return issues
 
         except json.JSONDecodeError:
-
             if output.strip():
                 return [line.strip() for line in output.split("\n") if line.strip()][
                     :10
@@ -790,7 +726,6 @@ class HookExecutor:
     def _extract_semgrep_results(self, json_data: dict) -> list[str]:
         issues = []
         for result in json_data.get("results", []):
-
             path = result.get("path", "unknown")
             line_num = result.get("start", {}).get("line", "?")
             rule_id = result.get("check_id", "unknown-rule")
@@ -813,14 +748,12 @@ class HookExecutor:
             error_type = error.get("type", "SemgrepError")
             error_msg = error.get("message", str(error))
 
-
             if error_type in INFRA_ERROR_TYPES:
                 self.console.print(
                     f"[yellow]Warning: Semgrep infrastructure error: "
                     f"{error_type}: {error_msg}[/yellow]"
                 )
             else:
-
                 issues.append(f"{error_type}: {error_msg}")
         return issues
 
@@ -865,7 +798,6 @@ class HookExecutor:
     ) -> dict[str, t.Any]:
         output = result.stdout + result.stderr
 
-
         if hook_name == "semgrep":
             files_processed = self._parse_semgrep_output(result)
         else:
@@ -891,13 +823,9 @@ class HookExecutor:
         self,
         result: subprocess.CompletedProcess[str],
     ) -> int:
-
-
         json_files = self._parse_semgrep_json_output(result)
         if json_files is not None and json_files >= 0:
-
             return json_files
-
 
         return self._parse_semgrep_text_output(result.stdout + result.stderr)
 
@@ -905,7 +833,6 @@ class HookExecutor:
         self,
         result: subprocess.CompletedProcess[str],
     ) -> int | None:
-
         output = result.stdout + result.stderr
         return self._process_output_for_json(output)
 
@@ -941,7 +868,6 @@ class HookExecutor:
         try:
             json_data = json.loads(line)
             if "results" in json_data:
-
                 file_paths = {
                     result.get("path") for result in json_data.get("results", [])
                 }
@@ -952,7 +878,6 @@ class HookExecutor:
 
     def _parse_semgrep_text_output(self, output: str) -> int:
         import re
-
 
         semgrep_patterns = [
             r"found\s+(\d+)\s+issues?\s+in\s+(\d+)\s+files?",
@@ -975,7 +900,6 @@ class HookExecutor:
                 if len(match) == 2:
                     return self._handle_issues_in_files_match(match)
                 elif len(match) == 1 and "no issues" not in output.lower():
-
                     continue
             elif "no issues" in output.lower():
                 return 0
@@ -989,20 +913,16 @@ class HookExecutor:
     def _parse_generic_hook_output(self, output: str) -> int:
         files_processed = 0
 
-
         if "files" in output.lower():
             files_processed = self._extract_file_count_from_patterns(output)
 
-
         if not files_processed and "ruff" in output.lower():
-
             files_processed = self._extract_file_count_for_ruff_like_tools(output)
 
         return files_processed
 
     def _extract_file_count_from_patterns(self, output: str) -> int:
         import re
-
 
         all_matches = []
         file_count_patterns = [
@@ -1018,9 +938,7 @@ class HookExecutor:
         for pattern in file_count_patterns:
             matches = re.findall(pattern, output, re.IGNORECASE)
             if matches:
-
                 all_matches.extend([int(m) for m in matches if m.isdigit()])
-
 
         if all_matches:
             return max(all_matches)
@@ -1030,10 +948,8 @@ class HookExecutor:
     def _extract_file_count_for_ruff_like_tools(self, output: str) -> int:
         import re
 
-
         all_passed_match = re.search(r"All\s+checks?\s+passed!", output, re.IGNORECASE)
         if all_passed_match:
-
             other_matches = re.findall(r"(\d+)\s+files?", output, re.IGNORECASE)
             if other_matches:
                 all_matches = [int(m) for m in other_matches if m.isdigit()]
@@ -1055,7 +971,6 @@ class HookExecutor:
         else:
             dots_needed = max(0, content_width - len(result.name))
             line = result.name + ("." * dots_needed)
-
 
         self.console.print(f"{line} {status_icon}")
 

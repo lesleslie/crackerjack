@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -28,7 +27,6 @@ logger = logging.getLogger(__name__)
 
 
 class PipAuditSettings(ToolAdapterSettings):
-
     tool_name: str = "pip-audit"
     use_json_output: bool = True
     require_hashes: bool = False
@@ -41,7 +39,6 @@ class PipAuditSettings(ToolAdapterSettings):
 
 
 class PipAuditAdapter(BaseToolAdapter):
-
     settings: PipAuditSettings | None = None
 
     def __init__(self, settings: PipAuditSettings | None = None) -> None:
@@ -89,44 +86,33 @@ class PipAuditAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.use_json_output:
             cmd.extend(["--format", "json"])
 
-
         cmd.extend(["--vulnerability-service", self.settings.vulnerability_service])
-
 
         if self.settings.output_desc:
             cmd.append("--desc")
 
-
         if self.settings.skip_editable:
             cmd.append("--skip-editable")
-
 
         if self.settings.require_hashes:
             cmd.append("--require-hashes")
 
-
         if self.settings.dry_run:
             cmd.append("--dry-run")
-
 
         if self.settings.fix:
             cmd.append("--fix")
 
-
         if self.settings.cache_dir:
             cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
-
 
         for file_path in files:
             if file_path.name in ("requirements.txt", "pyproject.toml"):
                 cmd.extend(["-r", str(file_path)])
             elif file_path.is_dir():
-
-
                 pass
 
         logger.info(
@@ -154,19 +140,15 @@ class PipAuditAdapter(BaseToolAdapter):
             f"vulnerability {vuln_id}",
         ]
 
-
         cve_aliases = [a for a in aliases if a.startswith("CVE-")]
         if cve_aliases:
             message_parts.append(f"({', '.join(cve_aliases)})")
 
-
         if description:
-
             desc_preview = (
                 description[:100] + "..." if len(description) > 100 else description
             )
             message_parts.append(f"- {desc_preview}")
-
 
         if fix_versions:
             message_parts.append(f"Fix available: {', '.join(fix_versions[:3])}")
@@ -253,7 +235,6 @@ class PipAuditAdapter(BaseToolAdapter):
         lines = output.strip().split("\n")
 
         for line in lines:
-
             if "PYSEC-" in line or "CVE-" in line or "vulnerability" in line.lower():
                 issue = self._parse_text_line(line)
                 if issue:
@@ -268,8 +249,6 @@ class PipAuditAdapter(BaseToolAdapter):
         return issues
 
     def _parse_text_line(self, line: str) -> ToolIssue | None:
-
-
         try:
             return ToolIssue(
                 file_path=Path("pyproject.toml"),

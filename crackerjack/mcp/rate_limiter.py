@@ -35,10 +35,10 @@ class RateLimiter:
         self.requests_per_hour = requests_per_hour
 
         self.minute_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque[float](maxlen=requests_per_minute), # type: ignore[arg-type, misc]
+            lambda: deque[float](maxlen=requests_per_minute),  # type: ignore[arg-type, misc]
         )
         self.hour_windows: dict[str, deque[float]] = defaultdict(
-            lambda: deque[float](maxlen=requests_per_hour), # type: ignore[arg-type, misc]
+            lambda: deque[float](maxlen=requests_per_hour),  # type: ignore[arg-type, misc]
         )
 
         self.global_minute_window: deque[float] = deque[float](
@@ -327,7 +327,6 @@ class RateLimitMiddleware:
         except asyncio.CancelledError:
             raise
         except Exception:
-
             return
 
     def get_comprehensive_stats(self) -> dict[str, t.Any]:

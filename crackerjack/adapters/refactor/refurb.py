@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -29,7 +28,6 @@ logger = logging.getLogger(__name__)
 
 
 class RefurbSettings(ToolAdapterSettings):
-
     tool_name: str = "refurb"
     use_json_output: bool = False
     enable_all: bool = False
@@ -40,7 +38,6 @@ class RefurbSettings(ToolAdapterSettings):
 
 
 class RefurbAdapter(BaseToolAdapter):
-
     settings: RefurbSettings | None = None
 
     def __init__(self, settings: RefurbSettings | None = None) -> None:
@@ -51,7 +48,6 @@ class RefurbAdapter(BaseToolAdapter):
 
     async def init(self) -> None:
         if not self.settings:
-
             timeout_seconds = self._get_timeout_from_settings()
 
             self.settings = RefurbSettings(
@@ -93,28 +89,22 @@ class RefurbAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.enable_all:
             cmd.append("--enable-all")
-
 
         if self.settings.disable_checks:
             for check in self.settings.disable_checks:
                 cmd.extend(["--ignore", check])
 
-
         if self.settings.enable_checks:
             for check in self.settings.enable_checks:
                 cmd.extend(["--enable", check])
 
-
         if self.settings.python_version:
             cmd.extend(["--python-version", self.settings.python_version])
 
-
         if self.settings.explain:
             cmd.append("--explain")
-
 
         cmd.extend([str(f) for f in files])
 
@@ -143,7 +133,6 @@ class RefurbAdapter(BaseToolAdapter):
         logger.debug("Parsing Refurb text output", extra={"line_count": len(lines)})
 
         for line in lines:
-
             if "[FURB" not in line:
                 continue
 
@@ -173,11 +162,9 @@ class RefurbAdapter(BaseToolAdapter):
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
 
-
             remaining = parts[2].strip()
             column_number = self._extract_column_number(remaining)
             message_part = self._extract_message_part(remaining, column_number)
-
 
             code, message = self._extract_code_and_message(message_part)
 
@@ -225,7 +212,6 @@ class RefurbAdapter(BaseToolAdapter):
 
         current_dir = Path.cwd()
 
-
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
             with suppress(Exception):
@@ -235,23 +221,18 @@ class RefurbAdapter(BaseToolAdapter):
                     data = tomllib.load(f)
 
                 if "project" in data and "name" in data["project"]:
-
                     package_name = str(data["project"]["name"]).replace("-", "_")
-
 
                     if (current_dir / package_name).exists():
                         return package_name
 
-
         if (current_dir / current_dir.name).exists():
             return current_dir.name
-
 
         return "src"
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         package_dir = self._detect_package_directory()
 
@@ -260,9 +241,7 @@ class RefurbAdapter(BaseToolAdapter):
             check_name=self.adapter_name,
             check_type=QACheckType.REFACTOR,
             enabled=True,
-            file_patterns=[
-                f"{package_dir}/**/*.py"
-            ],
+            file_patterns=[f"{package_dir}/**/*.py"],
             exclude_patterns=[
                 "**/test_*.py",
                 "**/tests/**",

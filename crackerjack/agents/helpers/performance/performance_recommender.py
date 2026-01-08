@@ -1,4 +1,3 @@
-
 import operator
 import typing as t
 from dataclasses import dataclass
@@ -9,14 +8,12 @@ from ...base import AgentContext
 
 @dataclass
 class OptimizationResult:
-
     lines: list[str]
     modified: bool
     optimization_description: str | None = None
 
 
 class PerformanceRecommender:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
         self.optimization_stats: dict[str, int] = {
@@ -437,7 +434,6 @@ class PerformanceRecommender:
         modified = False
         instances = issue.get("instances", [])
 
-
         if not instances:
             return lines, modified
 
@@ -478,12 +474,10 @@ class PerformanceRecommender:
     def _find_candidate_indices(
         lines: list[str], original_idx: int, target_content: str
     ) -> list[int]:
-
         if PerformanceRecommender._is_valid_original_index(
             lines, original_idx, target_content
         ):
             return [original_idx]
-
 
         if target_content:
             exact_matches = PerformanceRecommender._find_exact_content_matches(
@@ -491,7 +485,6 @@ class PerformanceRecommender:
             )
             if exact_matches:
                 return exact_matches
-
 
         return PerformanceRecommender._find_pattern_matches(lines)
 

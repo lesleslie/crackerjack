@@ -18,10 +18,10 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
-        
+
         # Verify environment variables are set
         assert os.environ.get('CRACKERJACK_DEBUG') == '1'
         assert os.environ.get('AI_AGENT') == '1'
@@ -34,10 +34,10 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=False)
-        
+
         # Verify environment variables are set
         assert os.environ.get('AI_AGENT') == '1'
         assert os.environ.get('CRACKERJACK_DEBUG') is None
@@ -50,10 +50,10 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=True)
-        
+
         # Verify environment variables are set
         assert os.environ.get('CRACKERJACK_DEBUG') == '1'
         assert os.environ.get('AI_AGENT_DEBUG') == '1'
@@ -66,10 +66,10 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=False)
-        
+
         # Verify no environment variables are set
         assert os.environ.get('CRACKERJACK_DEBUG') is None
         assert os.environ.get('AI_AGENT') is None
@@ -83,13 +83,13 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
-        
+
         # Verify console output was called
         assert mock_print.call_count >= 4
-        
+
         # Check that the expected messages were printed
         calls = [str(call) for call in mock_print.call_args_list]
         assert any('AI Agent Debug Mode Configuration' in str(call) for call in calls)
@@ -103,13 +103,13 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=False, debug_mode=True)
-        
+
         # Verify console output was called
         assert mock_print.call_count >= 2
-        
+
         # Check that the expected messages were printed
         calls = [str(call) for call in mock_print.call_args_list]
         assert any('AI Debug Mode Configuration' in str(call) for call in calls)
@@ -121,16 +121,16 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
-        
+
         # Verify environment variables persist
         assert os.environ.get('AI_AGENT') == '1'
-        
+
         # Call again with different parameters
         setup_ai_agent_env(ai_agent=False, debug_mode=False)
-        
+
         # Verify environment variables can be changed
         # Note: This test shows that the function can be called multiple times
         # The actual values depend on the last call
@@ -141,10 +141,10 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call the function with default debug_mode (False)
         setup_ai_agent_env(ai_agent=True)
-        
+
         # Verify environment variables are set correctly
         assert os.environ.get('AI_AGENT') == '1'
         assert os.environ.get('CRACKERJACK_DEBUG') is None
@@ -154,10 +154,10 @@ class TestCLIHandlers:
         # Set some initial environment variables
         os.environ['AI_AGENT'] = '0'
         os.environ['AI_AGENT_DEBUG'] = '0'
-        
+
         # Call the function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
-        
+
         # Verify environment variables are overwritten
         assert os.environ.get('AI_AGENT') == '1'
         assert os.environ.get('AI_AGENT_DEBUG') == '1'
@@ -179,14 +179,14 @@ class TestCLIHandlers:
         for var in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']:
             if var in os.environ:
                 del os.environ[var]
-        
+
         # Call function
         setup_ai_agent_env(ai_agent=True, debug_mode=True)
-        
+
         # Verify only expected environment variables are set
         env_vars = list(os.environ.keys())
         unexpected_vars = [var for var in env_vars if var.startswith(('CRACKERJACK', 'AI_AGENT')) and var not in ['CRACKERJACK_DEBUG', 'AI_AGENT', 'AI_AGENT_DEBUG', 'AI_AGENT_VERBOSE']]
-        
+
         assert len(unexpected_vars) == 0, f"Unexpected environment variables set: {unexpected_vars}"
 
 
@@ -204,7 +204,7 @@ def test_cli_handlers_module_import():
 def test_cli_handlers_console_instance():
     """Test that the console instance is properly configured."""
     from crackerjack.cli.handlers import console
-    
+
     # Verify console is a Rich Console instance
     from rich.console import Console
     assert isinstance(console, Console)
@@ -213,7 +213,7 @@ def test_cli_handlers_console_instance():
 def test_cli_handlers_logger_instance():
     """Test that the logger instance is properly configured."""
     from crackerjack.cli.handlers import logger
-    
+
     # Verify logger is a logging.Logger instance
     assert isinstance(logger, logging.Logger)
     assert logger.name == 'crackerjack.cli.handlers'

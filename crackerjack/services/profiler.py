@@ -1,4 +1,3 @@
-
 import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
@@ -11,7 +10,6 @@ import psutil
 
 @dataclass
 class ProfileResult:
-
     tool_name: str
     runs: int
     execution_times: list[float] = field(default_factory=list)
@@ -43,7 +41,6 @@ class ProfileResult:
 
 @dataclass
 class Bottleneck:
-
     tool_name: str
     metric_type: str
     severity: str
@@ -54,7 +51,6 @@ class Bottleneck:
 
 @dataclass
 class ComparisonReport:
-
     fast_phase_time: float
     comprehensive_phase_time: float
     total_time: float
@@ -71,7 +67,6 @@ class ComparisonReport:
 
 
 class ToolProfiler:
-
     def __init__(self, cache_dir: Path | None = None):
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
         self.results: dict[str, ProfileResult] = {}
@@ -86,21 +81,16 @@ class ToolProfiler:
         process = psutil.Process()
 
         for _ in range(runs):
-
             mem_before = process.memory_info().rss / 1024 / 1024
-
 
             start_time = time.perf_counter()
             tool_func()
             end_time = time.perf_counter()
 
-
             mem_after = process.memory_info().rss / 1024 / 1024
-
 
             result.execution_times.append(end_time - start_time)
             result.memory_usage.append(mem_after - mem_before)
-
 
         self.results[tool_name] = result
         return result
@@ -123,7 +113,6 @@ class ToolProfiler:
             tools_profiled=len(self.results),
         )
 
-
         report.bottlenecks = self.identify_bottlenecks()
 
         return report
@@ -132,7 +121,6 @@ class ToolProfiler:
         bottlenecks: list[Bottleneck] = []
 
         for tool_name, result in self.results.items():
-
             if result.mean_time > 2.0:
                 severity = "high" if result.mean_time > 5.0 else "medium"
                 bottlenecks.append(
@@ -148,7 +136,6 @@ class ToolProfiler:
                     )
                 )
 
-
             if result.mean_memory > 100.0:
                 severity = "high" if result.mean_memory > 500.0 else "medium"
                 bottlenecks.append(
@@ -161,7 +148,6 @@ class ToolProfiler:
                         recommendation="Optimize memory usage or implement streaming",
                     )
                 )
-
 
             total_requests = result.cache_hits + result.cache_misses
             if total_requests > 10 and result.cache_hit_rate < 50.0:
@@ -176,7 +162,6 @@ class ToolProfiler:
                     )
                 )
 
-
         severity_order = {"high": 0, "medium": 1, "low": 2}
         bottlenecks.sort(key=lambda b: severity_order[b.severity])
 
@@ -184,7 +169,6 @@ class ToolProfiler:
 
     def generate_report(self) -> str:
         lines = ["# Performance Profile Report", ""]
-
 
         if self.results:
             total_tools = len(self.results)
@@ -201,7 +185,6 @@ class ToolProfiler:
                 ]
             )
 
-
         lines.append("## Tool Performance")
         for tool_name, result in sorted(self.results.items()):
             lines.extend(
@@ -216,7 +199,6 @@ class ToolProfiler:
                     "",
                 ]
             )
-
 
         bottlenecks = self.identify_bottlenecks()
         if bottlenecks:

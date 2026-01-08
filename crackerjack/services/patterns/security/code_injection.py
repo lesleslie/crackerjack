@@ -1,4 +1,3 @@
-
 import re
 
 from ..core import ValidatedPattern
@@ -73,7 +72,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "validate_sql_comment_patterns": ValidatedPattern(
         name="validate_sql_comment_patterns",
-        pattern=r"(-{2, }|\/\*|\*\/)",
+        pattern=r"(-{2,}|\/\*|\*\/)",
         replacement="[SQL_COMMENT]",
         description="Detect SQL comment patterns in input validation",
         global_replace=True,

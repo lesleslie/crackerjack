@@ -7,7 +7,6 @@ from rich.text import Text
 
 from crackerjack.services.cache import CrackerjackCache
 
-
 console = Console()
 
 
@@ -15,12 +14,9 @@ def handle_clear_cache() -> None:
     try:
         cache = CrackerjackCache()
 
-
         cleanup_results = cache.cleanup_all()
 
-
         total_cleared = sum(cleanup_results.values())
-
 
         table = Table(
             title="Cache Cleared", show_header=True, header_style="bold green"

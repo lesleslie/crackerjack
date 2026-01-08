@@ -8,7 +8,6 @@ from pathlib import Path
 from typing import Final
 from uuid import UUID, uuid4
 
-
 MODULE_ID: Final[UUID] = uuid4()
 MODULE_STATUS: Final[str] = "stable"
 

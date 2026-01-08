@@ -1,4 +1,3 @@
-
 import re
 import typing as t
 from pathlib import Path
@@ -10,7 +9,6 @@ from crackerjack.services.regex_patterns import CompiledPatternCache
 
 
 class CommitMessageGenerator:
-
     def __init__(
         self,
         git_service: GitInterface,
@@ -18,7 +16,6 @@ class CommitMessageGenerator:
     ) -> None:
         self.console = console or Console()
         self.git = git_service
-
 
         self.patterns = {
             "feat": [
@@ -64,19 +61,15 @@ class CommitMessageGenerator:
         conventional_commits: bool = True,
     ) -> str:
         try:
-
             staged_files = self.git.get_staged_files()
             if not staged_files:
                 return "chore: no changes to commit"
 
-
             change_analysis = self._analyze_changes(staged_files)
-
 
             commit_type = self._determine_commit_type(change_analysis)
             scope = self._determine_scope(change_analysis)
             subject = self._generate_subject(change_analysis)
-
 
             if conventional_commits:
                 header = self._build_conventional_header(commit_type, scope, subject)
@@ -85,7 +78,6 @@ class CommitMessageGenerator:
 
             if not include_body:
                 return header
-
 
             body = self._generate_body(change_analysis)
 
@@ -112,19 +104,15 @@ class CommitMessageGenerator:
         for file_path in staged_files:
             path = Path(file_path)
 
-
             if path.suffix:
                 analysis["file_types"].add(path.suffix)
-
 
             if path.parent != Path():
                 analysis["directories"].add(str(path.parent))
 
-
             file_str = str(path).lower()
             for commit_type, patterns in self.patterns.items():
                 for pattern in patterns:
-
                     compiled_pattern = (
                         CompiledPatternCache.get_compiled_pattern_with_flags(
                             f"commit_{commit_type}_{pattern}", pattern, re.IGNORECASE
@@ -140,13 +128,11 @@ class CommitMessageGenerator:
         files = analysis["files"]
         file_types = analysis["file_types"]
 
-
         commit_type_checks = self._get_commit_type_checks()
 
         for commit_type, check_func in commit_type_checks:
             if check_func(patterns_found, files, file_types):
                 return commit_type
-
 
         return "chore"
 
@@ -187,9 +173,7 @@ class CommitMessageGenerator:
     def _is_style_commit(
         self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
     ) -> bool:
-        return (
-            "style" in patterns or len(files) > 5
-        )
+        return "style" in patterns or len(files) > 5
 
     def _is_refactor_commit(
         self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
@@ -201,13 +185,11 @@ class CommitMessageGenerator:
         files = analysis["files"]
 
         if len(directories) == 1:
-
             directory = list[str](directories)[0]
 
             if "/" in directory:
                 return directory.split("/")[0]
             return directory
-
 
         if any("test" in f.lower() for f in files):
             return "test"
@@ -218,7 +200,6 @@ class CommitMessageGenerator:
         if any(f.endswith((".yml", ".yaml", ".toml", ".json")) for f in files):
             return "config"
 
-
         return None
 
     def _generate_subject(self, analysis: dict[str, t.Any]) -> str:
@@ -226,11 +207,9 @@ class CommitMessageGenerator:
         file_types = analysis["file_types"]
         total_files = analysis["total_files"]
 
-
         if total_files == 1:
             file_path = Path(files[0])
             file_name = file_path.stem
-
 
             if "test" in file_name.lower():
                 return f"update {file_name} test"
@@ -241,12 +220,9 @@ class CommitMessageGenerator:
             else:
                 return f"update {file_name}"
 
-
         if total_files <= 3:
-
             file_names = [Path(f).stem for f in files]
             return f"update {', '.join(file_names)}"
-
 
         if len(file_types) == 1:
             file_type = list[t.Any](file_types)[0]
@@ -266,12 +242,10 @@ class CommitMessageGenerator:
         total_files = analysis["total_files"]
 
         if total_files <= 3:
-
             body_lines = ["Modified files:"]
             for file_path in sorted(files):
                 body_lines.append(f"- {file_path}")
             return "\n".join(body_lines)
-
 
         directories = analysis["directories"]
         file_types = analysis["file_types"]

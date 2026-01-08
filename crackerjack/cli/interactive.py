@@ -459,16 +459,13 @@ class InteractiveCLI:
             "🧪 Run tests?", default=getattr(options, "run_tests", False)
         )
 
-
         from ..cli.options import Options
 
         default_options = Options()
         if options.commit != default_options.commit:
-
             self.console.print(f"📝 Using command line flag: --commit={options.commit}")
             updated_options.commit = options.commit
         else:
-
             updated_options.commit = Confirm.ask(
                 "📝 Commit changes to git?",
                 default=options.commit,

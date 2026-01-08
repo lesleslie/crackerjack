@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -31,19 +30,15 @@ logger = logging.getLogger(__name__)
 
 
 class ComplexipySettings(ToolAdapterSettings):
-
     tool_name: str = "complexipy"
     use_json_output: bool = True
     max_complexity: int = 15
     include_cognitive: bool = True
     include_maintainability: bool = True
-    sort_by: str = (
-        "desc"
-    )
+    sort_by: str = "desc"
 
 
 class ComplexipyAdapter(BaseToolAdapter):
-
     settings: ComplexipySettings | None = None
 
     def __init__(self, settings: ComplexipySettings | None = None) -> None:
@@ -55,7 +50,6 @@ class ComplexipyAdapter(BaseToolAdapter):
 
     async def init(self) -> None:
         if not self.settings:
-
             config_data = self._load_config_from_pyproject()
             max_complexity = config_data.get("max_complexity", 15)
             self.settings = ComplexipySettings(
@@ -100,18 +94,14 @@ class ComplexipyAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.use_json_output:
             cmd.append("--output-json")
-
 
         config_data = self._load_config_from_pyproject()
         max_complexity = config_data.get("max_complexity", self.settings.max_complexity)
         cmd.extend(["--max-complexity-allowed", str(max_complexity)])
 
-
         cmd.extend(["--sort", self.settings.sort_by])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -130,7 +120,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         self,
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
-
         json_file = self._move_complexipy_results_to_output_dir()
 
         if (
@@ -156,7 +145,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                 )
                 return self._parse_text_output(result.raw_output)
         else:
-
             if not result.raw_output:
                 logger.debug("No output to parse")
                 return []
@@ -193,7 +181,6 @@ class ComplexipyAdapter(BaseToolAdapter):
             logger.warning("Settings not initialized, cannot parse JSON")
             return issues
 
-
         if isinstance(data, list):
             for func in data:
                 complexity = func.get("complexity", 0)
@@ -219,7 +206,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                 issues.append(issue)
             return issues
 
-
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
             issues.extend(
@@ -242,7 +228,6 @@ class ComplexipyAdapter(BaseToolAdapter):
             return None
 
         complexity = func.get("complexity", 0)
-
 
         if complexity <= self.settings.max_complexity:
             return None
@@ -349,7 +334,6 @@ class ComplexipyAdapter(BaseToolAdapter):
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
 
-
         config_data = self._load_config_from_pyproject()
         exclude_patterns = config_data.get(
             "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
@@ -390,7 +374,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                     toml_config = tomllib.load(f)
                 complexipy_config = toml_config.get("tool", {}).get("complexipy", {})
 
-
                 exclude_patterns = complexipy_config.get("exclude_patterns")
                 if exclude_patterns:
                     config["exclude_patterns"] = exclude_patterns
@@ -398,7 +381,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                         "Loaded exclude patterns from pyproject.toml",
                         extra={"exclude_patterns": exclude_patterns},
                     )
-
 
                 max_complexity = complexipy_config.get("max_complexity")
                 if max_complexity is not None:
@@ -422,7 +404,6 @@ class ComplexipyAdapter(BaseToolAdapter):
         )
 
     def _move_complexipy_results_to_output_dir(self) -> Path | None:
-
         project_root = Path.cwd()
         result_files = sorted(
             project_root.glob("complexipy_results_*.json"),
@@ -434,15 +415,12 @@ class ComplexipyAdapter(BaseToolAdapter):
             logger.debug("No complexipy result files found in project root")
             return None
 
-
         source_file = result_files[0]
-
 
         output_dir = AdapterOutputPaths.get_output_dir("complexipy")
         dest_file = output_dir / source_file.name
 
         try:
-
             shutil.move(str(source_file), str(dest_file))
             logger.info(
                 "Moved complexipy results to centralized location",
@@ -451,7 +429,6 @@ class ComplexipyAdapter(BaseToolAdapter):
                     "destination": str(dest_file),
                 },
             )
-
 
             AdapterOutputPaths.cleanup_old_outputs(
                 "complexipy", "complexipy_results_*.json", keep_latest=5

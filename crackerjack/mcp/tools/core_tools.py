@@ -142,20 +142,16 @@ def _validate_kwargs_argument(
 
 
 def _configure_stage_options(stage: str) -> CrackerjackSettings:
-
     from crackerjack.config import load_settings
 
     base_settings = load_settings(CrackerjackSettings)
-
 
     settings_dict = base_settings.model_dump()
 
     if stage in {"fast", "comprehensive"}:
         settings_dict["skip_hooks"] = False
     elif stage == "tests":
-        settings_dict["run_tests"] = (
-            True
-        )
+        settings_dict["run_tests"] = True
     elif stage == "cleaning":
         settings_dict["clean"] = True
     elif stage == "init":
@@ -167,7 +163,6 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
 def _execute_stage(
     orchestrator: "WorkflowOrchestrator", stage: str, settings: CrackerjackSettings
 ) -> bool:
-
     adapted_options = _adapt_settings_to_protocol(settings)
 
     if stage == "fast":
@@ -182,14 +177,12 @@ def _execute_stage(
 
 
 def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
-    return _AdaptedOptions(settings) # type: ignore
+    return _AdaptedOptions(settings)  # type: ignore
 
 
 class _AdaptedOptions:
-
     def __init__(self, settings: CrackerjackSettings):
         self.settings = settings
-
 
     @property
     def commit(self) -> bool:
@@ -198,7 +191,6 @@ class _AdaptedOptions:
     @property
     def create_pr(self) -> bool:
         return self.settings.git.create_pr
-
 
     @property
     def interactive(self) -> bool:
@@ -216,7 +208,6 @@ class _AdaptedOptions:
     def async_mode(self) -> bool:
         return self.settings.execution.async_mode
 
-
     @property
     def test(self) -> bool:
         return self.settings.testing.test
@@ -232,7 +223,6 @@ class _AdaptedOptions:
     @property
     def test_timeout(self) -> int:
         return self.settings.testing.test_timeout
-
 
     @property
     def publish(self) -> t.Any | None:
@@ -254,7 +244,6 @@ class _AdaptedOptions:
     def skip_version_check(self) -> bool:
         return self.settings.publishing.skip_version_check
 
-
     @property
     def ai_agent(self) -> bool:
         return self.settings.ai.ai_agent
@@ -262,7 +251,6 @@ class _AdaptedOptions:
     @property
     def start_mcp_server(self) -> bool:
         return self.settings.ai.start_mcp_server
-
 
     @property
     def skip_hooks(self) -> bool:
@@ -280,16 +268,13 @@ class _AdaptedOptions:
     def enable_ty(self) -> bool:
         return self.settings.hooks.enable_ty
 
-
     @property
     def clean(self) -> bool:
         return self.settings.cleaning.clean
 
-
     @property
     def track_progress(self) -> bool:
         return self.settings.progress.track_progress
-
 
     @property
     def cleanup(self) -> t.Any | None:
@@ -344,7 +329,7 @@ def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
         rate_limiter = context.rate_limiter if context else None
@@ -397,7 +382,7 @@ def _detect_errors_and_suggestions(
 
 
 def register_analyze_errors_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
         context = get_context()
         if not context:

@@ -41,16 +41,12 @@ class HookResult:
     files_processed: int = 0
     files_checked: list[str | Path] = field(default_factory=list)
     issues_found: list[str] | None = None
-    issues_count: int = (
-        0
-    )
+    issues_count: int = 0
     stage: str = "fast"
     exit_code: int | None = None
     error_message: str | None = None
     is_timeout: bool = False
-    is_config_error: bool = (
-        False
-    )
+    is_config_error: bool = False
     hook_name: str | None = None
     returncode: int | None = None
     output: str | None = None

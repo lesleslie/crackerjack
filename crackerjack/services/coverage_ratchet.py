@@ -21,7 +21,6 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         pkg_path: Path,
         console: Console | None = None,
     ) -> None:
-
         try:
             self.pkg_path = Path(str(pkg_path))
         except Exception:

@@ -1,4 +1,3 @@
-
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -11,7 +10,6 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class DeadCodeIssue(Issue):
-
     severity: str = "warning"
     issue_type: str = "unknown"
     name: str = "unknown"
@@ -30,7 +28,6 @@ class DeadCodeIssue(Issue):
 
 
 class SkylosAdapter(BaseRustToolAdapter):
-
     def __init__(
         self,
         context: "ExecutionContext",
@@ -48,7 +45,6 @@ class SkylosAdapter(BaseRustToolAdapter):
         return True
 
     def get_command_args(self, target_files: list[Path]) -> list[str]:
-
         args = [
             "uv",
             "run",
@@ -57,25 +53,20 @@ class SkylosAdapter(BaseRustToolAdapter):
             str(max(95, self.confidence_threshold)),
         ]
 
-
         if self._should_use_json_output():
             args.append("--json")
 
-
         if self.context.interactive:
             args.extend(["--web", "--port", str(self.web_dashboard_port)])
-
 
         if target_files:
             package_files = self._filter_package_files(target_files)
             if package_files:
                 args.extend(str(f) for f in package_files)
             else:
-
                 package_target = self._determine_package_target()
                 args.append(package_target)
         else:
-
             package_target = self._determine_package_target()
             args.append(package_target)
 
@@ -84,13 +75,11 @@ class SkylosAdapter(BaseRustToolAdapter):
     def _determine_package_target(self) -> str:
         from pathlib import Path
 
-
         cwd = Path.cwd()
         package_name = self._get_package_name_from_pyproject(cwd)
 
         if not package_name:
             package_name = self._find_package_directory_with_init(cwd)
-
 
         if not package_name:
             package_name = "crackerjack"
@@ -125,14 +114,12 @@ class SkylosAdapter(BaseRustToolAdapter):
     def _filter_package_files(self, target_files: list[Path]) -> list[Path]:
         from pathlib import Path
 
-
         cwd = Path.cwd()
         package_name = self._get_package_name_from_pyproject(cwd)
         if not package_name:
             package_name = self._find_package_directory_with_init(cwd)
         if not package_name:
             package_name = "crackerjack"
-
 
         excluded_dirs = {
             "tests",
@@ -158,19 +145,15 @@ class SkylosAdapter(BaseRustToolAdapter):
 
         package_files = []
         for file_path in target_files:
-
             abs_path = file_path.resolve() if not file_path.is_absolute() else file_path
-
 
             try:
                 rel_path = abs_path.relative_to(cwd)
                 top_level_dir = rel_path.parts[0] if rel_path.parts else ""
 
-
                 if top_level_dir == package_name and top_level_dir not in excluded_dirs:
                     package_files.append(file_path)
             except ValueError:
-
                 continue
 
         return package_files
@@ -201,7 +184,6 @@ class SkylosAdapter(BaseRustToolAdapter):
                 for item in data.get("dead_code", [])
             ]
 
-
             success = len(issues) == 0
 
             return ToolResult(
@@ -220,14 +202,12 @@ class SkylosAdapter(BaseRustToolAdapter):
         issues: list[Issue] = []
 
         if not output.strip():
-
             return ToolResult(
                 success=True,
                 issues=[],
                 raw_output=output,
                 tool_version=self.get_tool_version(),
             )
-
 
         for line in output.strip().split("\\n"):
             line = line.strip()
@@ -237,7 +217,6 @@ class SkylosAdapter(BaseRustToolAdapter):
             issue = self._parse_text_line(line)
             if issue:
                 issues.append(issue)
-
 
         success = len(issues) == 0
 

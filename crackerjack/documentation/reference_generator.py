@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 from dataclasses import dataclass, field
@@ -13,7 +12,6 @@ from ..models.protocols import (
 
 
 class ReferenceFormat(Enum):
-
     MARKDOWN = "markdown"
     HTML = "html"
     JSON = "json"
@@ -23,7 +21,6 @@ class ReferenceFormat(Enum):
 
 @dataclass
 class ParameterInfo:
-
     name: str
     type_hint: str
     default_value: t.Any
@@ -37,7 +34,6 @@ class ParameterInfo:
 
 @dataclass
 class CommandInfo:
-
     name: str
     description: str
     category: str
@@ -48,11 +44,9 @@ class CommandInfo:
     deprecated: bool = False
     added_in_version: str | None = None
 
-
     common_workflows: list[str] = field(default_factory=list)
     prerequisites: list[str] = field(default_factory=list)
     side_effects: list[str] = field(default_factory=list)
-
 
     ai_context: dict[str, t.Any] = field(default_factory=dict[str, t.Any])
     success_patterns: list[str] = field(default_factory=list)
@@ -61,7 +55,6 @@ class CommandInfo:
 
 @dataclass
 class CommandReference:
-
     commands: dict[str, CommandInfo]
     categories: dict[str, list[str]]
     workflows: dict[str, list[str]]
@@ -72,10 +65,8 @@ class CommandReference:
         return [cmd for cmd in self.commands.values() if cmd.category == category]
 
     def get_command_by_name(self, name: str) -> CommandInfo | None:
-
         if name in self.commands:
             return self.commands[name]
-
 
         for cmd in self.commands.values():
             if name in cmd.aliases:
@@ -85,7 +76,6 @@ class CommandReference:
 
 
 class ReferenceGenerator:
-
     def __init__(
         self,
         config_manager: ConfigManagerProtocol,
@@ -103,20 +93,15 @@ class ReferenceGenerator:
     ) -> CommandReference:
         self.logger.info(f"Generating command reference from: {cli_module_path}")
 
-
         commands = await self._analyze_cli_module(cli_module_path)
-
 
         if include_examples:
             commands = await self._enhance_with_examples(commands)
 
-
         if include_workflows:
             commands = await self._enhance_with_workflows(commands)
 
-
         categories = self._categorize_commands(commands)
-
 
         workflows = self._generate_workflows(commands) if include_workflows else {}
 
@@ -152,16 +137,13 @@ class ReferenceGenerator:
         commands = {}
 
         try:
-
             module_file = Path(module_path)
             if not module_file.exists():
                 raise FileNotFoundError(f"CLI module not found: {module_path}")
 
             source_code = module_file.read_text()
 
-
             tree = ast.parse(source_code)
-
 
             commands = self._extract_commands_from_ast(tree)
 
@@ -179,7 +161,6 @@ class ReferenceGenerator:
     def _create_command_visitor(
         self, commands: dict[str, CommandInfo]
     ) -> ast.NodeVisitor:
-
         class CommandVisitor(ast.NodeVisitor):
             def __init__(self, generator: t.Any) -> None:
                 self.generator = generator
@@ -300,9 +281,7 @@ class ReferenceGenerator:
         )
 
     def _add_parameter_examples(self, command: CommandInfo) -> None:
-
         basic_example = f"python -m crackerjack --{command.name}"
-
 
         param_examples = []
         for param in command.parameters:
@@ -441,7 +420,6 @@ class ReferenceGenerator:
             ],
         }
 
-
         available_workflows = {}
         for workflow_name, command_sequence in workflows.items():
             available_sequence = [
@@ -465,13 +443,10 @@ class ReferenceGenerator:
             "",
         ]
 
-
         lines.extend(self._render_markdown_toc(reference.categories))
         lines.append("")
 
-
         lines.extend(self._render_markdown_categories(reference))
-
 
         if reference.workflows:
             lines.extend(self._render_markdown_workflows(reference.workflows))
@@ -537,16 +512,13 @@ class ReferenceGenerator:
             "",
         ]
 
-
         if command.parameters:
             param_lines = self._render_command_parameters_markdown(command.parameters)
             lines.extend(param_lines)
 
-
         if command.examples:
             example_lines = self._render_command_examples_markdown(command.examples)
             lines.extend(example_lines)
-
 
         if command.related_commands:
             related_lines = self._render_command_related_markdown(
@@ -728,7 +700,6 @@ class ReferenceGenerator:
 
     def _render_yaml(self, reference: CommandReference) -> str:
         import yaml
-
 
         json_data = self._render_json(reference)
         import json

@@ -7,7 +7,6 @@ from .regex_patterns import SAFE_PATTERNS
 
 
 class CoverageBadgeService:
-
     def __init__(self, project_root: Path, console: Console | None = None) -> None:
         self.console = console or Console()
         self.project_root = project_root
@@ -58,11 +57,9 @@ class CoverageBadgeService:
         return "brightgreen"
 
     def _has_coverage_badge(self, content: str) -> bool:
-
         return SAFE_PATTERNS["detect_coverage_badge"].search(content) is not None
 
     def _update_existing_badge(self, content: str, new_badge_url: str) -> str:
-
         patterns_to_try = [
             "update_coverage_badge_url",
             "update_coverage_badge_any",
@@ -74,7 +71,6 @@ class CoverageBadgeService:
 
             temp_content = pattern_obj.apply(content)
             if temp_content != content:
-
                 new_content = temp_content.replace("NEW_BADGE_URL", new_badge_url)
                 return new_content
 
@@ -82,7 +78,6 @@ class CoverageBadgeService:
 
     def _insert_new_badge(self, content: str, badge_url: str) -> str:
         lines = content.split("\n")
-
 
         insert_index = self._find_badge_insertion_point(lines)
 
@@ -94,15 +89,12 @@ class CoverageBadgeService:
         return self._insert_after_title(content, badge_url)
 
     def _find_badge_insertion_point(self, lines: list[str]) -> int | None:
-
         badge_lines = [
             i for i, line in enumerate(lines) if line.strip().startswith(("[![", "!["))
         ]
 
         if badge_lines:
-
             return badge_lines[-1] + 1
-
 
         title_found = False
         for i, line in enumerate(lines):
@@ -119,10 +111,8 @@ class CoverageBadgeService:
     def _insert_after_title(self, content: str, badge_url: str) -> str:
         lines = content.split("\n")
 
-
         for i, line in enumerate(lines):
             if line.startswith("#"):
-
                 coverage_badge = f"![Coverage]({badge_url})"
                 if i + 1 < len(lines) and lines[i + 1].strip() == "":
                     lines.insert(i + 2, coverage_badge)
@@ -143,7 +133,6 @@ class CoverageBadgeService:
 
             if current_coverage is None:
                 return True
-
 
             return abs(coverage_percent - current_coverage) >= 0.01
 

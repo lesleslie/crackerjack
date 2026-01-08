@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 
@@ -6,7 +5,6 @@ from ...base import AgentContext
 
 
 class DeadCodeDetector:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
@@ -90,7 +88,6 @@ class DeadCodeDetector:
     def _detect_unreachable_code(
         analysis: dict[str, t.Any], tree: ast.AST, content: str
     ) -> None:
-
         class UnreachableCodeDetector(ast.NodeVisitor):
             def __init__(self) -> None:
                 self.unreachable_blocks: list[dict[str, t.Any]] = []
@@ -244,7 +241,6 @@ class DeadCodeDetector:
 
 
 class UsageDataCollector:
-
     def __init__(self) -> None:
         self.imports: dict[str, str] = {}
         self.import_lines: list[tuple[int, str, str]] = []
@@ -262,7 +258,6 @@ class UsageDataCollector:
 
 
 class EnhancedUsageAnalyzer(ast.NodeVisitor):
-
     def __init__(self, collector: UsageDataCollector) -> None:
         self.collector = collector
         self.used_names: set[str] = set()

@@ -1,4 +1,3 @@
-
 import asyncio
 import operator
 import typing as t
@@ -16,7 +15,6 @@ from crackerjack.agents.base import (
 
 
 class SkillCategory(Enum):
-
     CODE_QUALITY = "code_quality"
     TESTING = "testing"
     SECURITY = "security"
@@ -29,7 +27,6 @@ class SkillCategory(Enum):
 
 @dataclass
 class SkillMetadata:
-
     name: str
     description: str
     category: SkillCategory
@@ -56,7 +53,6 @@ class SkillMetadata:
 
 @dataclass
 class SkillExecutionResult:
-
     skill_name: str
     success: bool
     confidence: float
@@ -80,7 +76,6 @@ class SkillExecutionResult:
 
 
 class AgentSkill:
-
     def __init__(
         self,
         agent: SubAgent,
@@ -94,9 +89,7 @@ class AgentSkill:
         if issue.type not in self.metadata.supported_types:
             return 0.0
 
-
         agent_confidence = await self.agent.can_handle(issue)
-
 
         if agent_confidence >= self.metadata.confidence_threshold:
             return agent_confidence
@@ -113,7 +106,6 @@ class AgentSkill:
         start_time = time.time()
 
         try:
-
             if timeout:
                 result = await asyncio.wait_for(
                     self.agent.analyze_and_fix(issue),
@@ -124,10 +116,8 @@ class AgentSkill:
 
             execution_time_ms = int((time.time() - start_time) * 1000)
 
-
             self.metadata.execution_count += 1
             if result.success:
-
                 alpha = 0.1
                 self.metadata.success_rate = (
                     alpha * 1.0 + (1 - alpha) * self.metadata.success_rate
@@ -172,20 +162,15 @@ class AgentSkill:
         self,
         issues: list[Issue],
     ) -> t.Coroutine[t.Any, t.Any, list[SkillExecutionResult]]:
-
         async def _batch() -> list[SkillExecutionResult]:
-
             handleable = [i for i in issues if i.type in self.metadata.supported_types]
-
 
             tasks = [self.execute(issue) for issue in handleable]
             raw_results = await asyncio.gather(*tasks, return_exceptions=True)
 
-
             results: list[SkillExecutionResult] = []
             for result in raw_results:
                 if isinstance(result, BaseException):
-
                     results.append(
                         SkillExecutionResult(
                             skill_name=self.skill_id,
@@ -214,7 +199,6 @@ class AgentSkill:
 
 
 class AgentSkillRegistry:
-
     def __init__(self) -> None:
         self._skills: dict[str, AgentSkill] = {}
         self._category_index: dict[SkillCategory, list[str]] = {
@@ -230,9 +214,7 @@ class AgentSkillRegistry:
     ) -> None:
         self._skills[skill.skill_id] = skill
 
-
         self._category_index[skill.metadata.category].append(skill.skill_id)
-
 
         for issue_type in skill.metadata.supported_types:
             self._type_index[issue_type].append(skill.skill_id)
@@ -243,13 +225,10 @@ class AgentSkillRegistry:
         context: AgentContext,
         metadata: SkillMetadata | None = None,
     ) -> AgentSkill:
-
         agent = agent_class(context)
-
 
         if metadata is None:
             metadata = self._generate_metadata(agent)
-
 
         skill = AgentSkill(agent, metadata)
         self.register(skill)
@@ -266,7 +245,6 @@ class AgentSkillRegistry:
                 skill = self.register_agent(agent_class, context)
                 skills.append(skill)
             except Exception as e:
-
                 print(f"Warning: Failed to register {agent_class.__name__}: {e}")
 
         return skills
@@ -292,24 +270,20 @@ class AgentSkillRegistry:
         self,
         issue: Issue,
     ) -> t.Coroutine[t.Any, t.Any, AgentSkill | None]:
-
         async def _find() -> AgentSkill | None:
             candidates = self.get_skills_for_type(issue.type)
 
             if not candidates:
                 return None
 
-
             confidence_pairs = [
                 (skill, await skill.can_handle(issue)) for skill in candidates
             ]
-
 
             valid_pairs = [(s, c) for s, c in confidence_pairs if c > 0]
 
             if not valid_pairs:
                 return None
-
 
             valid_pairs.sort(key=operator.itemgetter(1), reverse=True)
             return valid_pairs[0][0]
@@ -340,18 +314,14 @@ class AgentSkillRegistry:
         }
 
     def _generate_metadata(self, agent: SubAgent) -> SkillMetadata:
-
         agent_name = agent.name.lower()
         category = self._infer_category(agent_name)
 
-
         supported_types = agent.get_supported_types()
-
 
         description = (
             f"{agent.name} - handles {', '.join(t.value for t in supported_types)}"
         )
-
 
         tags = self._infer_tags(agent_name, supported_types)
 
@@ -390,11 +360,9 @@ class AgentSkillRegistry:
     ) -> set[str]:
         tags = set()
 
-
         for word in agent_name.split("_"):
             if len(word) > 2:
                 tags.add(word)
-
 
         tags.update(issue_type.value for issue_type in supported_types)
 

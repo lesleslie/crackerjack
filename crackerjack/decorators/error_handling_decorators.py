@@ -1,4 +1,3 @@
-
 import functools
 import json
 import subprocess
@@ -16,10 +15,8 @@ def handle_file_errors(
     ),
     default_return: Any = None,
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -28,7 +25,6 @@ def handle_file_errors(
             except exceptions as e:
                 if log_error:
                     logger.error(f"File operation failed in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -50,10 +46,8 @@ def handle_json_errors(
     ),
     default_return: Any = None,
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -63,7 +57,6 @@ def handle_json_errors(
             except exceptions as e:
                 if log_error:
                     logger.error(f"JSON operation failed in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -84,10 +77,8 @@ def handle_subprocess_errors(
     ),
     default_return: Any = None,
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -97,7 +88,6 @@ def handle_subprocess_errors(
             except exceptions as e:
                 if log_error:
                     logger.error(f"Subprocess operation failed in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -115,10 +105,8 @@ def handle_validation_errors(
     exceptions: tuple[type[Exception], ...] = (ValueError, TypeError, AttributeError),
     default_return: Any = None,
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -128,7 +116,6 @@ def handle_validation_errors(
             except exceptions as e:
                 if log_error:
                     logger.error(f"Validation failed in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -147,14 +134,11 @@ def handle_network_errors(
         ConnectionError,
         ConnectionRefusedError,
         TimeoutError,
-
     ),
     default_return: Any = None,
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -164,7 +148,6 @@ def handle_network_errors(
             except exceptions as e:
                 if log_error:
                     logger.error(f"Network operation failed in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -180,24 +163,20 @@ def handle_network_errors(
 
 def handle_all_errors(
     log_error: bool = True,
-    reraise: bool
-    | None = None,
+    reraise: bool | None = None,
     default_return: Any = None,
     exclude: tuple[type[BaseException], ...] = (KeyboardInterrupt, SystemExit),
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
                 return func(*args, **kwargs)
             except exclude:
-
                 raise
             except Exception as e:
                 if log_error:
                     logger.error(f"Unexpected error in {func.__name__}: {e}")
-
 
                 should_reraise = (
                     reraise if reraise is not None else (default_return is None)
@@ -215,10 +194,9 @@ def retry_on_error(
     max_attempts: int = 3,
     delay: float = 1.0,
     backoff: float = 2.0,
-    exceptions: tuple[type[Exception], ...] = (Exception, ),
+    exceptions: tuple[type[Exception], ...] = (Exception,),
     log_retry: bool = True,
 ):
-
     def decorator(func: Callable) -> Callable:
         @functools.wraps(func)
         def wrapper(*args, **kwargs):

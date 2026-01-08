@@ -14,7 +14,6 @@ from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
 
 class AsyncWorkflowPipeline:
-
     def __init__(
         self,
         logger: logging.Logger | t.Any,

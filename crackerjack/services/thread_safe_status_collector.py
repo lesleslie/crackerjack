@@ -181,7 +181,6 @@ class ThreadSafeStatusCollector:
                     snapshot.services = cached_data
                 return
 
-
             from crackerjack.services.server_manager import find_mcp_server_processes
 
             mcp_task = asyncio.create_task(asyncio.to_thread(find_mcp_server_processes))
@@ -198,7 +197,6 @@ class ThreadSafeStatusCollector:
                     "running": len(mcp_processes) > 0,
                     "processes": mcp_processes,
                 },
-
             }
 
             with self._data_lock:
@@ -340,7 +338,6 @@ class ThreadSafeStatusCollector:
             stats = {
                 "server_info": {
                     "project_path": str(context.config.project_path),
-
                 },
                 "rate_limiting": {
                     "enabled": context.rate_limiter is not None,

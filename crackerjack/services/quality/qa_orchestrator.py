@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -18,7 +17,6 @@ if t.TYPE_CHECKING:
 
 
 class QAOrchestrator:
-
     def __init__(self, config: QAOrchestratorConfig) -> None:
         self.config = config
         self._adapters: dict[str, QAAdapterProtocol] = {}
@@ -28,7 +26,6 @@ class QAOrchestrator:
     async def register_adapter(self, adapter: QAAdapterProtocol) -> None:
         adapter_name = adapter.adapter_name
         self._adapters[adapter_name] = adapter
-
 
         await adapter.init()
 
@@ -40,7 +37,6 @@ class QAOrchestrator:
         stage: str = "fast",
         files: list[Path] | None = None,
     ) -> list[QAResult]:
-
         if stage == "fast":
             checks = self.config.fast_checks
         elif stage == "comprehensive":
@@ -48,16 +44,13 @@ class QAOrchestrator:
         else:
             raise ValueError(f"Invalid stage: {stage}")
 
-
         checks = [c for c in checks if c.enabled]
 
         if not checks:
             return []
 
-
         if self.config.run_formatters_first:
             checks.sort(key=lambda c: (not c.is_formatter, c.check_name))
-
 
         results = await self._execute_checks(checks, files)
 
@@ -67,14 +60,11 @@ class QAOrchestrator:
         self,
         files: list[Path] | None = None,
     ) -> dict[str, t.Any]:
-
         fast_results = await self.run_checks(stage="fast", files=files)
-
 
         comprehensive_results = await self.run_checks(
             stage="comprehensive", files=files
         )
-
 
         all_results = fast_results + comprehensive_results
 
@@ -97,7 +87,6 @@ class QAOrchestrator:
             if not adapter:
                 continue
 
-
             task = self._execute_single_check(adapter, check_config, files)
             tasks.append(task)
 
@@ -109,18 +98,15 @@ class QAOrchestrator:
         if not self.config.fail_fast or not tasks:
             return None
 
-
         task_list: list[asyncio.Task[QAResult]] = [
             asyncio.create_task(t) for t in tasks
         ]
-
 
         done, pending = await asyncio.wait(
             task_list[-1:], return_when=asyncio.FIRST_COMPLETED
         )
         result = done.pop().result()
         if not result.is_success:
-
             for pending_task in pending:
                 pending_task.cancel()
             return [result]
@@ -133,7 +119,6 @@ class QAOrchestrator:
             if isinstance(result, QAResult):
                 valid_results.append(result)
             elif isinstance(result, Exception):
-
                 continue
         return valid_results
 
@@ -144,14 +129,11 @@ class QAOrchestrator:
     ) -> list[QAResult]:
         tasks = self._create_check_tasks(checks, files)
 
-
         fail_result = await self._handle_fail_fast(tasks)
         if fail_result is not None:
             return fail_result
 
-
         results = await asyncio.gather(*tasks, return_exceptions=True)
-
 
         return self._filter_valid_results(results)
 
@@ -161,25 +143,19 @@ class QAOrchestrator:
         config: QACheckConfig,
         files: list[Path] | None,
     ) -> QAResult:
-
         cache_key = self._generate_cache_key(adapter, config, files)
-
 
         if self.config.enable_caching:
             cached_result = self._get_cached_result(cache_key)
             if cached_result:
                 return cached_result
 
-
         async with self._semaphore:
             try:
-
                 result = await adapter.check(files=files, config=config)
-
 
                 if self.config.enable_caching:
                     self._cache_result(cache_key, result)
-
 
                 if not result.is_success and config.retry_on_failure:
                     result = await adapter.check(files=files, config=config)
@@ -187,7 +163,6 @@ class QAOrchestrator:
                 return result
 
             except Exception as e:
-
                 return QAResult(
                     check_id=config.check_id,
                     check_name=adapter.adapter_name,
@@ -217,7 +192,6 @@ class QAOrchestrator:
             return None
 
         result, timestamp = self._cache[cache_key]
-
 
         if datetime.now() - timestamp > timedelta(hours=1):
             del self._cache[cache_key]
@@ -260,10 +234,8 @@ class QAOrchestrator:
         if not config_path.exists():
             raise FileNotFoundError(f"Config file not found: {config_path}")
 
-
         with config_path.open() as f:
             config_data = yaml.safe_load(f)
-
 
         if project_root is None:
             project_root = Path(config_data.get("project_root", "."))
@@ -278,9 +250,7 @@ class QAOrchestrator:
             verbose=config_data.get("verbose", False),
         )
 
-
         orchestrator = cls(config)
-
 
         return orchestrator
 

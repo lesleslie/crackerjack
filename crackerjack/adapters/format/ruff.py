@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -27,13 +26,11 @@ MODULE_STATUS = AdapterStatus.STABLE
 
 
 class RuffMode(StrEnum):
-
     CHECK = "check"
     FORMAT = "format"
 
 
 class RuffSettings(ToolAdapterSettings):
-
     tool_name: str = "ruff"
     mode: str = "check"
     fix_enabled: bool = False
@@ -47,7 +44,6 @@ class RuffSettings(ToolAdapterSettings):
 
 
 class RuffAdapter(BaseToolAdapter):
-
     settings: RuffSettings | None = None
 
     def __init__(self, settings: RuffSettings | None = None) -> None:
@@ -86,15 +82,12 @@ class RuffAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name, self.settings.mode]
 
-
         if self.settings.mode == "check":
             self._add_check_mode_options(cmd)
         elif self.settings.mode == "format":
             self._add_format_mode_options(cmd)
 
-
         cmd.extend([str(f) for f in files])
-
 
         if self.settings.respect_gitignore:
             cmd.append("--respect-gitignore")
@@ -107,7 +100,6 @@ class RuffAdapter(BaseToolAdapter):
 
         if self.settings.fix_enabled:
             cmd.append("--fix")
-
 
             if self.settings.unsafe_fixes:
                 cmd.append("--unsafe-fixes")
@@ -134,7 +126,6 @@ class RuffAdapter(BaseToolAdapter):
         if self.settings.preview:
             cmd.append("--preview")
 
-
         if not self.settings.fix_enabled:
             cmd.append("--check")
 
@@ -147,19 +138,14 @@ class RuffAdapter(BaseToolAdapter):
 
         issues: list[ToolIssue] = []
 
-
         if self.settings.mode == "check":
-
             if self.settings.use_json_output and result.raw_output:
                 issues = self._parse_check_json(result.raw_output)
             else:
-
                 issues = self._parse_check_text(result.raw_output)
 
         elif self.settings.mode == "format":
-
             if result.exit_code != 0:
-
                 issues = self._parse_format_output(
                     result.raw_output,
                     result.files_processed,
@@ -175,8 +161,6 @@ class RuffAdapter(BaseToolAdapter):
 
         issues = []
         for item in data:
-
-
             location = item.get("location", {})
             file_path = Path(item.get("filename", ""))
 
@@ -200,7 +184,6 @@ class RuffAdapter(BaseToolAdapter):
         lines = output.strip().split("\n")
 
         for line in lines:
-
             if ":" not in line:
                 continue
 
@@ -221,7 +204,6 @@ class RuffAdapter(BaseToolAdapter):
             column_number = (
                 int(parts[2].strip()) if parts[2].strip().isdigit() else None
             )
-
 
             message_part = parts[3].strip()
             code, message = self._extract_check_code_and_message(message_part)
@@ -259,12 +241,10 @@ class RuffAdapter(BaseToolAdapter):
     ) -> list[ToolIssue]:
         issues = []
 
-
         lines = output.strip().split("\n")
 
         for line in lines:
             if line.startswith("Would reformat:") or line.strip().endswith(".py"):
-
                 file_str = line.replace("Would reformat:", "").strip()
                 if file_str:
                     try:
@@ -277,7 +257,6 @@ class RuffAdapter(BaseToolAdapter):
                         issues.append(issue)
                     except Exception:
                         continue
-
 
         if not issues and processed_files:
             for file_path in processed_files:
@@ -295,9 +274,7 @@ class RuffAdapter(BaseToolAdapter):
         files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> QAResult:
-
         result = await super().check(files=files, config=config)
-
 
         if (
             self.settings
@@ -305,7 +282,6 @@ class RuffAdapter(BaseToolAdapter):
             and self.settings.fix_enabled
             and result.status in (QAResultStatus.SUCCESS, QAResultStatus.WARNING)
         ):
-
             result.files_modified = result.files_checked.copy()
             result.issues_fixed = result.issues_found
 
@@ -318,7 +294,6 @@ class RuffAdapter(BaseToolAdapter):
 
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
-
 
         is_format_mode = False
         if self.settings:

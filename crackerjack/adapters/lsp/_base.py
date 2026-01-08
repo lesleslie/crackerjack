@@ -1,4 +1,3 @@
-
 import json
 import typing as t
 from abc import ABC, abstractmethod
@@ -12,7 +11,6 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class Issue:
-
     file_path: Path
     line_number: int
     message: str
@@ -29,7 +27,6 @@ class Issue:
 
 @dataclass
 class ToolResult:
-
     success: bool
     issues: list[Issue] = field(default_factory=list)
     error: str | None = None
@@ -64,28 +61,20 @@ class ToolResult:
 
 
 class RustToolAdapter(Protocol):
+    def __init__(self, context: "ExecutionContext") -> None: ...
 
-    def __init__(self, context: "ExecutionContext") -> None:
-        ...
+    def get_command_args(self, target_files: list[Path]) -> list[str]: ...
 
-    def get_command_args(self, target_files: list[Path]) -> list[str]:
-        ...
+    def parse_output(self, output: str) -> ToolResult: ...
 
-    def parse_output(self, output: str) -> ToolResult:
-        ...
+    def supports_json_output(self) -> bool: ...
 
-    def supports_json_output(self) -> bool:
-        ...
+    def get_tool_version(self) -> str | None: ...
 
-    def get_tool_version(self) -> str | None:
-        ...
-
-    def validate_tool_available(self) -> bool:
-        ...
+    def validate_tool_available(self) -> bool: ...
 
 
 class BaseRustToolAdapter(ABC):
-
     def __init__(self, context: "ExecutionContext") -> None:
         self.context = context
         self._tool_version: str | None = None
@@ -153,7 +142,6 @@ class BaseRustToolAdapter(ABC):
             json_result = json.loads(output)
             return t.cast(dict[str, t.Any] | None, json_result)
         except json.JSONDecodeError:
-
             return None
 
     def _create_error_result(

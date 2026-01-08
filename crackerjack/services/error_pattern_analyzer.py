@@ -1,4 +1,3 @@
-
 import json
 import logging
 import typing as t
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ErrorPattern:
-
     error_type: str
     message: str
     file_path: str
@@ -45,7 +43,6 @@ class ErrorPattern:
 
 @dataclass
 class HeatMapCell:
-
     x: str
     y: str
     value: float
@@ -66,7 +63,6 @@ class HeatMapCell:
 
 @dataclass
 class HeatMapData:
-
     cells: list[HeatMapCell]
     x_labels: list[str]
     y_labels: list[str]
@@ -90,7 +86,6 @@ class HeatMapData:
 
 
 class ErrorPatternAnalyzer:
-
     def __init__(self, project_root: Path):
         self.project_root = Path(project_root)
         self.error_patterns: list[ErrorPattern] = []
@@ -101,7 +96,6 @@ class ErrorPatternAnalyzer:
         min_occurrences: int = 2,
     ) -> list[ErrorPattern]:
         logger.info(f"Analyzing error patterns for last {days} days")
-
 
         errors = self._collect_all_errors()
         self.error_patterns = self._process_error_data(errors, min_occurrences)
@@ -129,7 +123,6 @@ class ErrorPatternAnalyzer:
         self._assign_severity_levels()
 
     def generate_file_error_heatmap(self) -> HeatMapData:
-
         def _make_float_defaultdict() -> defaultdict[str, float]:
             return defaultdict(float)
 
@@ -146,7 +139,6 @@ class ErrorPatternAnalyzer:
             file_error_counts[file_path][error_type] += float(count)
             max_value = max(max_value, file_error_counts[file_path][error_type])
 
-
         cells = []
         files = sorted(file_error_counts.keys())
         error_types = sorted(
@@ -161,7 +153,7 @@ class ErrorPatternAnalyzer:
             for error_type in error_types:
                 count_val = float(file_error_counts[file_path].get(error_type, 0))
                 if count_val > 0:
-                    intensity = count_val / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+                    intensity = count_val / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
                     severity = self._get_severity_for_type(error_type)
 
                     cells.append(
@@ -232,7 +224,6 @@ class ErrorPatternAnalyzer:
         time_buckets_data: list[datetime],
         bucket_size: timedelta,
     ) -> tuple[defaultdict[str, defaultdict[str, float]], float]:
-
         def _make_float_defaultdict_temporal() -> defaultdict[str, float]:
             return defaultdict(float)
 
@@ -293,7 +284,7 @@ class ErrorPatternAnalyzer:
     def _create_temporal_cell(
         self, time_label: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
-        intensity = count / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -329,7 +320,6 @@ class ErrorPatternAnalyzer:
     def _count_errors_by_function(
         self,
     ) -> tuple[defaultdict[str, defaultdict[str, float]], float]:
-
         def _make_float_defaultdict_function() -> defaultdict[str, float]:
             return defaultdict(float)
 
@@ -381,7 +371,7 @@ class ErrorPatternAnalyzer:
     def _create_function_cell(
         self, function_id: str, error_type: str, count: float, max_value: float
     ) -> HeatMapCell:
-        intensity = count / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -401,10 +391,8 @@ class ErrorPatternAnalyzer:
     def _analyze_test_failures(self) -> list[dict[str, t.Any]]:
         errors: list[dict[str, t.Any]] = []
 
-
         pytest_cache = self.project_root / ".pytest_cache"
         if pytest_cache.exists():
-
             errors.extend(
                 [
                     {
@@ -430,7 +418,6 @@ class ErrorPatternAnalyzer:
 
     def _analyze_lint_errors(self) -> list[dict[str, t.Any]]:
         errors: list[dict[str, t.Any]] = []
-
 
         errors.extend(
             [
@@ -466,7 +453,6 @@ class ErrorPatternAnalyzer:
     def _analyze_git_history(self) -> list[dict[str, t.Any]]:
         errors: list[dict[str, t.Any]] = []
 
-
         errors.extend(
             [
                 {
@@ -493,12 +479,10 @@ class ErrorPatternAnalyzer:
     def _analyze_log_files(self) -> list[dict[str, t.Any]]:
         errors: list[dict[str, t.Any]] = []
 
-
         log_dirs = [self.project_root / "logs", Path.home() / "logs"]
 
         for log_dir in log_dirs:
             if log_dir.exists():
-
                 errors.extend(
                     [
                         {
@@ -528,7 +512,6 @@ class ErrorPatternAnalyzer:
         groups = defaultdict(list)
 
         for error in errors:
-
             key = f"{error['type']}:{error['file']}"
             if error.get("function"):
                 key += f":{error['function']}"
@@ -573,7 +556,6 @@ class ErrorPatternAnalyzer:
 
     def _calculate_error_trends(self) -> None:
         for pattern in self.error_patterns:
-
             time_diff = (datetime.now() - pattern.last_seen).days
 
             if time_diff <= 1:
@@ -598,9 +580,7 @@ class ErrorPatternAnalyzer:
         }
 
         for pattern in self.error_patterns:
-
             base_severity = severity_map.get(pattern.error_type, "medium")
-
 
             if pattern.count > 10:
                 severity_levels = ["low", "medium", "high", "critical"]

@@ -1,4 +1,3 @@
-
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -12,7 +11,6 @@ from .git import GitService
 
 
 class VersionBumpType(Enum):
-
     MAJOR = "major"
     MINOR = "minor"
     PATCH = "patch"
@@ -20,7 +18,6 @@ class VersionBumpType(Enum):
 
 @dataclass
 class VersionBumpRecommendation:
-
     bump_type: VersionBumpType
     confidence: float
     reasoning: list[str]
@@ -33,36 +30,32 @@ class VersionBumpRecommendation:
 
 
 class BreakingChangeAnalyzer:
-
     def __init__(self) -> None:
-
         self.breaking_patterns = [
             re.compile(
                 r"BREAKING\s*CHANGE[:\s]", re.IGNORECASE
-            ), # REGEX OK: breaking change detection
+            ),  # REGEX OK: breaking change detection
             re.compile(
                 r"^[^:\n]*!:", re.MULTILINE
-            ), # REGEX OK: conventional commit breaking marker
+            ),  # REGEX OK: conventional commit breaking marker
             re.compile(
                 r"\bremove\s+\w+\s+(api|function|method|class)", re.IGNORECASE
-            ), # REGEX OK: API removal detection
+            ),  # REGEX OK: API removal detection
             re.compile(
                 r"\bdelete\s+\w+\s+(api|endpoint|interface)", re.IGNORECASE
-            ), # REGEX OK: API deletion detection
+            ),  # REGEX OK: API deletion detection
             re.compile(
                 r"\bchange\s+\w+\s+(signature|interface|api)", re.IGNORECASE
-            ), # REGEX OK: API signature change
+            ),  # REGEX OK: API signature change
         ]
 
     def analyze(self, entries: list[ChangelogEntry]) -> tuple[bool, list[str], float]:
         breaking_changes: list[str] = []
 
         for entry in entries:
-
             if entry.breaking_change:
                 breaking_changes.append(entry.description)
                 continue
-
 
             for pattern in self.breaking_patterns:
                 if pattern.search(entry.description):
@@ -76,36 +69,32 @@ class BreakingChangeAnalyzer:
 
 
 class FeatureAnalyzer:
-
     def __init__(self) -> None:
-
         self.feature_patterns = [
             re.compile(
                 r"^feat[(\[]", re.IGNORECASE
-            ), # REGEX OK: conventional commit feat
+            ),  # REGEX OK: conventional commit feat
             re.compile(
                 r"\badd\s+(new\s+)?\w+", re.IGNORECASE
-            ), # REGEX OK: addition detection
+            ),  # REGEX OK: addition detection
             re.compile(
                 r"\bimplement\s+\w+", re.IGNORECASE
-            ), # REGEX OK: implementation detection
+            ),  # REGEX OK: implementation detection
             re.compile(
                 r"\bintroduce\s+\w+", re.IGNORECASE
-            ), # REGEX OK: introduction detection
+            ),  # REGEX OK: introduction detection
             re.compile(
                 r"\bcreate\s+(new\s+)?\w+", re.IGNORECASE
-            ), # REGEX OK: creation detection
+            ),  # REGEX OK: creation detection
         ]
 
     def analyze(self, entries: list[ChangelogEntry]) -> tuple[bool, list[str], float]:
         new_features: list[str] = []
 
         for entry in entries:
-
             if entry.type in ("Added", "feat"):
                 new_features.append(entry.description)
                 continue
-
 
             for pattern in self.feature_patterns:
                 if pattern.search(entry.description):
@@ -119,21 +108,15 @@ class FeatureAnalyzer:
 
 
 class ConventionalCommitAnalyzer:
-
     def __init__(self) -> None:
-
         self.commit_type_mappings = {
-
             "breaking": VersionBumpType.MAJOR,
-
             "feat": VersionBumpType.MINOR,
             "feature": VersionBumpType.MINOR,
-
             "fix": VersionBumpType.PATCH,
             "bugfix": VersionBumpType.PATCH,
             "patch": VersionBumpType.PATCH,
             "hotfix": VersionBumpType.PATCH,
-
             "docs": None,
             "style": None,
             "refactor": None,
@@ -148,10 +131,8 @@ class ConventionalCommitAnalyzer:
         recommended_bumps: list[VersionBumpType] = []
 
         for entry in entries:
-
             entry_type = entry.type.lower()
             type_counts[entry_type] = type_counts.get(entry_type, 0) + 1
-
 
             if entry.breaking_change:
                 recommended_bumps.append(VersionBumpType.MAJOR)
@@ -168,7 +149,6 @@ class ConventionalCommitAnalyzer:
 
 
 class VersionAnalyzer:
-
     def __init__(
         self,
         git_service: GitService,
@@ -177,11 +157,9 @@ class VersionAnalyzer:
         self.console = console or Console()
         self.git = git_service
 
-
         self.breaking_analyzer = BreakingChangeAnalyzer()
         self.feature_analyzer = FeatureAnalyzer()
         self.commit_analyzer = ConventionalCommitAnalyzer()
-
 
         self.changelog_generator = ChangelogGenerator(
             console=self.console, git_service=self.git
@@ -218,7 +196,6 @@ class VersionAnalyzer:
             elif bump_type == VersionBumpType.PATCH:
                 return f"{major}.{minor}.{patch + 1}"
             else:
-
                 from typing import assert_never
 
                 assert_never(bump_type)
@@ -277,7 +254,6 @@ class VersionAnalyzer:
     def _analyze_entries_and_recommend(
         self, current_version: str, all_entries: list[ChangelogEntry]
     ) -> VersionBumpRecommendation:
-
         has_breaking, breaking_changes, breaking_confidence = (
             self.breaking_analyzer.analyze(all_entries)
         )

@@ -24,7 +24,6 @@ class WorkflowResult:
 
 
 class WorkflowPipeline:
-
     def __init__(
         self,
         *,
@@ -93,18 +92,17 @@ class WorkflowPipeline:
             conn = sqlite3.connect(cache_db)
             cursor = conn.cursor()
 
-
             cursor.execute(
                 "DELETE FROM workflow_checkpoints WHERE workflow_key = ?",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
             cursor.execute(
                 "DELETE FROM workflow_executions WHERE workflow_key = ?",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
             cursor.execute(
                 "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
 
             conn.commit()
@@ -113,7 +111,6 @@ class WorkflowPipeline:
                 "Cleared Oneiric checkpoint cache for crackerjack workflow"
             )
         except Exception as e:
-
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
@@ -145,5 +142,4 @@ def _workflow_result_success(result: dict[str, t.Any]) -> bool:
 
 
 def _adapt_options(options: t.Any) -> t.Any:
-
     return options

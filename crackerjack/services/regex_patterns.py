@@ -1,14 +1,9 @@
-
-
 from .patterns import (
-
     MAX_INPUT_SIZE,
     MAX_ITERATIONS,
     PATTERN_CACHE_SIZE,
-
     SAFE_PATTERNS,
     CompiledPatternCache,
-
     RegexPatternsService,
     ValidatedPattern,
     apply_formatting_fixes,
@@ -38,16 +33,13 @@ from .patterns import (
 )
 
 __all__ = [
-
     "ValidatedPattern",
     "CompiledPatternCache",
     "validate_pattern_safety",
     "MAX_INPUT_SIZE",
     "MAX_ITERATIONS",
     "PATTERN_CACHE_SIZE",
-
     "SAFE_PATTERNS",
-
     "validate_all_patterns",
     "find_pattern_for_text",
     "apply_safe_replacement",

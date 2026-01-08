@@ -1,4 +1,3 @@
-
 import typing as t
 
 from ....services.regex_patterns import SAFE_PATTERNS
@@ -6,7 +5,6 @@ from ...base import AgentContext
 
 
 class CodeTransformer:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 

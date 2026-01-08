@@ -881,54 +881,123 @@ class TestManager:
         )
 
     def _extract_failure_lines(self, output: str) -> list[str]:
+        """Extract failed test names from pytest output.
+
+        Attempts to extract test names from the short test summary section,
+        falling back to scanning for FAILED lines and test paths.
+
+        Args:
+            output: Full pytest output string
+
+        Returns:
+            List of failed test names (max 10)
+        """
+        import re
+
+        lines = output.split("\n")
+
+        # Try extracting from short test summary
+        failures = self._extract_from_short_summary(lines)
+
+        # Fallback: scan for test paths if no failures found
+        if not failures:
+            failures = self._extract_from_test_paths(lines)
+
+        return failures[:10]
+
+    def _extract_from_short_summary(self, lines: list[str]) -> list[str]:
+        """Extract failed test names from pytest short test summary section.
+
+        Args:
+            lines: Split output lines
+
+        Returns:
+            List of test names that failed
+        """
         import re
 
         failures = []
-
-
         in_summary = False
-        lines = output.split("\n")
 
         for line in lines:
-
             if "short test summary" in line.lower():
                 in_summary = True
                 continue
 
-
             if in_summary and line.strip().startswith("="):
                 break
 
-
             if in_summary and line.strip().startswith("FAILED"):
-
-
-                match = re.search(r"FAILED\s+(.+?)\s+-", line)
-                if match:
-                    test_name = match.group(1).strip()
+                test_name = self._parse_summary_failed_line(line.strip())
+                if test_name:
                     failures.append(test_name)
-                elif "FAILED" in line:
 
-                    parts = line.split("FAILED", 1)
-                    if len(parts) > 1:
-                        test_name = parts[1].strip().split(" - ")[0].strip()
-                        if test_name:
-                            failures.append(test_name)
+        return failures
 
+    def _parse_summary_failed_line(self, line: str) -> str | None:
+        """Parse a single FAILED line from short summary.
 
-        if not failures:
-            for line in lines:
-                if "::" in line and "FAILED" in line.upper():
+        Args:
+            line: Line containing FAILED marker
 
-                    test_match = re.search(r'([a-zA-Z_/]+::.*?)(?:\s+|$)', line)
-                    if test_match:
-                        test_name = test_match.group(1).strip()
-                        if test_name and test_name not in failures:
-                            failures.append(test_name)
-                            if len(failures) >= 10:
-                                break
+        Returns:
+            Extracted test name or None
+        """
+        import re
 
-        return failures[:10]
+        # Try format: "FAILED test_path - error"
+        match = re.search(r"FAILED\s+(.+?)\s+-", line)
+        if match:
+            return match.group(1).strip()
+
+        # Try format: "FAILED test_path"
+        if "FAILED" in line:
+            parts = line.split("FAILED", 1)
+            if len(parts) > 1:
+                test_name = parts[1].strip().split(" - ")[0].strip()
+                return test_name or None
+
+        return None
+
+    def _extract_from_test_paths(self, lines: list[str]) -> list[str]:
+        """Extract test names from lines containing :: and FAILED markers.
+
+        Args:
+            lines: Split output lines
+
+        Returns:
+            List of test names (max 10)
+        """
+        failures = []
+
+        for line in lines:
+            test_name = self._try_extract_test_name(line)
+            if test_name and test_name not in failures:
+                failures.append(test_name)
+                if len(failures) >= 10:
+                    break
+
+        return failures
+
+    def _try_extract_test_name(self, line: str) -> str | None:
+        """Try to extract test name from a line containing :: and FAILED.
+
+        Args:
+            line: Output line to parse
+
+        Returns:
+            Extracted test name or None
+        """
+        import re
+
+        if not ("::" in line and "FAILED" in line.upper()):
+            return None
+
+        test_match = re.search(r'([a-zA-Z_/]+::.*?)(?:\s+|$)', line)
+        if test_match:
+            return test_match.group(1).strip()
+
+        return None
 
     @staticmethod
     def _strip_ansi_codes(text: str) -> str:
@@ -1267,163 +1336,252 @@ class TestManager:
     def _enrich_failures_from_short_summary(
         self, failures: list["TestFailure"], output: str
     ) -> None:
-        import re
+        """Enrich test failures with data from pytest short summary section.
 
+        Parses the pytest short test summary to extract error messages and
+        determine proper failure status (ERROR vs FAILED) for each test.
+
+        Args:
+            failures: List of TestFailure objects to enrich
+            output: Full pytest output string containing short summary
+        """
         from crackerjack.models.test_models import TestFailure
 
+        summary_failures = self._parse_short_summary(output)
+
+        # Case 1: No failures parsed yet, create from summary
+        if not failures and summary_failures:
+            self._create_failures_from_summary(failures, summary_failures)
+            return
+
+        # Case 2: Enrich existing failures with summary data
+        if summary_failures:
+            self._enrich_existing_failures(failures, summary_failures)
+
+        # Case 3: Match unnamed failures to summary entries
+        self._match_unnamed_failures(failures, summary_failures)
+
+    def _parse_short_summary(self, output: str) -> list[dict[str, str]]:
+        """Parse pytest short test summary section from output.
+
+        Args:
+            output: Full pytest output string
+
+        Returns:
+            List of dicts with 'test_path' and 'error_message' keys
+        """
+        import re
 
         lines = output.split("\n")
         in_summary = False
         summary_failures: list[dict[str, str]] = []
 
-
         for line in lines:
-
             if "short test summary" in line.lower():
                 in_summary = True
                 continue
 
-
             if in_summary and line.startswith("="):
                 break
 
-
             if in_summary and line.strip().startswith("FAILED"):
+                failure_data = self._parse_summary_failure_line(line.strip())
+                if failure_data:
+                    summary_failures.append(failure_data)
 
+        return summary_failures
 
-                match = re.match(r"^FAILED\s+(.+?)\s+-\s+(.+)$", line.strip())
-                if match:
-                    test_path, error_message = match.groups()
+    def _parse_summary_failure_line(self, line: str) -> dict[str, str] | None:
+        """Parse a single failure line from short summary.
 
-                    error_message = re.sub(r'\.\.\.$', '', error_message).strip()
-                    summary_failures.append(
-                        {"test_path": test_path, "error_message": error_message}
-                    )
-                else:
+        Args:
+            line: Single line from short test summary
 
-                    match2 = re.search(r"FAILED\s+(.+?)\s+-", line.strip())
-                    if match2:
-                        test_path = match2.group(1)
-                        error_msg = "Error: see full output above"
-                        summary_failures.append(
-                            {"test_path": test_path, "error_message": error_msg}
-                        )
+        Returns:
+            Dict with 'test_path' and 'error_message' or None
+        """
+        import re
 
+        # Try format: "FAILED test_path - error message"
+        match = re.match(r"^FAILED\s+(.+?)\s+-\s+(.+)$", line)
+        if match:
+            test_path, error_message = match.groups()
+            error_message = re.sub(r'\.\.\.$', '', error_message).strip()
+            return {"test_path": test_path, "error_message": error_message}
 
-        if not failures and summary_failures:
-            for summary_failure in summary_failures:
-                error_message = summary_failure["error_message"]
+        # Try format: "FAILED test_path -"
+        match2 = re.search(r"FAILED\s+(.+?)\s+-", line)
+        if match2:
+            test_path = match2.group(1)
+            return {
+                "test_path": test_path,
+                "error_message": "Error: see full output above"
+            }
 
+        return None
 
-                if any(
-                    error_message.startswith(f"{error_type}:")
-                    for error_type in [
-                        "TypeError",
-                        "KeyError",
-                        "AttributeError",
-                        "IndexError",
-                        "ValueError",
-                        "RuntimeError",
-                        "NameError",
-                        "ImportError",
-                        "FileNotFoundError",
-                        "UnboundLocalError",
-                    ]
-                ):
-                    status = "ERROR"
-                else:
-                    status = "FAILED"
+    def _determine_failure_status(self, error_message: str) -> str:
+        """Determine if error represents ERROR or FAILED status.
 
-                failures.append(
-                    TestFailure(
-                        test_name=summary_failure["test_path"],
-                        status=status,
-                        location=summary_failure["test_path"],
-                        assertion=error_message,
-                    )
+        Args:
+            error_message: Error message from test failure
+
+        Returns:
+            "ERROR" for exceptions, "FAILED" for assertion failures
+        """
+        error_types = (
+            "TypeError",
+            "KeyError",
+            "AttributeError",
+            "IndexError",
+            "ValueError",
+            "RuntimeError",
+            "NameError",
+            "ImportError",
+            "FileNotFoundError",
+            "UnboundLocalError",
+        )
+
+        if any(
+            error_message.startswith(f"{error_type}:")
+            for error_type in error_types
+        ):
+            return "ERROR"
+        return "FAILED"
+
+    def _create_failures_from_summary(
+        self,
+        failures: list["TestFailure"],
+        summary_failures: list[dict[str, str]],
+    ) -> None:
+        """Create TestFailure objects from summary when no failures exist.
+
+        Args:
+            failures: List to append new TestFailure objects to
+            summary_failures: Parsed summary data
+        """
+        from crackerjack.models.test_models import TestFailure
+
+        for summary_failure in summary_failures:
+            error_message = summary_failure["error_message"]
+            status = self._determine_failure_status(error_message)
+
+            failures.append(
+                TestFailure(
+                    test_name=summary_failure["test_path"],
+                    status=status,
+                    location=summary_failure["test_path"],
+                    assertion=error_message,
                 )
-            return
+            )
 
+    def _enrich_existing_failures(
+        self,
+        failures: list["TestFailure"],
+        summary_failures: list[dict[str, str]],
+    ) -> None:
+        """Enrich existing failure objects with summary data.
 
-        for i, summary_failure in enumerate(summary_failures):
+        Args:
+            failures: List of existing TestFailure objects
+            summary_failures: Parsed summary data to enrich with
+        """
+        for summary_failure in summary_failures:
             test_path = summary_failure["test_path"]
             error_message = summary_failure["error_message"]
+            status = self._determine_failure_status(error_message)
 
+            # Try to match by test name
+            if self._try_enrich_named_failure(failures, test_path, error_message, status):
+                continue
 
-            if any(
-                error_message.startswith(f"{error_type}:")
-                for error_type in [
-                    "TypeError",
-                    "KeyError",
-                    "AttributeError",
-                    "IndexError",
-                    "ValueError",
-                    "RuntimeError",
-                    "NameError",
-                    "ImportError",
-                    "FileNotFoundError",
-                    "UnboundLocalError",
-                ]
-            ):
-                status = "ERROR"
-            else:
-                status = "FAILED"
+            # Try to enrich unnamed failure
+            self._try_enrich_unnamed_failure(failures, test_path, error_message, status)
 
+    def _try_enrich_named_failure(
+        self,
+        failures: list["TestFailure"],
+        test_path: str,
+        error_message: str,
+        status: str,
+    ) -> bool:
+        """Try to enrich a named failure with summary data.
 
-            matched = False
-            for failure in failures:
-                if failure.test_name == test_path:
+        Args:
+            failures: List of TestFailure objects
+            test_path: Test identifier
+            error_message: Error message from summary
+            status: Determined status (ERROR or FAILED)
 
-                    if not failure.assertion:
-                        failure.assertion = error_message
-                    failure.status = status
-                    matched = True
-                    break
+        Returns:
+            True if failure was matched and enriched
+        """
+        for failure in failures:
+            if failure.test_name == test_path:
+                if not failure.assertion:
+                    failure.assertion = error_message
+                failure.status = status
+                return True
+        return False
 
+    def _try_enrich_unnamed_failure(
+        self,
+        failures: list["TestFailure"],
+        test_path: str,
+        error_message: str,
+        status: str,
+    ) -> bool:
+        """Try to enrich an unnamed failure with summary data.
 
-            if not matched:
-                for failure in failures:
-                    if not failure.test_name or failure.test_name in (
-                        "",
-                        "unknown",
-                        "N/A",
-                    ):
+        Args:
+            failures: List of TestFailure objects
+            test_path: Test identifier to assign
+            error_message: Error message from summary
+            status: Determined status (ERROR or FAILED)
 
-                        failure.test_name = test_path
-                        if not failure.assertion:
-                            failure.assertion = error_message
-                        failure.status = status
-                        matched = True
-                        break
+        Returns:
+            True if failure was matched and enriched
+        """
+        unnamed_values = ("", "unknown", "N/A")
 
+        for failure in failures:
+            if not failure.test_name or failure.test_name in unnamed_values:
+                failure.test_name = test_path
+                if not failure.assertion:
+                    failure.assertion = error_message
+                failure.status = status
+                return True
+        return False
 
-        unnamed_failures = [f for f in failures if not f.test_name or f.test_name in ("", "unknown", "N/A")]
-        if unnamed_failures and len(unnamed_failures) <= len(summary_failures):
-            for i, failure in enumerate(unnamed_failures):
-                if i < len(summary_failures):
-                    failure.test_name = summary_failures[i]["test_path"]
-                    error_message = summary_failures[i]["error_message"]
-                    if not failure.assertion:
-                        failure.assertion = error_message
+    def _match_unnamed_failures(
+        self,
+        failures: list["TestFailure"],
+        summary_failures: list[dict[str, str]],
+    ) -> None:
+        """Match unnamed failures to summary entries by position.
 
-                    if any(
-                        error_message.startswith(f"{error_type}:")
-                        for error_type in [
-                            "TypeError",
-                            "KeyError",
-                            "AttributeError",
-                            "IndexError",
-                            "ValueError",
-                            "RuntimeError",
-                            "NameError",
-                            "ImportError",
-                            "FileNotFoundError",
-                            "UnboundLocalError",
-                        ]
-                    ):
-                        failure.status = "ERROR"
-                    else:
-                        failure.status = "FAILED"
+        Args:
+            failures: List of TestFailure objects
+            summary_failures: Parsed summary data
+        """
+        unnamed_values = ("", "unknown", "N/A")
+        unnamed_failures = [
+            f for f in failures
+            if not f.test_name or f.test_name in unnamed_values
+        ]
+
+        if not unnamed_failures or len(unnamed_failures) > len(summary_failures):
+            return
+
+        for i, failure in enumerate(unnamed_failures):
+            if i < len(summary_failures):
+                failure.test_name = summary_failures[i]["test_path"]
+                error_message = summary_failures[i]["error_message"]
+
+                if not failure.assertion:
+                    failure.assertion = error_message
+
+                failure.status = self._determine_failure_status(error_message)
 
     def _parse_failure_line(
         self,

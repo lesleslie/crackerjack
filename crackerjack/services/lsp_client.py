@@ -19,19 +19,14 @@ from .zuban_lsp_service import ZubanLSPService
 
 
 class ProgressCallback(Protocol):
+    def on_file_start(self, file_path: str) -> None: ...
 
-    def on_file_start(self, file_path: str) -> None:
-        ...
+    def on_file_complete(self, file_path: str, error_count: int) -> None: ...
 
-    def on_file_complete(self, file_path: str, error_count: int) -> None:
-        ...
-
-    def on_progress(self, current: int, total: int) -> None:
-        ...
+    def on_progress(self, current: int, total: int) -> None: ...
 
 
 class RealTimeTypingFeedback:
-
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self._total_errors = 0
@@ -76,7 +71,6 @@ class RealTimeTypingFeedback:
 
 
 class JSONRPCClient:
-
     def __init__(self, lsp_service: ZubanLSPService) -> None:
         self.lsp_service = lsp_service
         self._request_id = 0
@@ -127,7 +121,6 @@ class JSONRPCClient:
 
 
 class LSPClient:
-
     def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self._server_port: int | None = None
@@ -145,13 +138,11 @@ class LSPClient:
         if self._lsp_service and self._lsp_service.is_running:
             return True
 
-
         self._lsp_service = ZubanLSPService(
             port=self._server_port or 8677,
             mode="stdio",
             console=self.console,
         )
-
 
         if await self._lsp_service.start():
             self._jsonrpc_client = JSONRPCClient(self._lsp_service)
@@ -186,7 +177,6 @@ class LSPClient:
             return self._check_files_with_feedback(
                 file_paths, progress_callback, show_progress
             )
-
 
         return self._check_files_via_lsp(file_paths, progress_callback, show_progress)
 
@@ -259,9 +249,7 @@ class LSPClient:
         progress_callback: ProgressCallback | None = None,
         show_progress: bool = True,
     ) -> dict[str, list[dict[str, t.Any]]]:
-
         try:
-
             try:
                 asyncio.get_running_loop()
 
@@ -274,7 +262,6 @@ class LSPClient:
                     )
                     return future.result(timeout=120)
             except RuntimeError:
-
                 return asyncio.run(
                     self._async_check_files_via_lsp(
                         file_paths, progress_callback, show_progress
@@ -306,16 +293,13 @@ class LSPClient:
         progress_callback: ProgressCallback | None = None,
         show_progress: bool = True,
     ) -> dict[str, list[dict[str, t.Any]]]:
-
         if not await self._validate_lsp_prerequisites():
             return self._check_files_with_feedback(
                 file_paths, progress_callback, show_progress
             )
 
         try:
-
             await self._initialize_lsp_workspace(file_paths)
-
 
             return await self._process_files_via_lsp(
                 file_paths, progress_callback, show_progress
@@ -414,26 +398,20 @@ class LSPClient:
 
     async def _check_file_via_lsp(self, file_path: str) -> list[dict[str, t.Any]]:
         if not self._jsonrpc_client:
-
             return self._check_file_with_zuban(file_path)
 
         try:
-
             await self._jsonrpc_client.did_open(file_path)
-
 
             await asyncio.sleep(0.1)
 
-
             diagnostics = self._check_file_with_zuban(file_path)
-
 
             await self._jsonrpc_client.did_close(file_path)
 
             return diagnostics
 
         except Exception:
-
             return self._check_file_with_zuban(file_path)
 
     def _check_file_with_zuban(self, file_path: str) -> list[dict[str, t.Any]]:
@@ -475,7 +453,6 @@ class LSPClient:
         return ":" in line and "error:" in line.lower()
 
     def _parse_error_line(self, line: str) -> dict[str, t.Any] | None:
-
         parts = line.split(":", 4)
         if len(parts) < 4:
             return None
@@ -517,14 +494,11 @@ class LSPClient:
     def get_project_files(self, project_path: Path) -> list[str]:
         python_files = []
 
-
         crackerjack_dir = project_path / "crackerjack"
         if crackerjack_dir.exists():
             for py_file in crackerjack_dir.rglob("*.py"):
-
                 rel_path = py_file.relative_to(project_path)
                 rel_str = str(rel_path)
-
 
                 if "/mcp/" in rel_str or "/plugins/" in rel_str:
                     continue

@@ -18,13 +18,11 @@ logger = logging.getLogger(__name__)
 
 
 def get_console_width() -> int:
-
     with suppress(Exception):
         settings = load_settings(CrackerjackSettings)
         width = getattr(getattr(settings, "console", None), "width", None)
         if isinstance(width, int) and width > 0:
             return width
-
 
     with suppress(Exception):
         from pathlib import Path as _P
@@ -40,7 +38,6 @@ def get_console_width() -> int:
             )
             if isinstance(width, int) and width > 0:
                 return width
-
 
     return 70
 

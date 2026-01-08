@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import argparse
@@ -9,7 +8,6 @@ from ._git_utils import get_files_by_extension
 
 
 def has_trailing_whitespace(line: str) -> bool:
-
     line_stripped = line.rstrip("\n\r")
 
     return line_stripped != line_stripped.rstrip()
@@ -17,16 +15,13 @@ def has_trailing_whitespace(line: str) -> bool:
 
 def fix_trailing_whitespace(file_path: Path) -> bool:
     try:
-
         content = file_path.read_text(encoding="utf-8")
         lines = content.splitlines(keepends=True)
-
 
         modified = False
         new_lines = []
         for line in lines:
             if has_trailing_whitespace(line):
-
                 line_body = line.rstrip("\r\n")
                 stripped = line_body.rstrip()
                 if line.endswith("\r\n"):
@@ -38,34 +33,28 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
             else:
                 new_lines.append(line)
 
-
         if modified:
             file_path.write_text("".join(new_lines), encoding="utf-8")
-            print(f"Fixed trailing whitespace: {file_path}") # noqa: T201
+            print(f"Fixed trailing whitespace: {file_path}")  # noqa: T201
 
         return modified
 
     except UnicodeDecodeError:
-
         return False
     except Exception as e:
-        print(f"Error processing {file_path}: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
         return False
 
 
 def _collect_files_to_check(args: argparse.Namespace) -> list[Path]:
-
     if not args.files:
-
         files = get_files_by_extension(
             [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
         )
         if not files:
-
             files = list(Path.cwd().rglob("*.py"))
     else:
         files = args.files
-
 
     return [f for f in files if f.is_file()]
 
@@ -76,7 +65,7 @@ def _process_files_in_check_mode(files: list[Path]) -> int:
         content = file_path.read_text(encoding="utf-8")
         lines = content.splitlines(keepends=True)
         if any(has_trailing_whitespace(line) for line in lines):
-            print(f"Trailing whitespace found: {file_path}") # noqa: T201
+            print(f"Trailing whitespace found: {file_path}")  # noqa: T201
             modified_count += 1
     return modified_count
 
@@ -110,27 +99,24 @@ def main(argv: list[str] | None = None) -> int:
     files = _collect_files_to_check(args)
 
     if not files:
-        print("No files to check") # noqa: T201
+        print("No files to check")  # noqa: T201
         return 0
-
 
     if args.check:
         modified_count = _process_files_in_check_mode(files)
     else:
         modified_count = _process_files_in_fix_mode(files)
 
-
     if modified_count > 0:
         if args.check:
-            print(f"\n{modified_count} file(s) with trailing whitespace") # noqa: T201
+            print(f"\n{modified_count} file(s) with trailing whitespace")  # noqa: T201
         else:
-            print(f"\nFixed {modified_count} file(s)") # noqa: T201
+            print(f"\nFixed {modified_count} file(s)")  # noqa: T201
 
-
-            print("files were modified by this hook") # noqa: T201
+            print("files were modified by this hook")  # noqa: T201
         return 1
 
-    print("No trailing whitespace found") # noqa: T201
+    print("No trailing whitespace found")  # noqa: T201
     return 0
 
 

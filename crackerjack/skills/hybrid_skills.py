@@ -1,4 +1,3 @@
-
 import typing as t
 from dataclasses import dataclass
 
@@ -17,7 +16,6 @@ from crackerjack.skills.agent_skills import (
 
 @dataclass
 class ToolMapping:
-
     tool_name: str
     skill_id: str
     method_name: str
@@ -37,7 +35,6 @@ class ToolMapping:
 
 
 class ToolDelegator:
-
     def __init__(self) -> None:
         self._tool_mappings: dict[str, ToolMapping] = {}
         self._skill_mappings: dict[str, list[str]] = {}
@@ -47,7 +44,6 @@ class ToolDelegator:
         mapping: ToolMapping,
     ) -> None:
         self._tool_mappings[mapping.tool_name] = mapping
-
 
         if mapping.skill_id not in self._skill_mappings:
             self._skill_mappings[mapping.skill_id] = []
@@ -73,7 +69,6 @@ class ToolDelegator:
 
 
 class HybridSkill(AgentSkill):
-
     def __init__(
         self,
         agent: SubAgent,
@@ -234,7 +229,6 @@ class HybridSkill(AgentSkill):
         if not mapping or mapping.skill_id != self.skill_id:
             raise ValueError(f"Tool {tool_name} not found in skill {self.skill_id}")
 
-
         if mapping.method_name == "can_handle":
             issue = self._parse_issue(kwargs)
             confidence = await self.can_handle(issue)
@@ -281,7 +275,6 @@ class HybridSkill(AgentSkill):
 
 
 class HybridSkillRegistry(AgentSkillRegistry):
-
     def __init__(self) -> None:
         super().__init__()
         self.delegator = ToolDelegator()
@@ -297,23 +290,17 @@ class HybridSkillRegistry(AgentSkillRegistry):
         metadata: SkillMetadata | None = None,
         generate_tools: bool = True,
     ) -> HybridSkill:
-
         agent = agent_class(context)
-
 
         if metadata is None:
             metadata = self._generate_metadata(agent)
 
-
         skill = HybridSkill(agent, metadata, self.delegator)
-
 
         self.register(skill)
 
-
         if generate_tools:
             skill.generate_default_tools()
-
 
         if self._mcp_app is not None:
             self._register_tools_with_mcp(skill)
@@ -361,13 +348,10 @@ class HybridSkillRegistry(AgentSkillRegistry):
         return mappings
 
     def _register_tools_with_mcp(self, skill: HybridSkill) -> None:
-
-
         pass
 
     def get_tool_statistics(self) -> dict[str, t.Any]:
         all_mappings = self.get_all_tool_mappings()
-
 
         tools_by_skill: dict[str, int] = {}
         for mapping in all_mappings:

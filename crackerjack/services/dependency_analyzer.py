@@ -1,4 +1,3 @@
-
 import ast
 import json
 import logging
@@ -12,7 +11,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class DependencyNode:
-
     id: str
     name: str
     type: str
@@ -41,7 +39,6 @@ class DependencyNode:
 
 @dataclass
 class DependencyEdge:
-
     source: str
     target: str
     type: str
@@ -60,7 +57,6 @@ class DependencyEdge:
 
 @dataclass
 class DependencyGraph:
-
     nodes: dict[str, DependencyNode] = field(default_factory=dict)
     edges: list[DependencyEdge] = field(default_factory=list)
     clusters: dict[str, list[str]] = field(default_factory=dict)
@@ -78,7 +74,6 @@ class DependencyGraph:
 
 
 class DependencyAnalyzer:
-
     def __init__(self, project_root: Path):
         self.project_root = Path(project_root)
         self.python_files: list[Path] = []
@@ -87,9 +82,7 @@ class DependencyAnalyzer:
     def analyze_project(self) -> DependencyGraph:
         logger.info(f"Starting dependency analysis for {self.project_root}")
 
-
         self._discover_python_files()
-
 
         for file_path in self.python_files:
             try:
@@ -97,7 +90,6 @@ class DependencyAnalyzer:
             except Exception as e:
                 logger.warning(f"Failed to analyze {file_path}: {e}")
                 continue
-
 
         self._generate_clusters()
         self._calculate_metrics()
@@ -112,7 +104,6 @@ class DependencyAnalyzer:
 
     def _discover_python_files(self) -> None:
         self.python_files = list[t.Any](self.project_root.rglob("*.py"))
-
 
         excluded_patterns = {
             "__pycache__",
@@ -141,10 +132,8 @@ class DependencyAnalyzer:
             visitor = DependencyVisitor(file_path, self.project_root)
             visitor.visit(tree)
 
-
             for node in visitor.nodes:
                 self.dependency_graph.nodes[node.id] = node
-
 
             self.dependency_graph.edges.extend(visitor.edges)
 
@@ -157,7 +146,6 @@ class DependencyAnalyzer:
         clusters: dict[str, list[str]] = {}
 
         for node_id, node in self.dependency_graph.nodes.items():
-
             relative_path = Path(node.file_path).relative_to(self.project_root)
             parts = relative_path.parts[:-1]
 
@@ -167,7 +155,6 @@ class DependencyAnalyzer:
                     clusters[cluster_name] = []
                 clusters[cluster_name].append(node_id)
             else:
-
                 if "root" not in clusters:
                     clusters["root"] = []
                 clusters["root"].append(node_id)
@@ -178,7 +165,6 @@ class DependencyAnalyzer:
         nodes = self.dependency_graph.nodes
         edges = self.dependency_graph.edges
 
-
         metrics: dict[str, t.Any] = {
             "total_nodes": len(nodes),
             "total_edges": len(edges),
@@ -187,7 +173,6 @@ class DependencyAnalyzer:
             if len(nodes) > 1
             else 0,
         }
-
 
         type_counts: dict[str, int] = {}
         complexity_sum = 0
@@ -199,13 +184,11 @@ class DependencyAnalyzer:
         metrics["node_types"] = type_counts
         metrics["average_complexity"] = complexity_sum / len(nodes) if nodes else 0
 
-
         edge_type_counts: dict[str, int] = {}
         for edge in edges:
             edge_type_counts[edge.type] = edge_type_counts.get(edge.type, 0) + 1
 
         metrics["edge_types"] = edge_type_counts
-
 
         in_degree: dict[str, int] = {}
         out_degree: dict[str, int] = {}
@@ -213,7 +196,6 @@ class DependencyAnalyzer:
         for edge in edges:
             out_degree[edge.source] = out_degree.get(edge.source, 0) + 1
             in_degree[edge.target] = in_degree.get(edge.target, 0) + 1
-
 
         from operator import itemgetter
 
@@ -231,7 +213,6 @@ class DependencyAnalyzer:
 
 
 class DependencyVisitor(ast.NodeVisitor):
-
     def __init__(self, file_path: Path, project_root: Path):
         self.file_path = file_path
         self.project_root = project_root
@@ -262,7 +243,6 @@ class DependencyVisitor(ast.NodeVisitor):
             imported_name = alias.asname or alias.name
             self.imports[imported_name] = alias.name
 
-
             edge = DependencyEdge(
                 source=f"module:{self.module_name}",
                 target=f"module:{alias.name}",
@@ -277,7 +257,6 @@ class DependencyVisitor(ast.NodeVisitor):
                 imported_name = alias.asname or alias.name
                 full_name = f"{node.module}.{alias.name}"
                 self.imports[imported_name] = full_name
-
 
                 edge = DependencyEdge(
                     source=f"module:{self.module_name}",
@@ -312,7 +291,6 @@ class DependencyVisitor(ast.NodeVisitor):
             },
         )
         self.nodes.append(class_node)
-
 
         for base in node.bases:
             if isinstance(base, ast.Name):
@@ -360,7 +338,6 @@ class DependencyVisitor(ast.NodeVisitor):
         if isinstance(node.func, ast.Name):
             called_name = self._resolve_name(node.func.id)
 
-
             source_id = self._get_current_context_id(node.lineno)
             if source_id:
                 edge = DependencyEdge(
@@ -373,7 +350,6 @@ class DependencyVisitor(ast.NodeVisitor):
                 self.edges.append(edge)
 
         elif isinstance(node.func, ast.Attribute):
-
             if isinstance(node.func.value, ast.Name):
                 obj_name = self._resolve_name(node.func.value.id)
                 method_name = node.func.attr
@@ -410,15 +386,13 @@ class DependencyVisitor(ast.NodeVisitor):
         if isinstance(decorator, ast.Name):
             return decorator.id
         elif isinstance(decorator, ast.Attribute):
-            return f"{decorator.value.id}.{decorator.attr}" # type: ignore
+            return f"{decorator.value.id}.{decorator.attr}"  # type: ignore
         return "unknown"
 
     def _resolve_name(self, name: str) -> str:
         return self.imports.get(name, f"{self.module_name}.{name}")
 
     def _get_current_context_id(self, line_number: int) -> str | None:
-
-
         return f"module:{self.module_name}"
 
 

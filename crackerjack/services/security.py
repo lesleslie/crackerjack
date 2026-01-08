@@ -199,9 +199,7 @@ class SecurityService(SecurityServiceProtocol):
         for secret_type, pattern in patterns.items():
             matches = re.finditer(pattern, content)
             for match in matches:
-
                 secret_value = match.group(1)
-
 
                 line_start_pos = match.start()
                 line_num = content[:line_start_pos].count("\n") + 1

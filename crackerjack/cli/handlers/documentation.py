@@ -1,9 +1,7 @@
-
 import typing as t
 from pathlib import Path
 
 from rich.console import Console
-
 
 console = Console()
 
@@ -48,7 +46,6 @@ def handle_documentation_commands(
 
     from crackerjack.services.documentation_service import DocumentationServiceImpl
 
-
     pkg_path = Path.cwd()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
@@ -71,7 +68,6 @@ def handle_documentation_commands(
 
 
 def create_sync_filesystem_service() -> t.Any:
-
     class SyncFileSystemService:
         def read_file(self, path: str | Path) -> str:
             return Path(path).read_text()
@@ -92,7 +88,6 @@ def create_sync_filesystem_service() -> t.Any:
 
 
 def create_config_manager() -> t.Any:
-
     class ConfigManager:
         def __init__(self) -> None:
             self._config: dict[str, t.Any] = {}
@@ -113,7 +108,6 @@ def create_config_manager() -> t.Any:
 
 
 def create_logger_adapter(logger: t.Any) -> t.Any:
-
     class LoggerAdapter:
         def __init__(self, logger: t.Any) -> None:
             self._logger = logger

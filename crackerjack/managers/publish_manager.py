@@ -17,25 +17,21 @@ from crackerjack.models.protocols import (
 
 
 class _NullGitService:
-
     def is_git_repo(self) -> bool:
         return False
 
 
 class _NullVersionAnalyzer:
-
     async def recommend_version_bump(self) -> t.Any:
         return None
 
 
 class _NullChangelogGenerator:
-
     def generate_changelog_from_commits(self, **_: t.Any) -> bool:
         return False
 
 
 class _RegexPatterns:
-
     def update_pyproject_version(self, content: str, version: str) -> str:
         from crackerjack.services.regex_patterns import update_pyproject_version
 
@@ -55,11 +51,9 @@ class PublishManagerImpl:
         pkg_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
-
         self.console = self._resolve_console(console)
         self.pkg_path = self._resolve_pkg_path(pkg_path)
         self.dry_run = dry_run
-
 
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
@@ -91,9 +85,9 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path) # type: ignore[return-value]
+            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
         except Exception:
-            return _NullGitService() # type: ignore[return-value]
+            return _NullGitService()  # type: ignore[return-value]
 
     def _resolve_version_analyzer(
         self, version_analyzer: VersionAnalyzerProtocol | None
@@ -103,9 +97,9 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return VersionAnalyzer(self._git_service) # type: ignore[arg-type]
+            return VersionAnalyzer(self._git_service)  # type: ignore[arg-type]
         except Exception:
-            return _NullVersionAnalyzer() # type: ignore[return-value]
+            return _NullVersionAnalyzer()  # type: ignore[return-value]
 
     def _resolve_changelog_generator(
         self, changelog_generator: ChangelogGeneratorProtocol | None
@@ -115,16 +109,16 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service) # type: ignore[return-value]
+            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
         except Exception:
-            return _NullChangelogGenerator() # type: ignore[return-value]
+            return _NullChangelogGenerator()  # type: ignore[return-value]
 
     def _resolve_regex_patterns(
         self, regex_patterns: RegexPatternsProtocol | None
     ) -> RegexPatternsProtocol:
         if regex_patterns is not None:
             return regex_patterns
-        return _RegexPatterns() # type: ignore[return-value]
+        return _RegexPatterns()  # type: ignore[return-value]
 
     def _resolve_filesystem(
         self, filesystem: FileSystemInterface | None
@@ -188,7 +182,6 @@ class PublishManagerImpl:
         try:
             content = self.filesystem.read_file(pyproject_path)
 
-
             if self._regex_patterns is not None:
                 update_pyproject_version_func = (
                     self._regex_patterns.update_pyproject_version
@@ -244,7 +237,6 @@ class PublishManagerImpl:
             msg = "Cannot determine current version"
             raise ValueError(msg)
         self.console.print(f"[cyan]📦[/ cyan] Current version: {current_version}")
-
 
         recommendation = self._get_version_recommendation()
         if recommendation and version_type != "interactive":
@@ -305,15 +297,11 @@ class PublishManagerImpl:
         try:
             import asyncio
 
-
             version_analyzer = self._version_analyzer
 
-
             try:
-
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-
                     import concurrent.futures
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -326,7 +314,6 @@ class PublishManagerImpl:
                         version_analyzer.recommend_version_bump()
                     )
             except RuntimeError:
-
                 recommendation = asyncio.run(version_analyzer.recommend_version_bump())
 
             return recommendation
@@ -347,7 +334,6 @@ class PublishManagerImpl:
 
         if recommendation.reasoning:
             self.console.print(f"[dim]→ {recommendation.reasoning[0]}[/dim]")
-
 
         if recommendation.breaking_changes:
             self.console.print(
@@ -541,7 +527,6 @@ class PublishManagerImpl:
     def _execute_publish(self) -> bool:
         result = self._run_command(["uv", "publish"])
 
-
         success_indicators = [
             "Successfully uploaded",
             "Package uploaded successfully",
@@ -554,7 +539,6 @@ class PublishManagerImpl:
         has_success_indicator = any(
             indicator in stdout_text for indicator in success_indicators
         )
-
 
         success = result.returncode == 0 or has_success_indicator
 
@@ -700,49 +684,64 @@ class PublishManagerImpl:
             self.console.print(f"[yellow]⚠️[/ yellow] Error reading package info: {e}")
             return {}
 
-    @staticmethod
-    def _parse_project_section_fallback(content: str) -> dict[str, t.Any]:
-        import ast
-
+    def _parse_project_section_fallback(self, content: str) -> dict[str, t.Any]:
         project: dict[str, t.Any] = {}
         in_project = False
 
         for raw_line in content.splitlines():
             line = raw_line.strip()
-            if not line or line.startswith("#"):
+            if not self._should_process_line(line):
                 continue
-            if line.startswith("[") and line.endswith("]"):
-                in_project = line.strip("[]") == "project"
+
+            in_project = self._update_project_state(line, in_project)
+            if not in_project:
                 continue
-            if not in_project or "=" not in line:
-                continue
-            key, value = line.split("=", 1)
-            normalized_key = key.strip().replace(" ", "")
-            raw_value = value.strip()
-            if raw_value.startswith("[") and raw_value.endswith("]"):
-                try:
-                    parsed_value = ast.literal_eval(raw_value)
-                except Exception:
-                    parsed_value = []
-                project[normalized_key] = parsed_value
-            elif raw_value.startswith("{") and raw_value.endswith("}"):
-                try:
-                    project[normalized_key] = ast.literal_eval(raw_value)
-                except Exception:
-                    project[normalized_key] = {}
-            else:
-                project[normalized_key] = raw_value.strip('"').strip("'")
+
+            parsed = self._parse_line_if_valid(line)
+            if parsed:
+                project[parsed[0]] = parsed[1]
 
         return {"project": project}
 
+    def _should_process_line(self, line: str) -> bool:
+        return bool(line and not line.startswith("#"))
+
+    def _update_project_state(self, line: str, current_state: bool) -> bool:
+        if line.startswith("[") and line.endswith("]"):
+            return line.strip("[]") == "project"
+        return current_state
+
+    def _parse_line_if_valid(self, line: str) -> tuple[str, t.Any] | None:
+        if "=" not in line:
+            return None
+
+        key, value = line.split("=", 1)
+        normalized_key = key.strip().replace(" ", "")
+        raw_value = value.strip()
+
+        return (normalized_key, self._parse_value(raw_value))
+
+    def _parse_value(self, raw_value: str) -> t.Any:
+        import ast
+
+        if raw_value.startswith("[") and raw_value.endswith("]"):
+            try:
+                return ast.literal_eval(raw_value)
+            except Exception:
+                return []
+        elif raw_value.startswith("{") and raw_value.endswith("}"):
+            try:
+                return ast.literal_eval(raw_value)
+            except Exception:
+                return {}
+        else:
+            return raw_value.strip("\"'")
+
     def _update_changelog_for_version(self, old_version: str, new_version: str) -> None:
         try:
-
             changelog_generator = self._changelog_generator
 
-
             changelog_path = self.pkg_path / "CHANGELOG.md"
-
 
             success = changelog_generator.generate_changelog_from_commits(
                 changelog_path=changelog_path,

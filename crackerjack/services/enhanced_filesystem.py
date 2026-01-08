@@ -17,7 +17,6 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.services.logging import LoggingContext
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -185,7 +184,6 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         batch_size: int = 10,
         enable_async: bool = True,
     ) -> None:
-
         self.cache = FileCache(max_size=cache_size, default_ttl=cache_ttl)
         self.batch_ops = BatchFileOperations(batch_size) if enable_async else None
         self.enable_async = enable_async

@@ -77,7 +77,6 @@ class AdvancedSettings(Settings):
 
 
 class ConsoleSettings(Settings):
-
     width: int = 70
     verbose: bool = False
 
@@ -109,7 +108,6 @@ class GlobalLockSettings(Settings):
 
 
 class AdapterTimeouts(Settings):
-
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 600
     refurb_timeout: int = 120

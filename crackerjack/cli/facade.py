@@ -7,17 +7,14 @@ from rich.console import Console
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 from crackerjack.models.protocols import OptionsProtocol
 
-
 VALID_COMMANDS = {"test", "lint", "check", "format", "security", "complexity", "all"}
 
 
 def validate_command(
     command: str | None, args: str | None = None
 ) -> tuple[str, list[str]]:
-
     if command is None:
         raise ValueError("Command cannot be None")
-
 
     if command.startswith("--") or command.startswith("-"):
         raise ValueError(
@@ -26,13 +23,11 @@ def validate_command(
             f"Use ai_agent_mode=True parameter for auto-fix, not --ai-fix in command"
         )
 
-
     if command not in VALID_COMMANDS:
         raise ValueError(
             f"Unknown command: {command!r}\n"
             f"Valid commands: {', '.join(sorted(VALID_COMMANDS))}"
         )
-
 
     args_str = args if args is not None else ""
 
@@ -54,7 +49,6 @@ class CrackerjackCLIFacade:
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
-
 
     def process(self, options: OptionsProtocol) -> None:
         try:

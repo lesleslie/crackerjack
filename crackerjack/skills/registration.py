@@ -1,4 +1,3 @@
-
 import typing as t
 from pathlib import Path
 
@@ -18,7 +17,6 @@ def register_agent_skills(
 
 def register_mcp_skills() -> MCPSkillRegistry:
     registry = MCPSkillRegistry()
-
 
     for skill_data in MCP_SKILL_GROUPS.values():
         registry.register_skill_group(skill_data)
@@ -50,21 +48,17 @@ def register_all_skills(
         str, AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry
     ] = {}
 
-
     if enable_agent_skills:
         agent_registry = register_agent_skills(context)
         registries["agent_skills"] = agent_registry
-
 
     if enable_mcp_skills:
         mcp_registry = register_mcp_skills()
         registries["mcp_skills"] = mcp_registry
 
-
     if enable_hybrid_skills:
         hybrid_registry = register_hybrid_skills(context, mcp_app)
         registries["hybrid_skills"] = hybrid_registry
-
 
         _register_hybrid_tools(hybrid_registry, mcp_app)
 
@@ -75,8 +69,6 @@ def _register_hybrid_tools(
     hybrid_registry: HybridSkillRegistry,
     mcp_app: t.Any,
 ) -> None:
-
-
     pass
 
 

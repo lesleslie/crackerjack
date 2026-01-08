@@ -15,7 +15,7 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
         try:
             context = get_context()
@@ -101,7 +101,7 @@ def _handle_general_error(error: Exception) -> str:
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     async def smart_error_analysis(use_cache: bool = True) -> str:
         context = get_context()
 
@@ -119,7 +119,7 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 
 
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         try:
             target_path, force, error = _parse_init_arguments(args, kwargs)
@@ -134,7 +134,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool() # type: ignore[misc]
+    @mcp_app.tool()  # type: ignore[misc]
     def suggest_agents(
         task_description: str = "",
         project_type: str = "python",

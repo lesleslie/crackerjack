@@ -1,4 +1,3 @@
-
 from pathlib import Path
 from textwrap import dedent
 
@@ -17,12 +16,10 @@ def handle_semantic_index(file_path: str) -> None:
     try:
         console.print(f"[cyan]Indexing file for semantic search:[/cyan] {file_path}")
 
-
         path_obj = Path(file_path)
         if not path_obj.exists():
             console.print(f"[red]Error:[/red] File does not exist: {file_path}")
             return
-
 
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
@@ -33,19 +30,16 @@ def handle_semantic_index(file_path: str) -> None:
             embedding_dimension=384,
         )
 
-
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
 
         if path_obj.is_file():
-
             embeddings = vector_store.index_file(path_obj)
             console.print(
                 f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]"
             )
         else:
-
             total_files = 0
             total_chunks = 0
 
@@ -66,7 +60,6 @@ def handle_semantic_index(file_path: str) -> None:
                 f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]"
             )
 
-
         stats = vector_store.get_stats()
         console.print(
             f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
@@ -82,7 +75,6 @@ def handle_semantic_search(query: str) -> None:
     try:
         console.print(f"[cyan]Performing semantic search for:[/cyan] {query}")
 
-
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -92,13 +84,11 @@ def handle_semantic_search(query: str) -> None:
             embedding_dimension=384,
         )
 
-
         search_query = SearchQuery(
             query=query,
             max_results=10,
             min_similarity=0.3,
         )
-
 
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
@@ -111,7 +101,6 @@ def handle_semantic_search(query: str) -> None:
             )
             return
 
-
         table = Table(title=f"Semantic Search Results for: '{query}'")
         table.add_column("File", style="cyan", no_wrap=True)
         table.add_column("Lines", style="magenta", justify="center")
@@ -119,14 +108,12 @@ def handle_semantic_search(query: str) -> None:
         table.add_column("Content Preview", style="white")
 
         for result in results:
-
             content_preview = (
                 result.content[:80] + "..."
                 if len(result.content) > 80
                 else result.content
             )
             content_preview = content_preview.replace("\n", " ").strip()
-
 
             content_preview = content_preview.replace("[", "\\[").replace("]", "\\]")
 
@@ -140,7 +127,6 @@ def handle_semantic_search(query: str) -> None:
         console.print(
             Panel(table, title="Semantic Search Results", border_style="cyan")
         )
-
 
         if results:
             top_result = results[0]
@@ -174,7 +160,6 @@ def handle_semantic_stats() -> None:
     try:
         console.print("[cyan]Retrieving semantic search index statistics...[/cyan]")
 
-
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
             chunk_size=512,
@@ -184,12 +169,10 @@ def handle_semantic_stats() -> None:
             embedding_dimension=384,
         )
 
-
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
         vector_store = VectorStore(config, db_path=db_path)
         stats = vector_store.get_stats()
-
 
         table = Table(title="Semantic Search Index Statistics")
         table.add_column("Metric", style="cyan", no_wrap=True)
@@ -198,7 +181,6 @@ def handle_semantic_stats() -> None:
         table.add_row("Total Files", str(stats.total_files))
         table.add_row("Total Chunks", str(stats.total_chunks))
         table.add_row("Index Size", f"{stats.index_size_mb:.2f} MB")
-
 
         avg_chunks = (
             stats.total_chunks / stats.total_files if stats.total_files > 0 else 0.0
@@ -236,9 +218,7 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
             f"[cyan]Removing file from semantic search index:[/cyan] {file_path}"
         )
 
-
         path_obj = Path(file_path)
-
 
         config = SemanticConfig(
             embedding_model="sentence-transformers/all-MiniLM-L6-v2",
@@ -248,7 +228,6 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
             similarity_threshold=0.7,
             embedding_dimension=384,
         )
-
 
         db_path = Path.cwd() / ".crackerjack" / "semantic_index.db"
         db_path.parent.mkdir(exist_ok=True)
@@ -263,7 +242,6 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
             console.print(
                 f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index"
             )
-
 
         stats = vector_store.get_stats()
         console.print(

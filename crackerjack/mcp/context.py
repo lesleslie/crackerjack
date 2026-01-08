@@ -178,9 +178,7 @@ class MCPServerContext:
             self._handle_git_setup_failure(e)
 
     async def _detect_git_repository(self) -> Path | None:
-
         current_dir = Path.cwd()
-
 
         if not self._is_git_repository(current_dir):
             return None
@@ -188,7 +186,6 @@ class MCPServerContext:
         return self._get_git_root_directory(current_dir)
 
     def _is_git_repository(self, current_dir: Path) -> bool:
-
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
@@ -198,7 +195,6 @@ class MCPServerContext:
         return git_check.returncode == 0
 
     def _get_git_root_directory(self, current_dir: Path) -> Path | None:
-
         git_root_result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
             capture_output=True,
@@ -212,10 +208,7 @@ class MCPServerContext:
         return None
 
     async def _log_git_detection(self, git_root: Path) -> None:
-
-
         self._log_to_stderr(git_root)
-
 
         self._log_to_console(git_root)
 
@@ -293,7 +286,6 @@ class MCPServerContext:
         await self.batched_saver.start()
 
     async def _finalize_initialization(self) -> None:
-
         await self._auto_setup_git_working_directory()
 
         for task in self._startup_tasks:

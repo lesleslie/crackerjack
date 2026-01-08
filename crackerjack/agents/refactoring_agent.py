@@ -26,7 +26,6 @@ class RefactoringAgent(SubAgent):
         self.semantic_enhancer = create_semantic_enhancer(context.project_path)
         self.semantic_insights: dict[str, SemanticInsight] = {}
 
-
         self._complexity_analyzer = ComplexityAnalyzer(context)
         self._code_transformer = CodeTransformer(context)
         self._dead_code_detector = DeadCodeDetector(context)
@@ -155,7 +154,6 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=[f"Could not read file: {file_path}"],
             )
 
-
         refactored_content = self._code_transformer.refactor_detect_agent_needs_pattern(
             content
         )
@@ -227,7 +225,6 @@ class RefactoringAgent(SubAgent):
             tree, content
         )
 
-
         semantic_complex_functions = await self._find_semantic_complex_patterns(
             content, file_path
         )
@@ -251,13 +248,11 @@ class RefactoringAgent(SubAgent):
         content: str,
         complex_functions: list[dict[str, t.Any]],
     ) -> FixResult:
-
         refactored_content = self._code_transformer.refactor_complex_functions(
             content, complex_functions
         )
 
         if refactored_content == content:
-
             refactored_content = self._code_transformer.apply_enhanced_strategies(
                 content
             )
@@ -376,7 +371,6 @@ class RefactoringAgent(SubAgent):
         content: str,
         analysis: dict[str, t.Any],
     ) -> FixResult:
-
         lines = content.split("\n")
         lines_to_remove = self._collect_all_removable_lines(lines, analysis)
 
@@ -409,7 +403,6 @@ class RefactoringAgent(SubAgent):
         self, lines: list[str], analysis: dict[str, t.Any]
     ) -> set[int]:
         lines_to_remove: set[int] = set()
-
 
         lines_to_remove.update(
             self._dead_code_detector.find_lines_to_remove(lines, analysis)
@@ -447,7 +440,6 @@ class RefactoringAgent(SubAgent):
         semantic_functions = []
 
         try:
-
             code_elements = (
                 self._complexity_analyzer.extract_code_functions_for_semantic_analysis(
                     content
@@ -459,12 +451,9 @@ class RefactoringAgent(SubAgent):
                     element["type"] == "function"
                     and element["estimated_complexity"] > 10
                 ):
-
                     insight = (
                         await self.semantic_enhancer.find_refactoring_opportunities(
-                            element["signature"]
-                            + "\n"
-                            + element["body"][:150],
+                            element["signature"] + "\n" + element["body"][:150],
                             current_file=file_path,
                         )
                     )
@@ -477,13 +466,10 @@ class RefactoringAgent(SubAgent):
                                 "line_end": element["end_line"],
                                 "complexity": element["estimated_complexity"],
                                 "semantic_matches": insight.total_matches,
-                                "refactor_opportunities": insight.related_patterns[
-                                    :3
-                                ],
+                                "refactor_opportunities": insight.related_patterns[:3],
                                 "node": element.get("node"),
                             }
                         )
-
 
                         self.semantic_insights[element["name"]] = insight
 
@@ -496,7 +482,6 @@ class RefactoringAgent(SubAgent):
         self, base_recommendations: list[str]
     ) -> list[str]:
         enhanced = base_recommendations.copy()
-
 
         if self.semantic_insights:
             total_semantic_matches = sum(
@@ -519,14 +504,12 @@ class RefactoringAgent(SubAgent):
                     f"review for consistent refactoring approach"
                 )
 
-
             for func_name, insight in self.semantic_insights.items():
                 summary = self.semantic_enhancer.get_semantic_context_summary(insight)
                 self.log(f"Semantic context for {func_name}: {summary}")
                 await self.semantic_enhancer.store_insight_to_session(
                     insight, "RefactoringAgent"
                 )
-
 
         enhanced = await get_session_enhanced_recommendations(
             enhanced, "RefactoringAgent", self.context.project_path

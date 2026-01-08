@@ -101,7 +101,6 @@ class ServiceWatchdog:
 
     def remove_service(self, service_id: str) -> None:
         if service_id in self.services:
-
             from contextlib import suppress
 
             with suppress(RuntimeError):
@@ -382,11 +381,9 @@ class ServiceWatchdog:
                 loop = asyncio.get_running_loop()
                 loop.create_task(self.stop_watchdog())
             except RuntimeError:
-
                 try:
                     asyncio.run(self.stop_watchdog())
                 except RuntimeError:
-
                     with contextlib.suppress(Exception):
                         loop = asyncio.new_event_loop()
                         try:
@@ -442,10 +439,8 @@ class ServiceWatchdog:
             (ServiceState.TIMEOUT, None): "[red]⏰ Timeout[/red]",
         }
 
-
         if service.state == ServiceState.RUNNING and service.is_healthy:
             return status_map[(ServiceState.RUNNING, True)]
-
 
         status_key = (service.state, None)
         return status_map.get(status_key, "[dim]⚫ Stopped[/dim]")
@@ -499,52 +494,44 @@ def remove_service(service_id: str) -> None:
 def start_watchdog(console: CrackerjackConsole | None = None) -> None:
     watchdog = get_service_watchdog(console)
     try:
-
         loop = asyncio.get_running_loop()
 
         loop.create_task(watchdog.start_watchdog())
     except RuntimeError:
-
         asyncio.run(watchdog.start_watchdog())
 
 
 def stop_watchdog() -> None:
     watchdog = get_service_watchdog()
     try:
-
         loop = asyncio.get_running_loop()
 
         loop.create_task(watchdog.stop_watchdog())
     except RuntimeError:
-
         asyncio.run(watchdog.stop_watchdog())
 
 
 def start_service(service_id: str) -> bool:
     watchdog = get_service_watchdog()
     try:
-
         loop = asyncio.get_running_loop()
 
         loop.create_task(watchdog.start_service(service_id))
 
         return True
     except RuntimeError:
-
         return asyncio.run(watchdog.start_service(service_id))
 
 
 def stop_service(service_id: str) -> bool:
     watchdog = get_service_watchdog()
     try:
-
         loop = asyncio.get_running_loop()
 
         loop.create_task(watchdog.stop_service(service_id))
 
         return True
     except RuntimeError:
-
         return asyncio.run(watchdog.stop_service(service_id))
 
 
@@ -561,15 +548,12 @@ def get_all_services_status() -> dict[str, ServiceStatus]:
 def print_status_report() -> None:
     watchdog = get_service_watchdog()
     try:
-
         loop = asyncio.get_running_loop()
 
         loop.create_task(watchdog.print_status_report())
     except RuntimeError:
-
         asyncio.run(watchdog.print_status_report())
 
 
 def signal_handler(signum: int, frame: object) -> None:
-
     pass

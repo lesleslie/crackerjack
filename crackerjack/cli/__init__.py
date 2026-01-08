@@ -6,7 +6,6 @@ from .handlers import (
 from .options import CLI_OPTIONS, BumpOption, Options, create_options
 from .version import get_package_version
 
-
 __all__ = [
     "CLI_OPTIONS",
     "BumpOption",

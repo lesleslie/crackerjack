@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import asyncio
@@ -22,7 +21,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolIssue:
-
     file_path: Path
     line_number: int | None = None
     column_number: int | None = None
@@ -45,7 +43,6 @@ class ToolIssue:
 
 @dataclass
 class ToolExecutionResult:
-
     success: bool | None = None
     issues: list[ToolIssue] = field(default_factory=list)
     error_message: str | None = None
@@ -93,7 +90,6 @@ class ToolExecutionResult:
 
 
 class ToolAdapterSettings(QABaseSettings):
-
     tool_name: str = ""
     tool_args: list[str] = field(default_factory=list)
     use_json_output: bool = False
@@ -102,7 +98,6 @@ class ToolAdapterSettings(QABaseSettings):
 
 
 class BaseToolAdapter(QAAdapterBase):
-
     settings: ToolAdapterSettings | None = None
     metadata: AdapterMetadata | None = None
 
@@ -115,7 +110,6 @@ class BaseToolAdapter(QAAdapterBase):
 
     async def init(self) -> None:
         if not self.settings:
-
             timeout_seconds = self._get_timeout_from_settings()
 
             self.settings = ToolAdapterSettings(
@@ -124,14 +118,12 @@ class BaseToolAdapter(QAAdapterBase):
                 max_workers=4,
             )
 
-
         available = await self.validate_tool_available()
         if not available:
             raise RuntimeError(
                 f"Tool '{self.tool_name}' not found in PATH. "
                 f"Please install it before using this adapter."
             )
-
 
         self._tool_version = await self.get_tool_version()
 
@@ -142,12 +134,9 @@ class BaseToolAdapter(QAAdapterBase):
             from crackerjack.config import CrackerjackSettings
             from crackerjack.config.loader import load_settings
 
-
             settings = load_settings(CrackerjackSettings)
 
-
             adapter_name = self.tool_name.lower()
-
 
             adapter_timeouts = settings.adapter_timeouts
             if adapter_timeouts and hasattr(
@@ -161,7 +150,6 @@ class BaseToolAdapter(QAAdapterBase):
         except Exception as e:
             logger.debug(f"Could not load timeout from settings: {e}")
 
-
         default_timeout = 300
         logger.debug(
             f"Using default timeout for {self.tool_name}: {default_timeout}s",
@@ -170,23 +158,20 @@ class BaseToolAdapter(QAAdapterBase):
 
     @property
     @abstractmethod
-    def tool_name(self) -> str:
-        ...
+    def tool_name(self) -> str: ...
 
     @abstractmethod
     def build_command(
         self,
         files: list[Path],
         config: QACheckConfig | None = None,
-    ) -> list[str]:
-        ...
+    ) -> list[str]: ...
 
     @abstractmethod
     async def parse_output(
         self,
         result: ToolExecutionResult,
-    ) -> list[ToolIssue]:
-        ...
+    ) -> list[ToolIssue]: ...
 
     async def check(
         self,
@@ -198,7 +183,6 @@ class BaseToolAdapter(QAAdapterBase):
 
         start_time = asyncio.get_event_loop().time()
 
-
         target_files = await self._get_target_files(files, config)
 
         if not target_files:
@@ -208,13 +192,11 @@ class BaseToolAdapter(QAAdapterBase):
                 start_time=start_time,
             )
 
-
         command = self.build_command(target_files, config)
 
         try:
             exec_result = await self._execute_tool(command, target_files, start_time)
         except TimeoutError:
-
             assert self.settings is not None, "Settings should be initialized"
             timeout_msg = (
                 f"Tool execution timed out after {self.settings.timeout_seconds}s"
@@ -238,9 +220,7 @@ class BaseToolAdapter(QAAdapterBase):
                 start_time=start_time,
             )
 
-
         issues = await self.parse_output(exec_result)
-
 
         return self._convert_to_qa_result(
             exec_result=exec_result,
@@ -255,13 +235,11 @@ class BaseToolAdapter(QAAdapterBase):
         if files:
             return files
 
-
         cfg = config or self.get_default_config()
 
         root = Path.cwd() / "crackerjack"
         if not root.exists():
             root = Path.cwd()
-
 
         standard_excludes = {
             ".venv",
@@ -284,7 +262,6 @@ class BaseToolAdapter(QAAdapterBase):
             "*.egg-info",
         }
 
-
         if (
             cfg
             and hasattr(cfg, "is_comprehensive_stage")
@@ -295,10 +272,8 @@ class BaseToolAdapter(QAAdapterBase):
         candidates = [p for p in root.rglob("*.py")]
         result: list[Path] = []
         for path in candidates:
-
             if any(excluded in path.parts for excluded in standard_excludes):
                 continue
-
 
             include = any(path.match(pattern) for pattern in cfg.file_patterns)
             if not include:
@@ -327,7 +302,6 @@ class BaseToolAdapter(QAAdapterBase):
                 cwd=Path.cwd(),
             )
 
-
             assert self.settings is not None, "Settings should be initialized"
             stdout_bytes, stderr_bytes = await asyncio.wait_for(
                 process.communicate(),
@@ -338,7 +312,6 @@ class BaseToolAdapter(QAAdapterBase):
             stderr = stderr_bytes.decode("utf-8", errors="replace")
 
             elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
-
 
             success = process.returncode == 0 or (
                 process.returncode == 1 and bool(stdout)
@@ -355,7 +328,6 @@ class BaseToolAdapter(QAAdapterBase):
             )
 
         except TimeoutError:
-
             if process:
                 from contextlib import suppress
 
@@ -508,7 +480,6 @@ class BaseToolAdapter(QAAdapterBase):
         )
 
     def _get_check_type(self) -> QACheckType:
-
         tool_lower = self.tool_name.lower()
 
         if "format" in tool_lower or "fmt" in tool_lower:

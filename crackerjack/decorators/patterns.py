@@ -1,4 +1,3 @@
-
 import typing as t
 from functools import wraps
 from pathlib import Path
@@ -29,7 +28,6 @@ def _create_async_wrapper(
     error_type: str | None,
     auto_analyze: bool,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:
@@ -56,7 +54,6 @@ def _create_sync_wrapper(
     error_type: str | None,
     auto_analyze: bool,
 ) -> t.Callable[..., t.Any]:
-
     @wraps(func)
     def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
         try:
@@ -156,7 +153,6 @@ def _analyze_result_errors_sync(
 
         pattern = cache.create_pattern_from_error(error_data, detected_type)
         if pattern:
-
             asyncio.run(cache.add_pattern(pattern))
 
 

@@ -1,4 +1,3 @@
-
 import json
 import logging
 import statistics
@@ -18,7 +17,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class ResourceMetrics:
-
     cpu_percent: float
     memory_percent: float
     disk_usage_percent: float
@@ -43,7 +41,6 @@ class ResourceMetrics:
 
 @dataclass
 class PerformanceProfile:
-
     workload_type: str
     concurrent_clients: int
     data_retention_days: int
@@ -57,7 +54,6 @@ class PerformanceProfile:
 
 @dataclass
 class OptimizationRecommendation:
-
     category: str
     priority: str
     title: str
@@ -74,7 +70,6 @@ class OptimizationRecommendation:
 
 @dataclass
 class ScalingMetrics:
-
     current_load: float
     projected_load: float
     response_time_p95: float
@@ -89,7 +84,6 @@ class ScalingMetrics:
 
 
 class ConnectionPool:
-
     def __init__(self, max_connections: int = 1000, cleanup_interval: int = 300):
         self.max_connections = max_connections
         self.cleanup_interval = cleanup_interval
@@ -105,10 +99,8 @@ class ConnectionPool:
         metadata: dict[str, t.Any] | None = None,
     ) -> None:
         with self._lock:
-
             if len(self.connections) >= self.max_connections:
                 self._cleanup_stale_connections()
-
 
             if len(self.connections) >= self.max_connections:
                 oldest_id = min(
@@ -161,8 +153,7 @@ class ConnectionPool:
                 [
                     conn
                     for conn, stats in self.connection_stats.items()
-                    if current_time - stats["last_activity"]
-                    < 300
+                    if current_time - stats["last_activity"] < 300
                 ]
             )
 
@@ -181,7 +172,6 @@ class ConnectionPool:
 
 
 class DataCompactionManager:
-
     def __init__(self, storage_dir: Path, max_storage_gb: float = 10.0):
         self.storage_dir = Path(storage_dir)
         self.max_storage_bytes = max_storage_gb * 1024**3
@@ -190,18 +180,13 @@ class DataCompactionManager:
     def _load_compaction_rules(self) -> dict[str, dict[str, t.Any]]:
         rules = {}
 
-
         rules["metrics_raw"] = self._create_metrics_raw_config()
-
 
         rules["metrics_hourly"] = self._create_metrics_hourly_config()
 
-
         rules["metrics_daily"] = self._create_metrics_daily_config()
 
-
         rules["error_patterns"] = self._create_error_patterns_config()
-
 
         rules["dependency_graphs"] = self._create_dependency_graphs_config()
 
@@ -269,7 +254,6 @@ class DataCompactionManager:
                     file_size_mb = file_path.stat().st_size / (1024**2)
                     freed_space_mb += file_size_mb
                     compacted_records += 1
-
 
         return {
             "compacted_records": compacted_records,
@@ -341,22 +325,16 @@ class DataCompactionManager:
 
 
 class EnterpriseOptimizer:
-
     def __init__(self, config_dir: Path, storage_dir: Path):
         self.config_dir = Path(config_dir)
         self.storage_dir = Path(storage_dir)
-
 
         self.connection_pool = ConnectionPool()
         self.compaction_manager = DataCompactionManager(storage_dir)
         self.executor = ThreadPoolExecutor(max_workers=4)
 
-
-        self.resource_history: deque[ResourceMetrics] = deque(
-            maxlen=1440
-        )
+        self.resource_history: deque[ResourceMetrics] = deque(maxlen=1440)
         self.performance_profile = self._load_performance_profile()
-
 
         self.last_optimization = datetime.now()
         self.optimization_recommendations: list[OptimizationRecommendation] = []
@@ -371,7 +349,6 @@ class EnterpriseOptimizer:
                 return PerformanceProfile(**data)
             except Exception as e:
                 logger.warning(f"Failed to load performance profile: {e}")
-
 
         return PerformanceProfile(
             workload_type="moderate",
@@ -388,17 +365,13 @@ class EnterpriseOptimizer:
 
     def collect_resource_metrics(self) -> ResourceMetrics:
         try:
-
             cpu_percent = psutil.cpu_percent(interval=1)
-
 
             memory = psutil.virtual_memory()
             memory_percent = memory.percent
 
-
             disk_usage = psutil.disk_usage(str(self.storage_dir))
             disk_percent = (disk_usage.used / disk_usage.total) * 100
-
 
             net_io = psutil.net_io_counters()
             network_io = {
@@ -407,7 +380,6 @@ class EnterpriseOptimizer:
                 "packets_sent": net_io.packets_sent,
                 "packets_recv": net_io.packets_recv,
             }
-
 
             process = psutil.Process()
             active_connections = len(process.connections())
@@ -423,7 +395,6 @@ class EnterpriseOptimizer:
                 thread_count=thread_count,
                 file_descriptors=file_descriptors,
             )
-
 
             self.resource_history.append(metrics)
 
@@ -443,7 +414,6 @@ class EnterpriseOptimizer:
 
     def analyze_scaling_needs(self) -> ScalingMetrics:
         if len(self.resource_history) < 10:
-
             return ScalingMetrics(
                 current_load=0.0,
                 projected_load=0.0,
@@ -457,14 +427,11 @@ class EnterpriseOptimizer:
 
         recent_metrics = list[t.Any](self.resource_history)[-10:]
 
-
         avg_cpu = statistics.mean([m.cpu_percent for m in recent_metrics])
         avg_memory = statistics.mean([m.memory_percent for m in recent_metrics])
         statistics.mean([m.active_connections for m in recent_metrics])
 
-
         current_load = max(avg_cpu / 100.0, avg_memory / 100.0)
-
 
         if len(recent_metrics) >= 5:
             cpu_trend = (
@@ -479,7 +446,6 @@ class EnterpriseOptimizer:
         else:
             projected_load = current_load
 
-
         memory_pressure = min(1.0, avg_memory / 100.0)
         if len(recent_metrics) >= 3:
             memory_velocity = (
@@ -487,9 +453,7 @@ class EnterpriseOptimizer:
             ) / 3
             memory_pressure += memory_velocity / 100.0
 
-
         cpu_saturation = min(1.0, avg_cpu / 100.0)
-
 
         if projected_load > 0.8 or memory_pressure > 0.85:
             scale_factor = 1.5
@@ -497,7 +461,6 @@ class EnterpriseOptimizer:
             scale_factor = 0.8
         else:
             scale_factor = 1.0
-
 
         cpu_variance = statistics.variance([m.cpu_percent for m in recent_metrics])
         memory_variance = statistics.variance(
@@ -525,7 +488,6 @@ class EnterpriseOptimizer:
         latest_metrics = self.resource_history[-1]
         scaling_metrics = self.analyze_scaling_needs()
         storage_usage = self.compaction_manager.get_storage_usage()
-
 
         recommendations.extend(self._generate_cpu_recommendations(latest_metrics))
         recommendations.extend(self._generate_memory_recommendations(latest_metrics))
@@ -665,7 +627,6 @@ class EnterpriseOptimizer:
     ) -> list[str]:
         optimizations_applied = []
 
-
         optimizations_applied.extend(self._apply_memory_optimizations(metrics))
         optimizations_applied.extend(
             self._apply_performance_optimizations(metrics, strategy)
@@ -725,15 +686,11 @@ class EnterpriseOptimizer:
 
     async def run_optimization_cycle(self) -> dict[str, t.Any]:
         try:
-
             metrics = self.collect_resource_metrics()
-
 
             scaling_metrics = self.analyze_scaling_needs()
 
-
             recommendations = self.generate_optimization_recommendations()
-
 
             optimization_result = None
             if (
@@ -788,15 +745,12 @@ class EnterpriseOptimizer:
         latest = self.resource_history[-1]
         storage = self.compaction_manager.get_storage_usage()
 
-
         cpu_score = max(0, 100 - latest.cpu_percent)
         memory_score = max(0, 100 - latest.memory_percent)
         storage_score = max(0, 100 - storage["utilization_percent"])
 
-
         pool_stats = self.connection_pool.get_stats()
         connection_score = max(0, 100 - pool_stats["utilization_percent"])
-
 
         health_score = (
             cpu_score * 0.3

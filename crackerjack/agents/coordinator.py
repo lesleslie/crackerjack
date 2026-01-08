@@ -77,7 +77,6 @@ class AgentCoordinator:
 
         issues_by_type = self._group_issues_by_type(issues)
 
-
         tasks = list[t.Any](
             starmap(self._handle_issues_by_type, issues_by_type.items())
         )
@@ -104,17 +103,14 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
-
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
         specialist_agents = []
-
 
         specialist_agents = [
             agent
             for agent in self.agents
             if agent.__class__.__name__ in preferred_agent_names
         ]
-
 
         if not specialist_agents:
             specialist_agents = [
@@ -202,7 +198,6 @@ class AgentCoordinator:
         if not best_agent or best_score <= 0:
             return best_agent
 
-
         CLOSE_SCORE_THRESHOLD = 0.05
 
         for agent, score in candidates:
@@ -266,9 +261,7 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling issue with {agent.name}: {issue.message[:100]}")
 
-
         issue_hash = self._create_issue_hash(issue)
-
 
         cached_decision = self._coerce_cached_decision(
             self.cache.get_agent_decision(agent.name, issue_hash)
@@ -337,11 +330,9 @@ class AgentCoordinator:
     async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
         cache_key = self._get_cache_key(agent.name, issue)
 
-
         if cache_key in self._issue_cache:
             self.logger.debug(f"Using in-memory cache for {agent.name}")
             return self._issue_cache[cache_key]
-
 
         cached_result = self._coerce_cached_decision(
             self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue))
@@ -352,9 +343,7 @@ class AgentCoordinator:
             self._issue_cache[cache_key] = cached_result
             return cached_result
 
-
         result = await agent.analyze_and_fix(issue)
-
 
         if result.success and result.confidence > 0.7:
             self._issue_cache[cache_key] = result

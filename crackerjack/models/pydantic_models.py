@@ -1,4 +1,3 @@
-
 from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
@@ -10,9 +9,7 @@ class CleaningConfig(BaseModel):
     force_update_docs: bool = False
     compress_docs: bool = False
     auto_compress_docs: bool = False
-    targets: list[str] = Field(
-        default_factory=list
-    )
+    targets: list[str] = Field(default_factory=list)
 
     @classmethod
     def from_settings(cls, settings: Any) -> "CleaningConfig":
@@ -268,7 +265,6 @@ class WorkflowOptions(BaseModel):
     mcp_server: MCPServerConfig = Field(default_factory=MCPServerConfig)
     zuban_lsp: ZubanLSPConfig = Field(default_factory=ZubanLSPConfig)
 
-
     @property
     def clean(self) -> bool:
         return self.cleaning.clean
@@ -327,7 +323,6 @@ class WorkflowOptions(BaseModel):
 
     @classmethod
     def from_settings(cls, settings: Any) -> "WorkflowOptions":
-
         return cls(
             cleaning=CleaningConfig.from_settings(getattr(settings, "cleaning", {})),
             hooks=HookConfig.from_settings(getattr(settings, "hooks", {})),

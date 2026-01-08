@@ -107,8 +107,6 @@ class FileHasher:
         return any(pattern in path_str for pattern in ignore_patterns)
 
     def invalidate_cache(self, file_path: Path | None = None) -> None:
-
-
         pass
 
 

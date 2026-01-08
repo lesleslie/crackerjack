@@ -1,4 +1,3 @@
-
 import typing as t
 from pathlib import Path
 
@@ -19,25 +18,21 @@ def initialize_skills(
     _project_path = project_path
 
     try:
-
-
-        import crackerjack.agents.architect_agent # noqa: F401
-        import crackerjack.agents.documentation_agent # noqa: F401
-        import crackerjack.agents.dry_agent # noqa: F401
-        import crackerjack.agents.formatting_agent # noqa: F401
-        import crackerjack.agents.import_optimization_agent # noqa: F401
-        import crackerjack.agents.performance_agent # noqa: F401
-        import crackerjack.agents.refactoring_agent # noqa: F401
-        import crackerjack.agents.security_agent # noqa: F401
-        import crackerjack.agents.semantic_agent # noqa: F401
-        import crackerjack.agents.test_creation_agent # noqa: F401
-        import crackerjack.agents.test_specialist_agent # noqa: F401
+        import crackerjack.agents.architect_agent  # noqa: F401
+        import crackerjack.agents.documentation_agent  # noqa: F401
+        import crackerjack.agents.dry_agent  # noqa: F401
+        import crackerjack.agents.formatting_agent  # noqa: F401
+        import crackerjack.agents.import_optimization_agent  # noqa: F401
+        import crackerjack.agents.performance_agent  # noqa: F401
+        import crackerjack.agents.refactoring_agent  # noqa: F401
+        import crackerjack.agents.security_agent  # noqa: F401
+        import crackerjack.agents.semantic_agent  # noqa: F401
+        import crackerjack.agents.test_creation_agent  # noqa: F401
+        import crackerjack.agents.test_specialist_agent  # noqa: F401
         from crackerjack.agents.base import AgentContext
         from crackerjack.skills import register_all_skills
 
-
         context = AgentContext(project_path=project_path)
-
 
         _skill_registries = register_all_skills(
             mcp_app=mcp_app,
@@ -50,7 +45,6 @@ def initialize_skills(
         return _skill_registries
 
     except Exception as e:
-
         print(f"Warning: Failed to initialize skills: {e}")
         return {}
 
@@ -70,7 +64,6 @@ def register_skill_tools(mcp_app: "FastMCP") -> None:
 
 
 def _register_list_skills(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="list_skills",
         description="List all available Crackerjack skills (agent, MCP, hybrid)",
@@ -100,7 +93,6 @@ def _register_list_skills(mcp_app: "FastMCP") -> None:
 
 
 def _register_get_skill_info(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="get_skill_info",
         description="Get detailed information about a specific skill",
@@ -143,7 +135,6 @@ def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
 
 
 def _register_search_skills(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="search_skills",
         description="Search for skills by query, category, or issue type",
@@ -154,14 +145,11 @@ def _register_search_skills(mcp_app: "FastMCP") -> None:
     ) -> dict[str, t.Any]:
         results = {}
 
-
         if "agent_skills" in _skill_registries:
             results["agent_skills"] = _search_agent_skills(query, search_in)
 
-
         if "mcp_skills" in _skill_registries:
             results["mcp_skills"] = _search_mcp_skills(query, search_in)
-
 
         if "hybrid_skills" in _skill_registries:
             results["hybrid_skills"] = _search_hybrid_skills(query, search_in)
@@ -182,16 +170,13 @@ def _search_agent_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 def _matches_search_criteria(
     metadata: dict[str, t.Any], query: str, search_in: str
 ) -> bool:
-
     if search_in in ("all", "names"):
         if query.lower() in metadata["name"].lower():
             return True
 
-
     if search_in in ("all", "descriptions"):
         if query.lower() in metadata["description"].lower():
             return True
-
 
     if search_in in ("all", "tags"):
         if _matches_tags(metadata.get("tags", []), query):
@@ -226,7 +211,6 @@ def _search_hybrid_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 
 
 def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="get_skills_for_issue",
         description="Get skills that can handle a specific issue type",
@@ -236,7 +220,6 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
     ) -> dict[str, t.Any]:
         from crackerjack.agents.base import IssueType
 
-
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -244,12 +227,10 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
 
         result = {}
 
-
         if "agent_skills" in _skill_registries:
             agent_skills = _skill_registries["agent_skills"]
             skills = agent_skills.get_skills_for_type(issue_enum)
             result["agent_skills"] = [s.get_info() for s in skills]
-
 
         if "hybrid_skills" in _skill_registries:
             hybrid_skills = _skill_registries["hybrid_skills"]
@@ -260,7 +241,6 @@ def _register_get_skills_for_issue(mcp_app: "FastMCP") -> None:
 
 
 def _register_get_skill_statistics(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="get_skill_statistics",
         description="Get statistics about all skill registries",
@@ -284,7 +264,6 @@ def _register_get_skill_statistics(mcp_app: "FastMCP") -> None:
 
 
 def _register_execute_skill(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="execute_skill",
         description="Execute a skill on an issue (hybrid skills only)",
@@ -306,7 +285,6 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
         if not skill:
             return {"error": f"Skill not found: {skill_id}"}
 
-
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -321,7 +299,6 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
             details=issue_data.get("details", []),
         )
 
-
         try:
             result = await skill.execute(issue, timeout=timeout)
             return result.to_dict()
@@ -334,7 +311,6 @@ def _register_execute_skill(mcp_app: "FastMCP") -> None:
 
 
 def _register_find_best_skill(mcp_app: "FastMCP") -> None:
-
     @mcp_app.tool(
         name="find_best_skill",
         description="Find the best skill for handling an issue",
@@ -349,7 +325,6 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
 
         registry = _skill_registries["hybrid_skills"]
 
-
         try:
             issue_enum = IssueType(issue_type)
         except ValueError:
@@ -360,7 +335,6 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
             severity=Priority.MEDIUM,
             message="Finding best skill",
         )
-
 
         try:
             best_skill = await registry.find_best_skill(issue)

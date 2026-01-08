@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 from datetime import datetime
@@ -8,7 +7,6 @@ from sqlmodel import Field, SQLModel
 
 
 class QualityBaselineRecord(SQLModel, table=True):
-
     __tablename__ = "quality_baselines"
 
     id: int | None = Field(default=None, primary_key=True)
@@ -38,7 +36,6 @@ class QualityBaselineRecord(SQLModel, table=True):
 
 
 class ProjectHealthRecord(SQLModel, table=True):
-
     __tablename__ = "project_health"
 
     id: int | None = Field(default=None, primary_key=True)
@@ -54,7 +51,6 @@ class ProjectHealthRecord(SQLModel, table=True):
 
 
 class DependencyMonitorCacheRecord(SQLModel, table=True):
-
     __tablename__ = "dependency_monitor_cache"
 
     id: int | None = Field(default=None, primary_key=True)

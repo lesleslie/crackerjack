@@ -1,4 +1,3 @@
-
 import asyncio
 import typing as t
 from contextlib import suppress
@@ -17,7 +16,6 @@ from ._client import ZubanLSPClient
 
 @dataclass
 class TypeIssue(Issue):
-
     severity: str = "error"
     column: int = 1
     error_code: str | None = None
@@ -34,7 +32,6 @@ class TypeIssue(Issue):
 
 
 class ZubanAdapter(BaseRustToolAdapter):
-
     def __init__(
         self,
         context: "ExecutionContext",
@@ -57,7 +54,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         try:
             import subprocess
 
-
             result = subprocess.run(
                 ["uv", "run", "zuban", "--version"],
                 capture_output=True,
@@ -67,7 +63,6 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             if result.returncode != 0:
                 return False
-
 
             result = subprocess.run(
                 ["uv", "run", "zuban", "--help"],
@@ -89,7 +84,6 @@ class ZubanAdapter(BaseRustToolAdapter):
             return
 
         try:
-
             from crackerjack.services.lsp_client import LSPClient
 
             self._lsp_client = LSPClient()
@@ -105,15 +99,12 @@ class ZubanAdapter(BaseRustToolAdapter):
             return []
 
         try:
-
             [str(f.resolve()) for f in target_files]
-
 
             diagnostics, _ = self._lsp_client.check_project_with_feedback(
                 project_path=target_files[0].parent if target_files else Path.cwd(),
                 show_progress=False,
             )
-
 
             issues: list[TypeIssue] = []
             for file_path, file_diagnostics in diagnostics.items():
@@ -132,7 +123,6 @@ class ZubanAdapter(BaseRustToolAdapter):
             return issues
 
         except Exception:
-
             self._lsp_available = False
             return []
 
@@ -154,7 +144,6 @@ class ZubanAdapter(BaseRustToolAdapter):
                 return issues
 
         except Exception:
-
             return await self.get_lsp_diagnostics(target_files)
 
     async def _initialize_lsp_workspace(
@@ -210,19 +199,15 @@ class ZubanAdapter(BaseRustToolAdapter):
     def get_command_args(self, target_files: list[Path]) -> list[str]:
         args = ["uv", "run", "zuban"]
 
-
         if self.mypy_compatibility:
             args.append("mypy")
         else:
             args.append("check")
 
-
         if self.strict_mode:
             args.append("--strict")
 
-
         args.append("--show-error-codes")
-
 
         if target_files:
             args.extend(str(f) for f in target_files)
@@ -232,7 +217,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         return args
 
     async def check_with_lsp_or_fallback(self, target_files: list[Path]) -> ToolResult:
-
         if not self.check_tool_health():
             return self._create_error_result(
                 "Zuban is not functional due to TOML parsing bug. "
@@ -240,23 +224,18 @@ class ZubanAdapter(BaseRustToolAdapter):
                 "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details."
             )
 
-
         if self.use_lsp:
-
             lsp_issues = await self.get_lsp_diagnostics_optimized(target_files)
             if not lsp_issues:
                 lsp_issues = await self.get_lsp_diagnostics(target_files)
 
             if lsp_issues is not None:
-
                 error_issues = [i for i in lsp_issues if i.severity == "error"]
                 success = len(error_issues) == 0
 
                 result = ToolResult(
                     success=success,
-                    issues=list[Issue](
-                        lsp_issues
-                    ),
+                    issues=list[Issue](lsp_issues),
                     raw_output=f"LSP diagnostics: {len(lsp_issues)} issue(s) found",
                     tool_version=self.get_tool_version(),
                 )
@@ -264,11 +243,9 @@ class ZubanAdapter(BaseRustToolAdapter):
                 result._execution_mode = "lsp"
                 return result
 
-
         return await self._run_cli_fallback(target_files)
 
     async def _run_cli_fallback(self, target_files: list[Path]) -> ToolResult:
-
         import subprocess
 
         try:
@@ -283,9 +260,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                 else None,
             )
 
-
             tool_result = self.parse_output(result.stdout + result.stderr)
-
 
             tool_result._execution_mode = "cli"
 
@@ -311,7 +286,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         try:
             issues: list[Issue] = []
             for item in data.get("diagnostics", []):
-
                 severity = item.get("severity", "error").lower()
                 if severity not in ("error", "warning", "info"):
                     severity = "error"
@@ -326,7 +300,6 @@ class ZubanAdapter(BaseRustToolAdapter):
                         error_code=item.get("code"),
                     )
                 )
-
 
             error_issues = [i for i in issues if i.severity == "error"]
             success = len(error_issues) == 0
@@ -347,14 +320,12 @@ class ZubanAdapter(BaseRustToolAdapter):
         issues: list[Issue] = []
 
         if not output.strip():
-
             return ToolResult(
                 success=True,
                 issues=[],
                 raw_output=output,
                 tool_version=self.get_tool_version(),
             )
-
 
         for line in output.strip().split("\\n"):
             line = line.strip()
@@ -364,7 +335,6 @@ class ZubanAdapter(BaseRustToolAdapter):
             issue = self._parse_text_line(line)
             if issue:
                 issues.append(issue)
-
 
         error_issues = [i for i in issues if i.severity == "error"]
         success = len(error_issues) == 0
@@ -415,7 +385,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         except ValueError:
             return None
 
-
         if len(parts) == 4:
             message_part = f"{parts[2]}:{parts[3]}".strip()
         else:
@@ -424,7 +393,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         return file_path, line_number, message_part
 
     def _extract_column_number(self, message_part: str) -> int:
-
         parts = message_part.split(":", 2)
         if len(parts) >= 2:
             with suppress(ValueError):
@@ -432,7 +400,6 @@ class ZubanAdapter(BaseRustToolAdapter):
         return 1
 
     def _parse_message_content(self, message_part: str) -> dict[str, str | None]:
-
         parts = message_part.split(":", 2)
         if len(parts) >= 2:
             try:
@@ -445,7 +412,6 @@ class ZubanAdapter(BaseRustToolAdapter):
 
         severity, message = self._extract_severity_and_message(working_message)
         error_code = self._extract_error_code(message)
-
 
         if error_code and "[" in message:
             code_start = message.rfind("[")
@@ -461,7 +427,6 @@ class ZubanAdapter(BaseRustToolAdapter):
                 severity = indicator[:-1]
                 message = working_message[len(indicator) :].strip()
                 return severity, message
-
 
         return "error", working_message
 

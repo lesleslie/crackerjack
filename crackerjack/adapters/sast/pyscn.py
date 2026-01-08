@@ -1,7 +1,5 @@
-
 from __future__ import annotations
 
-import json
 import logging
 import typing as t
 from pathlib import Path
@@ -30,11 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 class PyscnSettings(ToolAdapterSettings):
-
     tool_name: str = "pyscn"
-    use_json_output: bool = True
+    use_json_output: bool = False
     severity_threshold: str = "low"
     confidence_threshold: str = "low"
+    max_complexity: int = 15
     exclude_rules: list[str] = Field(default_factory=list)
     include_rules: list[str] = Field(default_factory=list)
     recursive: bool = True
@@ -42,7 +40,6 @@ class PyscnSettings(ToolAdapterSettings):
 
 
 class PyscnAdapter(BaseToolAdapter):
-
     settings: PyscnSettings | None = None
 
     def __init__(self, settings: PyscnSettings | None = None) -> None:
@@ -56,6 +53,7 @@ class PyscnAdapter(BaseToolAdapter):
             self.settings = PyscnSettings(
                 timeout_seconds=120,
                 max_workers=4,
+                max_complexity=15,
             )
             logger.info("Using default PyscnSettings")
         await super().init()
@@ -64,6 +62,7 @@ class PyscnAdapter(BaseToolAdapter):
             extra={
                 "severity_threshold": self.settings.severity_threshold,
                 "confidence_threshold": self.settings.confidence_threshold,
+                "max_complexity": self.settings.max_complexity,
                 "recursive": self.settings.recursive,
             },
         )
@@ -88,34 +87,9 @@ class PyscnAdapter(BaseToolAdapter):
         if not self.settings:
             raise RuntimeError("Settings not initialized")
 
-        cmd = [self.tool_name]
+        cmd = [self.tool_name, "check"]
 
-
-        if self.settings.use_json_output:
-            cmd.extend(["--format", "json"])
-
-
-        cmd.extend(["--severity", self.settings.severity_threshold])
-
-
-        cmd.extend(["--confidence", self.settings.confidence_threshold])
-
-
-        for rule in self.settings.exclude_rules:
-            cmd.extend(["--exclude", rule])
-
-
-        for rule in self.settings.include_rules:
-            cmd.extend(["--include", rule])
-
-
-        if self.settings.recursive:
-            cmd.append("--recursive")
-
-
-        if self.settings.max_depth is not None:
-            cmd.extend(["--max-depth", str(self.settings.max_depth)])
-
+        cmd.extend(["--max-complexity", str(self.settings.max_complexity)])
 
         cmd.extend([str(f) for f in files])
 
@@ -123,9 +97,7 @@ class PyscnAdapter(BaseToolAdapter):
             "Built Pyscn command",
             extra={
                 "file_count": len(files),
-                "severity_threshold": self.settings.severity_threshold,
-                "confidence_threshold": self.settings.confidence_threshold,
-                "recursive": self.settings.recursive,
+                "max_complexity": self.settings.max_complexity,
             },
         )
         return cmd
@@ -138,51 +110,20 @@ class PyscnAdapter(BaseToolAdapter):
             logger.debug("No output to parse")
             return []
 
-        try:
-            data = json.loads(result.raw_output)
-            logger.debug(
-                "Parsed Pyscn JSON output",
-                extra={"issues_count": len(data.get("issues", []))},
-            )
-        except json.JSONDecodeError as e:
-            logger.debug(
-                "JSON parse failed, falling back to text parsing",
-                extra={"error": str(e), "output_preview": result.raw_output[:200]},
-            )
-            return self._parse_text_output(result.raw_output)
-
-        issues = []
-
-
-        for issue_data in data.get("issues", []):
-            issue = ToolIssue(
-                file_path=Path(issue_data.get("file", "")),
-                line_number=issue_data.get("line"),
-                column_number=issue_data.get("column"),
-                message=issue_data.get("message", ""),
-                code=issue_data.get("rule_id"),
-                severity=issue_data.get("severity", "error"),
-            )
-            issues.append(issue)
-
-        logger.info(
-            "Parsed Pyscn output",
-            extra={
-                "total_issues": len(issues),
-                "errors": sum(1 for i in issues if i.severity == "error"),
-                "warnings": sum(1 for i in issues if i.severity == "warning"),
-                "files_affected": len({str(i.file_path) for i in issues}),
-            },
-        )
-        return issues
+        return self._parse_text_output(result.raw_output)
 
     def _parse_text_output(self, output: str) -> list[ToolIssue]:
         issues = []
         lines = output.strip().split("\n")
 
         for line in lines:
-
             if ":" not in line:
+                continue
+
+            if "clone of" in line or line.strip().startswith("⚠️"):
+                continue
+
+            if "is too complex" not in line:
                 continue
 
             issue = self._parse_text_line(line)
@@ -190,7 +131,7 @@ class PyscnAdapter(BaseToolAdapter):
                 issues.append(issue)
 
         logger.info(
-            "Parsed Pyscn text output (fallback)",
+            "Parsed Pyscn text output",
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len({str(i.file_path) for i in issues}),
@@ -238,7 +179,6 @@ class PyscnAdapter(BaseToolAdapter):
         if message:
             return message
 
-
         if severity_and_message.lower().startswith(severity):
             return severity_and_message[len(severity) :].strip()
 
@@ -259,6 +199,7 @@ class PyscnAdapter(BaseToolAdapter):
             exclude_patterns=[
                 "**/.venv/**",
                 "**/venv/**",
+                "**/tests/**",
                 "**/build/**",
                 "**/dist/**",
             ],
@@ -268,6 +209,7 @@ class PyscnAdapter(BaseToolAdapter):
             settings={
                 "severity_threshold": "medium",
                 "confidence_threshold": "medium",
+                "max_complexity": 15,
                 "recursive": True,
             },
         )

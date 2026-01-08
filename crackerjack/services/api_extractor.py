@@ -1,4 +1,3 @@
-
 import ast
 import inspect
 import re
@@ -11,9 +10,7 @@ from .regex_patterns import SAFE_PATTERNS
 
 
 class PythonDocstringParser:
-
     def __init__(self) -> None:
-
         self.google_param_pattern = SAFE_PATTERNS[
             "extract_google_docstring_params"
         ]._get_compiled_pattern()
@@ -30,7 +27,6 @@ class PythonDocstringParser:
 
         docstring = inspect.cleandoc(docstring)
 
-
         lines = docstring.split("\n")
         description_lines = []
         for line in lines:
@@ -41,12 +37,9 @@ class PythonDocstringParser:
 
         description = "\n".join(description_lines).strip()
 
-
         parameters = self._extract_parameters(docstring)
 
-
         returns = self._extract_returns(docstring)
-
 
         raises = self._extract_raises(docstring)
 
@@ -75,11 +68,9 @@ class PythonDocstringParser:
     def _extract_parameters(self, docstring: str) -> dict[str, str]:
         parameters = {}
 
-
         google_matches = self.google_param_pattern.findall(docstring)
         for param_name, param_desc in google_matches:
             parameters[param_name] = param_desc.strip()
-
 
         if not parameters:
             sphinx_matches = self.sphinx_param_pattern.findall(docstring)
@@ -95,7 +86,7 @@ class PythonDocstringParser:
         return ""
 
     def _extract_raises(self, docstring: str) -> list[str]:
-        raises_pattern = re.compile( # REGEX OK: exception extraction
+        raises_pattern = re.compile(  # REGEX OK: exception extraction
             r"(?:Raises?|Raise):\s*(.+?)(?=\n\n|\n\w+:|\Z)", re.MULTILINE | re.DOTALL
         )
         match = raises_pattern.search(docstring)
@@ -110,7 +101,6 @@ class PythonDocstringParser:
 
 
 class APIExtractorImpl(APIExtractorProtocol):
-
     def __init__(self) -> None:
         self.console = CrackerjackConsole()
         self.docstring_parser = PythonDocstringParser()
@@ -247,7 +237,6 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _create_base_module_info(
         self, tree: ast.AST, file_path: Path
     ) -> dict[str, t.Any]:
-
         docstring = (
             ast.get_docstring(tree)
             if isinstance(
@@ -328,7 +317,6 @@ class APIExtractorImpl(APIExtractorProtocol):
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
 
-
         parameters = []
         for arg in node.args.args:
             param_info = {
@@ -337,7 +325,6 @@ class APIExtractorImpl(APIExtractorProtocol):
                 "description": parsed_doc["parameters"].get(arg.arg, ""),
             }
             parameters.append(param_info)
-
 
         return_annotation = self._get_annotation_string(node.returns)
 
@@ -427,7 +414,6 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _extract_cli_info(self, tree: ast.AST, source_code: str) -> dict[str, t.Any]:
         cli_info: dict[str, t.Any] = {"options": [], "commands": [], "arguments": []}
 
-
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 self._extract_class_cli_options(node, cli_info)
@@ -464,7 +450,6 @@ class APIExtractorImpl(APIExtractorProtocol):
 
         for node in ast.walk(tree):
             if isinstance(node, ast.FunctionDef):
-
                 func_info = self._extract_function_info(node, source_code)
                 if "mcp" in func_info["name"].lower() or any(
                     "tool" in dec.lower() for dec in func_info["decorators"]
@@ -474,7 +459,6 @@ class APIExtractorImpl(APIExtractorProtocol):
         return {"tools": tools} if tools else None
 
     def _extract_mcp_markdown_docs(self, content: str) -> dict[str, t.Any]:
-
         sections: list[dict[str, t.Any]] = []
         current_section: dict[str, t.Any] | None = None
 
@@ -559,7 +543,6 @@ class APIExtractorImpl(APIExtractorProtocol):
                 "names": [alias.name for alias in node.names],
                 "from": None,
             }
-
 
         return {
             "type": "from_import",

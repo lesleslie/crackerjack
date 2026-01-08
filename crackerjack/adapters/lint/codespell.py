@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import typing as t
@@ -25,7 +24,6 @@ MODULE_STATUS = AdapterStatus.STABLE
 
 
 class CodespellSettings(ToolAdapterSettings):
-
     tool_name: str = "codespell"
     use_json_output: bool = False
     fix_enabled: bool = False
@@ -39,7 +37,6 @@ class CodespellSettings(ToolAdapterSettings):
 
 
 class CodespellAdapter(BaseToolAdapter):
-
     settings: CodespellSettings | None = None
 
     def __init__(self, settings: CodespellSettings | None = None) -> None:
@@ -72,29 +69,22 @@ class CodespellAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if self.settings.fix_enabled:
             cmd.append("--write-changes")
-
 
         if self.settings.skip_hidden:
             cmd.append("--skip=.*")
 
-
         if self.settings.ignore_words:
             cmd.extend(["--ignore-words-list", ", ".join(self.settings.ignore_words)])
-
 
         if self.settings.ignore_words_file and self.settings.ignore_words_file.exists():
             cmd.extend(["--ignore-words", str(self.settings.ignore_words_file)])
 
-
         if self.settings.check_filenames:
             cmd.append("--check-filenames")
 
-
         cmd.extend(["--quiet-level", str(self.settings.quiet_level)])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -103,7 +93,6 @@ class CodespellAdapter(BaseToolAdapter):
     def _parse_codespell_line(
         self, line: str
     ) -> tuple[Path | None, int | None, str, str | None] | None:
-
         if ":" not in line or "==>" not in line:
             return None
 
@@ -113,7 +102,6 @@ class CodespellAdapter(BaseToolAdapter):
 
         file_path = Path(parts[0].strip())
         line_number = int(parts[1].strip()) if parts[1].strip().isdigit() else None
-
 
         error_part = parts[2].strip() if len(parts) > 2 else line
         if "==>" in error_part:

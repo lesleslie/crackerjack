@@ -230,8 +230,6 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         target_path: str | t.Any,
         project_name: str,
     ) -> dict[str, t.Any]:
-
-
         self.logger.info(f"Smart merge pre-commit config for {project_name}")
         return source_content
 

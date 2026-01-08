@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import typing as t
@@ -24,21 +23,17 @@ MODULE_STATUS = AdapterStatus.STABLE
 
 
 class MdformatSettings(ToolAdapterSettings):
-
     tool_name: str = "mdformat"
     use_json_output: bool = False
     fix_enabled: bool = True
     line_length: int = 88
     check_only: bool = False
     wrap_mode: str = "keep"
-    timeout_seconds: int = (
-        300
-    )
+    timeout_seconds: int = 300
     max_workers: int = 4
 
 
 class MdformatAdapter(BaseToolAdapter):
-
     settings: MdformatSettings | None = None
 
     def __init__(self, settings: MdformatSettings | None = None) -> None:
@@ -67,7 +62,6 @@ class MdformatAdapter(BaseToolAdapter):
         if files:
             return files
 
-
         from crackerjack.tools._git_utils import get_git_tracked_files
 
         md_files = get_git_tracked_files("*.md")
@@ -84,13 +78,10 @@ class MdformatAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-
         if not self.settings.fix_enabled:
             cmd.append("--check")
         else:
-
             pass
-
 
         wrap_mode = getattr(self.settings, "wrap_mode", None)
         if wrap_mode:
@@ -99,13 +90,11 @@ class MdformatAdapter(BaseToolAdapter):
             elif isinstance(wrap_mode, str) and wrap_mode.isdigit():
                 cmd.extend(["--wrap", wrap_mode])
             else:
-
                 if self.settings.line_length:
                     cmd.extend(["--wrap", str(self.settings.line_length)])
         else:
             if self.settings.line_length:
                 cmd.extend(["--wrap", str(self.settings.line_length)])
-
 
         cmd.extend([str(f) for f in files])
 
@@ -118,9 +107,7 @@ class MdformatAdapter(BaseToolAdapter):
         if result.exit_code == 0:
             return []
 
-
         issues = self._parse_output_lines(result.raw_output)
-
 
         if not issues and result.files_processed:
             issues = self._create_issues_from_processed_files(result.files_processed)

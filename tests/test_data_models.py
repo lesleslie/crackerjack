@@ -25,7 +25,7 @@ class TestQualityBaselineRecord:
             linting_issues=10,
             quality_score=88,
         )
-        
+
         assert record.git_hash == "abc123def456"
         assert record.coverage_percent == 85.5
         assert record.test_count == 42
@@ -41,7 +41,7 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_default_values(self):
         """Test QualityBaselineRecord with default values."""
         record = QualityBaselineRecord(git_hash="test123")
-        
+
         assert record.coverage_percent == 0.0
         assert record.test_count == 0
         assert record.test_pass_rate == 0.0
@@ -56,7 +56,7 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_update_from_dict(self):
         """Test QualityBaselineRecord update_from_dict method."""
         record = QualityBaselineRecord(git_hash="test123")
-        
+
         update_data = {
             "coverage_percent": 90.5,
             "test_count": 100,
@@ -64,9 +64,9 @@ class TestQualityBaselineRecord:
             "quality_score": 95,
             "extra_metadata": {"ci_build": "#123"}
         }
-        
+
         record.update_from_dict(update_data)
-        
+
         assert record.coverage_percent == 90.5
         assert record.test_count == 100
         assert record.test_pass_rate == 98.7
@@ -76,15 +76,15 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_update_ignores_invalid_keys(self):
         """Test that update_from_dict ignores invalid keys."""
         record = QualityBaselineRecord(git_hash="test123")
-        
+
         update_data = {
             "coverage_percent": 75.0,
             "invalid_key": "should_be_ignored",
             "another_invalid": 123
         }
-        
+
         record.update_from_dict(update_data)
-        
+
         assert record.coverage_percent == 75.0
         assert not hasattr(record, "invalid_key")
         assert not hasattr(record, "another_invalid")
@@ -96,7 +96,7 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_field_types(self):
         """Test QualityBaselineRecord field types."""
         record = QualityBaselineRecord(git_hash="test123")
-        
+
         # Verify field types
         assert isinstance(record.id, int) or record.id is None
         assert isinstance(record.git_hash, str)
@@ -115,7 +115,7 @@ class TestQualityBaselineRecord:
         """Test QualityBaselineRecord equality comparison."""
         record1 = QualityBaselineRecord(git_hash="test123", coverage_percent=80.0)
         record2 = QualityBaselineRecord(git_hash="test123", coverage_percent=80.0)
-        
+
         # Should be equal if all fields are the same
         assert record1.git_hash == record2.git_hash
         assert record1.coverage_percent == record2.coverage_percent
@@ -123,7 +123,7 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_string_representation(self):
         """Test QualityBaselineRecord string representation."""
         record = QualityBaselineRecord(git_hash="test123", coverage_percent=75.5)
-        
+
         # Should have a string representation
         assert str(record) is not None
         assert len(str(record)) > 0
@@ -135,13 +135,13 @@ class TestQualityBaselineRecord:
             "build_number": 42,
             "environment": "production"
         }
-        
+
         record = QualityBaselineRecord(
             git_hash="test123",
             coverage_percent=85.0,
             extra_metadata=metadata
         )
-        
+
         assert record.extra_metadata == metadata
         assert record.extra_metadata["ci_system"] == "github_actions"
         assert record.extra_metadata["build_number"] == 42
@@ -149,7 +149,7 @@ class TestQualityBaselineRecord:
     def test_quality_baseline_record_inheritance(self):
         """Test QualityBaselineRecord inherits from SQLModel."""
         from sqlmodel import SQLModel
-        
+
         record = QualityBaselineRecord(git_hash="test123")
         assert isinstance(record, SQLModel)
 
@@ -168,7 +168,7 @@ class TestProjectHealthRecord:
             error_count=3,
             maintenance_score=90
         )
-        
+
         assert record.project_name == "test_project"
         assert record.health_score == 85
         assert isinstance(record.last_updated, datetime)
@@ -180,7 +180,7 @@ class TestProjectHealthRecord:
     def test_project_health_record_default_values(self):
         """Test ProjectHealthRecord with default values."""
         record = ProjectHealthRecord(project_name="test")
-        
+
         assert record.health_score == 0
         assert record.issue_count == 0
         assert record.warning_count == 0
@@ -195,14 +195,14 @@ class TestProjectHealthRecord:
     def test_project_health_record_inheritance(self):
         """Test ProjectHealthRecord inherits from SQLModel."""
         from sqlmodel import SQLModel
-        
+
         record = ProjectHealthRecord(project_name="test")
         assert isinstance(record, SQLModel)
 
     def test_project_health_record_field_types(self):
         """Test ProjectHealthRecord field types."""
         record = ProjectHealthRecord(project_name="test")
-        
+
         assert isinstance(record.id, int) or record.id is None
         assert isinstance(record.project_name, str)
         assert isinstance(record.health_score, int)
@@ -228,12 +228,12 @@ class TestDataModelsIntegration:
     def test_models_have_required_attributes(self):
         """Test that models have required SQLAlchemy attributes."""
         from sqlmodel import SQLModel
-        
+
         # Test QualityBaselineRecord
         assert hasattr(QualityBaselineRecord, '__tablename__')
         assert hasattr(QualityBaselineRecord, 'id')
         assert hasattr(QualityBaselineRecord, 'git_hash')
-        
+
         # Test ProjectHealthRecord
         assert hasattr(ProjectHealthRecord, '__tablename__')
         assert hasattr(ProjectHealthRecord, 'id')
@@ -242,10 +242,10 @@ class TestDataModelsIntegration:
     def test_models_are_sqlmodel_instances(self):
         """Test that models are proper SQLModel instances."""
         from sqlmodel import SQLModel
-        
+
         record1 = QualityBaselineRecord(git_hash="test")
         record2 = ProjectHealthRecord(project_name="test")
-        
+
         assert isinstance(record1, SQLModel)
         assert isinstance(record2, SQLModel)
 
@@ -256,14 +256,14 @@ class TestDataModelsIntegration:
             coverage_percent=80.0,
             test_count=50
         )
-        
+
         # Should be able to access attributes
         data = {
             'git_hash': record.git_hash,
             'coverage_percent': record.coverage_percent,
             'test_count': record.test_count
         }
-        
+
         assert data['git_hash'] == "test123"
         assert data['coverage_percent'] == 80.0
         assert data['test_count'] == 50

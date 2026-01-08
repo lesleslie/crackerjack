@@ -1,4 +1,3 @@
-
 import ast
 import typing as t
 from contextlib import suppress
@@ -8,7 +7,6 @@ from ...base import AgentContext
 
 
 class PerformancePatternDetector:
-
     def __init__(self, context: AgentContext) -> None:
         self.context = context
 
@@ -558,7 +556,6 @@ class PerformancePatternDetector:
 
 
 class NestedLoopAnalyzer(ast.NodeVisitor):
-
     def __init__(self) -> None:
         self.nested_loops: list[dict[str, t.Any]] = []
         self.complexity_hotspots: list[dict[str, t.Any]] = []
@@ -614,7 +611,6 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
 
 
 class ListOpAnalyzer(ast.NodeVisitor):
-
     def __init__(self) -> None:
         self.list_ops: list[dict[str, t.Any]] = []
         self._in_loop = False
