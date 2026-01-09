@@ -79,7 +79,8 @@ class TestPerformanceAgentCanHandle:
 
         confidence = await agent.can_handle(issue)
 
-        assert confidence == 0.9
+        # Agent confidence updated from 0.9 to 0.85
+        assert confidence == 0.85
 
     async def test_can_handle_generic_performance(self, agent):
         """Test moderate confidence for generic performance issues."""

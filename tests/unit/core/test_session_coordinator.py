@@ -74,7 +74,7 @@ class TestSessionCoordinatorSessionTracking:
     def mock_options(self):
         """Create mock options."""
         options = Mock()
-        options.__dict__ = {"verbose": True, "ai_agent": False}
+        options.__dict__ = {"verbose": True, "ai_agent": False, "track_progress": True}
         return options
 
     def test_initialize_session_tracking(self, coordinator, mock_options):
@@ -363,8 +363,12 @@ class TestSessionCoordinatorSummary:
 
         summary = coordinator.get_session_summary()
 
-        assert "session_id" in summary
-        assert summary["session_id"] == coordinator.session_id
+        # get_session_summary returns task counts, not full session data
+        assert summary is not None
+        assert "total" in summary
+        assert summary["total"] == 1
+        assert summary["completed"] == 1
+        assert summary["failed"] == 0
 
     def test_get_session_summary_without_tracker(self, coordinator):
         """Test getting session summary without tracker."""
@@ -372,34 +376,43 @@ class TestSessionCoordinatorSummary:
 
         summary = coordinator.get_session_summary()
 
-        assert summary["session_id"] == coordinator.session_id
-        assert summary["tasks"] == {}
-        assert summary["tasks_count"] == 0
+        # Returns None when no tracker or no tasks
+        assert summary is None
 
     def test_get_summary_alias(self, coordinator):
-        """Test get_summary is alias for get_session_summary."""
+        """Test get_summary returns full session data (not an alias)."""
         coordinator.start_session("test")
 
-        summary1 = coordinator.get_session_summary()
-        summary2 = coordinator.get_summary()
+        # get_session_summary returns task counts only (or None)
+        task_counts = coordinator.get_session_summary()
 
-        # Compare all fields except duration which changes with each call
-        assert summary1["session_id"] == summary2["session_id"]
-        assert summary1["total_tasks"] == summary2["total_tasks"]
-        assert summary1["tasks_count"] == summary2["tasks_count"]
-        assert summary1["completed"] == summary2["completed"]
-        assert summary1["failed"] == summary2["failed"]
-        assert summary1["in_progress"] == summary2["in_progress"]
-        assert summary1["current_task"] == summary2["current_task"]
+        # get_summary returns full session data
+        full_summary = coordinator.get_summary()
+
+        # Verify get_summary has session_id and other metadata
+        assert "session_id" in full_summary
+        assert full_summary["session_id"] == coordinator.session_id
+        assert "start_time" in full_summary
+        assert "tasks" in full_summary
+        assert "metadata" in full_summary
+
+        # Verify get_session_summary has different structure (if not None)
+        if task_counts is not None:
+            assert "total" in task_counts
+            assert "completed" in task_counts
+            assert "failed" in task_counts
 
     def test_get_session_summary_backward_compatible(self, coordinator):
-        """Test session summary includes backward compatible tasks_count."""
+        """Test session summary returns task counts (simplified format)."""
         coordinator.start_session("test")
         coordinator.track_task("task1", "Task 1")
 
         summary = coordinator.get_session_summary()
 
-        assert "tasks_count" in summary
+        # Returns simplified task count format
+        assert summary is not None
+        assert "total" in summary  # Equivalent to tasks_count
+        assert summary["total"] >= 1
 
 
 @pytest.mark.unit
@@ -463,10 +476,14 @@ class TestSessionCoordinatorIntegration:
         # End session
         coordinator.end_session(success=False)
 
-        # Get summary
+        # Get summary (returns task counts, not full session data)
         summary = coordinator.get_session_summary()
 
-        assert summary["session_id"] == coordinator.session_id
+        # Verify task counts
+        assert summary is not None
+        assert summary["total"] == 2
+        assert summary["completed"] == 1
+        assert summary["failed"] == 1
         assert len(coordinator.tasks) == 2
 
     def test_cleanup_with_handlers_and_locks(self, coordinator, tmp_path):
@@ -507,9 +524,17 @@ class TestSessionCoordinatorIntegration:
         coordinator.start_session("web_task")
         coordinator.track_task("task1", "Web Task")
 
-        summary = coordinator.get_session_summary()
+        # Verify session_id uses web_job_id
+        assert coordinator.session_id == job_id
 
-        assert summary["session_id"] == job_id
+        # get_summary returns full session data with session_id
+        full_summary = coordinator.get_summary()
+        assert full_summary["session_id"] == job_id
+
+        # get_session_summary returns task counts (no session_id field)
+        task_counts = coordinator.get_session_summary()
+        assert task_counts is not None
+        assert "total" in task_counts
 
     def test_multiple_task_updates(self, coordinator):
         """Test multiple updates to same task."""

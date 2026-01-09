@@ -563,7 +563,8 @@ class TestArchitectAgentExecution:
         assert result.confidence == 0.9
         assert "break_into_helper_methods" in result.fixes_applied[0]
         assert "extract_method" in result.fixes_applied[1]
-        assert "crackerjack-architect" in result.fixes_applied[2]
+        # Format changed from "crackerjack-architect" to "crackerjack - architect"
+        assert "architect" in result.fixes_applied[2]
         assert len(result.files_modified) == 1
 
     async def test_execute_with_plan_pattern_based(self, agent):

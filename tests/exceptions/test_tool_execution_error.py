@@ -317,9 +317,9 @@ class TestOutputFormatting:
         lines = ["Error 1", "Error 2"]
         formatted = error._format_output(lines)
 
-        # Lines should be indented
-        assert "  Error 1" in formatted
-        assert "  Error 2" in formatted
+        # Lines should be indented with 1 space (not 2)
+        assert " Error 1" in formatted
+        assert " Error 2" in formatted
 
 
 class TestStringRepresentations:

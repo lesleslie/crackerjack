@@ -107,6 +107,7 @@ class TestGitIntegration:
             capture_output=True,
             text=True,
             check=True,
+            cwd=Path.cwd(),
         )
 
     @patch("subprocess.run")
@@ -162,12 +163,12 @@ class TestLargeFileDetection:
         """Test detection of file above size threshold."""
         monkeypatch.chdir(tmp_path)
 
-        # Create file larger than 500KB (default threshold)
+        # Create file larger than 1000KB (default threshold)
         large_file = tmp_path / "large.bin"
-        large_file.write_bytes(b"x" * (600 * 1024))  # 600KB
+        large_file.write_bytes(b"x" * (1200 * 1024))  # 1200KB
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [Path("large.bin")]
+            mock_git.return_value = [large_file]
             exit_code = main([])
 
         assert exit_code == 1  # Large file detected
@@ -181,7 +182,7 @@ class TestLargeFileDetection:
         small_file.write_bytes(b"x" * (100 * 1024))  # 100KB
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [Path("small.txt")]
+            mock_git.return_value = [small_file]
             exit_code = main([])
 
         assert exit_code == 0  # No large files
@@ -195,7 +196,7 @@ class TestLargeFileDetection:
         test_file.write_bytes(b"x" * (200 * 1024))  # 200KB
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [Path("test.bin")]
+            mock_git.return_value = [test_file]
 
             # Should fail with 100KB threshold
             exit_code_fail = main(["--maxkb", "100"])
@@ -210,16 +211,15 @@ class TestLargeFileDetection:
         monkeypatch.chdir(tmp_path)
 
         # Create multiple files
-        (tmp_path / "small1.txt").write_bytes(b"x" * (50 * 1024))  # 50KB
-        (tmp_path / "small2.txt").write_bytes(b"x" * (100 * 1024))  # 100KB
-        (tmp_path / "large.bin").write_bytes(b"x" * (600 * 1024))  # 600KB
+        small1 = tmp_path / "small1.txt"
+        small2 = tmp_path / "small2.txt"
+        large = tmp_path / "large.bin"
+        small1.write_bytes(b"x" * (50 * 1024))  # 50KB
+        small2.write_bytes(b"x" * (100 * 1024))  # 100KB
+        large.write_bytes(b"x" * (1200 * 1024))  # 1200KB (above 1000KB threshold)
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [
-                Path("small1.txt"),
-                Path("small2.txt"),
-                Path("large.bin"),
-            ]
+            mock_git.return_value = [small1, small2, large]
             exit_code = main([])
 
         assert exit_code == 1  # At least one large file
@@ -230,10 +230,10 @@ class TestLargeFileDetection:
 
         # Create a large file
         large_file = tmp_path / "large.bin"
-        large_file.write_bytes(b"x" * (600 * 1024))  # 600KB
+        large_file.write_bytes(b"x" * (1200 * 1024))  # 1200KB (above 1000KB threshold)
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [Path("large.bin")]
+            mock_git.return_value = [large_file]
 
             # Should detect with --enforce-all
             exit_code = main(["--enforce-all"])
@@ -306,10 +306,10 @@ class TestCLI:
         large_file = tmp_path / "large.bin"
 
         valid_file.write_bytes(b"x" * (100 * 1024))  # 100KB
-        large_file.write_bytes(b"x" * (600 * 1024))  # 600KB
+        large_file.write_bytes(b"x" * (1200 * 1024))  # 1200KB (above 1000KB threshold)
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
-            mock_git.return_value = [Path("valid.txt"), Path("large.bin")]
+            mock_git.return_value = [valid_file, large_file]
             exit_code = main([])
 
         assert exit_code == 1  # At least one large file
@@ -419,19 +419,19 @@ class TestIntegration:
         """Test files at exact threshold boundary."""
         monkeypatch.chdir(tmp_path)
 
-        # Create file exactly at threshold (500KB = 512000 bytes)
+        # Create file exactly at threshold (1000KB = 1024000 bytes)
         exact_file = tmp_path / "exact.bin"
-        exact_file.write_bytes(b"x" * (500 * 1024))
+        exact_file.write_bytes(b"x" * (1000 * 1024))
 
         # Create file 1 byte over threshold
         over_file = tmp_path / "over.bin"
-        over_file.write_bytes(b"x" * (500 * 1024 + 1))
+        over_file.write_bytes(b"x" * (1000 * 1024 + 1))
 
         with patch("crackerjack.tools.check_added_large_files.get_git_tracked_files") as mock_git:
             # Exactly at threshold should pass
-            mock_git.return_value = [Path("exact.bin")]
+            mock_git.return_value = [exact_file]
             assert main([]) == 0
 
             # 1 byte over should fail
-            mock_git.return_value = [Path("over.bin")]
+            mock_git.return_value = [over_file]
             assert main([]) == 1

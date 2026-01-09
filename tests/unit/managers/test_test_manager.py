@@ -131,10 +131,12 @@ class TestTestManagerTestExecution:
     def test_run_tests_early_return_when_disabled(self, manager):
         """Test run_tests returns early when tests disabled."""
         options = Mock()
-        options.run_tests = False
+        # Use new nested config structure: options.test instead of options.run_tests
+        options.test = False
 
         result = manager.run_tests(options)
 
+        # Implementation returns True when tests are disabled (early return)
         assert result is True
         # Should not execute tests
         manager.executor.execute_with_progress.assert_not_called()
