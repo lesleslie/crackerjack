@@ -38,7 +38,7 @@ class TestPyscnAdapter:
             files = [Path("file1.py"), Path("file2.py")]
             command = adapter.build_command(files)
 
-            expected = ["pyscn", "--format", "json", "--severity", "low", "--confidence", "low", "--recursive"]
+            expected = ["pyscn", "check", "--max-complexity", "15"]
             expected.extend([str(f) for f in files])
 
             assert command == expected
@@ -48,12 +48,7 @@ class TestPyscnAdapter:
         """Test building a pyscn command with various options."""
         with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
             settings = PyscnSettings(
-                severity_threshold="high",
-                confidence_threshold="medium",
-                exclude_rules=["SCN001", "SCN002"],
-                include_rules=["SCN100"],
-                recursive=False,
-                max_depth=3,
+                max_complexity=20,
             )
             adapter = PyscnAdapter(settings=settings)
             await adapter.init()
@@ -63,47 +58,24 @@ class TestPyscnAdapter:
 
             # Check that the command contains the expected elements
             assert "pyscn" in command
-            assert "--format" in command
-            assert "json" in command
-            assert "--severity" in command
-            assert "high" in command
-            assert "--confidence" in command
-            assert "medium" in command
-            assert "--exclude" in command
-            assert "SCN001" in command
-            assert "SCN002" in command
-            assert "--include" in command
-            assert "SCN100" in command
-            assert "--max-depth" in command
-            assert "3" in command
+            assert "check" in command
+            assert "--max-complexity" in command
+            assert "20" in command
             assert str(files[0]) in command
 
     @pytest.mark.asyncio
     async def test_parse_json_output(self) -> None:
-        """Test parsing JSON output from pyscn."""
+        """Test parsing output from pyscn (text format only)."""
         with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
             adapter = PyscnAdapter()
             await adapter.init()
 
-            # Mock JSON output
-            json_output = json.dumps({
-                "issues": [
-                    {
-                        "file": "test.py",
-                        "line": 10,
-                        "column": 5,
-                        "message": "Potential security vulnerability detected",
-                        "severity": "high",
-                        "confidence": "medium",
-                        "rule_id": "SCN123",
-                        "rule_name": "insecure_crypto"
-                    }
-                ]
-            })
+            # Mock text output (pyscn only outputs text, not JSON)
+            text_output = "test.py:10:5: error: Function 'test_func' is too complex (complexity 25)"
 
             result = ToolExecutionResult(
                 success=True,
-                raw_output=json_output,
+                raw_output=text_output,
                 raw_stderr="",
                 execution_time_ms=0.0,
                 exit_code=0,
@@ -115,9 +87,7 @@ class TestPyscnAdapter:
             assert issue.file_path == Path("test.py")
             assert issue.line_number == 10
             assert issue.column_number == 5
-            assert issue.message == "Potential security vulnerability detected"
-            assert issue.code == "SCN123"
-            assert issue.severity == "high"
+            assert "complex" in issue.message.lower()
 
     @pytest.mark.asyncio
     async def test_parse_text_output(self) -> None:
@@ -126,12 +96,8 @@ class TestPyscnAdapter:
             adapter = PyscnAdapter()
             await adapter.init()
 
-        # This tests the fallback method directly
-        # Based on the implementation, the text format is:
-        # "file.py:10:5: error: Potential security vulnerability detected"
-        # But the parsing splits on ":" with maxsplit=4, so parts[3] would be " error"
-        # and parts[4] would be " Potential security vulnerability detected"
-        text_output = "test.py:10:5: error: Potential security vulnerability detected"
+        # Test the actual format: "file.py:10:5: error: Function 'test_func' is too complex"
+        text_output = "test.py:10:5: error: Function 'test_func' is too complex (complexity 25)"
         issues = adapter._parse_text_output(text_output)
 
         assert len(issues) == 1
@@ -139,8 +105,7 @@ class TestPyscnAdapter:
         assert issue.file_path == Path("test.py")
         assert issue.line_number == 10
         assert issue.column_number == 5
-        # Based on the implementation, the message should be from parts[4]
-        assert issue.message == "Potential security vulnerability detected"
+        assert "complex" in issue.message.lower()
         assert issue.severity == "error"
 
     @pytest.mark.asyncio

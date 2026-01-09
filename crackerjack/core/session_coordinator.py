@@ -312,7 +312,7 @@ class SessionCoordinator:
         self.lock_files.add(path)
 
     def set_cleanup_config(self, config: t.Any) -> None:
-        self._cleanup_config = config
+        self.cleanup_config = config
 
     def _cleanup_temporary_files(self) -> None:
         pass

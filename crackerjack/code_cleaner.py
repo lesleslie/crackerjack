@@ -42,7 +42,7 @@ class SafePatternApplicator:
             "type: ",
             "regex ok",
             "todo",
-            "gitleaks:allow",
+            "gitleaks: allow",
         ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
@@ -98,17 +98,6 @@ class FileProcessor(BaseModel):
             self.security_logger = get_security_logger()
 
     def read_file_safely(self, file_path: Path) -> str:
-        """Read file content with security validation and encoding fallback.
-
-        Args:
-            file_path: Path to file to read
-
-        Returns:
-            File content as string
-
-        Raises:
-            ExecutionError: If file validation or reading fails
-        """
         validated_path = self._validate_and_log_file_access(file_path)
 
         try:
@@ -117,21 +106,10 @@ class FileProcessor(BaseModel):
             raise
         except Exception as e:
             self._handle_unexpected_read_error(file_path, e)
-            # This line is unreachable but needed for type checker
-            raise  # pragma: no cover
+
+            raise # pragma: no cover
 
     def _validate_and_log_file_access(self, file_path: Path) -> Path:
-        """Validate file path and log access attempt.
-
-        Args:
-            file_path: Path to validate
-
-        Returns:
-            Validated path
-
-        Raises:
-            ExecutionError: If validation fails
-        """
         validated_path = SecurePathValidator.validate_file_path(
             file_path, self.base_directory
         )
@@ -149,36 +127,12 @@ class FileProcessor(BaseModel):
     def _try_read_with_encoding_fallback(
         self, validated_path: Path, original_path: Path
     ) -> str:
-        """Attempt to read file with UTF-8 and fallback encodings.
-
-        Args:
-            validated_path: Validated file path
-            original_path: Original file path for error messages
-
-        Returns:
-            File content as string
-
-        Raises:
-            ExecutionError: If all encoding attempts fail
-        """
         try:
             return validated_path.read_text(encoding="utf-8")
         except UnicodeDecodeError:
             return self._try_fallback_encodings(validated_path, original_path)
 
     def _try_fallback_encodings(self, validated_path: Path, original_path: Path) -> str:
-        """Try reading file with alternative encodings.
-
-        Args:
-            validated_path: Validated file path
-            original_path: Original file path for error messages
-
-        Returns:
-            File content as string
-
-        Raises:
-            ExecutionError: If all encoding attempts fail
-        """
         fallback_encodings = ("latin1", "cp1252")
 
         for encoding in fallback_encodings:
@@ -203,15 +157,6 @@ class FileProcessor(BaseModel):
         )
 
     def _handle_unexpected_read_error(self, file_path: Path, error: Exception) -> None:
-        """Handle unexpected errors during file reading.
-
-        Args:
-            file_path: Path that failed to read
-            error: The exception that occurred
-
-        Raises:
-            ExecutionError: Always raises with wrapped error
-        """
         self.security_logger.log_validation_failed(
             "file_read", file_path, f"Unexpected error during file read: {error}"
         )

@@ -325,49 +325,52 @@ class TestWorkflowOptions:
     def test_default_values(self) -> None:
         options = WorkflowOptions()
 
-        assert options.strip_code is None
-        assert options.run_tests is False
-        assert options.publish is None
-        assert options.bump is None
-        assert options.commit is False
-        assert options.create_pr is False
-        assert options.interactive is True
-        assert options.dry_run is False
+        # Note: cleaning.clean defaults to None from __init__, not True from dataclass
+        assert options.cleaning.strip_code is None
+        assert options.testing.test is False
+        assert options.publishing.publish is None
+        assert options.publishing.bump is None
+        assert options.git.commit is False
+        assert options.git.create_pr is False
+        assert options.execution.interactive is True
+        assert options.execution.dry_run is False
 
     def test_from_args_with_attributes(self) -> None:
         class MockArgs:
-            strip_code = True
-            run_tests = True
-            publish = "pypi"
-            bump = "patch"
-            commit = True
-            create_pr = False
-            interactive = False
-            dry_run = True
+            def __init__(self):
+                self.strip_code = True
+                self.run_tests = True
+                self.publish = "pypi"
+                self.bump = "patch"
+                self.commit = True
+                self.create_pr = False
+                self.interactive = False
+                self.dry_run = True
 
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.strip_code is True
-        assert options.run_tests is True
-        assert options.publish == "pypi"
-        assert options.bump == "patch"
-        assert options.commit is True
-        assert options.create_pr is False
-        assert options.interactive is False
-        assert options.dry_run is True
+        assert options.cleaning.strip_code is True
+        assert options.testing.test is True
+        assert options.publishing.publish == "pypi"
+        assert options.publishing.bump == "patch"
+        assert options.git.commit is True
+        assert options.git.create_pr is False
+        assert options.execution.interactive is False
+        assert options.execution.dry_run is True
 
     def test_from_args_missing_attributes(self) -> None:
         class MockArgs:
-            strip_code = True
+            def __init__(self):
+                self.strip_code = True
 
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.strip_code is True
+        assert options.cleaning.strip_code is True
 
-        assert options.run_tests is False
-        assert options.publish is None
+        assert options.testing.test is False
+        assert options.publishing.publish is None
 
 
 class TestInteractiveCLI:
