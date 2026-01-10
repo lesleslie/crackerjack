@@ -11,16 +11,19 @@ from uuid import UUID
 
 import pytest
 
-from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
+from crackerjack.adapters._tool_adapter_base import BaseToolAdapter
+from crackerjack.adapters.complexity.complexipy import (
+    ComplexipyAdapter,
+    ComplexipySettings,
+)
 from crackerjack.adapters.format.mdformat import MdformatAdapter, MdformatSettings
+from crackerjack.adapters.format.ruff import RuffAdapter, RuffSettings
 from crackerjack.adapters.lint.codespell import CodespellAdapter, CodespellSettings
+from crackerjack.adapters.refactor.creosote import CreosoteAdapter, CreosoteSettings
+from crackerjack.adapters.refactor.refurb import RefurbAdapter, RefurbSettings
 from crackerjack.adapters.sast.bandit import BanditAdapter, BanditSettings
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter, GitleaksSettings
 from crackerjack.adapters.type.zuban import ZubanAdapter, ZubanSettings
-from crackerjack.adapters.refactor.refurb import RefurbAdapter, RefurbSettings
-from crackerjack.adapters.refactor.creosote import CreosoteAdapter, CreosoteSettings
-from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter, ComplexipySettings
-from crackerjack.adapters._tool_adapter_base import BaseToolAdapter
 from crackerjack.models.qa_config import QACheckConfig
 from crackerjack.models.qa_results import QACheckType
 
@@ -28,7 +31,7 @@ from crackerjack.models.qa_results import QACheckType
 class TestRuffAdapter:
     """Tests for RuffAdapter (lint + format)."""
 
-    def test_ruff_adapter_lint_mode(self):
+    def test_ruff_adapter_lint_mode(self) -> None:
         """Test RuffAdapter in lint mode."""
         settings = RuffSettings(mode="check", fix_enabled=False)
         adapter = RuffAdapter(settings=settings)
@@ -38,7 +41,7 @@ class TestRuffAdapter:
         assert isinstance(adapter.adapter_name, str)
         assert isinstance(adapter.module_id, UUID)
 
-    def test_ruff_adapter_format_mode(self):
+    def test_ruff_adapter_format_mode(self) -> None:
         """Test RuffAdapter in format mode."""
         settings = RuffSettings(mode="format", fix_enabled=True)
         adapter = RuffAdapter(settings=settings)
@@ -46,17 +49,17 @@ class TestRuffAdapter:
         assert adapter.settings.mode == "format"
         assert adapter.settings.fix_enabled is True
 
-    def test_ruff_adapter_extends_base_tool(self):
+    def test_ruff_adapter_extends_base_tool(self) -> None:
         """Test RuffAdapter extends BaseToolAdapter."""
         adapter = RuffAdapter()
         assert isinstance(adapter, BaseToolAdapter)
 
-    def test_ruff_adapter_tool_name(self):
+    def test_ruff_adapter_tool_name(self) -> None:
         """Test RuffAdapter tool_name property."""
         adapter = RuffAdapter()
         assert adapter.tool_name == "ruff"
 
-    def test_ruff_adapter_default_config(self):
+    def test_ruff_adapter_default_config(self) -> None:
         """Test RuffAdapter provides default configuration."""
         adapter = RuffAdapter()
         config = adapter.get_default_config()
@@ -66,7 +69,7 @@ class TestRuffAdapter:
         assert isinstance(config.file_patterns, list)
         assert any("*.py" in pattern for pattern in config.file_patterns)
 
-    def test_ruff_adapter_build_command_check_mode(self):
+    def test_ruff_adapter_build_command_check_mode(self) -> None:
         """Test RuffAdapter builds correct command in check mode."""
         settings = RuffSettings(mode="check", use_json_output=True)
         adapter = RuffAdapter(settings=settings)
@@ -78,7 +81,7 @@ class TestRuffAdapter:
         assert "check" in command
         assert "--output-format" in command or "json" in command
 
-    def test_ruff_adapter_build_command_format_mode(self):
+    def test_ruff_adapter_build_command_format_mode(self) -> None:
         """Test RuffAdapter builds correct command in format mode."""
         settings = RuffSettings(mode="format", fix_enabled=False)
         adapter = RuffAdapter(settings=settings)
@@ -94,7 +97,7 @@ class TestRuffAdapter:
 class TestBanditAdapter:
     """Tests for BanditAdapter (security)."""
 
-    def test_bandit_adapter_initialization(self):
+    def test_bandit_adapter_initialization(self) -> None:
         """Test BanditAdapter initialization."""
         settings = BanditSettings(severity_level="high", confidence_level="high")
         adapter = BanditAdapter(settings=settings)
@@ -102,7 +105,7 @@ class TestBanditAdapter:
         assert adapter.settings.severity_level == "high"
         assert adapter.settings.confidence_level == "high"
 
-    def test_bandit_adapter_default_config(self):
+    def test_bandit_adapter_default_config(self) -> None:
         """Test BanditAdapter default configuration."""
         adapter = BanditAdapter()
         config = adapter.get_default_config()
@@ -111,12 +114,12 @@ class TestBanditAdapter:
         assert config.check_type == QACheckType.SAST
         assert config.stage == "comprehensive"  # SAST in comprehensive stage
 
-    def test_bandit_adapter_tool_name(self):
+    def test_bandit_adapter_tool_name(self) -> None:
         """Test BanditAdapter tool name."""
         adapter = BanditAdapter()
         assert adapter.tool_name == "bandit"
 
-    def test_bandit_adapter_excludes_tests_by_default(self):
+    def test_bandit_adapter_excludes_tests_by_default(self) -> None:
         """Test BanditAdapter excludes tests by default."""
         settings = BanditSettings()
         assert settings.exclude_tests is True
@@ -125,7 +128,7 @@ class TestBanditAdapter:
 class TestGitleaksAdapter:
     """Tests for GitleaksAdapter (secrets detection)."""
 
-    def test_gitleaks_adapter_detect_mode(self):
+    def test_gitleaks_adapter_detect_mode(self) -> None:
         """Test GitleaksAdapter in detect mode."""
         settings = GitleaksSettings(scan_mode="detect", redact=True)
         adapter = GitleaksAdapter(settings=settings)
@@ -133,14 +136,14 @@ class TestGitleaksAdapter:
         assert adapter.settings.scan_mode == "detect"
         assert adapter.settings.redact is True
 
-    def test_gitleaks_adapter_protect_mode(self):
+    def test_gitleaks_adapter_protect_mode(self) -> None:
         """Test GitleaksAdapter in protect mode."""
         settings = GitleaksSettings(scan_mode="protect")
         adapter = GitleaksAdapter(settings=settings)
 
         assert adapter.settings.scan_mode == "protect"
 
-    def test_gitleaks_adapter_default_config(self):
+    def test_gitleaks_adapter_default_config(self) -> None:
         """Test GitleaksAdapter default configuration."""
         adapter = GitleaksAdapter()
         config = adapter.get_default_config()
@@ -149,7 +152,7 @@ class TestGitleaksAdapter:
         assert config.check_type == QACheckType.SECURITY
         assert config.stage == "fast"  # Secrets detection in fast stage
 
-    def test_gitleaks_adapter_tool_name(self):
+    def test_gitleaks_adapter_tool_name(self) -> None:
         """Test GitleaksAdapter tool name."""
         adapter = GitleaksAdapter()
         assert adapter.tool_name == "gitleaks"
@@ -158,7 +161,7 @@ class TestGitleaksAdapter:
 class TestZubanAdapter:
     """Tests for ZubanAdapter (type checking)."""
 
-    def test_zuban_adapter_strict_mode(self):
+    def test_zuban_adapter_strict_mode(self) -> None:
         """Test ZubanAdapter with strict mode."""
         settings = ZubanSettings(strict_mode=True, incremental=True)
         adapter = ZubanAdapter(settings=settings)
@@ -166,7 +169,7 @@ class TestZubanAdapter:
         assert adapter.settings.strict_mode is True
         assert adapter.settings.incremental is True
 
-    def test_zuban_adapter_default_config(self):
+    def test_zuban_adapter_default_config(self) -> None:
         """Test ZubanAdapter default configuration."""
         adapter = ZubanAdapter()
         config = adapter.get_default_config()
@@ -175,7 +178,7 @@ class TestZubanAdapter:
         assert config.check_type == QACheckType.TYPE
         assert config.stage == "comprehensive"  # Type checking comprehensive
 
-    def test_zuban_adapter_tool_name(self):
+    def test_zuban_adapter_tool_name(self) -> None:
         """Test ZubanAdapter tool name."""
         adapter = ZubanAdapter()
         assert adapter.tool_name == "zuban"
@@ -184,7 +187,7 @@ class TestZubanAdapter:
 class TestRefurbAdapter:
     """Tests for RefurbAdapter (refactoring suggestions)."""
 
-    def test_refurb_adapter_with_disabled_checks(self):
+    def test_refurb_adapter_with_disabled_checks(self) -> None:
         """Test RefurbAdapter with specific checks disabled."""
         settings = RefurbSettings(disable_checks=["FURB101", "FURB102"])
         adapter = RefurbAdapter(settings=settings)
@@ -192,7 +195,7 @@ class TestRefurbAdapter:
         assert len(adapter.settings.disable_checks) == 2
         assert "FURB101" in adapter.settings.disable_checks
 
-    def test_refurb_adapter_default_config(self):
+    def test_refurb_adapter_default_config(self) -> None:
         """Test RefurbAdapter default configuration."""
         adapter = RefurbAdapter()
         config = adapter.get_default_config()
@@ -201,7 +204,7 @@ class TestRefurbAdapter:
         assert config.check_type == QACheckType.REFACTOR
         assert config.stage == "comprehensive"
 
-    def test_refurb_adapter_tool_name(self):
+    def test_refurb_adapter_tool_name(self) -> None:
         """Test RefurbAdapter tool name."""
         adapter = RefurbAdapter()
         assert adapter.tool_name == "refurb"
@@ -210,7 +213,7 @@ class TestRefurbAdapter:
 class TestComplexipyAdapter:
     """Tests for ComplexipyAdapter (complexity analysis)."""
 
-    def test_complexipy_adapter_max_complexity(self):
+    def test_complexipy_adapter_max_complexity(self) -> None:
         """Test ComplexipyAdapter with max complexity setting."""
         settings = ComplexipySettings(
             max_complexity=15,  # Crackerjack standard
@@ -221,7 +224,7 @@ class TestComplexipyAdapter:
         assert adapter.settings.max_complexity == 15
         assert adapter.settings.include_cognitive is True
 
-    def test_complexipy_adapter_default_config(self):
+    def test_complexipy_adapter_default_config(self) -> None:
         """Test ComplexipyAdapter default configuration."""
         adapter = ComplexipyAdapter()
         config = adapter.get_default_config()
@@ -230,7 +233,7 @@ class TestComplexipyAdapter:
         assert config.check_type == QACheckType.COMPLEXITY
         assert config.stage == "comprehensive"
 
-    def test_complexipy_adapter_tool_name(self):
+    def test_complexipy_adapter_tool_name(self) -> None:
         """Test ComplexipyAdapter tool name."""
         adapter = ComplexipyAdapter()
         assert adapter.tool_name == "complexipy"
@@ -239,7 +242,7 @@ class TestComplexipyAdapter:
 class TestCreosoteAdapter:
     """Tests for CreosoteAdapter (unused dependencies)."""
 
-    def test_creosote_adapter_with_excludes(self):
+    def test_creosote_adapter_with_excludes(self) -> None:
         """Test CreosoteAdapter with excluded dependencies."""
         settings = CreosoteSettings(
             exclude_deps=["pytest", "black", "ruff"],
@@ -249,7 +252,7 @@ class TestCreosoteAdapter:
         assert len(adapter.settings.exclude_deps) == 3
         assert "pytest" in adapter.settings.exclude_deps
 
-    def test_creosote_adapter_with_paths(self):
+    def test_creosote_adapter_with_paths(self) -> None:
         """Test CreosoteAdapter with custom scan paths."""
         settings = CreosoteSettings(
             paths=[Path("src"), Path("tests")],
@@ -258,7 +261,7 @@ class TestCreosoteAdapter:
 
         assert len(adapter.settings.paths) == 2
 
-    def test_creosote_adapter_default_config(self):
+    def test_creosote_adapter_default_config(self) -> None:
         """Test CreosoteAdapter default configuration."""
         adapter = CreosoteAdapter()
         config = adapter.get_default_config()
@@ -267,7 +270,7 @@ class TestCreosoteAdapter:
         assert config.check_type == QACheckType.REFACTOR
         assert config.stage == "comprehensive"
 
-    def test_creosote_adapter_tool_name(self):
+    def test_creosote_adapter_tool_name(self) -> None:
         """Test CreosoteAdapter tool name."""
         adapter = CreosoteAdapter()
         assert adapter.tool_name == "creosote"
@@ -276,7 +279,7 @@ class TestCreosoteAdapter:
 class TestCodespellAdapter:
     """Tests for CodespellAdapter (spelling)."""
 
-    def test_codespell_adapter_with_ignore_words(self):
+    def test_codespell_adapter_with_ignore_words(self) -> None:
         """Test CodespellAdapter with ignored words."""
         settings = CodespellSettings(
             ignore_words=["pydantic", "uuid", "dataclass"],
@@ -288,14 +291,14 @@ class TestCodespellAdapter:
         assert "pydantic" in adapter.settings.ignore_words
         assert adapter.settings.skip_hidden is True
 
-    def test_codespell_adapter_auto_fix(self):
+    def test_codespell_adapter_auto_fix(self) -> None:
         """Test CodespellAdapter with auto-fix enabled."""
         settings = CodespellSettings(fix_enabled=True)
         adapter = CodespellAdapter(settings=settings)
 
         assert adapter.settings.fix_enabled is True
 
-    def test_codespell_adapter_default_config(self):
+    def test_codespell_adapter_default_config(self) -> None:
         """Test CodespellAdapter default configuration."""
         adapter = CodespellAdapter()
         config = adapter.get_default_config()
@@ -304,7 +307,7 @@ class TestCodespellAdapter:
         assert config.check_type == QACheckType.FORMAT
         assert config.stage == "fast"  # Spelling in fast stage
 
-    def test_codespell_adapter_tool_name(self):
+    def test_codespell_adapter_tool_name(self) -> None:
         """Test CodespellAdapter tool name."""
         adapter = CodespellAdapter()
         assert adapter.tool_name == "codespell"
@@ -313,7 +316,7 @@ class TestCodespellAdapter:
 class TestMdformatAdapter:
     """Tests for MdformatAdapter (markdown formatting)."""
 
-    def test_mdformat_adapter_check_mode(self):
+    def test_mdformat_adapter_check_mode(self) -> None:
         """Test MdformatAdapter in check-only mode."""
         settings = MdformatSettings(
             fix_enabled=False,
@@ -324,21 +327,21 @@ class TestMdformatAdapter:
         assert adapter.settings.fix_enabled is False
         assert adapter.settings.line_length == 88
 
-    def test_mdformat_adapter_format_mode(self):
+    def test_mdformat_adapter_format_mode(self) -> None:
         """Test MdformatAdapter with formatting enabled."""
         settings = MdformatSettings(fix_enabled=True)
         adapter = MdformatAdapter(settings=settings)
 
         assert adapter.settings.fix_enabled is True
 
-    def test_mdformat_adapter_wrap_mode(self):
+    def test_mdformat_adapter_wrap_mode(self) -> None:
         """Test MdformatAdapter wrap mode options."""
         settings = MdformatSettings(wrap_mode="keep")
         adapter = MdformatAdapter(settings=settings)
 
         assert adapter.settings.wrap_mode == "keep"
 
-    def test_mdformat_adapter_default_config(self):
+    def test_mdformat_adapter_default_config(self) -> None:
         """Test MdformatAdapter default configuration."""
         adapter = MdformatAdapter()
         config = adapter.get_default_config()
@@ -348,7 +351,7 @@ class TestMdformatAdapter:
         assert config.stage == "fast"  # Markdown in fast stage
         assert config.is_formatter is True
 
-    def test_mdformat_adapter_tool_name(self):
+    def test_mdformat_adapter_tool_name(self) -> None:
         """Test MdformatAdapter tool name."""
         adapter = MdformatAdapter()
         assert adapter.tool_name == "mdformat"
@@ -372,13 +375,13 @@ class TestToolAdapterCommonPatterns:
             MdformatAdapter,
         ]
 
-    def test_all_extend_base_tool_adapter(self, all_adapters):
+    def test_all_extend_base_tool_adapter(self, all_adapters) -> None:
         """Test all tool adapters extend BaseToolAdapter."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
             assert isinstance(adapter, BaseToolAdapter)
 
-    def test_all_have_tool_name(self, all_adapters):
+    def test_all_have_tool_name(self, all_adapters) -> None:
         """Test all adapters have tool_name property."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
@@ -386,14 +389,14 @@ class TestToolAdapterCommonPatterns:
             assert isinstance(adapter.tool_name, str)
             assert len(adapter.tool_name) > 0
 
-    def test_all_have_module_id(self, all_adapters):
+    def test_all_have_module_id(self, all_adapters) -> None:
         """Test all adapters have module_id property."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
             assert hasattr(adapter, "module_id")
             assert isinstance(adapter.module_id, UUID)
 
-    def test_all_have_adapter_name(self, all_adapters):
+    def test_all_have_adapter_name(self, all_adapters) -> None:
         """Test all adapters have adapter_name property."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
@@ -401,7 +404,7 @@ class TestToolAdapterCommonPatterns:
             assert isinstance(adapter.adapter_name, str)
             assert len(adapter.adapter_name) > 0
 
-    def test_all_provide_default_config(self, all_adapters):
+    def test_all_provide_default_config(self, all_adapters) -> None:
         """Test all adapters provide default configuration."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
@@ -411,14 +414,14 @@ class TestToolAdapterCommonPatterns:
             assert config.enabled is not None
             assert isinstance(config.file_patterns, list)
 
-    def test_all_have_build_command_method(self, all_adapters):
+    def test_all_have_build_command_method(self, all_adapters) -> None:
         """Test all adapters have build_command method."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
             assert hasattr(adapter, "build_command")
             assert callable(adapter.build_command)
 
-    def test_all_have_parse_output_method(self, all_adapters):
+    def test_all_have_parse_output_method(self, all_adapters) -> None:
         """Test all adapters have parse_output method."""
         for adapter_class in all_adapters:
             adapter = adapter_class()
@@ -429,7 +432,7 @@ class TestToolAdapterCommonPatterns:
 class TestToolAdapterStageAssignment:
     """Test stage assignment for tool adapters."""
 
-    def test_fast_stage_adapters(self):
+    def test_fast_stage_adapters(self) -> None:
         """Test adapters assigned to fast stage."""
         # Ruff (lint+format), Gitleaks (secrets), Codespell, Mdformat
         fast_adapters = [
@@ -446,7 +449,7 @@ class TestToolAdapterStageAssignment:
                 f"{adapter_class.__name__} should be in fast stage"
             )
 
-    def test_comprehensive_stage_adapters(self):
+    def test_comprehensive_stage_adapters(self) -> None:
         """Test adapters assigned to comprehensive stage."""
         # Bandit, Zuban, Refurb, Complexipy, Creosote
         comp_adapters = [
@@ -468,7 +471,7 @@ class TestToolAdapterStageAssignment:
 class TestToolAdapterFilePatterns:
     """Test file pattern configuration for tool adapters."""
 
-    def test_python_adapters_have_py_patterns(self):
+    def test_python_adapters_have_py_patterns(self) -> None:
         """Test Python-specific adapters have .py file patterns."""
         python_adapters = [
             RuffAdapter,
@@ -487,7 +490,7 @@ class TestToolAdapterFilePatterns:
                 f"{adapter_class.__name__} should match Python files"
             )
 
-    def test_markdown_adapter_has_md_patterns(self):
+    def test_markdown_adapter_has_md_patterns(self) -> None:
         """Test Markdown adapter has .md file patterns."""
         adapter = MdformatAdapter()
         config = adapter.get_default_config()
@@ -499,7 +502,7 @@ class TestToolAdapterFilePatterns:
 class TestToolAdapterParallelSafety:
     """Test parallel execution safety flags."""
 
-    def test_formatters_are_not_always_parallel_safe(self):
+    def test_formatters_are_not_always_parallel_safe(self) -> None:
         """Test formatters may have parallel safety considerations."""
         # Formatters that modify files may not be parallel safe
         adapter = RuffAdapter(settings=RuffSettings(mode="format", fix_enabled=True))
@@ -509,7 +512,7 @@ class TestToolAdapterParallelSafety:
         assert hasattr(config, "parallel_safe")
         assert isinstance(config.parallel_safe, bool)
 
-    def test_read_only_checks_are_parallel_safe(self):
+    def test_read_only_checks_are_parallel_safe(self) -> None:
         """Test read-only checks are marked parallel safe."""
         # Read-only checks should be parallel safe
         read_only_adapters = [

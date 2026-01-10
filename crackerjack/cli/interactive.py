@@ -158,9 +158,9 @@ class InteractiveWorkflowManager:
     def _get_publishing_dependencies(self) -> list[str]:
         if "testing" in self.tasks:
             return ["testing"]
-        elif "hooks" in self.tasks:
+        if "hooks" in self.tasks:
             return ["hooks"]
-        elif "cleaning" in self.tasks:
+        if "cleaning" in self.tasks:
             return ["cleaning"]
         return []
 
@@ -195,9 +195,12 @@ class InteractiveWorkflowManager:
         try:
             # TODO(Phase 3): Replace with Oneiric workflow execution
             if self.orchestrator is None:
-                raise NotImplementedError(
+                msg = (
                     "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
                     "Will be reimplemented in Phase 3 (Oneiric integration)."
+                )
+                raise NotImplementedError(
+                    msg,
                 )
             phase_method = getattr(self.orchestrator, task.phase_method)
             success_result = phase_method(options)
@@ -456,10 +459,11 @@ class InteractiveCLI:
             default=getattr(options, "strip_code", False),
         )
         updated_options.run_tests = Confirm.ask(
-            "🧪 Run tests?", default=getattr(options, "run_tests", False)
+            "🧪 Run tests?",
+            default=getattr(options, "run_tests", False),
         )
 
-        from ..cli.options import Options
+        from crackerjack.cli.options import Options
 
         default_options = Options()
         if options.commit != default_options.commit:

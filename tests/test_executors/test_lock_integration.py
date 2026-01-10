@@ -27,7 +27,7 @@ class TestAsyncHookExecutorIntegration:
     """Test AsyncHookExecutor integration with global lock system."""
 
     @pytest.mark.asyncio
-    async def test_async_executor_uses_lock_manager(self, tmp_path):
+    async def test_async_executor_uses_lock_manager(self, tmp_path) -> None:
         """Test that AsyncHookExecutor properly uses the lock manager."""
         # Create mock lock manager
         mock_lock_manager = unittest.mock.AsyncMock()
@@ -38,19 +38,19 @@ class TestAsyncHookExecutorIntegration:
         logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
-            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager,
         )
 
         # Verify lock manager is properly injected
         assert executor.hook_lock_manager is mock_lock_manager
 
     @pytest.mark.asyncio
-    async def test_async_executor_with_global_locks_enabled(self, tmp_path):
+    async def test_async_executor_with_global_locks_enabled(self, tmp_path) -> None:
         """Test AsyncHookExecutor behavior with global locks enabled."""
         # Create real lock manager with test configuration
         lock_manager = HookLockManager()
         test_config = GlobalLockConfig(
-            lock_directory=tmp_path / "executor_locks", enabled=True
+            lock_directory=tmp_path / "executor_locks", enabled=True,
         )
         lock_manager._global_config = test_config
         lock_manager.enable_global_lock(True)
@@ -85,12 +85,12 @@ class TestAsyncHookExecutorIntegration:
         assert len(result.results) == 1
 
     @pytest.mark.asyncio
-    async def test_async_executor_with_global_locks_disabled(self, tmp_path):
+    async def test_async_executor_with_global_locks_disabled(self, tmp_path) -> None:
         """Test AsyncHookExecutor behavior with global locks disabled."""
         # Create lock manager with global locks disabled
         lock_manager = HookLockManager()
         test_config = GlobalLockConfig(
-            lock_directory=tmp_path / "executor_locks", enabled=False
+            lock_directory=tmp_path / "executor_locks", enabled=False,
         )
         lock_manager._global_config = test_config
         lock_manager.enable_global_lock(False)
@@ -113,7 +113,7 @@ class TestAsyncHookExecutorIntegration:
         )
 
         strategy = HookStrategy(
-            name="no_global_strategy", hooks=[test_hook], parallel=True
+            name="no_global_strategy", hooks=[test_hook], parallel=True,
         )
 
         # Execute strategy (should use only hook-specific locks)
@@ -123,7 +123,7 @@ class TestAsyncHookExecutorIntegration:
         assert len(result.results) == 1
 
     @pytest.mark.asyncio
-    async def test_async_executor_concurrent_prevention(self, tmp_path):
+    async def test_async_executor_concurrent_prevention(self, tmp_path) -> None:
         """Test that AsyncHookExecutor prevents concurrent execution of locked hooks."""
         # Create shared lock manager
         lock_manager = HookLockManager()
@@ -189,7 +189,7 @@ class TestIndividualHookExecutorIntegration:
     """Test IndividualHookExecutor integration with global lock system."""
 
     @pytest.mark.asyncio
-    async def test_individual_executor_uses_lock_manager(self, tmp_path):
+    async def test_individual_executor_uses_lock_manager(self, tmp_path) -> None:
         """Test that IndividualHookExecutor properly uses the lock manager."""
         # Create mock lock manager
         mock_lock_manager = unittest.mock.AsyncMock()
@@ -199,26 +199,26 @@ class TestIndividualHookExecutorIntegration:
         # Configure IndividualHookExecutor with mock lock manager
         console = Console()
         executor = IndividualHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager
+            console=console, pkg_path=tmp_path, hook_lock_manager=mock_lock_manager,
         )
 
         # Verify lock manager is properly injected
         assert executor.hook_lock_manager is mock_lock_manager
 
     @pytest.mark.asyncio
-    async def test_individual_executor_with_global_locks(self, tmp_path):
+    async def test_individual_executor_with_global_locks(self, tmp_path) -> None:
         """Test IndividualHookExecutor with global locks enabled."""
         # Create real lock manager
         lock_manager = HookLockManager()
         test_config = GlobalLockConfig(
-            lock_directory=tmp_path / "individual_locks", enabled=True
+            lock_directory=tmp_path / "individual_locks", enabled=True,
         )
         lock_manager._global_config = test_config
         lock_manager.enable_global_lock(True)
 
         console = Console()
         executor = IndividualHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         # Create hook strategy
@@ -242,7 +242,7 @@ class TestHookExecutorLockCoordination:
     """Test coordination between different hook executors using global locks."""
 
     @pytest.mark.asyncio
-    async def test_cross_executor_lock_coordination(self, tmp_path):
+    async def test_cross_executor_lock_coordination(self, tmp_path) -> None:
         """Test that different executor types coordinate through global locks."""
         # Shared lock manager and configuration
         lock_manager = HookLockManager()
@@ -271,7 +271,7 @@ class TestHookExecutorLockCoordination:
         )
 
         individual_executor = IndividualHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         # Create hooks for both executors
@@ -289,7 +289,7 @@ class TestHookExecutorLockCoordination:
 
         async_strategy = HookStrategy(name="async_strategy", hooks=[async_hook])
         individual_strategy = HookStrategy(
-            name="individual_strategy", hooks=[individual_hook]
+            name="individual_strategy", hooks=[individual_hook],
         )
 
         # Execute both strategies concurrently
@@ -312,7 +312,7 @@ class TestHookExecutorLockCoordination:
         assert execution_time > 0.1  # Should take some time for coordination
 
     @pytest.mark.asyncio
-    async def test_executor_global_lock_statistics(self, tmp_path):
+    async def test_executor_global_lock_statistics(self, tmp_path) -> None:
         """Test that executor usage updates global lock statistics."""
         # Create lock manager - it has default config with stats enabled
         lock_manager = HookLockManager()
@@ -364,7 +364,7 @@ class TestHookExecutorLockCoordination:
 class TestExecutorConfigurationFlow:
     """Test configuration flow from CLI options to executors."""
 
-    def test_lock_manager_configuration_from_options(self, tmp_path):
+    def test_lock_manager_configuration_from_options(self, tmp_path) -> None:
         """Test that lock manager gets properly configured from CLI options."""
         # Create mock CLI options
         mock_options = unittest.mock.Mock()
@@ -380,13 +380,13 @@ class TestExecutorConfigurationFlow:
         # Create executor with configured lock manager
         console = Console()
         executor = AsyncHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         # Executor should use the configured lock manager
         assert executor.hook_lock_manager is lock_manager
 
-    def test_disabled_global_locks_configuration(self, tmp_path):
+    def test_disabled_global_locks_configuration(self, tmp_path) -> None:
         """Test configuration flow when global locks are disabled."""
         mock_options = unittest.mock.Mock()
         mock_options.disable_global_locks = True
@@ -402,18 +402,18 @@ class TestExecutorConfigurationFlow:
         console = Console()
 
         async_executor = AsyncHookExecutor(
-            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         individual_executor = IndividualHookExecutor(
-            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         # Both executors should use the same lock manager
         assert async_executor.hook_lock_manager is lock_manager
         assert individual_executor.hook_lock_manager is lock_manager
 
-    def test_custom_timeout_configuration(self, tmp_path):
+    def test_custom_timeout_configuration(self, tmp_path) -> None:
         """Test custom timeout configuration from CLI options."""
         custom_timeout = 900  # 15 minutes
 
@@ -430,7 +430,7 @@ class TestExecutorConfigurationFlow:
         logger = logging.getLogger(__name__)
         console = Console()
         executor = AsyncHookExecutor(
-            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager
+            logger=logger, console=console, pkg_path=tmp_path, hook_lock_manager=lock_manager,
         )
 
         # Verify that the executor uses the same lock manager
@@ -441,7 +441,7 @@ class TestExecutorErrorHandling:
     """Test error handling in executor integration with global locks."""
 
     @pytest.mark.asyncio
-    async def test_executor_handles_lock_failures_gracefully(self, tmp_path):
+    async def test_executor_handles_lock_failures_gracefully(self, tmp_path) -> None:
         """Test that executors handle lock acquisition failures gracefully."""
         # Create lock manager with the actual configuration
         lock_manager = HookLockManager()
@@ -477,7 +477,7 @@ class TestExecutorErrorHandling:
         assert result.strategy_name == "failing_strategy"
 
     @pytest.mark.asyncio
-    async def test_executor_handles_lock_timeout_gracefully(self, tmp_path):
+    async def test_executor_handles_lock_timeout_gracefully(self, tmp_path) -> None:
         """Test executor handling of lock acquisition timeouts."""
         # Create lock manager with very short timeout
         lock_manager = HookLockManager()
@@ -541,7 +541,7 @@ class TestExecutorErrorHandling:
 class TestExecutorDefaultLockManager:
     """Test that executors use the default lock manager when none is provided."""
 
-    def test_async_executor_default_lock_manager(self, tmp_path):
+    def test_async_executor_default_lock_manager(self, tmp_path) -> None:
         """Test that AsyncHookExecutor uses default lock manager when none provided."""
         logger = logging.getLogger(__name__)
         console = Console()
@@ -555,7 +555,7 @@ class TestExecutorDefaultLockManager:
 
         assert executor.hook_lock_manager is hook_lock_manager
 
-    def test_individual_executor_default_lock_manager(self, tmp_path):
+    def test_individual_executor_default_lock_manager(self, tmp_path) -> None:
         """Test that IndividualHookExecutor uses default lock manager when none provided."""
         console = Console()
         executor = IndividualHookExecutor(console=console, pkg_path=tmp_path)
@@ -569,7 +569,7 @@ class TestExecutorDefaultLockManager:
         assert executor.hook_lock_manager is hook_lock_manager
 
     @pytest.mark.asyncio
-    async def test_executors_share_default_lock_manager(self, tmp_path):
+    async def test_executors_share_default_lock_manager(self, tmp_path) -> None:
         """Test that both executor types share the same default lock manager."""
         logger = logging.getLogger(__name__)
         console = Console()
@@ -591,7 +591,7 @@ class TestExecutorLockManagerMocking:
     """Test mocking capabilities for lock manager in executor tests."""
 
     @pytest.mark.asyncio
-    async def test_mock_lock_manager_integration(self, tmp_path):
+    async def test_mock_lock_manager_integration(self, tmp_path) -> None:
         """Test using mock lock manager for isolated executor testing."""
         # Create comprehensive mock lock manager
         mock_lock_manager = unittest.mock.Mock()
@@ -610,7 +610,7 @@ class TestExecutorLockManagerMocking:
             return AsyncContextManagerMock()
 
         mock_lock_manager.acquire_hook_lock = unittest.mock.Mock(
-            side_effect=mock_acquire_hook_lock_method
+            side_effect=mock_acquire_hook_lock_method,
         )
 
         logger = logging.getLogger(__name__)
@@ -643,7 +643,7 @@ class TestExecutorLockManagerMocking:
         # Verify execution completed
         assert result.strategy_name == "mock_strategy"
 
-    def test_mock_lock_manager_configuration(self):
+    def test_mock_lock_manager_configuration(self) -> None:
         """Test configuring executor with various mock lock manager behaviors."""
         mock_lock_manager = unittest.mock.Mock()
 

@@ -16,7 +16,9 @@ class EnhancedProactiveAgent(ProactiveAgent):
         self._external_consultation_enabled = enabled
 
     async def _execute_with_plan(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         internal_result = await self._execute_internal_fix(issue, plan)
 
@@ -25,33 +27,40 @@ class EnhancedProactiveAgent(ProactiveAgent):
 
         external_consultations = await self._consult_external_agents(issue, plan)
 
-        enhanced_result = self._combine_internal_and_external_results(
-            internal_result, external_consultations
+        return self._combine_internal_and_external_results(
+            internal_result,
+            external_consultations,
         )
 
-        return enhanced_result
-
     async def _execute_internal_fix(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         return await self.analyze_and_fix(issue)
 
     def _should_consult_external_agents(
-        self, issue: Issue, internal_result: FixResult, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        internal_result: FixResult,
+        plan: dict[str, t.Any],
     ) -> bool:
         if not self._external_consultation_enabled:
             return False
 
         return (
             self.claude_bridge.should_consult_external_agent(
-                issue, internal_result.confidence
+                issue,
+                internal_result.confidence,
             )
             or plan.get("strategy") == "external_specialist_guided"
             or not internal_result.success
         )
 
     async def _consult_external_agents(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> list[dict[str, t.Any]]:
         recommended_agents = self.claude_bridge.get_recommended_external_agents(issue)
         consultations = []
@@ -59,7 +68,9 @@ class EnhancedProactiveAgent(ProactiveAgent):
         for agent_name in recommended_agents[:2]:
             if self.claude_bridge.verify_agent_availability(agent_name):
                 consultation = await self.claude_bridge.consult_external_agent(
-                    issue, agent_name, {"plan": plan}
+                    issue,
+                    agent_name,
+                    {"plan": plan},
                 )
                 if consultation.get("status") == "success":
                     consultations.append(consultation)
@@ -67,13 +78,16 @@ class EnhancedProactiveAgent(ProactiveAgent):
         return consultations
 
     def _combine_internal_and_external_results(
-        self, internal_result: FixResult, external_consultations: list[dict[str, t.Any]]
+        self,
+        internal_result: FixResult,
+        external_consultations: list[dict[str, t.Any]],
     ) -> FixResult:
         if not external_consultations:
             return internal_result
 
         enhanced_result = self.claude_bridge.create_enhanced_fix_result(
-            internal_result, external_consultations
+            internal_result,
+            external_consultations,
         )
 
         enhanced_result.recommendations.insert(

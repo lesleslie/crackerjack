@@ -14,7 +14,7 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         self,
         git_service: GitServiceProtocol,
         project_root: Path | None = None,
-    ):
+    ) -> None:
         self._git_service = git_service
         self.project_root = project_root or Path.cwd()
 
@@ -117,7 +117,9 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         return sorted(all_modified)
 
     def filter_by_extensions(
-        self, files: list[Path], extensions: list[str]
+        self,
+        files: list[Path],
+        extensions: list[str],
     ) -> list[Path]:
         normalized = [ext if ext.startswith(".") else f".{ext}" for ext in extensions]
 

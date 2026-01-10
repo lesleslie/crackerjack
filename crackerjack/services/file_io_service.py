@@ -88,7 +88,10 @@ class FileIOService:
 
     @staticmethod
     async def write_json_file(
-        path: str | Path, data: dict, create_dirs: bool = True, indent: int = 2
+        path: str | Path,
+        data: dict,
+        create_dirs: bool = True,
+        indent: int = 2,
     ) -> None:
         try:
             content = json.dumps(data, indent=indent, ensure_ascii=False)
@@ -111,7 +114,10 @@ class FileIOService:
 
     @staticmethod
     def write_json_file_sync(
-        path: str | Path, data: dict, create_dirs: bool = True, indent: int = 2
+        path: str | Path,
+        data: dict,
+        create_dirs: bool = True,
+        indent: int = 2,
     ) -> None:
         try:
             file_path = Path(path)
@@ -145,7 +151,9 @@ class FileIOService:
 
     @staticmethod
     def write_binary_file_sync(
-        path: str | Path, data: bytes, create_dirs: bool = True
+        path: str | Path,
+        data: bytes,
+        create_dirs: bool = True,
     ) -> None:
         try:
             file_path = Path(path)
@@ -160,7 +168,9 @@ class FileIOService:
 
     @staticmethod
     async def write_binary_file(
-        path: str | Path, data: bytes, create_dirs: bool = True
+        path: str | Path,
+        data: bytes,
+        create_dirs: bool = True,
     ) -> None:
         try:
             file_path = Path(path)

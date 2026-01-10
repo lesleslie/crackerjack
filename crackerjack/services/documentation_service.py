@@ -3,11 +3,12 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..models.protocols import (
+from crackerjack.models.protocols import (
     APIExtractorProtocol,
     DocumentationGeneratorProtocol,
     DocumentationServiceProtocol,
 )
+
 from .api_extractor import APIExtractorImpl
 from .documentation_generator import DocumentationGeneratorImpl
 
@@ -32,7 +33,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         self._ensure_directories()
 
     def _categorize_source_files(
-        self, source_paths: list[Path]
+        self,
+        source_paths: list[Path],
     ) -> dict[str, list[Path]]:
         python_files = [p for p in source_paths if p.suffix == ".py"]
 
@@ -50,26 +52,27 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         }
 
     def _extract_specialized_apis(
-        self, categorized_files: dict[str, list[Path]]
+        self,
+        categorized_files: dict[str, list[Path]],
     ) -> dict[str, t.Any]:
         api_data = {}
 
         if categorized_files["protocol"]:
             for protocol_file in categorized_files["protocol"]:
                 protocol_data = self.api_extractor.extract_protocol_definitions(
-                    protocol_file
+                    protocol_file,
                 )
                 api_data.update(protocol_data)
 
         if categorized_files["service"]:
             service_data = self.api_extractor.extract_service_interfaces(
-                categorized_files["service"]
+                categorized_files["service"],
             )
             api_data.update(service_data)
 
         if categorized_files["manager"]:
             manager_data = self.api_extractor.extract_service_interfaces(
-                categorized_files["manager"]
+                categorized_files["manager"],
             )
             if "services" in manager_data:
                 api_data["managers"] = manager_data["services"]
@@ -86,7 +89,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
     def extract_api_documentation(self, source_paths: list[Path]) -> dict[str, t.Any]:
         self.console.print(
-            "[cyan]📖[/cyan] Extracting API documentation from source files..."
+            "[cyan]📖[/cyan] Extracting API documentation from source files...",
         )
 
         categorized_files = self._categorize_source_files(source_paths)
@@ -94,19 +97,21 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         if categorized_files["python"]:
             python_data = self.api_extractor.extract_from_python_files(
-                categorized_files["python"]
+                categorized_files["python"],
             )
             api_data.update(python_data)
 
         api_data.update(self._extract_specialized_apis(categorized_files))
 
         self.console.print(
-            f"[green]✅[/green] Extracted documentation from {len(source_paths)} files"
+            f"[green]✅[/green] Extracted documentation from {len(source_paths)} files",
         )
         return api_data
 
     def generate_documentation(
-        self, template_name: str, context: dict[str, t.Any]
+        self,
+        template_name: str,
+        context: dict[str, t.Any],
     ) -> str:
         try:
             return self.doc_generator.render_template(Path(template_name), context)
@@ -123,7 +128,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                         "type": "missing_file",
                         "path": str(doc_path),
                         "message": "Documentation file does not exist",
-                    }
+                    },
                 )
                 continue
 
@@ -145,7 +150,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                         "type": "read_error",
                         "path": str(doc_path),
                         "message": f"Could not read file: {e}",
-                    }
+                    },
                 )
 
         return issues
@@ -171,19 +176,21 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             ]
 
             index_content = self._generate_index_content(
-                api_docs, guide_docs, root_docs
+                api_docs,
+                guide_docs,
+                root_docs,
             )
 
             index_path.write_text(index_content, encoding="utf-8")
 
             self.console.print(
-                f"[green]✅[/green] Updated documentation index at {index_path}"
+                f"[green]✅[/green] Updated documentation index at {index_path}",
             )
             return True
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to update documentation index: {e}"
+                f"[red]❌[/red] Failed to update documentation index: {e}",
             )
             return False
 
@@ -216,13 +223,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         documented_items = 0
 
         protocol_total, protocol_documented = self._count_protocol_items(
-            api_data.get("protocols", {})
+            api_data.get("protocols", {}),
         )
         total_items += protocol_total
         documented_items += protocol_documented
 
         module_total, module_documented = self._count_module_items(
-            api_data.get("modules", {})
+            api_data.get("modules", {}),
         )
         total_items += module_total
         documented_items += module_documented
@@ -239,7 +246,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 documented_items += 1
 
             method_total, method_documented = self._count_method_items(
-                protocol_info.get("methods", [])
+                protocol_info.get("methods", []),
             )
             total_items += method_total
             documented_items += method_documented
@@ -252,13 +259,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
         for module_data in modules.values():
             class_total, class_documented = self._count_class_items(
-                module_data.get("classes", [])
+                module_data.get("classes", []),
             )
             total_items += class_total
             documented_items += class_documented
 
             func_total, func_documented = self._count_function_items(
-                module_data.get("functions", [])
+                module_data.get("functions", []),
             )
             total_items += func_total
             documented_items += func_documented
@@ -275,7 +282,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 documented_items += 1
 
             method_total, method_documented = self._count_method_items(
-                class_info.get("methods", [])
+                class_info.get("methods", []),
             )
             total_items += method_total
             documented_items += method_documented
@@ -283,7 +290,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         return total_items, documented_items
 
     def _count_function_items(
-        self, functions: list[dict[str, t.Any]]
+        self,
+        functions: list[dict[str, t.Any]],
     ) -> tuple[int, int]:
         total_items = len(functions)
         documented_items = sum(
@@ -303,7 +311,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def generate_full_api_documentation(self) -> bool:
         try:
             self.console.print(
-                "[cyan]📚[/cyan] Generating complete API documentation..."
+                "[cyan]📚[/cyan] Generating complete API documentation...",
             )
 
             source_files = list[t.Any](self.pkg_path.glob("**/*.py"))
@@ -321,14 +329,14 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
 
             if "protocols" in api_data:
                 protocol_docs = self._generate_protocol_documentation(
-                    api_data["protocols"]
+                    api_data["protocols"],
                 )
                 protocol_path = self.api_docs_dir / "PROTOCOLS.md"
                 protocol_path.write_text(protocol_docs, encoding="utf-8")
 
             if "services" in api_data:
                 service_docs = self._generate_service_documentation(
-                    api_data["services"]
+                    api_data["services"],
                 )
                 service_path = self.api_docs_dir / "SERVICES.md"
                 service_path.write_text(service_docs, encoding="utf-8")
@@ -347,13 +355,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             self.update_documentation_index()
 
             self.console.print(
-                "[green]🎉[/green] API documentation generation completed!"
+                "[green]🎉[/green] API documentation generation completed!",
             )
             return True
 
         except Exception as e:
             self.console.print(
-                f"[red]❌[/red] Failed to generate API documentation: {e}"
+                f"[red]❌[/red] Failed to generate API documentation: {e}",
             )
             return False
 
@@ -369,7 +377,9 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
             directory.mkdir(parents=True, exist_ok=True)
 
     def _check_internal_links(
-        self, content: str, doc_path: Path
+        self,
+        content: str,
+        doc_path: Path,
     ) -> list[dict[str, str]]:
         from .regex_patterns import SAFE_PATTERNS
 
@@ -393,36 +403,41 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                         "type": "broken_link",
                         "path": str(doc_path),
                         "message": f"Broken internal link: [{link_text}]({link_path})",
-                    }
+                    },
                 )
 
         return issues
 
     def _check_empty_sections(
-        self, content: str, doc_path: Path
+        self,
+        content: str,
+        doc_path: Path,
     ) -> list[dict[str, str]]:
         import re
 
         issues = []
 
         empty_section_pattern = re.compile(  # REGEX OK: markdown section parsing
-            r"(#{1, 6}\s+[^\n]+)\n\s*(#{1, 6}\s+[^\n]+)", re.MULTILINE
+            r"(#{1, 6}\s+[^\n]+)\n\s*(#{1, 6}\s+[^\n]+)",
+            re.MULTILINE,
         )
         matches = empty_section_pattern.findall(content)
 
-        for header1, header2 in matches:
+        for header1, _header2 in matches:
             issues.append(
                 {
                     "type": "empty_section",
                     "path": str(doc_path),
                     "message": f"Empty section found: {header1.strip()}",
-                }
+                },
             )
 
         return issues
 
     def _check_version_references(
-        self, content: str, doc_path: Path
+        self,
+        content: str,
+        doc_path: Path,
     ) -> list[dict[str, str]]:
         from .regex_patterns import SAFE_PATTERNS
 
@@ -440,13 +455,16 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                         "type": "outdated_version",
                         "path": str(doc_path),
                         "message": f"Potentially outdated version reference: {version}",
-                    }
+                    },
                 )
 
         return issues
 
     def _generate_index_content(
-        self, api_docs: list[Path], guide_docs: list[Path], root_docs: list[Path]
+        self,
+        api_docs: list[Path],
+        guide_docs: list[Path],
+        root_docs: list[Path],
     ) -> str:
         lines = [
             "# Documentation Index\n\n",
@@ -478,14 +496,15 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def _generate_protocol_documentation(self, protocols: dict[str, t.Any]) -> str:
         lines = ["# Protocol Reference\n\n"]
         lines.append(
-            "This document describes all protocol interfaces used in the codebase.\n\n"
+            "This document describes all protocol interfaces used in the codebase.\n\n",
         )
 
         for protocol_name, protocol_info in sorted(protocols.items()):
             lines.append(f"## {protocol_name}\n\n")
 
             description = protocol_info.get("docstring", {}).get(
-                "description", "No description provided."
+                "description",
+                "No description provided.",
             )
             lines.append(f"{description}\n\n")
 
@@ -498,7 +517,8 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 for method in methods:
                     lines.append(f"#### `{method['name']}`\n\n")
                     method_desc = method.get("docstring", {}).get(
-                        "description", "No description provided."
+                        "description",
+                        "No description provided.",
                     )
                     lines.append(f"{method_desc}\n\n")
 
@@ -519,7 +539,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def _generate_service_documentation(self, services: dict[str, t.Any]) -> str:
         lines = ["# Service Reference\n\n"]
         lines.append(
-            "This document describes all service implementations in the codebase.\n\n"
+            "This document describes all service implementations in the codebase.\n\n",
         )
 
         for service_name, service_info in sorted(services.items()):
@@ -529,19 +549,21 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         return "".join(lines)
 
     def _generate_service_section(
-        self, service_name: str, service_info: dict[str, t.Any]
+        self,
+        service_name: str,
+        service_info: dict[str, t.Any],
     ) -> list[str]:
         lines: list[str] = []
         lines.extend(
             (
                 f"## {service_name}\n\n",
                 f"**Location:** `{service_info.get('path', 'Unknown')}`\n\n",
-            )
+            ),
         )
 
         if service_info.get("protocols_implemented"):
             protocol_lines = self._generate_protocols_implemented(
-                service_info["protocols_implemented"]
+                service_info["protocols_implemented"],
             )
             lines.extend(protocol_lines)
 
@@ -563,12 +585,13 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
         for class_info in classes:
             lines.append(f"### {class_info['name']}\n\n")
             description = class_info.get("docstring", {}).get(
-                "description", "No description provided."
+                "description",
+                "No description provided.",
             )
             lines.append(f"{description}\n\n")
 
             public_method_lines = self._generate_public_methods(
-                class_info.get("methods", [])
+                class_info.get("methods", []),
             )
             lines.extend(public_method_lines)
 
@@ -591,7 +614,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def _generate_cli_documentation(self, commands: dict[str, t.Any]) -> str:
         lines = ["# CLI Reference\n\n"]
         lines.append(
-            "This document describes all command-line options and usage patterns.\n\n"
+            "This document describes all command-line options and usage patterns.\n\n",
         )
 
         for command_name, command_info in sorted(commands.items()):
@@ -602,7 +625,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
                 lines.append("### Available Options\n\n")
                 for option in options:
                     lines.append(
-                        f"- `--{option['name']}` ({option['type']}): {option.get('description', 'No description')}\n"
+                        f"- `--{option['name']}` ({option['type']}): {option.get('description', 'No description')}\n",
                     )
                 lines.append("\n")
 
@@ -611,7 +634,7 @@ class DocumentationServiceImpl(DocumentationServiceProtocol):
     def _format_cross_references(self, cross_refs: dict[str, list[str]]) -> str:
         lines = ["# Cross References\n\n"]
         lines.append(
-            "This document shows where API components are used throughout the codebase.\n\n"
+            "This document shows where API components are used throughout the codebase.\n\n",
         )
 
         for name, references in sorted(cross_refs.items()):

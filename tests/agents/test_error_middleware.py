@@ -5,7 +5,6 @@ import logging
 from pathlib import Path
 
 import pytest
-
 from rich.console import Console
 
 from crackerjack.agents.base import (
@@ -24,7 +23,8 @@ class _FailingAgent(SubAgent):
         return 1.0
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        raise ValueError("simulated failure")
+        msg = "simulated failure"
+        raise ValueError(msg)
 
     def get_supported_types(self) -> set[IssueType]:
         return {IssueType.FORMATTING}
@@ -36,16 +36,17 @@ async def test_agent_error_boundary_returns_fallback(caplog: pytest.LogCaptureFi
         def __init__(self) -> None:
             self.logger = logging.getLogger("crackerjack.test.agent_error")
             self.logger.setLevel(logging.ERROR)
-            self.context = AgentContext(project_path=Path("."))
+            self.context = AgentContext(project_path=Path())
             self.context.console = Console()
 
         @agent_error_boundary
         async def execute(self, agent: SubAgent, issue: Issue) -> FixResult:
-            raise ValueError("simulated failure")
+            msg = "simulated failure"
+            raise ValueError(msg)
 
     coordinator = DummyCoordinator()
 
-    agent = _FailingAgent(context=AgentContext(project_path=Path(".")))
+    agent = _FailingAgent(context=AgentContext(project_path=Path()))
     issue = Issue(
         id="issue-1",
         type=IssueType.FORMATTING,

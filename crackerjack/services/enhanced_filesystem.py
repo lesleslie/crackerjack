@@ -4,9 +4,8 @@ import asyncio
 import hashlib
 import logging
 import time
-from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import aiofiles
 
@@ -16,6 +15,9 @@ from crackerjack.models.protocols import (
     ServiceProtocol,
 )
 from crackerjack.services.logging import LoggingContext
+
+if TYPE_CHECKING:
+    from collections.abc import Iterator
 
 logger = logging.getLogger(__name__)
 
@@ -212,7 +214,8 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
         path_obj = Path(path) if isinstance(path, str) else path
 
         if not isinstance(content, str):
-            raise TypeError("Content must be a string")
+            msg = "Content must be a string"
+            raise TypeError(msg)
 
         with LoggingContext("write_file", path=str(path_obj), size=len(content)):
             self._write_file_direct(path_obj, content)
@@ -329,13 +332,13 @@ class EnhancedFileSystemService(EnhancedFileSystemServiceProtocol, ServiceProtoc
                 details=str(error),
                 recovery="Check file permissions and user access rights",
             ) from error
-        elif isinstance(error, UnicodeDecodeError):
+        if isinstance(error, UnicodeDecodeError):
             raise FileError(
                 message=f"Unable to decode file as UTF-8: {path}",
                 details=str(error),
                 recovery="Ensure file is text - based and UTF-8 encoded",
             ) from error
-        elif isinstance(error, OSError):
+        if isinstance(error, OSError):
             raise FileError(
                 message=f"System error reading file: {path}",
                 details=str(error),

@@ -42,10 +42,10 @@ class RateLimiter:
         )
 
         self.global_minute_window: deque[float] = deque[float](
-            maxlen=requests_per_minute * 10
+            maxlen=requests_per_minute * 10,
         )
         self.global_hour_window: deque[float] = deque[float](
-            maxlen=requests_per_hour * 10
+            maxlen=requests_per_hour * 10,
         )
 
         self._lock = asyncio.Lock()

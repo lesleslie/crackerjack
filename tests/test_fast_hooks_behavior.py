@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Test script to verify that crackerjack workflow properly stops at fast hooks failures.
+"""Test script to verify that crackerjack workflow properly stops at fast hooks failures.
 
 This script tests:
 1. Fast hooks failure should stop execution before running tests
@@ -15,7 +14,6 @@ import tempfile
 from pathlib import Path
 
 import pytest
-
 
 pytestmark = [
     pytest.mark.e2e,
@@ -35,26 +33,22 @@ if os.getenv("CRACKERJACK_E2E") != "1":
 def run_command(cmd, capture_output=True, timeout=60):
     """Run a command and return the result."""
     try:
-        result = subprocess.run(
+        return subprocess.run(
             cmd,
-            shell=True,
+            check=False, shell=True,
             capture_output=capture_output,
             text=True,
             timeout=timeout,
         )
-        return result
     except subprocess.TimeoutExpired:
-        print(f"Command timed out: {cmd}")
         return None
     except Exception as e:
-        print(f"Error running command: {e}")
         return None
 
 
 def create_test_project():
     """Create a temporary test project with intentional fast hook failures."""
     temp_dir = tempfile.mkdtemp(prefix="crackerjack_test_")
-    print(f"Created test directory: {temp_dir}")
 
     # Create a basic Python file with formatting issues (fast hook failure)
     test_file = Path(temp_dir) / "test_file.py"
@@ -114,30 +108,22 @@ quote-style = "double"
     return temp_dir
 
 
-def test_fast_hooks_failure_stops_workflow():
+def test_fast_hooks_failure_stops_workflow() -> bool:
     """Test that fast hooks failure stops the workflow before running tests."""
-    print("\n=== Test 1: Fast hooks failure should stop workflow ===")
-
     temp_dir = create_test_project()
     os.chdir(temp_dir)
 
     # Initialize git repo
-    subprocess.run(["git", "init"], capture_output=True)
-    subprocess.run(["git", "add", "."], capture_output=True)
-    subprocess.run(["git", "commit", "-m", "initial"], capture_output=True)
+    subprocess.run(["git", "init"], check=False, capture_output=True)
+    subprocess.run(["git", "add", "."], check=False, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], check=False, capture_output=True)
 
     # Run crackerjack with tests - should stop at fast hooks
     result = run_command("python -m crackerjack run -t", timeout=30)
 
     if result is None:
-        print("❌ Command failed to run or timed out")
         return False
 
-    print(f"Exit code: {result.returncode}")
-    print("STDOUT:")
-    print(result.stdout)
-    print("STDERR:")
-    print(result.stderr)
 
     # Check that fast hooks failed and workflow stopped
     output = result.stdout + result.stderr
@@ -158,30 +144,23 @@ def test_fast_hooks_failure_stops_workflow():
     tests_not_run = "running test suite" not in output.lower()
 
     if fast_hooks_failed and tests_not_run:
-        print("✅ PASS: Fast hooks failed and workflow stopped before tests")
         return True
-    elif fast_hooks_failed and not tests_not_run:
-        print("❌ FAIL: Fast hooks failed but workflow continued to tests")
+    if fast_hooks_failed and not tests_not_run:
         return False
-    elif not fast_hooks_failed:
-        print("❌ FAIL: Fast hooks should have failed due to formatting issues")
+    if not fast_hooks_failed:
         return False
-    else:
-        print("❌ FAIL: Unexpected workflow behavior")
-        return False
+    return False
 
 
-def test_fast_hooks_success_continues_workflow():
+def test_fast_hooks_success_continues_workflow() -> bool:
     """Test that fast hooks success allows workflow to continue."""
-    print("\n=== Test 2: Fast hooks success should continue workflow ===")
-
     temp_dir = create_test_project()
     os.chdir(temp_dir)
 
     # Initialize git repo
-    subprocess.run(["git", "init"], capture_output=True)
-    subprocess.run(["git", "add", "."], capture_output=True)
-    subprocess.run(["git", "commit", "-m", "initial"], capture_output=True)
+    subprocess.run(["git", "init"], check=False, capture_output=True)
+    subprocess.run(["git", "add", "."], check=False, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], check=False, capture_output=True)
 
     # First, fix the formatting issues by running ruff format
     result = run_command("python -m ruff format test_file.py")
@@ -197,14 +176,8 @@ def test_fast_hooks_success_continues_workflow():
     result = run_command("python -m crackerjack run -t", timeout=60)
 
     if result is None:
-        print("❌ Command failed to run or timed out")
         return False
 
-    print(f"Exit code: {result.returncode}")
-    print("STDOUT:")
-    print(result.stdout)
-    print("STDERR:")
-    print(result.stderr)
 
     output = result.stdout + result.stderr
 
@@ -225,30 +198,23 @@ def test_fast_hooks_success_continues_workflow():
     )
 
     if fast_hooks_passed and tests_run:
-        print("✅ PASS: Fast hooks passed and workflow continued to tests")
         return True
-    elif fast_hooks_passed and not tests_run:
-        print("❌ FAIL: Fast hooks passed but workflow didn't continue to tests")
+    if fast_hooks_passed and not tests_run:
         return False
-    elif not fast_hooks_passed:
-        print("❌ FAIL: Fast hooks should have passed after formatting fixes")
+    if not fast_hooks_passed:
         return False
-    else:
-        print("❌ FAIL: Unexpected workflow behavior")
-        return False
+    return False
 
 
-def test_workflow_order():
+def test_workflow_order() -> bool:
     """Test that the workflow order is correct."""
-    print("\n=== Test 3: Workflow order validation ===")
-
     temp_dir = create_test_project()
     os.chdir(temp_dir)
 
     # Initialize git repo
-    subprocess.run(["git", "init"], capture_output=True)
-    subprocess.run(["git", "add", "."], capture_output=True)
-    subprocess.run(["git", "commit", "-m", "initial"], capture_output=True)
+    subprocess.run(["git", "init"], check=False, capture_output=True)
+    subprocess.run(["git", "add", "."], check=False, capture_output=True)
+    subprocess.run(["git", "commit", "-m", "initial"], check=False, capture_output=True)
 
     # Create a proper test file
     test_py = Path(temp_dir) / "test_example.py"
@@ -270,12 +236,8 @@ def test_workflow_order():
     result = run_command("python -m crackerjack run -t", timeout=90)
 
     if result is None:
-        print("❌ Command failed to run or timed out")
         return False
 
-    print(f"Exit code: {result.returncode}")
-    print("STDOUT:")
-    print(result.stdout)
 
     output = result.stdout.lower()
 
@@ -294,39 +256,25 @@ def test_workflow_order():
         elif "comprehensive" in line and ("passed" in line or "failed" in line):
             comprehensive_pos = i
 
-    print(f"Fast hooks position: {fast_hooks_pos}")
-    print(f"Tests position: {tests_pos}")
-    print(f"Comprehensive hooks position: {comprehensive_pos}")
 
     # Validate order
     order_correct = True
     if fast_hooks_pos == -1:
-        print("❌ Fast hooks execution not found in output")
         order_correct = False
 
-    if tests_pos != -1 and fast_hooks_pos != -1:
-        if fast_hooks_pos >= tests_pos:
-            print("❌ Fast hooks should run before tests")
-            order_correct = False
+    if tests_pos != -1 and fast_hooks_pos != -1 and fast_hooks_pos >= tests_pos:
+        order_correct = False
 
     if comprehensive_pos != -1 and tests_pos != -1:
         # Comprehensive hooks should run after or in parallel with tests
         # We're more flexible here since they might run in parallel
         pass
 
-    if order_correct:
-        print("✅ PASS: Workflow order is correct")
-        return True
-    else:
-        print("❌ FAIL: Workflow order is incorrect")
-        return False
+    return bool(order_correct)
 
 
-def main():
+def main() -> int | None:
     """Run all tests."""
-    print("Testing crackerjack workflow fast hooks behavior")
-    print("=" * 60)
-
     original_cwd = Path.cwd()
 
     try:
@@ -343,26 +291,12 @@ def main():
         os.chdir(original_cwd)
 
         # Summary
-        print("\n" + "=" * 60)
-        print("TEST RESULTS SUMMARY:")
-        print(
-            f"Test 1 (Fast hooks failure stops): {'✅ PASS' if test1_result else '❌ FAIL'}"
-        )
-        print(
-            f"Test 2 (Fast hooks success continues): {'✅ PASS' if test2_result else '❌ FAIL'}"
-        )
-        print(
-            f"Test 3 (Workflow order correct): {'✅ PASS' if test3_result else '❌ FAIL'}"
-        )
 
         all_passed = test1_result and test2_result and test3_result
 
         if all_passed:
-            print("\n🎉 ALL TESTS PASSED - Fast hooks workflow behavior is correct!")
             return 0
-        else:
-            print("\n❌ SOME TESTS FAILED - Fast hooks workflow needs attention!")
-            return 1
+        return 1
 
     finally:
         os.chdir(original_cwd)

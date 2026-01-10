@@ -52,7 +52,9 @@ def _compare_tool_commands(precommit_commands: dict[str, list[str]]) -> dict[str
 
         match = _commands_match(tool_command, precommit_command)
         results[tool_name] = _create_comparison_result(
-            tool_command, precommit_command, match
+            tool_command,
+            precommit_command,
+            match,
         )
 
     return results
@@ -90,7 +92,9 @@ def _commands_equivalent(tool_command: list[str], precommit_command: list[str]) 
 
 
 def _create_comparison_result(
-    tool_command: list[str], precommit_command: list[str], match: bool
+    tool_command: list[str],
+    precommit_command: list[str],
+    match: bool,
 ) -> dict[str, t.Any]:
     return {
         "status": "match" if match else "mismatch",
@@ -101,7 +105,8 @@ def _create_comparison_result(
 
 
 def _add_precommit_only_commands(
-    results: dict[str, dict], precommit_commands: dict[str, list[str]]
+    results: dict[str, dict],
+    precommit_commands: dict[str, list[str]],
 ) -> None:
     for hook_id in precommit_commands:
         if hook_id not in TOOL_COMMANDS:
@@ -128,12 +133,13 @@ def generate_summary_section(results: dict[str, dict], lines: list[str]) -> None
             f"- 📝 tool_commands.py Only: {tool_only}",
             f"- 📝 .pre-commit-config.yaml Only: {precommit_only}",
             "",
-        ]
+        ],
     )
 
 
 def generate_mismatched_commands_section(
-    results: dict[str, dict], lines: list[str]
+    results: dict[str, dict],
+    lines: list[str],
 ) -> None:
     mismatches = sum(1 for r in results.values() if r["status"] == "mismatch")
 
@@ -144,7 +150,7 @@ def generate_mismatched_commands_section(
                 "",
                 "These hooks have different commands in the two locations:",
                 "",
-            ]
+            ],
         )
 
         for tool_name, result in sorted(results.items()):
@@ -165,7 +171,7 @@ def generate_mismatched_commands_section(
                     str(result["precommit_command"]),
                     "```",
                     "",
-                ]
+                ],
             )
 
 
@@ -179,7 +185,7 @@ def generate_tool_only_section(results: dict[str, dict], lines: list[str]) -> No
                 "",
                 "These tools are defined in tool_commands.py but not .pre-commit-config.yaml:",
                 "",
-            ]
+            ],
         )
 
         for tool_name, result in sorted(results.items()):
@@ -201,7 +207,7 @@ def generate_precommit_only_section(results: dict[str, dict], lines: list[str]) 
                 "",
                 "These hooks are in .pre-commit-config.yaml but not tool_commands.py:",
                 "",
-            ]
+            ],
         )
 
         for tool_name, result in sorted(results.items()):
@@ -209,7 +215,7 @@ def generate_precommit_only_section(results: dict[str, dict], lines: list[str]) 
                 continue
 
             lines.append(
-                f"- **{tool_name}**: `{' '.join(result['precommit_command'])}`"
+                f"- **{tool_name}**: `{' '.join(result['precommit_command'])}`",
             )
 
         lines.append("")
@@ -225,7 +231,7 @@ def generate_all_consistent_section(results: dict[str, dict], lines: list[str]) 
                 "",
                 "All hooks have matching commands between .pre-commit-config.yaml and tool_commands.py!",
                 "",
-            ]
+            ],
         )
 
 
@@ -247,12 +253,7 @@ def generate_report(results: dict[str, dict]) -> str:
     return "\n".join(lines)
 
 
-def main():
-    print("=" * 80)
-    print("Phase 10.4.2: Hook Command Consistency Audit")
-    print("=" * 80)
-    print()
-
+def main() -> None:
     results = compare_commands()
 
     report = generate_report(results)
@@ -260,15 +261,8 @@ def main():
     report_path = project_root / "docs" / "HOOK-COMMAND-AUDIT.md"
     report_path.write_text(report)
 
-    print("=" * 80)
-    print(f"✅ Report saved to: {report_path}")
-    print("=" * 80)
-    print()
-    print(report)
-
     mismatches = sum(1 for r in results.values() if r["status"] == "mismatch")
     if mismatches > 0:
-        print(f"\n⚠️ Found {mismatches} mismatched commands!")
         sys.exit(1)
 
 

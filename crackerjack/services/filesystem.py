@@ -27,7 +27,10 @@ class FileSystemService(FileSystemInterface):
             )
 
     def _handle_permission_error(
-        self, error: PermissionError, path: str | Path, operation: str
+        self,
+        error: PermissionError,
+        path: str | Path,
+        operation: str,
     ) -> None:
         raise FileError(
             message=f"Permission denied {operation}: {path}",
@@ -37,7 +40,9 @@ class FileSystemService(FileSystemInterface):
         ) from error
 
     def _handle_unicode_error(
-        self, error: UnicodeDecodeError, path: str | Path
+        self,
+        error: UnicodeDecodeError,
+        path: str | Path,
     ) -> None:
         raise FileError(
             message=f"Unable to decode file as UTF-8: {path}",
@@ -47,7 +52,10 @@ class FileSystemService(FileSystemInterface):
         ) from error
 
     def _handle_os_error(
-        self, error: OSError, path: str | Path, operation: str
+        self,
+        error: OSError,
+        path: str | Path,
+        operation: str,
     ) -> None:
         raise FileError(
             message=f"System error {operation}: {path}",
@@ -57,7 +65,10 @@ class FileSystemService(FileSystemInterface):
         ) from error
 
     def _handle_disk_space_error(
-        self, error: OSError, path: str | Path, operation: str
+        self,
+        error: OSError,
+        path: str | Path,
+        operation: str,
     ) -> None:
         if "No space left on device" in str(error):
             raise ResourceError(
@@ -205,7 +216,9 @@ class FileSystemService(FileSystemInterface):
         self._perform_file_copy(src_path, dst_path, src, dst)
 
     def _normalize_copy_paths(
-        self, src: str | Path, dst: str | Path
+        self,
+        src: str | Path,
+        dst: str | Path,
     ) -> tuple[Path, Path]:
         src_path = Path(src) if isinstance(src, str) else src
         dst_path = Path(dst) if isinstance(dst, str) else dst
@@ -237,7 +250,11 @@ class FileSystemService(FileSystemInterface):
             ) from e
 
     def _perform_file_copy(
-        self, src_path: Path, dst_path: Path, src: str | Path, dst: str | Path
+        self,
+        src_path: Path,
+        dst_path: Path,
+        src: str | Path,
+        dst: str | Path,
     ) -> None:
         try:
             shutil.copy2(src_path, dst_path)

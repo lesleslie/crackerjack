@@ -4,7 +4,8 @@ from contextlib import suppress
 from datetime import datetime
 from pathlib import Path
 
-from ..services.regex_patterns import SAFE_PATTERNS
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
 from .base import (
     FixResult,
     Issue,
@@ -95,7 +96,7 @@ class DocumentationAgent(SubAgent):
         self.log("Checking documentation consistency")
 
         md_files = list[t.Any](Path().glob("*.md")) + list[t.Any](
-            Path("docs").glob("*.md")
+            Path("docs").glob("*.md"),
         )
 
         agent_count_issues = self._check_agent_count_consistency(md_files)
@@ -310,10 +311,9 @@ class DocumentationAgent(SubAgent):
 
         insert_index = 0
         for i, line in enumerate(lines):
-            if line.startswith(("# ", "## ")):
-                if i > 0:
-                    insert_index = i
-                    break
+            if line.startswith(("# ", "## ")) and i > 0:
+                insert_index = i
+                break
 
         new_lines = (
             lines[:insert_index] + entry.split("\n") + [""] + lines[insert_index:]
@@ -366,7 +366,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
                 return None
 
             return self._analyze_file_content_for_agent_count(
-                file_path, content, patterns, expected_count
+                file_path,
+                content,
+                patterns,
+                expected_count,
             )
 
         return None
@@ -382,7 +385,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
         for pattern in patterns:
             result = self._check_pattern_for_count_mismatch(
-                pattern, pattern_map, content, file_path, expected_count
+                pattern,
+                pattern_map,
+                content,
+                file_path,
+                expected_count,
             )
             if result:
                 return result
@@ -417,7 +424,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
             return None
 
         return self._find_count_mismatch_in_matches(
-            safe_pattern, content, file_path, expected_count
+            safe_pattern,
+            content,
+            file_path,
+            expected_count,
         )
 
     def _find_count_mismatch_in_matches(
@@ -453,19 +463,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         sub_agent_pattern = SAFE_PATTERNS["update_sub_agent_count"]
 
         updated_content = agent_pattern.apply(updated_content).replace(
-            "NEW_COUNT", str(expected_count)
+            "NEW_COUNT",
+            str(expected_count),
         )
         updated_content = specialized_pattern.apply(updated_content).replace(
-            "NEW_COUNT", str(expected_count)
+            "NEW_COUNT",
+            str(expected_count),
         )
         updated_content = config_pattern.apply(updated_content).replace(
-            "NEW_COUNT", str(expected_count)
+            "NEW_COUNT",
+            str(expected_count),
         )
-        updated_content = sub_agent_pattern.apply(updated_content).replace(
-            "NEW_COUNT", str(expected_count)
+        return sub_agent_pattern.apply(updated_content).replace(
+            "NEW_COUNT",
+            str(expected_count),
         )
-
-        return updated_content
 
     def _detect_api_changes(self) -> list[dict[str, str]]:
         try:

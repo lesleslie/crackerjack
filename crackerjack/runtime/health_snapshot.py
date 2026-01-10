@@ -3,7 +3,9 @@ from __future__ import annotations
 import json
 import typing as t
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
+
+if t.TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass
@@ -59,8 +61,8 @@ def read_pid_file(path: Path) -> int | None:
 
 __all__ = [
     "RuntimeHealthSnapshot",
-    "write_runtime_health",
+    "read_pid_file",
     "read_runtime_health",
     "write_pid_file",
-    "read_pid_file",
+    "write_runtime_health",
 ]

@@ -27,14 +27,14 @@ class TestImportOptimizationAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test ImportOptimizationAgent initializes correctly."""
         agent = ImportOptimizationAgent(context)
 
         assert agent.context == context
         assert agent.name == "import_optimization"
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports import-related issue types."""
         agent = ImportOptimizationAgent(context)
 
@@ -56,7 +56,7 @@ class TestImportOptimizationAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_can_handle_supported_type(self, agent):
+    async def test_can_handle_supported_type(self, agent) -> None:
         """Test high confidence for supported types."""
         issue = Issue(
             id="import-001",
@@ -69,7 +69,7 @@ class TestImportOptimizationAgentCanHandle:
 
         assert confidence == 0.85
 
-    async def test_can_handle_unused_import_keyword(self, agent):
+    async def test_can_handle_unused_import_keyword(self, agent) -> None:
         """Test confidence for unused import keywords."""
         issue = Issue(
             id="import-002",
@@ -82,7 +82,7 @@ class TestImportOptimizationAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_import_style_keyword(self, agent):
+    async def test_can_handle_import_style_keyword(self, agent) -> None:
         """Test confidence for import style issues."""
         issue = Issue(
             id="import-003",
@@ -95,7 +95,7 @@ class TestImportOptimizationAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_unsupported_type(self, agent):
+    async def test_can_handle_unsupported_type(self, agent) -> None:
         """Test zero confidence for unsupported types."""
         issue = Issue(
             id="import-004",
@@ -120,7 +120,7 @@ class TestImportOptimizationAgentFileAnalysis:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_analyze_file_valid_python(self, agent, tmp_path):
+    async def test_analyze_file_valid_python(self, agent, tmp_path) -> None:
         """Test analyzing valid Python file."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -135,7 +135,7 @@ from typing import Any
         assert isinstance(analysis, ImportAnalysis)
         assert analysis.file_path == test_file
 
-    async def test_analyze_file_with_mixed_imports(self, agent, tmp_path):
+    async def test_analyze_file_with_mixed_imports(self, agent, tmp_path) -> None:
         """Test detecting mixed import styles."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -148,7 +148,7 @@ from os import path
 
             assert len(analysis.mixed_imports) > 0
 
-    async def test_analyze_file_invalid(self, agent, tmp_path):
+    async def test_analyze_file_invalid(self, agent, tmp_path) -> None:
         """Test analyzing non-existent file."""
         test_file = tmp_path / "nonexistent.py"
 
@@ -157,7 +157,7 @@ from os import path
         assert analysis.file_path == test_file
         assert analysis.mixed_imports == []
 
-    async def test_analyze_file_syntax_error(self, agent, tmp_path):
+    async def test_analyze_file_syntax_error(self, agent, tmp_path) -> None:
         """Test handling syntax errors."""
         test_file = tmp_path / "broken.py"
         test_file.write_text("import os\nif True")  # Syntax error
@@ -166,7 +166,7 @@ from os import path
 
         assert isinstance(analysis, ImportAnalysis)
 
-    def test_is_valid_python_file(self, agent, tmp_path):
+    def test_is_valid_python_file(self, agent, tmp_path) -> None:
         """Test Python file validation."""
         valid_file = tmp_path / "module.py"
         valid_file.write_text("import os")
@@ -190,20 +190,20 @@ class TestImportOptimizationAgentUnusedDetection:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_detect_unused_imports_success(self, agent, tmp_path):
+    async def test_detect_unused_imports_success(self, agent, tmp_path) -> None:
         """Test detecting unused imports with vulture."""
         test_file = tmp_path / "module.py"
 
         mock_result = Mock(returncode=0, stdout="unused import 'os'\n")
 
         with patch.object(
-            agent, "_run_vulture_analysis", return_value=mock_result
+            agent, "_run_vulture_analysis", return_value=mock_result,
         ):
             unused = await agent._detect_unused_imports(test_file)
 
             assert isinstance(unused, list)
 
-    async def test_detect_unused_imports_timeout(self, agent, tmp_path):
+    async def test_detect_unused_imports_timeout(self, agent, tmp_path) -> None:
         """Test handling vulture timeout."""
         test_file = tmp_path / "module.py"
 
@@ -216,7 +216,7 @@ class TestImportOptimizationAgentUnusedDetection:
 
             assert unused == []
 
-    def test_extract_unused_imports_from_result(self, agent):
+    def test_extract_unused_imports_from_result(self, agent) -> None:
         """Test extracting import names from vulture output."""
         mock_result = Mock(
             returncode=0,
@@ -228,7 +228,7 @@ class TestImportOptimizationAgentUnusedDetection:
 
         assert isinstance(unused, list)
 
-    def test_is_valid_vulture_result(self, agent):
+    def test_is_valid_vulture_result(self, agent) -> None:
         """Test vulture result validation."""
         valid_result = Mock(returncode=0, stdout="output")
         invalid_result = Mock(returncode=1, stdout="")
@@ -249,7 +249,7 @@ class TestImportOptimizationAgentImportAnalysis:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    def test_extract_import_information(self, agent):
+    def test_extract_import_information(self, agent) -> None:
         """Test extracting import information from AST."""
         code = """
 import os
@@ -266,7 +266,7 @@ from typing import Any, Dict
         assert "pathlib" in module_imports
         assert len(all_imports) > 0
 
-    def test_find_mixed_imports(self, agent):
+    def test_find_mixed_imports(self, agent) -> None:
         """Test finding mixed import styles."""
         module_imports = {
             "os": [
@@ -281,7 +281,7 @@ from typing import Any, Dict
         assert "os" in mixed
         assert "sys" not in mixed
 
-    def test_find_redundant_imports(self, agent):
+    def test_find_redundant_imports(self, agent) -> None:
         """Test finding redundant imports."""
         all_imports = [
             {"module": "os", "name": "path", "line": 1},
@@ -293,13 +293,13 @@ from typing import Any, Dict
         assert len(redundant) == 1
         assert "Line 2" in redundant[0]
 
-    def test_find_optimization_opportunities(self, agent):
+    def test_find_optimization_opportunities(self, agent) -> None:
         """Test finding consolidation opportunities."""
         module_imports = {
             "pathlib": [
                 {"type": "standard", "module": "pathlib"},
                 {"type": "standard", "module": "pathlib"},
-            ]
+            ],
         }
 
         opportunities = agent._find_optimization_opportunities(module_imports)
@@ -318,38 +318,38 @@ class TestImportOptimizationAgentImportOrdering:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    def test_get_import_category_stdlib(self, agent):
+    def test_get_import_category_stdlib(self, agent) -> None:
         """Test categorizing standard library imports."""
         category = agent._get_import_category("os")
 
         assert category == 1
 
-    def test_get_import_category_third_party(self, agent):
+    def test_get_import_category_third_party(self, agent) -> None:
         """Test categorizing third-party imports."""
         category = agent._get_import_category("requests")
 
         assert category == 2
 
-    def test_get_import_category_local(self, agent):
+    def test_get_import_category_local(self, agent) -> None:
         """Test categorizing local imports."""
         category = agent._get_import_category("crackerjack.services")
 
         assert category == 3
 
-    def test_is_stdlib_module(self, agent):
+    def test_is_stdlib_module(self, agent) -> None:
         """Test stdlib module detection."""
         assert agent._is_stdlib_module("os") is True
         assert agent._is_stdlib_module("sys") is True
         assert agent._is_stdlib_module("pathlib") is True
         assert agent._is_stdlib_module("requests") is False
 
-    def test_is_local_import(self, agent):
+    def test_is_local_import(self, agent) -> None:
         """Test local import detection."""
         assert agent._is_local_import("crackerjack.agents", "crackerjack") is True
         assert agent._is_local_import(".services", "services") is True
         assert agent._is_local_import("os.path", "os") is False
 
-    def test_check_star_imports(self, agent):
+    def test_check_star_imports(self, agent) -> None:
         """Test detecting star imports."""
         content = """
 from os import *
@@ -373,7 +373,7 @@ class TestImportOptimizationAgentFixIssue:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_fix_issue_no_file_path(self, agent):
+    async def test_fix_issue_no_file_path(self, agent) -> None:
         """Test handling issue without file path."""
         issue = Issue(
             id="import-001",
@@ -388,7 +388,7 @@ class TestImportOptimizationAgentFixIssue:
         assert result.success is False
         assert "No file path" in result.remaining_issues[0]
 
-    async def test_fix_issue_no_optimizations_needed(self, agent, tmp_path):
+    async def test_fix_issue_no_optimizations_needed(self, agent, tmp_path) -> None:
         """Test when no optimizations are needed."""
         test_file = tmp_path / "module.py"
         test_file.write_text("import os\n")
@@ -403,7 +403,7 @@ class TestImportOptimizationAgentFixIssue:
 
         with patch.object(agent, "analyze_file") as mock_analyze:
             mock_analyze.return_value = ImportAnalysis(
-                test_file, [], [], [], [], []
+                test_file, [], [], [], [], [],
             )
 
             result = await agent.fix_issue(issue)
@@ -412,7 +412,7 @@ class TestImportOptimizationAgentFixIssue:
             assert result.confidence == 1.0
             assert "No import optimizations needed" in result.fixes_applied[0]
 
-    async def test_fix_issue_with_optimizations(self, agent, tmp_path):
+    async def test_fix_issue_with_optimizations(self, agent, tmp_path) -> None:
         """Test applying optimizations."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -429,10 +429,10 @@ from os import path
         )
 
         with patch.object(
-            agent, "analyze_file"
+            agent, "analyze_file",
         ) as mock_analyze:
             mock_analyze.return_value = ImportAnalysis(
-                test_file, ["os"], [], [], [], []
+                test_file, ["os"], [], [], [], [],
             )
 
             with patch.object(agent, "_read_and_optimize_file", return_value="optimized"):
@@ -454,21 +454,21 @@ class TestImportOptimizationAgentOptimizations:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_optimize_imports(self, agent):
+    async def test_optimize_imports(self, agent) -> None:
         """Test optimizing import statements."""
         content = """
 import os
 from os import path
 """
         analysis = ImportAnalysis(
-            Path("test.py"), ["os"], [], [], [], []
+            Path("test.py"), ["os"], [], [], [], [],
         )
 
         optimized = await agent._optimize_imports(content, analysis)
 
         assert isinstance(optimized, str)
 
-    def test_remove_unused_imports(self, agent):
+    def test_remove_unused_imports(self, agent) -> None:
         """Test removing unused imports."""
         lines = [
             "import os",
@@ -482,7 +482,7 @@ from os import path
         # Should remove or filter unused imports
         assert isinstance(filtered, list)
 
-    def test_consolidate_mixed_imports(self, agent):
+    def test_consolidate_mixed_imports(self, agent) -> None:
         """Test consolidating mixed imports."""
         lines = [
             "import os",
@@ -495,7 +495,7 @@ from os import path
 
         assert isinstance(consolidated, list)
 
-    def test_remove_redundant_imports(self, agent):
+    def test_remove_redundant_imports(self, agent) -> None:
         """Test removing redundant imports."""
         lines = [
             "import os",
@@ -508,7 +508,7 @@ from os import path
 
         assert isinstance(filtered, list)
 
-    def test_organize_imports_pep8(self, agent):
+    def test_organize_imports_pep8(self, agent) -> None:
         """Test PEP 8 import organization."""
         lines = [
             "from crackerjack.services import config",
@@ -533,24 +533,24 @@ class TestImportOptimizationAgentHelpers:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    def test_is_multi_import_line(self, agent):
+    def test_is_multi_import_line(self, agent) -> None:
         """Test detecting multi-import lines."""
         assert agent._is_multi_import_line("from os import path, sep") is True
         assert agent._is_multi_import_line("import os") is False
 
-    def test_is_import_line(self, agent):
+    def test_is_import_line(self, agent) -> None:
         """Test detecting import lines."""
         assert agent._is_import_line("import os") is True
         assert agent._is_import_line("from os import path") is True
         assert agent._is_import_line("# import os") is False
         assert agent._is_import_line("def foo(): pass") is False
 
-    def test_extract_module_name(self, agent):
+    def test_extract_module_name(self, agent) -> None:
         """Test extracting module names."""
         assert agent._extract_module_name("import os.path") == "os"
         assert agent._extract_module_name("from pathlib import Path") == "pathlib"
 
-    def test_categorize_imports(self, agent):
+    def test_categorize_imports(self, agent) -> None:
         """Test categorizing imports by type."""
         all_imports = [
             {"module": "os", "name": "path"},
@@ -565,7 +565,7 @@ class TestImportOptimizationAgentHelpers:
         assert 2 in categories  # third-party
         assert 3 in categories  # local
 
-    def test_parse_import_lines(self, agent):
+    def test_parse_import_lines(self, agent) -> None:
         """Test parsing import lines."""
         lines = [
             "import os",
@@ -593,7 +593,7 @@ class TestImportOptimizationAgentDiagnostics:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_get_diagnostics_success(self, agent, tmp_path):
+    async def test_get_diagnostics_success(self, agent, tmp_path) -> None:
         """Test getting diagnostics successfully."""
         # Create test files
         (tmp_path / "module1.py").write_text("import os\n")
@@ -614,7 +614,7 @@ class TestImportOptimizationAgentDiagnostics:
             assert "files_analyzed" in diagnostics
             assert "capabilities" in diagnostics
 
-    async def test_get_diagnostics_error(self, agent):
+    async def test_get_diagnostics_error(self, agent) -> None:
         """Test handling diagnostics error."""
         with patch.object(agent, "_get_python_files", side_effect=Exception("Error")):
             diagnostics = await agent.get_diagnostics()
@@ -633,7 +633,7 @@ class TestImportOptimizationAgentASTParsing:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    def test_process_standard_import(self, agent):
+    def test_process_standard_import(self, agent) -> None:
         """Test processing standard import nodes."""
         code = "import os, sys"
         tree = ast.parse(code)
@@ -647,7 +647,7 @@ class TestImportOptimizationAgentASTParsing:
         assert "os" in module_imports
         assert "sys" in module_imports
 
-    def test_process_from_import(self, agent):
+    def test_process_from_import(self, agent) -> None:
         """Test processing from-import nodes."""
         code = "from pathlib import Path, PurePath"
         tree = ast.parse(code)
@@ -672,7 +672,7 @@ class TestImportOptimizationAgentIntegration:
         context = AgentContext(project_path=tmp_path)
         return ImportOptimizationAgent(context)
 
-    async def test_full_optimization_workflow(self, agent, tmp_path):
+    async def test_full_optimization_workflow(self, agent, tmp_path) -> None:
         """Test complete optimization workflow."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -694,7 +694,7 @@ from os import path
 
         assert isinstance(result, FixResult)
 
-    async def test_analyze_then_optimize(self, agent, tmp_path):
+    async def test_analyze_then_optimize(self, agent, tmp_path) -> None:
         """Test analyze followed by optimization."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -716,7 +716,7 @@ from os import path
             optimized = await agent._optimize_imports(content, analysis)
             assert isinstance(optimized, str)
 
-    def test_import_analysis_namedtuple(self):
+    def test_import_analysis_namedtuple(self) -> None:
         """Test ImportAnalysis NamedTuple structure."""
         analysis = ImportAnalysis(
             file_path=Path("test.py"),

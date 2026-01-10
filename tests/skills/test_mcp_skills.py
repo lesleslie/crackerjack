@@ -1,5 +1,4 @@
-"""
-Tests for MCP Skills System (Option 2)
+"""Tests for MCP Skills System (Option 2).
 
 Tests the MCPSkill, MCPSkillRegistry, and tool grouping functionality.
 """
@@ -7,13 +6,12 @@ Tests the MCPSkill, MCPSkillRegistry, and tool grouping functionality.
 import pytest
 
 from crackerjack.skills.mcp_skills import (
+    MCP_SKILL_GROUPS,
     MCPSkill,
     MCPSkillRegistry,
-    MCP_SKILL_GROUPS,
     SkillDomain,
     ToolReference,
 )
-
 
 # Tests
 

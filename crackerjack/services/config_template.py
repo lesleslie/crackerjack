@@ -84,7 +84,9 @@ class ConfigTemplateService:
         }
 
     def get_template(
-        self, config_type: str, version: str | None = None
+        self,
+        config_type: str,
+        version: str | None = None,
     ) -> ConfigVersion | None:
         if config_type not in self.templates:
             return None
@@ -114,7 +116,8 @@ class ConfigTemplateService:
 
             if needs_update:
                 update_info.diff_preview = self._generate_diff_preview(
-                    config_type, project_path
+                    config_type,
+                    project_path,
                 )
 
             updates[config_type] = update_info
@@ -150,7 +153,7 @@ class ConfigTemplateService:
 
         if v1_tuple < v2_tuple:
             return -1
-        elif v1_tuple > v2_tuple:
+        if v1_tuple > v2_tuple:
             return 1
         return 0
 
@@ -177,7 +180,9 @@ class ConfigTemplateService:
             return f"Error generating diff preview: {e}"
 
     def _create_config_diff(
-        self, current: dict[str, t.Any], new: dict[str, t.Any]
+        self,
+        current: dict[str, t.Any],
+        new: dict[str, t.Any],
     ) -> str:
         changes: list[str] = []
         self._collect_config_changes(current, new, changes)
@@ -243,23 +248,25 @@ class ConfigTemplateService:
         try:
             if config_type == "pyproject":
                 return self._apply_pyproject_update(template, project_path, interactive)
-            else:
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Unsupported config type: {config_type}"
-                )
-                return False
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Unsupported config type: {config_type}",
+            )
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Failed to apply update: {e}")
             return False
 
     def _apply_pyproject_update(
-        self, template: ConfigVersion, project_path: Path, interactive: bool
+        self,
+        template: ConfigVersion,
+        project_path: Path,
+        interactive: bool,
     ) -> bool:
         config_file = project_path / "pyproject.toml"
 
         if not config_file.exists():
             self.console.print(
-                f"[yellow]⚠️[/yellow] pyproject.toml not found at {project_path}"
+                f"[yellow]⚠️[/yellow] pyproject.toml not found at {project_path}",
             )
             return False
 
@@ -292,7 +299,7 @@ class ConfigTemplateService:
             self._update_version_tracking(project_path, "pyproject", template.version)
 
             self.console.print(
-                f"[green]✅[/green] Updated {config_file.name} to version {template.version}"
+                f"[green]✅[/green] Updated {config_file.name} to version {template.version}",
             )
             return True
         except Exception as e:
@@ -307,17 +314,19 @@ class ConfigTemplateService:
             return False
 
     def _update_version_tracking(
-        self, project_path: Path, config_type: str, version: str
+        self,
+        project_path: Path,
+        config_type: str,
+        version: str,
     ) -> None:
         version_file = project_path / ".crackerjack-config.yaml"
 
         data: dict[str, t.Any] = {"version": "1.0.0", "configs": {}}
         if version_file.exists():
-            with suppress(Exception):
-                with version_file.open() as f:
-                    existing_data = yaml.safe_load(f)
-                    if isinstance(existing_data, dict):
-                        data = existing_data
+            with suppress(Exception), version_file.open() as f:
+                existing_data = yaml.safe_load(f)
+                if isinstance(existing_data, dict):
+                    data = existing_data
 
         if "configs" not in data:
             data["configs"] = {}
@@ -327,9 +336,8 @@ class ConfigTemplateService:
             "last_updated": datetime.now().isoformat(),
         }
 
-        with suppress(Exception):
-            with version_file.open("w") as f:
-                yaml.dump(data, f, default_flow_style=False, sort_keys=False)
+        with suppress(Exception), version_file.open("w") as f:
+            yaml.dump(data, f, default_flow_style=False, sort_keys=False)
 
     def _invalidate_cache(self, project_path: Path) -> None:
         pass

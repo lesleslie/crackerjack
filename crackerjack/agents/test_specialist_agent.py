@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from ..services.regex_patterns import SAFE_PATTERNS
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
 from .base import (
     AgentContext,
     FixResult,

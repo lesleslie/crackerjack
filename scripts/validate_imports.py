@@ -24,32 +24,22 @@ CRITICAL_MODULES = [
 ]
 
 
-def validate_imports():
+def validate_imports() -> bool:
     failed = []
     succeeded = []
-
-    print("🔍 Validating critical module imports...\n")
 
     for module_name in CRITICAL_MODULES:
         try:
             importlib.import_module(module_name)
             succeeded.append(module_name)
-            print(f"✅ {module_name}")
         except Exception as e:
             failed.append((module_name, str(e)))
-            print(f"❌ {module_name}: {e}")
-
-    print(
-        f"\n📊 Results: {len(succeeded)}/{len(CRITICAL_MODULES)} modules imported successfully"
-    )
 
     if failed:
-        print(f"\n🔴 {len(failed)} Import Errors:")
-        for module, error in failed:
-            print(f" ❌ {module}: {error}")
+        for _module, _error in failed:
+            pass
         return False
 
-    print("\n✅ All critical modules imported successfully!")
     return True
 
 

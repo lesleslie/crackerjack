@@ -52,8 +52,7 @@ def handle_json_errors(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
                     logger.error(f"JSON operation failed in {func.__name__}: {e}")
@@ -83,8 +82,7 @@ def handle_subprocess_errors(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
                     logger.error(f"Subprocess operation failed in {func.__name__}: {e}")
@@ -111,8 +109,7 @@ def handle_validation_errors(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
                     logger.error(f"Validation failed in {func.__name__}: {e}")
@@ -143,8 +140,7 @@ def handle_network_errors(
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
             try:
-                result = func(*args, **kwargs)
-                return result
+                return func(*args, **kwargs)
             except exceptions as e:
                 if log_error:
                     logger.error(f"Network operation failed in {func.__name__}: {e}")
@@ -211,7 +207,7 @@ def retry_on_error(
                     if log_retry:
                         logger.warning(
                             f"Attempt {attempt + 1}/{max_attempts} failed in {func.__name__}: {e}. "
-                            f"Retrying in {current_delay}s..."
+                            f"Retrying in {current_delay}s...",
                         )
                     if attempt < max_attempts - 1:
                         import time
@@ -220,7 +216,7 @@ def retry_on_error(
                         current_delay *= backoff
 
             logger.error(
-                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}"
+                f"All {max_attempts} attempts failed in {func.__name__}: {last_exception}",
             )
             raise last_exception
 

@@ -1,5 +1,4 @@
-"""
-Test syntax validation to prevent code cleaner from breaking Python syntax.
+"""Test syntax validation to prevent code cleaner from breaking Python syntax.
 
 This module tests for common syntax issues that automated formatters
 or code cleaners might introduce, particularly walrus operators (:=)
@@ -18,7 +17,7 @@ class TestWalrusOperatorSyntax:
     """Test that walrus operators (:=) are properly formatted."""
 
     def test_walrus_operators_have_no_spaces(self) -> None:
-        """Test that all walrus operators in codebase use := not : ="""
+        """Test that all walrus operators in codebase use := not : =."""
         project_root = Path(__file__).parent.parent
         crackerjack_dir = project_root / "crackerjack"
 
@@ -41,7 +40,7 @@ class TestWalrusOperatorSyntax:
                     for i, line in enumerate(lines, 1):
                         if ": =" in line:
                             malformed_walrus_instances.append(
-                                (py_file, i, line.strip())
+                                (py_file, i, line.strip()),
                             )
 
             except UnicodeDecodeError:
@@ -88,11 +87,11 @@ class TestWalrusOperatorSyntax:
         # These are patterns that were found to be broken by the code cleaner
         test_cases = [
             # From coverage_ratchet.py
-            "if (next_milestone := self._get_next_milestone(new_coverage))",
+            "if (next_milestone := self._get_next_milestone(new_coverage)): pass",
             "points_to_next = (next_milestone - new_coverage) if (next_milestone := self._get_next_milestone(new_coverage)) else 0",
             # General patterns that should work
-            "if (value := some_function()) is not None:",
-            "while (line := file.readline()):",
+            "if (value := some_function()) is not None: pass",
+            "while (line := file.readline()): pass",
             "data = [(x, y) for x in range(10) if (y := x * 2) > 5]",
             "[y for x in items if (y := process(x)) is not None]",
         ]
@@ -202,7 +201,7 @@ class TestPythonSyntaxIntegrity:
                     if ": ." in line and 'f"' in line:
                         # This might be a malformed f-string like f"{value: .2f}" instead of f"{value:.2f}"
                         issues.append(
-                            f"{py_file.relative_to(project_root)}:{i}: {line.strip()}"
+                            f"{py_file.relative_to(project_root)}:{i}: {line.strip()}",
                         )
 
             except UnicodeDecodeError:
@@ -210,10 +209,7 @@ class TestPythonSyntaxIntegrity:
 
         # Don't fail for this one, just warn, as some spacing in f-strings might be intentional
         if issues:
-            print(
-                "Warning: Found potential malformed f-string formatting:\n"
-                + "\n".join(issues)
-            )
+            pass
 
     def test_filesystem_service_integration(self) -> None:
         """Test that FileSystemService can handle files with walrus operators."""
@@ -234,7 +230,7 @@ def another_test():
 
         # This should not raise any exceptions
         cleaned_content = fs_service.clean_trailing_whitespace_and_newlines(
-            test_content
+            test_content,
         )
 
         # The walrus operators should remain intact
@@ -287,8 +283,4 @@ class TestCodeCleanerSafety:
         # Ensure we're actually testing files with walrus operators
         assert len(files_with_walrus) > 0, (
             "No files with walrus operators found for validation"
-        )
-
-        print(
-            f"Successfully validated {len(files_with_walrus)} files containing walrus operators"
         )

@@ -5,6 +5,7 @@ glob patterns, and streaming operations with comprehensive error handling.
 """
 
 from pathlib import Path
+from typing import Never
 from unittest.mock import Mock, mock_open, patch
 
 import pytest
@@ -22,7 +23,7 @@ class TestFileSystemServiceReadOperations:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_read_file_success(self, service, tmp_path):
+    def test_read_file_success(self, service, tmp_path) -> None:
         """Test successful file reading."""
         test_file = tmp_path / "test.txt"
         content = "Hello, World!"
@@ -32,7 +33,7 @@ class TestFileSystemServiceReadOperations:
 
         assert result == content
 
-    def test_read_file_with_string_path(self, service, tmp_path):
+    def test_read_file_with_string_path(self, service, tmp_path) -> None:
         """Test reading file with string path."""
         test_file = tmp_path / "test.txt"
         content = "Hello, World!"
@@ -42,7 +43,7 @@ class TestFileSystemServiceReadOperations:
 
         assert result == content
 
-    def test_read_file_nonexistent(self, service, tmp_path):
+    def test_read_file_nonexistent(self, service, tmp_path) -> None:
         """Test reading non-existent file raises FileError."""
         nonexistent = tmp_path / "nonexistent.txt"
 
@@ -51,7 +52,7 @@ class TestFileSystemServiceReadOperations:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_read_file_permission_error(self, service, tmp_path):
+    def test_read_file_permission_error(self, service, tmp_path) -> None:
         """Test reading file without permissions raises FileError."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -66,7 +67,7 @@ class TestFileSystemServiceReadOperations:
         finally:
             test_file.chmod(0o644)
 
-    def test_read_file_unicode_decode_error(self, service, tmp_path):
+    def test_read_file_unicode_decode_error(self, service, tmp_path) -> None:
         """Test reading binary file as text raises FileError."""
         test_file = tmp_path / "binary.dat"
         # Write invalid UTF-8 bytes
@@ -88,7 +89,7 @@ class TestFileSystemServiceWriteOperations:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_write_file_success(self, service, tmp_path):
+    def test_write_file_success(self, service, tmp_path) -> None:
         """Test successful file writing."""
         test_file = tmp_path / "test.txt"
         content = "Hello, World!"
@@ -97,7 +98,7 @@ class TestFileSystemServiceWriteOperations:
 
         assert test_file.read_text() == content
 
-    def test_write_file_creates_parent_dirs(self, service, tmp_path):
+    def test_write_file_creates_parent_dirs(self, service, tmp_path) -> None:
         """Test writing file creates parent directories."""
         test_file = tmp_path / "subdir" / "nested" / "test.txt"
         content = "Hello, World!"
@@ -107,7 +108,7 @@ class TestFileSystemServiceWriteOperations:
         assert test_file.exists()
         assert test_file.read_text() == content
 
-    def test_write_file_cleans_trailing_whitespace_pyproject(self, service, tmp_path):
+    def test_write_file_cleans_trailing_whitespace_pyproject(self, service, tmp_path) -> None:
         """Test writing pyproject.toml cleans trailing whitespace."""
         test_file = tmp_path / "pyproject.toml"
         content = "line1  \nline2\t"
@@ -118,7 +119,7 @@ class TestFileSystemServiceWriteOperations:
         assert "line1\n" in result
         assert not result.rstrip("\n").endswith(" ")
 
-    def test_write_file_adds_final_newline(self, service, tmp_path):
+    def test_write_file_adds_final_newline(self, service, tmp_path) -> None:
         """Test writing file adds final newline."""
         test_file = tmp_path / "pyproject.toml"
         content = "line1\nline2"  # No final newline
@@ -128,7 +129,7 @@ class TestFileSystemServiceWriteOperations:
         result = test_file.read_text()
         assert result.endswith("\n")
 
-    def test_write_file_with_string_path(self, service, tmp_path):
+    def test_write_file_with_string_path(self, service, tmp_path) -> None:
         """Test writing file with string path."""
         test_file = tmp_path / "test.txt"
         content = "Hello, World!"
@@ -137,7 +138,7 @@ class TestFileSystemServiceWriteOperations:
 
         assert test_file.read_text() == content
 
-    def test_write_file_permission_error(self, service, tmp_path):
+    def test_write_file_permission_error(self, service, tmp_path) -> None:
         """Test writing to read-only directory raises FileError."""
         readonly_dir = tmp_path / "readonly"
         readonly_dir.mkdir()
@@ -162,34 +163,34 @@ class TestFileSystemServiceExistsAndMkdir:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_exists_file_true(self, service, tmp_path):
+    def test_exists_file_true(self, service, tmp_path) -> None:
         """Test exists returns True for existing file."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
 
         assert service.exists(test_file) is True
 
-    def test_exists_directory_true(self, service, tmp_path):
+    def test_exists_directory_true(self, service, tmp_path) -> None:
         """Test exists returns True for existing directory."""
         test_dir = tmp_path / "testdir"
         test_dir.mkdir()
 
         assert service.exists(test_dir) is True
 
-    def test_exists_nonexistent_false(self, service, tmp_path):
+    def test_exists_nonexistent_false(self, service, tmp_path) -> None:
         """Test exists returns False for non-existent path."""
         nonexistent = tmp_path / "nonexistent.txt"
 
         assert service.exists(nonexistent) is False
 
-    def test_exists_with_string_path(self, service, tmp_path):
+    def test_exists_with_string_path(self, service, tmp_path) -> None:
         """Test exists works with string path."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
 
         assert service.exists(str(test_file)) is True
 
-    def test_mkdir_creates_directory(self, service, tmp_path):
+    def test_mkdir_creates_directory(self, service, tmp_path) -> None:
         """Test mkdir creates directory."""
         new_dir = tmp_path / "newdir"
 
@@ -198,7 +199,7 @@ class TestFileSystemServiceExistsAndMkdir:
         assert new_dir.exists()
         assert new_dir.is_dir()
 
-    def test_mkdir_with_parents(self, service, tmp_path):
+    def test_mkdir_with_parents(self, service, tmp_path) -> None:
         """Test mkdir creates parent directories."""
         nested_dir = tmp_path / "parent" / "child" / "grandchild"
 
@@ -207,7 +208,7 @@ class TestFileSystemServiceExistsAndMkdir:
         assert nested_dir.exists()
         assert nested_dir.is_dir()
 
-    def test_mkdir_already_exists(self, service, tmp_path):
+    def test_mkdir_already_exists(self, service, tmp_path) -> None:
         """Test mkdir with exist_ok=True doesn't raise for existing dir."""
         test_dir = tmp_path / "testdir"
         test_dir.mkdir()
@@ -237,14 +238,14 @@ class TestFileSystemServiceGlobOperations:
         (tmp_path / "subdir" / "file4.md").write_text("# markdown")
         return tmp_path
 
-    def test_glob_pattern_matching(self, service, test_structure):
+    def test_glob_pattern_matching(self, service, test_structure) -> None:
         """Test glob finds files matching pattern."""
         results = service.glob("*.py", test_structure)
 
         assert len(results) == 1
         assert results[0].name == "file1.py"
 
-    def test_glob_all_files(self, service, test_structure):
+    def test_glob_all_files(self, service, test_structure) -> None:
         """Test glob with wildcard finds all files."""
         results = service.glob("*", test_structure)
 
@@ -255,13 +256,13 @@ class TestFileSystemServiceGlobOperations:
         assert "file2.txt" in names
         assert "subdir" in names
 
-    def test_glob_no_matches(self, service, test_structure):
+    def test_glob_no_matches(self, service, test_structure) -> None:
         """Test glob returns empty list when no matches."""
         results = service.glob("*.nonexistent", test_structure)
 
         assert results == []
 
-    def test_glob_nonexistent_base_path(self, service, tmp_path):
+    def test_glob_nonexistent_base_path(self, service, tmp_path) -> None:
         """Test glob raises FileError for non-existent base path."""
         nonexistent = tmp_path / "nonexistent"
 
@@ -270,7 +271,7 @@ class TestFileSystemServiceGlobOperations:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_rglob_recursive_matching(self, service, test_structure):
+    def test_rglob_recursive_matching(self, service, test_structure) -> None:
         """Test rglob finds files recursively."""
         results = service.rglob("*.py", test_structure)
 
@@ -279,7 +280,7 @@ class TestFileSystemServiceGlobOperations:
         assert "file1.py" in names
         assert "file3.py" in names
 
-    def test_rglob_all_files_recursive(self, service, test_structure):
+    def test_rglob_all_files_recursive(self, service, test_structure) -> None:
         """Test rglob with wildcard finds all files recursively."""
         results = service.rglob("*", test_structure)
 
@@ -300,7 +301,7 @@ class TestFileSystemServiceCopyOperations:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_copy_file_success(self, service, tmp_path):
+    def test_copy_file_success(self, service, tmp_path) -> None:
         """Test successful file copy."""
         src = tmp_path / "source.txt"
         dst = tmp_path / "dest.txt"
@@ -312,7 +313,7 @@ class TestFileSystemServiceCopyOperations:
         assert dst.exists()
         assert dst.read_text() == content
 
-    def test_copy_file_creates_parent_dirs(self, service, tmp_path):
+    def test_copy_file_creates_parent_dirs(self, service, tmp_path) -> None:
         """Test copy creates destination parent directories."""
         src = tmp_path / "source.txt"
         dst = tmp_path / "nested" / "subdir" / "dest.txt"
@@ -323,7 +324,7 @@ class TestFileSystemServiceCopyOperations:
         assert dst.exists()
         assert dst.read_text() == "content"
 
-    def test_copy_file_preserves_metadata(self, service, tmp_path):
+    def test_copy_file_preserves_metadata(self, service, tmp_path) -> None:
         """Test copy preserves file metadata (using copy2)."""
         src = tmp_path / "source.txt"
         dst = tmp_path / "dest.txt"
@@ -335,7 +336,7 @@ class TestFileSystemServiceCopyOperations:
         # copy2 should preserve mtime
         assert abs(dst.stat().st_mtime - original_mtime) < 1
 
-    def test_copy_file_with_string_paths(self, service, tmp_path):
+    def test_copy_file_with_string_paths(self, service, tmp_path) -> None:
         """Test copy works with string paths."""
         src = tmp_path / "source.txt"
         dst = tmp_path / "dest.txt"
@@ -345,7 +346,7 @@ class TestFileSystemServiceCopyOperations:
 
         assert dst.exists()
 
-    def test_copy_file_nonexistent_source(self, service, tmp_path):
+    def test_copy_file_nonexistent_source(self, service, tmp_path) -> None:
         """Test copying non-existent source raises FileError."""
         src = tmp_path / "nonexistent.txt"
         dst = tmp_path / "dest.txt"
@@ -355,7 +356,7 @@ class TestFileSystemServiceCopyOperations:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_copy_file_source_is_directory(self, service, tmp_path):
+    def test_copy_file_source_is_directory(self, service, tmp_path) -> None:
         """Test copying directory as file raises FileError."""
         src = tmp_path / "srcdir"
         src.mkdir()
@@ -376,7 +377,7 @@ class TestFileSystemServiceRemoveOperations:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_remove_file_success(self, service, tmp_path):
+    def test_remove_file_success(self, service, tmp_path) -> None:
         """Test successful file removal."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -385,14 +386,14 @@ class TestFileSystemServiceRemoveOperations:
 
         assert not test_file.exists()
 
-    def test_remove_file_nonexistent(self, service, tmp_path):
+    def test_remove_file_nonexistent(self, service, tmp_path) -> None:
         """Test removing non-existent file doesn't raise error."""
         nonexistent = tmp_path / "nonexistent.txt"
 
         # Should not raise
         service.remove_file(nonexistent)
 
-    def test_remove_file_is_directory(self, service, tmp_path):
+    def test_remove_file_is_directory(self, service, tmp_path) -> None:
         """Test removing directory as file raises FileError."""
         test_dir = tmp_path / "testdir"
         test_dir.mkdir()
@@ -402,7 +403,7 @@ class TestFileSystemServiceRemoveOperations:
 
         assert "not a file" in str(exc_info.value)
 
-    def test_remove_file_with_string_path(self, service, tmp_path):
+    def test_remove_file_with_string_path(self, service, tmp_path) -> None:
         """Test remove works with string path."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -421,7 +422,7 @@ class TestFileSystemServiceFileInfo:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_get_file_size(self, service, tmp_path):
+    def test_get_file_size(self, service, tmp_path) -> None:
         """Test getting file size."""
         test_file = tmp_path / "test.txt"
         content = "Hello, World!"
@@ -431,7 +432,7 @@ class TestFileSystemServiceFileInfo:
 
         assert size == len(content.encode("utf-8"))
 
-    def test_get_file_size_empty_file(self, service, tmp_path):
+    def test_get_file_size_empty_file(self, service, tmp_path) -> None:
         """Test getting size of empty file."""
         test_file = tmp_path / "empty.txt"
         test_file.write_text("")
@@ -440,7 +441,7 @@ class TestFileSystemServiceFileInfo:
 
         assert size == 0
 
-    def test_get_file_size_nonexistent(self, service, tmp_path):
+    def test_get_file_size_nonexistent(self, service, tmp_path) -> None:
         """Test getting size of non-existent file raises FileError."""
         nonexistent = tmp_path / "nonexistent.txt"
 
@@ -449,7 +450,7 @@ class TestFileSystemServiceFileInfo:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_get_file_size_directory(self, service, tmp_path):
+    def test_get_file_size_directory(self, service, tmp_path) -> None:
         """Test getting size of directory raises FileError."""
         test_dir = tmp_path / "testdir"
         test_dir.mkdir()
@@ -459,7 +460,7 @@ class TestFileSystemServiceFileInfo:
 
         assert "not a file" in str(exc_info.value)
 
-    def test_get_file_mtime(self, service, tmp_path):
+    def test_get_file_mtime(self, service, tmp_path) -> None:
         """Test getting file modification time."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -469,7 +470,7 @@ class TestFileSystemServiceFileInfo:
         assert isinstance(mtime, float)
         assert mtime > 0
 
-    def test_get_file_mtime_nonexistent(self, service, tmp_path):
+    def test_get_file_mtime_nonexistent(self, service, tmp_path) -> None:
         """Test getting mtime of non-existent file raises FileError."""
         nonexistent = tmp_path / "nonexistent.txt"
 
@@ -478,7 +479,7 @@ class TestFileSystemServiceFileInfo:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_get_file_mtime_directory(self, service, tmp_path):
+    def test_get_file_mtime_directory(self, service, tmp_path) -> None:
         """Test getting mtime of directory raises FileError."""
         test_dir = tmp_path / "testdir"
         test_dir.mkdir()
@@ -498,7 +499,7 @@ class TestFileSystemServiceStreamingOperations:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_read_file_chunked(self, service, tmp_path):
+    def test_read_file_chunked(self, service, tmp_path) -> None:
         """Test reading file in chunks."""
         test_file = tmp_path / "test.txt"
         content = "A" * 1000  # 1000 characters
@@ -511,7 +512,7 @@ class TestFileSystemServiceStreamingOperations:
         # Reassembled content should match
         assert "".join(chunks) == content
 
-    def test_read_file_chunked_small_file(self, service, tmp_path):
+    def test_read_file_chunked_small_file(self, service, tmp_path) -> None:
         """Test chunked reading of small file."""
         test_file = tmp_path / "small.txt"
         content = "Hello"
@@ -523,7 +524,7 @@ class TestFileSystemServiceStreamingOperations:
         assert len(chunks) == 1
         assert chunks[0] == content
 
-    def test_read_file_chunked_nonexistent(self, service, tmp_path):
+    def test_read_file_chunked_nonexistent(self, service, tmp_path) -> None:
         """Test chunked reading of non-existent file raises FileError."""
         nonexistent = tmp_path / "nonexistent.txt"
 
@@ -532,7 +533,7 @@ class TestFileSystemServiceStreamingOperations:
 
         assert "does not exist" in str(exc_info.value)
 
-    def test_read_lines_streaming(self, service, tmp_path):
+    def test_read_lines_streaming(self, service, tmp_path) -> None:
         """Test streaming line-by-line reading."""
         test_file = tmp_path / "lines.txt"
         lines = ["line1", "line2", "line3"]
@@ -542,7 +543,7 @@ class TestFileSystemServiceStreamingOperations:
 
         assert result == lines
 
-    def test_read_lines_streaming_strips_newlines(self, service, tmp_path):
+    def test_read_lines_streaming_strips_newlines(self, service, tmp_path) -> None:
         """Test streaming reads strip newline characters."""
         test_file = tmp_path / "lines.txt"
         test_file.write_text("line1\r\nline2\nline3\r")
@@ -552,7 +553,7 @@ class TestFileSystemServiceStreamingOperations:
         # All newline variants should be stripped
         assert all("\n" not in line and "\r" not in line for line in result)
 
-    def test_read_lines_streaming_empty_file(self, service, tmp_path):
+    def test_read_lines_streaming_empty_file(self, service, tmp_path) -> None:
         """Test streaming read of empty file."""
         test_file = tmp_path / "empty.txt"
         test_file.write_text("")
@@ -561,7 +562,7 @@ class TestFileSystemServiceStreamingOperations:
 
         assert result == []
 
-    def test_read_lines_streaming_nonexistent(self, service, tmp_path):
+    def test_read_lines_streaming_nonexistent(self, service, tmp_path) -> None:
         """Test streaming read of non-existent file raises FileError."""
         nonexistent = tmp_path / "nonexistent.txt"
 
@@ -580,7 +581,7 @@ class TestFileSystemServiceTrailingWhitespace:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_clean_trailing_whitespace_and_newlines(self, service):
+    def test_clean_trailing_whitespace_and_newlines(self, service) -> None:
         """Test static method cleans trailing whitespace."""
         content = "line1  \nline2\t\nline3 "
 
@@ -591,7 +592,7 @@ class TestFileSystemServiceTrailingWhitespace:
         assert lines[1] == "line2"
         assert lines[2] == "line3"
 
-    def test_clean_trailing_whitespace_adds_final_newline(self, service):
+    def test_clean_trailing_whitespace_adds_final_newline(self, service) -> None:
         """Test cleaning adds final newline."""
         content = "line1\nline2"
 
@@ -599,13 +600,13 @@ class TestFileSystemServiceTrailingWhitespace:
 
         assert result.endswith("\n")
 
-    def test_clean_trailing_whitespace_empty_string(self, service):
+    def test_clean_trailing_whitespace_empty_string(self, service) -> None:
         """Test cleaning empty string."""
         result = service.clean_trailing_whitespace_and_newlines("")
 
         assert result == ""
 
-    def test_clean_trailing_whitespace_preserves_content(self, service):
+    def test_clean_trailing_whitespace_preserves_content(self, service) -> None:
         """Test cleaning preserves line content."""
         content = "  indented\nnormal line\n\ttabbed"
 
@@ -625,12 +626,13 @@ class TestFileSystemServiceErrorHandling:
         """Create FileSystemService instance."""
         return FileSystemService()
 
-    def test_resource_error_no_space_write(self, service, tmp_path, monkeypatch):
+    def test_resource_error_no_space_write(self, service, tmp_path, monkeypatch) -> None:
         """Test ResourceError raised when no disk space for write."""
         test_file = tmp_path / "test.txt"
 
-        def mock_write_text(*args, **kwargs):
-            raise OSError("No space left on device")
+        def mock_write_text(*args, **kwargs) -> Never:
+            msg = "No space left on device"
+            raise OSError(msg)
 
         monkeypatch.setattr(Path, "write_text", mock_write_text)
 
@@ -639,12 +641,13 @@ class TestFileSystemServiceErrorHandling:
 
         assert "Insufficient disk space" in str(exc_info.value)
 
-    def test_resource_error_no_space_mkdir(self, service, tmp_path, monkeypatch):
+    def test_resource_error_no_space_mkdir(self, service, tmp_path, monkeypatch) -> None:
         """Test ResourceError raised when no disk space for mkdir."""
         test_dir = tmp_path / "testdir"
 
-        def mock_mkdir(*args, **kwargs):
-            raise OSError("No space left on device")
+        def mock_mkdir(*args, **kwargs) -> Never:
+            msg = "No space left on device"
+            raise OSError(msg)
 
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
 
@@ -653,7 +656,7 @@ class TestFileSystemServiceErrorHandling:
 
         assert "Insufficient disk space" in str(exc_info.value)
 
-    def test_error_code_preservation(self, service, tmp_path):
+    def test_error_code_preservation(self, service, tmp_path) -> None:
         """Test FileError preserves error codes."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
@@ -668,7 +671,7 @@ class TestFileSystemServiceErrorHandling:
         finally:
             test_file.chmod(0o644)
 
-    def test_recovery_messages_provided(self, service, tmp_path):
+    def test_recovery_messages_provided(self, service, tmp_path) -> None:
         """Test FileError includes recovery messages."""
         nonexistent = tmp_path / "nonexistent.txt"
 

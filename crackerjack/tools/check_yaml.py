@@ -13,7 +13,8 @@ class _UniqueKeyLoader(yaml.SafeLoader):
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in mapping:
-                raise yaml.YAMLError(f"Duplicate key: {key}")
+                msg = f"Duplicate key: {key}"
+                raise yaml.YAMLError(msg)
             mapping[key] = self.construct_object(value_node, deep=deep)
         return mapping
 

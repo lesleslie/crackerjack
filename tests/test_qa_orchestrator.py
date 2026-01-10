@@ -20,7 +20,7 @@ from crackerjack.services.quality.qa_orchestrator import QAOrchestrator
 class TestQAOrchestratorProtocolCompliance:
     """Test orchestrator implements QAOrchestratorProtocol."""
 
-    def test_orchestrator_is_protocol_compliant(self):
+    def test_orchestrator_is_protocol_compliant(self) -> None:
         """Verify orchestrator implements QAOrchestratorProtocol."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -43,7 +43,7 @@ class TestQAOrchestratorProtocolCompliance:
                 f"QAOrchestrator missing method: {method}"
             )
 
-    def test_orchestrator_configuration(self):
+    def test_orchestrator_configuration(self) -> None:
         """Test orchestrator accepts configuration."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -64,7 +64,7 @@ class TestQAOrchestratorProtocolCompliance:
 class TestAdapterRegistration:
     """Test adapter registration and retrieval."""
 
-    def test_register_adapter_synchronous(self):
+    def test_register_adapter_synchronous(self) -> None:
         """Test adapter registration (synchronous check)."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -80,7 +80,7 @@ class TestAdapterRegistration:
         # Note: Cannot test async register_adapter in synchronous test
         # per CLAUDE.md - only testing configuration here
 
-    def test_get_adapter_returns_none_for_unregistered(self):
+    def test_get_adapter_returns_none_for_unregistered(self) -> None:
         """Test get_adapter returns None for unregistered adapter."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -88,7 +88,7 @@ class TestAdapterRegistration:
         result = orchestrator.get_adapter("nonexistent-adapter")
         assert result is None
 
-    def test_orchestrator_has_empty_adapters_on_init(self):
+    def test_orchestrator_has_empty_adapters_on_init(self) -> None:
         """Test orchestrator starts with no adapters registered."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -99,7 +99,7 @@ class TestAdapterRegistration:
 class TestOrchestratorConfiguration:
     """Test orchestrator configuration patterns."""
 
-    def test_default_configuration(self):
+    def test_default_configuration(self) -> None:
         """Test orchestrator with default configuration."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -109,7 +109,7 @@ class TestOrchestratorConfiguration:
         assert orchestrator.config.enable_caching is True
         assert orchestrator.config.fail_fast is False
 
-    def test_custom_configuration(self):
+    def test_custom_configuration(self) -> None:
         """Test orchestrator with custom configuration."""
         config = QAOrchestratorConfig(
             project_root=Path("/tmp/test"),
@@ -127,7 +127,7 @@ class TestOrchestratorConfiguration:
         assert orchestrator.config.fail_fast is True
         assert orchestrator.config.run_formatters_first is False
 
-    def test_stage_configuration(self):
+    def test_stage_configuration(self) -> None:
         """Test orchestrator stage configuration."""
         fast_check = QACheckConfig(
             check_id=uuid4(),
@@ -161,14 +161,14 @@ class TestOrchestratorConfiguration:
 class TestCacheManagement:
     """Test result caching functionality."""
 
-    def test_cache_initialization(self):
+    def test_cache_initialization(self) -> None:
         """Test cache is initialized empty."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
 
         assert len(orchestrator._cache) == 0
 
-    def test_cache_key_generation(self):
+    def test_cache_key_generation(self) -> None:
         """Test cache key generation."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -194,7 +194,7 @@ class TestCacheManagement:
         assert isinstance(key1, str)
         assert len(key1) == 16  # 16 char hash
 
-    def test_cache_key_differs_for_different_inputs(self):
+    def test_cache_key_differs_for_different_inputs(self) -> None:
         """Test cache keys differ for different inputs."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -222,7 +222,7 @@ class TestCacheManagement:
 class TestSummaryGeneration:
     """Test summary statistics generation."""
 
-    def test_create_summary_empty_results(self):
+    def test_create_summary_empty_results(self) -> None:
         """Test summary generation with empty results."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -238,7 +238,7 @@ class TestSummaryGeneration:
         assert summary["total_issues_fixed"] == 0
         assert summary["pass_rate"] == 0.0
 
-    def test_create_summary_with_results(self):
+    def test_create_summary_with_results(self) -> None:
         """Test summary generation with actual results."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -287,7 +287,7 @@ class TestSummaryGeneration:
 class TestSemaphoreControl:
     """Test parallel execution control."""
 
-    def test_semaphore_initialization(self):
+    def test_semaphore_initialization(self) -> None:
         """Test semaphore is initialized with correct limit."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -297,7 +297,7 @@ class TestSemaphoreControl:
 
         assert orchestrator._semaphore._value == 8
 
-    def test_semaphore_respects_max_parallel(self):
+    def test_semaphore_respects_max_parallel(self) -> None:
         """Test semaphore limits parallel execution."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -312,7 +312,7 @@ class TestSemaphoreControl:
 class TestHealthCheck:
     """Test orchestrator health checking."""
 
-    def test_health_check_no_adapters(self):
+    def test_health_check_no_adapters(self) -> None:
         """Test health check with no adapters registered."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -321,7 +321,7 @@ class TestHealthCheck:
         # per CLAUDE.md - only testing configuration here
         assert len(orchestrator._adapters) == 0
 
-    def test_health_check_attributes_present(self):
+    def test_health_check_attributes_present(self) -> None:
         """Test health check method exists."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -333,17 +333,17 @@ class TestHealthCheck:
 class TestYAMLConfigLoading:
     """Test YAML configuration loading."""
 
-    def test_from_yaml_config_classmethod_exists(self):
+    def test_from_yaml_config_classmethod_exists(self) -> None:
         """Test from_yaml_config classmethod exists."""
         assert hasattr(QAOrchestrator, "from_yaml_config")
         assert callable(QAOrchestrator.from_yaml_config)
 
-    def test_from_yaml_config_is_classmethod(self):
+    def test_from_yaml_config_is_classmethod(self) -> None:
         """Test from_yaml_config is a classmethod."""
         import inspect
 
         # Get the unbound method
-        method = getattr(QAOrchestrator, "from_yaml_config")
+        method = QAOrchestrator.from_yaml_config
 
         # Check if it's a classmethod (will have __func__ attribute)
         assert hasattr(method, "__func__")
@@ -352,7 +352,7 @@ class TestYAMLConfigLoading:
 class TestFormatterOrdering:
     """Test formatter-first execution ordering."""
 
-    def test_formatter_ordering_enabled(self):
+    def test_formatter_ordering_enabled(self) -> None:
         """Test formatters run first when configured."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -362,7 +362,7 @@ class TestFormatterOrdering:
 
         assert orchestrator.config.run_formatters_first is True
 
-    def test_formatter_ordering_disabled(self):
+    def test_formatter_ordering_disabled(self) -> None:
         """Test formatters don't run first when disabled."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -376,7 +376,7 @@ class TestFormatterOrdering:
 class TestStageExecution:
     """Test stage-based execution."""
 
-    def test_stage_validation(self):
+    def test_stage_validation(self) -> None:
         """Test invalid stage raises error."""
         config = QAOrchestratorConfig(project_root=Path.cwd())
         orchestrator = QAOrchestrator(config)
@@ -392,7 +392,7 @@ class TestStageExecution:
 class TestFailFastMode:
     """Test fail-fast execution mode."""
 
-    def test_fail_fast_enabled(self):
+    def test_fail_fast_enabled(self) -> None:
         """Test fail-fast mode can be enabled."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),
@@ -402,7 +402,7 @@ class TestFailFastMode:
 
         assert orchestrator.config.fail_fast is True
 
-    def test_fail_fast_disabled(self):
+    def test_fail_fast_disabled(self) -> None:
         """Test fail-fast mode can be disabled."""
         config = QAOrchestratorConfig(
             project_root=Path.cwd(),

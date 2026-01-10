@@ -22,7 +22,10 @@ class CompiledPatternCache:
 
     @classmethod
     def get_compiled_pattern_with_flags(
-        cls, cache_key: str, pattern: str, flags: int
+        cls,
+        cache_key: str,
+        pattern: str,
+        flags: int,
     ) -> Pattern[str]:
         with cls._lock:
             if cache_key in cls._cache:
@@ -31,7 +34,8 @@ class CompiledPatternCache:
             try:
                 compiled = re.compile(pattern, flags)
             except re.error as e:
-                raise ValueError(f"Invalid regex pattern '{pattern}': {e}")
+                msg = f"Invalid regex pattern '{pattern}': {e}"
+                raise ValueError(msg)
 
             if len(cls._cache) >= cls._max_size:
                 oldest_key = next(iter(cls._cache))
@@ -98,11 +102,15 @@ class ValidatedPattern:
             raise
 
         if re.search(r"\\g\s+<", self.replacement) or re.search(
-            r"\\g\s*<[^>]*\s+[^>]*>", self.replacement
+            r"\\g\s*<[^>]*\s+[^>]*>",
+            self.replacement,
         ):
-            raise ValueError(
+            msg = (
                 f"Bad replacement syntax in '{self.name}': {self.replacement}. "
-                "Use \\g<1> not \\g <1>"  # REGEX OK: educational example
+                "Use \\g<1> not \\g <1>"
+            )
+            raise ValueError(
+                msg,  # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)
@@ -114,23 +122,30 @@ class ValidatedPattern:
                 count = 0 if self.global_replace else 1
                 result = self._apply_internal(input_text, count)
                 if result != expected:
-                    raise ValueError(
+                    msg = (
                         f"Pattern '{self.name}' failed test case: "
                         f"'{input_text}' -> '{result}' != expected '{expected}'"
                     )
+                    raise ValueError(
+                        msg,
+                    )
             except re.error as e:
-                raise ValueError(f"Pattern '{self.name}' failed on '{input_text}': {e}")
+                msg = f"Pattern '{self.name}' failed on '{input_text}': {e}"
+                raise ValueError(msg)
 
     def _get_compiled_pattern(self) -> Pattern[str]:
         cache_key = f"{self.pattern}|flags: {self.flags}"
         return CompiledPatternCache.get_compiled_pattern_with_flags(
-            cache_key, self.pattern, self.flags
+            cache_key,
+            self.pattern,
+            self.flags,
         )
 
     def _apply_internal(self, text: str, count: int = 1) -> str:
         if len(text) > MAX_INPUT_SIZE:
+            msg = f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             raise ValueError(
-                f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
+                msg,
             )
 
         return self._get_compiled_pattern().sub(self.replacement, text, count=count)
@@ -141,7 +156,8 @@ class ValidatedPattern:
 
     def apply_iteratively(self, text: str, max_iterations: int = MAX_ITERATIONS) -> str:
         if max_iterations <= 0:
-            raise ValueError("max_iterations must be positive")
+            msg = "max_iterations must be positive"
+            raise ValueError(msg)
 
         result = text
         for _ in range(max_iterations):
@@ -156,8 +172,9 @@ class ValidatedPattern:
 
     def apply_with_timeout(self, text: str, timeout_seconds: float = 1.0) -> str:
         def timeout_handler(signum: int, frame: t.Any) -> None:
+            msg = f"Pattern '{self.name}' timed out after {timeout_seconds}s"
             raise TimeoutError(
-                f"Pattern '{self.name}' timed out after {timeout_seconds}s"
+                msg,
             )
 
         old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -177,20 +194,24 @@ class ValidatedPattern:
 
     def search(self, text: str) -> re.Match[str] | None:
         if len(text) > MAX_INPUT_SIZE:
+            msg = f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             raise ValueError(
-                f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
+                msg,
             )
         return self._get_compiled_pattern().search(text)
 
     def findall(self, text: str) -> list[str]:
         if len(text) > MAX_INPUT_SIZE:
+            msg = f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
             raise ValueError(
-                f"Input text too large: {len(text)} bytes > {MAX_INPUT_SIZE}"
+                msg,
             )
         return self._get_compiled_pattern().findall(text)
 
     def get_performance_stats(
-        self, text: str, iterations: int = 100
+        self,
+        text: str,
+        iterations: int = 100,
     ) -> dict[str, float]:
         times = []
 

@@ -68,11 +68,12 @@ class AgentOrchestrator:
         try:
             self.logger.info(
                 f"Executing request: {request.task.description[:50]}... "
-                f"(strategy: {request.strategy.value})"
+                f"(strategy: {request.strategy.value})",
             )
 
             candidates = await self.selector.select_agents(
-                request.task, max_candidates=request.max_agents
+                request.task,
+                max_candidates=request.max_agents,
             )
 
             if not candidates:
@@ -102,7 +103,7 @@ class AgentOrchestrator:
             self.logger.info(
                 f"Execution completed in {execution_time: .2f}s: "
                 f"{'success' if result.success else 'failure'} "
-                f"using {len(result.agents_used)} agents"
+                f"using {len(result.agents_used)} agents",
             )
 
             return result
@@ -139,7 +140,7 @@ class AgentOrchestrator:
             if len(candidates) > 1 and request.fallback_to_system:
                 self.logger.warning(
                     f"Primary agent {best_candidate.agent.metadata.name} failed: {e}. "
-                    f"Trying fallback..."
+                    f"Trying fallback...",
                 )
 
                 fallback_request = ExecutionRequest(
@@ -174,7 +175,7 @@ class AgentOrchestrator:
 
         for candidate in agents_to_execute:
             task = asyncio.create_task(
-                self._execute_agent_safe(candidate.agent, request)
+                self._execute_agent_safe(candidate.agent, request),
             )
             tasks.append((candidate.agent, task))
 
@@ -239,7 +240,7 @@ class AgentOrchestrator:
             except Exception as e:
                 results.append((candidate.agent, e))
                 self.logger.warning(
-                    f"Sequential agent {candidate.agent.metadata.name} failed: {e}"
+                    f"Sequential agent {candidate.agent.metadata.name} failed: {e}",
                 )
 
         return ExecutionResult(
@@ -294,19 +295,23 @@ class AgentOrchestrator:
         )
 
     async def _execute_agent(
-        self, agent: RegisteredAgent, request: ExecutionRequest
+        self,
+        agent: RegisteredAgent,
+        request: ExecutionRequest,
     ) -> t.Any:
         if agent.agent is not None:
             return await self._execute_crackerjack_agent(agent, request)
-        elif agent.agent_path is not None:
+        if agent.agent_path is not None:
             return await self._execute_user_agent(agent, request)
-        elif agent.subagent_type is not None:
+        if agent.subagent_type is not None:
             return await self._execute_system_agent(agent, request)
-        else:
-            raise ValueError(f"Invalid agent configuration: {agent.metadata.name}")
+        msg = f"Invalid agent configuration: {agent.metadata.name}"
+        raise ValueError(msg)
 
     async def _execute_agent_safe(
-        self, agent: RegisteredAgent, request: ExecutionRequest
+        self,
+        agent: RegisteredAgent,
+        request: ExecutionRequest,
     ) -> t.Any:
         try:
             return await self._execute_agent(agent, request)
@@ -319,7 +324,8 @@ class AgentOrchestrator:
         request: ExecutionRequest,
     ) -> t.Any:
         if not agent.agent:
-            raise ValueError("No crackerjack agent instance available")
+            msg = "No crackerjack agent instance available"
+            raise ValueError(msg)
 
         issue = Issue(
             id="orchestrated_task",
@@ -329,8 +335,7 @@ class AgentOrchestrator:
             file_path=None,
         )
 
-        result = await agent.agent.analyze_and_fix(issue)
-        return result
+        return await agent.agent.analyze_and_fix(issue)
 
     async def _execute_user_agent(
         self,
@@ -339,13 +344,11 @@ class AgentOrchestrator:
     ) -> t.Any:
         from crackerjack.mcp.tools.core_tools import create_task_with_subagent
 
-        result = await create_task_with_subagent(
+        return await create_task_with_subagent(
             description=f"Execute task using {agent.metadata.name}",
             prompt=request.task.description,
             subagent_type=agent.metadata.name,
         )
-
-        return result
 
     async def _execute_system_agent(
         self,
@@ -353,17 +356,16 @@ class AgentOrchestrator:
         request: ExecutionRequest,
     ) -> t.Any:
         if not agent.subagent_type:
-            raise ValueError("No subagent type specified for system agent")
+            msg = "No subagent type specified for system agent"
+            raise ValueError(msg)
 
         from crackerjack.mcp.tools.core_tools import create_task_with_subagent
 
-        result = await create_task_with_subagent(
+        return await create_task_with_subagent(
             description=f"Execute task using {agent.metadata.name}",
             prompt=request.task.description,
             subagent_type=agent.subagent_type,
         )
-
-        return result
 
     def _map_task_to_issue_type(self, task: TaskDescription) -> t.Any:
         from crackerjack.agents.base import IssueType
@@ -383,11 +385,11 @@ class AgentOrchestrator:
         desc_lower = task.description.lower()
         if "test" in desc_lower:
             return IssueType.TEST_FAILURE
-        elif "refurb" in desc_lower or "complexity" in desc_lower:
+        if "refurb" in desc_lower or "complexity" in desc_lower:
             return IssueType.COMPLEXITY
-        elif "security" in desc_lower:
+        if "security" in desc_lower:
             return IssueType.SECURITY
-        elif "format" in desc_lower:
+        if "format" in desc_lower:
             return IssueType.FORMATTING
 
         return IssueType.FORMATTING
@@ -397,7 +399,7 @@ class AgentOrchestrator:
 
         if task.priority >= 80:
             return Priority.HIGH
-        elif task.priority >= 50:
+        if task.priority >= 50:
             return Priority.MEDIUM
 
         return Priority.LOW
@@ -450,7 +452,9 @@ class AgentOrchestrator:
             "total_executions": sum(self._execution_stats.values()),
             "agent_usage": self._execution_stats.copy(),
             "most_used_agent": max(
-                self._execution_stats.items(), key=itemgetter(1), default=("none", 0)
+                self._execution_stats.items(),
+                key=itemgetter(1),
+                default=("none", 0),
             )[0]
             if self._execution_stats
             else "none",

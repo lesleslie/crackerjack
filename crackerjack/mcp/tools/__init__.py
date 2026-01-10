@@ -9,14 +9,14 @@ from .skill_tools import initialize_skills, register_skill_tools
 from .utility_tools import register_utility_tools
 
 __all__ = [
+    "initialize_skills",
     "register_core_tools",
     "register_execution_tools",
     "register_intelligence_tools",
     "register_monitoring_tools",
-    "register_progress_tools",
     "register_proactive_tools",
+    "register_progress_tools",
     "register_semantic_tools",
     "register_skill_tools",
-    "initialize_skills",
     "register_utility_tools",
 ]

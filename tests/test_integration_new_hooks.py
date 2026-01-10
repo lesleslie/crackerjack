@@ -4,12 +4,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+from crackerjack.config.hooks import HookDefinition, HookStage, SecurityLevel
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor
-from crackerjack.config.hooks import HookDefinition, HookStage
-from crackerjack.config.hooks import SecurityLevel
 
 
-def test_check_ast_integration():
+def test_check_ast_integration() -> None:
     """Integration test for the check-ast hook execution."""
     # Create test files
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -36,6 +35,7 @@ def test_check_ast_integration():
 
         # Create executor and run hook
         import logging
+
         from rich.console import Console
         logger = logging.getLogger(__name__)
         console = Console()
@@ -53,7 +53,7 @@ def test_check_ast_integration():
         assert result.files_processed >= 0  # Should process both files
 
 
-def test_json_hooks_integration():
+def test_json_hooks_integration() -> None:
     """Integration test for the JSON validation hooks execution."""
     with tempfile.TemporaryDirectory() as tmpdir:
         test_dir = Path(tmpdir)
@@ -79,6 +79,7 @@ def test_json_hooks_integration():
 
         # Create executor and run hooks
         import logging
+
         from rich.console import Console
         logger = logging.getLogger(__name__)
         console = Console()
@@ -101,7 +102,7 @@ def test_json_hooks_integration():
         assert result.status == "failed"
 
 
-def test_check_added_large_files_integration():
+def test_check_added_large_files_integration() -> None:
     """Integration test for the check-added-large-files hook execution with the new parsing logic."""
     # Create test files
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -128,6 +129,7 @@ def test_check_added_large_files_integration():
 
         # Create executor and run hook
         import logging
+
         from rich.console import Console
         logger = logging.getLogger(__name__)
         console = Console()
@@ -146,7 +148,7 @@ def test_check_added_large_files_integration():
         # This may depend on the exact output of the native tool
 
 
-def test_hook_execution_with_timeout():
+def test_hook_execution_with_timeout() -> None:
     """Test hook execution with timeout handling."""
     with tempfile.TemporaryDirectory() as tmpdir:
         test_dir = Path(tmpdir)
@@ -166,6 +168,7 @@ def test_hook_execution_with_timeout():
             f.write("def test():\n    pass\n")
 
         import logging
+
         from rich.console import Console
         logger = logging.getLogger(__name__)
         console = Console()
@@ -189,4 +192,3 @@ if __name__ == "__main__":
     test_json_hooks_integration()
     test_check_added_large_files_integration()
     test_hook_execution_with_timeout()
-    print("All integration tests passed!")

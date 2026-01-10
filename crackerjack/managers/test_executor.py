@@ -18,14 +18,6 @@ class TestExecutor:
         self.pkg_path = pkg_path
 
     def _detect_target_project_dir(self, cmd: list[str]) -> Path:
-        """Detect target project directory from pytest command.
-
-        Args:
-            cmd: Command arguments list
-
-        Returns:
-            Detected project directory path
-        """
         test_start_idx = self._find_pytest_index(cmd)
 
         if test_start_idx > 0 and test_start_idx < len(cmd):
@@ -34,28 +26,12 @@ class TestExecutor:
         return self.pkg_path
 
     def _find_pytest_index(self, cmd: list[str]) -> int:
-        """Find index of pytest command in args list.
-
-        Args:
-            cmd: Command arguments list
-
-        Returns:
-            Index after 'pytest' or -1 if not found
-        """
         for i, arg in enumerate(cmd):
             if arg == "pytest":
                 return i + 1
         return -1
 
     def _find_project_from_test_args(self, test_args: list[str]) -> Path:
-        """Find project directory from test arguments.
-
-        Args:
-            test_args: Arguments after 'pytest' command
-
-        Returns:
-            Detected project directory path
-        """
         for arg in test_args:
             if arg.startswith("-"):
                 continue
@@ -67,14 +43,6 @@ class TestExecutor:
         return self.pkg_path
 
     def _get_project_dir_from_path(self, test_path: Path) -> Path:
-        """Determine project directory from test path.
-
-        Args:
-            test_path: Path to test file or directory
-
-        Returns:
-            Project directory path
-        """
         if test_path.is_dir():
             return test_path.parent
         if test_path.is_file():
@@ -119,7 +87,7 @@ class TestExecutor:
             )
 
         return self._run_test_command_with_ai_progress(
-            cmd, progress_callback, timeout, progress=progress
+            cmd, progress_callback, timeout, progress=progress,
         )
 
     def _pre_collect_tests(self, original_cmd: list[str]) -> int:
@@ -153,7 +121,7 @@ class TestExecutor:
         with suppress(Exception):
             result = subprocess.run(
                 collect_cmd,
-                cwd=self._detect_target_project_dir(collect_cmd),
+                check=False, cwd=self._detect_target_project_dir(collect_cmd),
                 capture_output=True,
                 text=True,
                 timeout=120,
@@ -171,13 +139,13 @@ class TestExecutor:
         return 0
 
     def _execute_with_live_progress(
-        self, cmd: list[str], timeout: int, progress: TestProgress | None = None
+        self, cmd: list[str], timeout: int, progress: TestProgress | None = None,
     ) -> subprocess.CompletedProcess[str]:
         if progress is None:
             progress = self._initialize_progress()
 
         with Live(
-            progress.format_progress(), console=self.console, transient=True
+            progress.format_progress(), console=self.console, transient=True,
         ) as live:
             env = self._setup_test_environment()
 
@@ -193,14 +161,14 @@ class TestExecutor:
             )
 
             stdout_thread, stderr_thread, monitor_thread = self._start_reader_threads(
-                process, progress, live
+                process, progress, live,
             )
 
             try:
                 process.wait(timeout=timeout)
             except subprocess.TimeoutExpired:
                 self._handle_progress_error(
-                    process, progress, "Test execution timed out"
+                    process, progress, "Test execution timed out",
                 )
 
             self._cleanup_threads([stdout_thread, stderr_thread, monitor_thread])
@@ -209,7 +177,7 @@ class TestExecutor:
             stdout_str = progress.get_stdout()
             stderr_str = progress.get_stderr()
             return subprocess.CompletedProcess(
-                cmd, process.returncode, stdout_str, stderr_str
+                cmd, process.returncode, stdout_str, stderr_str,
             )
 
     def _run_test_command_with_ai_progress(
@@ -223,11 +191,10 @@ class TestExecutor:
             progress = self._initialize_progress()
         env = self._setup_coverage_env()
 
-        result = self._execute_test_process_with_progress(
-            cmd, env, progress, progress_callback, timeout
+        return self._execute_test_process_with_progress(
+            cmd, env, progress, progress_callback, timeout,
         )
 
-        return result
 
     def _initialize_progress(self) -> TestProgress:
         progress = TestProgress()
@@ -257,7 +224,7 @@ class TestExecutor:
         return env
 
     def _start_reader_threads(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live
+        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
     ) -> tuple[threading.Thread, threading.Thread, threading.Thread]:
         stdout_thread = self._create_stdout_reader(process, progress, live)
         stderr_thread = self._create_stderr_reader(process, progress, live)
@@ -270,7 +237,7 @@ class TestExecutor:
         return stdout_thread, stderr_thread, monitor_thread
 
     def _create_stdout_reader(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live
+        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
     ) -> threading.Thread:
         def read_output() -> None:
             if process.stdout:
@@ -286,7 +253,7 @@ class TestExecutor:
         return threading.Thread(target=read_output, daemon=True)
 
     def _create_stderr_reader(
-        self, process: subprocess.Popen[str], progress: TestProgress, live: Live
+        self, process: subprocess.Popen[str], progress: TestProgress, live: Live,
     ) -> threading.Thread:
         def read_stderr() -> None:
             if process.stderr:
@@ -359,7 +326,7 @@ class TestExecutor:
         if "session starts" in line and progress.collection_status != "Session started":
             progress.update(collection_status="Session started")
             return True
-        elif (
+        if (
             "test session starts" in line
             and progress.collection_status != "Test collection started"
         ):
@@ -385,19 +352,19 @@ class TestExecutor:
             progress.update(passed=progress.passed + 1)
             self._extract_current_test(line, progress)
             return True
-        elif " FAILED " in line:
+        if " FAILED " in line:
             progress.update(failed=progress.failed + 1)
             self._extract_current_test(line, progress)
             return True
-        elif " SKIPPED " in line:
+        if " SKIPPED " in line:
             progress.update(skipped=progress.skipped + 1)
             self._extract_current_test(line, progress)
             return True
-        elif " ERROR " in line:
+        if " ERROR " in line:
             progress.update(errors=progress.errors + 1)
             self._extract_current_test(line, progress)
             return True
-        elif ":: " in line and any(x in line for x in ("RUNNING", "test_")):
+        if ":: " in line and any(x in line for x in ("RUNNING", "test_")):
             self._handle_running_test(line, progress)
             return True
 
@@ -439,7 +406,7 @@ class TestExecutor:
                 thread.join(timeout=1.0)
 
     def _handle_progress_error(
-        self, process: subprocess.Popen[str], progress: TestProgress, error_msg: str
+        self, process: subprocess.Popen[str], progress: TestProgress, error_msg: str,
     ) -> None:
         process.terminate()
         progress.update(is_complete=True, current_test=f"❌ {error_msg}")
@@ -462,14 +429,14 @@ class TestExecutor:
         )
 
         stdout_lines = self._read_stdout_with_progress(
-            process, progress, progress_callback
+            process, progress, progress_callback,
         )
         stderr_lines = self._read_stderr_lines(process)
 
         return_code = self._wait_for_process_completion(process, timeout)
 
         return subprocess.CompletedProcess(
-            cmd, return_code, "\n".join(stdout_lines), "\n".join(stderr_lines)
+            cmd, return_code, "\n".join(stdout_lines), "\n".join(stderr_lines),
         )
 
     def _read_stdout_with_progress(
@@ -507,7 +474,7 @@ class TestExecutor:
         return stderr_lines
 
     def _wait_for_process_completion(
-        self, process: subprocess.Popen[str], timeout: int
+        self, process: subprocess.Popen[str], timeout: int,
     ) -> int:
         try:
             process.wait(timeout=timeout)

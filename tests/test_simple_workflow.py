@@ -6,7 +6,7 @@ import pytest
 def _simulate_workflow(monkeypatch: pytest.MonkeyPatch) -> tuple[int, str]:
     outputs = {
         "fast": subprocess.CompletedProcess(
-            ["python", "-m", "crackerjack", "--fast"], 0, stdout="", stderr=""
+            ["python", "-m", "crackerjack", "--fast"], 0, stdout="", stderr="",
         ),
         "tests": subprocess.CompletedProcess(
             ["python", "-m", "crackerjack", "-t"],
@@ -15,7 +15,7 @@ def _simulate_workflow(monkeypatch: pytest.MonkeyPatch) -> tuple[int, str]:
             stderr="",
         ),
         "comp": subprocess.CompletedProcess(
-            ["python", "-m", "crackerjack", "--comp"], 0, stdout="", stderr=""
+            ["python", "-m", "crackerjack", "--comp"], 0, stdout="", stderr="",
         ),
     }
 
@@ -42,7 +42,7 @@ def test_comprehensive_workflow_order(monkeypatch: pytest.MonkeyPatch) -> None:
     _simulate_workflow(monkeypatch)
     result = subprocess.run(
         ["python", "-m", "crackerjack", "--comp"],
-        capture_output=True,
+        check=False, capture_output=True,
         text=True,
         timeout=120,
     )

@@ -7,7 +7,10 @@ console = Console()
 
 
 def _generate_heatmap_by_type(
-    generator: t.Any, heatmap_type: str, project_root: Path, console: t.Any
+    generator: t.Any,
+    heatmap_type: str,
+    project_root: Path,
+    console: t.Any,
 ) -> t.Any | None:
     if heatmap_type == "error_frequency":
         return generator.generate_error_frequency_heatmap()
@@ -69,18 +72,25 @@ def handle_heatmap_generation(
         project_root = Path.cwd()
 
         heatmap_data = _generate_heatmap_by_type(
-            generator, heatmap_type, project_root, console
+            generator,
+            heatmap_type,
+            project_root,
+            console,
         )
         if not heatmap_data:
             return False
 
         if not _save_heatmap_output(
-            generator, heatmap_data, heatmap_output, heatmap_type, console
+            generator,
+            heatmap_data,
+            heatmap_output,
+            heatmap_type,
+            console,
         ):
             return False
 
         console.print(
-            f"[cyan]📊[/cyan] Heat map '{heatmap_data.title}' generated successfully"
+            f"[cyan]📊[/cyan] Heat map '{heatmap_data.title}' generated successfully",
         )
         console.print(f"[dim] • Cells: {len(heatmap_data.cells)}")
         console.print(f"[dim] • X Labels: {len(heatmap_data.x_labels)}")
@@ -125,20 +135,21 @@ def get_sample_metric_value(metric_type: str) -> float:
     if metric_type == "test_pass_rate":
         return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)  # nosec B311
 
-    elif metric_type == "coverage_percentage":
+    if metric_type == "coverage_percentage":
         return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)  # nosec B311
 
-    elif metric_type == "complexity_score":
+    if metric_type == "complexity_score":
         return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)  # nosec B311
 
-    elif metric_type == "execution_time":
+    if metric_type == "execution_time":
         return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
 
     return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
 
 
 def display_anomaly_results(
-    anomalies: list[t.Any], baselines: dict[str, t.Any]
+    anomalies: list[t.Any],
+    baselines: dict[str, t.Any],
 ) -> None:
     console.print("[cyan]📊[/cyan] Analysis complete:")
 
@@ -159,7 +170,7 @@ def display_anomaly_results(
 
             console.print(
                 f" • [{severity_color}]{anomaly.severity.upper()}[/{severity_color}] "
-                f"{anomaly.metric_type}: {anomaly.description}"
+                f"{anomaly.metric_type}: {anomaly.description}",
             )
 
 
@@ -226,7 +237,10 @@ def handle_anomaly_detection(
 
         if anomaly_report:
             save_anomaly_report(
-                anomalies, baselines, anomaly_sensitivity, anomaly_report
+                anomalies,
+                baselines,
+                anomaly_sensitivity,
+                anomaly_report,
             )
 
         return False
@@ -277,7 +291,9 @@ def generate_predictive_sample_data(engine: t.Any) -> list[str]:
 
 
 def generate_predictions_summary(
-    engine: t.Any, metric_types: list[str], prediction_periods: int
+    engine: t.Any,
+    metric_types: list[str],
+    prediction_periods: int,
 ) -> dict[str, t.Any]:
     predictions_summary = {}
 
@@ -325,7 +341,7 @@ def display_trend_analysis(predictions_summary: dict[str, t.Any]) -> None:
 
         console.print(
             f" • {metric_type}: [{direction_color}]{direction}[/{direction_color}] "
-            f"(strength: {strength:.2f})"
+            f"(strength: {strength:.2f})",
         )
 
         if data["predictions"]:
@@ -333,7 +349,7 @@ def display_trend_analysis(predictions_summary: dict[str, t.Any]) -> None:
 
             console.print(
                 f" Next prediction: {next_pred['predicted_value']} "
-                f"(confidence: {next_pred['model_accuracy']:.2f})"
+                f"(confidence: {next_pred['model_accuracy']:.2f})",
             )
 
 
@@ -378,7 +394,7 @@ def handle_predictive_analytics(
     from crackerjack.services.ai.predictive_analytics import PredictiveAnalyticsEngine
 
     console.print(
-        "[cyan]📊[/cyan] Running predictive analytics and trend forecasting..."
+        "[cyan]📊[/cyan] Running predictive analytics and trend forecasting...",
     )
 
     try:
@@ -387,11 +403,13 @@ def handle_predictive_analytics(
         metric_types = generate_predictive_sample_data(engine)
 
         console.print(
-            f"[blue]🔮[/blue] Generating {prediction_periods} period predictions..."
+            f"[blue]🔮[/blue] Generating {prediction_periods} period predictions...",
         )
 
         predictions_summary = generate_predictions_summary(
-            engine, metric_types, prediction_periods
+            engine,
+            metric_types,
+            prediction_periods,
         )
         trend_summary = engine.get_trend_summary()
 

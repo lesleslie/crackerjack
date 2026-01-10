@@ -7,9 +7,9 @@ from unittest.mock import Mock, patch
 import pytest
 from rich.console import Console
 
-from crackerjack.services.initialization import InitializationService
 from crackerjack.services.filesystem import FileSystemService
 from crackerjack.services.git import GitService
+from crackerjack.services.initialization import InitializationService
 
 
 @pytest.fixture
@@ -41,7 +41,7 @@ def init_service(console, filesystem, git_service):
 class TestInitializationService:
     """Test cases for the InitializationService class."""
 
-    def test_get_config_files_excludes_precommit(self, init_service):
+    def test_get_config_files_excludes_precommit(self, init_service) -> None:
         """Test that pre-commit config is excluded from initialization."""
         config_files = init_service._get_config_files()
 
@@ -54,17 +54,17 @@ class TestInitializationService:
             ".gitignore",
             "CLAUDE.md",
             "RULES.md",
-            "example.mcp.json"
+            "example.mcp.json",
         }
         assert set(config_files.keys()) == expected_files
 
-    def test_initialize_project_full_without_precommit(self, init_service):
+    def test_initialize_project_full_without_precommit(self, init_service) -> None:
         """Test that project initialization doesn't copy pre-commit config."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
 
             # Mock the process_config_file method to track what files are processed
-            with patch.object(init_service, '_process_config_file') as mock_process:
+            with patch.object(init_service, "_process_config_file") as mock_process:
                 result = init_service.initialize_project_full(target_path)
 
                 # Verify the operation was successful
@@ -77,14 +77,14 @@ class TestInitializationService:
                 processed_files = [call[0][0] for call in mock_process.call_args_list]
                 assert ".pre-commit-config.yaml" not in processed_files
 
-    def test_process_config_file_skips_precommit(self, init_service):
+    def test_process_config_file_skips_precommit(self, init_service) -> None:
         """Test that pre-commit config file processing is skipped."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
 
             # Mock filesystem operations
-            with patch.object(init_service.filesystem, 'read_file') as mock_read, \
-                 patch.object(init_service.filesystem, 'write_file') as mock_write:
+            with patch.object(init_service.filesystem, "read_file") as mock_read, \
+                 patch.object(init_service.filesystem, "write_file") as mock_write:
 
                 # Test processing a pre-commit config file (should be skipped)
                 init_service._process_config_file(
@@ -93,14 +93,14 @@ class TestInitializationService:
                     "test-project",
                     target_path,
                     False,
-                    {"files_copied": [], "files_skipped": [], "errors": []}
+                    {"files_copied": [], "files_skipped": [], "errors": []},
                 )
 
                 # Verify no file operations were performed
                 mock_read.assert_not_called()
                 mock_write.assert_not_called()
 
-    def test_process_config_file_processes_other_files(self, init_service):
+    def test_process_config_file_processes_other_files(self, init_service) -> None:
         """Test that other config files are still processed."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             target_path = Path(tmp_dir)
@@ -121,7 +121,7 @@ class TestInitializationService:
                 "test-project",
                 target_path,
                 False,
-                results
+                results,
             )
 
             # Verify the method completed without error

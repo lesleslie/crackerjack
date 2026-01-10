@@ -3,16 +3,16 @@ from __future__ import annotations
 import asyncio
 import typing as t
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
-from crackerjack.models.adapter_metadata import AdapterMetadata
 from crackerjack.models.protocols import QAAdapterProtocol
 
 if t.TYPE_CHECKING:
+    from pathlib import Path
     from uuid import UUID
 
+    from crackerjack.models.adapter_metadata import AdapterMetadata
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult
 
@@ -32,14 +32,16 @@ class QABaseSettings(BaseModel):
     @classmethod
     def validate_timeout(cls, v: int) -> int:
         if v < 1 or v > 3600:
-            raise ValueError("Timeout must be between 1 and 3600 seconds")
+            msg = "Timeout must be between 1 and 3600 seconds"
+            raise ValueError(msg)
         return v
 
     @field_validator("max_workers")
     @classmethod
     def validate_workers(cls, v: int) -> int:
         if v < 1 or v > 16:
-            raise ValueError("Max workers must be between 1 and 16")
+            msg = "Max workers must be between 1 and 16"
+            raise ValueError(msg)
         return v
 
 
@@ -69,9 +71,12 @@ class QAAdapterBase:
 
     @property
     def module_id(self) -> UUID:
-        raise NotImplementedError(
+        msg = (
             f"{self.__class__.__name__} must implement module_id property "
             "that returns the module-level MODULE_ID constant"
+        )
+        raise NotImplementedError(
+            msg,
         )
 
     async def check(
@@ -79,16 +84,18 @@ class QAAdapterBase:
         files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> QAResult:
+        msg = f"{self.__class__.__name__} must implement check() method"
         raise NotImplementedError(
-            f"{self.__class__.__name__} must implement check() method"
+            msg,
         )
 
     async def validate_config(self, config: QACheckConfig) -> bool:
         return config is not None
 
     def get_default_config(self) -> QACheckConfig:
+        msg = f"{self.__class__.__name__} must implement get_default_config() method"
         raise NotImplementedError(
-            f"{self.__class__.__name__} must implement get_default_config() method"
+            msg,
         )
 
     async def health_check(self) -> dict[str, t.Any]:

@@ -4,10 +4,7 @@ import subprocess
 import typing as t
 from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
-
-if TYPE_CHECKING:
-    pass
+from typing import Any
 
 from crackerjack.models.protocols import QualityBaselineProtocol
 from crackerjack.services.cache import CrackerjackCache
@@ -108,7 +105,7 @@ class QualityBaselineService(QualityBaselineProtocol):
                 security_issues=security_issues,
                 type_errors=type_errors,
                 linting_issues=linting_issues,
-            )
+            ),
         )
 
     async def arecord_baseline(
@@ -205,45 +202,49 @@ class QualityBaselineService(QualityBaselineProtocol):
         }
 
     def _identify_improvements(
-        self, baseline: QualityMetrics, current: dict[str, t.Any]
+        self,
+        baseline: QualityMetrics,
+        current: dict[str, t.Any],
     ) -> list[str]:
         improvements = []
 
         if current["coverage_percent"] > baseline.coverage_percent:
             improvements.append(
-                f"Coverage increased by {current['coverage_percent'] - baseline.coverage_percent:.1f}%"
+                f"Coverage increased by {current['coverage_percent'] - baseline.coverage_percent:.1f}%",
             )
 
         if current["test_pass_rate"] > baseline.test_pass_rate:
             improvements.append(
-                f"Test pass rate improved by {current['test_pass_rate'] - baseline.test_pass_rate:.1f}%"
+                f"Test pass rate improved by {current['test_pass_rate'] - baseline.test_pass_rate:.1f}%",
             )
 
         if current.get("hook_failures", 0) < baseline.hook_failures:
             improvements.append(
-                f"Hook failures reduced by {baseline.hook_failures - current.get('hook_failures', 0)}"
+                f"Hook failures reduced by {baseline.hook_failures - current.get('hook_failures', 0)}",
             )
 
         return improvements
 
     def _identify_regressions(
-        self, baseline: QualityMetrics, current: dict[str, t.Any]
+        self,
+        baseline: QualityMetrics,
+        current: dict[str, t.Any],
     ) -> list[str]:
         regressions = []
 
         if current["coverage_percent"] < baseline.coverage_percent:
             regressions.append(
-                f"Coverage decreased by {baseline.coverage_percent - current['coverage_percent']:.1f}%"
+                f"Coverage decreased by {baseline.coverage_percent - current['coverage_percent']:.1f}%",
             )
 
         if current["test_pass_rate"] < baseline.test_pass_rate:
             regressions.append(
-                f"Test pass rate decreased by {baseline.test_pass_rate - current['test_pass_rate']:.1f}%"
+                f"Test pass rate decreased by {baseline.test_pass_rate - current['test_pass_rate']:.1f}%",
             )
 
         if current.get("security_issues", 0) > baseline.security_issues:
             regressions.append(
-                f"Security issues increased by {current.get('security_issues', 0) - baseline.security_issues}"
+                f"Security issues increased by {current.get('security_issues', 0) - baseline.security_issues}",
             )
 
         return regressions
@@ -294,7 +295,7 @@ class QualityBaselineService(QualityBaselineProtocol):
                     "type_errors": metrics.type_errors,
                     "linting_issues": metrics.linting_issues,
                     "quality_score": metrics.quality_score,
-                }
+                },
             )
         except Exception as exc:  # pragma: no cover - defensive
             self._logger.debug(

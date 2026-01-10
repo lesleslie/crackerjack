@@ -1,6 +1,6 @@
 import re
 
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
 
 PATTERNS: dict[str, ValidatedPattern] = {
     "detect_hardcoded_credentials_advanced": ValidatedPattern(

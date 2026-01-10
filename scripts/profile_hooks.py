@@ -33,12 +33,8 @@ def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
 
     all_hooks = FAST_HOOKS + COMPREHENSIVE_HOOKS
 
-    print(f"Estimating execution times for {len(all_hooks)} hooks...\n")
-
     for hook in all_hooks:
         if hook.name not in HOOK_ESTIMATES:
-            print(f"⚠️ No estimate for {hook.name}, using current timeout")
-
             mean_time = hook.timeout / 3
             variance = mean_time * 0.2
         else:
@@ -60,10 +56,6 @@ def estimate_hook_execution_times() -> dict[str, dict[str, float]]:
             if hook.name in HOOK_ESTIMATES
             else "derived",
         }
-
-        print(f"{hook.name}:")
-        print(f" Mean: {mean_time:.2f}s, P95: {p95_time:.2f}s")
-        print(f" Recommended: {recommended_timeout}s (current: {hook.timeout}s)\n")
 
     return results
 
@@ -95,7 +87,7 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
             change = "unchanged"
 
         lines.append(
-            f"| {hook_name} | {mean:.2f} | {p95:.2f} | {recommended} | {current} | {change} |"
+            f"| {hook_name} | {mean:.2f} | {p95:.2f} | {recommended} | {current} | {change} |",
         )
 
     lines.extend(
@@ -103,7 +95,7 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
             "",
             "## Analysis",
             "",
-        ]
+        ],
     )
 
     needs_increase = [
@@ -124,12 +116,12 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
                 "### ⚠️ Hooks Needing Timeout Increase",
                 "",
                 "These hooks may timeout prematurely:",
-            ]
+            ],
         )
         for name in needs_increase:
             stats = results[name]
             lines.append(
-                f"- **{name}**: {stats['current_timeout']}s → {stats['recommended_timeout']}s"
+                f"- **{name}**: {stats['current_timeout']}s → {stats['recommended_timeout']}s",
             )
         lines.append("")
 
@@ -139,12 +131,12 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
                 "### ✅ Hooks With Excessive Timeouts",
                 "",
                 "These hooks can fail faster:",
-            ]
+            ],
         )
         for name in needs_decrease:
             stats = results[name]
             lines.append(
-                f"- **{name}**: {stats['current_timeout']}s → {stats['recommended_timeout']}s"
+                f"- **{name}**: {stats['current_timeout']}s → {stats['recommended_timeout']}s",
             )
         lines.append("")
 
@@ -155,48 +147,36 @@ def generate_report(results: dict[str, dict[str, float]]) -> str:
             "Update `crackerjack/config/hooks.py` with recommended timeout values:",
             "",
             "```python",
-        ]
+        ],
     )
 
     for hook_name, stats in sorted(results.items()):
         recommended = stats["recommended_timeout"]
         p95 = stats["p95"]
         lines.append(
-            f"timeout={recommended}, # Phase 10.4.1: Profiled P95={p95:.2f}s, safety=3x"
+            f"timeout={recommended}, # Phase 10.4.1: Profiled P95={p95:.2f}s, safety=3x",
         )
 
     lines.extend(
         [
             "```",
             "",
-        ]
+        ],
     )
 
     return "\n".join(lines)
 
 
-def main():
-    print("=" * 80)
-    print("Phase 10.4.1: Hook Timeout Calibration")
-    print("=" * 80)
-    print()
-
+def main() -> None:
     results = estimate_hook_execution_times()
 
     if not results:
-        print("❌ No estimation results collected. Exiting.")
         sys.exit(1)
 
     report = generate_report(results)
 
     report_path = project_root / "docs" / "HOOK-TIMEOUT-CALIBRATION.md"
     report_path.write_text(report)
-
-    print("=" * 80)
-    print(f"✅ Report saved to: {report_path}")
-    print("=" * 80)
-    print()
-    print(report)
 
 
 if __name__ == "__main__":

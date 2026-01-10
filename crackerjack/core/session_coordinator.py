@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import time
 import typing as t
 import uuid
@@ -9,6 +10,8 @@ from pathlib import Path
 from rich.console import Console
 
 from crackerjack.models.task import SessionTracker
+
+logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
@@ -48,7 +51,8 @@ class SessionCoordinator:
         self._initialize_quality_service()
 
         self.session_tracker = SessionTracker(
-            session_id=self.session_id, start_time=self.start_time
+            session_id=self.session_id,
+            start_time=self.start_time,
         )
 
         self.session_tracker.metadata.update(
@@ -67,7 +71,8 @@ class SessionCoordinator:
 
         if self.session_tracker is None:
             self.session_tracker = SessionTracker(
-                session_id=self.session_id, start_time=self.start_time
+                session_id=self.session_id,
+                start_time=self.start_time,
             )
             self.tasks = self.session_tracker.tasks
             self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
@@ -88,7 +93,8 @@ class SessionCoordinator:
     ) -> str:
         if self.session_tracker is None:
             self.session_tracker = SessionTracker(
-                session_id=self.session_id, start_time=self.start_time
+                session_id=self.session_id,
+                start_time=self.start_time,
             )
             self.tasks = self.session_tracker.tasks
             self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
@@ -114,16 +120,6 @@ class SessionCoordinator:
         error_message: str | None = None,
         progress: int | None = None,
     ) -> None:
-        """Update task status and details in session tracker.
-
-        Args:
-            task_id: Unique task identifier
-            status: Task status (completed, failed, in_progress, etc.)
-            details: Optional task description
-            files_changed: Optional list of modified files
-            error_message: Optional error message for failed tasks
-            progress: Optional progress percentage (0-100)
-        """
         self._ensure_session_tracker()
 
         normalized = status.lower()
@@ -138,10 +134,10 @@ class SessionCoordinator:
             self._update_generic_task(task_id, normalized, details, progress)
 
     def _ensure_session_tracker(self) -> None:
-        """Ensure session tracker is initialized."""
         if self.session_tracker is None:
             self.session_tracker = SessionTracker(
-                session_id=self.session_id, start_time=self.start_time
+                session_id=self.session_id,
+                start_time=self.start_time,
             )
             self.tasks = self.session_tracker.tasks
             self.session_tracker.metadata.update({"pkg_path": str(self.pkg_path)})
@@ -152,16 +148,7 @@ class SessionCoordinator:
         details: str | None,
         files_changed: list[str] | None,
     ) -> None:
-        """Update task as completed.
-
-        Args:
-            task_id: Task identifier
-            details: Optional completion details
-            files_changed: Optional list of modified files
-        """
-        assert (
-            self.session_tracker is not None
-        )  # Guaranteed by _ensure_session_tracker()
+        assert self.session_tracker is not None
         self.session_tracker.complete_task(task_id, details, files_changed)
 
     def _update_failed_task(
@@ -170,16 +157,7 @@ class SessionCoordinator:
         error_message: str | None,
         details: str | None,
     ) -> None:
-        """Update task as failed.
-
-        Args:
-            task_id: Task identifier
-            error_message: Error description
-            details: Optional failure details
-        """
-        assert (
-            self.session_tracker is not None
-        )  # Guaranteed by _ensure_session_tracker()
+        assert self.session_tracker is not None
         self.session_tracker.fail_task(task_id, error_message or "Task failed", details)
 
     def _update_in_progress_task(
@@ -188,16 +166,7 @@ class SessionCoordinator:
         details: str | None,
         progress: int | None,
     ) -> None:
-        """Update task as in progress.
-
-        Args:
-            task_id: Task identifier
-            details: Optional progress details
-            progress: Optional progress percentage
-        """
-        assert (
-            self.session_tracker is not None
-        )  # Guaranteed by _ensure_session_tracker()
+        assert self.session_tracker is not None
         if task_id not in self.session_tracker.tasks:
             self.session_tracker.start_task(task_id, task_id, details)
         else:
@@ -215,17 +184,7 @@ class SessionCoordinator:
         details: str | None,
         progress: int | None,
     ) -> None:
-        """Update task with generic status.
-
-        Args:
-            task_id: Task identifier
-            status: Task status
-            details: Optional task details
-            progress: Optional progress percentage
-        """
-        assert (
-            self.session_tracker is not None
-        )  # Guaranteed by _ensure_session_tracker()
+        assert self.session_tracker is not None
         if task_id in self.session_tracker.tasks:
             task = self.session_tracker.tasks[task_id]
             task.status = status or task.status
@@ -241,20 +200,15 @@ class SessionCoordinator:
         details: str | None = None,
     ) -> None:
         if self.session_tracker:
-            self.session_tracker.fail_task(task_id, error_message, details)
+            if details:
+                self.session_tracker.fail_task(task_id, error_message, details)
+            else:
+                self.session_tracker.fail_task(task_id, error_message)
 
-    def get_session_summary(self) -> dict[str, t.Any] | None:
-        if not self.session_tracker or not self.session_tracker.tasks:
-            return None
-        tasks = list(self.session_tracker.tasks.values())
-        total = len(tasks)
-        completed = len([t for t in tasks if t.status == "completed"])
-        failed = len([t for t in tasks if t.status == "failed"])
-        return {
-            "total": total,
-            "completed": completed,
-            "failed": failed,
-        }
+    def get_session_summary(self) -> dict[str, t.Any]:
+        if self.session_tracker is None:
+            return {"tasks_count": 0}
+        return self.session_tracker.get_summary()
 
     def get_summary(self) -> dict[str, t.Any]:
         tasks = (
@@ -275,14 +229,20 @@ class SessionCoordinator:
         if self.session_tracker:
             self.session_tracker.metadata["duration"] = duration
             self.session_tracker.metadata["success"] = success
-            if success and self.current_task:
-                self.session_tracker.complete_task(self.current_task)
-            elif not success and self.current_task:
-                self.session_tracker.fail_task(self.current_task, "Session failed")
+        if success:
+            self.complete_task(
+                self.current_task or "workflow",
+                f"Completed successfully in {duration:.1f}s",
+            )
+        elif not success:
+            self.fail_task(
+                self.current_task or "workflow",
+                f"Completed with issues in {duration:.1f}s",
+            )
         self.current_task = None
 
     def cleanup_resources(self) -> None:
-        for handler in self.cleanup_handlers.copy():
+        for handler in self._cleanup_handlers.copy():
             try:
                 handler()
             except Exception as exc:  # pragma: no cover - defensive
@@ -293,35 +253,84 @@ class SessionCoordinator:
         with suppress(Exception):
             self._cleanup_temporary_files()
         with suppress(Exception):
-            self._cleanup_debug_logs()
-        with suppress(Exception):
-            self._cleanup_coverage_files()
-        with suppress(Exception):
             self._cleanup_pycache_directories()
 
-        for lock_path in list(self.lock_files):
+        for lock_path in list(self._lock_files):
             with suppress(OSError):
                 if lock_path.exists():
                     lock_path.unlink()
-            self.lock_files.discard(lock_path)
+            self._lock_files.discard(lock_path)
 
     def register_cleanup(self, handler: t.Callable[[], None]) -> None:
-        self.cleanup_handlers.append(handler)
+        self._cleanup_handlers.append(handler)
 
     def track_lock_file(self, path: Path) -> None:
-        self.lock_files.add(path)
+        self._lock_files.add(path)
 
     def set_cleanup_config(self, config: t.Any) -> None:
-        self.cleanup_config = config
+        self._cleanup_config = config
 
     def _cleanup_temporary_files(self) -> None:
-        pass
+        if self._cleanup_config is None:
+            self._cleanup_debug_logs()
+            self._cleanup_coverage_files()
+            return
 
-    def _cleanup_debug_logs(self) -> None:
-        pass
+        if not getattr(self._cleanup_config, "auto_cleanup", False):
+            return
 
-    def _cleanup_coverage_files(self) -> None:
-        pass
+        keep_debug = getattr(self._cleanup_config, "keep_debug_logs", None)
+        keep_coverage = getattr(self._cleanup_config, "keep_coverage_files", None)
+
+        if keep_debug is not None:
+            self._cleanup_debug_logs(keep_recent=keep_debug)
+        else:
+            self._cleanup_debug_logs()
+
+        if keep_coverage is not None:
+            self._cleanup_coverage_files(keep_recent=keep_coverage)
+        else:
+            self._cleanup_coverage_files()
+
+    def _cleanup_debug_logs(self, keep_recent: int | None = None) -> None:
+        pattern = "crackerjack-debug-*.log"
+        debug_files = sorted(
+            self.pkg_path.glob(pattern),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+
+        if keep_recent is None or keep_recent < 0:
+            files_to_remove = debug_files
+        else:
+            files_to_remove = debug_files[keep_recent:]
+
+        for file_path in files_to_remove:
+            try:
+                file_path.unlink()
+            except PermissionError:
+                logger.debug(f"Permission denied: {file_path}")
+            except FileNotFoundError:
+                logger.debug(f"File not found: {file_path}")
+
+    def _cleanup_coverage_files(self, keep_recent: int | None = None) -> None:
+        pattern = ".coverage.*"
+        coverage_files = sorted(
+            self.pkg_path.glob(pattern),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True,
+        )
+
+        if keep_recent is None or keep_recent < 0:
+            files_to_remove = coverage_files
+        else:
+            files_to_remove = coverage_files[keep_recent:]
+
+        for file_path in files_to_remove:
+            try:
+                file_path.unlink()
+            except FileNotFoundError:
+                logger.debug(f"File not found: {file_path}")
 
     def _cleanup_pycache_directories(self) -> None:
         pass

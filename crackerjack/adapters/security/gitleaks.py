@@ -43,7 +43,8 @@ class GitleaksAdapter(BaseToolAdapter):
     def __init__(self, settings: GitleaksSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "GitleaksAdapter initialized", extra={"has_settings": settings is not None}
+            "GitleaksAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -82,7 +83,8 @@ class GitleaksAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -139,7 +141,8 @@ class GitleaksAdapter(BaseToolAdapter):
             data = json.loads(result.raw_output)
             findings = data if isinstance(data, list) else [data]
             logger.debug(
-                "Parsed Gitleaks JSON output", extra={"findings_count": len(findings)}
+                "Parsed Gitleaks JSON output",
+                extra={"findings_count": len(findings)},
             )
         except json.JSONDecodeError as e:
             logger.warning(

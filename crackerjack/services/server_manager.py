@@ -163,7 +163,8 @@ def stop_mcp_server() -> bool:
         return True
 
     ServerPanels.info(
-        title="MCP Server", message=f"Stopping {len(processes)} process(es)"
+        title="MCP Server",
+        message=f"Stopping {len(processes)} process(es)",
     )
 
     success = True
@@ -212,7 +213,8 @@ def stop_all_servers() -> bool:
 
 def restart_mcp_server() -> bool:
     ServerPanels.info(
-        title="MCP Server", message="Restarting Crackerjack MCP Server..."
+        title="MCP Server",
+        message="Restarting Crackerjack MCP Server...",
     )
 
     stop_mcp_server()

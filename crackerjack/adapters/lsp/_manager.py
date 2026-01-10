@@ -23,7 +23,8 @@ class RustToolHookManager:
         self.adapters["zuban"] = ZubanAdapter(context=self.context)
 
     async def run_all_tools(
-        self, target_files: list[Path] | None = None
+        self,
+        target_files: list[Path] | None = None,
     ) -> dict[str, ToolResult]:
         target_files = target_files or []
 
@@ -41,7 +42,7 @@ class RustToolHookManager:
                         "No Rust tools are available. "
                         "Install skylos and zuban with: uv add skylos zuban"
                     ),
-                )
+                ),
             }
 
         tasks = [
@@ -65,7 +66,9 @@ class RustToolHookManager:
         return tool_results
 
     async def run_single_tool(
-        self, tool_name: str, target_files: list[Path] | None = None
+        self,
+        tool_name: str,
+        target_files: list[Path] | None = None,
     ) -> ToolResult:
         if tool_name not in self.adapters:
             return ToolResult(
@@ -89,7 +92,10 @@ class RustToolHookManager:
         return await self._run_single_tool(tool_name, adapter, target_files or [])
 
     async def _run_single_tool(
-        self, name: str, adapter: BaseRustToolAdapter, target_files: list[Path]
+        self,
+        name: str,
+        adapter: BaseRustToolAdapter,
+        target_files: list[Path],
     ) -> ToolResult:
         start_time = time.time()
 
@@ -138,7 +144,8 @@ class RustToolHookManager:
         return info
 
     def create_consolidated_report(
-        self, results: dict[str, ToolResult]
+        self,
+        results: dict[str, ToolResult],
     ) -> dict[str, t.Any]:
         total_issues = 0
         total_errors = 0

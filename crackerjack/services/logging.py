@@ -4,14 +4,16 @@ import logging
 import sys
 import time
 import uuid
-from collections.abc import Callable
 from contextvars import ContextVar
 from datetime import UTC, datetime
-from pathlib import Path
-from types import TracebackType
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import structlog
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+    from pathlib import Path
+    from types import TracebackType
 
 _correlation_id_var: ContextVar[str | None] = ContextVar(
     "crackerjack_correlation_id",
@@ -24,7 +26,9 @@ _processors: list[Callable[..., dict[str, Any]] | Any] = []
 
 
 def add_correlation_id(
-    _: Any, __: str | None, event_dict: dict[str, Any]
+    _: Any,
+    __: str | None,
+    event_dict: dict[str, Any],
 ) -> dict[str, Any]:
     event_dict.setdefault("correlation_id", get_correlation_id())
     return event_dict

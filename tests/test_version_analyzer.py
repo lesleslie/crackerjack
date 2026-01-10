@@ -22,7 +22,7 @@ async def main() -> None:
     console.print("[bold blue]🔍 Version Bump Analyzer Test[/bold blue]\n")
 
     # Initialize services
-    pkg_path = Path(".")
+    pkg_path = Path()
     git_service = GitService(console, pkg_path)
     version_analyzer = VersionAnalyzer(console, git_service)
 
@@ -38,7 +38,7 @@ async def main() -> None:
 
         try:
             recommendation = await version_analyzer.recommend_version_bump(
-                since_version
+                since_version,
             )
             version_analyzer.display_recommendation(recommendation)
 
@@ -50,7 +50,7 @@ async def main() -> None:
                 console.print("[yellow]❌ Version bump declined[/yellow]")
             else:
                 console.print(
-                    f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]"
+                    f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]",
                 )
 
         except Exception as e:

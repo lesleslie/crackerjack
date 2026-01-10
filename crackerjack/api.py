@@ -67,7 +67,8 @@ class CrackerjackAPI:
     def code_cleaner(self) -> CodeCleaner:
         if self._code_cleaner is None:
             self._code_cleaner = CodeCleaner(
-                console=self.console, base_directory=self.project_path
+                console=self.console,
+                base_directory=self.project_path,
             )
         return self._code_cleaner
 
@@ -119,15 +120,14 @@ class CrackerjackAPI:
 
         if safe_mode:
             self.console.print(
-                "[green]🛡️ Using safe mode with comprehensive backup protection[/green]"
+                "[green]🛡️ Using safe mode with comprehensive backup protection[/green]",
             )
             return self._execute_safe_code_cleaning(target_dir)
-        else:
-            self.console.print(
-                "[yellow]⚠️ Legacy mode - backup protection still enabled for safety[/yellow]"
-            )
-            self._notify_backup_status(backup)
-            return self._execute_code_cleaning(target_dir)
+        self.console.print(
+            "[yellow]⚠️ Legacy mode - backup protection still enabled for safety[/yellow]",
+        )
+        self._notify_backup_status(backup)
+        return self._execute_code_cleaning(target_dir)
 
     def _validate_code_before_cleaning(self, target_dir: Path) -> None:
         todos_found = self._check_for_todos(target_dir)
@@ -195,22 +195,22 @@ class CrackerjackAPI:
         if result.overall_success:
             self.console.print(
                 f"[green]🎉 Package cleaning completed successfully![/green] "
-                f"({result.successful_files}/{result.total_files} files cleaned)"
+                f"({result.successful_files}/{result.total_files} files cleaned)",
             )
         else:
             self.console.print(
                 f"[red]❌ Package cleaning failed![/red] "
-                f"({result.failed_files}/{result.total_files} files failed)"
+                f"({result.failed_files}/{result.total_files} files failed)",
             )
 
             if result.backup_restored:
                 self.console.print(
-                    "[yellow]⚠️ Files were automatically restored from backup[/yellow]"
+                    "[yellow]⚠️ Files were automatically restored from backup[/yellow]",
                 )
 
             if result.backup_metadata:
                 self.console.print(
-                    f"[blue]📦 Backup available at: {result.backup_metadata.backup_directory}[/blue]"
+                    f"[blue]📦 Backup available at: {result.backup_metadata.backup_directory}[/blue]",
                 )
 
     def _report_cleaning_results(self, results: list[CleaningResult]) -> None:
@@ -240,7 +240,8 @@ class CrackerjackAPI:
         import os
 
         if os.getenv("PYTEST_CURRENT_TEST"):
-            raise RuntimeError("run_tests requires full runtime context")
+            msg = "run_tests requires full runtime context"
+            raise RuntimeError(msg)
 
         from time import time
 
@@ -574,7 +575,8 @@ def clean_code(
     safe_mode: bool = True,
 ) -> list[CleaningResult] | PackageCleaningResult:
     return CrackerjackAPI(project_path=project_path).clean_code(
-        backup=backup, safe_mode=safe_mode
+        backup=backup,
+        safe_mode=safe_mode,
     )
 
 

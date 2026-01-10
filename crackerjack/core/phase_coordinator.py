@@ -24,17 +24,6 @@ from crackerjack.config import get_console_width
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.decorators import handle_errors
-from crackerjack.models.protocols import (
-    ConfigMergeServiceProtocol,
-    FileSystemInterface,
-    GitInterface,
-    HookManager,
-    MemoryOptimizerProtocol,
-    OptionsProtocol,
-    PublishManager,
-    TestManagerProtocol,
-)
-from crackerjack.models.task import HookResult
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 try:
@@ -45,13 +34,23 @@ try:
 except Exception:  # pragma: no cover - optional legacy module
     FileSystemCache = t.Any  # type: ignore[assignment]
     GitOperationCache = t.Any  # type: ignore[assignment]
-from crackerjack.services.parallel_executor import (
-    AsyncCommandExecutor,
-    ParallelHookExecutor,
-)
 
 if t.TYPE_CHECKING:
-    pass
+    from crackerjack.models.protocols import (
+        ConfigMergeServiceProtocol,
+        FileSystemInterface,
+        GitInterface,
+        HookManager,
+        MemoryOptimizerProtocol,
+        OptionsProtocol,
+        PublishManager,
+        TestManagerProtocol,
+    )
+    from crackerjack.models.task import HookResult
+    from crackerjack.services.parallel_executor import (
+        AsyncCommandExecutor,
+        ParallelHookExecutor,
+    )
 
 
 class PhaseCoordinator:
@@ -86,14 +85,16 @@ class PhaseCoordinator:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
         self.session = session or SessionCoordinator(
-            console=self.console, pkg_path=self.pkg_path
+            console=self.console,
+            pkg_path=self.pkg_path,
         )
 
         self._settings = settings or load_settings(CrackerjackSettings)
 
         self.filesystem = filesystem or FileSystemService()
         self.git_service = git_service or GitService(
-            console=self.console, pkg_path=self.pkg_path
+            console=self.console,
+            pkg_path=self.pkg_path,
         )
         self.hook_manager = hook_manager or HookManagerImpl(
             pkg_path=self.pkg_path,
@@ -103,10 +104,12 @@ class PhaseCoordinator:
             settings=self._settings,
         )
         self.test_manager = test_manager or TestManagementImpl(
-            console=self.console, pkg_path=self.pkg_path
+            console=self.console,
+            pkg_path=self.pkg_path,
         )
         self.publish_manager = publish_manager or PublishManagerImpl(
-            console=self.console, pkg_path=self.pkg_path
+            console=self.console,
+            pkg_path=self.pkg_path,
         )
         self.config_merge_service = config_merge_service
 
@@ -179,10 +182,11 @@ class PhaseCoordinator:
             return True
         self.session.track_task("configuration", "Configuration updates")
         self.console.print(
-            "[dim]⚙️ Configuration phase skipped (no automated updates defined).[/dim]"
+            "[dim]⚙️ Configuration phase skipped (no automated updates defined).[/dim]",
         )
         self.session.complete_task(
-            "configuration", "No configuration updates were required."
+            "configuration",
+            "No configuration updates were required.",
         )
         return True
 
@@ -216,7 +220,7 @@ class PhaseCoordinator:
 
             if attempt > 1:
                 self.console.print(
-                    f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n"
+                    f"\n[yellow]♻️[/yellow] Verification Retry {attempt}/{max_attempts}\n",
                 )
 
             self._display_hook_phase_header(
@@ -225,7 +229,10 @@ class PhaseCoordinator:
             )
 
             success = self._execute_hooks_once(
-                "fast", self.hook_manager.run_fast_hooks, options, attempt
+                "fast",
+                self.hook_manager.run_fast_hooks,
+                options,
+                attempt,
             )
 
             if success:
@@ -252,7 +259,7 @@ class PhaseCoordinator:
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
-                "[yellow]⚠️[/yellow] Skipping comprehensive hooks (--skip-hooks)"
+                "[yellow]⚠️[/yellow] Skipping comprehensive hooks (--skip-hooks)",
             )
             return True
 
@@ -271,7 +278,9 @@ class PhaseCoordinator:
 
         if not success:
             self._display_hook_failures(
-                "comprehensive", self._last_hook_results, options
+                "comprehensive",
+                self._last_hook_results,
+                options,
             )
 
         summary = self._last_hook_summary or {}
@@ -281,7 +290,8 @@ class PhaseCoordinator:
             self.session.complete_task("hooks_comprehensive", details=details)
         else:
             self.session.fail_task(
-                "hooks_comprehensive", "Comprehensive hook failures detected"
+                "hooks_comprehensive",
+                "Comprehensive hook failures detected",
             )
 
         return success
@@ -289,7 +299,9 @@ class PhaseCoordinator:
     @handle_errors
     def run_testing_phase(self, options: OptionsProtocol) -> bool:
         if not getattr(options, "test", False) and not getattr(
-            options, "run_tests", False
+            options,
+            "run_tests",
+            False,
         ):
             return True
         self.session.track_task("testing", "Test execution")
@@ -330,7 +342,7 @@ class PhaseCoordinator:
         version_type = self._determine_version_type(options)
         if version_type:
             self.console.print(
-                "[dim]ℹ️ Commit phase skipped (handled by publish workflow)[/dim]"
+                "[dim]ℹ️ Commit phase skipped (handled by publish workflow)[/dim]",
             )
             return True
 
@@ -357,7 +369,12 @@ class PhaseCoordinator:
 
         callbacks = self._setup_progress_callbacks(progress)
         elapsed_time = self._run_hooks_with_progress(
-            suite_name, hook_runner, progress, hook_count, attempt, callbacks
+            suite_name,
+            hook_runner,
+            progress,
+            hook_count,
+            attempt,
+            callbacks,
         )
 
         if elapsed_time is None:
@@ -377,7 +394,8 @@ class PhaseCoordinator:
         )
 
     def _setup_progress_callbacks(
-        self, progress: Progress
+        self,
+        progress: Progress,
     ) -> dict[str, t.Callable[[int, int], None] | None | dict[str, t.Any]]:
         task_id_holder = {"task_id": None}
 
@@ -391,7 +409,9 @@ class PhaseCoordinator:
 
         original_callback = getattr(self.hook_manager, "_progress_callback", None)
         original_start_callback = getattr(
-            self.hook_manager, "_progress_start_callback", None
+            self.hook_manager,
+            "_progress_start_callback",
+            None,
         )
 
         self.hook_manager._progress_callback = update_progress
@@ -427,9 +447,7 @@ class PhaseCoordinator:
                 start_time = time.time()
                 hook_results = hook_runner()
                 self._last_hook_results = hook_results
-                elapsed_time = time.time() - start_time
-
-                return elapsed_time
+                return time.time() - start_time
 
         except Exception as exc:
             self._handle_hook_execution_error(suite_name, exc, attempt)
@@ -438,10 +456,13 @@ class PhaseCoordinator:
             self._restore_progress_callbacks(callbacks)
 
     def _handle_hook_execution_error(
-        self, suite_name: str, exc: Exception, attempt: int
+        self,
+        suite_name: str,
+        exc: Exception,
+        attempt: int,
     ) -> None:
         self.console.print(
-            f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}"
+            f"[red]❌[/red] {suite_name.title()} hooks encountered an unexpected error: {exc}",
         )
         self.logger.error(
             "Hook execution raised exception: %s",
@@ -454,10 +475,14 @@ class PhaseCoordinator:
         self.hook_manager._progress_start_callback = callbacks["original_started"]
 
     def _process_hook_results(
-        self, suite_name: str, elapsed_time: float, attempt: int
+        self,
+        suite_name: str,
+        elapsed_time: float,
+        attempt: int,
     ) -> bool:
         summary = self.hook_manager.get_hook_summary(
-            self._last_hook_results, elapsed_time=elapsed_time
+            self._last_hook_results,
+            elapsed_time=elapsed_time,
         )
         self._last_hook_summary = summary
         self._report_hook_results(suite_name, self._last_hook_results, summary, attempt)
@@ -503,7 +528,7 @@ class PhaseCoordinator:
 
         if total == 0:
             self.console.print(
-                f"[yellow]⚠️[/yellow] No {suite_name} hooks are configured for this project."
+                f"[yellow]⚠️[/yellow] No {suite_name} hooks are configured for this project.",
             )
             return
 
@@ -534,7 +559,9 @@ class PhaseCoordinator:
             self._render_rich_hook_results(suite_name, results)
 
     def _render_plain_hook_results(
-        self, suite_name: str, results: list[HookResult]
+        self,
+        suite_name: str,
+        results: list[HookResult],
     ) -> None:
         self.console.print(f"{suite_name.title()} Hook Results:", highlight=False)
 
@@ -615,7 +642,9 @@ class PhaseCoordinator:
         )
 
     def _render_rich_hook_results(
-        self, suite_name: str, results: list[HookResult]
+        self,
+        suite_name: str,
+        results: list[HookResult],
     ) -> None:
         stats = self._calculate_hook_statistics(results)
         summary_text = self._build_summary_text(stats)
@@ -630,7 +659,7 @@ class PhaseCoordinator:
         if has_config_errors:
             self.console.print(
                 " [dim][yellow]![/yellow] = Configuration or tool error (not code "
-                "issues)[/dim]"
+                "issues)[/dim]",
             )
 
         self.console.print()
@@ -670,7 +699,7 @@ class PhaseCoordinator:
                 issues_display = "[yellow]![/yellow]"
             else:
                 issues_display = str(
-                    result.issues_count if hasattr(result, "issues_count") else 0
+                    result.issues_count if hasattr(result, "issues_count") else 0,
                 )
             table.add_row(
                 self._strip_ansi(result.name),
@@ -725,7 +754,10 @@ class PhaseCoordinator:
         }
 
     def _build_results_panel(
-        self, suite_name: str, table: Table, summary_text: str
+        self,
+        suite_name: str,
+        table: Table,
+        summary_text: str,
     ) -> Panel:
         return Panel(
             table,
@@ -738,7 +770,9 @@ class PhaseCoordinator:
         )
 
     def _format_failing_hooks(
-        self, suite_name: str, results: list[HookResult]
+        self,
+        suite_name: str,
+        results: list[HookResult],
     ) -> list[HookResult]:
         failing = [
             result
@@ -748,7 +782,8 @@ class PhaseCoordinator:
 
         if failing:
             self.console.print(
-                f"[red]Details for failing {suite_name} hooks:[/red]", highlight=False
+                f"[red]Details for failing {suite_name} hooks:[/red]",
+                highlight=False,
             )
 
         return failing
@@ -861,7 +896,8 @@ class PhaseCoordinator:
         if cleaned_files:
             self.console.print(f"Cleaned {len(cleaned_files)} files")
             self.session.complete_task(
-                "cleaning", f"Cleaned {len(cleaned_files)} files"
+                "cleaning",
+                f"Cleaned {len(cleaned_files)} files",
             )
         else:
             self.console.print("No cleaning needed for any files")
@@ -872,7 +908,9 @@ class PhaseCoordinator:
         return options.publish or options.all or options.bump
 
     def _execute_publishing_workflow(
-        self, options: OptionsProtocol, version_type: str
+        self,
+        options: OptionsProtocol,
+        version_type: str,
     ) -> bool:
         original_head = (
             self.git_service.get_current_commit_hash()
@@ -892,7 +930,10 @@ class PhaseCoordinator:
             return False
 
         if not self._publish_to_pypi(
-            options, new_version, original_head, current_commit_hash
+            options,
+            new_version,
+            original_head,
+            current_commit_hash,
         ):
             return False
 
@@ -911,14 +952,14 @@ class PhaseCoordinator:
 
         self._display_commit_push_header()
         self.console.print(
-            "[cyan]ℹ️[/cyan] Committing existing changes before version bump..."
+            "[cyan]ℹ️[/cyan] Committing existing changes before version bump...",
         )
         commit_message = self._get_commit_message(existing_changes, options)
         if not self._execute_commit_and_push(existing_changes, commit_message):
             self.session.fail_task("publishing", "Failed to commit pre-publish changes")
             return False
         self.console.print(
-            "[green]✅[/green] Pre-publish changes committed and pushed\n"
+            "[green]✅[/green] Pre-publish changes committed and pushed\n",
         )
         return True
 
@@ -932,7 +973,7 @@ class PhaseCoordinator:
 
         self.console.print(f"[green]✅[/green] Version bumped to {new_version}")
         self.console.print(
-            f"[green]✅[/green] Changelog updated for version {new_version}"
+            f"[green]✅[/green] Changelog updated for version {new_version}",
         )
         return new_version
 
@@ -954,12 +995,11 @@ class PhaseCoordinator:
         if not self.git_service.commit(commit_message):
             self.session.fail_task("publishing", "Failed to commit changes")
             return None
-        current_commit_hash = (
+        return (
             self.git_service.get_current_commit_hash()
             if hasattr(self.git_service, "get_current_commit_hash")
             else None
         )
-        return current_commit_hash
 
     def _publish_to_pypi(
         self,
@@ -982,30 +1022,31 @@ class PhaseCoordinator:
         if not options.no_git_tags:
             if not self.publish_manager.create_git_tag_local(new_version):
                 self.console.print(
-                    f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}"
+                    f"[yellow]⚠️[/yellow] Failed to create git tag v{new_version}",
                 )
 
         if not self.git_service.push_with_tags():
             self.console.print("[yellow]⚠️[/yellow] Push failed. Please push manually")
 
     def _attempt_rollback_version_bump(
-        self, original_head: str, current_commit_hash: str
+        self,
+        original_head: str,
+        current_commit_hash: str,
     ) -> bool:
         try:
             self.console.print(
-                "[yellow]🔄 Attempting to rollback version bump commit...[/yellow]"
+                "[yellow]🔄 Attempting to rollback version bump commit...[/yellow]",
             )
 
             result = self.git_service.reset_hard(original_head)
 
             if result:
                 self.console.print(
-                    f"[green]✅ Version bump commit ({current_commit_hash[:8]}...) reverted[/green]"
+                    f"[green]✅ Version bump commit ({current_commit_hash[:8]}...) reverted[/green]",
                 )
                 return True
-            else:
-                self.console.print("[red]❌ Failed to revert version bump commit[/red]")
-                return False
+            self.console.print("[red]❌ Failed to revert version bump commit[/red]")
+            return False
         except Exception as e:
             self.console.print(f"[red]❌ Error during version rollback: {e}[/red]")
             return False
@@ -1034,7 +1075,9 @@ class PhaseCoordinator:
         return True
 
     def _get_commit_message(
-        self, changed_files: list[str], options: OptionsProtocol
+        self,
+        changed_files: list[str],
+        options: OptionsProtocol,
     ) -> str:
         suggestions = self.git_service.get_commit_message_suggestions(changed_files)
         if not suggestions:
@@ -1048,7 +1091,7 @@ class PhaseCoordinator:
     def _interactive_commit_message_selection(self, suggestions: list[str]) -> str:
         self._display_commit_suggestions(suggestions)
         choice = self.console.input(
-            "\nEnter number, custom message, or press Enter for default: "
+            "\nEnter number, custom message, or press Enter for default: ",
         ).strip()
         return self._process_commit_choice(choice, suggestions)
 
@@ -1066,7 +1109,9 @@ class PhaseCoordinator:
         return choice
 
     def _execute_commit_and_push(
-        self, changed_files: list[str], commit_message: str
+        self,
+        changed_files: list[str],
+        commit_message: str,
     ) -> bool:
         if not self.git_service.add_files(changed_files):
             self.session.fail_task("commit", "Failed to add files to git")

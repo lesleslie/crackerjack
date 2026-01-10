@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""
-Test script to verify the updated hook output parsing with hook name parameter.
-"""
+"""Test script to verify the updated hook output parsing with hook name parameter."""
 
 from pathlib import Path
-from crackerjack.executors.hook_executor import HookExecutor
-from rich.console import Console
 from subprocess import CompletedProcess
 
+from rich.console import Console
 
-def test_updated_method():
+from crackerjack.executors.hook_executor import HookExecutor
+
+
+def test_updated_method() -> None:
     # Create a mock HookExecutor
     console = Console()
     pkg_path = Path.cwd()
@@ -22,23 +22,14 @@ def test_updated_method():
         args=["uvx", "semgrep", "--config=p/python", "--json", "crackerjack/executors/"],
         returncode=0,
         stdout=real_output,
-        stderr="Ran 151 rules on 9 files: 0 findings."
+        stderr="Ran 151 rules on 9 files: 0 findings.",
     )
 
     # Test with hook_name="semgrep" (this should use semgrep-specific parsing)
     parsed_with_semgrep = executor._parse_hook_output(result, "semgrep")
-    print(f"Test with real semgrep output (hook_name='semgrep'):")
-    print(f"  Files processed: {parsed_with_semgrep['files_processed']}")
-    print(f"  Expected: 0 (no issues found)")
-    print(f"  Result: {'PASS' if parsed_with_semgrep['files_processed'] == 0 else 'FAIL'}")
-    print()
 
     # Test with hook_name="ruff" (this should use generic parsing)
     parsed_with_ruff = executor._parse_hook_output(result, "ruff")
-    print(f"Test with same output (hook_name='ruff', generic parsing):")
-    print(f"  Files processed: {parsed_with_ruff['files_processed']}")
-    print(f"  This uses generic pattern matching, likely finds '9 files' from stderr")
-    print()
 
     # Now test with semgrep output that has issues
     stdout_with_issues = '{"version":"1.142.1","results":[{"path":"test_file1.py","check_id":"python.sqlalchemy.security.sql-injection.sql-injection","line":10},{"path":"test_file2.py","check_id":"python.django.security.audit.xss.audit-xss","line":15},{"path":"test_file1.py","check_id":"python.django.security.injection.runserver.runserver-bind-all-interfaces","line":8}],"errors":[],"paths":{"scanned":["test_file1.py","test_file2.py"]},"time":{}}'
@@ -47,15 +38,10 @@ def test_updated_method():
         args=["uvx", "semgrep", "--config=p/python", "--json", "."],
         returncode=1,  # Semgrep returns 1 when issues are found
         stdout=stdout_with_issues,
-        stderr=""
+        stderr="",
     )
 
     parsed_issues = executor._parse_hook_output(result_with_issues, "semgrep")
-    print(f"Test with semgrep output containing issues:")
-    print(f"  Files processed: {parsed_issues['files_processed']}")
-    print(f"  Expected: 2 (two unique files with issues)")
-    print(f"  Result: {'PASS' if parsed_issues['files_processed'] == 2 else 'FAIL'}")
-    print()
 
 
 if __name__ == "__main__":

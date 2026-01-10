@@ -39,7 +39,7 @@ def test_pattern_immediately(
                     "expected": expected,
                     "actual": result,
                     "passed": passed,
-                }
+                },
             )
             if not passed:
                 results["all_passed"] = False
@@ -51,56 +51,38 @@ def test_pattern_immediately(
                     "expected": expected,
                     "actual": f"ERROR: {e}",
                     "passed": False,
-                }
+                },
             )
             results["all_passed"] = False
 
     if ".*.*" in pattern:
         results["warnings"].append(
-            "Multiple .* constructs may cause performance issues"
+            "Multiple .* constructs may cause performance issues",
         )
     if ".+.+" in pattern:
         results["warnings"].append(
-            "Multiple .+ constructs may cause performance issues"
+            "Multiple .+ constructs may cause performance issues",
         )
 
     return results
 
 
 def print_pattern_test_report(results: dict[str, t.Any]) -> None:
-    print("\n🔍 REGEX PATTERN TEST REPORT")
-    print("=" * 50)
-    print(f"Pattern: {results['pattern']}")
-    print(f"Replacement: {results['replacement']}")
     if results["description"]:
-        print(f"Description: {results['description']}")
-    print()
+        pass
 
     if results["errors"]:
-        print("❌ ERRORS: ")
-        for error in results["errors"]:
-            print(f" • {error}")
-        print()
+        for _error in results["errors"]:
+            pass
 
     if results["warnings"]:
-        print("⚠️ WARNINGS: ")
-        for warning in results["warnings"]:
-            print(f" • {warning}")
-        print()
+        for _warning in results["warnings"]:
+            pass
 
-    print("📋 TEST CASES: ")
     for test in results["test_results"]:
-        status = "✅ PASS" if test["passed"] else "❌ FAIL"
-        print(
-            f" {status} Test {test['test_case']}: '{test['input']}' → '{test['actual']}'"
-        )
+        "✅ PASS" if test["passed"] else "❌ FAIL"
         if not test["passed"]:
-            print(f" Expected: '{test['expected']}'")
-
-    print(
-        f"\n🎯 OVERALL: {'✅ ALL TESTS PASSED' if results['all_passed'] else '❌ TESTS FAILED'}"
-    )
-    print("=" * 50)
+            pass
 
 
 def quick_pattern_test(
@@ -156,14 +138,16 @@ def _build_test_cases(original_pattern: str, sample_text: str) -> list[tuple[str
                 ("word - word", "word-word"),
                 ("already-good", "already-good"),
                 ("multiple - word - spacing", "multiple-word - spacing"),
-            ]
+            ],
         )
 
     return test_cases
 
 
 def suggest_migration_for_re_sub(
-    original_pattern: str, original_replacement: str, sample_text: str = ""
+    original_pattern: str,
+    original_replacement: str,
+    sample_text: str = "",
 ) -> dict[str, t.Any]:
     suggestion: dict[str, t.Any] = {
         "original_pattern": original_pattern,
@@ -184,7 +168,7 @@ def suggest_migration_for_re_sub(
         compiled = CompiledPatternCache.get_compiled_pattern(forbidden_pattern)
         if compiled.search(original_replacement):
             suggestion["safety_issues"].append(
-                "CRITICAL: Bad replacement syntax - spaces in \\g<1>"
+                "CRITICAL: Bad replacement syntax - spaces in \\g<1>",
             )
 
     if sample_text:
@@ -200,58 +184,23 @@ def suggest_migration_for_re_sub(
 
 
 def print_migration_suggestion(suggestion: dict[str, t.Any]) -> None:
-    print("\n🔄 REGEX MIGRATION SUGGESTION")
-    print("=" * 50)
-    print(f"Original Pattern: {suggestion['original_pattern']}")
-    print(f"Original Replacement: {suggestion['original_replacement']}")
-    print()
-
     if suggestion["safety_issues"]:
-        print("❌ SAFETY ISSUES: ")
-        for issue in suggestion["safety_issues"]:
-            print(f" • {issue}")
-        print()
+        for _issue in suggestion["safety_issues"]:
+            pass
 
     if suggestion["existing_matches"]:
-        print("✅ EXISTING PATTERNS AVAILABLE: ")
         for pattern_name in suggestion["existing_matches"]:
-            pattern = SAFE_PATTERNS[pattern_name]
-            print(f" • {pattern_name}: {pattern.description}")
-        print("💡 Consider using existing patterns instead of creating new ones.")
-        print()
+            SAFE_PATTERNS[pattern_name]
 
     if suggestion["needs_new_pattern"]:
-        print("🆕 NEW PATTERN NEEDED: ")
-        print(f" Suggested Name: {suggestion['suggested_name']}")
-        print(" Add to crackerjack/services/regex_patterns.py: ")
-        print()
-        print(" ```python")
-        print(f' "{suggestion["suggested_name"]}": ValidatedPattern(')
-        print(f' name="{suggestion["suggested_name"]}", ')
-        print(f' pattern=r"{suggestion["original_pattern"]}", ')
-        print(f' replacement=r"{suggestion["original_replacement"]}", ')
-        print(' description="TODO: Add description", ')
-        print(" test_cases=[")
-        for test_input, test_output in suggestion["test_cases_needed"]:
-            print(f' ("{test_input}", "{test_output}"), ')
-        print(" ]")
-        print(" ), ")
-        print(" ```")
-        print()
+        for _test_input, _test_output in suggestion["test_cases_needed"]:
+            pass
 
-    print("🔧 MIGRATION STEPS: ")
-    print(" 1. Fix any safety issues in replacement syntax")
     if suggestion["existing_matches"]:
-        print(" 2. Use existing safe patterns if possible: ")
         for pattern_name in suggestion["existing_matches"]:
-            print(f" SAFE_PATTERNS['{pattern_name}'].apply(text)")
+            pass
     if suggestion["needs_new_pattern"]:
-        print(" 3. Add new ValidatedPattern to regex_patterns.py")
-        print(" 4. Test thoroughly with comprehensive test cases")
-    print(" 5. Replace re.sub() call with safe pattern usage")
-    print(" 6. Run hook to validate")
-
-    print("=" * 50)
+        pass
 
 
 def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
@@ -263,7 +212,7 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
 
         for i, line in enumerate(lines, 1):
             re_sub_pattern = CompiledPatternCache.get_compiled_pattern(
-                r're\.sub\s*\(\s*[r]?["\']([^"\']+)["\'], \s*[r]?["\']([^"\']*)["\']'
+                r're\.sub\s*\(\s*[r]?["\']([^"\']+)["\'], \s*[r]?["\']([^"\']*)["\']',
             )
             re_sub_match = re_sub_pattern.search(line)
             if re_sub_match:
@@ -286,7 +235,7 @@ def audit_file_for_re_sub(file_path: Path) -> list[dict[str, t.Any]]:
                 "file": str(file_path),
                 "line_number": 0,
                 "error": f"Failed to audit file: {e}",
-            }
+            },
         )
 
     return findings
@@ -348,17 +297,18 @@ def _check_for_safe_patterns_import(lines: list[str]) -> bool:
 def _fix_replacement_syntax_issues(line: str) -> str:
     if r"\g < " in line or r"\g< " in line or r"\g <" in line:
         spacing_fix_pattern = CompiledPatternCache.get_compiled_pattern(
-            r"\\g\s*<\s*(\d+)\s*>"
+            r"\\g\s*<\s*(\d+)\s*>",
         )
         line = spacing_fix_pattern.sub(r"\\g<\1>", line)
     return line
 
 
 def _process_re_sub_patterns(
-    line: str, has_safe_patterns_import: bool
+    line: str,
+    has_safe_patterns_import: bool,
 ) -> tuple[str, bool, bool]:
     re_sub_match = CompiledPatternCache.get_compiled_pattern(
-        r're\.sub\s*\(\s*r?["\']([^"\']+)["\']\s*, \s*r?["\']([^"\']*)["\']'
+        r're\.sub\s*\(\s*r?["\']([^"\']+)["\']\s*, \s*r?["\']([^"\']*)["\']',
     ).search(line)
 
     if not re_sub_match:
@@ -380,26 +330,32 @@ def _identify_safe_pattern(pattern: str, replacement: str) -> str | None:
         r"\g<1>-\g<2>",
     ):
         return "fix_hyphenated_names"
-    elif "token" in pattern.lower() and "*" in replacement:
+    if "token" in pattern.lower() and "*" in replacement:
         return "mask_tokens"
-    elif r"python\s*-\s*m" in pattern:
+    if r"python\s*-\s*m" in pattern:
         return "fix_python_command_spacing"
     return None
 
 
 def _replace_with_safe_pattern(
-    line: str, re_sub_match: re.Match[str], safe_pattern_name: str
+    line: str,
+    re_sub_match: re.Match[str],
+    safe_pattern_name: str,
 ) -> tuple[str, bool, bool]:
     before_re_sub = line[: re_sub_match.start()]
     after_re_sub = line[re_sub_match.end() :]
 
     assign_match = CompiledPatternCache.get_compiled_pattern(r"(\w+)\s*=\s*$").search(
-        before_re_sub
+        before_re_sub,
     )
 
     if assign_match:
         return _handle_assignment_pattern(
-            line, assign_match, before_re_sub, after_re_sub, safe_pattern_name
+            line,
+            assign_match,
+            before_re_sub,
+            after_re_sub,
+            safe_pattern_name,
         )
     return _handle_direct_replacement(line, re_sub_match, safe_pattern_name)
 
@@ -418,7 +374,9 @@ def _handle_assignment_pattern(
 
 
 def _handle_direct_replacement(
-    line: str, re_sub_match: re.Match[str], safe_pattern_name: str
+    line: str,
+    re_sub_match: re.Match[str],
+    safe_pattern_name: str,
 ) -> tuple[str, bool, bool]:
     text_var = _extract_source_variable(line)
     new_line = line.replace(
@@ -430,7 +388,7 @@ def _handle_direct_replacement(
 
 def _extract_source_variable(line: str) -> str:
     full_match = CompiledPatternCache.get_compiled_pattern(
-        r"re\.sub\s*\([^, ]+, \s*[^, ]+, \s*(\w+)"
+        r"re\.sub\s*\([^, ]+, \s*[^, ]+, \s*(\w+)",
     ).search(line)
     return full_match.group(1) if full_match else "text"
 
@@ -459,8 +417,9 @@ if __name__ == "__main__":
         description="Fix spacing in hyphenated names",
     )
 
-    print("\n" + "=" * 60)
     migration = suggest_migration_for_re_sub(
-        r"python\s*-\s*m\s+", "python -m ", "python - m crackerjack"
+        r"python\s*-\s*m\s+",
+        "python -m ",
+        "python - m crackerjack",
     )
     print_migration_suggestion(migration)

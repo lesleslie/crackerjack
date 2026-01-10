@@ -1,13 +1,14 @@
 """Tests for Phase 10.2.4: Fast Iteration Mode CLI flags."""
 
 import pytest
+
 from crackerjack.cli.options import Options
 
 
 class TestFastIterationFlag:
     """Test --fast-iteration flag functionality."""
 
-    def test_fast_iteration_default_false(self):
+    def test_fast_iteration_default_false(self) -> None:
         """Test that fast_iteration defaults to False."""
         options = Options(
             commit=False,
@@ -21,7 +22,7 @@ class TestFastIterationFlag:
 
         assert options.fast_iteration is False
 
-    def test_fast_iteration_can_be_enabled(self):
+    def test_fast_iteration_can_be_enabled(self) -> None:
         """Test that fast_iteration can be set to True."""
         options = Options(
             commit=False,
@@ -36,7 +37,7 @@ class TestFastIterationFlag:
 
         assert options.fast_iteration is True
 
-    def test_fast_iteration_in_options_dataclass(self):
+    def test_fast_iteration_in_options_dataclass(self) -> None:
         """Test that fast_iteration field exists in Options dataclass."""
         options = Options(
             commit=False,
@@ -56,7 +57,7 @@ class TestFastIterationFlag:
 class TestToolFlag:
     """Test --tool flag functionality."""
 
-    def test_tool_default_none(self):
+    def test_tool_default_none(self) -> None:
         """Test that tool defaults to None."""
         options = Options(
             commit=False,
@@ -70,7 +71,7 @@ class TestToolFlag:
 
         assert options.tool is None
 
-    def test_tool_can_be_set(self):
+    def test_tool_can_be_set(self) -> None:
         """Test that tool can be set to a specific value."""
         options = Options(
             commit=False,
@@ -85,7 +86,7 @@ class TestToolFlag:
 
         assert options.tool == "ruff-check"
 
-    def test_tool_in_options_dataclass(self):
+    def test_tool_in_options_dataclass(self) -> None:
         """Test that tool field exists in Options dataclass."""
         options = Options(
             commit=False,
@@ -105,7 +106,7 @@ class TestToolFlag:
 class TestChangedOnlyFlag:
     """Test --changed-only flag functionality."""
 
-    def test_changed_only_default_false(self):
+    def test_changed_only_default_false(self) -> None:
         """Test that changed_only defaults to False."""
         options = Options(
             commit=False,
@@ -119,7 +120,7 @@ class TestChangedOnlyFlag:
 
         assert options.changed_only is False
 
-    def test_changed_only_can_be_enabled(self):
+    def test_changed_only_can_be_enabled(self) -> None:
         """Test that changed_only can be set to True."""
         options = Options(
             commit=False,
@@ -134,7 +135,7 @@ class TestChangedOnlyFlag:
 
         assert options.changed_only is True
 
-    def test_changed_only_in_options_dataclass(self):
+    def test_changed_only_in_options_dataclass(self) -> None:
         """Test that changed_only field exists in Options dataclass."""
         options = Options(
             commit=False,
@@ -154,7 +155,7 @@ class TestChangedOnlyFlag:
 class TestFlagCombinations:
     """Test combinations of fast iteration flags."""
 
-    def test_fast_iteration_with_tool(self):
+    def test_fast_iteration_with_tool(self) -> None:
         """Test fast_iteration combined with tool."""
         options = Options(
             commit=False,
@@ -172,7 +173,7 @@ class TestFlagCombinations:
         assert options.fast_iteration is True
         assert options.tool == "zuban"
 
-    def test_fast_iteration_with_changed_only(self):
+    def test_fast_iteration_with_changed_only(self) -> None:
         """Test fast_iteration combined with changed_only."""
         options = Options(
             commit=False,
@@ -190,7 +191,7 @@ class TestFlagCombinations:
         assert options.fast_iteration is True
         assert options.changed_only is True
 
-    def test_all_three_flags_together(self):
+    def test_all_three_flags_together(self) -> None:
         """Test all three flags can be used together."""
         options = Options(
             commit=False,
@@ -213,23 +214,24 @@ class TestFlagCombinations:
 class TestOptionsProtocolIntegration:
     """Test that new fields are in OptionsProtocol."""
 
-    def test_options_protocol_has_fast_iteration(self):
+    def test_options_protocol_has_fast_iteration(self) -> None:
         """Test OptionsProtocol includes fast_iteration."""
-        from crackerjack.models.protocols import OptionsProtocol
         import typing as t
+
+        from crackerjack.models.protocols import OptionsProtocol
 
         # Check that the protocol has the attribute
         assert hasattr(OptionsProtocol, "__annotations__")
         assert "fast_iteration" in OptionsProtocol.__annotations__
 
-    def test_options_protocol_has_tool(self):
+    def test_options_protocol_has_tool(self) -> None:
         """Test OptionsProtocol includes tool."""
         from crackerjack.models.protocols import OptionsProtocol
 
         assert hasattr(OptionsProtocol, "__annotations__")
         assert "tool" in OptionsProtocol.__annotations__
 
-    def test_options_protocol_has_changed_only(self):
+    def test_options_protocol_has_changed_only(self) -> None:
         """Test OptionsProtocol includes changed_only."""
         from crackerjack.models.protocols import OptionsProtocol
 

@@ -43,7 +43,7 @@ def handle_contextual_ai(
             return False
 
         console.print(
-            "[blue]🧠[/blue] Analyzing project context for AI recommendations..."
+            "[blue]🧠[/blue] Analyzing project context for AI recommendations...",
         )
         recommendations = assistant.get_contextual_recommendations(ai_recommendations)
 

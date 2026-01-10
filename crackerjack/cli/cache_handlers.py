@@ -19,7 +19,9 @@ def handle_clear_cache() -> None:
         total_cleared = sum(cleanup_results.values())
 
         table = Table(
-            title="Cache Cleared", show_header=True, header_style="bold green"
+            title="Cache Cleared",
+            show_header=True,
+            header_style="bold green",
         )
         table.add_column("Cache Type", style="cyan", no_wrap=True)
         table.add_column("Items Cleared", justify="right", style="yellow")
@@ -69,7 +71,8 @@ def _create_cache_stats_table() -> Table:
 
 
 def _populate_cache_stats_table(
-    table: Table, stats: dict[str, t.Any]
+    table: Table,
+    stats: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     totals = {"hits": 0, "misses": 0, "entries": 0, "size": 0.0}
 

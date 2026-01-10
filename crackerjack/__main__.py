@@ -291,7 +291,11 @@ def run(
     options.remove_from_index = remove_from_index
 
     ai_fix, verbose = setup_debug_and_verbose_flags(
-        ai_fix, ai_debug, debug, verbose, options
+        ai_fix,
+        ai_debug,
+        debug,
+        verbose,
+        options,
     )
     setup_ai_agent_env(ai_fix, ai_debug or debug)
 
@@ -347,7 +351,9 @@ def _process_all_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
     if not handle_documentation_commands(
-        local_vars["generate_docs"], local_vars["validate_docs"], options
+        local_vars["generate_docs"],
+        local_vars["validate_docs"],
+        options,
     ):
         return False
 
@@ -373,7 +379,9 @@ def _handle_analysis_commands(local_vars: t.Any, options: t.Any) -> bool:
 
 def _handle_specialized_analytics(local_vars: t.Any) -> bool:
     if not handle_heatmap_generation(
-        local_vars["heatmap"], local_vars["heatmap_type"], local_vars["heatmap_output"]
+        local_vars["heatmap"],
+        local_vars["heatmap_type"],
+        local_vars["heatmap_output"],
     ):
         return False
 
@@ -458,30 +466,34 @@ def _handle_advanced_features(local_vars: t.Any) -> bool:
     ):
         return False
 
-    if not handle_contextual_ai(
+    return handle_contextual_ai(
         local_vars["contextual_ai"],
         local_vars["ai_recommendations"],
         local_vars["ai_help_query"],
-    ):
-        return False
-
-    return True
+    )
 
 
 @app.command()
 def run_tests(
     workers: int = typer.Option(
-        0, "--workers", "-n", help="Test workers (0=auto-detect)"
+        0,
+        "--workers",
+        "-n",
+        help="Test workers (0=auto-detect)",
     ),
     timeout: int = typer.Option(300, "--timeout", help="Test timeout in seconds"),
     coverage: bool = typer.Option(
-        True, "--coverage/--no-coverage", help="Run with coverage tracking"
+        True,
+        "--coverage/--no-coverage",
+        help="Run with coverage tracking",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     benchmark: bool = typer.Option(
-        False, "--benchmark", help="Run performance benchmarks"
+        False,
+        "--benchmark",
+        help="Run performance benchmarks",
     ),
-):
+) -> t.Never:
     cmd = ["pytest"]
 
     if workers != 1:
@@ -500,12 +512,12 @@ def run_tests(
         cmd.append("--benchmark-only")
 
     console.print(f"[blue]Running: {' '.join(cmd)}[/blue]")
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd, check=False)
     raise typer.Exit(result.returncode)
 
 
 @app.command()
-def qa_health():
+def qa_health() -> t.Never:
     from crackerjack.server import CrackerjackServer
 
     settings = load_settings(CrackerjackSettings)
@@ -527,12 +539,11 @@ def qa_health():
     if qa_status.get("total", 0) == qa_status.get("healthy", 0):
         console.print("\n[green]✅ All adapters healthy[/green]")
         raise typer.Exit(0)
-    else:
-        console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
-        raise typer.Exit(1)
+    console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
+    raise typer.Exit(1)
 
 
-def main():
+def main() -> None:
     app()
 
 

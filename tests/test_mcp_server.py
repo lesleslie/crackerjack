@@ -1,3 +1,4 @@
+import contextlib
 from unittest.mock import patch
 
 from crackerjack.mcp.server import MCPOptions, main
@@ -24,7 +25,5 @@ class TestMCPServerIntegration:
     def test_main_with_defaults(self) -> None:
         with patch("crackerjack.mcp.server_core._initialize_context"):
             with patch("crackerjack.mcp.server_core.console"):
-                try:
+                with contextlib.suppress(SystemExit):
                     main(".", None)
-                except SystemExit:
-                    pass

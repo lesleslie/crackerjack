@@ -3,15 +3,15 @@ from __future__ import annotations
 from datetime import datetime
 
 import pytest
+from rich.console import Console
 
 from crackerjack.documentation.dual_output_generator import (
     DocumentationResult,
     DualOutputGenerator,
 )
-from rich.console import Console
 
 
-def test_to_dict_basic():
+def test_to_dict_basic() -> None:
     result = DocumentationResult(
         ai_reference="ai",
         agent_capabilities={"agents": {"demo": {}}},
@@ -29,7 +29,7 @@ def test_to_dict_basic():
 
 
 @pytest.mark.asyncio
-async def test_generate_documentation_short_circuit(tmp_path):
+async def test_generate_documentation_short_circuit(tmp_path) -> None:
     generator = DualOutputGenerator(project_path=tmp_path, console=Console())
     cached_result = DocumentationResult(
         ai_reference="cached",

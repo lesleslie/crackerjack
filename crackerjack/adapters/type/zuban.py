@@ -42,7 +42,8 @@ class ZubanAdapter(BaseToolAdapter):
     def __init__(self, settings: ZubanSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "ZubanAdapter initialized", extra={"has_settings": settings is not None}
+            "ZubanAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -81,7 +82,8 @@ class ZubanAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name, "mypy", "--config-file", "mypy.ini"]
 
@@ -136,7 +138,10 @@ class ZubanAdapter(BaseToolAdapter):
         return has_column, column_number
 
     def _parse_with_column_format(
-        self, file_path_str: str, line_str: str, parts: list[str]
+        self,
+        file_path_str: str,
+        line_str: str,
+        parts: list[str],
     ) -> tuple[Path, int, int | None, str, str] | None:
         if not line_str.isdigit():
             return None
@@ -152,7 +157,10 @@ class ZubanAdapter(BaseToolAdapter):
         return (Path(file_path_str), line_number, column_number, message, code)
 
     def _parse_without_column_format(
-        self, file_path_str: str, line_str: str, parts: list[str]
+        self,
+        file_path_str: str,
+        line_str: str,
+        parts: list[str],
     ) -> tuple[Path, int, int | None, str, str]:
         file_path = Path(file_path_str)
         message_with_code = (
@@ -165,7 +173,10 @@ class ZubanAdapter(BaseToolAdapter):
         return file_path, int(line_str), None, message, code
 
     def _parse_standard_format(
-        self, file_path_str: str, line_str: str, parts: list[str]
+        self,
+        file_path_str: str,
+        line_str: str,
+        parts: list[str],
     ) -> tuple[Path, int, int | None, str, str]:
         file_path = Path(file_path_str)
         line_number = int(line_str)
@@ -178,7 +189,8 @@ class ZubanAdapter(BaseToolAdapter):
         return file_path, line_number, None, message, code
 
     def _extract_parts_from_line(
-        self, line: str
+        self,
+        line: str,
     ) -> tuple[Path, int, int | None, str, str] | None:
         if ":" not in line:
             return None
@@ -197,18 +209,20 @@ class ZubanAdapter(BaseToolAdapter):
                     int(line_str)
 
                     result = self._parse_with_column_format(
-                        file_path_str, line_str, parts
+                        file_path_str,
+                        line_str,
+                        parts,
                     )
                     if result is not None:
                         return result
 
                     return self._parse_without_column_format(
-                        file_path_str, line_str, parts
+                        file_path_str,
+                        line_str,
+                        parts,
                     )
-                else:
-                    return None
-            else:
-                return self._parse_standard_format(file_path_str, line_str, parts)
+                return None
+            return self._parse_standard_format(file_path_str, line_str, parts)
         except (ValueError, IndexError):
             return None
 

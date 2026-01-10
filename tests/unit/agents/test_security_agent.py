@@ -22,13 +22,13 @@ class TestSecurityAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test SecurityAgent initializes correctly."""
         agent = SecurityAgent(context)
 
         assert agent.context == context
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports security and regex validation issues."""
         agent = SecurityAgent(context)
 
@@ -49,7 +49,7 @@ class TestSecurityAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    async def test_can_handle_regex_validation_issue(self, agent):
+    async def test_can_handle_regex_validation_issue(self, agent) -> None:
         """Test high confidence for regex validation issues."""
         issue = Issue(
             id="regex-001",
@@ -62,7 +62,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.95
 
-    async def test_can_handle_regex_validation_keyword(self, agent):
+    async def test_can_handle_regex_validation_keyword(self, agent) -> None:
         """Test high confidence for regex validation keywords."""
         issue = Issue(
             id="sec-001",
@@ -75,7 +75,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.95
 
-    async def test_can_handle_bandit_security_issue(self, agent):
+    async def test_can_handle_bandit_security_issue(self, agent) -> None:
         """Test handling bandit security issues."""
         issue = Issue(
             id="sec-002",
@@ -88,7 +88,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_hardcoded_secret(self, agent):
+    async def test_can_handle_hardcoded_secret(self, agent) -> None:
         """Test handling hardcoded secret issues."""
         issue = Issue(
             id="sec-003",
@@ -101,7 +101,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_shell_injection(self, agent):
+    async def test_can_handle_shell_injection(self, agent) -> None:
         """Test handling shell injection vulnerabilities."""
         issue = Issue(
             id="sec-004",
@@ -114,7 +114,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_weak_crypto(self, agent):
+    async def test_can_handle_weak_crypto(self, agent) -> None:
         """Test handling weak cryptography issues."""
         issue = Issue(
             id="sec-005",
@@ -127,7 +127,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_pickle_usage(self, agent):
+    async def test_can_handle_pickle_usage(self, agent) -> None:
         """Test handling unsafe pickle usage."""
         issue = Issue(
             id="sec-006",
@@ -140,7 +140,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_yaml_load(self, agent):
+    async def test_can_handle_yaml_load(self, agent) -> None:
         """Test handling unsafe yaml.load usage."""
         issue = Issue(
             id="sec-007",
@@ -153,7 +153,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_security_file_path(self, agent):
+    async def test_can_handle_security_file_path(self, agent) -> None:
         """Test moderate confidence for security-related file paths."""
         issue = Issue(
             id="sec-008",
@@ -167,7 +167,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.7
 
-    async def test_can_handle_generic_security_issue(self, agent):
+    async def test_can_handle_generic_security_issue(self, agent) -> None:
         """Test lower confidence for generic security issues."""
         issue = Issue(
             id="sec-009",
@@ -180,7 +180,7 @@ class TestSecurityAgentCanHandle:
 
         assert confidence == 0.6
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="fmt-001",
@@ -204,7 +204,7 @@ class TestSecurityAgentVulnerabilityIdentification:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    def test_identify_regex_validation_by_type(self, agent):
+    def test_identify_regex_validation_by_type(self, agent) -> None:
         """Test identifying regex validation by issue type."""
         issue = Issue(
             id="regex-001",
@@ -217,7 +217,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "regex_validation"
 
-    def test_identify_regex_validation_by_keyword(self, agent):
+    def test_identify_regex_validation_by_keyword(self, agent) -> None:
         """Test identifying regex validation by keyword."""
         issue = Issue(
             id="sec-001",
@@ -230,7 +230,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "regex_validation"
 
-    def test_identify_hardcoded_temp_paths(self, agent):
+    def test_identify_hardcoded_temp_paths(self, agent) -> None:
         """Test identifying hardcoded temp paths."""
         issue = Issue(
             id="sec-002",
@@ -243,7 +243,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "hardcoded_temp_paths"
 
-    def test_identify_shell_injection(self, agent):
+    def test_identify_shell_injection(self, agent) -> None:
         """Test identifying shell injection."""
         issue = Issue(
             id="sec-003",
@@ -256,7 +256,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "shell_injection"
 
-    def test_identify_pickle_usage(self, agent):
+    def test_identify_pickle_usage(self, agent) -> None:
         """Test identifying unsafe pickle usage."""
         issue = Issue(
             id="sec-004",
@@ -269,7 +269,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "pickle_usage"
 
-    def test_identify_unsafe_yaml(self, agent):
+    def test_identify_unsafe_yaml(self, agent) -> None:
         """Test identifying unsafe YAML loading."""
         issue = Issue(
             id="sec-005",
@@ -282,7 +282,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "unsafe_yaml"
 
-    def test_identify_weak_crypto(self, agent):
+    def test_identify_weak_crypto(self, agent) -> None:
         """Test identifying weak cryptography."""
         issue = Issue(
             id="sec-006",
@@ -295,7 +295,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "weak_crypto"
 
-    def test_identify_jwt_secrets(self, agent):
+    def test_identify_jwt_secrets(self, agent) -> None:
         """Test identifying JWT secret issues."""
         issue = Issue(
             id="sec-007",
@@ -308,7 +308,7 @@ class TestSecurityAgentVulnerabilityIdentification:
 
         assert vulnerability == "jwt_secrets"
 
-    def test_identify_unknown(self, agent):
+    def test_identify_unknown(self, agent) -> None:
         """Test identifying unknown vulnerability type."""
         issue = Issue(
             id="sec-008",
@@ -332,7 +332,7 @@ class TestSecurityAgentPatternChecks:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    def test_is_regex_validation_issue_by_type(self, agent):
+    def test_is_regex_validation_issue_by_type(self, agent) -> None:
         """Test regex validation issue identification by type."""
         issue = Issue(
             id="regex-001",
@@ -345,7 +345,7 @@ class TestSecurityAgentPatternChecks:
 
         assert result is True
 
-    def test_is_regex_validation_issue_by_keyword(self, agent):
+    def test_is_regex_validation_issue_by_keyword(self, agent) -> None:
         """Test regex validation issue identification by keyword."""
         issue = Issue(
             id="sec-001",
@@ -358,7 +358,7 @@ class TestSecurityAgentPatternChecks:
 
         assert result is True
 
-    def test_is_not_regex_validation_issue(self, agent):
+    def test_is_not_regex_validation_issue(self, agent) -> None:
         """Test non-regex validation issue."""
         issue = Issue(
             id="sec-002",
@@ -371,49 +371,49 @@ class TestSecurityAgentPatternChecks:
 
         assert result is False
 
-    def test_check_bandit_patterns_b108(self, agent):
+    def test_check_bandit_patterns_b108(self, agent) -> None:
         """Test checking Bandit B108 pattern."""
         result = agent._check_bandit_patterns("Bandit B108: hardcoded temp")
 
         assert result == "hardcoded_temp_paths"
 
-    def test_check_bandit_patterns_b602(self, agent):
+    def test_check_bandit_patterns_b602(self, agent) -> None:
         """Test checking Bandit B602 pattern."""
         result = agent._check_bandit_patterns("Bandit B602: shell=True")
 
         assert result == "shell_injection"
 
-    def test_check_bandit_patterns_b301(self, agent):
+    def test_check_bandit_patterns_b301(self, agent) -> None:
         """Test checking Bandit B301 pattern."""
         result = agent._check_bandit_patterns("Bandit B301: pickle usage")
 
         assert result == "pickle_usage"
 
-    def test_check_bandit_patterns_b506(self, agent):
+    def test_check_bandit_patterns_b506(self, agent) -> None:
         """Test checking Bandit B506 pattern."""
         result = agent._check_bandit_patterns("Bandit B506: yaml.load")
 
         assert result == "unsafe_yaml"
 
-    def test_check_bandit_patterns_crypto(self, agent):
+    def test_check_bandit_patterns_crypto(self, agent) -> None:
         """Test checking weak crypto patterns."""
         result = agent._check_bandit_patterns("Using MD5 hash function")
 
         assert result == "weak_crypto"
 
-    def test_check_bandit_patterns_no_match(self, agent):
+    def test_check_bandit_patterns_no_match(self, agent) -> None:
         """Test checking with no matching pattern."""
         result = agent._check_bandit_patterns("Some other issue")
 
         assert result is None
 
-    def test_is_jwt_secret_issue(self, agent):
+    def test_is_jwt_secret_issue(self, agent) -> None:
         """Test identifying JWT secret issues."""
         result = agent._is_jwt_secret_issue("Hardcoded JWT secret key")
 
         assert result is True
 
-    def test_is_not_jwt_secret_issue(self, agent):
+    def test_is_not_jwt_secret_issue(self, agent) -> None:
         """Test non-JWT secret issues."""
         result = agent._is_jwt_secret_issue("Some other secret")
 
@@ -431,7 +431,7 @@ class TestSecurityAgentAnalyzeAndFix:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    async def test_analyze_and_fix_with_fixes_applied(self, agent):
+    async def test_analyze_and_fix_with_fixes_applied(self, agent) -> None:
         """Test successful security fix application."""
         issue = Issue(
             id="sec-001",
@@ -453,7 +453,7 @@ class TestSecurityAgentAnalyzeAndFix:
                     assert result.confidence == 0.95
                     assert len(result.fixes_applied) > 0
 
-    async def test_analyze_and_fix_no_fixes_applied(self, agent):
+    async def test_analyze_and_fix_no_fixes_applied(self, agent) -> None:
         """Test when no fixes can be applied."""
         issue = Issue(
             id="sec-002",
@@ -474,7 +474,7 @@ class TestSecurityAgentAnalyzeAndFix:
                     assert result.confidence == 0.4
                     assert len(result.recommendations) > 0
 
-    async def test_analyze_and_fix_error_handling(self, agent):
+    async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
         issue = Issue(
             id="sec-003",
@@ -502,7 +502,7 @@ class TestSecurityAgentFixMethods:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    async def test_apply_vulnerability_fixes_shell_injection(self, agent):
+    async def test_apply_vulnerability_fixes_shell_injection(self, agent) -> None:
         """Test applying shell injection fixes."""
         issue = Issue(
             id="sec-001",
@@ -514,14 +514,14 @@ class TestSecurityAgentFixMethods:
         with patch.object(agent, "_fix_shell_injection") as mock_fix:
             mock_fix.return_value = {"fixes": ["Removed shell=True"], "files": []}
 
-            fixes, files = await agent._apply_vulnerability_fixes(
-                "shell_injection", issue, [], []
+            fixes, _files = await agent._apply_vulnerability_fixes(
+                "shell_injection", issue, [], [],
             )
 
             mock_fix.assert_called_once_with(issue)
             assert "Removed shell=True" in fixes
 
-    async def test_apply_vulnerability_fixes_hardcoded_secrets(self, agent):
+    async def test_apply_vulnerability_fixes_hardcoded_secrets(self, agent) -> None:
         """Test applying hardcoded secrets fixes."""
         issue = Issue(
             id="sec-002",
@@ -533,14 +533,14 @@ class TestSecurityAgentFixMethods:
         with patch.object(agent, "_fix_hardcoded_secrets") as mock_fix:
             mock_fix.return_value = {"fixes": ["Moved secret to env var"], "files": []}
 
-            fixes, files = await agent._apply_vulnerability_fixes(
-                "hardcoded_secrets", issue, [], []
+            fixes, _files = await agent._apply_vulnerability_fixes(
+                "hardcoded_secrets", issue, [], [],
             )
 
             mock_fix.assert_called_once_with(issue)
             assert "Moved secret to env var" in fixes
 
-    async def test_apply_vulnerability_fixes_unknown_type(self, agent):
+    async def test_apply_vulnerability_fixes_unknown_type(self, agent) -> None:
         """Test applying fixes for unknown vulnerability type."""
         issue = Issue(
             id="sec-003",
@@ -550,13 +550,13 @@ class TestSecurityAgentFixMethods:
         )
 
         fixes, files = await agent._apply_vulnerability_fixes(
-            "unknown", issue, [], []
+            "unknown", issue, [], [],
         )
 
         assert fixes == []
         assert files == []
 
-    async def test_apply_additional_fixes_no_initial_fixes(self, agent):
+    async def test_apply_additional_fixes_no_initial_fixes(self, agent) -> None:
         """Test applying additional fixes when no initial fixes applied."""
         issue = Issue(
             id="sec-004",
@@ -570,12 +570,12 @@ class TestSecurityAgentFixMethods:
             with patch.object(agent, "_fix_file_security_issues") as mock_file:
                 mock_file.return_value = {"fixes": [], "files": []}
 
-                fixes, files = await agent._apply_additional_fixes(issue, [], [])
+                fixes, _files = await agent._apply_additional_fixes(issue, [], [])
 
                 mock_bandit.assert_called_once()
                 assert "Bandit suggestion" in fixes
 
-    async def test_apply_additional_fixes_with_file_path(self, agent, tmp_path):
+    async def test_apply_additional_fixes_with_file_path(self, agent, tmp_path) -> None:
         """Test applying additional fixes with file path."""
         test_file = tmp_path / "test.py"
         test_file.write_text("import os\npassword = 'secret'\n")
@@ -594,7 +594,7 @@ class TestSecurityAgentFixMethods:
                 mock_file.return_value = {"fixes": ["Fixed file"], "files": []}
 
                 fixes, files = await agent._apply_additional_fixes(
-                    issue, ["Previous fix"], []
+                    issue, ["Previous fix"], [],
                 )
 
                 mock_file.assert_called_once_with(str(test_file))
@@ -612,7 +612,7 @@ class TestSecurityAgentRecommendations:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    def test_get_security_recommendations(self, agent):
+    def test_get_security_recommendations(self, agent) -> None:
         """Test getting security recommendations."""
         recommendations = agent._get_security_recommendations()
 
@@ -622,7 +622,7 @@ class TestSecurityAgentRecommendations:
         assert any("shell=True" in rec for rec in recommendations)
         assert any("environment variables" in rec for rec in recommendations)
 
-    def test_create_error_fix_result(self, agent):
+    def test_create_error_fix_result(self, agent) -> None:
         """Test creating error fix result."""
         error = Exception("Test error message")
 
@@ -645,7 +645,7 @@ class TestSecurityAgentPatternUtilities:
         context = AgentContext(project_path=tmp_path)
         return SecurityAgent(context)
 
-    def test_check_enhanced_patterns_weak_crypto(self, agent):
+    def test_check_enhanced_patterns_weak_crypto(self, agent) -> None:
         """Test checking enhanced patterns for weak crypto."""
         with patch("crackerjack.agents.security_agent.SAFE_PATTERNS") as mock_patterns:
             mock_pattern = Mock()
@@ -656,7 +656,7 @@ class TestSecurityAgentPatternUtilities:
 
             assert result == "weak_crypto"
 
-    def test_check_enhanced_patterns_no_match(self, agent):
+    def test_check_enhanced_patterns_no_match(self, agent) -> None:
         """Test checking enhanced patterns with no match."""
         with patch("crackerjack.agents.security_agent.SAFE_PATTERNS") as mock_patterns:
             mock_pattern = Mock()
@@ -667,7 +667,7 @@ class TestSecurityAgentPatternUtilities:
 
             assert result is None
 
-    def test_check_legacy_patterns(self, agent):
+    def test_check_legacy_patterns(self, agent) -> None:
         """Test checking legacy patterns."""
         with patch("crackerjack.agents.security_agent.SAFE_PATTERNS") as mock_patterns:
             mock_pattern = Mock()
@@ -678,7 +678,7 @@ class TestSecurityAgentPatternUtilities:
 
             assert result == "hardcoded_temp_paths"
 
-    def test_check_legacy_patterns_no_match(self, agent):
+    def test_check_legacy_patterns_no_match(self, agent) -> None:
         """Test checking legacy patterns with no match."""
         with patch("crackerjack.agents.security_agent.SAFE_PATTERNS") as mock_patterns:
             mock_pattern = Mock()

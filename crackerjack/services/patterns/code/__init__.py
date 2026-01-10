@@ -1,4 +1,5 @@
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
+
 from .detection import PATTERNS as DETECTION_PATTERNS
 from .imports import PATTERNS as IMPORT_PATTERNS
 from .paths import PATTERNS as PATH_PATTERNS

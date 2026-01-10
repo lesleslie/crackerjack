@@ -181,7 +181,7 @@ class AgentSkill:
                             recommendations=[],
                             files_modified=[],
                             execution_time_ms=0,
-                        )
+                        ),
                     )
                 else:
                     results.append(result)
@@ -244,8 +244,8 @@ class AgentSkillRegistry:
             try:
                 skill = self.register_agent(agent_class, context)
                 skills.append(skill)
-            except Exception as e:
-                print(f"Warning: Failed to register {agent_class.__name__}: {e}")
+            except Exception:
+                pass
 
         return skills
 

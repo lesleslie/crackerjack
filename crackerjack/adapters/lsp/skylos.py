@@ -22,7 +22,7 @@ class DeadCodeIssue(Issue):
                 "issue_type": self.issue_type,
                 "name": self.name,
                 "confidence": self.confidence,
-            }
+            },
         )
         return base_dict
 
@@ -94,12 +94,11 @@ class SkylosAdapter(BaseRustToolAdapter):
         import tomllib
         from contextlib import suppress
 
-        with suppress(Exception):
-            with pyproject_path.open("rb") as f:
-                data = tomllib.load(f)
-                project_name = data.get("project", {}).get("name")
-                if project_name:
-                    return project_name.replace("-", "_")
+        with suppress(Exception), pyproject_path.open("rb") as f:
+            data = tomllib.load(f)
+            project_name = data.get("project", {}).get("name")
+            if project_name:
+                return project_name.replace("-", "_")
         return None
 
     def _find_package_directory_with_init(self, cwd: Path) -> str | None:
@@ -167,7 +166,8 @@ class SkylosAdapter(BaseRustToolAdapter):
         data = self._parse_json_output_safe(output)
         if data is None:
             return self._create_error_result(
-                "Invalid JSON output from Skylos", raw_output=output
+                "Invalid JSON output from Skylos",
+                raw_output=output,
             )
 
         try:
@@ -195,7 +195,8 @@ class SkylosAdapter(BaseRustToolAdapter):
 
         except (KeyError, TypeError, ValueError) as e:
             return self._create_error_result(
-                f"Failed to parse Skylos JSON output: {e}", raw_output=output
+                f"Failed to parse Skylos JSON output: {e}",
+                raw_output=output,
             )
 
     def _parse_text_output(self, output: str) -> ToolResult:

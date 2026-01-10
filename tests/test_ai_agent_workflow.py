@@ -270,7 +270,7 @@ class AIAgentWorkflowTester:
             import re
 
             match = re.search(
-                r"(\d +)\s + fixes?\s + applied", line.lower()
+                r"(\d +)\s + fixes?\s + applied", line.lower(),
             )  # REGEX OK: parsing test output format
             if match:
                 current_iteration["errors_fixed"] += int(match.group(1))

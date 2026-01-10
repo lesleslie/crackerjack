@@ -6,9 +6,8 @@ from pathlib import Path
 
 from rich.console import Console
 
-from ..options import Options
-
 if t.TYPE_CHECKING:
+    from crackerjack.cli.options import Options
     from crackerjack.models.config import ConfigUpdateInfo
     from crackerjack.services.config_template import (
         ConfigTemplateService,
@@ -60,9 +59,8 @@ def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
 
 
 def handle_interactive_mode(options: Options) -> None:
+    from crackerjack.cli.interactive import launch_interactive_cli
     from crackerjack.cli.version import get_package_version
-
-    from ..interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
     launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
@@ -88,7 +86,10 @@ def handle_config_updates(options: Options) -> None:
         _handle_check_updates(config_service, pkg_path, console)
     elif options.apply_config_updates:
         _handle_apply_updates(
-            config_service, pkg_path, options.config_interactive, console
+            config_service,
+            pkg_path,
+            options.config_interactive,
+            console,
         )
     elif options.diff_config:
         _handle_diff_config(config_service, pkg_path, options.diff_config, console)
@@ -97,7 +98,9 @@ def handle_config_updates(options: Options) -> None:
 
 
 def _handle_check_updates(
-    config_service: ConfigTemplateService, pkg_path: Path, console: Console
+    config_service: ConfigTemplateService,
+    pkg_path: Path,
+    console: Console,
 ) -> None:
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
@@ -134,7 +137,11 @@ def _handle_apply_updates(
         return
 
     success_count = _apply_config_updates_batch(
-        config_service, configs_to_update, pkg_path, interactive, console
+        config_service,
+        configs_to_update,
+        pkg_path,
+        interactive,
+        console,
     )
     _report_update_results(success_count, len(configs_to_update), console)
 
@@ -152,7 +159,9 @@ def _handle_diff_config(
 
 
 def _handle_refresh_cache(
-    config_service: ConfigTemplateService, pkg_path: Path, console: Console
+    config_service: ConfigTemplateService,
+    pkg_path: Path,
+    console: Console,
 ) -> None:
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
@@ -160,13 +169,14 @@ def _handle_refresh_cache(
 
 
 def _display_available_updates(
-    updates: dict[str, ConfigUpdateInfo], console: Console
+    updates: dict[str, ConfigUpdateInfo],
+    console: Console,
 ) -> None:
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
         if update_info.needs_update:
             console.print(
-                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}"
+                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}",
             )
 
 
@@ -193,13 +203,15 @@ def _apply_config_updates_batch(
 
 
 def _report_update_results(
-    success_count: int, total_count: int, console: Console
+    success_count: int,
+    total_count: int,
+    console: Console,
 ) -> None:
     if success_count == total_count:
         console.print(
-            f"[green]✅ Successfully updated {success_count} configurations[/green]"
+            f"[green]✅ Successfully updated {success_count} configurations[/green]",
         )
     else:
         console.print(
-            f"[yellow]⚠️ Updated {success_count}/{total_count} configurations[/yellow]"
+            f"[yellow]⚠️ Updated {success_count}/{total_count} configurations[/yellow]",
         )

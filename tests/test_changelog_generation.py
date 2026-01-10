@@ -8,7 +8,7 @@ from tests.base_test import BaseCrackerjackFeatureTest
 class TestChangelogGeneration(BaseCrackerjackFeatureTest):
     """Test automatic changelog generation functionality."""
 
-    def test_conventional_commit_parsing(self):
+    def test_conventional_commit_parsing(self) -> None:
         """Test parsing of various conventional commit formats."""
         # This would require importing the actual ConventionalCommitParser
         # parser = ConventionalCommitParser()
@@ -39,12 +39,11 @@ class TestChangelogGeneration(BaseCrackerjackFeatureTest):
         #     else:
         #         assert result.category == expected_category
         #         assert expected_description.lower() in result.description.lower()
-        pass
 
     @pytest.mark.asyncio
     async def test_changelog_entry_generation(
-        self, mock_git_service, test_project_structure
-    ):
+        self, mock_git_service, test_project_structure,
+    ) -> None:
         """Test generation of changelog entries from commit history."""
         # automator = ChangelogAutomator(mock_git_service)
         #
@@ -59,12 +58,11 @@ class TestChangelogGeneration(BaseCrackerjackFeatureTest):
         # assert "### Fixed" in entry
         # assert "race condition in user creation" in entry
         # assert "### Changed" in entry  # docs updates should be here
-        pass
 
     @pytest.mark.asyncio
     async def test_changelog_file_integration(
-        self, mock_git_service, test_project_structure
-    ):
+        self, mock_git_service, test_project_structure,
+    ) -> None:
         """Test integration with existing CHANGELOG.md file."""
         # automator = ChangelogAutomator(mock_git_service)
         #
@@ -81,9 +79,8 @@ class TestChangelogGeneration(BaseCrackerjackFeatureTest):
         # assert changelog_content.index("## [2.0.0]") < changelog_content.index(
         #     "## [1.2.3]"
         # )
-        pass
 
-    def test_empty_commit_handling(self):
+    def test_empty_commit_handling(self) -> None:
         """Test handling of commits with no relevant changes."""
         # automator = ChangelogAutomator(MagicMock())
         # automator.git_service.get_commits_since_last_release.return_value = [
@@ -106,9 +103,8 @@ class TestChangelogGeneration(BaseCrackerjackFeatureTest):
         # # Should generate minimal entry for version with no user-facing changes
         # assert "## [1.2.4] - 2024-01-10" in entry
         # assert "No user-facing changes" in entry or len(entry.split("\n")) <= 3
-        pass
 
-    def test_changelog_formatting_consistency(self):
+    def test_changelog_formatting_consistency(self) -> None:
         """Test that changelog formatting follows Keep a Changelog standard."""
         # formatter = ChangelogFormatter()
         #
@@ -133,14 +129,13 @@ class TestChangelogGeneration(BaseCrackerjackFeatureTest):
         # # Verify bullet points are formatted correctly
         # assert "- New user registration endpoint" in formatted
         # assert "- Memory leak in batch processing" in formatted
-        pass
 
 
 class TestChangelogPublishIntegration(BaseCrackerjackFeatureTest):
     """Test changelog integration with publish workflow."""
 
     @pytest.mark.asyncio
-    async def test_publish_manager_changelog_integration(self, test_project_structure):
+    async def test_publish_manager_changelog_integration(self, test_project_structure) -> None:
         """Test that publish manager integrates changelog generation."""
         # publish_manager = PublishManagerImpl(
         #     console=Console(), pkg_path=test_project_structure, dry_run=True
@@ -158,10 +153,9 @@ class TestChangelogPublishIntegration(BaseCrackerjackFeatureTest):
         #     # Verify changelog generation was called
         #     mock_changelog.generate_changelog_entry.assert_called_once_with("2.0.0")
         #     assert result  # Workflow should succeed
-        pass
 
     @pytest.mark.asyncio
-    async def test_changelog_failure_handling(self, test_project_structure):
+    async def test_changelog_failure_handling(self, test_project_structure) -> None:
         """Test handling of changelog generation failures during publish."""
         # publish_manager = PublishManagerImpl(
         #     console=Console(),
@@ -179,9 +173,8 @@ class TestChangelogPublishIntegration(BaseCrackerjackFeatureTest):
         #
         #     # Workflow should fail gracefully
         #     assert not result
-        pass
 
-    def test_dry_run_changelog_preview(self, test_project_structure):
+    def test_dry_run_changelog_preview(self, test_project_structure) -> None:
         """Test changelog preview in dry run mode."""
         # publish_manager = PublishManagerImpl(
         #     console=Console(), pkg_path=test_project_structure, dry_run=True
@@ -192,4 +185,3 @@ class TestChangelogPublishIntegration(BaseCrackerjackFeatureTest):
         #
         #     # Should show dry run preview
         #     mock_print.assert_any_call(match=re.compile(r"Would generate changelog"))
-        pass

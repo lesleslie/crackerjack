@@ -1,9 +1,15 @@
 """Tests for crackerjack.agents.performance_helpers."""
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
-from crackerjack.agents.performance_helpers import OptimizationResult, EnhancedNestedLoopAnalyzer, EnhancedListOpAnalyzer
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
+from crackerjack.agents.performance_helpers import (
+    EnhancedListOpAnalyzer,
+    EnhancedNestedLoopAnalyzer,
+    OptimizationResult,
+)
 
 
 class TestPerformancehelpers:
@@ -18,7 +24,7 @@ class TestPerformancehelpers:
     - Performance validation (where applicable)
     """
 
-    def test_module_imports_successfully(self):
+    def test_module_imports_successfully(self) -> None:
         """Test that the module can be imported without errors."""
         import crackerjack.agents.performance_helpers
         assert crackerjack.agents.performance_helpers is not None
@@ -31,12 +37,12 @@ class TestPerformancehelpers:
         except Exception:
             pytest.skip("Analyzer requires specific configuration")
 
-    def test_enhancednestedloopanalyzer_instantiation(self, enhancednestedloopanalyzer_instance):
+    def test_enhancednestedloopanalyzer_instantiation(self, enhancednestedloopanalyzer_instance) -> None:
         """Test successful instantiation of EnhancedNestedLoopAnalyzer."""
         assert enhancednestedloopanalyzer_instance is not None
         assert isinstance(enhancednestedloopanalyzer_instance, EnhancedNestedLoopAnalyzer)
 
-        assert hasattr(enhancednestedloopanalyzer_instance, '__class__')
+        assert hasattr(enhancednestedloopanalyzer_instance, "__class__")
         assert enhancednestedloopanalyzer_instance.__class__.__name__ == "EnhancedNestedLoopAnalyzer"
 
     @pytest.fixture
@@ -47,19 +53,18 @@ class TestPerformancehelpers:
         except Exception:
             pytest.skip("Analyzer requires specific configuration")
 
-    def test_enhancedlistopanalyzer_instantiation(self, enhancedlistopanalyzer_instance):
+    def test_enhancedlistopanalyzer_instantiation(self, enhancedlistopanalyzer_instance) -> None:
         """Test successful instantiation of EnhancedListOpAnalyzer."""
         assert enhancedlistopanalyzer_instance is not None
         assert isinstance(enhancedlistopanalyzer_instance, EnhancedListOpAnalyzer)
 
-        assert hasattr(enhancedlistopanalyzer_instance, '__class__')
+        assert hasattr(enhancedlistopanalyzer_instance, "__class__")
         assert enhancedlistopanalyzer_instance.__class__.__name__ == "EnhancedListOpAnalyzer"
 
-    def test_enhancedlistopanalyzer_properties(self, enhancedlistopanalyzer_instance):
+    def test_enhancedlistopanalyzer_properties(self, enhancedlistopanalyzer_instance) -> None:
         """Test EnhancedListOpAnalyzer properties and attributes."""
-
-        assert hasattr(enhancedlistopanalyzer_instance, '__dict__') or \
-         hasattr(enhancedlistopanalyzer_instance, '__slots__')
+        assert hasattr(enhancedlistopanalyzer_instance, "__dict__") or \
+         hasattr(enhancedlistopanalyzer_instance, "__slots__")
 
         str_repr = str(enhancedlistopanalyzer_instance)
         assert len(str_repr) > 0

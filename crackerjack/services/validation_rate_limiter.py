@@ -12,7 +12,7 @@ class ValidationRateLimit:
         max_failures: int = 10,
         window_seconds: int = 60,
         block_duration: int = 300,
-    ):
+    ) -> None:
         self.max_failures = max_failures
         self.window_seconds = window_seconds
         self.block_duration = block_duration
@@ -28,7 +28,8 @@ class ValidationRateLimiter:
         self._limits = {
             "default": ValidationRateLimit(),
             "command_injection": ValidationRateLimit(
-                max_failures=3, block_duration=600
+                max_failures=3,
+                block_duration=600,
             ),
             "path_traversal": ValidationRateLimit(max_failures=3, block_duration=600),
             "sql_injection": ValidationRateLimit(max_failures=2, block_duration=900),
@@ -43,8 +44,7 @@ class ValidationRateLimiter:
             if client_id in self._blocked_until:
                 if time.time() < self._blocked_until[client_id]:
                     return True
-                else:
-                    del self._blocked_until[client_id]
+                del self._blocked_until[client_id]
             return False
 
     def record_failure(
@@ -96,8 +96,7 @@ class ValidationRateLimiter:
     def get_block_time_remaining(self, client_id: str) -> int:
         with self._lock:
             if client_id in self._blocked_until:
-                remaining = max(0, int(self._blocked_until[client_id] - time.time()))
-                return remaining
+                return max(0, int(self._blocked_until[client_id] - time.time()))
             return 0
 
     def get_client_stats(self, client_id: str) -> dict[str, t.Any]:
@@ -188,7 +187,7 @@ class ValidationRateLimiter:
                         "client_id": client_id,
                         "blocked_until": block_until,
                         "time_remaining": remaining,
-                    }
+                    },
                 )
 
             for client_id, window in self._failure_windows.items():
@@ -204,7 +203,7 @@ class ValidationRateLimiter:
                                 "client_id": client_id,
                                 "recent_failures": recent_failures,
                                 "total_failures": len(window),
-                            }
+                            },
                         )
 
             return stats

@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 from crackerjack.services.quality.anomaly_detector import (
-    AnomalyDetector,
     AnomalyDetection,
+    AnomalyDetector,
     BaselineModel,
     MetricPoint,
 )
@@ -24,7 +24,7 @@ except ImportError:
 class TestAnomalyDetector:
     """Test cases for the AnomalyDetector class."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test that AnomalyDetector initializes with default parameters."""
         detector = AnomalyDetector()
 
@@ -39,7 +39,7 @@ class TestAnomalyDetector:
         assert isinstance(detector.anomalies, list)
         assert len(detector.anomalies) == 0
 
-    def test_init_custom_parameters(self):
+    def test_init_custom_parameters(self) -> None:
         """Test that AnomalyDetector initializes with custom parameters."""
         detector = AnomalyDetector(baseline_window=50, sensitivity=3.0, min_samples=5)
 
@@ -48,7 +48,7 @@ class TestAnomalyDetector:
         assert detector.sensitivity == 3.0
         assert detector.min_samples == 5
 
-    def test_add_metric_creates_history(self):
+    def test_add_metric_creates_history(self) -> None:
         """Test that adding a metric creates history entries."""
         detector = AnomalyDetector(min_samples=3)
 
@@ -66,7 +66,7 @@ class TestAnomalyDetector:
         assert all(isinstance(point, MetricPoint) for point in points)
         assert [point.value for point in points] == [10.0, 15.0, 20.0]
 
-    def test_add_metric_with_timestamp(self):
+    def test_add_metric_with_timestamp(self) -> None:
         """Test that adding a metric with custom timestamp works."""
         detector = AnomalyDetector(min_samples=2)
         custom_timestamp = datetime(2023, 1, 1, 12, 0, 0)
@@ -79,7 +79,7 @@ class TestAnomalyDetector:
         assert len(points) == 1
         assert points[0].timestamp == custom_timestamp
 
-    def test_add_metric_with_metadata(self):
+    def test_add_metric_with_metadata(self) -> None:
         """Test that adding a metric with metadata works."""
         detector = AnomalyDetector(min_samples=2)
         metadata = {"source": "test", "version": "1.0"}
@@ -92,7 +92,7 @@ class TestAnomalyDetector:
         assert len(points) == 1
         assert points[0].metadata == metadata
 
-    def test_update_baseline_creates_model(self):
+    def test_update_baseline_creates_model(self) -> None:
         """Test that baseline is updated when enough samples are available."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -108,7 +108,7 @@ class TestAnomalyDetector:
         assert baseline.metric_type == "test_metric"
         assert baseline.sample_count == len(values)
 
-    def test_detect_normal_values_no_anomalies(self):
+    def test_detect_normal_values_no_anomalies(self) -> None:
         """Test that normal values within bounds don't create anomalies."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -119,7 +119,7 @@ class TestAnomalyDetector:
         # Verify no anomalies were detected
         assert len(detector.anomalies) == 0
 
-    def test_detect_anomaly_creates_detection(self):
+    def test_detect_anomaly_creates_detection(self) -> None:
         """Test that anomalous values create anomaly detections."""
         detector = AnomalyDetector(min_samples=10, sensitivity=2.0)
 
@@ -138,7 +138,7 @@ class TestAnomalyDetector:
         assert anomaly.value == 50.0
         assert anomaly.severity in ["low", "medium", "high", "critical"]
 
-    def test_get_anomalies_returns_filtered_results(self):
+    def test_get_anomalies_returns_filtered_results(self) -> None:
         """Test that get_anomalies filters results correctly."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -168,7 +168,7 @@ class TestAnomalyDetector:
         if recent_anomalies:
             assert all(a.timestamp >= timestamps[2] for a in recent_anomalies)
 
-    def test_get_baseline_summary_returns_summary(self):
+    def test_get_baseline_summary_returns_summary(self) -> None:
         """Test that get_baseline_summary returns proper summary."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -191,7 +191,7 @@ class TestAnomalyDetector:
         assert "range" in metric1_summary
         assert "sample_count" in metric1_summary
 
-    def test_export_model_creates_file(self):
+    def test_export_model_creates_file(self) -> None:
         """Test that export_model creates a valid JSON file."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -209,7 +209,7 @@ class TestAnomalyDetector:
 
             # Verify file contains valid JSON
             import json
-            with open(output_path, "r", encoding="utf-8") as f:
+            with open(output_path, encoding="utf-8") as f:
                 model_data = json.load(f)
 
             # Verify model data structure
@@ -227,9 +227,9 @@ class TestAnomalyDetector:
 
     @pytest.mark.skipif(
         not SCIPY_AVAILABLE,
-        reason="Test requires scipy which is not available"
+        reason="Test requires scipy which is not available",
     )
-    def test_detect_seasonal_patterns_identifies_patterns(self):
+    def test_detect_seasonal_patterns_identifies_patterns(self) -> None:
         """Test that seasonal patterns are detected correctly."""
         detector = AnomalyDetector(min_samples=5)
 
@@ -242,7 +242,7 @@ class TestAnomalyDetector:
             point = MetricPoint(
                 timestamp=timestamp,
                 value=value,
-                metric_type="hourly_metric"
+                metric_type="hourly_metric",
             )
             detector.metric_history["hourly_metric"].append(point)
 
@@ -255,19 +255,19 @@ class TestAnomalyDetector:
         # Should have some hourly patterns
         assert len(baseline.seasonal_patterns) > 0
 
-    def test_calculate_severity_handles_edge_cases(self):
+    def test_calculate_severity_handles_edge_cases(self) -> None:
         """Test severity calculation handles edge cases."""
         detector = AnomalyDetector(min_samples=3)
 
         # Add metrics to create baseline
-        for i in range(10):
+        for _i in range(10):
             detector.add_metric("test_metric", 10.0)
 
         # Test with zero standard deviation (constant values)
         point = MetricPoint(
             timestamp=datetime.now(),
             value=50.0,  # Large deviation from constant baseline
-            metric_type="test_metric"
+            metric_type="test_metric",
         )
 
         # This should not crash and should return a severity
@@ -277,7 +277,7 @@ class TestAnomalyDetector:
         assert isinstance(severity, str)
         assert severity in ["low", "medium", "high", "critical"]
 
-    def test_threshold_breach_detection_works(self):
+    def test_threshold_breach_detection_works(self) -> None:
         """Test that threshold breach detection works correctly."""
         detector = AnomalyDetector()
 
@@ -305,7 +305,7 @@ class TestAnomalyDetector:
         result = detector._threshold_breached_in_direction(5.0, 10.0, "both")
         assert result is False
 
-    def test_anomaly_description_generation(self):
+    def test_anomaly_description_generation(self) -> None:
         """Test that anomaly descriptions are generated correctly."""
         detector = AnomalyDetector()
 
@@ -313,7 +313,7 @@ class TestAnomalyDetector:
         point = MetricPoint(
             timestamp=datetime.now(),
             value=50.0,
-            metric_type="test_metric"
+            metric_type="test_metric",
         )
         baseline = BaselineModel(
             metric_type="test_metric",
@@ -322,12 +322,12 @@ class TestAnomalyDetector:
             min_value=10.0,
             max_value=40.0,
             sample_count=100,
-            last_updated=datetime.now()
+            last_updated=datetime.now(),
         )
 
         # Test description generation
         description = detector._generate_anomaly_description(
-            point, baseline, 15.0, 35.0, "high"
+            point, baseline, 15.0, 35.0, "high",
         )
 
         # Verify description contains key information
@@ -336,7 +336,7 @@ class TestAnomalyDetector:
         assert "50.0" in description
         assert "above" in description or "below" in description
 
-    def test_get_anomalies_sorts_by_timestamp(self):
+    def test_get_anomalies_sorts_by_timestamp(self) -> None:
         """Test that get_anomalies returns results sorted by timestamp."""
         detector = AnomalyDetector()
 
@@ -351,7 +351,7 @@ class TestAnomalyDetector:
                 expected_range=(5.0, 15.0),
                 severity="medium",
                 confidence=0.8,
-                description=f"Test anomaly {i}"
+                description=f"Test anomaly {i}",
             )
             detector.anomalies.append(anomaly)
 
@@ -363,7 +363,7 @@ class TestAnomalyDetector:
         for i in range(len(anomalies) - 1):
             assert anomalies[i].timestamp >= anomalies[i + 1].timestamp
 
-    def test_get_anomalies_respects_limit(self):
+    def test_get_anomalies_respects_limit(self) -> None:
         """Test that get_anomalies respects the limit parameter."""
         detector = AnomalyDetector()
 
@@ -376,7 +376,7 @@ class TestAnomalyDetector:
                 expected_range=(5.0, 15.0),
                 severity="medium",
                 confidence=0.8,
-                description=f"Test anomaly {i}"
+                description=f"Test anomaly {i}",
             )
             detector.anomalies.append(anomaly)
 

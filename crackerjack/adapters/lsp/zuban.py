@@ -26,7 +26,7 @@ class TypeIssue(Issue):
             {
                 "column": self.column,
                 "error_code": self.error_code,
-            }
+            },
         )
         return base_dict
 
@@ -56,6 +56,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             result = subprocess.run(
                 ["uv", "run", "zuban", "--version"],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -66,6 +67,7 @@ class ZubanAdapter(BaseRustToolAdapter):
 
             result = subprocess.run(
                 ["uv", "run", "zuban", "--help"],
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=10,
@@ -117,7 +119,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                             message=diag.get("message", "Type error"),
                             severity=diag.get("severity", "error"),
                             error_code=diag.get("code"),
-                        )
+                        ),
                     )
 
             return issues
@@ -127,7 +129,8 @@ class ZubanAdapter(BaseRustToolAdapter):
             return []
 
     async def get_lsp_diagnostics_optimized(
-        self, target_files: list[Path]
+        self,
+        target_files: list[Path],
     ) -> list[TypeIssue]:
         if not self.use_lsp:
             return []
@@ -140,21 +143,24 @@ class ZubanAdapter(BaseRustToolAdapter):
                 if not await self._initialize_lsp_workspace(lsp, target_files):
                     return []
 
-                issues = await self._process_files_with_lsp(lsp, target_files)
-                return issues
+                return await self._process_files_with_lsp(lsp, target_files)
 
         except Exception:
             return await self.get_lsp_diagnostics(target_files)
 
     async def _initialize_lsp_workspace(
-        self, lsp: t.Any, target_files: list[Path]
+        self,
+        lsp: t.Any,
+        target_files: list[Path],
     ) -> bool:
         root_path = target_files[0].parent if target_files else Path.cwd()
         init_result = await lsp.initialize(root_path)
         return init_result and not init_result.get("error")
 
     async def _process_files_with_lsp(
-        self, lsp: t.Any, target_files: list[Path]
+        self,
+        lsp: t.Any,
+        target_files: list[Path],
     ) -> list[TypeIssue]:
         issues: list[TypeIssue] = []
         for file_path in target_files:
@@ -164,7 +170,9 @@ class ZubanAdapter(BaseRustToolAdapter):
         return issues
 
     async def _get_file_diagnostics_from_lsp(
-        self, lsp: t.Any, file_path: Path
+        self,
+        lsp: t.Any,
+        file_path: Path,
     ) -> list[TypeIssue]:
         await lsp.text_document_did_open(file_path)
         await asyncio.sleep(0.1)
@@ -180,7 +188,9 @@ class ZubanAdapter(BaseRustToolAdapter):
         return issues
 
     def _create_type_issue_from_diagnostic(
-        self, diag: dict[str, t.Any], file_path: Path
+        self,
+        diag: dict[str, t.Any],
+        file_path: Path,
     ) -> TypeIssue:
         return TypeIssue(
             file_path=Path(diag.get("uri", str(file_path)).replace("file://", "")),
@@ -193,7 +203,8 @@ class ZubanAdapter(BaseRustToolAdapter):
 
     def _map_lsp_severity(self, lsp_severity: int) -> str:
         return {1: "error", 2: "warning", 3: "info", 4: "info"}.get(
-            lsp_severity, "error"
+            lsp_severity,
+            "error",
         )
 
     def get_command_args(self, target_files: list[Path]) -> list[str]:
@@ -221,7 +232,7 @@ class ZubanAdapter(BaseRustToolAdapter):
             return self._create_error_result(
                 "Zuban is not functional due to TOML parsing bug. "
                 "Consider using pyright as alternative. "
-                "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details."
+                "See ZUBAN_TOML_PARSING_BUG_ANALYSIS.md for details.",
             )
 
         if self.use_lsp:
@@ -252,6 +263,7 @@ class ZubanAdapter(BaseRustToolAdapter):
             cmd_args = self.get_command_args(target_files)
             result = subprocess.run(
                 cmd_args,
+                check=False,
                 capture_output=True,
                 text=True,
                 timeout=60,
@@ -280,7 +292,8 @@ class ZubanAdapter(BaseRustToolAdapter):
         data = self._parse_json_output_safe(output)
         if data is None:
             return self._create_error_result(
-                "Invalid JSON output from Zuban", raw_output=output
+                "Invalid JSON output from Zuban",
+                raw_output=output,
             )
 
         try:
@@ -298,7 +311,7 @@ class ZubanAdapter(BaseRustToolAdapter):
                         message=item["message"],
                         severity=severity,
                         error_code=item.get("code"),
-                    )
+                    ),
                 )
 
             error_issues = [i for i in issues if i.severity == "error"]
@@ -313,7 +326,8 @@ class ZubanAdapter(BaseRustToolAdapter):
 
         except (KeyError, TypeError, ValueError) as e:
             return self._create_error_result(
-                f"Failed to parse Zuban JSON output: {e}", raw_output=output
+                f"Failed to parse Zuban JSON output: {e}",
+                raw_output=output,
             )
 
     def _parse_text_output(self, output: str) -> ToolResult:
@@ -441,6 +455,6 @@ class ZubanAdapter(BaseRustToolAdapter):
     def _normalize_severity(self, severity: str) -> str:
         if severity in ("note", "info"):
             return "info"
-        elif severity not in ("error", "warning"):
+        if severity not in ("error", "warning"):
             return "error"
         return severity

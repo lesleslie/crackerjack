@@ -35,7 +35,10 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
         self.loop_stack.pop()
 
     def _create_loop_info(
-        self, node: ast.For | ast.While, loop_type: str, current_depth: int
+        self,
+        node: ast.For | ast.While,
+        loop_type: str,
+        current_depth: int,
     ) -> dict[str, t.Any]:
         loop_info: dict[str, t.Any] = {
             "line_number": node.lineno,
@@ -53,7 +56,9 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
         return loop_info
 
     def _check_complexity_hotspot(
-        self, loop_info: dict[str, t.Any], current_depth: int
+        self,
+        loop_info: dict[str, t.Any],
+        current_depth: int,
     ) -> None:
         if current_depth >= 3:
             self.complexity_hotspots.append(
@@ -61,7 +66,7 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
                 | {
                     "severity": "high",
                     "suggestion": "Critical: Consider algorithmic improvements (memoization, caching, different data structures)",
-                }
+                },
             )
 
     def _calculate_complexity_factor(self, depth: int) -> int:
@@ -70,9 +75,9 @@ class EnhancedNestedLoopAnalyzer(ast.NodeVisitor):
     def _get_optimization_priority(self, depth: int) -> str:
         if depth >= 4:
             return "critical"
-        elif depth == 3:
+        if depth == 3:
             return "high"
-        elif depth == 2:
+        if depth == 2:
             return "medium"
         return "low"
 
@@ -151,7 +156,7 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
                 "performance_gain": f"{impact_factor * 2}x"
                 if list_size > 1
                 else "2-3x",
-            }
+            },
         )
 
     def _handle_variable_concat(self, node: ast.AugAssign, impact_factor: int) -> None:
@@ -165,7 +170,7 @@ class EnhancedListOpAnalyzer(ast.NodeVisitor):
                 "impact_factor": impact_factor,
                 "optimization": "extend",
                 "performance_gain": f"{impact_factor * 3}x",
-            }
+            },
         )
 
     def _calculate_performance_impact(self) -> int:

@@ -426,11 +426,13 @@ class InteractiveCLI:
             self._add_setup_phase,
             self._add_config_phase,
             partial(
-                self._add_cleaning_phase, enabled=getattr(options, "strip_code", False)
+                self._add_cleaning_phase,
+                enabled=getattr(options, "strip_code", False),
             ),
             self._add_fast_hooks_phase,
             partial(
-                self._add_testing_phase, enabled=getattr(options, "run_tests", False)
+                self._add_testing_phase,
+                enabled=getattr(options, "run_tests", False),
             ),
             self._add_comprehensive_hooks_phase,
             partial(
@@ -690,7 +692,7 @@ class InteractiveCLI:
                 table.add_row(f"[{style}]{status.title()}[/{style}]", str(count))
 
         self.console.print(
-            Panel(table, title="Workflow Summary", border_style="magenta")
+            Panel(table, title="Workflow Summary", border_style="magenta"),
         )
 
 

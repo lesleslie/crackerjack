@@ -18,7 +18,7 @@ from crackerjack.services.tool_filter import (
 class TestFilterConfig:
     """Test FilterConfig dataclass."""
 
-    def test_filter_config_defaults(self):
+    def test_filter_config_defaults(self) -> None:
         """Test FilterConfig initializes with defaults."""
         config = FilterConfig()
 
@@ -27,19 +27,19 @@ class TestFilterConfig:
         assert config.file_patterns == []
         assert config.exclude_patterns == []
 
-    def test_filter_config_tool_name(self):
+    def test_filter_config_tool_name(self) -> None:
         """Test FilterConfig with tool_name."""
         config = FilterConfig(tool_name="ruff-check")
 
         assert config.tool_name == "ruff-check"
 
-    def test_filter_config_changed_only(self):
+    def test_filter_config_changed_only(self) -> None:
         """Test FilterConfig with changed_only."""
         config = FilterConfig(changed_only=True)
 
         assert config.changed_only is True
 
-    def test_filter_config_patterns(self):
+    def test_filter_config_patterns(self) -> None:
         """Test FilterConfig with file patterns."""
         config = FilterConfig(
             file_patterns=["*.py", "*.pyi"],
@@ -53,7 +53,7 @@ class TestFilterConfig:
 class TestFilterResult:
     """Test FilterResult dataclass and properties."""
 
-    def test_filter_result_initialization(self):
+    def test_filter_result_initialization(self) -> None:
         """Test FilterResult can be initialized."""
         result = FilterResult(
             total_tools=5,
@@ -71,7 +71,7 @@ class TestFilterResult:
         assert result.total_files == 100
         assert result.filter_effectiveness == 98.0
 
-    def test_tools_filtered_out_property(self):
+    def test_tools_filtered_out_property(self) -> None:
         """Test tools_filtered_out property."""
         result = FilterResult(
             total_tools=5,
@@ -85,7 +85,7 @@ class TestFilterResult:
 
         assert result.tools_filtered_out == 4
 
-    def test_files_filtered_out_property(self):
+    def test_files_filtered_out_property(self) -> None:
         """Test files_filtered_out property."""
         result = FilterResult(
             total_tools=1,
@@ -103,7 +103,7 @@ class TestFilterResult:
 class TestToolFilter:
     """Test ToolFilter class."""
 
-    def test_filter_tools_no_filter(self):
+    def test_filter_tools_no_filter(self) -> None:
         """Test filter_tools with no filtering."""
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
@@ -116,7 +116,7 @@ class TestToolFilter:
         assert result.skipped_tools == []
         assert result.filter_effectiveness == 0.0
 
-    def test_filter_tools_specific_tool(self):
+    def test_filter_tools_specific_tool(self) -> None:
         """Test filter_tools with specific tool."""
         config = FilterConfig(tool_name="bandit")
         filter_obj = ToolFilter(config=config)
@@ -128,7 +128,7 @@ class TestToolFilter:
         assert result.skipped_tools == ["ruff-check", "zuban"]
         assert result.filter_effectiveness == pytest.approx(66.67, abs=0.01)
 
-    def test_filter_tools_nonexistent_tool(self):
+    def test_filter_tools_nonexistent_tool(self) -> None:
         """Test filter_tools with nonexistent tool."""
         config = FilterConfig(tool_name="nonexistent")
         filter_obj = ToolFilter(config=config)
@@ -140,7 +140,7 @@ class TestToolFilter:
         assert result.skipped_tools == available_tools
         assert result.filter_effectiveness == 100.0
 
-    def test_filter_files_no_filter(self, tmp_path: Path):
+    def test_filter_files_no_filter(self, tmp_path: Path) -> None:
         """Test filter_files with no filtering."""
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
@@ -152,7 +152,7 @@ class TestToolFilter:
         assert result.skipped_files == []
         assert result.filter_effectiveness == 0.0
 
-    def test_filter_files_changed_only(self, tmp_path: Path):
+    def test_filter_files_changed_only(self, tmp_path: Path) -> None:
         """Test filter_files with changed_only flag."""
         # Create test files
         file1 = tmp_path / "file1.py"
@@ -181,7 +181,7 @@ class TestToolFilter:
         assert file2 not in result.filtered_files
         assert result.filter_effectiveness == pytest.approx(66.67, abs=0.01)
 
-    def test_filter_files_include_patterns(self, tmp_path: Path):
+    def test_filter_files_include_patterns(self, tmp_path: Path) -> None:
         """Test filter_files with include patterns."""
         files = [
             tmp_path / "file1.py",
@@ -199,7 +199,7 @@ class TestToolFilter:
         assert tmp_path / "file3.py" in result.filtered_files
         assert tmp_path / "file2.txt" not in result.filtered_files
 
-    def test_filter_files_exclude_patterns(self, tmp_path: Path):
+    def test_filter_files_exclude_patterns(self, tmp_path: Path) -> None:
         """Test filter_files with exclude patterns."""
         files = [
             tmp_path / "file1.py",
@@ -217,28 +217,28 @@ class TestToolFilter:
         assert tmp_path / "file3.py" in result.filtered_files
         assert tmp_path / "test_file2.py" not in result.filtered_files
 
-    def test_should_run_tool_no_filter(self):
+    def test_should_run_tool_no_filter(self) -> None:
         """Test should_run_tool with no filter."""
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
 
         assert filter_obj.should_run_tool("any-tool") is True
 
-    def test_should_run_tool_with_filter_match(self):
+    def test_should_run_tool_with_filter_match(self) -> None:
         """Test should_run_tool with matching tool."""
         config = FilterConfig(tool_name="ruff-check")
         filter_obj = ToolFilter(config=config)
 
         assert filter_obj.should_run_tool("ruff-check") is True
 
-    def test_should_run_tool_with_filter_no_match(self):
+    def test_should_run_tool_with_filter_no_match(self) -> None:
         """Test should_run_tool with non-matching tool."""
         config = FilterConfig(tool_name="ruff-check")
         filter_obj = ToolFilter(config=config)
 
         assert filter_obj.should_run_tool("bandit") is False
 
-    def test_get_filtered_files(self, tmp_path: Path):
+    def test_get_filtered_files(self, tmp_path: Path) -> None:
         """Test get_filtered_files returns filtered list."""
         files = [
             tmp_path / "file1.py",
@@ -254,7 +254,7 @@ class TestToolFilter:
         assert len(filtered) == 2
         assert all(f.suffix == ".py" for f in filtered)
 
-    def test_estimate_time_savings_no_filter(self):
+    def test_estimate_time_savings_no_filter(self) -> None:
         """Test estimate_time_savings with no filtering."""
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
@@ -272,7 +272,7 @@ class TestToolFilter:
         assert savings["time_saved"] == 0.0
         assert savings["percent_saved"] == 0.0
 
-    def test_estimate_time_savings_with_tool_filter(self):
+    def test_estimate_time_savings_with_tool_filter(self) -> None:
         """Test estimate_time_savings with tool filter."""
         config = FilterConfig(tool_name="ruff-check")
         filter_obj = ToolFilter(config=config)
@@ -290,7 +290,7 @@ class TestToolFilter:
         assert savings["time_saved"] == 8.0
         assert savings["percent_saved"] == 80.0
 
-    def test_generate_filter_summary_tools_only(self):
+    def test_generate_filter_summary_tools_only(self) -> None:
         """Test generate_filter_summary with tool filtering."""
         config = FilterConfig(tool_name="ruff-check")
         filter_obj = ToolFilter(config=config)
@@ -313,7 +313,7 @@ class TestToolFilter:
         assert "Tools to Run: 1" in summary
         assert "ruff-check" in summary
 
-    def test_generate_filter_summary_files_only(self, tmp_path: Path):
+    def test_generate_filter_summary_files_only(self, tmp_path: Path) -> None:
         """Test generate_filter_summary with file filtering."""
         config = FilterConfig()
         filter_obj = ToolFilter(config=config)
@@ -339,7 +339,7 @@ class TestToolFilter:
 class TestConvenienceFunctions:
     """Test convenience factory functions."""
 
-    def test_create_tool_only_filter(self):
+    def test_create_tool_only_filter(self) -> None:
         """Test create_tool_only_filter creates correct filter."""
         filter_obj = create_tool_only_filter("ruff-check")
 
@@ -348,7 +348,7 @@ class TestConvenienceFunctions:
         assert filter_obj.should_run_tool("ruff-check") is True
         assert filter_obj.should_run_tool("bandit") is False
 
-    def test_create_changed_files_filter(self, tmp_path: Path):
+    def test_create_changed_files_filter(self, tmp_path: Path) -> None:
         """Test create_changed_files_filter creates correct filter."""
         executor = IncrementalExecutor(cache_dir=tmp_path / "cache")
         filter_obj = create_changed_files_filter(executor)
@@ -357,7 +357,7 @@ class TestConvenienceFunctions:
         assert filter_obj.config.changed_only is True
         assert filter_obj.executor is executor
 
-    def test_create_combined_filter(self, tmp_path: Path):
+    def test_create_combined_filter(self, tmp_path: Path) -> None:
         """Test create_combined_filter creates correct filter."""
         executor = IncrementalExecutor(cache_dir=tmp_path / "cache")
         filter_obj = create_combined_filter("ruff-check", executor)
@@ -370,7 +370,7 @@ class TestConvenienceFunctions:
 class TestFilterIntegration:
     """Integration tests for realistic filtering scenarios."""
 
-    def test_full_workflow_tool_and_files(self, tmp_path: Path):
+    def test_full_workflow_tool_and_files(self, tmp_path: Path) -> None:
         """Test complete workflow: filter tools and files."""
         # Create test files with unique content
         py_files = [tmp_path / f"file{i}.py" for i in range(5)]
@@ -407,7 +407,7 @@ class TestFilterIntegration:
         assert py_files[3] in file_result.filtered_files
         assert py_files[4] in file_result.filtered_files
 
-    def test_time_savings_calculation(self):
+    def test_time_savings_calculation(self) -> None:
         """Test realistic time savings calculation."""
         config = FilterConfig(tool_name="ruff-check")
         filter_obj = ToolFilter(config=config)

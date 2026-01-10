@@ -50,9 +50,9 @@ class TestProgress:
     def overall_status_color(self) -> str:
         if self.failed > 0 or self.errors > 0:
             return "red"
-        elif self.completed > 0 and self.completed == self.total_tests:
+        if self.completed > 0 and self.completed == self.total_tests:
             return "green"
-        elif self.passed > 0:
+        if self.passed > 0:
             return "yellow"
         return "cyan"
 
@@ -106,14 +106,13 @@ class TestProgress:
 
         if eta < 60:
             return f"ETA: {int(eta)}s"
-        elif eta < 3600:
+        if eta < 3600:
             minutes = int(eta // 60)
             seconds = int(eta % 60)
             return f"ETA: {minutes}m {seconds}s"
-        else:
-            hours = int(eta // 3600)
-            minutes = int((eta % 3600) // 60)
-            return f"ETA: {hours}h {minutes}m"
+        hours = int(eta // 3600)
+        minutes = int((eta % 3600) // 60)
+        return f"ETA: {hours}h {minutes}m"
 
     def _format_test_rate(self) -> str:
         rate = self.tests_per_second
@@ -143,7 +142,7 @@ class TestProgress:
         if self.completed > 0:
             progress_pct = (self.completed / self.total_tests) * 100
             status_parts.append(
-                f"[dim]{self.completed}/{self.total_tests} ({progress_pct:.0f}%)[/dim]"
+                f"[dim]{self.completed}/{self.total_tests} ({progress_pct:.0f}%)[/dim]",
             )
 
         if self.passed > 0:

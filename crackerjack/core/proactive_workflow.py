@@ -3,9 +3,9 @@ import time
 import typing as t
 from pathlib import Path
 
-from ..agents.base import AgentContext, Issue, IssueType, Priority
-from ..agents.coordinator import AgentCoordinator
-from ..models.protocols import OptionsProtocol
+from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+from crackerjack.agents.coordinator import AgentCoordinator
+from crackerjack.models.protocols import OptionsProtocol
 
 
 class ProactiveWorkflowPipeline:
@@ -15,7 +15,8 @@ class ProactiveWorkflowPipeline:
         self._architect_agent_coordinator: AgentCoordinator | None = None
 
     async def run_complete_workflow_with_planning(
-        self, options: OptionsProtocol
+        self,
+        options: OptionsProtocol,
     ) -> bool:
         self.logger.info("Starting proactive workflow with architectural planning")
 
@@ -30,11 +31,12 @@ class ProactiveWorkflowPipeline:
                 architectural_plan = await self._create_comprehensive_plan(assessment)
 
                 result = await self._execute_planned_workflow(
-                    options, architectural_plan
+                    options,
+                    architectural_plan,
                 )
             else:
                 self.logger.info(
-                    "Codebase is architecturally sound, using standard workflow"
+                    "Codebase is architecturally sound, using standard workflow",
                 )
 
                 result = await self._execute_standard_workflow(options)
@@ -89,7 +91,7 @@ class ProactiveWorkflowPipeline:
                     file_path=str(self.project_path),
                     details=["Similar patterns may exist across modules"],
                 ),
-            )
+            ),
         )
 
         return potential_issues
@@ -105,12 +107,14 @@ class ProactiveWorkflowPipeline:
         return len(complex_issues) >= 2
 
     async def _create_comprehensive_plan(
-        self, assessment: "ArchitecturalAssessment"
+        self,
+        assessment: "ArchitecturalAssessment",
     ) -> dict[str, t.Any]:
         self.logger.info("Creating comprehensive architectural plan")
 
         if self._architect_agent_coordinator is None:
-            raise RuntimeError("ArchitectAgentCoordinator is not initialized")
+            msg = "ArchitectAgentCoordinator is not initialized"
+            raise RuntimeError(msg)
 
         architect = self._architect_agent_coordinator._get_architect_agent()
 
@@ -154,12 +158,14 @@ class ProactiveWorkflowPipeline:
             }
 
         self.logger.info(
-            f"Created plan with strategy: {comprehensive_plan.get('strategy')}"
+            f"Created plan with strategy: {comprehensive_plan.get('strategy')}",
         )
         return comprehensive_plan
 
     async def _execute_planned_workflow(
-        self, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         strategy = plan.get("strategy", "basic_reactive")
         phases = plan.get("phases", ["standard_workflow"])
@@ -174,45 +180,54 @@ class ProactiveWorkflowPipeline:
             ):
                 self.logger.error(f"Critical phase {phase} failed")
                 return False
-            elif not success:
+            if not success:
                 self.logger.warning(f"Phase {phase} had issues but continuing")
 
         return True
 
     async def _execute_workflow_phase(
-        self, phase: str, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        phase: str,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         self.logger.info(f"Executing phase: {phase}")
 
         if phase == "configuration_setup":
             return await self._setup_with_architecture(options, plan)
-        elif phase == "fast_hooks_with_architecture":
+        if phase == "fast_hooks_with_architecture":
             return await self._run_fast_hooks_with_planning(options, plan)
-        elif phase == "architectural_refactoring":
+        if phase == "architectural_refactoring":
             return await self._perform_architectural_refactoring(options, plan)
-        elif phase == "comprehensive_validation":
+        if phase == "comprehensive_validation":
             return await self._comprehensive_validation(options, plan)
-        elif phase == "pattern_learning":
+        if phase == "pattern_learning":
             return await self._learn_and_cache_patterns(plan)
 
         return await self._execute_standard_workflow(options)
 
     async def _setup_with_architecture(
-        self, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         self.logger.info("Setting up project with architectural planning")
 
         return True
 
     async def _run_fast_hooks_with_planning(
-        self, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         self.logger.info("Running fast hooks with architectural planning")
 
         return True
 
     async def _perform_architectural_refactoring(
-        self, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         self.logger.info("Performing architectural refactoring")
 
@@ -226,7 +241,9 @@ class ProactiveWorkflowPipeline:
         return True
 
     async def _comprehensive_validation(
-        self, options: OptionsProtocol, plan: dict[str, t.Any]
+        self,
+        options: OptionsProtocol,
+        plan: dict[str, t.Any],
     ) -> bool:
         self.logger.info("Performing comprehensive validation")
         validation_steps = plan.get("validation", [])

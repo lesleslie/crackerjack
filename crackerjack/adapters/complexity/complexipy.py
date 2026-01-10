@@ -90,7 +90,8 @@ class ComplexipyAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -209,12 +210,14 @@ class ComplexipyAdapter(BaseToolAdapter):
         for file_data in data.get("files", []):
             file_path = Path(file_data.get("path", ""))
             issues.extend(
-                self._process_file_data(file_path, file_data.get("functions", []))
+                self._process_file_data(file_path, file_data.get("functions", [])),
             )
         return issues
 
     def _process_file_data(
-        self, file_path: Path, functions: list[dict]
+        self,
+        file_path: Path,
+        functions: list[dict],
     ) -> list[ToolIssue]:
         issues = []
         for func in functions:
@@ -336,7 +339,8 @@ class ComplexipyAdapter(BaseToolAdapter):
 
         config_data = self._load_config_from_pyproject()
         exclude_patterns = config_data.get(
-            "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
+            "exclude_patterns",
+            ["**/.venv/**", "**/venv/**", "**/tests/**"],
         )
         max_complexity = config_data.get("max_complexity", 15)
 
@@ -400,7 +404,8 @@ class ComplexipyAdapter(BaseToolAdapter):
     def _load_exclude_patterns_from_config(self) -> list[str]:
         config = self._load_config_from_pyproject()
         return config.get(
-            "exclude_patterns", ["**/.venv/**", "**/venv/**", "**/tests/**"]
+            "exclude_patterns",
+            ["**/.venv/**", "**/venv/**", "**/tests/**"],
         )
 
     def _move_complexipy_results_to_output_dir(self) -> Path | None:
@@ -431,7 +436,9 @@ class ComplexipyAdapter(BaseToolAdapter):
             )
 
             AdapterOutputPaths.cleanup_old_outputs(
-                "complexipy", "complexipy_results_*.json", keep_latest=5
+                "complexipy",
+                "complexipy_results_*.json",
+                keep_latest=5,
             )
 
             return dest_file

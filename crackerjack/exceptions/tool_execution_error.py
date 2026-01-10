@@ -14,7 +14,7 @@ class ToolExecutionError(Exception):
         command: list[str] | None = None,
         cwd: Path | None = None,
         duration: float | None = None,
-    ):
+    ) -> None:
         self.tool = tool
         self.exit_code = exit_code
         self.stdout = stdout.strip()
@@ -36,12 +36,12 @@ class ToolExecutionError(Exception):
             (
                 f"[bold red]Tool:[/bold red] {self.tool}",
                 f"[bold red]Exit Code:[/bold red] {self.exit_code}",
-            )
+            ),
         )
 
         if self.duration is not None:
             content_parts.append(
-                f"[bold yellow]Duration:[/bold yellow] {self.duration:.2f}s"
+                f"[bold yellow]Duration:[/bold yellow] {self.duration:.2f}s",
             )
 
         if self.cwd:

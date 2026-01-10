@@ -8,7 +8,7 @@ from tests.base_test import BaseCrackerjackFeatureTest
 class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
     """Test AI-optimized documentation system."""
 
-    def test_dual_output_generation(self):
+    def test_dual_output_generation(self) -> None:
         """Test generation of both AI and human-readable formats."""
         # doc_generator = DualOutputGenerator()
         #
@@ -34,9 +34,8 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         # # Should be narrative for human consumption
         # assert "Run quality checks" in human_format
         # assert len(human_format.split("\n")) > 3  # Multi-line narrative
-        pass
 
-    def test_agent_capabilities_json_generation(self):
+    def test_agent_capabilities_json_generation(self) -> None:
         """Test generation of structured agent capabilities."""
         # capabilities_generator = AgentCapabilitiesGenerator()
         #
@@ -81,9 +80,8 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         #     "complexity"
         #     in capabilities_data["agents"]["RefactoringAgent"]["specializations"]
         # )
-        pass
 
-    def test_error_patterns_yaml_generation(self):
+    def test_error_patterns_yaml_generation(self) -> None:
         """Test generation of error patterns YAML."""
         # error_patterns_generator = ErrorPatternsGenerator()
         #
@@ -122,9 +120,8 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         # assert "import_errors" in yaml_data
         # assert len(yaml_data["import_errors"]["patterns"]) == 2
         # assert yaml_data["import_errors"]["confidence"] == 0.95
-        pass
 
-    def test_mkdocs_integration(self):
+    def test_mkdocs_integration(self) -> None:
         """Test MkDocs Material integration."""
         # mkdocs_integration = MkDocsIntegration()
         #
@@ -146,10 +143,9 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         #
         # assert "Home" in nav_structure[0]
         # assert "Quick Start" in str(nav_structure)
-        pass
 
     @pytest.mark.asyncio
-    async def test_documentation_validation_system(self):
+    async def test_documentation_validation_system(self) -> None:
         """Test documentation consistency validation."""
         # validator = DocumentationValidator()
         #
@@ -176,9 +172,8 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         #
         # assert len(conflict_result.conflicts) > 0
         # assert "quality threshold" in conflict_result.conflicts[0].description.lower()
-        pass
 
-    def test_automated_reference_generation(self):
+    def test_automated_reference_generation(self) -> None:
         """Test automated API reference generation."""
         # ref_generator = ReferenceGenerator()
         #
@@ -205,9 +200,8 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         # assert "## GitService" in reference_md
         # assert "git_service.commit('message')" in reference_md
         # assert "## AgentCoordinator" in reference_md
-        pass
 
-    def test_documentation_deployment(self):
+    def test_documentation_deployment(self) -> None:
         """Test documentation deployment functionality."""
         # deployer = DocumentationDeployer()
         #
@@ -226,4 +220,3 @@ class TestAIOptimizedDocumentation(BaseCrackerjackFeatureTest):
         #
         # assert dev_config["dev_addr"] == "127.0.0.1:8000"
         # assert dev_config["use_directory_urls"] is True
-        pass

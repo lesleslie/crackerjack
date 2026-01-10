@@ -1,11 +1,13 @@
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
+
 from crackerjack.documentation.reference_generator import (
-    CommandReference,
     CommandInfo,
+    CommandReference,
     ParameterInfo,
-    ReferenceGenerator,
     ReferenceFormat,
+    ReferenceGenerator,
 )
 from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
 
@@ -39,7 +41,7 @@ class TestReferenceGenerator:
                         default_value="default",
                         description="A test parameter",
                         required=False,
-                    )
+                    ),
                 ],
             ),
             "other-command": CommandInfo(
@@ -61,7 +63,7 @@ class TestReferenceGenerator:
             workflows=workflows,
         )
 
-    def test_get_commands_by_category_returns_correct_commands(self, command_reference):
+    def test_get_commands_by_category_returns_correct_commands(self, command_reference) -> None:
         """Test that get_commands_by_category returns commands for a specific category."""
         result = command_reference.get_commands_by_category("test")
 
@@ -69,13 +71,13 @@ class TestReferenceGenerator:
         assert result[0].name == "test-command"
         assert result[0].category == "test"
 
-    def test_get_commands_by_category_returns_empty_list_for_unknown_category(self, command_reference):
+    def test_get_commands_by_category_returns_empty_list_for_unknown_category(self, command_reference) -> None:
         """Test that get_commands_by_category returns empty list for unknown category."""
         result = command_reference.get_commands_by_category("unknown")
 
         assert result == []
 
-    def test_get_command_by_name_returns_command_by_name(self, command_reference):
+    def test_get_command_by_name_returns_command_by_name(self, command_reference) -> None:
         """Test that get_command_by_name returns command by its name."""
         result = command_reference.get_command_by_name("test-command")
 
@@ -83,7 +85,7 @@ class TestReferenceGenerator:
         assert result.name == "test-command"
         assert result.description == "A test command"
 
-    def test_get_command_by_name_returns_command_by_alias(self, command_reference):
+    def test_get_command_by_name_returns_command_by_alias(self, command_reference) -> None:
         """Test that get_command_by_name returns command by its alias."""
         # Add an alias to test command
         command_reference.commands["test-command"].aliases = ["alias1", "alias2"]
@@ -93,14 +95,14 @@ class TestReferenceGenerator:
         assert result is not None
         assert result.name == "test-command"
 
-    def test_get_command_by_name_returns_none_for_unknown_command(self, command_reference):
+    def test_get_command_by_name_returns_none_for_unknown_command(self, command_reference) -> None:
         """Test that get_command_by_name returns None for unknown command."""
         result = command_reference.get_command_by_name("unknown_command")
 
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_generate_reference_creates_reference(self, mock_config_manager, mock_logger):
+    async def test_generate_reference_creates_reference(self, mock_config_manager, mock_logger) -> None:
         """Test that generate_reference creates a command reference."""
         generator = ReferenceGenerator(mock_config_manager, mock_logger)
 
@@ -120,7 +122,7 @@ class TestReferenceGenerator:
         assert isinstance(result, CommandReference)
 
     @pytest.mark.asyncio
-    async def test_render_reference_formats_correctly(self, mock_config_manager, mock_logger, command_reference):
+    async def test_render_reference_formats_correctly(self, mock_config_manager, mock_logger, command_reference) -> None:
         """Test that render_reference outputs in the correct format."""
         generator = ReferenceGenerator(mock_config_manager, mock_logger)
 
@@ -139,7 +141,7 @@ class TestReferenceGenerator:
 class TestCommandInfo:
     """Unit tests for CommandInfo dataclass."""
 
-    def test_command_info_initialization(self):
+    def test_command_info_initialization(self) -> None:
         """Test CommandInfo can be initialized with parameters."""
         param = ParameterInfo(
             name="test-param",

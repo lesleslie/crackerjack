@@ -352,7 +352,7 @@ class AIAgentDebugger:
         )
 
         self.console.print(
-            Panel(table, title="AI Agent Debug Summary", border_style=border_style)
+            Panel(table, title="AI Agent Debug Summary", border_style=border_style),
         )
 
         if self.iteration_stats:
@@ -400,7 +400,7 @@ class AIAgentDebugger:
             )
 
         self.console.print(
-            Panel(table, title="Iteration Breakdown", border_style=border_style)
+            Panel(table, title="Iteration Breakdown", border_style=border_style),
         )
 
     def _print_agent_activity_breakdown(self, border_style: str = "red") -> None:
@@ -441,7 +441,7 @@ class AIAgentDebugger:
             table.add_row(agent, str(stats["activities"]), confidence_text)
 
         self.console.print(
-            Panel(table, title="Agent Activity Breakdown", border_style=border_style)
+            Panel(table, title="Agent Activity Breakdown", border_style=border_style),
         )
 
     def _print_total_statistics(self, border_style: str = "red") -> None:
@@ -482,7 +482,7 @@ class AIAgentDebugger:
         )
 
         self.console.print(
-            Panel(table, title="Total Workflow Statistics", border_style=border_style)
+            Panel(table, title="Total Workflow Statistics", border_style=border_style),
         )
 
     def _print_mcp_operation_breakdown(self, border_style: str = "red") -> None:
@@ -519,7 +519,7 @@ class AIAgentDebugger:
             )
 
         self.console.print(
-            Panel(table, title="MCP Tool Usage", border_style=border_style)
+            Panel(table, title="MCP Tool Usage", border_style=border_style),
         )
 
     def log_iteration_start(self, iteration_number: int) -> None:

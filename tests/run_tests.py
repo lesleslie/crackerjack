@@ -13,7 +13,6 @@ def run_tests():
     test_dir = project_root / "tests" / "test_new_features"
 
     if not test_dir.exists():
-        print(f"Test directory not found: {test_dir}")
         return 1
 
     # Run pytest on the new test directory
@@ -25,7 +24,6 @@ def run_tests():
         )
         return result.returncode
     except Exception as e:
-        print(f"Error running tests: {e}")
         return 1
 
 

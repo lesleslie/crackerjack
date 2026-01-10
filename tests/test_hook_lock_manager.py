@@ -27,7 +27,7 @@ from crackerjack.executors.hook_lock_manager import HookLockManager
 class TestHookLockManagerBasics:
     """Test basic HookLockManager functionality and protocol compliance."""
 
-    def test_singleton_behavior(self):
+    def test_singleton_behavior(self) -> None:
         """Test that HookLockManager follows singleton pattern."""
         manager1 = HookLockManager()
         manager2 = HookLockManager()
@@ -35,7 +35,7 @@ class TestHookLockManagerBasics:
         assert manager1 is manager2
         assert id(manager1) == id(manager2)
 
-    def test_initial_configuration(self):
+    def test_initial_configuration(self) -> None:
         """Test initial configuration and default values."""
         manager = HookLockManager()
 
@@ -49,7 +49,7 @@ class TestHookLockManagerBasics:
         # Default timeout should be set
         assert manager.get_hook_timeout("complexipy") == 300.0
 
-    def test_hook_lock_list_management(self):
+    def test_hook_lock_list_management(self) -> None:
         """Test adding and removing hooks from lock list."""
         manager = HookLockManager()
 
@@ -64,7 +64,7 @@ class TestHookLockManagerBasics:
         manager.remove_hook_from_lock_list(test_hook)
         assert not manager.requires_lock(test_hook)
 
-    def test_global_lock_enable_disable(self):
+    def test_global_lock_enable_disable(self) -> None:
         """Test enabling and disabling global lock functionality."""
         manager = HookLockManager()
 
@@ -79,7 +79,7 @@ class TestHookLockManagerBasics:
         manager.enable_global_lock(True)
         assert manager.is_global_lock_enabled()
 
-    def test_hook_timeout_management(self):
+    def test_hook_timeout_management(self) -> None:
         """Test custom timeout setting for hooks."""
         manager = HookLockManager()
 
@@ -93,7 +93,7 @@ class TestHookLockManagerBasics:
         assert manager.get_hook_timeout(hook_name) == custom_timeout
         assert manager.get_hook_timeout(hook_name) != default_timeout
 
-    def test_lock_stats_structure(self):
+    def test_lock_stats_structure(self) -> None:
         """Test lock statistics structure and content."""
         manager = HookLockManager()
 
@@ -122,7 +122,7 @@ class TestHookLockManagerBasics:
             for field in required_fields:
                 assert field in hook_stats
 
-    def test_global_lock_path_generation(self, tmp_path):
+    def test_global_lock_path_generation(self, tmp_path) -> None:
         """Test global lock path generation."""
         manager = HookLockManager()
 
@@ -141,7 +141,7 @@ class TestHookLockManagerAsyncLocking:
     """Test async locking functionality."""
 
     @pytest.mark.asyncio
-    async def test_hook_not_requiring_lock_immediate_return(self):
+    async def test_hook_not_requiring_lock_immediate_return(self) -> None:
         """Test that hooks not requiring locks return immediately."""
         manager = HookLockManager()
 
@@ -157,7 +157,7 @@ class TestHookLockManagerAsyncLocking:
         assert execution_time < 0.1
 
     @pytest.mark.asyncio
-    async def test_hook_specific_lock_acquisition(self):
+    async def test_hook_specific_lock_acquisition(self) -> None:
         """Test hook-specific lock acquisition when global locks are disabled."""
         manager = HookLockManager()
         manager.enable_global_lock(False)  # Disable global locks
@@ -174,7 +174,7 @@ class TestHookLockManagerAsyncLocking:
         assert not manager.is_hook_currently_locked(hook_name)
 
     @pytest.mark.asyncio
-    async def test_concurrent_hook_lock_prevention(self):
+    async def test_concurrent_hook_lock_prevention(self) -> None:
         """Test that concurrent hook locks are prevented."""
         manager = HookLockManager()
         manager.enable_global_lock(False)  # Use only hook-specific locks for simplicity
@@ -188,7 +188,7 @@ class TestHookLockManagerAsyncLocking:
 
         results = []
 
-        async def acquire_lock(identifier):
+        async def acquire_lock(identifier) -> None:
             try:
                 async with manager.acquire_hook_lock(hook_name):
                     results.append(f"{identifier}_acquired")
@@ -211,7 +211,7 @@ class TestHookLockManagerAsyncLocking:
         assert timeout_count == 1
 
     @pytest.mark.asyncio
-    async def test_lock_timeout_handling(self):
+    async def test_lock_timeout_handling(self) -> None:
         """Test lock acquisition timeout handling."""
         manager = HookLockManager()
         manager.enable_global_lock(False)
@@ -221,7 +221,7 @@ class TestHookLockManagerAsyncLocking:
         manager.set_hook_timeout(hook_name, 0.05)  # Very short timeout
 
         # Acquire lock and hold it
-        async def hold_lock():
+        async def hold_lock() -> None:
             async with manager.acquire_hook_lock(hook_name):
                 await asyncio.sleep(0.2)  # Hold briefly
 
@@ -249,7 +249,7 @@ class TestGlobalLockFileOperations:
     """Test global lock file operations and atomic behavior."""
 
     @pytest.mark.asyncio
-    async def test_global_lock_file_creation(self, tmp_path):
+    async def test_global_lock_file_creation(self, tmp_path) -> None:
         """Test atomic global lock file creation with proper JSON format."""
         manager = HookLockManager()
 
@@ -293,7 +293,7 @@ class TestGlobalLockFileOperations:
         assert not lock_path.exists()
 
     @pytest.mark.asyncio
-    async def test_lock_file_permissions(self, tmp_path):
+    async def test_lock_file_permissions(self, tmp_path) -> None:
         """Test that lock files have proper permissions (0o600)."""
         manager = HookLockManager()
 
@@ -313,7 +313,7 @@ class TestGlobalLockFileOperations:
             assert permissions == 0o600  # Owner read/write only
 
     @pytest.mark.asyncio
-    async def test_cross_session_coordination_simulation(self, tmp_path):
+    async def test_cross_session_coordination_simulation(self, tmp_path) -> None:
         """Test cross-session coordination by simulating different sessions."""
         # Create two managers with different session IDs (simulating different processes)
 
@@ -353,7 +353,7 @@ class TestGlobalLockFileOperations:
             assert not lock_path.exists()
 
     @pytest.mark.asyncio
-    async def test_corrupted_lock_file_handling(self, tmp_path):
+    async def test_corrupted_lock_file_handling(self, tmp_path) -> None:
         """Test handling of corrupted lock files."""
         manager = HookLockManager()
 
@@ -385,7 +385,7 @@ class TestHeartbeatMechanism:
     """Test heartbeat mechanism for lock maintenance."""
 
     @pytest.mark.asyncio
-    async def test_heartbeat_updates_lock_file(self, tmp_path):
+    async def test_heartbeat_updates_lock_file(self, tmp_path) -> None:
         """Test that heartbeat mechanism updates lock file timestamps."""
         manager = HookLockManager()
 
@@ -424,12 +424,12 @@ class TestHeartbeatMechanism:
             assert updated_data["session_id"] == initial_data["session_id"]
 
     @pytest.mark.asyncio
-    async def test_heartbeat_task_cleanup_on_release(self, tmp_path):
+    async def test_heartbeat_task_cleanup_on_release(self, tmp_path) -> None:
         """Test that heartbeat tasks are properly cleaned up on lock release."""
         manager = HookLockManager()
 
         test_config = GlobalLockConfig(
-            lock_directory=tmp_path / "locks", session_heartbeat_interval=0.1
+            lock_directory=tmp_path / "locks", session_heartbeat_interval=0.1,
         )
         manager._global_config = test_config
         manager.enable_global_lock(True)
@@ -458,7 +458,7 @@ class TestHeartbeatMechanism:
 class TestStaleLockCleanup:
     """Test stale lock detection and cleanup functionality."""
 
-    def test_cleanup_stale_locks_by_age(self, tmp_path):
+    def test_cleanup_stale_locks_by_age(self, tmp_path) -> None:
         """Test cleanup of stale locks based on file age."""
         manager = HookLockManager()
 
@@ -503,7 +503,7 @@ class TestStaleLockCleanup:
         assert not old_lock_path.exists()
         assert recent_lock_path.exists()
 
-    def test_cleanup_corrupted_lock_files(self, tmp_path):
+    def test_cleanup_corrupted_lock_files(self, tmp_path) -> None:
         """Test cleanup of corrupted/invalid lock files."""
         manager = HookLockManager()
 
@@ -529,7 +529,7 @@ class TestStaleLockCleanup:
         for filename in corrupted_files:
             assert not (locks_dir / filename).exists()
 
-    def test_no_cleanup_if_directory_missing(self, tmp_path):
+    def test_no_cleanup_if_directory_missing(self, tmp_path) -> None:
         """Test cleanup behavior when lock directory doesn't exist."""
         manager = HookLockManager()
 
@@ -543,7 +543,7 @@ class TestStaleLockCleanup:
         assert cleaned_count == 0
 
     @pytest.mark.asyncio
-    async def test_stale_lock_cleanup_during_acquisition(self, tmp_path):
+    async def test_stale_lock_cleanup_during_acquisition(self, tmp_path) -> None:
         """Test that stale lock cleanup happens before acquisition attempt."""
         manager = HookLockManager()
 
@@ -587,7 +587,7 @@ class TestStatisticsTracking:
     """Test comprehensive statistics tracking for global locks."""
 
     @pytest.mark.asyncio
-    async def test_global_lock_stats_tracking(self, tmp_path):
+    async def test_global_lock_stats_tracking(self, tmp_path) -> None:
         """Test that global lock statistics are properly tracked."""
         manager = HookLockManager()
 
@@ -621,7 +621,7 @@ class TestStatisticsTracking:
         assert hook_stats["success_rate"] == 1.0
 
     @pytest.mark.asyncio
-    async def test_global_lock_failure_stats(self, tmp_path):
+    async def test_global_lock_failure_stats(self, tmp_path) -> None:
         """Test tracking of global lock failures."""
         manager = HookLockManager()
 
@@ -665,7 +665,7 @@ class TestStatisticsTracking:
         assert hook_stats["failures"] > 0
         assert hook_stats["success_rate"] < 1.0
 
-    def test_comprehensive_status_includes_global_stats(self, tmp_path):
+    def test_comprehensive_status_includes_global_stats(self, tmp_path) -> None:
         """Test that comprehensive status includes global lock information."""
         manager = HookLockManager()
 
@@ -700,7 +700,7 @@ class TestStatisticsTracking:
         for field in expected_config_fields:
             assert field in config
 
-    def test_stats_reset_functionality(self):
+    def test_stats_reset_functionality(self) -> None:
         """Test resetting statistics for specific or all hooks."""
         manager = HookLockManager()
 
@@ -733,7 +733,7 @@ class TestStatisticsTracking:
 class TestConfigurationIntegration:
     """Test configuration integration and CLI options flow."""
 
-    def test_configure_from_options(self, tmp_path):
+    def test_configure_from_options(self, tmp_path) -> None:
         """Test configuring lock manager from CLI options.
 
         Tests that configure_from_options properly updates the manager's
@@ -755,7 +755,7 @@ class TestConfigurationIntegration:
         settings = GlobalLockSettings(
             enabled=True,
             timeout_seconds=120.0,
-            lock_directory=custom_lock_dir
+            lock_directory=custom_lock_dir,
         )
         config = GlobalLockConfig(settings=settings)
         manager._global_config = config
@@ -768,7 +768,7 @@ class TestConfigurationIntegration:
             str(manager._global_config.lock_directory) == str(custom_lock_dir)
         )
 
-    def test_configure_with_disabled_global_locks(self):
+    def test_configure_with_disabled_global_locks(self) -> None:
         """Test configuration with global locks disabled.
 
         Tests that the manager properly handles configuration with
@@ -794,7 +794,7 @@ class TestErrorHandling:
     """Test error handling and edge cases."""
 
     @pytest.mark.asyncio
-    async def test_file_permission_error_handling(self, tmp_path):
+    async def test_file_permission_error_handling(self, tmp_path) -> None:
         """Test handling of file permission errors during lock operations."""
         manager = HookLockManager()
 
@@ -831,7 +831,7 @@ class TestErrorHandling:
                 restricted_dir.chmod(0o755)
 
     @pytest.mark.asyncio
-    async def test_disk_full_simulation(self, tmp_path, monkeypatch):
+    async def test_disk_full_simulation(self, tmp_path, monkeypatch) -> None:
         """Test behavior when disk is full during lock file creation."""
         manager = HookLockManager()
 
@@ -850,7 +850,8 @@ class TestErrorHandling:
             # mode is passed as positional argument (args[0]) not kwargs
             mode = args[0] if args else kwargs.get("mode", "")
             if mode == "x" and "disk_full_test" in str(self):
-                raise OSError("No space left on device")
+                msg = "No space left on device"
+                raise OSError(msg)
             return original_open(self, *args, **kwargs)
 
         monkeypatch.setattr("pathlib.Path.open", mock_path_open)
@@ -861,7 +862,7 @@ class TestErrorHandling:
                 pass
 
     @pytest.mark.asyncio
-    async def test_heartbeat_failure_handling(self, tmp_path):
+    async def test_heartbeat_failure_handling(self, tmp_path) -> None:
         """Test handling of heartbeat failures."""
         manager = HookLockManager()
 
@@ -890,7 +891,7 @@ class TestErrorHandling:
 class TestProtocolCompliance:
     """Test compliance with HookLockManagerProtocol."""
 
-    def test_protocol_method_signatures(self):
+    def test_protocol_method_signatures(self) -> None:
         """Test that all protocol methods exist with correct signatures."""
         from crackerjack.models.protocols import HookLockManagerProtocol
 
@@ -917,7 +918,7 @@ class TestProtocolCompliance:
         assert callable(manager.acquire_hook_lock)
         assert callable(manager.get_lock_stats)
 
-    def test_protocol_return_types(self):
+    def test_protocol_return_types(self) -> None:
         """Test that protocol methods return expected types."""
         manager = HookLockManager()
 

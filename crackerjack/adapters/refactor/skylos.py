@@ -39,7 +39,8 @@ class SkylosAdapter(BaseToolAdapter):
     def __init__(self, settings: SkylosSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "SkylosAdapter initialized", extra={"has_settings": settings is not None}
+            "SkylosAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -78,7 +79,8 @@ class SkylosAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = ["uv", "run", "skylos"]
 
@@ -89,6 +91,7 @@ class SkylosAdapter(BaseToolAdapter):
 
         if files:
             cmd.extend([str(f) for f in files])
+            target = " ".join(str(f) for f in files)
         else:
             target = self._determine_scan_target(files)
             cmd.append(target)
@@ -134,12 +137,11 @@ class SkylosAdapter(BaseToolAdapter):
         if not pyproject_path.exists():
             return None
 
-        with suppress(Exception):
-            with pyproject_path.open("rb") as f:
-                data = tomllib.load(f)
-                project_name = data.get("project", {}).get("name")
-                if project_name:
-                    return project_name.replace("-", "_")
+        with suppress(Exception), pyproject_path.open("rb") as f:
+            data = tomllib.load(f)
+            project_name = data.get("project", {}).get("name")
+            if project_name:
+                return project_name.replace("-", "_")
 
         return None
 

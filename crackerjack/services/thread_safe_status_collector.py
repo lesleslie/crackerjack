@@ -6,8 +6,10 @@ import typing as t
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 
-from ..mcp.context import MCPServerContext
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
+
+if t.TYPE_CHECKING:
+    from crackerjack.mcp.context import MCPServerContext
 
 
 @dataclass
@@ -58,17 +60,17 @@ class ThreadSafeStatusCollector:
 
                 if include_services:
                     collection_tasks.append(
-                        self._collect_services_data(client_id, snapshot)
+                        self._collect_services_data(client_id, snapshot),
                     )
 
                 if include_jobs:
                     collection_tasks.append(
-                        self._collect_jobs_data(client_id, snapshot)
+                        self._collect_jobs_data(client_id, snapshot),
                     )
 
                 if include_stats:
                     collection_tasks.append(
-                        self._collect_server_stats(client_id, snapshot)
+                        self._collect_server_stats(client_id, snapshot),
                     )
 
                 await asyncio.wait_for(
@@ -105,7 +107,8 @@ class ThreadSafeStatusCollector:
                     client_id=client_id,
                     operation="collect_status",
                 )
-                raise TimeoutError(f"Status collection timed out after {self.timeout}s")
+                msg = f"Status collection timed out after {self.timeout}s"
+                raise TimeoutError(msg)
 
             except Exception as e:
                 self.security_logger.log_security_event(
@@ -117,14 +120,12 @@ class ThreadSafeStatusCollector:
                     additional_data={"error": str(e)},
                 )
 
-                snapshot = StatusSnapshot(
+                return StatusSnapshot(
                     timestamp=start_time,
                     collection_duration=time.time() - start_time,
                     errors=[str(e)],
                     is_complete=False,
                 )
-
-                return snapshot
 
     @asynccontextmanager
     async def _collection_context(self, client_id: str) -> t.AsyncGenerator[None]:
@@ -143,7 +144,8 @@ class ThreadSafeStatusCollector:
                 await asyncio.sleep(0.1)
 
             if not collection_acquired:
-                raise RuntimeError("Unable to acquire collection lock - system busy")
+                msg = "Unable to acquire collection lock - system busy"
+                raise RuntimeError(msg)
 
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.COLLECTION_START,
@@ -225,13 +227,13 @@ class ThreadSafeStatusCollector:
 
             jobs_data = {
                 "active_count": len(
-                    [j for j in active_jobs if j["status"] == "running"]
+                    [j for j in active_jobs if j["status"] == "running"],
                 ),
                 "completed_count": len(
-                    [j for j in active_jobs if j["status"] == "completed"]
+                    [j for j in active_jobs if j["status"] == "completed"],
                 ),
                 "failed_count": len(
-                    [j for j in active_jobs if j["status"] == "failed"]
+                    [j for j in active_jobs if j["status"] == "failed"],
                 ),
                 "details": active_jobs,
             }
@@ -265,7 +267,7 @@ class ThreadSafeStatusCollector:
                 return
 
             stats_task = asyncio.create_task(
-                asyncio.to_thread(self._build_server_stats_safe, context)
+                asyncio.to_thread(self._build_server_stats_safe, context),
             )
 
             server_stats = await asyncio.wait_for(stats_task, timeout=5.0)
@@ -301,10 +303,12 @@ class ThreadSafeStatusCollector:
                             "iteration": progress_data.get("iteration", 0),
                             "max_iterations": progress_data.get("max_iterations", 10),
                             "current_stage": progress_data.get(
-                                "current_stage", "unknown"
+                                "current_stage",
+                                "unknown",
                             ),
                             "overall_progress": progress_data.get(
-                                "overall_progress", 0
+                                "overall_progress",
+                                0,
                             ),
                             "stage_progress": progress_data.get("stage_progress", 0),
                             "message": progress_data.get("message", ""),
@@ -347,7 +351,7 @@ class ThreadSafeStatusCollector:
                 },
                 "resource_usage": {
                     "temp_files_count": len(
-                        list[t.Any](context.progress_dir.glob("*.json"))
+                        list[t.Any](context.progress_dir.glob("*.json")),
                     )
                     if context.progress_dir.exists()
                     else 0,

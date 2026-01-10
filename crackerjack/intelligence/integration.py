@@ -45,7 +45,7 @@ class IntelligentAgentSystem:
         stats = self.registry.get_agent_stats()
         self.logger.info(
             f"System initialized: {stats['total_agents']} agents available "
-            f"({stats['by_source']})"
+            f"({stats['by_source']})",
         )
 
     async def execute_smart_task(
@@ -63,12 +63,14 @@ class IntelligentAgentSystem:
         )
 
         candidates = await self.orchestrator.selector.select_agents(
-            task, max_candidates=5
+            task,
+            max_candidates=5,
         )
         candidate_names = [c.agent.metadata.name for c in candidates]
 
         learning_recommendations = self.learning_system.get_agent_recommendations(
-            task, candidate_names
+            task,
+            candidate_names,
         )
 
         for candidate in candidates:
@@ -141,7 +143,7 @@ class IntelligentAgentSystem:
             remaining_issues=[issue.message] if not smart_result.success else [],
             recommendations=smart_result.recommendations,
             fixes_applied=[
-                f"Applied using intelligent agent: {', '.join(smart_result.agents_used)}"
+                f"Applied using intelligent agent: {', '.join(smart_result.agents_used)}",
             ]
             if smart_result.success
             else [],

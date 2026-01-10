@@ -22,7 +22,7 @@ class TestDRYAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test DRYAgent initializes correctly."""
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             agent = DRYAgent(context)
@@ -30,7 +30,7 @@ class TestDRYAgentInitialization:
             assert agent.context == context
             assert agent.semantic_insights == {}
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports DRY violation issues."""
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             agent = DRYAgent(context)
@@ -53,7 +53,7 @@ class TestDRYAgentCanHandle:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    async def test_can_handle_dry_violation(self, agent):
+    async def test_can_handle_dry_violation(self, agent) -> None:
         """Test high confidence for DRY violation issues."""
         issue = Issue(
             id="dry-001",
@@ -66,7 +66,7 @@ class TestDRYAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="fmt-001",
@@ -92,7 +92,7 @@ class TestDRYAgentAnalyzeAndFix:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    async def test_analyze_and_fix_no_file_path(self, agent):
+    async def test_analyze_and_fix_no_file_path(self, agent) -> None:
         """Test analyze_and_fix when no file path provided."""
         issue = Issue(
             id="dry-001",
@@ -107,7 +107,7 @@ class TestDRYAgentAnalyzeAndFix:
         assert result.success is False
         assert "No file path" in result.remaining_issues[0]
 
-    async def test_analyze_and_fix_file_not_exists(self, agent, tmp_path):
+    async def test_analyze_and_fix_file_not_exists(self, agent, tmp_path) -> None:
         """Test analyze_and_fix when file doesn't exist."""
         issue = Issue(
             id="dry-001",
@@ -122,7 +122,7 @@ class TestDRYAgentAnalyzeAndFix:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    async def test_analyze_and_fix_with_violations(self, agent, tmp_path):
+    async def test_analyze_and_fix_with_violations(self, agent, tmp_path) -> None:
         """Test analyze_and_fix with detected violations."""
         test_file = tmp_path / "test.py"
         test_file.write_text("""
@@ -155,7 +155,7 @@ def func3():
             # May or may not find violations depending on pattern matching
             assert result.confidence >= 0.0
 
-    async def test_analyze_and_fix_error_handling(self, agent, tmp_path):
+    async def test_analyze_and_fix_error_handling(self, agent, tmp_path) -> None:
         """Test error handling in analyze_and_fix."""
         test_file = tmp_path / "test.py"
         test_file.write_text("import os\n")
@@ -187,7 +187,7 @@ class TestDRYAgentViolationDetection:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    def test_detect_error_response_patterns(self, agent):
+    def test_detect_error_response_patterns(self, agent) -> None:
         """Test detecting repeated error response patterns."""
         content = """
 def func1():
@@ -212,7 +212,7 @@ def func3():
             # Should detect repeated pattern if >= 3 instances
             assert isinstance(violations, list)
 
-    def test_detect_path_conversion_patterns(self, agent):
+    def test_detect_path_conversion_patterns(self, agent) -> None:
         """Test detecting repeated path conversion patterns."""
         content = """
 path1 = Path(str_path1)
@@ -230,7 +230,7 @@ path3 = Path(str_path3)
             assert len(violations) > 0
             assert violations[0]["type"] == "path_conversion_pattern"
 
-    def test_detect_file_existence_patterns(self, agent):
+    def test_detect_file_existence_patterns(self, agent) -> None:
         """Test detecting repeated file existence checks."""
         content = """
 if file1.exists():
@@ -251,7 +251,7 @@ if file3.exists():
             assert len(violations) > 0
             assert violations[0]["type"] == "file_existence_pattern"
 
-    def test_detect_exception_patterns(self, agent):
+    def test_detect_exception_patterns(self, agent) -> None:
         """Test detecting repeated exception handling patterns."""
         content = """
 except Exception as e:
@@ -283,7 +283,7 @@ class TestDRYAgentFixApplication:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    def test_apply_dry_fixes_no_violations(self, agent):
+    def test_apply_dry_fixes_no_violations(self, agent) -> None:
         """Test applying fixes when no violations."""
         content = "def foo():\n    pass\n"
         violations = []
@@ -292,7 +292,7 @@ class TestDRYAgentFixApplication:
 
         assert result == content
 
-    def test_apply_dry_fixes_with_error_response_violation(self, agent):
+    def test_apply_dry_fixes_with_error_response_violation(self, agent) -> None:
         """Test applying fixes for error response violations."""
         content = "import json\n\ndef foo():\n    pass\n"
         violation = {
@@ -307,7 +307,7 @@ class TestDRYAgentFixApplication:
 
             mock_fix.assert_called_once()
 
-    def test_apply_dry_fixes_with_path_conversion_violation(self, agent):
+    def test_apply_dry_fixes_with_path_conversion_violation(self, agent) -> None:
         """Test applying fixes for path conversion violations."""
         content = "path = Path(str_path)\n"
         violation = {
@@ -322,7 +322,7 @@ class TestDRYAgentFixApplication:
 
             mock_fix.assert_called_once()
 
-    def test_find_utility_insert_position(self, agent):
+    def test_find_utility_insert_position(self, agent) -> None:
         """Test finding position to insert utility functions."""
         lines = [
             "import os",
@@ -337,7 +337,7 @@ class TestDRYAgentFixApplication:
         # Should insert after imports
         assert position == 2
 
-    def test_check_ensure_path_exists(self, agent):
+    def test_check_ensure_path_exists(self, agent) -> None:
         """Test checking if _ensure_path utility already exists."""
         lines = [
             "def _ensure_path(path):",
@@ -348,7 +348,7 @@ class TestDRYAgentFixApplication:
 
         assert result is True
 
-    def test_check_ensure_path_not_exists(self, agent):
+    def test_check_ensure_path_not_exists(self, agent) -> None:
         """Test checking when _ensure_path utility doesn't exist."""
         lines = [
             "def foo():",
@@ -371,7 +371,7 @@ class TestDRYAgentFunctionExtraction:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    def test_extract_code_functions_simple(self, agent):
+    def test_extract_code_functions_simple(self, agent) -> None:
         """Test extracting simple function."""
         content = """
 def test_function():
@@ -383,7 +383,7 @@ def test_function():
         assert functions[0]["name"] == "test_function"
         assert functions[0]["type"] == "function"
 
-    def test_extract_code_functions_multiple(self, agent):
+    def test_extract_code_functions_multiple(self, agent) -> None:
         """Test extracting multiple functions."""
         content = """
 def func1():
@@ -402,32 +402,32 @@ def func3():
         assert functions[1]["name"] == "func2"
         assert functions[2]["name"] == "func3"
 
-    def test_is_function_definition(self, agent):
+    def test_is_function_definition(self, agent) -> None:
         """Test detecting function definitions."""
         assert agent._is_function_definition("def foo():") is True
         assert agent._is_function_definition("def bar(x, y):") is True
         assert agent._is_function_definition("    return x") is False
         assert agent._is_function_definition("# comment") is False
 
-    def test_should_skip_line_empty(self, agent):
+    def test_should_skip_line_empty(self, agent) -> None:
         """Test skipping empty lines."""
         result = agent._should_skip_line("", None, "")
 
         assert result is True
 
-    def test_should_skip_line_comment(self, agent):
+    def test_should_skip_line_comment(self, agent) -> None:
         """Test skipping comment lines."""
         result = agent._should_skip_line("# This is a comment", None, "# This is a comment")
 
         assert result is True
 
-    def test_should_skip_line_code(self, agent):
+    def test_should_skip_line_code(self, agent) -> None:
         """Test not skipping code lines."""
         result = agent._should_skip_line("return True", None, "    return True")
 
         assert result is False
 
-    def test_is_line_inside_function(self, agent):
+    def test_is_line_inside_function(self, agent) -> None:
         """Test checking if line is inside function."""
         current_function = {"indent_level": 0}
 
@@ -457,7 +457,7 @@ class TestDRYAgentSemanticDetection:
             agent.semantic_enhancer = mock_enhancer
             return agent
 
-    async def test_detect_semantic_violations_with_matches(self, agent, tmp_path):
+    async def test_detect_semantic_violations_with_matches(self, agent, tmp_path) -> None:
         """Test detecting semantic violations with high confidence matches."""
         content = """
 def calculate_total(items):
@@ -479,7 +479,7 @@ def calculate_total(items):
         assert violations[0]["type"] == "semantic_duplicate"
         assert violations[0]["confidence_score"] > 0
 
-    async def test_detect_semantic_violations_no_matches(self, agent, tmp_path):
+    async def test_detect_semantic_violations_no_matches(self, agent, tmp_path) -> None:
         """Test detecting semantic violations with no matches."""
         content = """
 def simple_function():
@@ -496,12 +496,12 @@ def simple_function():
 
         assert len(violations) == 0
 
-    async def test_detect_semantic_violations_error_handling(self, agent, tmp_path):
+    async def test_detect_semantic_violations_error_handling(self, agent, tmp_path) -> None:
         """Test semantic violation detection error handling."""
         content = "def foo(): pass"
 
         agent.semantic_enhancer.find_duplicate_patterns.side_effect = Exception(
-            "Semantic analysis failed"
+            "Semantic analysis failed",
         )
 
         # Should not raise exception
@@ -521,7 +521,7 @@ class TestDRYAgentResultCreation:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    def test_create_no_fixes_result(self, agent):
+    def test_create_no_fixes_result(self, agent) -> None:
         """Test creating result when no fixes could be applied."""
         result = agent._create_no_fixes_result()
 
@@ -530,7 +530,7 @@ class TestDRYAgentResultCreation:
         assert len(result.remaining_issues) > 0
         assert len(result.recommendations) > 0
 
-    def test_create_dry_error_result(self, agent):
+    def test_create_dry_error_result(self, agent) -> None:
         """Test creating error result."""
         error = Exception("Test error message")
 
@@ -540,7 +540,7 @@ class TestDRYAgentResultCreation:
         assert result.confidence == 0.0
         assert "Error processing" in result.remaining_issues[0]
 
-    def test_validate_dry_issue_no_file_path(self, agent):
+    def test_validate_dry_issue_no_file_path(self, agent) -> None:
         """Test validating issue without file path."""
         issue = Issue(
             id="dry-001",
@@ -555,7 +555,7 @@ class TestDRYAgentResultCreation:
         assert result is not None
         assert result.success is False
 
-    def test_validate_dry_issue_file_not_exists(self, agent, tmp_path):
+    def test_validate_dry_issue_file_not_exists(self, agent, tmp_path) -> None:
         """Test validating issue with non-existent file."""
         issue = Issue(
             id="dry-001",
@@ -571,7 +571,7 @@ class TestDRYAgentResultCreation:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    def test_validate_dry_issue_valid(self, agent, tmp_path):
+    def test_validate_dry_issue_valid(self, agent, tmp_path) -> None:
         """Test validating issue with valid file."""
         test_file = tmp_path / "valid.py"
         test_file.write_text("def foo(): pass")
@@ -601,7 +601,7 @@ class TestDRYAgentProcessing:
         with patch("crackerjack.agents.dry_agent.create_semantic_enhancer"):
             return DRYAgent(context)
 
-    async def test_process_dry_violation_no_violations(self, agent, tmp_path):
+    async def test_process_dry_violation_no_violations(self, agent, tmp_path) -> None:
         """Test processing when no violations found."""
         test_file = tmp_path / "clean.py"
         test_file.write_text("def foo():\n    return True\n")
@@ -616,7 +616,7 @@ class TestDRYAgentProcessing:
                 assert result.confidence == 0.7
                 assert "No DRY violations" in result.recommendations[0]
 
-    async def test_process_dry_violation_cannot_read_file(self, agent, tmp_path):
+    async def test_process_dry_violation_cannot_read_file(self, agent, tmp_path) -> None:
         """Test processing when file cannot be read."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -628,7 +628,7 @@ class TestDRYAgentProcessing:
         assert result.success is False
         assert "Could not read" in result.remaining_issues[0]
 
-    async def test_apply_and_save_dry_fixes_success(self, agent, tmp_path):
+    async def test_apply_and_save_dry_fixes_success(self, agent, tmp_path) -> None:
         """Test successfully applying and saving fixes."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -641,14 +641,14 @@ class TestDRYAgentProcessing:
                 mock_enhance.return_value = ["Verify functionality"]
 
                 result = await agent._apply_and_save_dry_fixes(
-                    test_file, content, violations
+                    test_file, content, violations,
                 )
 
                 assert result.success is True
                 assert result.confidence == 0.8
                 assert len(result.fixes_applied) > 0
 
-    async def test_apply_and_save_dry_fixes_no_changes(self, agent, tmp_path):
+    async def test_apply_and_save_dry_fixes_no_changes(self, agent, tmp_path) -> None:
         """Test when fixes produce no changes."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -656,13 +656,13 @@ class TestDRYAgentProcessing:
 
         with patch.object(agent, "_apply_dry_fixes", return_value=content):
             result = await agent._apply_and_save_dry_fixes(
-                test_file, content, violations
+                test_file, content, violations,
             )
 
             assert result.success is False
             assert result.confidence == 0.5
 
-    async def test_apply_and_save_dry_fixes_write_failure(self, agent, tmp_path):
+    async def test_apply_and_save_dry_fixes_write_failure(self, agent, tmp_path) -> None:
         """Test when writing fixed content fails."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -672,7 +672,7 @@ class TestDRYAgentProcessing:
             agent.context.write_file_content = Mock(return_value=False)
 
             result = await agent._apply_and_save_dry_fixes(
-                test_file, content, violations
+                test_file, content, violations,
             )
 
             assert result.success is False

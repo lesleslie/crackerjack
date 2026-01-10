@@ -84,7 +84,7 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
         (
             "| Mode | Runs | Mean | Median (P50) | P95 | P99 | Success Rate |",
             "|------|------|------|--------------|-----|-----|--------------|",
-        )
+        ),
     )
 
     for mode in ("default", "fast", "comp"):
@@ -93,7 +93,7 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
         stats = stats_by_mode[mode]
         report.append(
             f"| `{mode}` | {stats.runs} | {stats.mean:.2f}s | {stats.median:.2f}s | "
-            f"{stats.p95:.2f}s | {stats.p99:.2f}s | {stats.success_rate:.0f}% |"
+            f"{stats.p95:.2f}s | {stats.p99:.2f}s | {stats.success_rate:.0f}% |",
         )
 
     report.append("\n## Detailed Statistics\n")
@@ -111,17 +111,17 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
                 f"- **Max**: {stats.max:.2f}s",
                 f"- **Std Dev**: {stats.std_dev:.2f}s",
                 f"- **Success Rate**: {stats.success_rate:.0f}%\n",
-            )
+            ),
         )
 
     report.extend(
-        ("## Migration Abort Criteria\n", "Based on these baseline measurements:\n")
+        ("## Migration Abort Criteria\n", "Based on these baseline measurements:\n"),
     )
 
     for mode, stats in stats_by_mode.items():
         threshold = stats.median * 1.1
         report.append(
-            f"- **{mode} mode**: Abort if median > {threshold:.2f}s (10% slower than {stats.median:.2f}s)"
+            f"- **{mode} mode**: Abort if median > {threshold:.2f}s (10% slower than {stats.median:.2f}s)",
         )
 
     return "\n".join(report)
@@ -136,9 +136,11 @@ def format_markdown_report(results: dict[str, list[BenchmarkRun]]) -> str:
 )
 @click.option("--timeout", default=300, help="Timeout per run in seconds")
 @click.option(
-    "--modes", default="default, fast, comp", help="Comma-separated modes to benchmark"
+    "--modes",
+    default="default, fast, comp",
+    help="Comma-separated modes to benchmark",
 )
-def main(runs: int, output: str, timeout: int, modes: str):
+def main(runs: int, output: str, timeout: int, modes: str) -> None:
     mode_list = modes.split(", ")
     results: dict[str, list[BenchmarkRun]] = {mode: [] for mode in mode_list}
 
@@ -178,7 +180,7 @@ def main(runs: int, output: str, timeout: int, modes: str):
         stats = calculate_stats(results[mode])
         click.echo(
             f" 📈 {mode} median: {stats.median:.2f}s "
-            f"(P95: {stats.p95:.2f}s, success: {stats.success_rate:.0f}%)\n"
+            f"(P95: {stats.p95:.2f}s, success: {stats.success_rate:.0f}%)\n",
         )
 
     report = format_markdown_report(results)

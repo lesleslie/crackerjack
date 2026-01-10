@@ -11,15 +11,15 @@ from uuid import UUID
 import pytest
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QAAdapterProtocol
-from crackerjack.adapters.format.ruff import RuffAdapter
+from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
 from crackerjack.adapters.format.mdformat import MdformatAdapter
+from crackerjack.adapters.format.ruff import RuffAdapter
 from crackerjack.adapters.lint.codespell import CodespellAdapter
+from crackerjack.adapters.refactor.creosote import CreosoteAdapter
+from crackerjack.adapters.refactor.refurb import RefurbAdapter
 from crackerjack.adapters.sast.bandit import BanditAdapter
 from crackerjack.adapters.security.gitleaks import GitleaksAdapter
 from crackerjack.adapters.type.zuban import ZubanAdapter
-from crackerjack.adapters.refactor.refurb import RefurbAdapter
-from crackerjack.adapters.refactor.creosote import CreosoteAdapter
-from crackerjack.adapters.complexity.complexipy import ComplexipyAdapter
 from crackerjack.adapters.utility.checks import UtilityCheckAdapter
 from crackerjack.models.protocols import QAAdapterProtocol as ProtocolDef
 
@@ -43,14 +43,14 @@ class TestQAAdapterProtocolCompliance:
             MdformatAdapter,
         ]
 
-    def test_all_adapters_extend_base(self, adapter_classes):
+    def test_all_adapters_extend_base(self, adapter_classes) -> None:
         """Verify all adapters extend QAAdapterBase."""
         for adapter_class in adapter_classes:
             assert issubclass(adapter_class, QAAdapterBase), (
                 f"{adapter_class.__name__} must extend QAAdapterBase"
             )
 
-    def test_protocol_compliance(self, adapter_classes):
+    def test_protocol_compliance(self, adapter_classes) -> None:
         """Verify all adapters implement QAAdapterProtocol."""
         for adapter_class in adapter_classes:
             # Check required attributes
@@ -74,7 +74,7 @@ class TestQAAdapterProtocolCompliance:
                     f"{adapter_class.__name__} missing method: {method}"
                 )
 
-    def test_init_method_signature(self, adapter_classes):
+    def test_init_method_signature(self, adapter_classes) -> None:
         """Verify init() method has correct signature."""
         for adapter_class in adapter_classes:
             init_sig = inspect.signature(adapter_class.init)
@@ -90,7 +90,7 @@ class TestQAAdapterProtocolCompliance:
                 f"{adapter_class.__name__}.init() should have no required parameters"
             )
 
-    def test_check_method_signature(self, adapter_classes):
+    def test_check_method_signature(self, adapter_classes) -> None:
         """Verify check() method has correct signature."""
         for adapter_class in adapter_classes:
             check_sig = inspect.signature(adapter_class.check)
@@ -117,7 +117,7 @@ class TestQAAdapterProtocolCompliance:
                 f"{adapter_class.__name__}.check() 'config' must have default"
             )
 
-    def test_validate_config_method_signature(self, adapter_classes):
+    def test_validate_config_method_signature(self, adapter_classes) -> None:
         """Verify validate_config() method has correct signature."""
         for adapter_class in adapter_classes:
             validate_sig = inspect.signature(adapter_class.validate_config)
@@ -133,7 +133,7 @@ class TestQAAdapterProtocolCompliance:
                 f"{adapter_class.__name__}.validate_config() missing 'config' parameter"
             )
 
-    def test_adapter_name_property(self, adapter_classes):
+    def test_adapter_name_property(self, adapter_classes) -> None:
         """Verify adapter_name property returns string."""
         for adapter_class in adapter_classes:
             # Check it's a property
@@ -142,7 +142,7 @@ class TestQAAdapterProtocolCompliance:
                 property,
             ), f"{adapter_class.__name__}.adapter_name must be a property"
 
-    def test_module_id_property(self, adapter_classes):
+    def test_module_id_property(self, adapter_classes) -> None:
         """Verify module_id property returns UUID."""
         for adapter_class in adapter_classes:
             # Check it's a property
@@ -155,7 +155,7 @@ class TestQAAdapterProtocolCompliance:
 class TestQAAdapterInstantiation:
     """Test adapter instantiation and configuration."""
 
-    def test_ruff_adapter_instantiation(self):
+    def test_ruff_adapter_instantiation(self) -> None:
         """Test RuffAdapter can be instantiated."""
         from crackerjack.adapters.format.ruff import RuffSettings
 
@@ -166,7 +166,7 @@ class TestQAAdapterInstantiation:
         assert isinstance(adapter.adapter_name, str)
         assert isinstance(adapter.module_id, UUID)
 
-    def test_bandit_adapter_instantiation(self):
+    def test_bandit_adapter_instantiation(self) -> None:
         """Test BanditAdapter can be instantiated."""
         from crackerjack.adapters.sast.bandit import BanditSettings
 
@@ -177,7 +177,7 @@ class TestQAAdapterInstantiation:
         assert isinstance(adapter.adapter_name, str)
         assert isinstance(adapter.module_id, UUID)
 
-    def test_utility_check_adapter_instantiation(self):
+    def test_utility_check_adapter_instantiation(self) -> None:
         """Test UtilityCheckAdapter can be instantiated."""
         from crackerjack.adapters.utility.checks import (
             UtilityCheckSettings,
@@ -192,7 +192,7 @@ class TestQAAdapterInstantiation:
         assert isinstance(adapter.adapter_name, str)
         assert isinstance(adapter.module_id, UUID)
 
-    def test_adapter_without_settings(self):
+    def test_adapter_without_settings(self) -> None:
         """Test adapters can be instantiated without settings."""
         adapter = RuffAdapter()
         assert adapter.settings is None
@@ -204,7 +204,7 @@ class TestQAAdapterInstantiation:
 class TestQAAdapterConfiguration:
     """Test adapter configuration validation."""
 
-    def test_get_default_config(self):
+    def test_get_default_config(self) -> None:
         """Test all adapters provide default configuration."""
         from crackerjack.models.qa_config import QACheckConfig
 
@@ -233,7 +233,7 @@ class TestQAAdapterConfiguration:
             assert config.enabled is not None
             assert isinstance(config.file_patterns, list)
 
-    def test_utility_check_default_configs(self):
+    def test_utility_check_default_configs(self) -> None:
         """Test UtilityCheckAdapter provides configs for different check types."""
         from crackerjack.adapters.utility.checks import UtilityCheckType
 
@@ -246,7 +246,7 @@ class TestQAAdapterConfiguration:
             UtilityCheckType.DEPENDENCY_LOCK,
         ]
 
-        for check_type in check_types:
+        for _check_type in check_types:
             # Each check type would have its own default config
             # (Implementation detail - not testing specific configs here)
             pass
@@ -255,16 +255,17 @@ class TestQAAdapterConfiguration:
 class TestQABaseSettings:
     """Test QA adapter settings patterns."""
 
-    def test_settings_extend_pydantic(self):
+    def test_settings_extend_pydantic(self) -> None:
         """Verify settings classes use Pydantic BaseModel."""
-        from crackerjack.adapters.format.ruff import RuffSettings
         from pydantic import BaseModel
+
+        from crackerjack.adapters.format.ruff import RuffSettings
 
         assert issubclass(RuffSettings, BaseModel), (
             "Settings must extend Pydantic BaseModel"
         )
 
-    def test_settings_field_validators(self):
+    def test_settings_field_validators(self) -> None:
         """Test settings have proper field validators."""
         from crackerjack.adapters.format.ruff import RuffSettings
 
@@ -276,7 +277,7 @@ class TestQABaseSettings:
         assert hasattr(settings, "tool_name")
         assert isinstance(settings.tool_name, str)
 
-    def test_settings_with_defaults(self):
+    def test_settings_with_defaults(self) -> None:
         """Test settings have sensible defaults."""
         from crackerjack.adapters.sast.bandit import BanditSettings
 

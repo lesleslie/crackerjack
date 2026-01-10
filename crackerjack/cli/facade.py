@@ -11,31 +11,42 @@ VALID_COMMANDS = {"test", "lint", "check", "format", "security", "complexity", "
 
 
 def validate_command(
-    command: str | None, args: str | None = None
+    command: str | None,
+    args: str | None = None,
 ) -> tuple[str, list[str]]:
     if command is None:
-        raise ValueError("Command cannot be None")
+        msg = "Command cannot be None"
+        raise ValueError(msg)
 
-    if command.startswith("--") or command.startswith("-"):
-        raise ValueError(
+    if command.startswith(("--", "-")):
+        msg = (
             f"Invalid command: {command!r}\n"
             f"Commands should be semantic (e.g., 'test', 'lint', 'check')\n"
             f"Use ai_agent_mode=True parameter for auto-fix, not --ai-fix in command"
         )
+        raise ValueError(
+            msg,
+        )
 
     if command not in VALID_COMMANDS:
-        raise ValueError(
+        msg = (
             f"Unknown command: {command!r}\n"
             f"Valid commands: {', '.join(sorted(VALID_COMMANDS))}"
+        )
+        raise ValueError(
+            msg,
         )
 
     args_str = args if args is not None else ""
 
     parsed_args = shlex.split(args_str) if args_str else []
     if "--ai-fix" in parsed_args:
-        raise ValueError(
+        msg = (
             "Do not pass --ai-fix in args parameter\n"
             "Use ai_agent_mode=True parameter instead"
+        )
+        raise ValueError(
+            msg,
         )
 
     return command, parsed_args
@@ -106,7 +117,7 @@ class CrackerjackCLIFacade:
 
     def _handle_advanced_batch(self, options: OptionsProtocol) -> None:
         self.console.print(
-            "[red]❌ Advanced batch processing is not yet implemented[/ red]"
+            "[red]❌ Advanced batch processing is not yet implemented[/ red]",
         )
         raise SystemExit(1)
 

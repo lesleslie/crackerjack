@@ -102,7 +102,9 @@ class AsyncTaskManager:
         return task
 
     async def _wrap_task(
-        self, coro: t.Coroutine[t.Any, t.Any, t.Any], task_id: str
+        self,
+        coro: t.Coroutine[t.Any, t.Any, t.Any],
+        task_id: str,
     ) -> t.Any:
         try:
             async with self._task_semaphore:

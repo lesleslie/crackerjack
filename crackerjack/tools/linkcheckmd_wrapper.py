@@ -33,7 +33,8 @@ def _check_broken_links(all_results: list[str]) -> bool:
 
 
 def _process_scan_results(
-    scan_paths: list[Path], repo_root: Path
+    scan_paths: list[Path],
+    repo_root: Path,
 ) -> tuple[list[str], int]:
     all_results = []
 
@@ -45,25 +46,16 @@ def _process_scan_results(
                 all_results.append(result.stdout)
 
             if result.stderr:
-                print(result.stderr, file=sys.stderr, end="")
+                pass
 
             if result.returncode == 22:
                 continue
-            elif result.returncode != 0:
-                print(
-                    f"Error running linkcheckmd on {path}: exit code {result.returncode}",
-                    file=sys.stderr,
-                )
+            if result.returncode != 0:
                 return all_results, result.returncode
 
         except subprocess.TimeoutExpired:
-            print(f"Timeout checking links in {path} (>5 minutes)", file=sys.stderr)
             return all_results, 1
         except FileNotFoundError:
-            print(
-                "Error: linkcheckmd not found. Install with: uv pip install linkcheckmd",
-                file=sys.stderr,
-            )
             return all_results, 127
 
     return all_results, 0
@@ -77,25 +69,21 @@ def main(argv: list[str] | None = None) -> int:
     files = md_files + markdown_files
 
     if not files:
-        print("No git-tracked markdown files found")
         return 0
 
     scan_paths = _get_scan_paths(files, repo_root)
-    print(f"Checking links in {len(files)} markdown files...")
 
     all_results, exit_code = _process_scan_results(scan_paths, repo_root)
 
     if exit_code != 0:
         return exit_code
 
-    for output in all_results:
-        print(output, end="")
+    for _output in all_results:
+        pass
 
     if _check_broken_links(all_results):
-        print("\n✗ Found broken links (see above)")
         return 22
 
-    print(f"\n✓ All links valid in {len(files)} markdown files")
     return 0
 
 

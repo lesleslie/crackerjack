@@ -1,5 +1,4 @@
-"""
-Enhanced tests for the optimized PerformanceAgent with real performance scenarios.
+"""Enhanced tests for the optimized PerformanceAgent with real performance scenarios.
 Tests the Qwen-audit recommended improvements for O(n²) detection and optimization.
 """
 
@@ -65,7 +64,7 @@ class TestNestedLoopDetection:
 
     @pytest.mark.asyncio
     async def test_detect_simple_nested_loops(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test detection of simple O(n²) nested loops."""
         temp_python_file.write_text("""
@@ -108,7 +107,7 @@ def triple_nested():
 
     @pytest.mark.asyncio
     async def test_complexity_priority_classification(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test that nested loops are classified by priority correctly."""
         temp_python_file.write_text("""
@@ -154,7 +153,7 @@ class TestListOperationOptimization:
 
     @pytest.mark.asyncio
     async def test_list_concatenation_in_loops(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test optimization of list concatenation in loops."""
         temp_python_file.write_text("""
@@ -199,7 +198,7 @@ def efficient_baseline():
 
     @pytest.mark.asyncio
     async def test_performance_impact_assessment(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test that performance impact is correctly assessed."""
         temp_python_file.write_text("""
@@ -241,7 +240,7 @@ class TestStringOptimization:
 
     @pytest.mark.asyncio
     async def test_string_concatenation_patterns(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test detection and optimization of string concatenation patterns."""
         temp_python_file.write_text("""
@@ -293,7 +292,7 @@ def with_repeated_formatting():
 
     @pytest.mark.asyncio
     async def test_string_impact_assessment(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test string concatenation impact assessment."""
         temp_python_file.write_text("""
@@ -332,7 +331,7 @@ class TestBuiltinOptimization:
 
     @pytest.mark.asyncio
     async def test_repeated_builtin_calls(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test detection of repeated expensive builtin calls in loops."""
         temp_python_file.write_text("""
@@ -380,7 +379,7 @@ class TestComprehensiveOptimization:
 
     @pytest.mark.asyncio
     async def test_multiple_optimization_types(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test handling of files with multiple performance issues."""
         temp_python_file.write_text("""
@@ -454,7 +453,7 @@ class TestPerformanceMetrics:
 
     @pytest.mark.asyncio
     async def test_performance_measurement_tracking(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test that performance metrics are properly tracked."""
         temp_python_file.write_text("""
@@ -506,7 +505,7 @@ class TestRealWorldScenarios:
 
     @pytest.mark.asyncio
     async def test_data_processing_scenario(
-        self, performance_agent, temp_python_file
+        self, performance_agent, temp_python_file,
     ) -> None:
         """Test optimization of typical data processing code."""
         temp_python_file.write_text("""

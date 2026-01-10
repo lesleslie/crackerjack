@@ -58,7 +58,7 @@ class PublishManagerImpl:
         self._git_service = self._resolve_git_service(git_service)
         self._version_analyzer = self._resolve_version_analyzer(version_analyzer)
         self._changelog_generator = self._resolve_changelog_generator(
-            changelog_generator
+            changelog_generator,
         )
         self._regex_patterns = self._resolve_regex_patterns(regex_patterns)
         self.filesystem = self._resolve_filesystem(filesystem)
@@ -78,7 +78,8 @@ class PublishManagerImpl:
         return Path.cwd()
 
     def _resolve_git_service(
-        self, git_service: GitServiceProtocol | None
+        self,
+        git_service: GitServiceProtocol | None,
     ) -> GitServiceProtocol:
         if git_service is not None:
             return git_service
@@ -90,7 +91,8 @@ class PublishManagerImpl:
             return _NullGitService()  # type: ignore[return-value]
 
     def _resolve_version_analyzer(
-        self, version_analyzer: VersionAnalyzerProtocol | None
+        self,
+        version_analyzer: VersionAnalyzerProtocol | None,
     ) -> VersionAnalyzerProtocol:
         if version_analyzer is not None:
             return version_analyzer
@@ -102,7 +104,8 @@ class PublishManagerImpl:
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 
     def _resolve_changelog_generator(
-        self, changelog_generator: ChangelogGeneratorProtocol | None
+        self,
+        changelog_generator: ChangelogGeneratorProtocol | None,
     ) -> ChangelogGeneratorProtocol:
         if changelog_generator is not None:
             return changelog_generator
@@ -114,14 +117,16 @@ class PublishManagerImpl:
             return _NullChangelogGenerator()  # type: ignore[return-value]
 
     def _resolve_regex_patterns(
-        self, regex_patterns: RegexPatternsProtocol | None
+        self,
+        regex_patterns: RegexPatternsProtocol | None,
     ) -> RegexPatternsProtocol:
         if regex_patterns is not None:
             return regex_patterns
         return _RegexPatterns()  # type: ignore[return-value]
 
     def _resolve_filesystem(
-        self, filesystem: FileSystemInterface | None
+        self,
+        filesystem: FileSystemInterface | None,
     ) -> FileSystemInterface:
         if filesystem is not None:
             return filesystem
@@ -130,7 +135,8 @@ class PublishManagerImpl:
         return FileSystemService()
 
     def _resolve_security(
-        self, security: SecurityServiceProtocol | None
+        self,
+        security: SecurityServiceProtocol | None,
     ) -> SecurityServiceProtocol:
         if security is not None:
             return security
@@ -194,7 +200,8 @@ class PublishManagerImpl:
             new_content = update_pyproject_version_func(content, new_version)
             if not isinstance(new_content, str):
                 new_content = _RegexPatterns().update_pyproject_version(
-                    content, new_version
+                    content,
+                    new_version,
                 )
             if content != new_content:
                 if not self.dry_run:
@@ -244,7 +251,7 @@ class PublishManagerImpl:
             if version_type == "auto":
                 version_type = recommendation.bump_type.value
                 self.console.print(
-                    f"[green]🎯[/green] Using AI-recommended bump type: {version_type}"
+                    f"[green]🎯[/green] Using AI-recommended bump type: {version_type}",
                 )
 
         if version_type == "interactive":
@@ -279,7 +286,7 @@ class PublishManagerImpl:
             if recommendation:
                 default_type = recommendation.bump_type.value
                 self.console.print(
-                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]"
+                    f"[dim]AI recommendation: {default_type} (confidence: {recommendation.confidence:.0%})[/dim]",
                 )
 
             return Prompt.ask(
@@ -289,7 +296,7 @@ class PublishManagerImpl:
             )
         except ImportError:
             self.console.print(
-                "[yellow]⚠️[/ yellow] Rich prompt not available, defaulting to patch"
+                "[yellow]⚠️[/ yellow] Rich prompt not available, defaulting to patch",
             )
             return "patch"
 
@@ -306,12 +313,13 @@ class PublishManagerImpl:
 
                     with concurrent.futures.ThreadPoolExecutor() as executor:
                         future = executor.submit(
-                            asyncio.run, version_analyzer.recommend_version_bump()
+                            asyncio.run,
+                            version_analyzer.recommend_version_bump(),
                         )
                         recommendation = future.result(timeout=10)
                 else:
                     recommendation = loop.run_until_complete(
-                        version_analyzer.recommend_version_bump()
+                        version_analyzer.recommend_version_bump(),
                     )
             except RuntimeError:
                 recommendation = asyncio.run(version_analyzer.recommend_version_bump())
@@ -329,7 +337,7 @@ class PublishManagerImpl:
         self.console.print("\n[cyan]🎯 AI Version Analysis[/cyan]")
         self.console.print(
             f"Recommended: [bold green]{recommendation.recommended_version}[/bold green] "
-            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence"
+            f"({recommendation.bump_type.value.upper()}) - {recommendation.confidence:.0%} confidence",
         )
 
         if recommendation.reasoning:
@@ -337,15 +345,15 @@ class PublishManagerImpl:
 
         if recommendation.breaking_changes:
             self.console.print(
-                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected"
+                f"[red]⚠️[/red] {len(recommendation.breaking_changes)} breaking changes detected",
             )
         elif recommendation.new_features:
             self.console.print(
-                f"[green]✨[/green] {len(recommendation.new_features)} new features detected"
+                f"[green]✨[/green] {len(recommendation.new_features)} new features detected",
             )
         elif recommendation.bug_fixes:
             self.console.print(
-                f"[blue]🔧[/blue] {len(recommendation.bug_fixes)} bug fixes detected"
+                f"[blue]🔧[/blue] {len(recommendation.bug_fixes)} bug fixes detected",
             )
 
     def validate_auth(self) -> bool:
@@ -451,11 +459,11 @@ class PublishManagerImpl:
             shutil.rmtree(dist_dir)
             dist_dir.mkdir(exist_ok=True)
             self.console.print(
-                "[cyan]🧹[/ cyan] Cleaned dist directory for fresh build"
+                "[cyan]🧹[/ cyan] Cleaned dist directory for fresh build",
             )
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Warning: Could not clean dist directory: {e}"
+                f"[yellow]⚠️[/ yellow] Warning: Could not clean dist directory: {e}",
             )
 
     def _execute_build(self) -> bool:
@@ -751,11 +759,11 @@ class PublishManagerImpl:
 
             if success:
                 self.console.print(
-                    f"[green]📝[/green] Updated changelog for version {new_version}"
+                    f"[green]📝[/green] Updated changelog for version {new_version}",
                 )
             else:
                 self.console.print(
-                    "[yellow]⚠️[/yellow] Changelog update encountered issues"
+                    "[yellow]⚠️[/yellow] Changelog update encountered issues",
                 )
 
         except Exception as e:

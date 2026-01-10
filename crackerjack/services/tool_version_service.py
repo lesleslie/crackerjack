@@ -7,16 +7,18 @@ from .smart_scheduling import SmartSchedulingService
 from .version_checker import VersionChecker, VersionInfo
 
 __all__ = [
-    "VersionInfo",
-    "ToolVersionService",
     "ConfigIntegrityService",
     "SmartSchedulingService",
+    "ToolVersionService",
+    "VersionInfo",
 ]
 
 
 class ToolVersionService:
     def __init__(
-        self, console: Console | None = None, project_path: Path | None = None
+        self,
+        console: Console | None = None,
+        project_path: Path | None = None,
     ) -> None:
         self.console = console or Console()
         self.project_path = project_path or Path.cwd()

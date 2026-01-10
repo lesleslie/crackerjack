@@ -6,7 +6,7 @@ from loguru import logger
 
 
 class CommandExecutionService:
-    def __init__(self, default_timeout: int = 30):
+    def __init__(self, default_timeout: int = 30) -> None:
         self.default_timeout = default_timeout
 
     async def run_command(
@@ -26,7 +26,12 @@ class CommandExecutionService:
             self._get_executable(cmd)
             process = await self._create_subprocess(cmd, capture_output, cwd, env)
             return await self._execute_process(
-                process, cmd, str_cmd, timeout, check, capture_output
+                process,
+                cmd,
+                str_cmd,
+                timeout,
+                check,
+                capture_output,
             )
         except FileNotFoundError:
             logger.error(f"Command not found: {self._get_executable(cmd)}")
@@ -38,9 +43,8 @@ class CommandExecutionService:
     def _get_executable(self, cmd: str | list[str]) -> str:
         if isinstance(cmd, list):
             return cmd[0] if cmd else ""
-        else:
-            parts = cmd.split()
-            return parts[0] if parts else ""
+        parts = cmd.split()
+        return parts[0] if parts else ""
 
     async def _create_subprocess(
         self,
@@ -68,7 +72,8 @@ class CommandExecutionService:
     ) -> subprocess.CompletedProcess:
         try:
             stdout, stderr = await asyncio.wait_for(
-                process.communicate(), timeout=timeout
+                process.communicate(),
+                timeout=timeout,
             )
 
             return_code = process.returncode if process.returncode is not None else 0
@@ -81,7 +86,7 @@ class CommandExecutionService:
 
             if check and process.returncode != 0:
                 logger.error(
-                    f"Command failed with exit code {process.returncode}: {str_cmd}"
+                    f"Command failed with exit code {process.returncode}: {str_cmd}",
                 )
                 raise subprocess.CalledProcessError(
                     return_code,
@@ -201,12 +206,12 @@ class CommandExecutionService:
                 if attempt == max_retries:
                     logger.error(f"Command failed after {max_retries} retries: {cmd}")
                     raise
-                else:
-                    wait_time = backoff_factor * (2**attempt)
-                    logger.warning(
-                        f"Command failed on attempt {attempt + 1}, "
-                        f"retrying in {wait_time}s: {cmd}. Error: {e}"
-                    )
-                    await asyncio.sleep(wait_time)
+                wait_time = backoff_factor * (2**attempt)
+                logger.warning(
+                    f"Command failed on attempt {attempt + 1}, "
+                    f"retrying in {wait_time}s: {cmd}. Error: {e}",
+                )
+                await asyncio.sleep(wait_time)
 
-        raise RuntimeError("Unexpected error in run_command_with_retries")
+        msg = "Unexpected error in run_command_with_retries"
+        raise RuntimeError(msg)

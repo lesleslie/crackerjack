@@ -3,7 +3,9 @@ from __future__ import annotations
 import typing as t
 from dataclasses import dataclass
 from enum import StrEnum
-from uuid import UUID
+
+if t.TYPE_CHECKING:
+    from uuid import UUID
 
 
 class AdapterStatus(StrEnum):
@@ -39,4 +41,4 @@ class AdapterMetadata:
         return f"{self.name} v{self.version} ({self.status.value})"
 
 
-__all__ = ["AdapterStatus", "AdapterMetadata"]
+__all__ = ["AdapterMetadata", "AdapterStatus"]

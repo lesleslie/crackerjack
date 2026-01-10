@@ -21,13 +21,13 @@ class TestArchitectAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test ArchitectAgent initializes correctly."""
         agent = ArchitectAgent(context)
 
         assert agent.context == context
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports comprehensive issue types."""
         agent = ArchitectAgent(context)
 
@@ -60,7 +60,7 @@ class TestArchitectAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_can_handle_complexity_high_confidence(self, agent):
+    async def test_can_handle_complexity_high_confidence(self, agent) -> None:
         """Test high confidence for complexity issues."""
         issue = Issue(
             id="arch-001",
@@ -73,7 +73,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_dry_violation(self, agent):
+    async def test_can_handle_dry_violation(self, agent) -> None:
         """Test confidence for DRY violations."""
         issue = Issue(
             id="arch-002",
@@ -86,7 +86,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.85
 
-    async def test_can_handle_performance(self, agent):
+    async def test_can_handle_performance(self, agent) -> None:
         """Test confidence for performance issues."""
         issue = Issue(
             id="arch-003",
@@ -99,7 +99,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_security(self, agent):
+    async def test_can_handle_security(self, agent) -> None:
         """Test confidence for security issues."""
         issue = Issue(
             id="arch-004",
@@ -112,7 +112,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.75
 
-    async def test_can_handle_formatting_low_confidence(self, agent):
+    async def test_can_handle_formatting_low_confidence(self, agent) -> None:
         """Test low confidence for formatting issues."""
         issue = Issue(
             id="arch-005",
@@ -125,7 +125,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.4
 
-    async def test_can_handle_import_error(self, agent):
+    async def test_can_handle_import_error(self, agent) -> None:
         """Test low confidence for import errors."""
         issue = Issue(
             id="arch-006",
@@ -138,7 +138,7 @@ class TestArchitectAgentCanHandle:
 
         assert confidence == 0.4
 
-    async def test_can_handle_default_confidence(self, agent):
+    async def test_can_handle_default_confidence(self, agent) -> None:
         """Test default confidence for other issue types."""
         issue = Issue(
             id="arch-007",
@@ -163,7 +163,7 @@ class TestArchitectAgentPlanning:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_plan_before_action_external_specialist(self, agent):
+    async def test_plan_before_action_external_specialist(self, agent) -> None:
         """Test planning with external specialist for complexity."""
         issue = Issue(
             id="arch-001",
@@ -181,7 +181,7 @@ class TestArchitectAgentPlanning:
         assert "risks" in plan
         assert "validation" in plan
 
-    async def test_plan_before_action_dry_violation_external(self, agent):
+    async def test_plan_before_action_dry_violation_external(self, agent) -> None:
         """Test external specialist plan for DRY violations."""
         issue = Issue(
             id="arch-002",
@@ -195,7 +195,7 @@ class TestArchitectAgentPlanning:
         assert plan["strategy"] == "external_specialist_guided"
         assert plan["approach"] == "extract_common_patterns"
 
-    async def test_plan_before_action_internal_strategy(self, agent):
+    async def test_plan_before_action_internal_strategy(self, agent) -> None:
         """Test internal planning for simpler issues."""
         issue = Issue(
             id="arch-003",
@@ -210,7 +210,7 @@ class TestArchitectAgentPlanning:
         assert "patterns" in plan
         assert plan["risks"] == ["minimal"]
 
-    async def test_needs_external_specialist_complexity(self, agent):
+    async def test_needs_external_specialist_complexity(self, agent) -> None:
         """Test external specialist detection for complexity."""
         issue = Issue(
             id="test",
@@ -223,7 +223,7 @@ class TestArchitectAgentPlanning:
 
         assert needs_external is True
 
-    async def test_needs_external_specialist_dry_violation(self, agent):
+    async def test_needs_external_specialist_dry_violation(self, agent) -> None:
         """Test external specialist detection for DRY."""
         issue = Issue(
             id="test",
@@ -236,7 +236,7 @@ class TestArchitectAgentPlanning:
 
         assert needs_external is True
 
-    async def test_needs_external_specialist_other_types(self, agent):
+    async def test_needs_external_specialist_other_types(self, agent) -> None:
         """Test no external specialist for other types."""
         issue = Issue(
             id="test",
@@ -260,7 +260,7 @@ class TestArchitectAgentPatternRecommendations:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    def test_get_specialist_approach_complexity(self, agent):
+    def test_get_specialist_approach_complexity(self, agent) -> None:
         """Test specialist approach for complexity."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -268,7 +268,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "break_into_helper_methods"
 
-    def test_get_specialist_approach_dry_violation(self, agent):
+    def test_get_specialist_approach_dry_violation(self, agent) -> None:
         """Test specialist approach for DRY violations."""
         issue = Issue(type=IssueType.DRY_VIOLATION, message="DRY", severity=Priority.MEDIUM)
 
@@ -276,7 +276,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "extract_common_patterns"
 
-    def test_get_specialist_approach_performance(self, agent):
+    def test_get_specialist_approach_performance(self, agent) -> None:
         """Test specialist approach for performance."""
         issue = Issue(type=IssueType.PERFORMANCE, message="Slow", severity=Priority.HIGH)
 
@@ -284,7 +284,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "optimize_algorithms"
 
-    def test_get_specialist_approach_security(self, agent):
+    def test_get_specialist_approach_security(self, agent) -> None:
         """Test specialist approach for security."""
         issue = Issue(type=IssueType.SECURITY, message="Vulnerable", severity=Priority.CRITICAL)
 
@@ -292,7 +292,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "apply_secure_patterns"
 
-    def test_get_specialist_approach_default(self, agent):
+    def test_get_specialist_approach_default(self, agent) -> None:
         """Test default specialist approach."""
         issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
 
@@ -300,7 +300,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "apply_clean_code_principles"
 
-    def test_get_internal_approach_formatting(self, agent):
+    def test_get_internal_approach_formatting(self, agent) -> None:
         """Test internal approach for formatting."""
         issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
 
@@ -308,7 +308,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "apply_standard_formatting"
 
-    def test_get_internal_approach_import_error(self, agent):
+    def test_get_internal_approach_import_error(self, agent) -> None:
         """Test internal approach for import errors."""
         issue = Issue(type=IssueType.IMPORT_ERROR, message="Import", severity=Priority.MEDIUM)
 
@@ -316,7 +316,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "optimize_imports"
 
-    def test_get_internal_approach_type_error(self, agent):
+    def test_get_internal_approach_type_error(self, agent) -> None:
         """Test internal approach for type errors."""
         issue = Issue(type=IssueType.TYPE_ERROR, message="Type", severity=Priority.MEDIUM)
 
@@ -324,7 +324,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "add_type_annotations"
 
-    def test_get_internal_approach_test_failure(self, agent):
+    def test_get_internal_approach_test_failure(self, agent) -> None:
         """Test internal approach for test failures."""
         issue = Issue(type=IssueType.TEST_FAILURE, message="Test", severity=Priority.HIGH)
 
@@ -332,7 +332,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "fix_test_patterns"
 
-    def test_get_internal_approach_default(self, agent):
+    def test_get_internal_approach_default(self, agent) -> None:
         """Test default internal approach."""
         issue = Issue(type=IssueType.DEPENDENCY, message="Dep", severity=Priority.MEDIUM)
 
@@ -340,7 +340,7 @@ class TestArchitectAgentPatternRecommendations:
 
         assert approach == "apply_standard_fix"
 
-    def test_get_recommended_patterns_complexity(self, agent):
+    def test_get_recommended_patterns_complexity(self, agent) -> None:
         """Test pattern recommendations for complexity."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -351,7 +351,7 @@ class TestArchitectAgentPatternRecommendations:
         assert "protocol_interfaces" in patterns
         assert "helper_methods" in patterns
 
-    def test_get_recommended_patterns_dry_violation(self, agent):
+    def test_get_recommended_patterns_dry_violation(self, agent) -> None:
         """Test pattern recommendations for DRY violations."""
         issue = Issue(type=IssueType.DRY_VIOLATION, message="DRY", severity=Priority.MEDIUM)
 
@@ -362,7 +362,7 @@ class TestArchitectAgentPatternRecommendations:
         assert "protocol_pattern" in patterns
         assert "composition" in patterns
 
-    def test_get_recommended_patterns_performance(self, agent):
+    def test_get_recommended_patterns_performance(self, agent) -> None:
         """Test pattern recommendations for performance."""
         issue = Issue(type=IssueType.PERFORMANCE, message="Slow", severity=Priority.HIGH)
 
@@ -373,7 +373,7 @@ class TestArchitectAgentPatternRecommendations:
         assert "caching" in patterns
         assert "algorithm_optimization" in patterns
 
-    def test_get_recommended_patterns_security(self, agent):
+    def test_get_recommended_patterns_security(self, agent) -> None:
         """Test pattern recommendations for security."""
         issue = Issue(type=IssueType.SECURITY, message="Vulnerable", severity=Priority.CRITICAL)
 
@@ -384,7 +384,7 @@ class TestArchitectAgentPatternRecommendations:
         assert "safe_subprocess" in patterns
         assert "token_handling" in patterns
 
-    def test_get_recommended_patterns_default(self, agent):
+    def test_get_recommended_patterns_default(self, agent) -> None:
         """Test default pattern recommendations."""
         issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
 
@@ -403,7 +403,7 @@ class TestArchitectAgentDependenciesAndRisks:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    def test_analyze_dependencies_complexity(self, agent):
+    def test_analyze_dependencies_complexity(self, agent) -> None:
         """Test dependency analysis for complexity issues."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -413,7 +413,7 @@ class TestArchitectAgentDependenciesAndRisks:
         assert "update_type_annotations" in dependencies
         assert "verify_imports" in dependencies
 
-    def test_analyze_dependencies_dry_violation(self, agent):
+    def test_analyze_dependencies_dry_violation(self, agent) -> None:
         """Test dependency analysis for DRY violations."""
         issue = Issue(type=IssueType.DRY_VIOLATION, message="DRY", severity=Priority.MEDIUM)
 
@@ -422,7 +422,7 @@ class TestArchitectAgentDependenciesAndRisks:
         assert "update_all_usage_sites" in dependencies
         assert "ensure_backward_compatibility" in dependencies
 
-    def test_analyze_dependencies_default(self, agent):
+    def test_analyze_dependencies_default(self, agent) -> None:
         """Test default dependency analysis."""
         issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
 
@@ -430,7 +430,7 @@ class TestArchitectAgentDependenciesAndRisks:
 
         assert dependencies == []
 
-    def test_identify_risks_complexity(self, agent):
+    def test_identify_risks_complexity(self, agent) -> None:
         """Test risk identification for complexity issues."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -440,7 +440,7 @@ class TestArchitectAgentDependenciesAndRisks:
         assert "changing_method_signatures" in risks
         assert "test_failures" in risks
 
-    def test_identify_risks_dry_violation(self, agent):
+    def test_identify_risks_dry_violation(self, agent) -> None:
         """Test risk identification for DRY violations."""
         issue = Issue(type=IssueType.DRY_VIOLATION, message="DRY", severity=Priority.MEDIUM)
 
@@ -449,7 +449,7 @@ class TestArchitectAgentDependenciesAndRisks:
         assert "breaking_dependent_code" in risks
         assert "performance_impact" in risks
 
-    def test_identify_risks_default(self, agent):
+    def test_identify_risks_default(self, agent) -> None:
         """Test default risk identification."""
         issue = Issue(type=IssueType.FORMATTING, message="Format", severity=Priority.LOW)
 
@@ -457,7 +457,7 @@ class TestArchitectAgentDependenciesAndRisks:
 
         assert risks == []
 
-    def test_get_validation_steps(self, agent):
+    def test_get_validation_steps(self, agent) -> None:
         """Test validation step generation."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -480,7 +480,7 @@ class TestArchitectAgentCachedPatterns:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    def test_get_cached_patterns_for_issue(self, agent):
+    def test_get_cached_patterns_for_issue(self, agent) -> None:
         """Test retrieving cached patterns for issue."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
@@ -491,13 +491,13 @@ class TestArchitectAgentCachedPatterns:
             # Should return default when no cached patterns
             assert patterns == ["default_pattern"]
 
-    def test_get_cached_patterns_with_matching_patterns(self, agent):
+    def test_get_cached_patterns_with_matching_patterns(self, agent) -> None:
         """Test retrieving matching cached patterns."""
         issue = Issue(type=IssueType.COMPLEXITY, message="Complex", severity=Priority.HIGH)
 
         cached = {
             "complexity_issue_1": {
-                "plan": {"patterns": ["extract_method", "helper_functions"]}
+                "plan": {"patterns": ["extract_method", "helper_functions"]},
             },
             "complexity_issue_2": {"plan": {"patterns": ["simplify_logic"]}},
             "performance_issue": {"plan": {"patterns": ["optimize_loop"]}},
@@ -523,7 +523,7 @@ class TestArchitectAgentExecution:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_analyze_and_fix(self, agent):
+    async def test_analyze_and_fix(self, agent) -> None:
         """Test analyze_and_fix delegates to proactive workflow."""
         issue = Issue(
             id="arch-001",
@@ -533,14 +533,14 @@ class TestArchitectAgentExecution:
         )
 
         with patch.object(
-            agent, "analyze_and_fix_proactively", return_value=FixResult(success=True)
+            agent, "analyze_and_fix_proactively", return_value=FixResult(success=True),
         ) as mock_proactive:
             result = await agent.analyze_and_fix(issue)
 
             mock_proactive.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_execute_with_plan_external_specialist(self, agent):
+    async def test_execute_with_plan_external_specialist(self, agent) -> None:
         """Test execution with external specialist strategy."""
         issue = Issue(
             id="arch-001",
@@ -567,7 +567,7 @@ class TestArchitectAgentExecution:
         assert "architect" in result.fixes_applied[2]
         assert len(result.files_modified) == 1
 
-    async def test_execute_with_plan_pattern_based(self, agent):
+    async def test_execute_with_plan_pattern_based(self, agent) -> None:
         """Test execution with pattern-based strategy."""
         issue = Issue(
             id="arch-002",
@@ -591,7 +591,7 @@ class TestArchitectAgentExecution:
         assert "ruff_format" in result.fixes_applied[1]
         assert len(result.files_modified) == 1
 
-    async def test_execute_specialist_guided_fix(self, agent):
+    async def test_execute_specialist_guided_fix(self, agent) -> None:
         """Test specialist-guided fix execution."""
         issue = Issue(
             id="arch-001",
@@ -615,7 +615,7 @@ class TestArchitectAgentExecution:
         assert len(result.recommendations) == 2
         assert "run_tests" in result.recommendations[0]
 
-    async def test_execute_pattern_based_fix(self, agent):
+    async def test_execute_pattern_based_fix(self, agent) -> None:
         """Test pattern-based fix execution."""
         issue = Issue(
             id="arch-002",
@@ -637,7 +637,7 @@ class TestArchitectAgentExecution:
         assert "apply_formatting" in result.fixes_applied[0]
         assert "ruff_format" in result.fixes_applied[1]
 
-    async def test_execute_with_plan_no_file_path(self, agent):
+    async def test_execute_with_plan_no_file_path(self, agent) -> None:
         """Test execution when issue has no file path."""
         issue = Issue(
             id="arch-003",
@@ -666,7 +666,7 @@ class TestArchitectAgentIntegration:
         context = AgentContext(project_path=tmp_path)
         return ArchitectAgent(context)
 
-    async def test_full_workflow_external_specialist(self, agent):
+    async def test_full_workflow_external_specialist(self, agent) -> None:
         """Test complete workflow with external specialist."""
         issue = Issue(
             id="arch-001",
@@ -685,7 +685,7 @@ class TestArchitectAgentIntegration:
         assert result.success is True
         assert result.confidence == 0.9
 
-    async def test_full_workflow_internal_pattern(self, agent):
+    async def test_full_workflow_internal_pattern(self, agent) -> None:
         """Test complete workflow with internal patterns."""
         issue = Issue(
             id="arch-002",
@@ -704,7 +704,7 @@ class TestArchitectAgentIntegration:
         assert result.success is True
         assert result.confidence == 0.75
 
-    def test_comprehensive_issue_type_support(self, agent):
+    def test_comprehensive_issue_type_support(self, agent) -> None:
         """Test agent supports all expected issue types."""
         supported = agent.get_supported_types()
 

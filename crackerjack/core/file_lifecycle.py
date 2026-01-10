@@ -8,7 +8,8 @@ import time
 import typing as t
 from pathlib import Path
 
-from ..models.resource_protocols import AbstractFileResource
+from crackerjack.models.resource_protocols import AbstractFileResource
+
 from .resource_manager import ResourceManager
 
 
@@ -54,28 +55,32 @@ class AtomicFileWriter(AbstractFileResource):
                 self.backup_path.unlink()
             except OSError as e:
                 self.logger.warning(
-                    f"Failed to remove backup file {self.backup_path}: {e}"
+                    f"Failed to remove backup file {self.backup_path}: {e}",
                 )
 
     def write(self, content: str) -> None:
         if not self._file_handle:
-            raise RuntimeError("AtomicFileWriter not initialized")
+            msg = "AtomicFileWriter not initialized"
+            raise RuntimeError(msg)
         self._file_handle.write(content)
 
     def writelines(self, lines: t.Iterable[str]) -> None:
         if not self._file_handle:
-            raise RuntimeError("AtomicFileWriter not initialized")
+            msg = "AtomicFileWriter not initialized"
+            raise RuntimeError(msg)
         self._file_handle.writelines(lines)
 
     def flush(self) -> None:
         if not self._file_handle:
-            raise RuntimeError("AtomicFileWriter not initialized")
+            msg = "AtomicFileWriter not initialized"
+            raise RuntimeError(msg)
         self._file_handle.flush()
         os.fsync(self._file_handle.fileno())
 
     async def commit(self) -> None:
         if not self.temp_path:
-            raise RuntimeError("AtomicFileWriter not initialized")
+            msg = "AtomicFileWriter not initialized"
+            raise RuntimeError(msg)
 
         self.flush()
 
@@ -91,11 +96,12 @@ class AtomicFileWriter(AbstractFileResource):
                 try:
                     self.backup_path.replace(self.path)
                     self.logger.info(
-                        f"Restored {self.path} from backup after commit failure"
+                        f"Restored {self.path} from backup after commit failure",
                     )
                 except OSError:
-                    self.logger.error(f"Failed to restore {self.path} from backup")
-            raise RuntimeError(f"Failed to commit changes to {self.path}") from e
+                    self.logger.exception(f"Failed to restore {self.path} from backup")
+            msg = f"Failed to commit changes to {self.path}"
+            raise RuntimeError(msg) from e
 
     async def rollback(self) -> None:
         if self.backup_path and self.backup_path.exists():
@@ -103,7 +109,7 @@ class AtomicFileWriter(AbstractFileResource):
                 self.backup_path.replace(self.path)
                 self.logger.info(f"Rolled back changes to {self.path}")
             except OSError as e:
-                self.logger.error(f"Failed to rollback {self.path}: {e}")
+                self.logger.exception(f"Failed to rollback {self.path}: {e}")
                 raise
 
 
@@ -138,8 +144,9 @@ class LockedFileResource(AbstractFileResource):
             except OSError:
                 await asyncio.sleep(0.1)
 
+        msg = f"Failed to acquire lock on {self.path} within {self.timeout}s"
         raise TimeoutError(
-            f"Failed to acquire lock on {self.path} within {self.timeout}s"
+            msg,
         )
 
     async def _do_cleanup(self) -> None:
@@ -155,7 +162,8 @@ class LockedFileResource(AbstractFileResource):
     @property
     def file_handle(self) -> t.IO[str]:
         if not self._file_handle:
-            raise RuntimeError("LockedFileResource not initialized")
+            msg = "LockedFileResource not initialized"
+            raise RuntimeError(msg)
         return self._file_handle
 
     def read(self) -> str:
@@ -199,7 +207,7 @@ class SafeDirectoryCreator(AbstractFileResource):
                 dir_path.mkdir(exist_ok=True)
                 self.logger.debug(f"Created directory: {dir_path}")
             except OSError as e:
-                self.logger.error(f"Failed to create directory {dir_path}: {e}")
+                self.logger.exception(f"Failed to create directory {dir_path}: {e}")
                 if self.cleanup_on_error:
                     await self._cleanup_created_dirs()
                 raise
@@ -312,17 +320,18 @@ class BatchFileOperations:
             self.logger.info(f"Successfully executed {executed_ops} file operations")
 
         except Exception as e:
-            self.logger.error(f"Batch operation failed at step {executed_ops}: {e}")
+            self.logger.exception(f"Batch operation failed at step {executed_ops}: {e}")
 
             for i in range(executed_ops - 1, -1, -1):
                 try:
                     self.rollback_operations[i]()
                 except Exception as rollback_error:
-                    self.logger.error(
-                        f"Rollback failed for operation {i}: {rollback_error}"
+                    self.logger.exception(
+                        f"Rollback failed for operation {i}: {rollback_error}",
                     )
 
-            raise RuntimeError("Batch file operations failed and rolled back") from e
+            msg = "Batch file operations failed and rolled back"
+            raise RuntimeError(msg) from e
 
 
 @contextlib.asynccontextmanager
@@ -388,7 +397,7 @@ class SafeFileOperations:
     ) -> str:
         fallback_encodings = fallback_encodings or ["latin-1", "cp1252"]
 
-        for enc in [encoding] + fallback_encodings:
+        for enc in [encoding, *fallback_encodings]:
             try:
                 return path.read_text(encoding=enc)
             except UnicodeDecodeError:
@@ -397,11 +406,12 @@ class SafeFileOperations:
                 raise
             except Exception as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to read {path} with encoding {enc}: {e}"
+                    f"Failed to read {path} with encoding {enc}: {e}",
                 )
                 continue
 
-        raise RuntimeError(f"Failed to read {path} with any supported encoding")
+        msg = f"Failed to read {path} with any supported encoding"
+        raise RuntimeError(msg)
 
     @staticmethod
     async def safe_write_text(
@@ -426,7 +436,8 @@ class SafeFileOperations:
         backup: bool = True,
     ) -> None:
         if not source.exists():
-            raise FileNotFoundError(f"Source file not found: {source}")
+            msg = f"Source file not found: {source}"
+            raise FileNotFoundError(msg)
 
         if backup and dest.exists():
             backup_path = dest.with_suffix(f"{dest.suffix}.bak")
@@ -443,7 +454,8 @@ class SafeFileOperations:
         except Exception as e:
             if backup and dest.with_suffix(f"{dest.suffix}.bak").exists():
                 shutil.move(dest.with_suffix(f"{dest.suffix}.bak"), dest)
-            raise RuntimeError(f"Failed to copy {source} to {dest}") from e
+            msg = f"Failed to copy {source} to {dest}"
+            raise RuntimeError(msg) from e
 
     @staticmethod
     async def safe_move_file(
@@ -452,7 +464,8 @@ class SafeFileOperations:
         backup: bool = True,
     ) -> None:
         if not source.exists():
-            raise FileNotFoundError(f"Source file not found: {source}")
+            msg = f"Source file not found: {source}"
+            raise FileNotFoundError(msg)
 
         backup_path = None
         if backup and dest.exists():
@@ -469,4 +482,5 @@ class SafeFileOperations:
         except Exception as e:
             if backup_path and backup_path.exists():
                 shutil.move(backup_path, dest)
-            raise RuntimeError(f"Failed to move {source} to {dest}") from e
+            msg = f"Failed to move {source} to {dest}"
+            raise RuntimeError(msg) from e

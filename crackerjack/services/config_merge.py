@@ -47,9 +47,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
         if not target_path.exists():
             return t.cast(
-                dict[str, t.Any],
+                "dict[str, t.Any]",
                 self._replace_project_name_in_config_value(
-                    source_content, project_name
+                    source_content,
+                    project_name,
                 ),
             )
 
@@ -117,12 +118,12 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
         target_path.write_text(merged_content)
         new_patterns_count = len(
-            [p for p in patterns if p not in parsed_content.existing_patterns]
+            [p for p in patterns if p not in parsed_content.existing_patterns],
         )
         all_patterns_count = len(parsed_content.existing_patterns) + new_patterns_count
 
         self.logger.info(
-            f"Smart merged .gitignore (cleaned duplicates) new_patterns_count={new_patterns_count} total_crackerjack_patterns={all_patterns_count}"
+            f"Smart merged .gitignore (cleaned duplicates) new_patterns_count={new_patterns_count} total_crackerjack_patterns={all_patterns_count}",
         )
         return merged_content
 
@@ -155,7 +156,10 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         }
 
     def _process_gitignore_line(
-        self, line: str, parsed: t.Any, state: dict[str, bool]
+        self,
+        line: str,
+        parsed: t.Any,
+        state: dict[str, bool],
     ) -> dict[str, bool]:
         stripped = line.strip()
 
@@ -183,13 +187,19 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return state["skip_empty_after_crackerjack"] and not stripped
 
     def _collect_pattern_if_present(
-        self, stripped: str, parsed: t.Any, state: dict[str, bool]
+        self,
+        stripped: str,
+        parsed: t.Any,
+        state: dict[str, bool],
     ) -> None:
         if stripped and not stripped.startswith("#"):
             parsed.existing_patterns.add(stripped)
 
     def _add_line_if_non_crackerjack(
-        self, line: str, parsed: t.Any, state: dict[str, bool]
+        self,
+        line: str,
+        parsed: t.Any,
+        state: dict[str, bool],
     ) -> None:
         if not state["inside_crackerjack_section"]:
             parsed.cleaned_lines.append(line)
@@ -198,7 +208,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return line in ("# Crackerjack patterns", "# Crackerjack generated files")
 
     def _build_merged_gitignore_content(
-        self, parsed_content: t.Any, new_patterns: list[str]
+        self,
+        parsed_content: t.Any,
+        new_patterns: list[str],
     ) -> str:
         if parsed_content.cleaned_lines and not parsed_content.cleaned_lines[-1]:
             parsed_content.cleaned_lines.pop()
@@ -208,7 +220,8 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             merged_content += "\n"
 
         all_crackerjack_patterns = self._get_consolidated_patterns(
-            parsed_content.existing_patterns, new_patterns
+            parsed_content.existing_patterns,
+            new_patterns,
         )
 
         if all_crackerjack_patterns:
@@ -219,7 +232,9 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         return merged_content
 
     def _get_consolidated_patterns(
-        self, existing_patterns: set[str], new_patterns: list[str]
+        self,
+        existing_patterns: set[str],
+        new_patterns: list[str],
     ) -> list[str]:
         new_patterns_to_add = [p for p in new_patterns if p not in existing_patterns]
         return list[t.Any](existing_patterns) + new_patterns_to_add
@@ -310,10 +325,11 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             if tool_name in source_tools:
                 if tool_name not in target_tools:
                     target_tools[tool_name] = self._replace_project_name_in_tool_config(
-                        source_tools[tool_name], project_name
+                        source_tools[tool_name],
+                        project_name,
                     )
                     self.console.print(
-                        f"[green]➕[/green] Added [tool.{tool_name}] configuration"
+                        f"[green]➕[/green] Added [tool.{tool_name}] configuration",
                     )
                 else:
                     self._merge_tool_settings(
@@ -337,13 +353,14 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         for key, value in source_tool.items():
             if key not in target_tool:
                 target_tool[key] = self._replace_project_name_in_config_value(
-                    value, project_name
+                    value,
+                    project_name,
                 )
                 updated_keys.append(key)
 
         if updated_keys:
             self.console.print(
-                f"[yellow]🔄[/yellow] Updated [tool.{tool_name}] with: {', '.join(updated_keys)}"
+                f"[yellow]🔄[/yellow] Updated [tool.{tool_name}] with: {', '.join(updated_keys)}",
             )
 
     def _merge_pytest_markers(
@@ -373,7 +390,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         if new_markers:
             target_markers.extend(new_markers)
             self.console.print(
-                f"[green]➕[/green] Added pytest markers: {len(new_markers)}"
+                f"[green]➕[/green] Added pytest markers: {len(new_markers)}",
             )
 
     def _remove_fixed_coverage_requirements(
@@ -396,7 +413,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             if original_addopts != addopts:
                 target_coverage["addopts"] = addopts
                 self.console.print(
-                    "[green]🔄[/green] Removed fixed coverage requirement (using ratchet system)"
+                    "[green]🔄[/green] Removed fixed coverage requirement (using ratchet system)",
                 )
 
         coverage_report = (
@@ -406,35 +423,39 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
             original_fail_under = coverage_report["fail_under"]
             coverage_report["fail_under"] = 0
             self.console.print(
-                f"[green]🔄[/green] Reset coverage.report.fail_under from {original_fail_under} to 0 (ratchet system)"
+                f"[green]🔄[/green] Reset coverage.report.fail_under from {original_fail_under} to 0 (ratchet system)",
             )
 
     def _replace_project_name_in_tool_config(
-        self, tool_config: dict[str, t.Any], project_name: str
+        self,
+        tool_config: dict[str, t.Any],
+        project_name: str,
     ) -> dict[str, t.Any]:
         if project_name == "crackerjack":
             return tool_config
 
         result = copy.deepcopy(tool_config)
         return t.cast(
-            dict[str, t.Any],
+            "dict[str, t.Any]",
             self._replace_project_name_in_config_value(result, project_name),
         )
 
     def _replace_project_name_in_config_value(
-        self, value: t.Any, project_name: str
+        self,
+        value: t.Any,
+        project_name: str,
     ) -> t.Any:
         if project_name == "crackerjack":
             return value
 
         if isinstance(value, str):
             return value.replace("crackerjack", project_name)
-        elif isinstance(value, list):
+        if isinstance(value, list):
             return [
                 self._replace_project_name_in_config_value(item, project_name)
                 for item in value
             ]
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return {
                 key: self._replace_project_name_in_config_value(val, project_name)
                 for key, val in value.items()

@@ -41,7 +41,8 @@ class CreosoteAdapter(BaseToolAdapter):
     def __init__(self, settings: CreosoteSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "CreosoteAdapter initialized", extra={"has_settings": settings is not None}
+            "CreosoteAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -74,7 +75,9 @@ class CreosoteAdapter(BaseToolAdapter):
         return "creosote"
 
     async def _get_target_files(
-        self, files: list[Path] | None, config: QACheckConfig | None
+        self,
+        files: list[Path] | None,
+        config: QACheckConfig | None,
     ) -> list[Path]:
         if files:
             return files
@@ -88,7 +91,8 @@ class CreosoteAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -124,7 +128,9 @@ class CreosoteAdapter(BaseToolAdapter):
         return None
 
     def _create_issue_for_dependency(
-        self, dep_name: str, config_file: Path
+        self,
+        dep_name: str,
+        config_file: Path,
     ) -> ToolIssue:
         return ToolIssue(
             file_path=config_file,

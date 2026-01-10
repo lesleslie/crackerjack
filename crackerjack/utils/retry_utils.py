@@ -89,8 +89,8 @@ def retry(
             )
 
         if asyncio.iscoroutinefunction(func):
-            return cast(Callable[..., T], async_wrapper)
-        return cast(Callable[..., T], sync_wrapper)
+            return cast("Callable[..., T]", async_wrapper)
+        return cast("Callable[..., T]", sync_wrapper)
 
     return decorator
 
@@ -112,8 +112,7 @@ async def _retry_async[T](
 
     for attempt in range(max_attempts):
         try:
-            result = await func(*args, **kwargs)  # type: ignore[misc]
-            return result  # type: ignore[no-any-return]
+            return await func(*args, **kwargs)  # type: ignore[misc]
 
         except exceptions as e:
             last_exception = e
@@ -136,7 +135,8 @@ async def _retry_async[T](
 
     if last_exception is not None:
         raise last_exception
-    raise RuntimeError("Retry failed but no exception was captured")
+    msg = "Retry failed but no exception was captured"
+    raise RuntimeError(msg)
 
 
 def _retry_sync[T](
@@ -156,8 +156,7 @@ def _retry_sync[T](
 
     for attempt in range(max_attempts):
         try:
-            result = func(*args, **kwargs)
-            return result  # type: ignore[no-any-return]
+            return func(*args, **kwargs)
 
         except exceptions as e:
             last_exception = e
@@ -180,7 +179,8 @@ def _retry_sync[T](
 
     if last_exception is not None:
         raise last_exception
-    raise RuntimeError("Retry failed but no exception was captured")
+    msg = "Retry failed but no exception was captured"
+    raise RuntimeError(msg)
 
 
 API_CONNECTION_EXCEPTIONS = (
@@ -213,7 +213,8 @@ def retry_api_call(
 @retry_api_call(max_attempts=3, delay=0.5)
 async def example_api_call_async(url: str) -> str:
     if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
-        raise ConnectionError("Simulated network error")
+        msg = "Simulated network error"
+        raise ConnectionError(msg)
 
     return f"Success: {url}"
 
@@ -221,6 +222,7 @@ async def example_api_call_async(url: str) -> str:
 @retry_api_call(max_attempts=3, delay=0.5)
 def example_api_call_sync(url: str) -> str:
     if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
-        raise ConnectionError("Simulated network error")
+        msg = "Simulated network error"
+        raise ConnectionError(msg)
 
     return f"Success: {url}"

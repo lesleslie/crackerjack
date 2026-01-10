@@ -309,4 +309,4 @@ class CrackerjackCache:
         return f"{base_key}{version_part}"
 
 
-__all__ = ["CrackerjackCache", "CacheStats", "Cache", "get_cache"]
+__all__ = ["Cache", "CacheStats", "CrackerjackCache", "get_cache"]

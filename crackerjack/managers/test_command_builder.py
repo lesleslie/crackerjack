@@ -9,14 +9,6 @@ from crackerjack.models.protocols import OptionsProtocol
 
 
 def parse_pytest_addopts(addopts: str | list) -> list[str]:
-    """Parse pytest addopts into a list of arguments.
-
-    Args:
-        addopts: Either a string or list of pytest addopts
-
-    Returns:
-        List of individual pytest arguments
-    """
     if isinstance(addopts, list):
         return addopts
 
@@ -71,19 +63,19 @@ class TestCommandBuilder:
     def _handle_not_implemented_error(self, print_info: bool) -> int:
         if print_info and self.console:
             self.console.print(
-                "[yellow]⚠️ CPU detection unavailable, using 2 workers[/yellow]"
+                "[yellow]⚠️ CPU detection unavailable, using 2 workers[/yellow]",
             )
         return 2
 
     def _handle_general_error(self, print_info: bool, e: Exception) -> int:
         if print_info and self.console:
             self.console.print(
-                f"[yellow]⚠️ Worker detection failed: {e}. Using 2 workers.[/yellow]"
+                f"[yellow]⚠️ Worker detection failed: {e}. Using 2 workers.[/yellow]",
             )
         return 2
 
     def get_optimal_workers(
-        self, options: OptionsProtocol, print_info: bool = True
+        self, options: OptionsProtocol, print_info: bool = True,
     ) -> int | str:
         try:
 
@@ -117,20 +109,20 @@ class TestCommandBuilder:
         if os.getenv("CRACKERJACK_DISABLE_AUTO_WORKERS") == "1":
             if print_info and self.console:
                 self.console.print(
-                    "[yellow]⚠️ Auto-detection disabled via environment variable[/yellow]"
+                    "[yellow]⚠️ Auto-detection disabled via environment variable[/yellow]",
                 )
             return True
         return False
 
     def _check_explicit_workers(
-        self, options: OptionsProtocol, print_info: bool
+        self, options: OptionsProtocol, print_info: bool,
     ) -> int | None:
         if hasattr(options, "test_workers") and options.test_workers > 0:
             return options.test_workers
         return None
 
     def _check_auto_detection(
-        self, options: OptionsProtocol, print_info: bool
+        self, options: OptionsProtocol, print_info: bool,
     ) -> str | int | None:
         if hasattr(options, "test_workers") and options.test_workers == 0:
 
@@ -138,7 +130,7 @@ class TestCommandBuilder:
 
                 if print_info and self.console:
                     self.console.print(
-                        "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]"
+                        "[cyan]🔧 Using pytest-xdist auto-detection for workers[/cyan]",
                     )
                 return "auto"
 
@@ -147,7 +139,7 @@ class TestCommandBuilder:
         return None
 
     def _check_fractional_workers(
-        self, options: OptionsProtocol, print_info: bool
+        self, options: OptionsProtocol, print_info: bool,
     ) -> int | None:
         if hasattr(options, "test_workers") and options.test_workers < 0:
             import multiprocessing
@@ -161,7 +153,7 @@ class TestCommandBuilder:
 
             if print_info and self.console:
                 self.console.print(
-                    f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]"
+                    f"[cyan]🔧 Fractional workers: {cpu_count} cores ÷ {divisor} = {workers} workers[/cyan]",
                 )
 
             return workers
@@ -186,7 +178,7 @@ class TestCommandBuilder:
 
             if limited_workers < workers and self.console:
                 self.console.print(
-                    f"[yellow]⚠️ Limited to {limited_workers} workers (available memory: {available_gb:.1f}GB)[/yellow]"
+                    f"[yellow]⚠️ Limited to {limited_workers} workers (available memory: {available_gb:.1f}GB)[/yellow]",
                 )
 
             return limited_workers
@@ -243,19 +235,10 @@ class TestCommandBuilder:
                 "--cov-report=html",
                 "--cov-report=json",
                 "--cov-fail-under=0",
-            ]
+            ],
         )
 
     def _check_project_disabled_xdist(self) -> bool:
-        """Check if project has disabled pytest-xdist in configuration.
-
-        Reads pyproject.toml or pytest.ini to check if -p no:xdist is set in addopts.
-        This respects project-specific configuration that may disable xdist for
-        technical reasons (e.g., DuckDB locking, coverage issues).
-
-        Returns:
-            True if project has explicitly disabled xdist, False otherwise
-        """
         try:
             pyproject_path = self.pkg_path / "pyproject.toml"
 
@@ -272,79 +255,46 @@ class TestCommandBuilder:
             return False
 
     def _load_pytest_addopts(self, pyproject_path: Path) -> str | None:
-        """Load pytest addopts from pyproject.toml.
-
-        Args:
-            pyproject_path: Path to pyproject.toml file
-
-        Returns:
-            Addopts string or None
-        """
         import tomllib
 
         with pyproject_path.open("rb") as f:
             data = tomllib.load(f)
 
-        # Check both [tool.pytest] and [tool.pytest.ini_options] formats
+
         pytest_config = data.get("tool", {}).get("pytest", {})
 
-        # Try ini_options first (pytest.ini_options format)
+
         ini_options = pytest_config.get("ini_options", {})
         addopts = ini_options.get("addopts")
 
-        # If not in ini_options, try direct pytest config format
+
         if addopts is None:
             addopts = pytest_config.get("addopts")
 
         return addopts
 
     def _addopts_disables_xdist(self, addopts: str) -> bool:
-        """Check if addopts string disables xdist.
-
-        Args:
-            addopts: Addopts string from pytest config
-
-        Returns:
-            True if -p no:xdist is found
-        """
         parsed_opts = parse_pytest_addopts(addopts)
 
-        # Check for -p no:xdist in various forms
+
         if "-p" in parsed_opts:
             idx = parsed_opts.index("-p")
-            if idx + 1 < len(parsed_opts) and parsed_opts[idx + 1] == "no:xdist":
+            if idx + 1 < len(parsed_opts) and parsed_opts[idx + 1] == "no: xdist":
                 return True
 
-        # Also check for compact form "-pno:xdist"
+
         return self._has_compact_no_xdist_flag(parsed_opts)
 
     def _has_compact_no_xdist_flag(self, parsed_opts: list[str]) -> bool:
-        """Check for compact -pno:xdist flag in parsed options.
-
-        Args:
-            parsed_opts: List of parsed command-line options
-
-        Returns:
-            True if -pno:xdist or similar flag is found
-        """
-        for opt in parsed_opts:
-            if opt.startswith("-p") and "no:xdist" in opt:
-                return True
-        return False
+        return any(opt.startswith("-p") and "no: xdist" in opt for opt in parsed_opts)
 
     def _add_worker_options(self, cmd: list[str], options: OptionsProtocol) -> None:
-        """Add pytest-xdist worker options to command if appropriate.
 
-        Args:
-            cmd: Command list to modify
-            options: Test command options
-        """
-        # Check if project has explicitly disabled xdist
         if self._check_project_disabled_xdist():
             self._print_xdist_disabled_message()
             return
 
-        # Skip xdist for benchmarks (parallel execution skews results)
+
         if self._should_skip_xdist_for_benchmark(options):
             return
 
@@ -352,54 +302,38 @@ class TestCommandBuilder:
         self._add_worker_count_options(cmd, workers)
 
     def _print_xdist_disabled_message(self) -> None:
-        """Print message explaining xdist is disabled by project config."""
         if self.console:
             self.console.print(
-                "[yellow]⚠️ Project has disabled pytest-xdist in configuration[/yellow]"
+                "[yellow]⚠️ Project has disabled pytest-xdist in configuration[/yellow]",
             )
             self.console.print(
-                "[cyan]🧪 Tests running sequentially (respecting project config)[/cyan]"
+                "[cyan]🧪 Tests running sequentially (respecting project config)[/cyan]",
             )
 
     def _should_skip_xdist_for_benchmark(self, options: OptionsProtocol) -> bool:
-        """Check if xdist should be skipped for benchmark tests.
-
-        Args:
-            options: Test command options
-
-        Returns:
-            True if benchmarks are running
-        """
         if hasattr(options, "benchmark") and options.benchmark:
             if self.console:
                 self.console.print(
-                    "[yellow]⚠️ Benchmarks running sequentially (parallel execution skews results)[/yellow]"
+                    "[yellow]⚠️ Benchmarks running sequentially (parallel execution skews results)[/yellow]",
                 )
             return True
         return False
 
     def _add_worker_count_options(self, cmd: list[str], workers: str | int) -> None:
-        """Add worker count options to command.
-
-        Args:
-            cmd: Command list to modify
-            workers: Number of workers or 'auto'
-        """
         if workers == "auto":
             cmd.extend(["-n", "auto", "--dist=loadfile"])
             if self.console:
                 self.console.print(
-                    "[cyan]🚀 Tests running with auto-detected workers (--dist=loadfile)[/cyan]"
+                    "[cyan]🚀 Tests running with auto-detected workers (--dist=loadfile)[/cyan]",
                 )
         elif isinstance(workers, int) and workers > 1:
             cmd.extend(["-n", str(workers), "--dist=loadfile"])
             if self.console:
                 self.console.print(
-                    f"[cyan]🚀 Tests running with {workers} workers (--dist=loadfile)[/cyan]"
+                    f"[cyan]🚀 Tests running with {workers} workers (--dist=loadfile)[/cyan]",
                 )
-        else:
-            if self.console:
-                self.console.print("[cyan]🧪 Tests running sequentially[/cyan]")
+        elif self.console:
+            self.console.print("[cyan]🧪 Tests running sequentially[/cyan]")
 
     def _add_benchmark_options(self, cmd: list[str], options: OptionsProtocol) -> None:
         if hasattr(options, "benchmark") and options.benchmark:
@@ -408,7 +342,7 @@ class TestCommandBuilder:
                     "--benchmark-only",
                     "--benchmark-sort=mean",
                     "--benchmark-columns=min, max, mean, stddev",
-                ]
+                ],
             )
 
     def _add_timeout_options(self, cmd: list[str], options: OptionsProtocol) -> None:
@@ -435,7 +369,7 @@ class TestCommandBuilder:
                 "-ra",
                 "--strict-markers",
                 "--strict-config",
-            ]
+            ],
         )
 
     def _add_test_path(self, cmd: list[str]) -> None:
@@ -458,7 +392,7 @@ class TestCommandBuilder:
             [
                 f"--cov={package_name}",
                 "--cov-report=term-missing",
-            ]
+            ],
         )
 
         cmd.extend(["-k", test_pattern])

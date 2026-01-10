@@ -15,7 +15,7 @@ class CoverageBadgeService:
     def update_readme_coverage_badge(self, coverage_percent: float) -> bool:
         if not self.readme_path.exists():
             self.console.print(
-                "[yellow]⚠️[/yellow] README.md not found, skipping badge update"
+                "[yellow]⚠️[/yellow] README.md not found, skipping badge update",
             )
             return False
 
@@ -33,11 +33,10 @@ class CoverageBadgeService:
             if updated_content != readme_content:
                 self.readme_path.write_text(updated_content, encoding="utf-8")
                 self.console.print(
-                    f"[green]📊[/green] Coverage badge {action}: {coverage_percent:.1f}%"
+                    f"[green]📊[/green] Coverage badge {action}: {coverage_percent:.1f}%",
                 )
                 return True
-            else:
-                return False
+            return False
 
         except Exception as e:
             self.console.print(f"[red]❌[/red] Failed to update coverage badge: {e}")
@@ -52,7 +51,7 @@ class CoverageBadgeService:
     def _get_badge_color(self, coverage_percent: float) -> str:
         if coverage_percent < 50:
             return "red"
-        elif coverage_percent < 80:
+        if coverage_percent < 80:
             return "yellow"
         return "brightgreen"
 
@@ -71,8 +70,7 @@ class CoverageBadgeService:
 
             temp_content = pattern_obj.apply(content)
             if temp_content != content:
-                new_content = temp_content.replace("NEW_BADGE_URL", new_badge_url)
-                return new_content
+                return temp_content.replace("NEW_BADGE_URL", new_badge_url)
 
         return content
 
@@ -101,9 +99,9 @@ class CoverageBadgeService:
             if line.startswith("#") and not title_found:
                 title_found = True
                 continue
-            elif title_found and line.strip() == "":
+            if title_found and line.strip() == "":
                 continue
-            elif title_found and line.strip():
+            if title_found and line.strip():
                 return i
 
         return None

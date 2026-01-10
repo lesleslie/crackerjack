@@ -17,14 +17,14 @@ from crackerjack.services.git import FailedGitResult, GitService
 class TestGitServiceInitialization:
     """Test GitService initialization."""
 
-    def test_initialization_with_default_path(self):
+    def test_initialization_with_default_path(self) -> None:
         """Test GitService initializes with current working directory."""
         with patch("crackerjack.services.git.Console"):
             service = GitService(console=Mock(), pkg_path=None)
 
             assert service.pkg_path == Path.cwd()
 
-    def test_initialization_with_custom_path(self, tmp_path):
+    def test_initialization_with_custom_path(self, tmp_path) -> None:
         """Test GitService initializes with custom path."""
         with patch("crackerjack.services.git.Console"):
             service = GitService(console=Mock(), pkg_path=tmp_path)
@@ -43,7 +43,7 @@ class TestGitServiceRepositoryDetection:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_is_git_repo_true(self, mock_execute, service):
+    def test_is_git_repo_true(self, mock_execute, service) -> None:
         """Test is_git_repo returns True for valid git repository."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=["git", "rev-parse", "--git-dir"],
@@ -55,7 +55,7 @@ class TestGitServiceRepositoryDetection:
         assert service.is_git_repo() is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_is_git_repo_false(self, mock_execute, service):
+    def test_is_git_repo_false(self, mock_execute, service) -> None:
         """Test is_git_repo returns False for non-git directory."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=["git", "rev-parse", "--git-dir"],
@@ -67,7 +67,7 @@ class TestGitServiceRepositoryDetection:
         assert service.is_git_repo() is False
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_is_git_repo_handles_exception(self, mock_execute, service):
+    def test_is_git_repo_handles_exception(self, mock_execute, service) -> None:
         """Test is_git_repo handles exceptions gracefully."""
         mock_execute.side_effect = FileNotFoundError("git not found")
 
@@ -85,20 +85,20 @@ class TestGitServiceFileOperations:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_changed_files(self, mock_execute, service):
+    def test_get_changed_files(self, mock_execute, service) -> None:
         """Test getting all changed files."""
         # Mock staged files
         mock_execute.side_effect = [
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="file1.py\nfile2.py\n", stderr=""
+                args=[], returncode=0, stdout="file1.py\nfile2.py\n", stderr="",
             ),
             # Mock unstaged files
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="file3.py\n", stderr=""
+                args=[], returncode=0, stdout="file3.py\n", stderr="",
             ),
             # Mock untracked files
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="file4.py\n", stderr=""
+                args=[], returncode=0, stdout="file4.py\n", stderr="",
             ),
         ]
 
@@ -111,10 +111,10 @@ class TestGitServiceFileOperations:
         assert "file4.py" in files
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_changed_files_empty(self, mock_execute, service):
+    def test_get_changed_files_empty(self, mock_execute, service) -> None:
         """Test getting changed files when none exist."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
+            args=[], returncode=0, stdout="", stderr="",
         )
 
         files = service.get_changed_files()
@@ -122,10 +122,10 @@ class TestGitServiceFileOperations:
         assert files == []
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_staged_files(self, mock_execute, service):
+    def test_get_staged_files(self, mock_execute, service) -> None:
         """Test getting staged files."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="staged1.py\nstaged2.py\n", stderr=""
+            args=[], returncode=0, stdout="staged1.py\nstaged2.py\n", stderr="",
         )
 
         files = service.get_staged_files()
@@ -135,10 +135,10 @@ class TestGitServiceFileOperations:
         assert "staged2.py" in files
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_add_files_success(self, mock_execute, service):
+    def test_add_files_success(self, mock_execute, service) -> None:
         """Test successfully adding files."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
+            args=[], returncode=0, stdout="", stderr="",
         )
 
         result = service.add_files(["file1.py", "file2.py"])
@@ -147,10 +147,10 @@ class TestGitServiceFileOperations:
         assert mock_execute.call_count == 2
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_add_files_failure(self, mock_execute, service):
+    def test_add_files_failure(self, mock_execute, service) -> None:
         """Test handling of git add failure."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=128, stdout="", stderr="fatal: pathspec 'file.py' did not match any files"
+            args=[], returncode=128, stdout="", stderr="fatal: pathspec 'file.py' did not match any files",
         )
 
         result = service.add_files(["file.py"])
@@ -158,10 +158,10 @@ class TestGitServiceFileOperations:
         assert result is False
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_add_all_files_success(self, mock_execute, service):
+    def test_add_all_files_success(self, mock_execute, service) -> None:
         """Test successfully adding all files."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
+            args=[], returncode=0, stdout="", stderr="",
         )
 
         result = service.add_all_files()
@@ -169,10 +169,10 @@ class TestGitServiceFileOperations:
         assert result is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_add_all_files_failure(self, mock_execute, service):
+    def test_add_all_files_failure(self, mock_execute, service) -> None:
         """Test handling of add all failure."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=1, stdout="", stderr="error"
+            args=[], returncode=1, stdout="", stderr="error",
         )
 
         result = service.add_all_files()
@@ -191,10 +191,10 @@ class TestGitServiceCommit:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_commit_success(self, mock_execute, service):
+    def test_commit_success(self, mock_execute, service) -> None:
         """Test successful commit."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="[main abc123] Test commit", stderr=""
+            args=[], returncode=0, stdout="[main abc123] Test commit", stderr="",
         )
 
         result = service.commit("Test commit")
@@ -202,7 +202,7 @@ class TestGitServiceCommit:
         assert result is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_commit_hook_modification(self, mock_execute, service):
+    def test_commit_hook_modification(self, mock_execute, service) -> None:
         """Test commit with hook modification and retry."""
         # First commit fails due to hook modification
         mock_execute.side_effect = [
@@ -214,11 +214,11 @@ class TestGitServiceCommit:
             ),
             # Re-add files
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="", stderr=""
+                args=[], returncode=0, stdout="", stderr="",
             ),
             # Retry commit succeeds
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="[main abc123] Test commit", stderr=""
+                args=[], returncode=0, stdout="[main abc123] Test commit", stderr="",
             ),
         ]
 
@@ -228,7 +228,7 @@ class TestGitServiceCommit:
         assert mock_execute.call_count == 3
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_commit_hook_blocked(self, mock_execute, service):
+    def test_commit_hook_blocked(self, mock_execute, service) -> None:
         """Test commit blocked by hooks."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
@@ -242,7 +242,7 @@ class TestGitServiceCommit:
         assert result is False
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_commit_generic_failure(self, mock_execute, service):
+    def test_commit_generic_failure(self, mock_execute, service) -> None:
         """Test commit with generic failure."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
@@ -267,7 +267,7 @@ class TestGitServicePush:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_push_success(self, mock_execute, service):
+    def test_push_success(self, mock_execute, service) -> None:
         """Test successful push."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
@@ -281,7 +281,7 @@ class TestGitServicePush:
         assert result is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_push_failure(self, mock_execute, service):
+    def test_push_failure(self, mock_execute, service) -> None:
         """Test failed push."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
@@ -295,7 +295,7 @@ class TestGitServicePush:
         assert result is False
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_push_with_tags_success(self, mock_execute, service):
+    def test_push_with_tags_success(self, mock_execute, service) -> None:
         """Test successful push with tags."""
         mock_execute.return_value = subprocess.CompletedProcess(
             args=[],
@@ -309,10 +309,10 @@ class TestGitServicePush:
         assert result is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_push_no_new_commits(self, mock_execute, service):
+    def test_push_no_new_commits(self, mock_execute, service) -> None:
         """Test push with no new commits."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
+            args=[], returncode=0, stdout="", stderr="",
         )
 
         result = service.push()
@@ -331,10 +331,10 @@ class TestGitServiceBranch:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_current_branch_success(self, mock_execute, service):
+    def test_get_current_branch_success(self, mock_execute, service) -> None:
         """Test getting current branch name."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="main\n", stderr=""
+            args=[], returncode=0, stdout="main\n", stderr="",
         )
 
         branch = service.get_current_branch()
@@ -342,10 +342,10 @@ class TestGitServiceBranch:
         assert branch == "main"
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_current_branch_failure(self, mock_execute, service):
+    def test_get_current_branch_failure(self, mock_execute, service) -> None:
         """Test getting current branch when not in repo."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=128, stdout="", stderr="fatal: not a git repository"
+            args=[], returncode=128, stdout="", stderr="fatal: not a git repository",
         )
 
         branch = service.get_current_branch()
@@ -353,10 +353,10 @@ class TestGitServiceBranch:
         assert branch is None
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_unpushed_commit_count(self, mock_execute, service):
+    def test_get_unpushed_commit_count(self, mock_execute, service) -> None:
         """Test getting unpushed commit count."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="3\n", stderr=""
+            args=[], returncode=0, stdout="3\n", stderr="",
         )
 
         count = service.get_unpushed_commit_count()
@@ -364,10 +364,10 @@ class TestGitServiceBranch:
         assert count == 3
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_unpushed_commit_count_zero(self, mock_execute, service):
+    def test_get_unpushed_commit_count_zero(self, mock_execute, service) -> None:
         """Test unpushed commit count when up to date."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="0\n", stderr=""
+            args=[], returncode=0, stdout="0\n", stderr="",
         )
 
         count = service.get_unpushed_commit_count()
@@ -375,10 +375,10 @@ class TestGitServiceBranch:
         assert count == 0
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_unpushed_commit_count_error(self, mock_execute, service):
+    def test_get_unpushed_commit_count_error(self, mock_execute, service) -> None:
         """Test unpushed commit count with error."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=128, stdout="", stderr="error"
+            args=[], returncode=128, stdout="", stderr="error",
         )
 
         count = service.get_unpushed_commit_count()
@@ -396,14 +396,14 @@ class TestGitServiceCommitMessages:
         with patch("crackerjack.services.git.Console"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
-    def test_get_commit_message_suggestions_empty(self, service):
+    def test_get_commit_message_suggestions_empty(self, service) -> None:
         """Test commit message suggestions with no files."""
         suggestions = service.get_commit_message_suggestions([])
 
         assert len(suggestions) > 0
         assert "Update project files" in suggestions
 
-    def test_get_commit_message_suggestions_docs(self, service):
+    def test_get_commit_message_suggestions_docs(self, service) -> None:
         """Test commit message suggestions for documentation files."""
         files = ["README.md", "docs/guide.md"]
 
@@ -411,7 +411,7 @@ class TestGitServiceCommitMessages:
 
         assert any("documentation" in msg.lower() for msg in suggestions)
 
-    def test_get_commit_message_suggestions_tests(self, service):
+    def test_get_commit_message_suggestions_tests(self, service) -> None:
         """Test commit message suggestions for test files."""
         files = ["test_git.py", "tests/test_service.py"]
 
@@ -419,7 +419,7 @@ class TestGitServiceCommitMessages:
 
         assert any("test" in msg.lower() for msg in suggestions)
 
-    def test_get_commit_message_suggestions_config(self, service):
+    def test_get_commit_message_suggestions_config(self, service) -> None:
         """Test commit message suggestions for config files."""
         files = ["pyproject.toml", "config.yaml"]
 
@@ -427,7 +427,7 @@ class TestGitServiceCommitMessages:
 
         assert any("config" in msg.lower() for msg in suggestions)
 
-    def test_get_commit_message_suggestions_mixed(self, service):
+    def test_get_commit_message_suggestions_mixed(self, service) -> None:
         """Test commit message suggestions for mixed file types."""
         files = ["README.md", "test_git.py", "pyproject.toml"]
 
@@ -436,7 +436,7 @@ class TestGitServiceCommitMessages:
         # Should return max 5 suggestions
         assert len(suggestions) <= 5
 
-    def test_get_commit_message_suggestions_pyproject_specific(self, service):
+    def test_get_commit_message_suggestions_pyproject_specific(self, service) -> None:
         """Test specific message for pyproject.toml."""
         files = ["pyproject.toml"]
 
@@ -461,15 +461,15 @@ class TestGitServiceFilteredFiles:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_changed_files_by_extension(self, mock_execute, service):
+    def test_get_changed_files_by_extension(self, mock_execute, service) -> None:
         """Test getting changed files filtered by extension."""
         # Mock staged and unstaged files
         mock_execute.side_effect = [
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="file1.py\nfile2.md\n", stderr=""
+                args=[], returncode=0, stdout="file1.py\nfile2.md\n", stderr="",
             ),
             subprocess.CompletedProcess(
-                args=[], returncode=0, stdout="file3.py\n", stderr=""
+                args=[], returncode=0, stdout="file3.py\n", stderr="",
             ),
         ]
 
@@ -480,10 +480,10 @@ class TestGitServiceFilteredFiles:
         assert all(str(f).endswith(".py") for f in py_files)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_changed_files_by_extension_staged_only(self, mock_execute, service):
+    def test_get_changed_files_by_extension_staged_only(self, mock_execute, service) -> None:
         """Test getting only staged files by extension."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="file1.py\n", stderr=""
+            args=[], returncode=0, stdout="file1.py\n", stderr="",
         )
 
         py_files = service.get_changed_files_by_extension(
@@ -496,10 +496,10 @@ class TestGitServiceFilteredFiles:
         assert mock_execute.call_count == 1
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_changed_files_by_extension_unstaged_only(self, mock_execute, service):
+    def test_get_changed_files_by_extension_unstaged_only(self, mock_execute, service) -> None:
         """Test getting only unstaged files by extension."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="file3.py\n", stderr=""
+            args=[], returncode=0, stdout="file3.py\n", stderr="",
         )
 
         py_files = service.get_changed_files_by_extension(
@@ -523,10 +523,10 @@ class TestGitServiceCommitOperations:
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_current_commit_hash(self, mock_execute, service):
+    def test_get_current_commit_hash(self, mock_execute, service) -> None:
         """Test getting current commit hash."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="abc123def456\n", stderr=""
+            args=[], returncode=0, stdout="abc123def456\n", stderr="",
         )
 
         commit_hash = service.get_current_commit_hash()
@@ -534,10 +534,10 @@ class TestGitServiceCommitOperations:
         assert commit_hash == "abc123def456"
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_get_current_commit_hash_failure(self, mock_execute, service):
+    def test_get_current_commit_hash_failure(self, mock_execute, service) -> None:
         """Test getting commit hash with error."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=128, stdout="", stderr="error"
+            args=[], returncode=128, stdout="", stderr="error",
         )
 
         commit_hash = service.get_current_commit_hash()
@@ -545,10 +545,10 @@ class TestGitServiceCommitOperations:
         assert commit_hash is None
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_reset_hard_success(self, mock_execute, service):
+    def test_reset_hard_success(self, mock_execute, service) -> None:
         """Test hard reset to commit."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=0, stdout="", stderr=""
+            args=[], returncode=0, stdout="", stderr="",
         )
 
         result = service.reset_hard("abc123")
@@ -556,10 +556,10 @@ class TestGitServiceCommitOperations:
         assert result is True
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
-    def test_reset_hard_failure(self, mock_execute, service):
+    def test_reset_hard_failure(self, mock_execute, service) -> None:
         """Test hard reset failure."""
         mock_execute.return_value = subprocess.CompletedProcess(
-            args=[], returncode=1, stdout="", stderr="error: invalid commit"
+            args=[], returncode=1, stdout="", stderr="error: invalid commit",
         )
 
         result = service.reset_hard("invalid")
@@ -571,7 +571,7 @@ class TestGitServiceCommitOperations:
 class TestFailedGitResult:
     """Test FailedGitResult class."""
 
-    def test_failed_git_result_initialization(self):
+    def test_failed_git_result_initialization(self) -> None:
         """Test FailedGitResult creates proper error result."""
         cmd = ["git", "status"]
         error = "Command validation failed"

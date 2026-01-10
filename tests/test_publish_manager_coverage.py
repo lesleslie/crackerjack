@@ -2,13 +2,13 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
 from typing import Any
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+from rich.console import Console
 
 from crackerjack.managers.publish_manager import PublishManagerImpl
-from rich.console import Console
 
 
 # Module-level fixtures available to all test classes
@@ -307,7 +307,7 @@ class TestPublishManagerVersionBumping:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
+        _injection_map, _pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -387,7 +387,7 @@ class TestPublishManagerAuthentication:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
+        _injection_map, _pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -502,7 +502,7 @@ class TestPublishManagerBuildPackage:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
+        _injection_map, _pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -589,7 +589,7 @@ class TestPublishManagerPublishPackage:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
+        _injection_map, _pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -709,7 +709,7 @@ class TestPublishManagerUtilities:
         temp_pkg_path,
     ):
         """Create PublishManagerImpl with mocked dependencies."""
-        injection_map, pkg_path = publish_manager_di_context
+        _injection_map, _pkg_path = publish_manager_di_context
         return create_publish_manager(
             mock_console=mock_console,
             mock_git_service=mock_git_service,
@@ -783,8 +783,13 @@ requires - python = " >=    3.8"
             assert info["python_requires"] == " >=    3.8"
 
     def test_get_package_info_missing_file(self, publish_manager) -> None:
-        info = publish_manager.get_package_info()
-        assert info == {}
+        with patch.object(
+            publish_manager.filesystem,
+            "read_file",
+            return_value="",
+        ):
+            info = publish_manager.get_package_info()
+            assert info == {}
 
     def test_get_package_info_error(self, publish_manager) -> None:
         with patch.object(

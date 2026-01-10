@@ -246,7 +246,7 @@ class PluginLoader:
             return False
         except Exception as e:
             self.logger.exception(
-                f"Unexpected error loading plugin {plugin_source}: {e}"
+                f"Unexpected error loading plugin {plugin_source}: {e}",
             )
             return False
 

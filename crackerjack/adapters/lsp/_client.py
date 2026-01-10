@@ -1,9 +1,11 @@
 import asyncio
 import json
 import logging
-import socket
 import typing as t
 from pathlib import Path
+
+if t.TYPE_CHECKING:
+    import socket
 
 logger = logging.getLogger("crackerjack.lsp_client")
 
@@ -25,7 +27,8 @@ class ZubanLSPClient:
     async def connect(self, timeout: float = 5.0) -> bool:
         try:
             self._reader, self._writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port), timeout=timeout
+                asyncio.open_connection(self.host, self.port),
+                timeout=timeout,
             )
 
             logger.info(f"Connected to Zuban LSP server at {self.host}:{self.port}")
@@ -66,7 +69,7 @@ class ZubanLSPClient:
                         "versionSupport": True,
                         "tagSupport": {"valueSet": [1, 2]},
                         "relatedInformation": True,
-                    }
+                    },
                 },
                 "workspace": {
                     "workspaceFolders": True,
@@ -74,7 +77,7 @@ class ZubanLSPClient:
                 },
             },
             "workspaceFolders": [
-                {"uri": f"file://{root_path}", "name": root_path.name}
+                {"uri": f"file://{root_path}", "name": root_path.name},
             ],
         }
 
@@ -103,13 +106,16 @@ class ZubanLSPClient:
                 "languageId": "python",
                 "version": 1,
                 "text": content,
-            }
+            },
         }
 
         await self._send_notification("textDocument/didOpen", params)
 
     async def text_document_did_change(
-        self, file_path: Path, content: str, version: int = 2
+        self,
+        file_path: Path,
+        content: str,
+        version: int = 2,
     ) -> None:
         params = {
             "textDocument": {
@@ -125,7 +131,7 @@ class ZubanLSPClient:
         params = {
             "textDocument": {
                 "uri": f"file://{file_path}",
-            }
+            },
         }
 
         await self._send_notification("textDocument/didClose", params)
@@ -134,7 +140,10 @@ class ZubanLSPClient:
         return []
 
     async def _send_request(
-        self, method: str, params: dict[str, t.Any] | None = None, timeout: float = 10.0
+        self,
+        method: str,
+        params: dict[str, t.Any] | None = None,
+        timeout: float = 10.0,
     ) -> dict[str, t.Any] | None:
         if not self._writer or not self._reader:
             return None
@@ -152,21 +161,22 @@ class ZubanLSPClient:
         try:
             await self._send_message(request)
 
-            response = await asyncio.wait_for(
-                self._read_response(request_id), timeout=timeout
+            return await asyncio.wait_for(
+                self._read_response(request_id),
+                timeout=timeout,
             )
-
-            return response
 
         except TimeoutError:
             logger.warning(f"LSP request {method} timed out")
             return {"error": "timeout", "id": request_id}
         except Exception as e:
-            logger.error(f"LSP request {method} failed: {e}")
+            logger.exception(f"LSP request {method} failed: {e}")
             return {"error": str(e), "id": request_id}
 
     async def _send_notification(
-        self, method: str, params: dict[str, t.Any] | None = None
+        self,
+        method: str,
+        params: dict[str, t.Any] | None = None,
     ) -> None:
         if not self._writer:
             return
@@ -182,7 +192,7 @@ class ZubanLSPClient:
         try:
             await self._send_message(notification)
         except Exception as e:
-            logger.error(f"LSP notification {method} failed: {e}")
+            logger.exception(f"LSP notification {method} failed: {e}")
 
     async def _send_message(self, message: dict[str, t.Any]) -> None:
         if not self._writer:
@@ -208,11 +218,11 @@ class ZubanLSPClient:
 
             if "id" in message:
                 logger.debug(
-                    f"Received response for ID {message['id']}, expected {expected_id}"
+                    f"Received response for ID {message['id']}, expected {expected_id}",
                 )
             else:
                 logger.debug(
-                    f"Received notification: {message.get('method', 'unknown')}"
+                    f"Received notification: {message.get('method', 'unknown')}",
                 )
 
     async def _read_message(self) -> dict[str, t.Any] | None:
@@ -237,10 +247,10 @@ class ZubanLSPClient:
             content = content_bytes.decode()
 
             json_result = json.loads(content)
-            return t.cast(dict[str, t.Any] | None, json_result)
+            return t.cast("dict[str, t.Any] | None", json_result)
 
         except Exception as e:
-            logger.error(f"Failed to read LSP message: {e}")
+            logger.exception(f"Failed to read LSP message: {e}")
             return None
 
     async def __aenter__(self) -> "ZubanLSPClient":

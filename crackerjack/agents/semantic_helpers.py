@@ -2,8 +2,8 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from ..models.semantic_models import SearchQuery, SemanticConfig
-from ..services.vector_store import VectorStore
+from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
+from crackerjack.services.vector_store import VectorStore
 
 
 @dataclass
@@ -117,7 +117,9 @@ class SemanticEnhancer:
             )
 
     async def find_duplicate_patterns(
-        self, code_snippet: str, current_file: Path | None = None
+        self,
+        code_snippet: str,
+        current_file: Path | None = None,
     ) -> SemanticInsight:
         insight = await self.find_similar_patterns(
             query=code_snippet,
@@ -130,7 +132,9 @@ class SemanticEnhancer:
         return insight
 
     async def find_refactoring_opportunities(
-        self, function_signature: str, current_file: Path | None = None
+        self,
+        function_signature: str,
+        current_file: Path | None = None,
     ) -> SemanticInsight:
         return await self.find_similar_patterns(
             query=function_signature,
@@ -140,7 +144,9 @@ class SemanticEnhancer:
         )
 
     async def find_implementation_examples(
-        self, pattern_description: str, current_file: Path | None = None
+        self,
+        pattern_description: str,
+        current_file: Path | None = None,
     ) -> SemanticInsight:
         return await self.find_similar_patterns(
             query=pattern_description,
@@ -160,13 +166,13 @@ class SemanticEnhancer:
             if semantic_insight.high_confidence_matches > 0:
                 enhanced.append(
                     f"Semantic analysis found {semantic_insight.high_confidence_matches} "
-                    f"highly similar patterns - consider consolidation"
+                    f"highly similar patterns - consider consolidation",
                 )
 
             if semantic_insight.total_matches >= 3:
                 enhanced.append(
                     f"Found {semantic_insight.total_matches} related patterns "
-                    f"across codebase - review for consistency"
+                    f"across codebase - review for consistency",
                 )
 
             high_conf_files = {
@@ -200,7 +206,9 @@ class SemanticEnhancer:
         )
 
     async def store_insight_to_session(
-        self, insight: SemanticInsight, agent_type: str
+        self,
+        insight: SemanticInsight,
+        agent_type: str,
     ) -> bool:
         try:
             session_key = f"{agent_type}_{hash(insight.query)}"
@@ -217,7 +225,9 @@ def create_semantic_enhancer(project_path: Path) -> SemanticEnhancer:
 
 
 async def get_session_enhanced_recommendations(
-    base_recommendations: list[str], agent_type: str, project_path: Path
+    base_recommendations: list[str],
+    agent_type: str,
+    project_path: Path,
 ) -> list[str]:
     try:
         enhancer = create_semantic_enhancer(project_path)
@@ -237,7 +247,7 @@ async def get_session_enhanced_recommendations(
         if total_patterns > 5:
             enhanced.append(
                 f"Session context: {total_patterns} similar patterns found "
-                "across recent analyses - consider broader refactoring"
+                "across recent analyses - consider broader refactoring",
             )
 
         return enhanced

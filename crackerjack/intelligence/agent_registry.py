@@ -66,7 +66,7 @@ class AgentRegistry:
             f"Registry initialized with {len(self._agents)} agents: "
             f"{len([a for a in self._agents.values() if a.metadata.source == AgentSource.CRACKERJACK])} crackerjack, "
             f"{len([a for a in self._agents.values() if a.metadata.source == AgentSource.USER])} user, "
-            f"{len([a for a in self._agents.values() if a.metadata.source == AgentSource.SYSTEM])} system"
+            f"{len([a for a in self._agents.values() if a.metadata.source == AgentSource.SYSTEM])} system",
         )
 
     async def _register_crackerjack_agents(self) -> None:
@@ -154,7 +154,8 @@ class AgentRegistry:
 
         for agent_name, description in system_agents:
             capabilities = self._infer_capabilities_from_system_agent(
-                agent_name, description
+                agent_name,
+                description,
             )
 
             metadata = AgentMetadata(
@@ -179,7 +180,7 @@ class AgentRegistry:
             content = agent_file.read_text(encoding="utf-8")
             return self._extract_agent_data_from_content(content)
         except Exception as e:
-            self.logger.error(f"Error parsing agent file {agent_file}: {e}")
+            self.logger.exception(f"Error parsing agent file {agent_file}: {e}")
             return None
 
     def _extract_agent_data_from_content(self, content: str) -> dict[str, t.Any] | None:
@@ -245,12 +246,15 @@ class AgentRegistry:
         ]
 
     def _class_name_matches_keywords(
-        self, class_name: str, keywords: list[str]
+        self,
+        class_name: str,
+        keywords: list[str],
     ) -> bool:
         return any(keyword in class_name for keyword in keywords)
 
     def _infer_capabilities_from_user_agent(
-        self, agent_data: dict[str, t.Any]
+        self,
+        agent_data: dict[str, t.Any],
     ) -> set[AgentCapability]:
         capabilities = set()
 
@@ -298,7 +302,9 @@ class AgentRegistry:
         return capabilities
 
     def _infer_capabilities_from_system_agent(
-        self, name: str, description: str
+        self,
+        name: str,
+        description: str,
     ) -> set[AgentCapability]:
         capabilities = set()
 
@@ -327,11 +333,13 @@ class AgentRegistry:
 
         for agent_names in self._capability_map.values():
             agent_names.sort(
-                key=lambda name: self._agents[name].metadata.priority, reverse=True
+                key=lambda name: self._agents[name].metadata.priority,
+                reverse=True,
             )
 
     def get_agents_by_capability(
-        self, capability: AgentCapability
+        self,
+        capability: AgentCapability,
     ) -> list[RegisteredAgent]:
         agent_names = self._capability_map.get(capability, [])
         return [self._agents[name] for name in agent_names]
@@ -353,7 +361,7 @@ class AgentRegistry:
 
         for source in AgentSource:
             count = len(
-                [a for a in self._agents.values() if a.metadata.source == source]
+                [a for a in self._agents.values() if a.metadata.source == source],
             )
             stats["by_source"][source.value] = count
 

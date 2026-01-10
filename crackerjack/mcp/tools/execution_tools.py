@@ -53,7 +53,7 @@ async def _handle_context_validation(context: t.Any) -> str | None:
                     "MCP server may not be properly initialized.",
                     "timestamp": datetime.now().isoformat(),
                     "details": str(e),
-                }
+                },
             )
         raise
 
@@ -78,7 +78,7 @@ def _handle_type_error(error: TypeError) -> str:
                 "error": f"Async execution error: A function returned None instead of an awaitable. {error}",
                 "traceback": traceback.format_exc(),
                 "timestamp": datetime.now().isoformat(),
-            }
+            },
         )
     raise error
 
@@ -96,7 +96,7 @@ def _handle_general_error(error: Exception) -> str:
             "timestamp": context.get_current_time()
             if context and hasattr(context, "get_current_time")
             else datetime.now().isoformat(),
-        }
+        },
     )
 
 
@@ -114,7 +114,7 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
                     "status": "error",
                     "message": f"Error analysis failed: {e}",
                     "recommendations": [],
-                }
+                },
             )
 
 
@@ -142,7 +142,9 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
     ) -> str:
         try:
             recommendations = _generate_agent_recommendations(
-                task_description, project_type, current_context
+                task_description,
+                project_type,
+                current_context,
             )
             return json.dumps(recommendations, indent=2)
         except Exception as e:
@@ -151,7 +153,7 @@ def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
                     "status": "error",
                     "message": f"Agent suggestion failed: {e}",
                     "recommendations": {},
-                }
+                },
             )
 
 
@@ -164,14 +166,14 @@ async def _validate_context_and_rate_limit(context: t.Any) -> str | None:
 
         with suppress(Exception):
             allowed, details = await context.rate_limiter.check_request_allowed(
-                "execute_crackerjack"
+                "execute_crackerjack",
             )
             if not allowed:
                 return json.dumps(
                     {
                         "status": "error",
                         "message": f"Rate limit exceeded: {details}. Please wait before retrying.",
-                    }
+                    },
                 )
 
     return None
@@ -213,7 +215,10 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
     filesystem = FileSystemService()
     git_service = GitService(target_path)
     return InitializationService(
-        console, filesystem, git_service, target_path
+        console,
+        filesystem,
+        git_service,
+        target_path,
     ).initialize_project_full(force=force)
 
 
@@ -223,7 +228,7 @@ def _create_init_error_response(message: str) -> str:
             "status": "error",
             "message": message,
             "initialized": False,
-        }
+        },
     )
 
 
@@ -246,12 +251,14 @@ def _create_init_exception_response(error: Exception, target_path: t.Any) -> str
             "message": f"Initialization failed: {error}",
             "target_path": str(target_path),
             "initialized": False,
-        }
+        },
     )
 
 
 def _generate_agent_recommendations(
-    task_description: str, project_type: str, current_context: str
+    task_description: str,
+    project_type: str,
+    current_context: str,
 ) -> dict[str, t.Any]:
     recommendations = {
         "status": "success",
@@ -266,7 +273,9 @@ def _generate_agent_recommendations(
     }
 
     suggestions = _analyze_task_for_agents(
-        task_description, project_type, current_context
+        task_description,
+        project_type,
+        current_context,
     )
     recommendations["suggested_agents"] = suggestions["agents"]
     recommendations["workflow_recommendations"] = suggestions["workflows"]
@@ -276,7 +285,9 @@ def _generate_agent_recommendations(
 
 
 def _analyze_task_for_agents(
-    task_description: str, project_type: str, current_context: str
+    task_description: str,
+    project_type: str,
+    current_context: str,
 ) -> dict[str, t.Any]:
     agents = []
     workflows = []
@@ -298,7 +309,7 @@ def _analyze_task_for_agents(
                     "reason": "Code quality improvements often require refactoring",
                     "confidence": 0.7,
                 },
-            ]
+            ],
         )
         reasoning_parts.append("Task involves testing or quality improvement")
 
@@ -310,7 +321,7 @@ def _analyze_task_for_agents(
                 "name": "SecurityAgent",
                 "reason": "Task involves security considerations",
                 "confidence": 0.9,
-            }
+            },
         )
         reasoning_parts.append("Security concerns detected")
 
@@ -323,7 +334,7 @@ def _analyze_task_for_agents(
                 "name": "PerformanceAgent",
                 "reason": "Task involves performance optimization",
                 "confidence": 0.8,
-            }
+            },
         )
         reasoning_parts.append("Performance optimization required")
 
@@ -335,7 +346,7 @@ def _analyze_task_for_agents(
                 "name": "DocumentationAgent",
                 "reason": "Task involves documentation work",
                 "confidence": 0.8,
-            }
+            },
         )
         reasoning_parts.append("Documentation work identified")
 
@@ -348,7 +359,7 @@ def _analyze_task_for_agents(
                 "name": "ImportOptimizationAgent",
                 "reason": "Task involves import or dependency management",
                 "confidence": 0.7,
-            }
+            },
         )
         reasoning_parts.append("Import / dependency work detected")
 
@@ -358,7 +369,7 @@ def _analyze_task_for_agents(
                 "Run quality checks with AI agent auto-fixing",
                 "Use comprehensive testing with coverage tracking",
                 "Apply refactoring for code clarity",
-            ]
+            ],
         )
 
     if not agents:
@@ -367,7 +378,7 @@ def _analyze_task_for_agents(
                 "name": "RefactoringAgent",
                 "reason": "Default agent for general code improvement tasks",
                 "confidence": 0.5,
-            }
+            },
         )
         reasoning_parts.append("General code improvement task")
 

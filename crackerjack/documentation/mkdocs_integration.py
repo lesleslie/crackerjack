@@ -5,7 +5,7 @@ from pathlib import Path
 
 import yaml
 
-from ..models.protocols import (
+from crackerjack.models.protocols import (
     ConfigManagerProtocol,
     FileSystemServiceProtocol,
     LoggerProtocol,
@@ -42,7 +42,7 @@ class MkDocsIntegrationService:
         config_manager: ConfigManagerProtocol,
         filesystem: FileSystemServiceProtocol,
         logger: LoggerProtocol,
-    ):
+    ) -> None:
         self.config_manager = config_manager
         self.filesystem = filesystem
         self.logger = logger
@@ -115,7 +115,7 @@ class MkDocsIntegrationService:
 
             if serve:
                 self.logger.info(
-                    "MkDocs development server started at http://127.0.0.1:8000"
+                    "MkDocs development server started at http://127.0.0.1:8000",
                 )
             else:
                 self.logger.info("MkDocs site built successfully")
@@ -123,7 +123,7 @@ class MkDocsIntegrationService:
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to build MkDocs site: {e}")
+            self.logger.exception(f"Failed to build MkDocs site: {e}")
             return False
 
     def create_config_from_project(
@@ -231,7 +231,7 @@ class MkDocsIntegrationService:
                     "primary": "blue",
                     "accent": "blue",
                 },
-            }
+            },
         }
 
     def _get_default_nav_structure(self) -> dict[str, str]:
@@ -265,7 +265,8 @@ class MkDocsIntegrationService:
         ]
 
     def _generate_nav_from_content(
-        self, docs_content: dict[str, str]
+        self,
+        docs_content: dict[str, str],
     ) -> list[dict[str, str]]:
         nav = []
 
@@ -292,9 +293,7 @@ class MkDocsIntegrationService:
             return "Home"
 
         title = name.replace("_", " ").replace("-", " ")
-        title = " ".join(word.capitalize() for word in title.split())
-
-        return title
+        return " ".join(word.capitalize() for word in title.split())
 
     def _extract_repo_name(self, repo_url: str) -> str:
         repo_url = repo_url.removesuffix(".git")
@@ -381,9 +380,10 @@ class MkDocsSiteBuilder:
 
             if success:
                 return site
-            else:
-                return None
+            return None
 
         except Exception as e:
-            self.integration.logger.error(f"Failed to build documentation site: {e}")
+            self.integration.logger.exception(
+                f"Failed to build documentation site: {e}"
+            )
             return None

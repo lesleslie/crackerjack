@@ -51,7 +51,7 @@ class AgentAuditResult:
 
 
 class AgentAuditor:
-    def __init__(self, console: Console | None = None):
+    def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self.agent_results: list[AgentAuditResult] = []
 
@@ -80,7 +80,7 @@ class AgentAuditor:
         return self.agent_results
 
     async def _audit_single_agent_file(
-        self, agent_file: Path
+        self, agent_file: Path,
     ) -> AgentAuditResult | None:
         self.console.print(f"🔍 Auditing {agent_file.name}")
 
@@ -116,8 +116,8 @@ class AgentAuditor:
         return result
 
     async def _analyze_agent_implementation(
-        self, class_node: ast.ClassDef, source: str, result: AgentAuditResult
-    ):
+        self, class_node: ast.ClassDef, source: str, result: AgentAuditResult,
+    ) -> None:
         self._analyze_methods(class_node, result)
 
         self._analyze_complexity(class_node, source, result)
@@ -126,7 +126,7 @@ class AgentAuditor:
 
         self._generate_quality_recommendations(result)
 
-    def _analyze_methods(self, class_node: ast.ClassDef, result: AgentAuditResult):
+    def _analyze_methods(self, class_node: ast.ClassDef, result: AgentAuditResult) -> None:
         method_names = []
         async_methods = 0
 
@@ -150,10 +150,10 @@ class AgentAuditor:
         result.has_get_supported_types = "get_supported_types" in method_names
 
     def _analyze_complexity(
-        self, class_node: ast.ClassDef, source: str, result: AgentAuditResult
-    ):
+        self, class_node: ast.ClassDef, source: str, result: AgentAuditResult,
+    ) -> None:
         result.lines_of_code = len(
-            [line for line in source.split("\n") if line.strip()]
+            [line for line in source.split("\n") if line.strip()],
         )
         result.estimated_complexity = self._estimate_complexity(class_node)
 
@@ -162,7 +162,7 @@ class AgentAuditor:
         if not result.has_analyze_and_fix:
             result.critical_issues.append("Missing required analyze_and_fix method")
 
-    def _calculate_quality_score(self, result: AgentAuditResult):
+    def _calculate_quality_score(self, result: AgentAuditResult) -> None:
         score = 100
         if not result.has_can_handle:
             score -= 30
@@ -177,16 +177,16 @@ class AgentAuditor:
 
         result.performance_score = max(0, score)
 
-    def _generate_quality_recommendations(self, result: AgentAuditResult):
+    def _generate_quality_recommendations(self, result: AgentAuditResult) -> None:
         if result.estimated_complexity > 15:
             result.recommendations.append("Consider breaking down complex methods")
         if result.lines_of_code > 300:
             result.recommendations.append(
-                "Consider splitting large agent into smaller focused agents"
+                "Consider splitting large agent into smaller focused agents",
             )
         if not result.has_async_methods and result.method_count > 3:
             result.recommendations.append(
-                "Consider using async methods for better performance"
+                "Consider using async methods for better performance",
             )
 
     def _estimate_complexity(self, class_node: ast.ClassDef) -> int:
@@ -200,7 +200,7 @@ class AgentAuditor:
 
         return complexity
 
-    async def _audit_registered_agents(self):
+    async def _audit_registered_agents(self) -> None:
         self.console.print("🧪 Testing registered agents...")
 
         context = AgentContext(project_path=Path.cwd())
@@ -214,7 +214,7 @@ class AgentAuditor:
 
             if not existing_result:
                 existing_result = AgentAuditResult(
-                    agent_name=agent_name, class_name=agent_name, file_path="Unknown"
+                    agent_name=agent_name, class_name=agent_name, file_path="Unknown",
                 )
                 self.agent_results.append(existing_result)
 
@@ -231,7 +231,7 @@ class AgentAuditor:
                 existing_result.critical_issues.append(f"Instantiation failed: {e}")
                 existing_result.instantiation_success = False
 
-    async def _test_agent_confidence(self, agent: SubAgent, result: AgentAuditResult):
+    async def _test_agent_confidence(self, agent: SubAgent, result: AgentAuditResult) -> None:
         test_issues = {
             IssueType.COMPLEXITY: Issue(
                 id="test1",
@@ -282,14 +282,14 @@ class AgentAuditor:
                     valid_confidences += 1
                 else:
                     result.integration_issues.append(
-                        f"Invalid confidence {confidence} for {issue_type}"
+                        f"Invalid confidence {confidence} for {issue_type}",
                     )
 
                 total_tests += 1
 
             except Exception as e:
                 result.integration_issues.append(
-                    f"can_handle failed for {issue_type}: {e}"
+                    f"can_handle failed for {issue_type}: {e}",
                 )
 
         result.confidence_range_valid = valid_confidences == total_tests
@@ -297,7 +297,7 @@ class AgentAuditor:
         if not result.confidence_range_valid:
             result.critical_issues.append("Invalid confidence scores returned")
 
-    def _generate_audit_recommendations(self):
+    def _generate_audit_recommendations(self) -> None:
         self.console.print("📊 Generating audit recommendations...")
 
         total_agents = len(self.agent_results)
@@ -305,7 +305,7 @@ class AgentAuditor:
         critical_issues_count = sum(len(r.critical_issues) for r in self.agent_results)
 
         self.console.print(
-            f"📈 Agent Status: {working_agents}/{total_agents} agents functional"
+            f"📈 Agent Status: {working_agents}/{total_agents} agents functional",
         )
         self.console.print(f"🚨 Critical Issues: {critical_issues_count} total")
 
@@ -314,19 +314,19 @@ class AgentAuditor:
         ]
         if problematic_agents:
             self.console.print(
-                f"⚠️ Problematic Agents: {[r.agent_name for r in problematic_agents]}"
+                f"⚠️ Problematic Agents: {[r.agent_name for r in problematic_agents]}",
             )
 
         avg_performance = sum(r.performance_score for r in self.agent_results) / len(
-            self.agent_results
+            self.agent_results,
         )
         self.console.print(f"📊 Average Performance Score: {avg_performance: .1f}/ 100")
 
         top_performers = sorted(
-            self.agent_results, key=lambda r: r.performance_score, reverse=True
+            self.agent_results, key=lambda r: r.performance_score, reverse=True,
         )[:3]
         self.console.print(
-            f"🏆 Top Performers: {[(r.agent_name, f'{r.performance_score: .1f}') for r in top_performers]}"
+            f"🏆 Top Performers: {[(r.agent_name, f'{r.performance_score: .1f}') for r in top_performers]}",
         )
 
     def create_audit_table(self) -> Table:
@@ -345,7 +345,7 @@ class AgentAuditor:
         table.add_column("Critical Issues", width=25)
 
         for result in sorted(
-            self.agent_results, key=lambda r: r.performance_score, reverse=True
+            self.agent_results, key=lambda r: r.performance_score, reverse=True,
         ):
             status_text = "✅ GOOD"
             status_color = "green"
@@ -376,7 +376,7 @@ class AgentAuditor:
 
         return table
 
-    def save_detailed_report(self):
+    def save_detailed_report(self) -> None:
         import json
         from datetime import datetime
 
@@ -445,7 +445,7 @@ async def main():
     critical_agents = [r for r in results if len(r.critical_issues) > 0]
     if critical_agents:
         console.print(
-            f"\n🚨 [bold red]CRITICAL: {len(critical_agents)} agents have critical issues[/ bold red]"
+            f"\n🚨 [bold red]CRITICAL: {len(critical_agents)} agents have critical issues[/ bold red]",
         )
         for agent in critical_agents:
             console.print(f" • {agent.agent_name}: {'; '.join(agent.critical_issues)}")

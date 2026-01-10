@@ -1,8 +1,9 @@
 import typing as t
 from pathlib import Path
 
-from ..models.semantic_models import SearchQuery, SemanticConfig
-from ..services.vector_store import VectorStore
+from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
+from crackerjack.services.vector_store import VectorStore
+
 from .base import (
     AgentContext,
     FixResult,
@@ -71,7 +72,9 @@ class SemanticAgent(SubAgent):
             vector_store = self._get_vector_store(config)
 
             result = await self._perform_semantic_analysis(
-                file_path, vector_store, issue
+                file_path,
+                vector_store,
+                issue,
             )
 
             self._update_pattern_stats(result)
@@ -121,7 +124,10 @@ class SemanticAgent(SubAgent):
         return db_path
 
     async def _perform_semantic_analysis(
-        self, file_path: Path, vector_store: VectorStore, issue: Issue
+        self,
+        file_path: Path,
+        vector_store: VectorStore,
+        issue: Issue,
     ) -> FixResult:
         content = self.context.get_file_content(file_path)
         if not content:
@@ -138,7 +144,10 @@ class SemanticAgent(SubAgent):
             self.log(f"Warning: Could not index file {file_path}: {e}")
 
         semantic_insights = await self._discover_semantic_patterns(
-            vector_store, file_path, content, issue
+            vector_store,
+            file_path,
+            content,
+            issue,
         )
 
         recommendations = self._generate_semantic_recommendations(semantic_insights)
@@ -199,7 +208,7 @@ class SemanticAgent(SubAgent):
                                     }
                                     for result in related_results[:3]
                                 ],
-                            }
+                            },
                         )
 
             except Exception as e:
@@ -220,7 +229,7 @@ class SemanticAgent(SubAgent):
         value = node.body[0].value
         if hasattr(value, "s"):
             return str(value.s)[:100]
-        elif hasattr(value, "value") and isinstance(value.value, str):
+        if hasattr(value, "value") and isinstance(value.value, str):
             return str(value.value)[:100]
         return ""
 
@@ -244,7 +253,7 @@ class SemanticAgent(SubAgent):
 
         if isinstance(node, ast.Name):
             return node.id
-        elif isinstance(node, ast.Attribute):
+        if isinstance(node, ast.Attribute):
             return f"{self._get_ast_name(node.value)}.{node.attr}"
         return "Unknown"
 
@@ -264,7 +273,7 @@ class SemanticAgent(SubAgent):
                         "signature": self.parent._build_function_signature(node),
                         "docstring": self.parent._extract_docstring_from_node(node),
                         "line_number": node.lineno,
-                    }
+                    },
                 )
                 self.generic_visit(node)
 
@@ -275,7 +284,7 @@ class SemanticAgent(SubAgent):
                         "name": node.name,
                         "signature": self.parent._build_class_signature(node),
                         "line_number": node.lineno,
-                    }
+                    },
                 )
                 self.generic_visit(node)
 
@@ -297,7 +306,7 @@ class SemanticAgent(SubAgent):
                         "name": func_name,
                         "signature": stripped,
                         "line_number": i + 1,
-                    }
+                    },
                 )
             elif stripped.startswith("class ") and ":" in stripped:
                 class_name = stripped.split(":")[0].replace("class ", "").strip()
@@ -307,7 +316,7 @@ class SemanticAgent(SubAgent):
                         "name": class_name,
                         "signature": stripped,
                         "line_number": i + 1,
-                    }
+                    },
                 )
         return elements
 
@@ -318,7 +327,9 @@ class SemanticAgent(SubAgent):
             return self._extract_text_elements(content)
 
     async def _analyze_issue_context(
-        self, vector_store: VectorStore, issue: Issue
+        self,
+        vector_store: VectorStore,
+        issue: Issue,
     ) -> list[dict[str, t.Any]]:
         suggestions = []
 
@@ -343,7 +354,7 @@ class SemanticAgent(SubAgent):
                             }
                             for result in results[:3]
                         ],
-                    }
+                    },
                 )
         except Exception as e:
             self.log(f"Warning: Issue context analysis failed: {e}")
@@ -351,7 +362,8 @@ class SemanticAgent(SubAgent):
         return suggestions
 
     def _generate_semantic_recommendations(
-        self, insights: dict[str, t.Any]
+        self,
+        insights: dict[str, t.Any],
     ) -> list[str]:
         recommendations = []
 
@@ -363,7 +375,7 @@ class SemanticAgent(SubAgent):
 
         if context_suggestions:
             recommendations.append(
-                "Semantic analysis revealed contextual insights for code understanding"
+                "Semantic analysis revealed contextual insights for code understanding",
             )
 
         recommendations.extend(self._get_general_semantic_recommendations())
@@ -374,14 +386,14 @@ class SemanticAgent(SubAgent):
         recommendations = []
 
         recommendations.append(
-            f"Found {len(related_patterns)} similar code patterns across the codebase"
+            f"Found {len(related_patterns)} similar code patterns across the codebase",
         )
 
         high_similarity_count = self._count_high_similarity_patterns(related_patterns)
         if high_similarity_count > 0:
             recommendations.append(
                 f"Detected {high_similarity_count} highly similar implementations - "
-                "consider refactoring for DRY principle compliance"
+                "consider refactoring for DRY principle compliance",
             )
 
         return recommendations

@@ -69,10 +69,13 @@ class CachedHookExecutor:
         }
 
     def _execute_single_hook_with_cache(
-        self, hook_def: HookDefinition, context: dict[str, t.Any]
+        self,
+        hook_def: HookDefinition,
+        context: dict[str, t.Any],
     ) -> None:
         cached_result = self._get_cached_result(
-            hook_def, context["current_file_hashes"]
+            hook_def,
+            context["current_file_hashes"],
         )
 
         if cached_result and self._is_cache_valid(cached_result, hook_def):
@@ -81,16 +84,19 @@ class CachedHookExecutor:
             self._handle_cache_miss(hook_def, context)
 
     def _get_cached_result(
-        self, hook_def: HookDefinition, current_file_hashes: list[str]
+        self,
+        hook_def: HookDefinition,
+        current_file_hashes: list[str],
     ) -> HookResult | None:
         try:
             if hook_def.name in self.cache.EXPENSIVE_HOOKS:
                 tool_version = self._get_tool_version(hook_def.name)
                 return self.cache.get_expensive_hook_result(
-                    hook_def.name, current_file_hashes, tool_version
+                    hook_def.name,
+                    current_file_hashes,
+                    tool_version,
                 )
-            else:
-                return self.cache.get_hook_result(hook_def.name, current_file_hashes)
+            return self.cache.get_hook_result(hook_def.name, current_file_hashes)
         except Exception as e:
             self.logger.warning(f"Cache error for hook {hook_def.name}: {e}")
             return None
@@ -106,7 +112,9 @@ class CachedHookExecutor:
         context["cache_hits"] += 1
 
     def _handle_cache_miss(
-        self, hook_def: HookDefinition, context: dict[str, t.Any]
+        self,
+        hook_def: HookDefinition,
+        context: dict[str, t.Any],
     ) -> None:
         self.logger.debug(f"Executing hook (cache miss): {hook_def.name}")
 
@@ -116,7 +124,9 @@ class CachedHookExecutor:
 
         if hook_result.status == "passed":
             self._cache_successful_result(
-                hook_def, hook_result, context["current_file_hashes"]
+                hook_def,
+                hook_result,
+                context["current_file_hashes"],
             )
 
     def _cache_successful_result(
@@ -129,17 +139,25 @@ class CachedHookExecutor:
             if hook_def.name in self.cache.EXPENSIVE_HOOKS:
                 tool_version = self._get_tool_version(hook_def.name)
                 self.cache.set_expensive_hook_result(
-                    hook_def.name, current_file_hashes, hook_result, tool_version
+                    hook_def.name,
+                    current_file_hashes,
+                    hook_result,
+                    tool_version,
                 )
             else:
                 self.cache.set_hook_result(
-                    hook_def.name, current_file_hashes, hook_result
+                    hook_def.name,
+                    current_file_hashes,
+                    hook_result,
                 )
         except Exception as e:
             self.logger.warning(f"Failed to cache result for {hook_def.name}: {e}")
 
     def _build_execution_result(
-        self, strategy: HookStrategy, context: dict[str, t.Any], start_time: float
+        self,
+        strategy: HookStrategy,
+        context: dict[str, t.Any],
+        start_time: float,
     ) -> HookExecutionResult:
         total_time = time.time() - start_time
         success = all(result.status == "passed" for result in context["results"])
@@ -147,7 +165,7 @@ class CachedHookExecutor:
         self.logger.info(
             f"Cached strategy '{strategy.name}' completed in {total_time:.2f}s - "
             f"Success: {success}, Cache hits: {context['cache_hits']}, "
-            f"Cache misses: {context['cache_misses']}"
+            f"Cache misses: {context['cache_misses']}",
         )
 
         return HookExecutionResult(

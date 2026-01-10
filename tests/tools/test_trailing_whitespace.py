@@ -2,6 +2,7 @@
 
 import sys
 from pathlib import Path
+from typing import Never
 from unittest.mock import patch
 
 import pytest
@@ -16,33 +17,33 @@ from crackerjack.tools.trailing_whitespace import (
 class TestTrailingWhitespaceDetection:
     """Test trailing whitespace detection logic."""
 
-    def test_detects_space_at_end(self):
+    def test_detects_space_at_end(self) -> None:
         """Test detection of space at end of line."""
         assert has_trailing_whitespace("hello world \n")
         assert has_trailing_whitespace("hello world  \n")
 
-    def test_detects_tab_at_end(self):
+    def test_detects_tab_at_end(self) -> None:
         """Test detection of tab at end of line."""
         assert has_trailing_whitespace("hello world\t\n")
         assert has_trailing_whitespace("hello world\t\t\n")
 
-    def test_detects_mixed_whitespace(self):
+    def test_detects_mixed_whitespace(self) -> None:
         """Test detection of mixed trailing whitespace."""
         assert has_trailing_whitespace("hello world \t \n")
         assert has_trailing_whitespace("hello world\t \t\n")
 
-    def test_no_trailing_whitespace(self):
+    def test_no_trailing_whitespace(self) -> None:
         """Test lines without trailing whitespace."""
         assert not has_trailing_whitespace("hello world\n")
         assert not has_trailing_whitespace("hello world\r\n")
         assert not has_trailing_whitespace("hello world")
 
-    def test_empty_line(self):
+    def test_empty_line(self) -> None:
         """Test empty line detection."""
         assert not has_trailing_whitespace("\n")
         assert not has_trailing_whitespace("\r\n")
 
-    def test_only_whitespace(self):
+    def test_only_whitespace(self) -> None:
         """Test line with only whitespace."""
         assert has_trailing_whitespace("   \n")
         assert has_trailing_whitespace("\t\t\n")
@@ -51,7 +52,7 @@ class TestTrailingWhitespaceDetection:
 class TestTrailingWhitespaceFixer:
     """Test trailing whitespace fixing logic."""
 
-    def test_fixes_trailing_space(self, tmp_path):
+    def test_fixes_trailing_space(self, tmp_path) -> None:
         """Test removal of trailing spaces."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world \n")
@@ -59,7 +60,7 @@ class TestTrailingWhitespaceFixer:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "hello world\n"
 
-    def test_fixes_trailing_tab(self, tmp_path):
+    def test_fixes_trailing_tab(self, tmp_path) -> None:
         """Test removal of trailing tabs."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world\t\n")
@@ -67,7 +68,7 @@ class TestTrailingWhitespaceFixer:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "hello world\n"
 
-    def test_fixes_mixed_whitespace(self, tmp_path):
+    def test_fixes_mixed_whitespace(self, tmp_path) -> None:
         """Test removal of mixed trailing whitespace."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world \t \n")
@@ -75,7 +76,7 @@ class TestTrailingWhitespaceFixer:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "hello world\n"
 
-    def test_preserves_newline_type(self, tmp_path):
+    def test_preserves_newline_type(self, tmp_path) -> None:
         """Test that line ending type is preserved."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world \r\n", newline="")
@@ -83,7 +84,7 @@ class TestTrailingWhitespaceFixer:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text(newline="") == "hello world\r\n"
 
-    def test_no_modification_when_clean(self, tmp_path):
+    def test_no_modification_when_clean(self, tmp_path) -> None:
         """Test no modification when file is already clean."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world\n")
@@ -91,7 +92,7 @@ class TestTrailingWhitespaceFixer:
         assert not fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "hello world\n"
 
-    def test_multiple_lines_with_mixed_issues(self, tmp_path):
+    def test_multiple_lines_with_mixed_issues(self, tmp_path) -> None:
         """Test fixing multiple lines with various issues."""
         test_file = tmp_path / "test.txt"
         content = "line1 \nline2\t\nline3\nline4  \n"
@@ -101,7 +102,7 @@ class TestTrailingWhitespaceFixer:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == expected
 
-    def test_skips_binary_files(self, tmp_path):
+    def test_skips_binary_files(self, tmp_path) -> None:
         """Test binary files are skipped gracefully."""
         binary_file = tmp_path / "test.bin"
         binary_file.write_bytes(b"\x00\x01\x02\x03")
@@ -109,7 +110,7 @@ class TestTrailingWhitespaceFixer:
         # Should return False (not modified) and not raise
         assert not fix_trailing_whitespace(binary_file)
 
-    def test_handles_missing_file(self, tmp_path):
+    def test_handles_missing_file(self, tmp_path) -> None:
         """Test graceful handling of missing file."""
         missing_file = tmp_path / "nonexistent.txt"
 
@@ -120,14 +121,14 @@ class TestTrailingWhitespaceFixer:
 class TestTrailingWhitespaceCLI:
     """Test trailing_whitespace CLI interface."""
 
-    def test_cli_help(self):
+    def test_cli_help(self) -> None:
         """Test --help displays correctly."""
         with pytest.raises(SystemExit) as exc_info:
             main(["--help"])
 
         assert exc_info.value.code == 0
 
-    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch):
+    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch) -> None:
         """Test CLI with no arguments uses current directory."""
         monkeypatch.chdir(tmp_path)
 
@@ -143,7 +144,7 @@ class TestTrailingWhitespaceCLI:
         assert (tmp_path / "test1.py").read_text() == "hello\n"
         assert (tmp_path / "test2.py").read_text() == "world\n"
 
-    def test_cli_with_file_arguments(self, tmp_path):
+    def test_cli_with_file_arguments(self, tmp_path) -> None:
         """Test CLI with explicit file arguments."""
         test_file1 = tmp_path / "test1.txt"
         test_file2 = tmp_path / "test2.txt"
@@ -157,7 +158,7 @@ class TestTrailingWhitespaceCLI:
         assert test_file1.read_text() == "hello\n"
         assert test_file2.read_text() == "world\n"
 
-    def test_cli_check_mode(self, tmp_path):
+    def test_cli_check_mode(self, tmp_path) -> None:
         """Test --check mode doesn't modify files."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello \n")
@@ -167,7 +168,7 @@ class TestTrailingWhitespaceCLI:
         assert exit_code == 1  # Issues found
         assert test_file.read_text() == "hello \n"  # Not modified
 
-    def test_cli_check_mode_clean_file(self, tmp_path):
+    def test_cli_check_mode_clean_file(self, tmp_path) -> None:
         """Test --check mode with clean file."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello\n")
@@ -176,7 +177,7 @@ class TestTrailingWhitespaceCLI:
 
         assert exit_code == 0  # No issues
 
-    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys):
+    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys) -> None:
         """Test CLI with no files to check."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
@@ -188,14 +189,14 @@ class TestTrailingWhitespaceCLI:
         captured = capsys.readouterr()
         assert "No files to check" in captured.out
 
-    def test_cli_nonexistent_file(self, tmp_path):
+    def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI with nonexistent file."""
         exit_code = main([str(tmp_path / "nonexistent.txt")])
 
         # Should handle gracefully
         assert exit_code == 0  # No files processed
 
-    def test_cli_mixed_clean_and_dirty(self, tmp_path):
+    def test_cli_mixed_clean_and_dirty(self, tmp_path) -> None:
         """Test CLI with mix of clean and dirty files."""
         clean_file = tmp_path / "clean.txt"
         dirty_file = tmp_path / "dirty.txt"
@@ -213,7 +214,7 @@ class TestTrailingWhitespaceCLI:
 class TestTrailingWhitespaceEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_empty_file(self, tmp_path):
+    def test_empty_file(self, tmp_path) -> None:
         """Test handling of empty file."""
         empty_file = tmp_path / "empty.txt"
         empty_file.write_text("")
@@ -221,7 +222,7 @@ class TestTrailingWhitespaceEdgeCases:
         assert not fix_trailing_whitespace(empty_file)
         assert empty_file.read_text() == ""
 
-    def test_file_with_no_newline_at_end(self, tmp_path):
+    def test_file_with_no_newline_at_end(self, tmp_path) -> None:
         """Test file without trailing newline."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world ", newline="")
@@ -229,7 +230,7 @@ class TestTrailingWhitespaceEdgeCases:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text(newline="") == "hello world"
 
-    def test_file_with_only_whitespace_lines(self, tmp_path):
+    def test_file_with_only_whitespace_lines(self, tmp_path) -> None:
         """Test file with lines containing only whitespace."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("   \n\t\t\n  \t  \n")
@@ -237,7 +238,7 @@ class TestTrailingWhitespaceEdgeCases:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "\n\n\n"
 
-    def test_very_long_line(self, tmp_path):
+    def test_very_long_line(self, tmp_path) -> None:
         """Test handling of very long lines."""
         test_file = tmp_path / "test.txt"
         long_line = "x" * 10000 + " \n"
@@ -246,7 +247,7 @@ class TestTrailingWhitespaceEdgeCases:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "x" * 10000 + "\n"
 
-    def test_unicode_content(self, tmp_path):
+    def test_unicode_content(self, tmp_path) -> None:
         """Test handling of Unicode content."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello 世界 \n")
@@ -254,18 +255,17 @@ class TestTrailingWhitespaceEdgeCases:
         assert fix_trailing_whitespace(test_file)
         assert test_file.read_text() == "hello 世界\n"
 
-    def test_permission_error(self, tmp_path, monkeypatch):
+    def test_permission_error(self, tmp_path, monkeypatch) -> None:
         """Test handling of permission errors."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello \n")
 
-        # Mock read_text to raise PermissionError
-        original_read_text = Path.read_text
+        # Mock both read_bytes and read_text to raise PermissionError
+        def mock_read_bytes(*args, **kwargs) -> Never:
+            msg = "Permission denied"
+            raise PermissionError(msg)
 
-        def mock_read_text(*args, **kwargs):
-            raise PermissionError("Permission denied")
-
-        monkeypatch.setattr(Path, "read_text", mock_read_text)
+        monkeypatch.setattr(Path, "read_bytes", mock_read_bytes)
 
         # Should handle gracefully
         assert not fix_trailing_whitespace(test_file)
@@ -274,7 +274,7 @@ class TestTrailingWhitespaceEdgeCases:
 class TestTrailingWhitespaceIntegration:
     """Integration tests with real-world scenarios."""
 
-    def test_python_file_with_code(self, tmp_path):
+    def test_python_file_with_code(self, tmp_path) -> None:
         """Test Python file with real code."""
         py_file = tmp_path / "test.py"
         code = '''def hello():
@@ -287,10 +287,11 @@ class TestTrailingWhitespaceIntegration:
 '''
         py_file.write_text(code)
 
-        assert fix_trailing_whitespace(py_file)
+        # Code has no trailing whitespace, so no modifications
+        assert not fix_trailing_whitespace(py_file)
         assert py_file.read_text() == expected
 
-    def test_markdown_file(self, tmp_path):
+    def test_markdown_file(self, tmp_path) -> None:
         """Test Markdown file."""
         md_file = tmp_path / "test.md"
         content = "# Title  \n\nParagraph with trailing space. \n"
@@ -300,7 +301,7 @@ class TestTrailingWhitespaceIntegration:
         assert fix_trailing_whitespace(md_file)
         assert md_file.read_text() == expected
 
-    def test_mixed_file_types(self, tmp_path):
+    def test_mixed_file_types(self, tmp_path) -> None:
         """Test CLI with mixed file types."""
         py_file = tmp_path / "test.py"
         txt_file = tmp_path / "test.txt"

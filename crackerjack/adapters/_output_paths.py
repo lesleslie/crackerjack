@@ -14,10 +14,7 @@ class AdapterOutputPaths:
     def get_output_dir(cls, adapter_name: str | None = None) -> Path:
         base_dir = Path.cwd() / cls.OUTPUTS_DIR
 
-        if adapter_name:
-            output_dir = base_dir / adapter_name
-        else:
-            output_dir = base_dir
+        output_dir = base_dir / adapter_name if adapter_name else base_dir
 
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -42,7 +39,9 @@ class AdapterOutputPaths:
 
     @classmethod
     def get_latest_output(
-        cls, adapter_name: str, pattern: str = "*.json"
+        cls,
+        adapter_name: str,
+        pattern: str = "*.json",
     ) -> Path | None:
         output_dir = cls.get_output_dir(adapter_name)
 
@@ -89,7 +88,7 @@ class AdapterOutputPaths:
         if deleted_count > 0:
             logger.info(
                 f"Cleaned up {deleted_count} old {adapter_name} output files, "
-                f"kept {keep_latest} most recent"
+                f"kept {keep_latest} most recent",
             )
 
         return deleted_count

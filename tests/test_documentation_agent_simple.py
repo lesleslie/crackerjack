@@ -53,7 +53,7 @@ class TestDocumentationAgentSimple:
 
     @pytest.mark.asyncio
     async def test_analyze_and_fix_with_nonexistent_file(
-        self, documentation_agent
+        self, documentation_agent,
     ) -> None:
         issue = Issue(
             id="doc - 002",

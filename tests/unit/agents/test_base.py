@@ -24,14 +24,14 @@ from crackerjack.agents.base import (
 class TestPriorityEnum:
     """Test Priority enumeration."""
 
-    def test_priority_values(self):
+    def test_priority_values(self) -> None:
         """Test all priority levels are defined."""
         assert Priority.LOW.value == "low"
         assert Priority.MEDIUM.value == "medium"
         assert Priority.HIGH.value == "high"
         assert Priority.CRITICAL.value == "critical"
 
-    def test_priority_ordering(self):
+    def test_priority_ordering(self) -> None:
         """Test priority enum members exist in expected order."""
         priorities = list(Priority)
         assert len(priorities) == 4
@@ -43,7 +43,7 @@ class TestPriorityEnum:
 class TestIssueTypeEnum:
     """Test IssueType enumeration."""
 
-    def test_issue_type_values(self):
+    def test_issue_type_values(self) -> None:
         """Test all issue types are defined."""
         assert IssueType.FORMATTING.value == "formatting"
         assert IssueType.TYPE_ERROR.value == "type_error"
@@ -54,7 +54,7 @@ class TestIssueTypeEnum:
         assert IssueType.DRY_VIOLATION.value == "dry_violation"
         assert IssueType.PERFORMANCE.value == "performance"
 
-    def test_issue_type_count(self):
+    def test_issue_type_count(self) -> None:
         """Test expected number of issue types."""
         issue_types = list(IssueType)
         # Should have at least 12 issue types
@@ -65,7 +65,7 @@ class TestIssueTypeEnum:
 class TestIssueDataclass:
     """Test Issue dataclass."""
 
-    def test_issue_creation_minimal(self):
+    def test_issue_creation_minimal(self) -> None:
         """Test creating issue with minimal required fields."""
         issue = Issue(
             id="test-001",
@@ -83,7 +83,7 @@ class TestIssueDataclass:
         assert issue.details == []
         assert issue.stage == "unknown"
 
-    def test_issue_creation_full(self):
+    def test_issue_creation_full(self) -> None:
         """Test creating issue with all fields."""
         issue = Issue(
             id="test-002",
@@ -104,7 +104,7 @@ class TestIssueDataclass:
         assert len(issue.details) == 2
         assert issue.stage == "analysis"
 
-    def test_issue_defaults(self):
+    def test_issue_defaults(self) -> None:
         """Test issue default values."""
         issue = Issue(
             id="test-003",
@@ -121,7 +121,7 @@ class TestIssueDataclass:
 class TestFixResultDataclass:
     """Test FixResult dataclass."""
 
-    def test_fix_result_creation_minimal(self):
+    def test_fix_result_creation_minimal(self) -> None:
         """Test creating fix result with minimal fields."""
         result = FixResult(success=True, confidence=0.9)
 
@@ -132,7 +132,7 @@ class TestFixResultDataclass:
         assert result.recommendations == []
         assert result.files_modified == []
 
-    def test_fix_result_creation_full(self):
+    def test_fix_result_creation_full(self) -> None:
         """Test creating fix result with all fields."""
         result = FixResult(
             success=True,
@@ -150,7 +150,7 @@ class TestFixResultDataclass:
         assert len(result.recommendations) == 2
         assert len(result.files_modified) == 2
 
-    def test_fix_result_merge_with(self):
+    def test_fix_result_merge_with(self) -> None:
         """Test merging two fix results."""
         result1 = FixResult(
             success=True,
@@ -183,7 +183,7 @@ class TestFixResultDataclass:
         assert "file1.py" in merged.files_modified
         assert "file2.py" in merged.files_modified
 
-    def test_fix_result_merge_deduplicates_issues(self):
+    def test_fix_result_merge_deduplicates_issues(self) -> None:
         """Test merging deduplicates remaining issues."""
         result1 = FixResult(
             success=True,
@@ -203,7 +203,7 @@ class TestFixResultDataclass:
         assert len(merged.remaining_issues) == 3
         assert set(merged.remaining_issues) == {"Issue 1", "Issue 2", "Issue 3"}
 
-    def test_fix_result_merge_deduplicates_files(self):
+    def test_fix_result_merge_deduplicates_files(self) -> None:
         """Test merging deduplicates modified files."""
         result1 = FixResult(
             success=True,
@@ -223,7 +223,7 @@ class TestFixResultDataclass:
         assert len(merged.files_modified) == 3
         assert set(merged.files_modified) == {"file1.py", "file2.py", "file3.py"}
 
-    def test_fix_result_merge_failure_propagates(self):
+    def test_fix_result_merge_failure_propagates(self) -> None:
         """Test merge with failure propagates failure."""
         result1 = FixResult(success=True, confidence=0.9)
         result2 = FixResult(success=False, confidence=0.5)
@@ -237,7 +237,7 @@ class TestFixResultDataclass:
 class TestAgentContext:
     """Test AgentContext dataclass."""
 
-    def test_agent_context_creation_minimal(self, tmp_path):
+    def test_agent_context_creation_minimal(self, tmp_path) -> None:
         """Test creating agent context with minimal fields."""
         context = AgentContext(project_path=tmp_path)
 
@@ -248,7 +248,7 @@ class TestAgentContext:
         assert context.subprocess_timeout == 300
         assert context.max_file_size == 10_000_000
 
-    def test_agent_context_creation_full(self, tmp_path):
+    def test_agent_context_creation_full(self, tmp_path) -> None:
         """Test creating agent context with all fields."""
         temp_dir = tmp_path / "temp"
         temp_dir.mkdir()
@@ -269,7 +269,7 @@ class TestAgentContext:
         assert context.subprocess_timeout == 600
         assert context.max_file_size == 5_000_000
 
-    def test_get_file_content_success(self, tmp_path):
+    def test_get_file_content_success(self, tmp_path) -> None:
         """Test getting file content."""
         context = AgentContext(project_path=tmp_path)
         test_file = tmp_path / "test.py"
@@ -280,7 +280,7 @@ class TestAgentContext:
 
         assert result == content
 
-    def test_get_file_content_string_path(self, tmp_path):
+    def test_get_file_content_string_path(self, tmp_path) -> None:
         """Test getting file content with string path."""
         context = AgentContext(project_path=tmp_path)
         test_file = tmp_path / "test.py"
@@ -291,7 +291,7 @@ class TestAgentContext:
 
         assert result == content
 
-    def test_get_file_content_nonexistent(self, tmp_path):
+    def test_get_file_content_nonexistent(self, tmp_path) -> None:
         """Test getting content of non-existent file."""
         context = AgentContext(project_path=tmp_path)
         nonexistent = tmp_path / "nonexistent.py"
@@ -300,7 +300,7 @@ class TestAgentContext:
 
         assert result is None
 
-    def test_get_file_content_directory(self, tmp_path):
+    def test_get_file_content_directory(self, tmp_path) -> None:
         """Test getting content of directory returns None."""
         context = AgentContext(project_path=tmp_path)
         test_dir = tmp_path / "testdir"
@@ -310,7 +310,7 @@ class TestAgentContext:
 
         assert result is None
 
-    def test_get_file_content_too_large(self, tmp_path):
+    def test_get_file_content_too_large(self, tmp_path) -> None:
         """Test getting content of file exceeding max size."""
         context = AgentContext(project_path=tmp_path, max_file_size=100)
         test_file = tmp_path / "large.py"
@@ -321,7 +321,7 @@ class TestAgentContext:
 
         assert result is None
 
-    def test_write_file_content_success(self, tmp_path):
+    def test_write_file_content_success(self, tmp_path) -> None:
         """Test writing file content."""
         context = AgentContext(project_path=tmp_path)
         test_file = tmp_path / "output.py"
@@ -332,7 +332,7 @@ class TestAgentContext:
         assert result is True
         assert test_file.read_text() == content
 
-    def test_write_file_content_string_path(self, tmp_path):
+    def test_write_file_content_string_path(self, tmp_path) -> None:
         """Test writing file with string path."""
         context = AgentContext(project_path=tmp_path)
         test_file = tmp_path / "output.py"
@@ -343,7 +343,7 @@ class TestAgentContext:
         assert result is True
         assert test_file.read_text() == content
 
-    def test_write_file_content_failure(self, tmp_path):
+    def test_write_file_content_failure(self, tmp_path) -> None:
         """Test writing file content handles errors."""
         context = AgentContext(project_path=tmp_path)
         # Try to write to directory instead of file
@@ -381,12 +381,12 @@ class TestSubAgentBase:
         """Create test agent instance."""
         return self.TestAgent(context)
 
-    def test_agent_initialization(self, agent, context):
+    def test_agent_initialization(self, agent, context) -> None:
         """Test agent initializes correctly."""
         assert agent.context == context
         assert agent.name == "TestAgent"
 
-    def test_agent_get_supported_types(self, agent):
+    def test_agent_get_supported_types(self, agent) -> None:
         """Test agent returns supported issue types."""
         supported = agent.get_supported_types()
 
@@ -395,7 +395,7 @@ class TestSubAgentBase:
         assert len(supported) == 2
 
     @pytest.mark.asyncio
-    async def test_agent_can_handle(self, agent):
+    async def test_agent_can_handle(self, agent) -> None:
         """Test agent can_handle returns confidence score."""
         issue = Issue(
             id="test-001",
@@ -409,7 +409,7 @@ class TestSubAgentBase:
         assert confidence == 0.9
 
     @pytest.mark.asyncio
-    async def test_agent_analyze_and_fix(self, agent):
+    async def test_agent_analyze_and_fix(self, agent) -> None:
         """Test agent analyze_and_fix returns fix result."""
         issue = Issue(
             id="test-001",
@@ -424,7 +424,7 @@ class TestSubAgentBase:
         assert result.confidence == 0.9
 
     @pytest.mark.asyncio
-    async def test_run_command_success(self, agent):
+    async def test_run_command_success(self, agent) -> None:
         """Test running command successfully."""
         returncode, stdout, stderr = await agent.run_command(["echo", "hello"])
 
@@ -433,21 +433,21 @@ class TestSubAgentBase:
         assert stderr == ""
 
     @pytest.mark.asyncio
-    async def test_run_command_with_cwd(self, agent, tmp_path):
+    async def test_run_command_with_cwd(self, agent, tmp_path) -> None:
         """Test running command with custom working directory."""
         test_dir = tmp_path / "subdir"
         test_dir.mkdir()
 
-        returncode, stdout, stderr = await agent.run_command(["pwd"], cwd=test_dir)
+        returncode, stdout, _stderr = await agent.run_command(["pwd"], cwd=test_dir)
 
         assert returncode == 0
         assert str(test_dir) in stdout
 
     @pytest.mark.asyncio
-    async def test_run_command_timeout(self, agent):
+    async def test_run_command_timeout(self, agent) -> None:
         """Test command timeout handling."""
         # Use a command that would take longer than timeout
-        returncode, stdout, stderr = await agent.run_command(
+        returncode, _stdout, stderr = await agent.run_command(
             ["sleep", "10"],
             timeout=0.1,
         )
@@ -455,14 +455,14 @@ class TestSubAgentBase:
         assert returncode == -1
         assert "timed out" in stderr.lower()
 
-    def test_log_method(self, agent):
+    def test_log_method(self, agent) -> None:
         """Test log method doesn't raise errors."""
         # Should not raise
         agent.log("Test message", level="INFO")
         agent.log("Warning message", level="WARN")
 
     @pytest.mark.asyncio
-    async def test_plan_before_action(self, agent):
+    async def test_plan_before_action(self, agent) -> None:
         """Test plan_before_action returns default strategy."""
         issue = Issue(
             id="test-001",
@@ -478,7 +478,7 @@ class TestSubAgentBase:
         assert "confidence" in plan
         assert plan["confidence"] == 0.5
 
-    def test_get_cached_patterns(self, agent):
+    def test_get_cached_patterns(self, agent) -> None:
         """Test get_cached_patterns returns empty dict by default."""
         patterns = agent.get_cached_patterns()
 
@@ -514,13 +514,13 @@ class TestAgentRegistry:
         def get_supported_types(self) -> set[IssueType]:
             return {IssueType.SECURITY}
 
-    def test_registry_initialization(self):
+    def test_registry_initialization(self) -> None:
         """Test registry initializes empty."""
         registry = AgentRegistry()
 
         assert registry._agents == {}
 
-    def test_registry_register_agent(self):
+    def test_registry_register_agent(self) -> None:
         """Test registering an agent."""
         registry = AgentRegistry()
 
@@ -529,7 +529,7 @@ class TestAgentRegistry:
         assert "MockAgent1" in registry._agents
         assert registry._agents["MockAgent1"] == self.MockAgent1
 
-    def test_registry_register_multiple_agents(self):
+    def test_registry_register_multiple_agents(self) -> None:
         """Test registering multiple agents."""
         registry = AgentRegistry()
 
@@ -540,7 +540,7 @@ class TestAgentRegistry:
         assert "MockAgent1" in registry._agents
         assert "MockAgent2" in registry._agents
 
-    def test_registry_create_all(self, tmp_path):
+    def test_registry_create_all(self, tmp_path) -> None:
         """Test creating all registered agents."""
         registry = AgentRegistry()
         registry.register(self.MockAgent1)
@@ -554,7 +554,7 @@ class TestAgentRegistry:
         assert any(agent.name == "MockAgent1" for agent in agents)
         assert any(agent.name == "MockAgent2" for agent in agents)
 
-    def test_registry_create_all_with_empty_registry(self, tmp_path):
+    def test_registry_create_all_with_empty_registry(self, tmp_path) -> None:
         """Test creating agents from empty registry."""
         registry = AgentRegistry()
         context = AgentContext(project_path=tmp_path)
@@ -568,13 +568,13 @@ class TestAgentRegistry:
 class TestGlobalAgentRegistry:
     """Test global agent_registry instance."""
 
-    def test_global_registry_exists(self):
+    def test_global_registry_exists(self) -> None:
         """Test global agent_registry instance exists."""
         from crackerjack.agents.base import agent_registry
 
         assert isinstance(agent_registry, AgentRegistry)
 
-    def test_global_registry_is_singleton(self):
+    def test_global_registry_is_singleton(self) -> None:
         """Test global agent_registry is singleton."""
         from crackerjack.agents.base import agent_registry as registry1
         from crackerjack.agents.base import agent_registry as registry2

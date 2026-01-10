@@ -43,11 +43,11 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
         ):
             suggestions.update(
                 {
-                    "recommended_agent": "crackerjack - test-specialist",
-                    "reason": "Test failures detected-specialist needed for debugging and fixes",
-                    "usage": 'Task tool with subagent_type ="crackerjack - test-specialist"',
+                    "recommended_agent": "test-specialist",
+                    "reason": "Test failures detected-test specialist needed for debugging and fixes",
+                    "usage": 'Task tool with subagent_type ="test-specialist"',
                     "priority": "HIGH",
-                }
+                },
             )
 
         elif any(
@@ -60,7 +60,7 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
                     "reason": "Security issues detected-immediate audit required",
                     "usage": 'Task tool with subagent_type ="security-auditor"',
                     "priority": "HIGH",
-                }
+                },
             )
 
         elif any("complex" in str(error).lower() for error in recent_errors):
@@ -70,7 +70,7 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
                     "reason": "Complexity issues detected-architectural review needed",
                     "usage": 'Task tool with subagent_type ="crackerjack-architect"',
                     "priority": "HIGH",
-                }
+                },
             )
 
         else:
@@ -80,7 +80,7 @@ def _suggest_agent_for_context(state_manager: t.Any) -> dict[str, t.Any]:
                     "reason": "Python project-ensure crackerjack compliance from the start",
                     "usage": 'Task tool with subagent_type ="crackerjack-architect"',
                     "priority": "MEDIUM",
-                }
+                },
             )
 
     return suggestions
@@ -195,11 +195,14 @@ async def _get_comprehensive_status_secure(
     auth_manager = get_status_authenticator()
     try:
         credentials = await authenticate_status_request(
-            auth_header, client_ip, "get_comprehensive_status"
+            auth_header,
+            client_ip,
+            "get_comprehensive_status",
         )
 
         if not auth_manager.is_operation_allowed(
-            "get_comprehensive_status", credentials.access_level
+            "get_comprehensive_status",
+            credentials.access_level,
         ):
             return {"error": "Insufficient privileges for comprehensive status"}
 
@@ -350,7 +353,9 @@ def _register_server_stats_tool(mcp_app: t.Any) -> None:
             await validate_status_request(client_id, "get_server_stats", {})
 
             async with await secure_status_operation(
-                client_id, "get_server_stats", timeout=15.0
+                client_id,
+                "get_server_stats",
+                timeout=15.0,
             ):
                 context = get_context()
                 if not context:
@@ -459,7 +464,7 @@ def _register_command_help_tool(mcp_app: t.Any) -> None:
                     "description": "Initialize or update crackerjack configuration with smart configuration merging",
                     "usage": "Optional parameters: target_path (defaults to current directory)",
                     "kwargs": {
-                        "force": "boolean-force overwrite existing configurations"
+                        "force": "boolean-force overwrite existing configurations",
                     },
                     "features": [
                         "Smart merge preserving existing configurations",
@@ -530,7 +535,8 @@ def _get_resources_status(context: t.Any) -> dict[str, t.Any]:
 
 
 async def _build_filtered_status(
-    requested: set[str], context: t.Any
+    requested: set[str],
+    context: t.Any,
 ) -> dict[str, t.Any]:
     filtered_status: dict[str, t.Any] = {"timestamp": time.time()}
 
@@ -553,7 +559,9 @@ def _register_filtered_status_tool(mcp_app: t.Any) -> None:
 
         try:
             await validate_status_request(
-                client_id, "get_filtered_status", {"components": components}
+                client_id,
+                "get_filtered_status",
+                {"components": components},
             )
 
             return await _process_filtered_status_request(client_id, components)
@@ -568,7 +576,9 @@ async def _process_filtered_status_request(client_id: str, components: str) -> s
         return _format_status_error(error)
 
     async with await secure_status_operation(
-        client_id, "get_filtered_status", timeout=20.0
+        client_id,
+        "get_filtered_status",
+        timeout=20.0,
     ):
         return await _collect_status_data(client_id, requested)
 

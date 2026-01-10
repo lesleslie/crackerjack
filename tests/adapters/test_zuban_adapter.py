@@ -27,7 +27,7 @@ class TestZubanAdapterInitialization:
     def test_module_registration(self) -> None:
         """Test adapter module registration constants (static UUID from registry)."""
         # UUID from ADAPTER_UUID_REGISTRY.md: zuban_type
-        assert MODULE_ID == UUID("e42fd557-ed29-4104-8edd-46607ab807e2")
+        assert UUID("e42fd557-ed29-4104-8edd-46607ab807e2") == MODULE_ID
         assert MODULE_STATUS == AdapterStatus.STABLE
 
     def test_adapter_initialization_with_defaults(self) -> None:

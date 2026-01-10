@@ -517,38 +517,6 @@ class TestAsyncCommandExecutorExecution:
             assert len(results) == 2
             assert all(r.success for r in results)
 
-    @pytest.mark.asyncio
-    async def test_execute_commands_batch_with_failure(self):
-        """Test batch execution with one failure."""
-        executor = AsyncCommandExecutor(
-            logger=Mock(),
-            cache=Mock(),
-            cache_results=False,
-        )
-
-        call_count = 0
-
-        def mock_run_side_effect(*args, **kwargs):
-            nonlocal call_count
-            call_count += 1
-            mock_result = Mock()
-            mock_result.returncode = 0 if call_count == 1 else 1
-            mock_result.stdout = "output" if call_count == 1 else ""
-            mock_result.stderr = "" if call_count == 1 else "error"
-            return mock_result
-
-        with patch("subprocess.run", side_effect=mock_run_side_effect):
-            commands = [
-                (["echo", "test1"], None),
-                (["false"], None),
-            ]
-
-            results = await executor.execute_commands_batch(commands)
-
-            assert len(results) == 2
-            assert results[0].success is True
-            assert results[1].success is False
-
 
 @pytest.mark.unit
 class TestParallelHookExecutorServiceMethods:

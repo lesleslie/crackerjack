@@ -7,14 +7,15 @@ and comprehensive middleware functionality.
 import asyncio
 import time
 from pathlib import Path
+from typing import Never
 from unittest.mock import patch
 
 import pytest
 
 from crackerjack.mcp.rate_limiter import (
     RateLimitConfig,
-    RateLimitMiddleware,
     RateLimiter,
+    RateLimitMiddleware,
     ResourceMonitor,
 )
 
@@ -23,7 +24,7 @@ from crackerjack.mcp.rate_limiter import (
 class TestRateLimitConfig:
     """Test RateLimitConfig dataclass."""
 
-    def test_default_config(self):
+    def test_default_config(self) -> None:
         """Test default configuration values."""
         config = RateLimitConfig()
 
@@ -36,7 +37,7 @@ class TestRateLimitConfig:
         assert config.max_cache_entries == 10000
         assert config.max_state_history == 100
 
-    def test_custom_config(self):
+    def test_custom_config(self) -> None:
         """Test custom configuration values."""
         config = RateLimitConfig(
             requests_per_minute=60,
@@ -55,7 +56,7 @@ class TestRateLimitConfig:
 class TestRateLimiterInitialization:
     """Test RateLimiter initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         limiter = RateLimiter()
 
@@ -64,7 +65,7 @@ class TestRateLimiterInitialization:
         assert len(limiter.minute_windows) == 0
         assert len(limiter.hour_windows) == 0
 
-    def test_initialization_custom_limits(self):
+    def test_initialization_custom_limits(self) -> None:
         """Test initialization with custom limits."""
         limiter = RateLimiter(requests_per_minute=60, requests_per_hour=600)
 
@@ -77,7 +78,7 @@ class TestRateLimiterIsAllowed:
     """Test RateLimiter is_allowed method."""
 
     @pytest.mark.asyncio
-    async def test_is_allowed_first_request(self):
+    async def test_is_allowed_first_request(self) -> None:
         """Test first request is allowed."""
         limiter = RateLimiter(requests_per_minute=30, requests_per_hour=300)
 
@@ -89,7 +90,7 @@ class TestRateLimiterIsAllowed:
         assert info["hour_requests_remaining"] == 299
 
     @pytest.mark.asyncio
-    async def test_is_allowed_within_limits(self):
+    async def test_is_allowed_within_limits(self) -> None:
         """Test requests within limits are allowed."""
         limiter = RateLimiter(requests_per_minute=5, requests_per_hour=10)
 
@@ -104,7 +105,7 @@ class TestRateLimiterIsAllowed:
         assert info["minute_requests_remaining"] == 0
 
     @pytest.mark.asyncio
-    async def test_is_allowed_minute_limit_exceeded(self):
+    async def test_is_allowed_minute_limit_exceeded(self) -> None:
         """Test request denied when minute limit exceeded."""
         limiter = RateLimiter(requests_per_minute=3, requests_per_hour=100)
 
@@ -123,7 +124,7 @@ class TestRateLimiterIsAllowed:
         assert info["retry_after"] == 60
 
     @pytest.mark.asyncio
-    async def test_is_allowed_hour_limit_exceeded(self):
+    async def test_is_allowed_hour_limit_exceeded(self) -> None:
         """Test request denied when hour limit exceeded."""
         limiter = RateLimiter(requests_per_minute=100, requests_per_hour=3)
 
@@ -142,7 +143,7 @@ class TestRateLimiterIsAllowed:
         assert info["retry_after"] == 3600
 
     @pytest.mark.asyncio
-    async def test_is_allowed_different_clients(self):
+    async def test_is_allowed_different_clients(self) -> None:
         """Test different clients have separate limits."""
         limiter = RateLimiter(requests_per_minute=2, requests_per_hour=10)
 
@@ -161,7 +162,7 @@ class TestRateLimiterCleanup:
     """Test RateLimiter cleanup functionality."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_windows_removes_expired_entries(self):
+    async def test_cleanup_windows_removes_expired_entries(self) -> None:
         """Test cleanup removes expired entries."""
         limiter = RateLimiter(requests_per_minute=5, requests_per_hour=10)
 
@@ -178,7 +179,7 @@ class TestRateLimiterCleanup:
         assert len(limiter.minute_windows.get("client1", [])) == 0
 
     @pytest.mark.asyncio
-    async def test_cleanup_windows_removes_empty_client_windows(self):
+    async def test_cleanup_windows_removes_empty_client_windows(self) -> None:
         """Test cleanup removes empty client windows."""
         limiter = RateLimiter(requests_per_minute=5, requests_per_hour=10)
 
@@ -202,7 +203,7 @@ class TestRateLimiterStats:
     """Test RateLimiter statistics."""
 
     @pytest.mark.asyncio
-    async def test_get_stats_empty(self):
+    async def test_get_stats_empty(self) -> None:
         """Test stats with no requests."""
         limiter = RateLimiter(requests_per_minute=30, requests_per_hour=300)
 
@@ -215,7 +216,7 @@ class TestRateLimiterStats:
         assert stats["limits"]["requests_per_hour"] == 300
 
     @pytest.mark.asyncio
-    async def test_get_stats_with_requests(self):
+    async def test_get_stats_with_requests(self) -> None:
         """Test stats with active requests."""
         limiter = RateLimiter(requests_per_minute=30, requests_per_hour=300)
 
@@ -234,7 +235,7 @@ class TestRateLimiterStats:
 class TestResourceMonitorInitialization:
     """Test ResourceMonitor initialization."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test ResourceMonitor initialization."""
         config = RateLimitConfig()
 
@@ -250,7 +251,7 @@ class TestResourceMonitorJobSlots:
     """Test ResourceMonitor job slot management."""
 
     @pytest.mark.asyncio
-    async def test_acquire_job_slot_success(self):
+    async def test_acquire_job_slot_success(self) -> None:
         """Test acquiring job slot successfully."""
         config = RateLimitConfig(max_concurrent_jobs=5)
         monitor = ResourceMonitor(config)
@@ -262,7 +263,7 @@ class TestResourceMonitorJobSlots:
         assert len(monitor.active_jobs) == 1
 
     @pytest.mark.asyncio
-    async def test_acquire_job_slot_multiple(self):
+    async def test_acquire_job_slot_multiple(self) -> None:
         """Test acquiring multiple job slots."""
         config = RateLimitConfig(max_concurrent_jobs=3)
         monitor = ResourceMonitor(config)
@@ -274,7 +275,7 @@ class TestResourceMonitorJobSlots:
         assert len(monitor.active_jobs) == 3
 
     @pytest.mark.asyncio
-    async def test_acquire_job_slot_at_limit(self):
+    async def test_acquire_job_slot_at_limit(self) -> None:
         """Test acquiring job slot when at limit."""
         config = RateLimitConfig(max_concurrent_jobs=2)
         monitor = ResourceMonitor(config)
@@ -289,7 +290,7 @@ class TestResourceMonitorJobSlots:
         assert acquired is False
 
     @pytest.mark.asyncio
-    async def test_release_job_slot(self):
+    async def test_release_job_slot(self) -> None:
         """Test releasing job slot."""
         config = RateLimitConfig(max_concurrent_jobs=5)
         monitor = ResourceMonitor(config)
@@ -300,7 +301,7 @@ class TestResourceMonitorJobSlots:
         assert "job1" not in monitor.active_jobs
 
     @pytest.mark.asyncio
-    async def test_release_job_slot_nonexistent(self):
+    async def test_release_job_slot_nonexistent(self) -> None:
         """Test releasing non-existent job slot."""
         config = RateLimitConfig(max_concurrent_jobs=5)
         monitor = ResourceMonitor(config)
@@ -314,7 +315,7 @@ class TestResourceMonitorStaleJobs:
     """Test ResourceMonitor stale job cleanup."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_stale_jobs_none(self):
+    async def test_cleanup_stale_jobs_none(self) -> None:
         """Test cleanup with no stale jobs."""
         config = RateLimitConfig(max_job_duration_minutes=30)
         monitor = ResourceMonitor(config)
@@ -327,7 +328,7 @@ class TestResourceMonitorStaleJobs:
         assert "job1" in monitor.active_jobs
 
     @pytest.mark.asyncio
-    async def test_cleanup_stale_jobs_found(self):
+    async def test_cleanup_stale_jobs_found(self) -> None:
         """Test cleanup with stale jobs."""
         config = RateLimitConfig(max_job_duration_minutes=1)
         monitor = ResourceMonitor(config)
@@ -346,7 +347,7 @@ class TestResourceMonitorStaleJobs:
 class TestResourceMonitorFileValidation:
     """Test ResourceMonitor file validation."""
 
-    def test_check_file_size_nonexistent(self, tmp_path):
+    def test_check_file_size_nonexistent(self, tmp_path) -> None:
         """Test file size check for non-existent file."""
         config = RateLimitConfig(max_file_size_mb=10)
         monitor = ResourceMonitor(config)
@@ -357,7 +358,7 @@ class TestResourceMonitorFileValidation:
 
         assert result is True
 
-    def test_check_file_size_under_limit(self, tmp_path):
+    def test_check_file_size_under_limit(self, tmp_path) -> None:
         """Test file size check for file under limit."""
         config = RateLimitConfig(max_file_size_mb=10)
         monitor = ResourceMonitor(config)
@@ -369,7 +370,7 @@ class TestResourceMonitorFileValidation:
 
         assert result is True
 
-    def test_check_file_size_over_limit(self, tmp_path):
+    def test_check_file_size_over_limit(self, tmp_path) -> None:
         """Test file size check for file over limit."""
         config = RateLimitConfig(max_file_size_mb=0.001)  # Very small limit
         monitor = ResourceMonitor(config)
@@ -381,7 +382,7 @@ class TestResourceMonitorFileValidation:
 
         assert result is False
 
-    def test_check_progress_files_limit_nonexistent_dir(self, tmp_path):
+    def test_check_progress_files_limit_nonexistent_dir(self, tmp_path) -> None:
         """Test progress files limit with non-existent directory."""
         config = RateLimitConfig(max_progress_files=10)
         monitor = ResourceMonitor(config)
@@ -392,7 +393,7 @@ class TestResourceMonitorFileValidation:
 
         assert result is True
 
-    def test_check_progress_files_limit_under_limit(self, tmp_path):
+    def test_check_progress_files_limit_under_limit(self, tmp_path) -> None:
         """Test progress files limit under limit."""
         config = RateLimitConfig(max_progress_files=10)
         monitor = ResourceMonitor(config)
@@ -411,7 +412,7 @@ class TestResourceMonitorStats:
     """Test ResourceMonitor statistics."""
 
     @pytest.mark.asyncio
-    async def test_get_stats_empty(self):
+    async def test_get_stats_empty(self) -> None:
         """Test stats with no active jobs."""
         config = RateLimitConfig(max_concurrent_jobs=5)
         monitor = ResourceMonitor(config)
@@ -424,7 +425,7 @@ class TestResourceMonitorStats:
         assert stats["job_details"] == {}
 
     @pytest.mark.asyncio
-    async def test_get_stats_with_jobs(self):
+    async def test_get_stats_with_jobs(self) -> None:
         """Test stats with active jobs."""
         config = RateLimitConfig(max_concurrent_jobs=5)
         monitor = ResourceMonitor(config)
@@ -444,7 +445,7 @@ class TestResourceMonitorStats:
 class TestRateLimitMiddlewareInitialization:
     """Test RateLimitMiddleware initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         middleware = RateLimitMiddleware()
 
@@ -453,7 +454,7 @@ class TestRateLimitMiddlewareInitialization:
         assert isinstance(middleware.resource_monitor, ResourceMonitor)
         assert middleware._running is False
 
-    def test_initialization_custom_config(self):
+    def test_initialization_custom_config(self) -> None:
         """Test initialization with custom config."""
         config = RateLimitConfig(requests_per_minute=60)
 
@@ -468,7 +469,7 @@ class TestRateLimitMiddlewareLifecycle:
     """Test RateLimitMiddleware start/stop."""
 
     @pytest.mark.asyncio
-    async def test_start_middleware(self):
+    async def test_start_middleware(self) -> None:
         """Test starting middleware."""
         middleware = RateLimitMiddleware()
 
@@ -480,7 +481,7 @@ class TestRateLimitMiddlewareLifecycle:
         await middleware.stop()
 
     @pytest.mark.asyncio
-    async def test_stop_middleware(self):
+    async def test_stop_middleware(self) -> None:
         """Test stopping middleware."""
         middleware = RateLimitMiddleware()
 
@@ -496,16 +497,16 @@ class TestRateLimitMiddlewareOperations:
     """Test RateLimitMiddleware operations."""
 
     @pytest.mark.asyncio
-    async def test_check_request_allowed(self):
+    async def test_check_request_allowed(self) -> None:
         """Test checking if request is allowed."""
         middleware = RateLimitMiddleware()
 
-        allowed, info = await middleware.check_request_allowed("client1")
+        allowed, _info = await middleware.check_request_allowed("client1")
 
         assert allowed is True
 
     @pytest.mark.asyncio
-    async def test_acquire_job_resources(self):
+    async def test_acquire_job_resources(self) -> None:
         """Test acquiring job resources."""
         middleware = RateLimitMiddleware()
 
@@ -514,7 +515,7 @@ class TestRateLimitMiddlewareOperations:
         assert acquired is True
 
     @pytest.mark.asyncio
-    async def test_release_job_resources(self):
+    async def test_release_job_resources(self) -> None:
         """Test releasing job resources."""
         middleware = RateLimitMiddleware()
 
@@ -523,7 +524,7 @@ class TestRateLimitMiddlewareOperations:
 
         # Should not raise error
 
-    def test_validate_file_size(self, tmp_path):
+    def test_validate_file_size(self, tmp_path) -> None:
         """Test validating file size."""
         middleware = RateLimitMiddleware()
 
@@ -534,7 +535,7 @@ class TestRateLimitMiddlewareOperations:
 
         assert result is True
 
-    def test_validate_progress_files(self, tmp_path):
+    def test_validate_progress_files(self, tmp_path) -> None:
         """Test validating progress files."""
         middleware = RateLimitMiddleware()
 
@@ -548,7 +549,7 @@ class TestRateLimitMiddlewareStats:
     """Test RateLimitMiddleware comprehensive stats."""
 
     @pytest.mark.asyncio
-    async def test_get_comprehensive_stats(self):
+    async def test_get_comprehensive_stats(self) -> None:
         """Test getting comprehensive stats."""
         middleware = RateLimitMiddleware()
 
@@ -569,7 +570,7 @@ class TestRateLimitMiddlewareCleanupLoop:
     """Test RateLimitMiddleware cleanup loop."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_loop_runs(self):
+    async def test_cleanup_loop_runs(self) -> None:
         """Test cleanup loop executes."""
         middleware = RateLimitMiddleware()
 
@@ -583,15 +584,16 @@ class TestRateLimitMiddlewareCleanupLoop:
             await middleware.stop()
 
     @pytest.mark.asyncio
-    async def test_cleanup_loop_handles_exceptions(self):
+    async def test_cleanup_loop_handles_exceptions(self) -> None:
         """Test cleanup loop handles exceptions gracefully."""
         middleware = RateLimitMiddleware()
 
         # Make cleanup_stale_jobs raise exception
         original_cleanup = middleware.resource_monitor.cleanup_stale_jobs
 
-        async def failing_cleanup():
-            raise RuntimeError("Test error")
+        async def failing_cleanup() -> Never:
+            msg = "Test error"
+            raise RuntimeError(msg)
 
         middleware.resource_monitor.cleanup_stale_jobs = failing_cleanup
 

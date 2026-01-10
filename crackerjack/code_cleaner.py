@@ -27,8 +27,7 @@ class SafePatternApplicator:
     def apply_formatting_patterns(self, content: str) -> str:
         content = SAFE_PATTERNS["spacing_after_comma"].apply(content)
         content = SAFE_PATTERNS["spacing_after_colon"].apply(content)
-        content = SAFE_PATTERNS["multiple_spaces"].apply(content)
-        return content
+        return SAFE_PATTERNS["multiple_spaces"].apply(content)
 
     def has_preserved_comment(self, line: str) -> bool:
         if line.strip().startswith(("#! /", "#!/")):
@@ -42,7 +41,7 @@ class SafePatternApplicator:
             "type: ",
             "regex ok",
             "todo",
-            "gitleaks: allow",
+            "gitleaks:",
         ]
         return any(keyword in line_lower for keyword in preserved_keywords)
 
@@ -107,11 +106,12 @@ class FileProcessor(BaseModel):
         except Exception as e:
             self._handle_unexpected_read_error(file_path, e)
 
-            raise # pragma: no cover
+            raise  # pragma: no cover
 
     def _validate_and_log_file_access(self, file_path: Path) -> Path:
         validated_path = SecurePathValidator.validate_file_path(
-            file_path, self.base_directory
+            file_path,
+            self.base_directory,
         )
         SecurePathValidator.validate_file_size(validated_path)
 
@@ -125,7 +125,9 @@ class FileProcessor(BaseModel):
         return validated_path
 
     def _try_read_with_encoding_fallback(
-        self, validated_path: Path, original_path: Path
+        self,
+        validated_path: Path,
+        original_path: Path,
     ) -> str:
         try:
             return validated_path.read_text(encoding="utf-8")
@@ -158,7 +160,9 @@ class FileProcessor(BaseModel):
 
     def _handle_unexpected_read_error(self, file_path: Path, error: Exception) -> None:
         self.security_logger.log_validation_failed(
-            "file_read", file_path, f"Unexpected error during file read: {error}"
+            "file_read",
+            file_path,
+            f"Unexpected error during file read: {error}",
         )
 
         raise ExecutionError(
@@ -178,7 +182,10 @@ class FileProcessor(BaseModel):
 
         except Exception as e:
             self.security_logger.log_atomic_operation(
-                "write", file_path, False, error=str(e)
+                "write",
+                file_path,
+                False,
+                error=str(e),
             )
 
             raise ExecutionError(
@@ -189,7 +196,9 @@ class FileProcessor(BaseModel):
     def backup_file(self, file_path: Path) -> Path:
         try:
             backup_path = AtomicFileOperations.atomic_backup_and_write(
-                file_path, file_path.read_bytes(), self.base_directory
+                file_path,
+                file_path.read_bytes(),
+                self.base_directory,
             )
 
             self.security_logger.log_backup_created(file_path, backup_path)
@@ -201,7 +210,9 @@ class FileProcessor(BaseModel):
 
         except Exception as e:
             self.security_logger.log_validation_failed(
-                "backup_creation", file_path, f"Backup creation failed: {e}"
+                "backup_creation",
+                file_path,
+                f"Backup creation failed: {e}",
             )
 
             raise ExecutionError(
@@ -409,7 +420,8 @@ class CodeCleaner(BaseModel):
 
         if self.file_processor is None:
             self.file_processor = FileProcessor(
-                console=self.console, base_directory=self.base_directory
+                console=self.console,
+                base_directory=self.base_directory,
             )
 
         if self.error_handler is None:
@@ -437,23 +449,25 @@ class CodeCleaner(BaseModel):
         ]
 
         result = self.pipeline.clean_file(file_path, cleaning_steps)
-        return t.cast(CleaningResult, result)
+        return t.cast("CleaningResult", result)
 
     def clean_files(
-        self, pkg_dir: Path | None = None, use_backup: bool = True
+        self,
+        pkg_dir: Path | None = None,
+        use_backup: bool = True,
     ) -> list[CleaningResult] | PackageCleaningResult:
         if use_backup:
             package_result = self.clean_files_with_backup(pkg_dir)
             self.logger.info(
                 f"Package cleaning with backup completed: "
                 f"success={package_result.overall_success}, "
-                f"restored={package_result.backup_restored}"
+                f"restored={package_result.backup_restored}",
             )
             return package_result
 
         self.console.print(
             "[yellow]⚠️ WARNING: Running without backup protection. "
-            "Consider using use_backup=True for safety.[/yellow]"
+            "Consider using use_backup=True for safety.[/yellow]",
         )
 
         if pkg_dir is None:
@@ -484,15 +498,16 @@ class CodeCleaner(BaseModel):
         return results
 
     def clean_files_with_backup(
-        self, pkg_dir: Path | None = None
+        self,
+        pkg_dir: Path | None = None,
     ) -> PackageCleaningResult:
         validated_pkg_dir = self._prepare_package_directory(pkg_dir)
 
         self.logger.info(
-            f"Starting safe package cleaning with backup: {validated_pkg_dir}"
+            f"Starting safe package cleaning with backup: {validated_pkg_dir}",
         )
         self.console.print(
-            "[cyan]🛡️ Starting package cleaning with backup protection...[/cyan]"
+            "[cyan]🛡️ Starting package cleaning with backup protection...[/cyan]",
         )
 
         backup_metadata: BackupMetadata | None = None
@@ -505,7 +520,8 @@ class CodeCleaner(BaseModel):
                 return self._handle_no_files_to_process(backup_metadata)
 
             cleaning_result = self._execute_cleaning_with_backup(
-                files_to_process, backup_metadata
+                files_to_process,
+                backup_metadata,
             )
 
             return self._finalize_cleaning_result(cleaning_result, backup_metadata)
@@ -518,7 +534,8 @@ class CodeCleaner(BaseModel):
             pkg_dir = self.base_directory or Path.cwd()
 
         if self.base_directory and not SecurePathValidator.is_within_directory(
-            pkg_dir, self.base_directory
+            pkg_dir,
+            self.base_directory,
         ):
             raise ExecutionError(
                 message=(
@@ -531,17 +548,18 @@ class CodeCleaner(BaseModel):
 
     def _create_backup(self, validated_pkg_dir: Path) -> BackupMetadata:
         self.console.print(
-            "[yellow]📦 Creating backup of all package files...[/yellow]"
+            "[yellow]📦 Creating backup of all package files...[/yellow]",
         )
 
         backup_result = self.backup_service.create_package_backup(
-            validated_pkg_dir, self.base_directory
+            validated_pkg_dir,
+            self.base_directory,
         )
-        backup_metadata: BackupMetadata = t.cast(BackupMetadata, backup_result)
+        backup_metadata: BackupMetadata = t.cast("BackupMetadata", backup_result)
 
         self.console.print(
             f"[green]✅ Backup created: {backup_metadata.backup_id}[/green] "
-            f"({backup_metadata.total_files} files, {backup_metadata.total_size} bytes)"
+            f"({backup_metadata.total_files} files, {backup_metadata.total_size} bytes)",
         )
 
         return backup_metadata
@@ -559,7 +577,7 @@ class CodeCleaner(BaseModel):
 
         if not package_dir or not package_dir.exists():
             self.console.print(
-                "[yellow]⚠️ Could not determine package directory, searching for Python packages...[/yellow]"
+                "[yellow]⚠️ Could not determine package directory, searching for Python packages...[/yellow]",
             )
             return self._fallback_discover_packages(root_dir)
 
@@ -575,13 +593,11 @@ class CodeCleaner(BaseModel):
             ".venv",
             "venv",
         }
-        filtered_files = [
+        return [
             f
             for f in package_files
             if not any(excl in f.parts for excl in exclude_dirs)
         ]
-
-        return filtered_files
 
     def _find_package_directory(self, root_dir: Path) -> Path | None:
         pyproject_path = root_dir / "pyproject.toml"
@@ -593,7 +609,7 @@ class CodeCleaner(BaseModel):
                     config = tomllib.load(f)
 
                 project_name_raw = config.get("project", {}).get("name")
-                project_name: str | None = t.cast(str | None, project_name_raw)
+                project_name: str | None = t.cast("str | None", project_name_raw)
                 if project_name:
                     package_name = project_name.replace("-", "_").lower()
                     package_dir = root_dir / package_name
@@ -656,14 +672,17 @@ class CodeCleaner(BaseModel):
         return python_files
 
     def _should_include_file_path(
-        self, file_path: Path, exclude_dirs: set[str]
+        self,
+        file_path: Path,
+        exclude_dirs: set[str],
     ) -> bool:
         path_parts = set[t.Any](file_path.parts)
 
         return not bool(path_parts.intersection(exclude_dirs))
 
     def _handle_no_files_to_process(
-        self, backup_metadata: BackupMetadata
+        self,
+        backup_metadata: BackupMetadata,
     ) -> PackageCleaningResult:
         self.console.print("[yellow]⚠️ No files found to process[/yellow]")
         self.backup_service.cleanup_backup(backup_metadata)
@@ -679,7 +698,9 @@ class CodeCleaner(BaseModel):
         )
 
     def _execute_cleaning_with_backup(
-        self, files_to_process: list[Path], backup_metadata: BackupMetadata
+        self,
+        files_to_process: list[Path],
+        backup_metadata: BackupMetadata,
     ) -> dict[str, t.Any]:
         self.console.print(f"[cyan]🧹 Cleaning {len(files_to_process)} files...[/cyan]")
 
@@ -704,7 +725,7 @@ class CodeCleaner(BaseModel):
                         ExecutionError(
                             message=f"Cleaning failed for {file_path}: {result.steps_failed}",
                             error_code=ErrorCode.CODE_CLEANING_ERROR,
-                        )
+                        ),
                     )
             except Exception as e:
                 cleaning_errors.append(e)
@@ -718,7 +739,7 @@ class CodeCleaner(BaseModel):
                         original_size=0,
                         cleaned_size=0,
                         backup_metadata=backup_metadata,
-                    )
+                    ),
                 )
 
         return {
@@ -728,7 +749,9 @@ class CodeCleaner(BaseModel):
         }
 
     def _finalize_cleaning_result(
-        self, cleaning_result: dict[str, t.Any], backup_metadata: BackupMetadata
+        self,
+        cleaning_result: dict[str, t.Any],
+        backup_metadata: BackupMetadata,
     ) -> PackageCleaningResult:
         file_results = cleaning_result["file_results"]
         cleaning_errors = cleaning_result["cleaning_errors"]
@@ -748,7 +771,10 @@ class CodeCleaner(BaseModel):
             )
 
         return self._handle_cleaning_success(
-            backup_metadata, file_results, files_to_process, successful_files
+            backup_metadata,
+            file_results,
+            files_to_process,
+            successful_files,
         )
 
     def _handle_cleaning_failure(
@@ -762,12 +788,12 @@ class CodeCleaner(BaseModel):
     ) -> PackageCleaningResult:
         self.console.print(
             f"[red]❌ Cleaning failed ({failed_files} files failed). "
-            f"Restoring from backup...[/red]"
+            f"Restoring from backup...[/red]",
         )
 
         self.logger.error(
             f"Package cleaning failed with {len(cleaning_errors)} errors, "
-            f"restoring from backup {backup_metadata.backup_id}"
+            f"restoring from backup {backup_metadata.backup_id}",
         )
 
         self.backup_service.restore_from_backup(backup_metadata, self.base_directory)
@@ -793,7 +819,7 @@ class CodeCleaner(BaseModel):
     ) -> PackageCleaningResult:
         self.console.print(
             f"[green]✅ Package cleaning completed successfully![/green] "
-            f"({successful_files} files cleaned)"
+            f"({successful_files} files cleaned)",
         )
 
         self.backup_service.cleanup_backup(backup_metadata)
@@ -809,7 +835,9 @@ class CodeCleaner(BaseModel):
         )
 
     def _handle_critical_error(
-        self, error: Exception, backup_metadata: BackupMetadata | None
+        self,
+        error: Exception,
+        backup_metadata: BackupMetadata | None,
     ) -> PackageCleaningResult:
         self.logger.error(f"Critical error during package cleaning: {error}")
         self.console.print(f"[red]💥 Critical error: {error}[/red]")
@@ -832,46 +860,47 @@ class CodeCleaner(BaseModel):
     def _attempt_emergency_restoration(self, backup_metadata: BackupMetadata) -> bool:
         try:
             self.console.print(
-                "[yellow]🔄 Attempting emergency restoration...[/yellow]"
+                "[yellow]🔄 Attempting emergency restoration...[/yellow]",
             )
             self.backup_service.restore_from_backup(
-                backup_metadata, self.base_directory
+                backup_metadata,
+                self.base_directory,
             )
             self.console.print("[green]✅ Emergency restoration completed[/green]")
             return True
 
         except Exception as restore_error:
-            self.logger.error(f"Emergency restoration failed: {restore_error}")
+            self.logger.exception(f"Emergency restoration failed: {restore_error}")
             self.console.print(
                 f"[red]💥 Emergency restoration failed: {restore_error}[/red]\n"
                 f"[yellow]⚠️ Manual restoration may be needed from: "
-                f"{backup_metadata.backup_directory}[/yellow]"
+                f"{backup_metadata.backup_directory}[/yellow]",
             )
             return False
 
     def restore_from_backup_metadata(self, backup_metadata: BackupMetadata) -> None:
         self.console.print(
-            f"[yellow]🔄 Manually restoring from backup: {backup_metadata.backup_id}[/yellow]"
+            f"[yellow]🔄 Manually restoring from backup: {backup_metadata.backup_id}[/yellow]",
         )
 
         self.backup_service.restore_from_backup(backup_metadata, self.base_directory)
 
         self.console.print(
             f"[green]✅ Manual restoration completed from backup: "
-            f"{backup_metadata.backup_id}[/green]"
+            f"{backup_metadata.backup_id}[/green]",
         )
 
     def create_emergency_backup(self, pkg_dir: Path | None = None) -> BackupMetadata:
         validated_pkg_dir = self._prepare_package_directory(pkg_dir)
 
         self.console.print(
-            "[cyan]🛡️ Creating emergency backup before risky operation...[/cyan]"
+            "[cyan]🛡️ Creating emergency backup before risky operation...[/cyan]",
         )
 
         backup_metadata = self._create_backup(validated_pkg_dir)
 
         self.console.print(
-            f"[green]✅ Emergency backup created: {backup_metadata.backup_id}[/green]"
+            f"[green]✅ Emergency backup created: {backup_metadata.backup_id}[/green]",
         )
 
         return backup_metadata
@@ -879,25 +908,26 @@ class CodeCleaner(BaseModel):
     def restore_emergency_backup(self, backup_metadata: BackupMetadata) -> bool:
         try:
             self.console.print(
-                f"[yellow]🔄 Restoring emergency backup: {backup_metadata.backup_id}[/yellow]"
+                f"[yellow]🔄 Restoring emergency backup: {backup_metadata.backup_id}[/yellow]",
             )
 
             self.backup_service.restore_from_backup(
-                backup_metadata, self.base_directory
+                backup_metadata,
+                self.base_directory,
             )
 
             self.console.print(
-                f"[green]✅ Emergency backup restored successfully: {backup_metadata.backup_id}[/green]"
+                f"[green]✅ Emergency backup restored successfully: {backup_metadata.backup_id}[/green]",
             )
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Emergency backup restoration failed: {e}")
+            self.logger.exception(f"Emergency backup restoration failed: {e}")
             self.console.print(
                 f"[red]💥 Emergency backup restoration failed: {e}[/red]\n"
                 f"[yellow]⚠️ Manual intervention required. Backup location: "
-                f"{backup_metadata.backup_directory}[/yellow]"
+                f"{backup_metadata.backup_directory}[/yellow]",
             )
 
             return False
@@ -909,25 +939,24 @@ class CodeCleaner(BaseModel):
             if validation_result.is_valid:
                 self.console.print(
                     f"[green]✅ Backup verification passed: {backup_metadata.backup_id}[/green] "
-                    f"({validation_result.total_validated} files verified)"
+                    f"({validation_result.total_validated} files verified)",
                 )
                 return True
-            else:
-                self.console.print(
-                    f"[red]❌ Backup verification failed: {backup_metadata.backup_id}[/red]"
-                )
+            self.console.print(
+                f"[red]❌ Backup verification failed: {backup_metadata.backup_id}[/red]",
+            )
 
-                for error in validation_result.validation_errors[:3]:
-                    self.console.print(f"[red] • {error}[/red]")
+            for error in validation_result.validation_errors[:3]:
+                self.console.print(f"[red] • {error}[/red]")
 
-                if len(validation_result.validation_errors) > 3:
-                    remaining = len(validation_result.validation_errors) - 3
-                    self.console.print(f"[red] ... and {remaining} more errors[/red]")
+            if len(validation_result.validation_errors) > 3:
+                remaining = len(validation_result.validation_errors) - 3
+                self.console.print(f"[red] ... and {remaining} more errors[/red]")
 
-                return False
+            return False
 
         except Exception as e:
-            self.logger.error(f"Backup verification failed with exception: {e}")
+            self.logger.exception(f"Backup verification failed with exception: {e}")
             self.console.print(f"[red]💥 Backup verification error: {e}[/red]")
             return False
 
@@ -948,7 +977,7 @@ class CodeCleaner(BaseModel):
 
             if backup_dirs:
                 self.console.print(
-                    f"[cyan]📦 Found {len(backup_dirs)} available backups: [/cyan]"
+                    f"[cyan]📦 Found {len(backup_dirs)} available backups: [/cyan]",
                 )
                 for backup_dir in sorted(backup_dirs):
                     self.console.print(f" • {backup_dir.name}")
@@ -958,14 +987,15 @@ class CodeCleaner(BaseModel):
             return backup_dirs
 
         except Exception as e:
-            self.logger.error(f"Failed to list[t.Any] backups: {e}")
+            self.logger.exception(f"Failed to list[t.Any] backups: {e}")
             self.console.print(f"[red]💥 Error listing backups: {e}[/red]")
             return []
 
     def should_process_file(self, file_path: Path) -> bool:
         try:
             validated_path = SecurePathValidator.validate_file_path(
-                file_path, self.base_directory
+                file_path,
+                self.base_directory,
             )
 
             SecurePathValidator.validate_file_size(validated_path)
@@ -1046,13 +1076,13 @@ class CodeCleaner(BaseModel):
                 self,
                 docstring_nodes: list[ast.AST],
                 is_docstring_node: t.Callable[[ast.AST], bool],
-            ):
+            ) -> None:
                 self.docstring_nodes = docstring_nodes
                 self.is_docstring_node = is_docstring_node
 
             def _add_if_docstring(self, node: ast.AST) -> None:
                 if self.is_docstring_node(node) and hasattr(node, "body"):
-                    body: list[ast.stmt] = getattr(node, "body")
+                    body: list[ast.stmt] = node.body
                     self.docstring_nodes.append(body[0])
                 self.generic_visit(node)
 
@@ -1136,7 +1166,10 @@ class CodeCleaner(BaseModel):
 
             for i, char in enumerate(line):
                 should_stop, preserve_rest = self._should_stop_for_comment(
-                    char, string_state, line, i
+                    char,
+                    string_state,
+                    line,
+                    i,
                 )
                 if should_stop:
                     if preserve_rest:
@@ -1150,7 +1183,11 @@ class CodeCleaner(BaseModel):
             return "".join(result_chars).rstrip()
 
         def _should_stop_for_comment(
-            self, char: str, string_state: dict[str, t.Any], line: str, index: int
+            self,
+            char: str,
+            string_state: dict[str, t.Any],
+            line: str,
+            index: int,
         ) -> tuple[bool, bool]:
             if string_state["in_string"] or char != "#":
                 return (False, False)
@@ -1162,7 +1199,11 @@ class CodeCleaner(BaseModel):
             return (True, False)
 
         def _update_string_state(
-            self, char: str, index: int, line: str, string_state: dict[str, t.Any]
+            self,
+            char: str,
+            index: int,
+            line: str,
+            string_state: dict[str, t.Any],
         ) -> None:
             if not string_state["in_string"]:
                 if char in ('"', "'"):
@@ -1192,7 +1233,7 @@ class CodeCleaner(BaseModel):
 
             def _add_if_docstring(self, node: ast.AST) -> None:
                 if self._is_docstring_node(node) and hasattr(node, "body"):
-                    body: list[ast.stmt] = getattr(node, "body")
+                    body: list[ast.stmt] = node.body
                     docstring_nodes.append(body[0])
                 self.generic_visit(node)
 
@@ -1229,7 +1270,7 @@ class CodeCleaner(BaseModel):
                     else:
                         empty_line_count = 0
                         leading_whitespace = len(cleaned_line) - len(
-                            cleaned_line.lstrip()
+                            cleaned_line.lstrip(),
                         )
                         content = cleaned_line.lstrip()
 

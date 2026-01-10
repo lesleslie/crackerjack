@@ -37,7 +37,7 @@ def handle_semantic_index(file_path: str) -> None:
         if path_obj.is_file():
             embeddings = vector_store.index_file(path_obj)
             console.print(
-                f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]"
+                f"[green]✅ Successfully indexed {len(embeddings)} chunks from {path_obj.name}[/green]",
             )
         else:
             total_files = 0
@@ -49,25 +49,25 @@ def handle_semantic_index(file_path: str) -> None:
                     total_files += 1
                     total_chunks += len(embeddings)
                     console.print(
-                        f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]"
+                        f"[dim]Indexed {len(embeddings)} chunks from {file.relative_to(path_obj)}[/dim]",
                     )
                 except Exception as e:
                     console.print(
-                        f"[yellow]Warning:[/yellow] Failed to index {file}: {e}"
+                        f"[yellow]Warning:[/yellow] Failed to index {file}: {e}",
                     )
 
             console.print(
-                f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]"
+                f"[green]✅ Successfully indexed {total_files} files with {total_chunks} total chunks[/green]",
             )
 
         stats = vector_store.get_stats()
         console.print(
-            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",
         )
 
     except Exception as e:
         console.print(
-            f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+            f"[red]Error indexing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
         )
 
 
@@ -97,7 +97,7 @@ def handle_semantic_search(query: str) -> None:
 
         if not results:
             console.print(
-                "[yellow]No results found. Try a different search term or index more files.[/yellow]"
+                "[yellow]No results found. Try a different search term or index more files.[/yellow]",
             )
             return
 
@@ -125,7 +125,7 @@ def handle_semantic_search(query: str) -> None:
             )
 
         console.print(
-            Panel(table, title="Semantic Search Results", border_style="cyan")
+            Panel(table, title="Semantic Search Results", border_style="cyan"),
         )
 
         if results:
@@ -147,12 +147,12 @@ def handle_semantic_search(query: str) -> None:
                 """).strip(),
                     title="🎯 Best Match",
                     border_style="green",
-                )
+                ),
             )
 
     except Exception as e:
         console.print(
-            f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+            f"[red]Error performing search:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
         )
 
 
@@ -192,7 +192,8 @@ def handle_semantic_stats() -> None:
 
         if stats.last_updated:
             table.add_row(
-                "Last Updated", stats.last_updated.strftime("%Y-%m-%d %H:%M:%S")
+                "Last Updated",
+                stats.last_updated.strftime("%Y-%m-%d %H:%M:%S"),
             )
 
         console.print(Panel(table, border_style="cyan"))
@@ -203,19 +204,19 @@ def handle_semantic_stats() -> None:
                     "[yellow]The semantic search index is empty. Use [bold]--index[/bold] to add files.[/yellow]",
                     title="💡 Tip",
                     border_style="yellow",
-                )
+                ),
             )
 
     except Exception as e:
         console.print(
-            f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+            f"[red]Error retrieving stats:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
         )
 
 
 def handle_remove_from_semantic_index(file_path: str) -> None:
     try:
         console.print(
-            f"[cyan]Removing file from semantic search index:[/cyan] {file_path}"
+            f"[cyan]Removing file from semantic search index:[/cyan] {file_path}",
         )
 
         path_obj = Path(file_path)
@@ -236,19 +237,19 @@ def handle_remove_from_semantic_index(file_path: str) -> None:
 
         if success:
             console.print(
-                f"[green]✅ Successfully removed {path_obj.name} from index[/green]"
+                f"[green]✅ Successfully removed {path_obj.name} from index[/green]",
             )
         else:
             console.print(
-                f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index"
+                f"[yellow]Warning:[/yellow] File {path_obj.name} was not found in index",
             )
 
         stats = vector_store.get_stats()
         console.print(
-            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks"
+            f"[cyan]Index now contains:[/cyan] {stats.total_files} files, {stats.total_chunks} chunks",
         )
 
     except Exception as e:
         console.print(
-            f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}"
+            f"[red]Error removing file:[/red] {str(e).replace('[', '\\[').replace(']', '\\]')}",
         )

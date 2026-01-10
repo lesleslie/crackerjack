@@ -1,7 +1,8 @@
 import typing as t
 from pathlib import Path
 
-from ..services.regex_patterns import SAFE_PATTERNS
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
 from .base import (
     AgentContext,
     FixResult,
@@ -113,20 +114,24 @@ class DRYAgent(SubAgent):
         recommendations = ["Verify functionality after DRY fixes"]
         if hasattr(self, "current_semantic_insight") and self.current_semantic_insight:
             recommendations = self.semantic_enhancer.enhance_recommendations(
-                recommendations, self.current_semantic_insight
+                recommendations,
+                self.current_semantic_insight,
             )
 
             summary = self.semantic_enhancer.get_semantic_context_summary(
-                self.current_semantic_insight
+                self.current_semantic_insight,
             )
             self.log(f"Semantic context: {summary}")
 
             await self.semantic_enhancer.store_insight_to_session(
-                self.current_semantic_insight, "DRYAgent"
+                self.current_semantic_insight,
+                "DRYAgent",
             )
 
         recommendations = await get_session_enhanced_recommendations(
-            recommendations, "DRYAgent", self.context.project_path
+            recommendations,
+            "DRYAgent",
+            self.context.project_path,
         )
 
         return FixResult(
@@ -267,19 +272,18 @@ class DRYAgent(SubAgent):
 
         exception_handlers: list[dict[str, t.Any]] = []
         for i, line in enumerate(lines):
-            if exception_pattern.test(line.strip()):
-                if (
-                    i + 1 < len(lines)
-                    and "error" in lines[i + 1]
-                    and "str(" in lines[i + 1]
-                ):
-                    exception_handlers.append(
-                        {
-                            "line_number": i + 1,
-                            "content": line.strip(),
-                            "next_line": lines[i + 1].strip(),
-                        },
-                    )
+            if exception_pattern.test(line.strip()) and (
+                i + 1 < len(lines)
+                and "error" in lines[i + 1]
+                and "str(" in lines[i + 1]
+            ):
+                exception_handlers.append(
+                    {
+                        "line_number": i + 1,
+                        "content": line.strip(),
+                        "next_line": lines[i + 1].strip(),
+                    },
+                )
 
         if len(exception_handlers) >= 3:
             violations.append(
@@ -303,13 +307,15 @@ class DRYAgent(SubAgent):
         return "\n".join(lines) if modified else content
 
     def _apply_violation_fix(
-        self, lines: list[str], violation: dict[str, t.Any]
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
     ) -> tuple[list[str], bool]:
         violation_type = violation["type"]
 
         if violation_type == "error_response_pattern":
             return self._fix_error_response_pattern(lines, violation)
-        elif violation_type == "path_conversion_pattern":
+        if violation_type == "path_conversion_pattern":
             return self._fix_path_conversion_pattern(lines, violation)
 
         return lines, False
@@ -343,7 +349,7 @@ def _ensure_path(path: str | Path) -> Path:
         for i, util_line in enumerate(utility_lines):
             lines.insert(insert_pos + i, util_line)
 
-        return [line for line in utility_lines]
+        return list(utility_lines)
 
     def _find_utility_insert_position(self, lines: list[str]) -> int:
         insert_pos = 0
@@ -355,7 +361,10 @@ def _ensure_path(path: str | Path) -> Path:
         return insert_pos
 
     def _apply_error_pattern_replacements(
-        self, lines: list[str], violation: dict[str, t.Any], utility_lines_count: int
+        self,
+        lines: list[str],
+        violation: dict[str, t.Any],
+        utility_lines_count: int,
     ) -> None:
         path_pattern = SAFE_PATTERNS["fix_path_conversion_with_ensure_path"]
 
@@ -380,7 +389,10 @@ def _ensure_path(path: str | Path) -> Path:
             adjustment = self._add_ensure_path_utility(lines)
 
         modified = self._apply_path_pattern_replacements(
-            lines, violation, adjustment, utility_function_added
+            lines,
+            violation,
+            adjustment,
+            utility_function_added,
         )
 
         return lines, modified
@@ -431,7 +443,9 @@ def _ensure_path(path: str | Path) -> Path:
         return modified
 
     async def _detect_semantic_violations(
-        self, content: str, file_path: Path
+        self,
+        content: str,
+        file_path: Path,
     ) -> list[dict[str, t.Any]]:
         violations = []
 
@@ -456,7 +470,7 @@ def _ensure_path(path: str | Path) -> Path:
                                 if insight.total_matches > 0
                                 else 0,
                                 "suggestion": "Consider extracting common functionality to shared utility",
-                            }
+                            },
                         )
 
                         self.current_semantic_insight = insight
@@ -481,11 +495,20 @@ def _ensure_path(path: str | Path) -> Path:
 
             if self._is_function_definition(stripped):
                 current_function = self._handle_function_definition(
-                    functions, current_function, stripped, indent, i
+                    functions,
+                    current_function,
+                    stripped,
+                    indent,
+                    i,
                 )
             elif current_function:
                 current_function = self._handle_function_body_line(
-                    functions, current_function, line, stripped, indent, i
+                    functions,
+                    current_function,
+                    line,
+                    stripped,
+                    indent,
+                    i,
                 )
 
         if current_function:
@@ -495,7 +518,10 @@ def _ensure_path(path: str | Path) -> Path:
         return functions
 
     def _should_skip_line(
-        self, stripped: str, current_function: dict[str, t.Any] | None, line: str
+        self,
+        stripped: str,
+        current_function: dict[str, t.Any] | None,
+        line: str,
     ) -> bool:
         if not stripped or stripped.startswith("#"):
             if current_function:
@@ -539,13 +565,15 @@ def _ensure_path(path: str | Path) -> Path:
         if self._is_line_inside_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
-        else:
-            current_function["end_line"] = line_index
-            functions.append(current_function)
-            return None
+        current_function["end_line"] = line_index
+        functions.append(current_function)
+        return None
 
     def _is_line_inside_function(
-        self, current_function: dict[str, t.Any], indent: int, stripped: str
+        self,
+        current_function: dict[str, t.Any],
+        indent: int,
+        stripped: str,
     ) -> bool:
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]

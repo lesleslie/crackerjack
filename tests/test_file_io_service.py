@@ -2,18 +2,20 @@
 
 import asyncio
 import json
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
 import pytest
+
 from crackerjack.services.file_io_service import FileIOService
 
 
 class TestFileIOService:
     """Test cases for FileIOService functionality."""
 
-    def test_read_text_file_sync(self):
+    def test_read_text_file_sync(self) -> None:
         """Test synchronous reading of text files."""
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp:
             tmp.write("Hello, World!")
             tmp_path = Path(tmp.name)
 
@@ -23,9 +25,9 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_write_text_file_sync(self):
+    def test_write_text_file_sync(self) -> None:
         """Test synchronous writing of text files."""
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -36,10 +38,10 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_read_json_file_sync(self):
+    def test_read_json_file_sync(self) -> None:
         """Test synchronous reading of JSON files."""
         test_data = {"key": "value", "number": 42}
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
             json.dump(test_data, tmp)
             tmp_path = Path(tmp.name)
 
@@ -49,10 +51,10 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_write_json_file_sync(self):
+    def test_write_json_file_sync(self) -> None:
         """Test synchronous writing of JSON files."""
         test_data = {"key": "value", "number": 42}
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -63,10 +65,10 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_read_binary_file_sync(self):
+    def test_read_binary_file_sync(self) -> None:
         """Test synchronous reading of binary files."""
         test_data = b"Hello, World!"
-        with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.bin') as tmp:
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".bin") as tmp:
             tmp.write(test_data)
             tmp_path = Path(tmp.name)
 
@@ -76,10 +78,10 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_write_binary_file_sync(self):
+    def test_write_binary_file_sync(self) -> None:
         """Test synchronous writing of binary files."""
         test_data = b"Hello, World!"
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.bin') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".bin") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -90,28 +92,28 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_file_exists(self):
+    def test_file_exists(self) -> None:
         """Test file existence checking."""
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
-            assert FileIOService.file_exists(tmp_path) == True
-            assert FileIOService.file_exists(Path("nonexistent_file.txt")) == False
+            assert FileIOService.file_exists(tmp_path)
+            assert not FileIOService.file_exists(Path("nonexistent_file.txt"))
         finally:
             tmp_path.unlink()
 
-    def test_directory_exists(self):
+    def test_directory_exists(self) -> None:
         """Test directory existence checking."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
-            assert FileIOService.directory_exists(tmp_path) == True
-            assert FileIOService.directory_exists(Path("nonexistent_dir")) == False
+            assert FileIOService.directory_exists(tmp_path)
+            assert not FileIOService.directory_exists(Path("nonexistent_dir"))
 
     @pytest.mark.asyncio
-    async def test_read_text_file_async(self):
+    async def test_read_text_file_async(self) -> None:
         """Test asynchronous reading of text files."""
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt') as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".txt") as tmp:
             tmp.write("Hello, Async World!")
             tmp_path = Path(tmp.name)
 
@@ -122,9 +124,9 @@ class TestFileIOService:
             tmp_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_write_text_file_async(self):
+    async def test_write_text_file_async(self) -> None:
         """Test asynchronous writing of text files."""
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.txt') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".txt") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -136,10 +138,10 @@ class TestFileIOService:
             tmp_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_read_json_file_async(self):
+    async def test_read_json_file_async(self) -> None:
         """Test asynchronous reading of JSON files."""
         test_data = {"key": "async_value", "number": 99}
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.json') as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
             json.dump(test_data, tmp)
             tmp_path = Path(tmp.name)
 
@@ -150,10 +152,10 @@ class TestFileIOService:
             tmp_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_write_json_file_async(self):
+    async def test_write_json_file_async(self) -> None:
         """Test asynchronous writing of JSON files."""
         test_data = {"key": "async_value", "number": 99}
-        with tempfile.NamedTemporaryFile(delete=False, suffix='.json') as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -165,10 +167,10 @@ class TestFileIOService:
             tmp_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_read_binary_file_async(self):
+    async def test_read_binary_file_async(self) -> None:
         """Test asynchronous reading of binary files."""
         test_data = b"Hello, Async World!"
-        with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.bin') as tmp:
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".bin") as tmp:
             tmp.write(test_data)
             tmp_path = Path(tmp.name)
 
@@ -179,10 +181,10 @@ class TestFileIOService:
             tmp_path.unlink()
 
     @pytest.mark.asyncio
-    async def test_write_binary_file_async(self):
+    async def test_write_binary_file_async(self) -> None:
         """Test asynchronous writing of binary files."""
         test_data = b"Hello, Async World!"
-        with tempfile.NamedTemporaryFile(mode='wb', delete=False, suffix='.bin') as tmp:
+        with tempfile.NamedTemporaryFile(mode="wb", delete=False, suffix=".bin") as tmp:
             tmp_path = Path(tmp.name)
 
         try:
@@ -193,7 +195,7 @@ class TestFileIOService:
         finally:
             tmp_path.unlink()
 
-    def test_write_text_file_sync_with_dir_creation(self):
+    def test_write_text_file_sync_with_dir_creation(self) -> None:
         """Test that write_text_file creates directories when create_dirs=True."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             dir_path = Path(tmp_dir) / "subdir"
@@ -206,7 +208,7 @@ class TestFileIOService:
                 content = f.read()
             assert content == "Hello, World!"
 
-    def test_write_json_file_sync_with_dir_creation(self):
+    def test_write_json_file_sync_with_dir_creation(self) -> None:
         """Test that write_json_file creates directories when create_dirs=True."""
         test_data = {"key": "value", "number": 42}
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -221,7 +223,7 @@ class TestFileIOService:
             assert content == test_data
 
     @pytest.mark.asyncio
-    async def test_write_text_file_async_with_dir_creation(self):
+    async def test_write_text_file_async_with_dir_creation(self) -> None:
         """Test that async write_text_file creates directories when create_dirs=True."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             dir_path = Path(tmp_dir) / "async_subdir"
@@ -235,7 +237,7 @@ class TestFileIOService:
             assert content == "Hello, Async World!"
 
     @pytest.mark.asyncio
-    async def test_write_json_file_async_with_dir_creation(self):
+    async def test_write_json_file_async_with_dir_creation(self) -> None:
         """Test that async write_json_file creates directories when create_dirs=True."""
         test_data = {"key": "value", "number": 42}
         with tempfile.TemporaryDirectory() as tmp_dir:

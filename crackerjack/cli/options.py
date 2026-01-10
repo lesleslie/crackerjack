@@ -7,7 +7,9 @@ from pydantic import BaseModel, field_validator
 
 
 def parse_bump_option_with_flag_support(
-    ctx: click.Context, param: click.Parameter, value: str | None
+    ctx: click.Context,
+    param: click.Parameter,
+    value: str | None,
 ) -> str | None:
     if value is None:
         return None

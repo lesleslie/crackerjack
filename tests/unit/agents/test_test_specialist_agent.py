@@ -22,7 +22,7 @@ class TestTestSpecialistAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test TestSpecialistAgent initializes correctly."""
         agent = TestSpecialistAgent(context)
 
@@ -32,7 +32,7 @@ class TestTestSpecialistAgentInitialization:
         assert "assertion_error" in agent.common_test_patterns
         assert "mock_spec_error" in agent.common_test_patterns
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports test-related issue types."""
         agent = TestSpecialistAgent(context)
 
@@ -54,7 +54,7 @@ class TestTestSpecialistAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_can_handle_perfect_test_match(self, agent):
+    async def test_can_handle_perfect_test_match(self, agent) -> None:
         """Test perfect confidence for test keywords."""
         issue = Issue(
             id="test-001",
@@ -67,7 +67,7 @@ class TestTestSpecialistAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_fixture_keyword(self, agent):
+    async def test_can_handle_fixture_keyword(self, agent) -> None:
         """Test confidence for fixture-related messages."""
         issue = Issue(
             id="test-002",
@@ -80,7 +80,7 @@ class TestTestSpecialistAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_test_file_path(self, agent):
+    async def test_can_handle_test_file_path(self, agent) -> None:
         """Test confidence based on test file path."""
         issue = Issue(
             id="test-003",
@@ -94,7 +94,7 @@ class TestTestSpecialistAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_general_test_failure(self, agent):
+    async def test_can_handle_general_test_failure(self, agent) -> None:
         """Test default confidence for test failure type."""
         issue = Issue(
             id="test-004",
@@ -107,7 +107,7 @@ class TestTestSpecialistAgentCanHandle:
 
         assert confidence == 0.7
 
-    async def test_can_handle_unsupported_type(self, agent):
+    async def test_can_handle_unsupported_type(self, agent) -> None:
         """Test zero confidence for unsupported types."""
         issue = Issue(
             id="test-005",
@@ -131,7 +131,7 @@ class TestTestSpecialistAgentFailureIdentification:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    def test_identify_fixture_not_found(self, agent):
+    def test_identify_fixture_not_found(self, agent) -> None:
         """Test identifying fixture not found errors."""
         issue = Issue(
             id="test-001",
@@ -144,7 +144,7 @@ class TestTestSpecialistAgentFailureIdentification:
 
         assert failure_type == "fixture_not_found"
 
-    def test_identify_hardcoded_path(self, agent):
+    def test_identify_hardcoded_path(self, agent) -> None:
         """Test identifying hardcoded path issues."""
         issue = Issue(
             id="test-002",
@@ -158,7 +158,7 @@ class TestTestSpecialistAgentFailureIdentification:
         # Pattern matching may return different results
         assert isinstance(failure_type, str)
 
-    def test_identify_unknown_failure(self, agent):
+    def test_identify_unknown_failure(self, agent) -> None:
         """Test identifying unknown failure types."""
         issue = Issue(
             id="test-003",
@@ -183,7 +183,7 @@ class TestTestSpecialistAgentAnalyzeAndFix:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_analyze_and_fix_success(self, agent):
+    async def test_analyze_and_fix_success(self, agent) -> None:
         """Test successful issue fixing."""
         issue = Issue(
             id="test-001",
@@ -203,7 +203,7 @@ class TestTestSpecialistAgentAnalyzeAndFix:
             assert result.confidence == 0.8
             assert len(result.fixes_applied) == 1
 
-    async def test_analyze_and_fix_error_handling(self, agent):
+    async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
         issue = Issue(
             id="test-002",
@@ -213,7 +213,7 @@ class TestTestSpecialistAgentAnalyzeAndFix:
         )
 
         with patch.object(
-            agent, "_apply_issue_fixes", side_effect=Exception("Fix failed")
+            agent, "_apply_issue_fixes", side_effect=Exception("Fix failed"),
         ):
             result = await agent.analyze_and_fix(issue)
 
@@ -233,7 +233,7 @@ class TestTestSpecialistAgentFixtureFixes:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_fix_missing_temp_pkg_path_fixture(self, agent, tmp_path):
+    async def test_fix_missing_temp_pkg_path_fixture(self, agent, tmp_path) -> None:
         """Test adding temp_pkg_path fixture."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -257,7 +257,7 @@ class TestModule:
         # Should handle fixture addition
         assert isinstance(fixes, list)
 
-    async def test_fix_missing_console_fixture(self, agent, tmp_path):
+    async def test_fix_missing_console_fixture(self, agent, tmp_path) -> None:
         """Test adding console fixture."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("def test_console(console): pass")
@@ -276,7 +276,7 @@ class TestModule:
 
         assert isinstance(fixes, list)
 
-    async def test_fix_missing_tmp_path_fixture(self, agent):
+    async def test_fix_missing_tmp_path_fixture(self, agent) -> None:
         """Test handling built-in tmp_path fixture."""
         issue = Issue(
             id="test-003",
@@ -304,7 +304,7 @@ class TestTestSpecialistAgentImportFixes:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_fix_import_errors_add_pytest(self, agent, tmp_path):
+    async def test_fix_import_errors_add_pytest(self, agent, tmp_path) -> None:
         """Test adding missing pytest import."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -328,7 +328,7 @@ def test_something():
         # Should attempt to add pytest import
         assert isinstance(fixes, list)
 
-    async def test_fix_import_errors_add_pathlib(self, agent, tmp_path):
+    async def test_fix_import_errors_add_pathlib(self, agent, tmp_path) -> None:
         """Test adding missing pathlib import."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -351,7 +351,7 @@ def test_path():
 
         assert isinstance(fixes, list)
 
-    async def test_fix_import_errors_invalid_file(self, agent):
+    async def test_fix_import_errors_invalid_file(self, agent) -> None:
         """Test handling invalid file path."""
         issue = Issue(
             id="test-003",
@@ -365,7 +365,7 @@ def test_path():
 
         assert fixes == []
 
-    def test_needs_pytest_import(self, agent):
+    def test_needs_pytest_import(self, agent) -> None:
         """Test detecting missing pytest import."""
         content_without = "def test_foo(): pass"
         content_with = "import pytest\ndef test_foo(): pass"
@@ -373,7 +373,7 @@ def test_path():
         assert agent._needs_pytest_import(content_without) is True
         assert agent._needs_pytest_import(content_with) is False
 
-    def test_needs_pathlib_import(self, agent):
+    def test_needs_pathlib_import(self, agent) -> None:
         """Test detecting missing pathlib import."""
         content_without = "p = Path('test')"
         content_with = "from pathlib import Path\np = Path('test')"
@@ -381,7 +381,7 @@ def test_path():
         assert agent._needs_pathlib_import(content_without) is True
         assert agent._needs_pathlib_import(content_with) is False
 
-    def test_needs_mock_import(self, agent):
+    def test_needs_mock_import(self, agent) -> None:
         """Test detecting missing Mock import."""
         content_without = "m = Mock()"
         content_with = "from unittest.mock import Mock\nm = Mock()"
@@ -401,7 +401,7 @@ class TestTestSpecialistAgentPathFixes:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_fix_hardcoded_paths(self, agent, tmp_path):
+    async def test_fix_hardcoded_paths(self, agent, tmp_path) -> None:
         """Test fixing hardcoded paths."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -424,7 +424,7 @@ def test_path():
 
         assert isinstance(fixes, list)
 
-    async def test_fix_hardcoded_paths_no_file(self, agent):
+    async def test_fix_hardcoded_paths_no_file(self, agent) -> None:
         """Test handling missing file path."""
         issue = Issue(
             id="test-002",
@@ -450,7 +450,7 @@ class TestTestSpecialistAgentMockFixes:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_fix_mock_issues(self, agent, tmp_path):
+    async def test_fix_mock_issues(self, agent, tmp_path) -> None:
         """Test fixing mock issues."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -473,7 +473,7 @@ def test_console():
 
         assert isinstance(fixes, list)
 
-    def test_needs_console_mock_fix(self, agent):
+    def test_needs_console_mock_fix(self, agent) -> None:
         """Test detecting console mock issues."""
         content_needs_fix = "console = Mock()"
         content_no_fix = "console = Console()"
@@ -493,7 +493,7 @@ class TestTestSpecialistAgentGeneralFixes:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_fix_test_file_issues(self, agent, tmp_path):
+    async def test_fix_test_file_issues(self, agent, tmp_path) -> None:
         """Test applying general fixes to test file."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -509,7 +509,7 @@ def test_something():
 
             assert isinstance(fixes, list)
 
-    async def test_apply_general_test_fixes(self, agent):
+    async def test_apply_general_test_fixes(self, agent) -> None:
         """Test applying general test fixes."""
         with patch.object(
             agent,
@@ -520,7 +520,7 @@ def test_something():
 
             assert isinstance(fixes, list)
 
-    async def test_apply_general_test_fixes_with_import_error(self, agent):
+    async def test_apply_general_test_fixes_with_import_error(self, agent) -> None:
         """Test detecting import issues during test collection."""
         with patch.object(
             agent,
@@ -543,39 +543,39 @@ class TestTestSpecialistAgentHelpers:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    def test_check_perfect_test_matches(self, agent):
+    def test_check_perfect_test_matches(self, agent) -> None:
         """Test perfect test match detection."""
         assert agent._check_perfect_test_matches("test failed") == 1.0
         assert agent._check_perfect_test_matches("pytest error") == 1.0
         assert agent._check_perfect_test_matches("fixture not found") == 1.0
         assert agent._check_perfect_test_matches("some other error") == 0.0
 
-    def test_check_test_file_path(self, agent):
+    def test_check_test_file_path(self, agent) -> None:
         """Test file path checking."""
         assert agent._check_test_file_path("/tests/test_module.py") == 0.8
         assert agent._check_test_file_path("/src/test_utils.py") == 0.8
         assert agent._check_test_file_path("/src/module.py") == 0.0
         assert agent._check_test_file_path(None) == 0.0
 
-    def test_check_general_test_failure(self, agent):
+    def test_check_general_test_failure(self, agent) -> None:
         """Test general test failure confidence."""
         assert agent._check_general_test_failure(IssueType.TEST_FAILURE) == 0.7
         assert agent._check_general_test_failure(IssueType.FORMATTING) == 0.0
 
-    def test_get_failure_recommendations_with_fixes(self, agent):
+    def test_get_failure_recommendations_with_fixes(self, agent) -> None:
         """Test recommendations when fixes applied."""
         recommendations = agent._get_failure_recommendations(["Fix applied"])
 
         assert recommendations == []
 
-    def test_get_failure_recommendations_no_fixes(self, agent):
+    def test_get_failure_recommendations_no_fixes(self, agent) -> None:
         """Test recommendations when no fixes applied."""
         recommendations = agent._get_failure_recommendations([])
 
         assert len(recommendations) > 0
         assert any("import" in r for r in recommendations)
 
-    def test_is_valid_file_path(self, agent, tmp_path):
+    def test_is_valid_file_path(self, agent, tmp_path) -> None:
         """Test file path validation."""
         valid_file = tmp_path / "test.py"
         valid_file.write_text("content")
@@ -584,7 +584,7 @@ class TestTestSpecialistAgentHelpers:
         assert agent._is_valid_file_path(str(tmp_path / "nonexistent.py")) is False
         assert agent._is_valid_file_path(None) is False
 
-    def test_find_import_section_end(self, agent):
+    def test_find_import_section_end(self, agent) -> None:
         """Test finding import section end."""
         lines = [
             "import os",
@@ -610,7 +610,7 @@ class TestTestSpecialistAgentIntegration:
         context = AgentContext(project_path=tmp_path)
         return TestSpecialistAgent(context)
 
-    async def test_full_workflow_fixture_fix(self, agent, tmp_path):
+    async def test_full_workflow_fixture_fix(self, agent, tmp_path) -> None:
         """Test complete workflow for fixture fix."""
         test_file = tmp_path / "test_module.py"
         test_file.write_text("""
@@ -637,7 +637,7 @@ class TestModule:
         result = await agent.analyze_and_fix(issue)
         assert isinstance(result, FixResult)
 
-    def test_pattern_coverage(self, agent):
+    def test_pattern_coverage(self, agent) -> None:
         """Test all pattern types are covered."""
         patterns = agent.common_test_patterns
 

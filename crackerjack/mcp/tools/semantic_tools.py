@@ -39,7 +39,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
                         "success": False,
                         "error": f"Invalid file path: {path_result.error_message}",
                         "validation_type": path_result.validation_type,
-                    }
+                    },
                 )
 
             file_path_obj = Path(path_result.sanitized_value or file_path)
@@ -59,7 +59,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
                     "file_path": str(file_path_obj),
                     "embedding_dimension": config.embedding_dimension,
                     "message": f"Successfully indexed {len(embeddings)} chunks from {file_path_obj.name}",
-                }
+                },
             )
 
         except Exception as e:
@@ -68,7 +68,7 @@ def _register_index_file_tool(mcp_app: t.Any) -> None:
                     "success": False,
                     "error": f"Failed to index file: {e}",
                     "file_path": file_path,
-                }
+                },
             )
 
 
@@ -109,7 +109,10 @@ def _register_search_semantic_tool(mcp_app: t.Any) -> None:
             results = vector_store.search(search_query)
 
             response_data = _format_search_results(
-                results, sanitized_query, max_results, min_similarity
+                results,
+                sanitized_query,
+                max_results,
+                min_similarity,
             )
             return json.dumps(response_data)
 
@@ -138,7 +141,8 @@ def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
                     "total_chunks": stats.total_chunks,
                     "index_size_mb": stats.index_size_mb,
                     "average_chunks_per_file": round(
-                        stats.total_chunks / stats.total_files, 2
+                        stats.total_chunks / stats.total_files,
+                        2,
                     )
                     if stats.total_files > 0
                     else 0.0,
@@ -147,7 +151,7 @@ def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
                     "last_updated": stats.last_updated.isoformat()
                     if stats.last_updated
                     else None,
-                }
+                },
             )
 
         except Exception as e:
@@ -155,7 +159,7 @@ def _register_get_semantic_stats_tool(mcp_app: t.Any) -> None:
                 {
                     "success": False,
                     "error": f"Failed to get semantic stats: {e}",
-                }
+                },
             )
 
 
@@ -175,7 +179,7 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
                         "success": False,
                         "error": f"Invalid file path: {path_result.error_message}",
                         "validation_type": path_result.validation_type,
-                    }
+                    },
                 )
 
             file_path_obj = Path(path_result.sanitized_value or file_path)
@@ -192,7 +196,7 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
                     "success": success,
                     "file_path": str(file_path_obj),
                     "message": f"{'Successfully removed' if success else 'Failed to remove'} {file_path_obj.name} from index",
-                }
+                },
             )
 
         except Exception as e:
@@ -201,7 +205,7 @@ def _register_remove_file_from_index_tool(mcp_app: t.Any) -> None:
                     "success": False,
                     "error": f"Failed to remove file: {e}",
                     "file_path": file_path,
-                }
+                },
             )
 
 
@@ -229,7 +233,7 @@ def _register_get_embeddings_tool(mcp_app: t.Any) -> None:
                 {
                     "success": False,
                     "error": f"Failed to generate embeddings: {e}",
-                }
+                },
             )
 
 
@@ -250,14 +254,14 @@ def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
                         {
                             "success": False,
                             "error": "Both embeddings must be JSON arrays",
-                        }
+                        },
                     )
             except json.JSONDecodeError as e:
                 return json.dumps(
                     {
                         "success": False,
                         "error": f"Invalid JSON for embeddings: {e}",
-                    }
+                    },
                 )
 
             config = _parse_semantic_config(config_json)
@@ -273,7 +277,7 @@ def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
                     "similarity_score": round(similarity, 6),
                     "embedding1_dimension": len(emb1),
                     "embedding2_dimension": len(emb2),
-                }
+                },
             )
 
         except Exception as e:
@@ -281,7 +285,7 @@ def _register_calculate_similarity_tool(mcp_app: t.Any) -> None:
                 {
                     "success": False,
                     "error": f"Failed to calculate similarity: {e}",
-                }
+                },
             )
 
 
@@ -358,7 +362,7 @@ def _parse_texts_input(texts: str) -> tuple[list[str], str | None]:
                 {
                     "success": False,
                     "error": "texts must be a JSON array of strings",
-                }
+                },
             )
             return [], error
         return texts_list, None
@@ -367,13 +371,14 @@ def _parse_texts_input(texts: str) -> tuple[list[str], str | None]:
             {
                 "success": False,
                 "error": f"Invalid JSON for texts: {e}",
-            }
+            },
         )
         return [], error
 
 
 def _generate_embeddings_for_texts(
-    texts_list: list[str], config: SemanticConfig
+    texts_list: list[str],
+    config: SemanticConfig,
 ) -> list:
     embedding_service = EmbeddingService(config)
 
@@ -389,7 +394,7 @@ def _format_embeddings_response(texts_list: list[str], embeddings: list) -> str:
             "texts_count": len(texts_list),
             "embedding_dimension": len(embeddings[0]) if embeddings else 0,
             "embeddings": embeddings,
-        }
+        },
     )
 
 
@@ -412,12 +417,12 @@ def _parse_semantic_config(config_json: str) -> SemanticConfig | str:
             {
                 "success": False,
                 "error": f"Invalid JSON configuration: {e}",
-            }
+            },
         )
     except Exception as e:
         return json.dumps(
             {
                 "success": False,
                 "error": f"Invalid configuration: {e}",
-            }
+            },
         )

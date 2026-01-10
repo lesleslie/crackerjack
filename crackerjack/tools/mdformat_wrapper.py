@@ -24,7 +24,7 @@ def main(argv: list[str] | None = None) -> int:
     cmd.extend([str(f) for f in files])
 
     try:
-        check_cmd = cmd + ["--check"]
+        check_cmd = [*cmd, "--check"]
         check_result = subprocess.run(
             check_cmd,
             cwd=Path.cwd(),
@@ -34,7 +34,6 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         if check_result.returncode == 0:
-            print(f"All {len(files)} markdown files already formatted correctly")
             return 0
 
         format_result = subprocess.run(
@@ -46,23 +45,16 @@ def main(argv: list[str] | None = None) -> int:
         )
 
         if format_result.stdout:
-            print(format_result.stdout, end="")
+            pass
         if format_result.stderr:
-            print(format_result.stderr, end="", file=sys.stderr)
+            pass
 
         files_formatted = check_result.returncode
         if files_formatted:
-            print(
-                f"Formatted {len(files)} markdown files - run crackerjack again to verify"
-            )
             return 1
 
         return 0
     except FileNotFoundError:
-        print(
-            "Error: mdformat not found. Install with: uv pip install mdformat mdformat-ruff",
-            file=sys.stderr,
-        )  # noqa: T201
         return 127
     except Exception as e:
         print(f"Error running mdformat: {e}", file=sys.stderr)  # noqa: T201

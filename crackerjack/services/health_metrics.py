@@ -1,3 +1,4 @@
+import itertools
 import json
 import subprocess
 import time
@@ -36,24 +37,28 @@ class ProjectHealth:
         return self.config_completeness < 0.8
 
     def _is_trending_up(
-        self, values: list[int] | list[float], min_points: int = 3
+        self,
+        values: list[int] | list[float],
+        min_points: int = 3,
     ) -> bool:
         if len(values) < min_points:
             return False
 
         recent = values[-min_points:]
 
-        return all(a <= b for a, b in zip(recent, recent[1:]))
+        return all(a <= b for a, b in itertools.pairwise(recent))
 
     def _is_trending_down(
-        self, values: list[int] | list[float], min_points: int = 3
+        self,
+        values: list[int] | list[float],
+        min_points: int = 3,
     ) -> bool:
         if len(values) < min_points:
             return False
 
         recent = values[-min_points:]
 
-        return all(a >= b for a, b in zip(recent, recent[1:]))
+        return all(a >= b for a, b in itertools.pairwise(recent))
 
     def get_health_score(self) -> float:
         scores: list[float] = []
@@ -355,7 +360,7 @@ class HealthMetricsService:
                 raise ValueError(msg)
 
             if not parsed.path.startswith("/pypi/") or not parsed.path.endswith(
-                "/json"
+                "/json",
             ):
                 msg = f"Invalid PyPI API path: {parsed.path}"
                 raise ValueError(msg)
@@ -554,7 +559,8 @@ class HealthMetricsService:
         }
 
     def _get_lint_errors_metrics(
-        self, health: ProjectHealth
+        self,
+        health: ProjectHealth,
     ) -> dict[str, str | int | None]:
         return {
             "current": health.lint_error_trend[-1] if health.lint_error_trend else None,
@@ -562,19 +568,22 @@ class HealthMetricsService:
         }
 
     def _get_test_coverage_metrics(
-        self, health: ProjectHealth
+        self,
+        health: ProjectHealth,
     ) -> dict[str, str | float | None]:
         return {
             "current": health.test_coverage_trend[-1]
             if health.test_coverage_trend
             else None,
             "trend": self._get_coverage_trend_direction(
-                health, health.test_coverage_trend
+                health,
+                health.test_coverage_trend,
             ),
         }
 
     def _get_dependency_age_metrics(
-        self, health: ProjectHealth
+        self,
+        health: ProjectHealth,
     ) -> dict[str, float | int | None]:
         if not health.dependency_age:
             return {"average": None, "outdated_count": 0}
@@ -589,15 +598,17 @@ class HealthMetricsService:
     def _get_trend_direction(self, health: ProjectHealth, trend_data: list[int]) -> str:
         if health._is_trending_up([float(x) for x in trend_data]):
             return "up"
-        elif health._is_trending_down([float(x) for x in trend_data]):
+        if health._is_trending_down([float(x) for x in trend_data]):
             return "down"
         return "stable"
 
     def _get_coverage_trend_direction(
-        self, health: ProjectHealth, coverage_trend: list[float]
+        self,
+        health: ProjectHealth,
+        coverage_trend: list[float],
     ) -> str:
         if health._is_trending_up([int(x) for x in coverage_trend]):
             return "up"
-        elif health._is_trending_down(coverage_trend):
+        if health._is_trending_down(coverage_trend):
             return "down"
         return "stable"

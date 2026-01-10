@@ -48,7 +48,7 @@ class TestConfigIntegrityService:
             drift_detected = config_integrity_service.check_config_integrity()
             assert drift_detected is True
             config_integrity_service.console.print.assert_called_with(
-                f"[yellow]⚠️ {pyproject_toml.name} has been modified manually[/ yellow]"
+                f"[yellow]⚠️ {pyproject_toml.name} has been modified manually[/ yellow]",
             )
 
     def test_check_config_integrity_missing_sections(self, config_integrity_service: ConfigIntegrityService, tmp_path: Path) -> None:
@@ -58,7 +58,7 @@ class TestConfigIntegrityService:
         drift_detected = config_integrity_service.check_config_integrity()
         assert drift_detected is True
         config_integrity_service.console.print.assert_called_with(
-            f"[red]❌ Configuration integrity error: Missing required config section: tool.pyright in pyproject.toml[/ red]"
+            "[red]❌ Configuration integrity error: Missing required config section: tool.pyright in pyproject.toml[/ red]",
         )
 
     def test_check_file_drift_no_drift(self, config_integrity_service: ConfigIntegrityService, tmp_path: Path) -> None:
@@ -85,7 +85,7 @@ class TestConfigIntegrityService:
         drift = config_integrity_service._check_file_drift(file_path)
         assert drift is True
         config_integrity_service.console.print.assert_called_with(
-            f"[yellow]⚠️ {file_path.name} has been modified manually[/ yellow]"
+            f"[yellow]⚠️ {file_path.name} has been modified manually[/ yellow]",
         )
 
     def test_check_file_drift_os_error(self, config_integrity_service: ConfigIntegrityService, tmp_path: Path) -> None:

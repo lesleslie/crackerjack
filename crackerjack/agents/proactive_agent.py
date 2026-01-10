@@ -35,7 +35,9 @@ class ProactiveAgent(SubAgent):
         return result
 
     async def _execute_with_plan(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         return await self.analyze_and_fix(issue)
 
@@ -43,7 +45,10 @@ class ProactiveAgent(SubAgent):
         return f"{issue.type.value}: {issue.file_path}: {issue.line_number}"
 
     def _cache_successful_pattern(
-        self, issue: Issue, plan: dict[str, t.Any], result: FixResult
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
+        result: FixResult,
     ) -> None:
         pattern_key = f"{issue.type.value}_{plan.get('strategy', 'default')}"
         self._pattern_cache[pattern_key] = {
@@ -60,7 +65,7 @@ class ProactiveAgent(SubAgent):
     def get_planning_confidence(self, issue: Issue) -> float:
         pattern_prefix = f"{issue.type.value}_"
         confidences = [
-            t.cast(float, pattern.get("confidence", 0.0))
+            t.cast("float", pattern.get("confidence", 0.0))
             for key, pattern in self._pattern_cache.items()
             if key.startswith(pattern_prefix)
         ]

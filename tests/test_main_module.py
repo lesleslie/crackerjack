@@ -25,7 +25,7 @@ class TestMainModuleImports:
         import typer
 
         test_app = typer.Typer(
-            help="Crackerjack: Your Python project setup and style enforcement tool."
+            help="Crackerjack: Your Python project setup and style enforcement tool.",
         )
         assert test_app is not None
         assert callable(test_app)

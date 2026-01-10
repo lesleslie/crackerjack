@@ -16,21 +16,21 @@ class TestToolProfilerIntegration:
         """Create ToolProfiler instance with temp cache dir."""
         return ToolProfiler(cache_dir=tmp_path / "cache")
 
-    def test_realistic_workflow_profiling(self, profiler: ToolProfiler):
+    def test_realistic_workflow_profiling(self, profiler: ToolProfiler) -> None:
         """Test profiling a realistic workflow with multiple tools."""
 
         # Simulate fast formatting tools
-        def ruff_format():
+        def ruff_format() -> None:
             time.sleep(0.002)  # Fast formatter
 
-        def ruff_isort():
+        def ruff_isort() -> None:
             time.sleep(0.002)  # Fast import sorter
 
         # Simulate comprehensive analysis tools
-        def zuban():
+        def zuban() -> None:
             time.sleep(0.02)  # Type checking
 
-        def bandit():
+        def bandit() -> None:
             time.sleep(0.01)  # Security scanning
 
         # Profile each tool
@@ -53,14 +53,14 @@ class TestToolProfilerIntegration:
 
         assert comp_time > fast_time * 5  # Comprehensive should be 5x+ slower
 
-    def test_report_generation_workflow(self, profiler: ToolProfiler):
+    def test_report_generation_workflow(self, profiler: ToolProfiler) -> None:
         """Test complete workflow: profile -> compare -> report."""
 
         # Profile some tools
-        def fast_tool():
+        def fast_tool() -> None:
             time.sleep(0.002)
 
-        def slow_tool():
+        def slow_tool() -> None:
             time.sleep(0.02)
 
         profiler.profile_tool("fast-tool", fast_tool, runs=3)
@@ -81,14 +81,14 @@ class TestToolProfilerIntegration:
         assert "fast-tool" in markdown
         assert "slow-tool" in markdown
 
-    def test_bottleneck_detection_workflow(self, profiler: ToolProfiler):
+    def test_bottleneck_detection_workflow(self, profiler: ToolProfiler) -> None:
         """Test bottleneck detection in realistic scenario."""
 
         # Create tools with different characteristics
-        def normal_tool():
+        def normal_tool() -> None:
             time.sleep(0.01)  # Normal execution time
 
-        def slow_tool():
+        def slow_tool() -> None:
             time.sleep(0.01)
 
         # Profile tools

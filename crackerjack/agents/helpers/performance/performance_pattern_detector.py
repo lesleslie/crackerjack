@@ -2,8 +2,8 @@ import ast
 import typing as t
 from contextlib import suppress
 
-from ....services.regex_patterns import SAFE_PATTERNS
-from ...base import AgentContext
+from crackerjack.agents.base import AgentContext
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 class PerformancePatternDetector:
@@ -50,7 +50,8 @@ class PerformancePatternDetector:
         return NestedLoopAnalyzer()
 
     def _build_nested_loop_issues(
-        self, analyzer: "NestedLoopAnalyzer"
+        self,
+        analyzer: "NestedLoopAnalyzer",
     ) -> list[dict[str, t.Any]]:
         if not analyzer.nested_loops:
             return []
@@ -62,12 +63,12 @@ class PerformancePatternDetector:
                 "hotspots": analyzer.complexity_hotspots,
                 "total_count": len(analyzer.nested_loops),
                 "high_priority_count": self._count_high_priority_loops(
-                    analyzer.nested_loops
+                    analyzer.nested_loops,
                 ),
                 "suggestion": self._generate_nested_loop_suggestions(
-                    analyzer.nested_loops
+                    analyzer.nested_loops,
                 ),
-            }
+            },
         ]
 
     @staticmethod
@@ -79,24 +80,24 @@ class PerformancePatternDetector:
         suggestions = []
 
         critical_count = len(
-            [n for n in nested_loops if n.get("priority") == "critical"]
+            [n for n in nested_loops if n.get("priority") == "critical"],
         )
         high_count = len([n for n in nested_loops if n.get("priority") == "high"])
 
         if critical_count > 0:
             suggestions.append(
-                f"CRITICAL: {critical_count} O(n⁴+) loops need immediate algorithmic redesign"
+                f"CRITICAL: {critical_count} O(n⁴+) loops need immediate algorithmic redesign",
             )
         if high_count > 0:
             suggestions.append(
-                f"HIGH: {high_count} O(n³) loops should use memoization/caching"
+                f"HIGH: {high_count} O(n³) loops should use memoization/caching",
             )
 
         suggestions.extend(
             [
                 "Consider: 1) Hash tables for lookups 2) List comprehensions 3) NumPy for numerical operations",
                 "Profile: Use timeit or cProfile to measure actual performance impact",
-            ]
+            ],
         )
 
         return "; ".join(suggestions)
@@ -119,7 +120,8 @@ class PerformancePatternDetector:
         return ListOpAnalyzer()
 
     def _build_list_ops_issues(
-        self, analyzer: "ListOpAnalyzer"
+        self,
+        analyzer: "ListOpAnalyzer",
     ) -> list[dict[str, t.Any]]:
         total_impact = sum(int(op["impact_factor"]) for op in analyzer.list_ops)
         high_impact_ops = [
@@ -133,7 +135,7 @@ class PerformancePatternDetector:
                 "total_impact": total_impact,
                 "high_impact_count": len(high_impact_ops),
                 "suggestion": self._generate_list_op_suggestions(analyzer.list_ops),
-            }
+            },
         ]
 
     @staticmethod
@@ -141,11 +143,11 @@ class PerformancePatternDetector:
         suggestions = []
 
         high_impact_count = len(
-            [op for op in list_ops if int(op["impact_factor"]) >= 10]
+            [op for op in list_ops if int(op["impact_factor"]) >= 10],
         )
         if high_impact_count > 0:
             suggestions.append(
-                f"HIGH IMPACT: {high_impact_count} list[t.Any] operations in hot loops"
+                f"HIGH IMPACT: {high_impact_count} list[t.Any] operations in hot loops",
             )
 
         append_count = len([op for op in list_ops if op["optimization"] == "append"])
@@ -155,11 +157,11 @@ class PerformancePatternDetector:
             suggestions.append(f"Replace {append_count} += [item] with .append(item)")
         if extend_count > 0:
             suggestions.append(
-                f"Replace {extend_count} += multiple_items with .extend()"
+                f"Replace {extend_count} += multiple_items with .extend()",
             )
 
         suggestions.append(
-            "Expected performance gains: 2-50x depending on loop context"
+            "Expected performance gains: 2-50x depending on loop context",
         )
 
         return "; ".join(suggestions)
@@ -245,7 +247,8 @@ class PerformancePatternDetector:
         return []
 
     def _detect_string_inefficiencies_enhanced(
-        self, content: str
+        self,
+        content: str,
     ) -> list[dict[str, t.Any]]:
         issues: list[dict[str, t.Any]] = []
         lines = content.split("\n")
@@ -266,9 +269,9 @@ class PerformancePatternDetector:
                             "content": stripped,
                             "context": context_info,
                             "estimated_impact": int(
-                                context_info.get("impact_factor", "1")
+                                context_info.get("impact_factor", "1"),
                             ),
-                        }
+                        },
                     )
 
             if ".join([])" in stripped:
@@ -278,7 +281,7 @@ class PerformancePatternDetector:
                         "content": stripped,
                         "optimization": "Use empty string literal instead",
                         "performance_gain": "2x",
-                    }
+                    },
                 )
 
             if any(pattern in stripped for pattern in ('f"', ".format(", "% ")):
@@ -288,7 +291,7 @@ class PerformancePatternDetector:
                             "line_number": i + 1,
                             "content": stripped,
                             "optimization": "Move formatting outside loop if static",
-                        }
+                        },
                     )
 
         total_issues = (
@@ -306,15 +309,19 @@ class PerformancePatternDetector:
                     "repeated_formatting": repeated_format_calls,
                     "total_count": total_issues,
                     "suggestion": self._generate_string_suggestions(
-                        string_concat_patterns, inefficient_joins, repeated_format_calls
+                        string_concat_patterns,
+                        inefficient_joins,
+                        repeated_format_calls,
                     ),
-                }
+                },
             )
 
         return issues
 
     def _analyze_string_context(
-        self, lines: list[str], line_idx: int
+        self,
+        lines: list[str],
+        line_idx: int,
     ) -> dict[str, t.Any]:
         context = self._create_default_string_context()
         loop_context = self._find_loop_context_in_lines(lines, line_idx)
@@ -333,7 +340,9 @@ class PerformancePatternDetector:
         }
 
     def _find_loop_context_in_lines(
-        self, lines: list[str], line_idx: int
+        self,
+        lines: list[str],
+        line_idx: int,
     ) -> dict[str, t.Any] | None:
         for i in range(max(0, line_idx - 10), line_idx):
             line = lines[i].strip()
@@ -343,11 +352,12 @@ class PerformancePatternDetector:
         return None
 
     def _analyze_single_line_for_loop_context(
-        self, line: str
+        self,
+        line: str,
     ) -> dict[str, t.Any] | None:
         if "for " in line and " in " in line:
             return self._analyze_for_loop_context(line)
-        elif "while " in line:
+        if "while " in line:
             return self._analyze_while_loop_context()
         return None
 
@@ -395,7 +405,7 @@ class PerformancePatternDetector:
     def _calculate_impact_from_range_size(range_size: int) -> int:
         if range_size > 1000:
             return 10
-        elif range_size > 100:
+        if range_size > 100:
             return 5
         return 2
 
@@ -425,28 +435,29 @@ class PerformancePatternDetector:
 
         if concat_patterns:
             high_impact = len(
-                [p for p in concat_patterns if p.get("estimated_impact", 1) >= 5]
+                [p for p in concat_patterns if p.get("estimated_impact", 1) >= 5],
             )
             suggestions.append(
                 f"String concatenation: {len(concat_patterns)} instances "
-                f"({high_impact} high-impact) - use list[t.Any].append + join"
+                f"({high_impact} high-impact) - use list[t.Any].append + join",
             )
 
         if inefficient_joins:
             suggestions.append(
-                f"Empty joins: {len(inefficient_joins)} - use empty string literal"
+                f"Empty joins: {len(inefficient_joins)} - use empty string literal",
             )
 
         if repeated_formatting:
             suggestions.append(
-                f"Repeated formatting: {len(repeated_formatting)} - cache format strings"
+                f"Repeated formatting: {len(repeated_formatting)} - cache format strings",
             )
 
         suggestions.append("Expected gains: 3-50x for string building in loops")
         return "; ".join(suggestions)
 
     def _detect_list_comprehension_opportunities(
-        self, tree: ast.AST
+        self,
+        tree: ast.AST,
     ) -> list[dict[str, t.Any]]:
         issues: list[dict[str, t.Any]] = []
 
@@ -475,7 +486,7 @@ class PerformancePatternDetector:
                             "optimization": "list_comprehension",
                             "performance_gain": "20-30% faster",
                             "readability": "improved",
-                        }
+                        },
                     )
 
                 self.generic_visit(node)
@@ -492,13 +503,15 @@ class PerformancePatternDetector:
                     "suggestion": f"Convert {len(analyzer.opportunities)} append loops"
                     f" to list[t.Any] comprehensions for better performance "
                     f"and readability",
-                }
+                },
             )
 
         return issues
 
     def _detect_inefficient_builtin_usage(
-        self, tree: ast.AST, content: str
+        self,
+        tree: ast.AST,
+        content: str,
     ) -> list[dict[str, t.Any]]:
         issues: list[dict[str, t.Any]] = []
 
@@ -533,7 +546,7 @@ class PerformancePatternDetector:
                                     "optimization": f"Cache {func_name}() "
                                     f"result outside loop",
                                     "performance_gain": "2-10x depending on data size",
-                                }
+                                },
                             )
 
                 self.generic_visit(node)
@@ -549,7 +562,7 @@ class PerformancePatternDetector:
                     "total_count": len(analyzer.inefficient_calls),
                     "suggestion": f"Cache {len(analyzer.inefficient_calls)} "
                     f"repeated builtin calls outside loops",
-                }
+                },
             )
 
         return issues
@@ -586,16 +599,16 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
                     "complexity": complexity,
                     "priority": priority,
                     "type": loop_type,
-                }
+                },
             )
 
     @staticmethod
     def _calculate_loop_complexity(depth: int) -> str:
         if depth == 2:
             return "O(n²)"
-        elif depth == 3:
+        if depth == 3:
             return "O(n³)"
-        elif depth >= 4:
+        if depth >= 4:
             return "O(n⁴+)"
         return "O(n)"
 
@@ -603,9 +616,7 @@ class NestedLoopAnalyzer(ast.NodeVisitor):
     def _determine_priority(depth: int) -> str:
         if depth >= 4:
             return "critical"
-        elif depth == 3:
-            return "high"
-        elif depth == 2:
+        if depth in {3, 2}:
             return "high"
         return "medium"
 
@@ -640,7 +651,7 @@ class ListOpAnalyzer(ast.NodeVisitor):
                         else "extend",
                         "impact_factor": impact,
                         "performance_gain": f"{max(2, min(50, impact * 5))}x",
-                    }
+                    },
                 )
 
         self.generic_visit(node)

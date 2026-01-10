@@ -40,7 +40,9 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 
 class AgentCoordinator:
     def __init__(
-        self, context: AgentContext, cache: CrackerjackCache | None = None
+        self,
+        context: AgentContext,
+        cache: CrackerjackCache | None = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -78,7 +80,7 @@ class AgentCoordinator:
         issues_by_type = self._group_issues_by_type(issues)
 
         tasks = list[t.Any](
-            starmap(self._handle_issues_by_type, issues_by_type.items())
+            starmap(self._handle_issues_by_type, issues_by_type.items()),
         )
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -91,7 +93,7 @@ class AgentCoordinator:
                 self.logger.error(f"Issue type handling failed: {result}")
                 overall_result.success = False
                 overall_result.remaining_issues.append(
-                    f"Type handling failed: {result}"
+                    f"Type handling failed: {result}",
                 )
 
         return overall_result
@@ -163,7 +165,9 @@ class AgentCoordinator:
         return self._apply_built_in_preference(candidates, best_agent, best_score)
 
     async def _score_all_specialists(
-        self, specialists: list[SubAgent], issue: Issue
+        self,
+        specialists: list[SubAgent],
+        issue: Issue,
     ) -> list[tuple[SubAgent, float]]:
         candidates: list[tuple[SubAgent, float]] = []
 
@@ -177,7 +181,8 @@ class AgentCoordinator:
         return candidates
 
     def _find_highest_scoring_agent(
-        self, candidates: list[tuple[SubAgent, float]]
+        self,
+        candidates: list[tuple[SubAgent, float]],
     ) -> tuple[SubAgent | None, float]:
         best_agent = None
         best_score = 0.0
@@ -202,10 +207,18 @@ class AgentCoordinator:
 
         for agent, score in candidates:
             if self._should_prefer_built_in_agent(
-                agent, best_agent, score, best_score, CLOSE_SCORE_THRESHOLD
+                agent,
+                best_agent,
+                score,
+                best_score,
+                CLOSE_SCORE_THRESHOLD,
             ):
                 self._log_built_in_preference(
-                    agent, score, best_agent, best_score, best_score - score
+                    agent,
+                    score,
+                    best_agent,
+                    best_score,
+                    best_score - score,
                 )
                 return agent
 
@@ -236,7 +249,7 @@ class AgentCoordinator:
         self.logger.info(
             f"Preferring built-in agent {agent.name} (score: {score:.2f}) "
             f"over {best_agent.name} (score: {best_score:.2f}) "
-            f"due to {score_difference:.2f} threshold preference"
+            f"due to {score_difference:.2f} threshold preference",
         )
 
     def _is_built_in_agent(self, agent: SubAgent) -> bool:
@@ -264,7 +277,7 @@ class AgentCoordinator:
         issue_hash = self._create_issue_hash(issue)
 
         cached_decision = self._coerce_cached_decision(
-            self.cache.get_agent_decision(agent.name, issue_hash)
+            self.cache.get_agent_decision(agent.name, issue_hash),
         )
         if cached_decision:
             self.logger.debug(f"Using cached decision for {agent.name}")
@@ -335,7 +348,7 @@ class AgentCoordinator:
             return self._issue_cache[cache_key]
 
         cached_result = self._coerce_cached_decision(
-            self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue))
+            self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue)),
         )
         if cached_result:
             self.logger.debug(f"Using persistent cache for {agent.name}")
@@ -348,7 +361,9 @@ class AgentCoordinator:
         if result.success and result.confidence > 0.7:
             self._issue_cache[cache_key] = result
             self.cache.set_agent_decision(
-                agent.name, self._create_issue_hash(issue), result
+                agent.name,
+                self._create_issue_hash(issue),
+                result,
             )
 
         return result
@@ -392,18 +407,17 @@ class AgentCoordinator:
 
         overall_result = await self._apply_fixes_with_plan(issues, architectural_plan)
 
-        validation_result = await self._validate_against_plan(
-            overall_result, architectural_plan
+        return await self._validate_against_plan(
+            overall_result,
+            architectural_plan,
         )
-
-        return validation_result
 
     async def _create_architectural_plan(self, issues: list[Issue]) -> dict[str, t.Any]:
         architect = self._get_architect_agent()
 
         if not architect:
             return self._create_fallback_plan(
-                "No ArchitectAgent available for planning"
+                "No ArchitectAgent available for planning",
             )
 
         complex_issues = self._filter_complex_issues(issues)
@@ -411,7 +425,9 @@ class AgentCoordinator:
             return {"strategy": "simple_fixes", "patterns": ["standard_patterns"]}
 
         return await self._generate_architectural_plan(
-            architect, complex_issues, issues
+            architect,
+            complex_issues,
+            issues,
         )
 
     def _create_fallback_plan(self, reason: str) -> dict[str, t.Any]:
@@ -427,7 +443,10 @@ class AgentCoordinator:
         return [issue for issue in issues if issue.type in complex_types]
 
     async def _generate_architectural_plan(
-        self, architect: t.Any, complex_issues: list[Issue], all_issues: list[Issue]
+        self,
+        architect: t.Any,
+        complex_issues: list[Issue],
+        all_issues: list[Issue],
     ) -> dict[str, t.Any]:
         primary_issue = complex_issues[0]
 
@@ -439,7 +458,7 @@ class AgentCoordinator:
             enriched_plan = self._enrich_architectural_plan(plan, all_issues)
 
             self.logger.info(
-                f"Created architectural plan: {enriched_plan.get('strategy', 'unknown')}"
+                f"Created architectural plan: {enriched_plan.get('strategy', 'unknown')}",
             )
             return enriched_plan
 
@@ -448,14 +467,18 @@ class AgentCoordinator:
             return {"strategy": "reactive_fallback", "patterns": [], "error": str(e)}
 
     def _enrich_architectural_plan(
-        self, plan: dict[str, t.Any], issues: list[Issue]
+        self,
+        plan: dict[str, t.Any],
+        issues: list[Issue],
     ) -> dict[str, t.Any]:
         plan["all_issues"] = [issue.id for issue in issues]
         plan["issue_types"] = list[t.Any]({issue.type.value for issue in issues})
         return plan
 
     async def _apply_fixes_with_plan(
-        self, issues: list[Issue], plan: dict[str, t.Any]
+        self,
+        issues: list[Issue],
+        plan: dict[str, t.Any],
     ) -> FixResult:
         strategy = plan.get("strategy", "reactive_fallback")
 
@@ -468,7 +491,9 @@ class AgentCoordinator:
         return await self._process_prioritized_groups(prioritized_issues, plan)
 
     async def _process_prioritized_groups(
-        self, prioritized_issues: list[list[Issue]], plan: dict[str, t.Any]
+        self,
+        prioritized_issues: list[list[Issue]],
+        plan: dict[str, t.Any],
     ) -> FixResult:
         overall_result = FixResult(success=True, confidence=1.0)
 
@@ -478,27 +503,35 @@ class AgentCoordinator:
 
             if self._should_fail_on_group_failure(group_result, issue_group, plan):
                 overall_result = self._mark_critical_group_failure(
-                    overall_result, issue_group
+                    overall_result,
+                    issue_group,
                 )
 
         return overall_result
 
     def _should_fail_on_group_failure(
-        self, group_result: FixResult, issue_group: list[Issue], plan: dict[str, t.Any]
+        self,
+        group_result: FixResult,
+        issue_group: list[Issue],
+        plan: dict[str, t.Any],
     ) -> bool:
         return not group_result.success and self._is_critical_group(issue_group, plan)
 
     def _mark_critical_group_failure(
-        self, overall_result: FixResult, issue_group: list[Issue]
+        self,
+        overall_result: FixResult,
+        issue_group: list[Issue],
     ) -> FixResult:
         overall_result.success = False
         overall_result.remaining_issues.append(
-            f"Critical issue group failed: {[i.id for i in issue_group]}"
+            f"Critical issue group failed: {[i.id for i in issue_group]}",
         )
         return overall_result
 
     async def _validate_against_plan(
-        self, result: FixResult, plan: dict[str, t.Any]
+        self,
+        result: FixResult,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         validation_steps = plan.get("validation", [])
 
@@ -512,7 +545,7 @@ class AgentCoordinator:
                 f"Validate with: {', '.join(validation_steps)}",
                 f"Applied strategy: {plan.get('strategy', 'unknown')}",
                 f"Used patterns: {', '.join(plan.get('patterns', []))}",
-            ]
+            ],
         )
 
         return result
@@ -524,7 +557,9 @@ class AgentCoordinator:
         return None
 
     def _prioritize_issues_by_plan(
-        self, issues: list[Issue], plan: dict[str, t.Any]
+        self,
+        issues: list[Issue],
+        plan: dict[str, t.Any],
     ) -> list[list[Issue]]:
         strategy = plan.get("strategy", "reactive_fallback")
 
@@ -541,7 +576,9 @@ class AgentCoordinator:
         return list[t.Any](groups.values())
 
     async def _handle_issue_group_with_plan(
-        self, issues: list[Issue], plan: dict[str, t.Any]
+        self,
+        issues: list[Issue],
+        plan: dict[str, t.Any],
     ) -> FixResult:
         if not issues:
             return FixResult(success=True, confidence=1.0)
@@ -568,7 +605,9 @@ class AgentCoordinator:
         return await self._handle_issues_by_type(representative_issue.type, issues)
 
     def _should_use_architect_for_group(
-        self, issues: list[Issue], plan: dict[str, t.Any]
+        self,
+        issues: list[Issue],
+        plan: dict[str, t.Any],
     ) -> bool:
         strategy = plan.get("strategy", "")
 

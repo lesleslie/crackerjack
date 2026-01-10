@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import logging
 import os
 from datetime import UTC, datetime
@@ -10,14 +11,14 @@ logger = logging.getLogger(__name__)
 
 
 class CrackerjackServer:
-    def __init__(self, settings: CrackerjackSettings):
+    def __init__(self, settings: CrackerjackSettings) -> None:
         self.settings = settings
         self.running = False
         self.adapters: list = []
         self.start_time: datetime | None = None
         self._server_task: asyncio.Task | None = None
 
-    async def start(self):
+    async def start(self) -> None:
         logger.info("Starting Crackerjack MCP server...")
         self.running = True
         self.start_time = datetime.now(UTC)
@@ -33,39 +34,53 @@ class CrackerjackServer:
             logger.info("Server main loop cancelled")
             raise
 
-    async def _init_qa_adapters(self):
+    async def _init_qa_adapters(self) -> None:
         self.adapters = []
         enabled_names = []
 
         await self._initialize_adapters(enabled_names)
 
         logger.info(
-            f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}"
+            f"Initialized {len(self.adapters)} QA adapters: {', '.join(enabled_names)}",
         )
 
-    async def _initialize_adapters(self, enabled_names: list[str]):
+    async def _initialize_adapters(self, enabled_names: list[str]) -> None:
         await self._init_adapter_if_enabled("ruff_enabled", True, "Ruff", enabled_names)
 
         await self._init_adapter_if_enabled(
-            "bandit_enabled", True, "Bandit", enabled_names
+            "bandit_enabled",
+            True,
+            "Bandit",
+            enabled_names,
         )
 
         await self._init_adapter_if_enabled(
-            "semgrep_enabled", False, "Semgrep", enabled_names
+            "semgrep_enabled",
+            False,
+            "Semgrep",
+            enabled_names,
         )
 
         zuban_enabled = getattr(
-            getattr(self.settings, "zuban_lsp", None), "enabled", True
+            getattr(self.settings, "zuban_lsp", None),
+            "enabled",
+            True,
         )
         if zuban_enabled:
             await self._init_zuban_adapter(enabled_names)
 
         await self._init_adapter_if_enabled(
-            "refurb_enabled", True, "Refurb", enabled_names
+            "refurb_enabled",
+            True,
+            "Refurb",
+            enabled_names,
         )
 
         await self._init_adapter_if_enabled(
-            "skylos_enabled", True, "Skylos", enabled_names
+            "skylos_enabled",
+            True,
+            "Skylos",
+            enabled_names,
         )
 
         await self._init_claude_adapter(enabled_names)
@@ -76,7 +91,7 @@ class CrackerjackServer:
         default_value: bool,
         adapter_name: str,
         enabled_names: list[str],
-    ):
+    ) -> None:
         if getattr(self.settings, setting_name, default_value):
             try:
                 adapter_class = self._get_adapter_class(adapter_name)
@@ -89,7 +104,7 @@ class CrackerjackServer:
             except Exception as e:
                 logger.warning(f"Failed to initialize {adapter_name} adapter: {e}")
 
-    async def _init_zuban_adapter(self, enabled_names: list[str]):
+    async def _init_zuban_adapter(self, enabled_names: list[str]) -> None:
         try:
             from crackerjack.adapters.type.zuban import ZubanAdapter
 
@@ -101,7 +116,7 @@ class CrackerjackServer:
         except Exception as e:
             logger.warning(f"Failed to initialize Zuban adapter: {e}")
 
-    async def _init_claude_adapter(self, enabled_names: list[str]):
+    async def _init_claude_adapter(self, enabled_names: list[str]) -> None:
         ai_settings = getattr(self.settings, "ai", None)
         if ai_settings and getattr(ai_settings, "ai_agent", False):
             try:
@@ -115,7 +130,7 @@ class CrackerjackServer:
                 api_key = getattr(ai_settings, "anthropic_api_key", None)
                 if api_key:
                     claude_settings = ClaudeCodeFixerSettings(
-                        anthropic_api_key=SecretStr(api_key)
+                        anthropic_api_key=SecretStr(api_key),
                     )
                     claude = ClaudeCodeFixer(settings=claude_settings)
                     await claude.init()
@@ -132,25 +147,25 @@ class CrackerjackServer:
             from crackerjack.adapters.format.ruff import RuffAdapter
 
             return RuffAdapter
-        elif adapter_name == "Bandit":
+        if adapter_name == "Bandit":
             from crackerjack.adapters.sast.bandit import BanditAdapter
 
             return BanditAdapter
-        elif adapter_name == "Semgrep":
+        if adapter_name == "Semgrep":
             from crackerjack.adapters.sast.semgrep import SemgrepAdapter
 
             return SemgrepAdapter
-        elif adapter_name == "Refurb":
+        if adapter_name == "Refurb":
             from crackerjack.adapters.refactor.refurb import RefurbAdapter
 
             return RefurbAdapter
-        elif adapter_name == "Skylos":
+        if adapter_name == "Skylos":
             from crackerjack.adapters.refactor.skylos import SkylosAdapter
 
             return SkylosAdapter
         return None
 
-    def stop(self):
+    def stop(self) -> None:
         logger.info("Stopping Crackerjack MCP server...")
         self.running = False
 
@@ -186,16 +201,24 @@ class CrackerjackServer:
                 "settings": {
                     "qa_mode": getattr(self.settings, "qa_mode", False),
                     "ai_agent": getattr(
-                        getattr(self.settings, "ai", None), "ai_agent", False
+                        getattr(self.settings, "ai", None),
+                        "ai_agent",
+                        False,
                     ),
                     "auto_fix": getattr(
-                        getattr(self.settings, "ai", None), "autofix", False
+                        getattr(self.settings, "ai", None),
+                        "autofix",
+                        False,
                     ),
                     "test_workers": getattr(
-                        getattr(self.settings, "testing", None), "test_workers", 0
+                        getattr(self.settings, "testing", None),
+                        "test_workers",
+                        0,
                     ),
                     "verbose": getattr(
-                        getattr(self.settings, "execution", None), "verbose", False
+                        getattr(self.settings, "execution", None),
+                        "verbose",
+                        False,
                     ),
                 },
             },
@@ -208,7 +231,9 @@ class CrackerjackServer:
             "semgrep": getattr(self.settings, "semgrep_enabled", False),
             "mypy": getattr(self.settings, "mypy_enabled", True),
             "zuban": getattr(
-                getattr(self.settings, "zuban_lsp", None), "enabled", True
+                getattr(self.settings, "zuban_lsp", None),
+                "enabled",
+                True,
             ),
             "pytest": hasattr(self.settings, "testing"),
         }
@@ -217,11 +242,9 @@ class CrackerjackServer:
         self._server_task = asyncio.create_task(self.start())
         return self._server_task
 
-    async def shutdown(self):
+    async def shutdown(self) -> None:
         self.stop()
         if self._server_task and not self._server_task.done():
             self._server_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._server_task
-            except asyncio.CancelledError:
-                pass

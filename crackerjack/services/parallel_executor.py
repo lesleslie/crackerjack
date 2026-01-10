@@ -48,13 +48,13 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         max_workers: int = 3,
         timeout_seconds: int = 300,
         strategy: ExecutionStrategy = ExecutionStrategy.PARALLEL_SAFE,
-    ):
+    ) -> None:
         self.max_workers = max_workers
         self.timeout_seconds = timeout_seconds
         self.strategy = strategy
         # Type: LoggerProtocol (logging.Logger is compatible)
         self._logger: LoggerProtocol = logger or logging.getLogger(
-            "crackerjack.parallel_executor"
+            "crackerjack.parallel_executor",
         )  # type: ignore[assignment]
         self._cache = cache
 
@@ -84,8 +84,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
                     except RuntimeError as e:
                         if "Event loop is closed" in str(e):
                             return
-                        else:
-                            raise
+                        raise
 
     def health_check(self) -> bool:
         return True
@@ -185,7 +184,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         all_results: list[ExecutionResult] = []
 
         self._logger.info(
-            f"Executing {len(hooks)} hooks in {len(groups)} parallel groups"
+            f"Executing {len(hooks)} hooks in {len(groups)} parallel groups",
         )
 
         for group_name, group_hooks in groups.items():
@@ -280,14 +279,14 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
                 )
                 processed_results.append(error_result)
                 self._logger.error(
-                    f"Hook {hooks[i].name} failed with exception: {result}"
+                    f"Hook {hooks[i].name} failed with exception: {result}",
                 )
             else:
-                processed_results.append(t.cast(ExecutionResult, result))
+                processed_results.append(t.cast("ExecutionResult", result))
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(
-            f"Parallel {group_name} execution: {successful}/{len(hooks)} succeeded"
+            f"Parallel {group_name} execution: {successful}/{len(hooks)} succeeded",
         )
 
         return processed_results
@@ -302,11 +301,12 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         cache: PerformanceCacheProtocol | None = None,
         max_workers: int = 4,
         cache_results: bool = True,
-    ):
+    ) -> None:
         self.max_workers = max_workers
         self.cache_results = cache_results
         self._logger = logger or t.cast(
-            "LoggerProtocol", logging.getLogger("crackerjack.async_executor")
+            "LoggerProtocol",
+            logging.getLogger("crackerjack.async_executor"),
         )
         self._cache = cache
         from concurrent.futures import ThreadPoolExecutor
@@ -361,8 +361,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
                     except RuntimeError as e:
                         if "Event loop is closed" in str(e):
                             return
-                        else:
-                            raise
+                        raise
 
     async def execute_command(
         self,
@@ -375,7 +374,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
             cached_result = await self._get_cached_result(command, cwd)
             if cached_result:
                 self._logger.debug(
-                    f"Using cached result for command: {' '.join(command)}"
+                    f"Using cached result for command: {' '.join(command)}",
                 )
                 return cached_result
 
@@ -410,11 +409,11 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
                 )
                 processed_results.append(error_result)
             else:
-                processed_results.append(t.cast(ExecutionResult, result))
+                processed_results.append(t.cast("ExecutionResult", result))
 
         successful = sum(1 for r in processed_results if r.success)
         self._logger.info(
-            f"Batch execution: {successful}/{len(commands)} commands succeeded"
+            f"Batch execution: {successful}/{len(commands)} commands succeeded",
         )
 
         return processed_results
@@ -474,7 +473,7 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         if self._cache is None:
             return None
         cache_result = self._cache.get(self._get_cache_key(command, cwd))
-        return t.cast(ExecutionResult | None, cache_result)
+        return t.cast("ExecutionResult | None", cache_result)
 
     async def _cache_result(
         self,

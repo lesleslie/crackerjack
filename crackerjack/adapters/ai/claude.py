@@ -64,12 +64,14 @@ class ClaudeCodeFixerSettings(BaseModel):
         key = v.get_secret_value()
 
         if not key.startswith("sk-ant-"):
+            msg = "Invalid Anthropic API key format (must start with 'sk-ant-')"
             raise ValueError(
-                "Invalid Anthropic API key format (must start with 'sk-ant-')"
+                msg,
             )
 
         if len(key) < 20:
-            raise ValueError("API key too short to be valid")
+            msg = "API key too short to be valid"
+            raise ValueError(msg)
 
         return v
 
@@ -86,8 +88,9 @@ class ClaudeCodeFixer:
             return
 
         if not self._settings:
+            msg = "Settings not provided - pass ClaudeCodeFixerSettings to constructor"
             raise RuntimeError(
-                "Settings not provided - pass ClaudeCodeFixerSettings to constructor"
+                msg,
             )
 
         self._initialized = True
@@ -102,7 +105,11 @@ class ClaudeCodeFixer:
         max_retries: int = 3,
     ) -> dict[str, str | float | list[str] | bool]:
         return await self._fix_code_issue(
-            file_path, issue_description, code_context, fix_type, max_retries
+            file_path,
+            issue_description,
+            code_context,
+            fix_type,
+            max_retries,
         )
 
     async def _fix_code_issue(
@@ -116,7 +123,10 @@ class ClaudeCodeFixer:
         client = await self._ensure_client()
 
         prompt = self._build_fix_prompt(
-            file_path, issue_description, code_context, fix_type
+            file_path,
+            issue_description,
+            code_context,
+            fix_type,
         )
 
         for attempt in range(max_retries):
@@ -152,7 +162,8 @@ class ClaudeCodeFixer:
             await self.init()
 
         if not self._settings:
-            raise RuntimeError("Settings not initialized - call init() first")
+            msg = "Settings not initialized - call init() first"
+            raise RuntimeError(msg)
 
         import anthropic
 
@@ -214,7 +225,8 @@ class ClaudeCodeFixer:
 
         for pattern, message in dangerous_patterns:
             if re.search(
-                pattern, code
+                pattern,
+                code,
             ):  # REGEX OK: security validation of AI-generated code
                 return False, f"Security violation: {message}"
 
@@ -259,20 +271,26 @@ class ClaudeCodeFixer:
 
     def _sanitize_error_message(self, error_msg: str) -> str:
         error_msg = re.sub(
-            r"/[\w\-./ ]+/", "<path>/", error_msg
+            r"/[\w\-./ ]+/",
+            "<path>/",
+            error_msg,
         )  # REGEX OK: sanitizing Unix paths in error messages
         error_msg = re.sub(
-            r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg
+            r"[A-Z]:\\[\w\-\\ ]+\\",
+            "<path>\\",
+            error_msg,
         )  # REGEX OK: sanitizing Windows paths in error messages
 
         error_msg = re.sub(
-            r"sk-[a-zA-Z0-9]{20, }", "<api-key>", error_msg
+            r"sk-[a-zA-Z0-9]{20, }",
+            "<api-key>",
+            error_msg,
         )  # REGEX OK: masking OpenAI API keys in error messages
-        error_msg = re.sub(
-            r'["\'][\w\-]{32, }["\']', "<secret>", error_msg
+        return re.sub(
+            r'["\'][\w\-]{32, }["\']',
+            "<secret>",
+            error_msg,
         )  # REGEX OK: masking generic secrets in error messages
-
-        return error_msg
 
     def _sanitize_prompt_input(self, user_input: str) -> str:
         sanitized = user_input
@@ -285,12 +303,12 @@ class ClaudeCodeFixer:
 
         for pattern in injection_patterns:
             sanitized = re.sub(
-                pattern, "[FILTERED]", sanitized
+                pattern,
+                "[FILTERED]",
+                sanitized,
             )  # REGEX OK: preventing prompt injection attacks
 
-        sanitized = sanitized.replace("```", "'''")
-
-        return sanitized
+        return sanitized.replace("```", "'''")
 
     def _is_safe_usage(self, import_node: ast.Import) -> bool:
         return True
@@ -346,17 +364,16 @@ Respond with ONLY the JSON, no additional text."""
 
     async def _call_claude_api(self, client, prompt: str):  # type: ignore[no-untyped-def]
         assert self._settings is not None, "Settings not initialized"
-        response = await client.messages.create(
+        return await client.messages.create(
             model=self._settings.model,
             max_tokens=self._settings.max_tokens,
             temperature=self._settings.temperature,
             messages=[{"role": "user", "content": prompt}],
         )
 
-        return response
-
     def _parse_fix_response(
-        self, response
+        self,
+        response,
     ) -> dict[str, str | float | list[str] | bool]:  # type: ignore[no-untyped-def]
         try:
             content = response.content[0].text
@@ -383,7 +400,7 @@ Respond with ONLY the JSON, no additional text."""
 
             if not is_valid:
                 logger.error(
-                    f"AI-generated code failed security validation: {error_msg}"
+                    f"AI-generated code failed security validation: {error_msg}",
                 )
                 return {
                     "success": False,
@@ -404,7 +421,7 @@ Respond with ONLY the JSON, no additional text."""
 
         except json.JSONDecodeError as e:
             sanitized_error = self._sanitize_error_message(str(e))
-            logger.error(f"Failed to parse JSON response: {sanitized_error}")
+            logger.exception(f"Failed to parse JSON response: {sanitized_error}")
             return {
                 "success": False,
                 "error": f"Invalid JSON: {sanitized_error}",
@@ -412,7 +429,7 @@ Respond with ONLY the JSON, no additional text."""
             }
         except Exception as e:
             sanitized_error = self._sanitize_error_message(str(e))
-            logger.error(f"Unexpected error parsing response: {sanitized_error}")
+            logger.exception(f"Unexpected error parsing response: {sanitized_error}")
             return {
                 "success": False,
                 "error": sanitized_error,
@@ -480,11 +497,10 @@ Respond with ONLY the JSON, no additional text."""
     ) -> str:
         confidence = previous_response.get("confidence", 0.0)
 
-        feedback = f"""
+        return f"""
 **Previous Attempt Analysis**:
 The previous fix had confidence {confidence:.2f}.
 Please provide a more robust solution with higher confidence.
 
 {original_prompt}
 """
-        return feedback

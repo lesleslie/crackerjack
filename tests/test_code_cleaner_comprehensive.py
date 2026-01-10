@@ -6,16 +6,16 @@ import pytest
 from rich.console import Console
 
 from crackerjack.code_cleaner import (
-    CodeCleaner,
     CleaningResult,
+    CodeCleaner,
     PackageCleaningResult,
     SafePatternApplicator,
 )
 
 
 class TestSafePatternApplicator:
-    def test_apply_docstring_patterns(self):
-        """Test applying docstring patterns"""
+    def test_apply_docstring_patterns(self) -> None:
+        """Test applying docstring patterns."""
         applicator = SafePatternApplicator()
 
         # Test with docstring patterns
@@ -27,8 +27,8 @@ class TestSafePatternApplicator:
         # The result should be the same since we're not changing docstrings
         assert result == code_with_docstrings
 
-    def test_apply_formatting_patterns(self):
-        """Test applying formatting patterns"""
+    def test_apply_formatting_patterns(self) -> None:
+        """Test applying formatting patterns."""
         applicator = SafePatternApplicator()
 
         # Test spacing after comma
@@ -49,8 +49,8 @@ class TestSafePatternApplicator:
         result = applicator.apply_formatting_patterns(code_with_multiple_spaces)
         assert result == expected
 
-    def test_has_preserved_comment(self):
-        """Test has_preserved_comment method"""
+    def test_has_preserved_comment(self) -> None:
+        """Test has_preserved_comment method."""
         applicator = SafePatternApplicator()
 
         # Test shebang comments (still useful for executable scripts)
@@ -80,24 +80,25 @@ class TestSafePatternApplicator:
         # Test regular comment
         assert applicator.has_preserved_comment("# This is a regular comment") is False
 
-    def test_inline_nosec_preservation(self):
-        """Test that inline nosec comments are preserved"""
-        from crackerjack.code_cleaner import CodeCleaner
-        from pathlib import Path
+    def test_inline_nosec_preservation(self) -> None:
+        """Test that inline nosec comments are preserved."""
         import tempfile
+        from pathlib import Path
+
+        from crackerjack.code_cleaner import CodeCleaner
 
         cleaner = CodeCleaner(console=Console(), base_directory=Path(tempfile.gettempdir()))
 
         # Test code with inline nosec comments
-        test_code = '''import random
+        test_code = """import random
 value = random.random()  # nosec B311
 other = 123  # regular comment
 result = value * 2  # type: ignore
 secret = "test-key"  # gitleaks:allow
 password = "test-password"  # GITLEAKS:ALLOW
-'''
+"""
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write(test_code)
             temp_path = Path(f.name)
 
@@ -106,13 +107,13 @@ password = "test-password"  # GITLEAKS:ALLOW
             cleaned = temp_path.read_text()
 
             # Verify nosec, type: ignore, and gitleaks:allow are preserved
-            assert '# nosec B311' in cleaned
-            assert '# type: ignore' in cleaned
+            assert "# nosec B311" in cleaned
+            assert "# type: ignore" in cleaned
             # Note: formatting step adds space after colon, so we check for the formatted version
-            assert '# gitleaks: allow' in cleaned or '# gitleaks:allow' in cleaned
-            assert '# GITLEAKS: ALLOW' in cleaned or '# GITLEAKS:ALLOW' in cleaned
+            assert "# gitleaks: allow" in cleaned or "# gitleaks:allow" in cleaned
+            assert "# GITLEAKS: ALLOW" in cleaned or "# GITLEAKS:ALLOW" in cleaned
             # Verify regular comment is removed
-            assert '# regular comment' not in cleaned
+            assert "# regular comment" not in cleaned
 
         finally:
             temp_path.unlink()
@@ -127,20 +128,20 @@ class TestCodeCleaner:
     def cleaner(self, console):
         return CodeCleaner(console=console, base_directory=Path(tempfile.gettempdir()))
 
-    def test_init(self, cleaner, console):
-        """Test CodeCleaner initialization"""
+    def test_init(self, cleaner, console) -> None:
+        """Test CodeCleaner initialization."""
         assert cleaner.console == console
         assert cleaner.base_directory == Path(tempfile.gettempdir())
         assert cleaner.logger is not None
 
-    def test_prepare_package_directory_with_valid_path(self, cleaner):
-        """Test _prepare_package_directory with valid path"""
+    def test_prepare_package_directory_with_valid_path(self, cleaner) -> None:
+        """Test _prepare_package_directory with valid path."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             tmp_path = Path(tmp_dir)
             result = cleaner._prepare_package_directory(tmp_path)
             assert result == tmp_path
 
-    def test_prepare_package_directory_with_none(self, cleaner):
-        """Test _prepare_package_directory with None (should use base_directory)"""
+    def test_prepare_package_directory_with_none(self, cleaner) -> None:
+        """Test _prepare_package_directory with None (should use base_directory)."""
         result = cleaner._prepare_package_directory(None)
         assert result == cleaner.base_directory

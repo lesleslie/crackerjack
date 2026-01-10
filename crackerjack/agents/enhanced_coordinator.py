@@ -22,7 +22,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         }
 
         self.logger.info(
-            f"Enhanced coordinator initialized with external agents: {enable_external_agents}"
+            f"Enhanced coordinator initialized with external agents: {enable_external_agents}",
         )
 
     def enable_external_agents(self, enabled: bool = True) -> None:
@@ -48,15 +48,19 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             strategic_consultations = await self._pre_consult_for_strategy(issues)
 
             architectural_plan = await self._create_enhanced_architectural_plan(
-                issues, strategic_consultations
+                issues,
+                strategic_consultations,
             )
 
             overall_result = await self._apply_enhanced_fixes_with_plan(
-                issues, architectural_plan, strategic_consultations
+                issues,
+                architectural_plan,
+                strategic_consultations,
             )
 
             validated_result = await self._validate_with_external_agents(
-                overall_result, architectural_plan
+                overall_result,
+                architectural_plan,
             )
 
             self._update_consultation_stats(strategic_consultations, validated_result)
@@ -104,18 +108,21 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         return strategic_consultations
 
     async def _create_enhanced_architectural_plan(
-        self, issues: list[Issue], strategic_consultations: dict[str, t.Any]
+        self,
+        issues: list[Issue],
+        strategic_consultations: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         base_plan = await self._create_architectural_plan(issues)
 
         architect_guidance = strategic_consultations.get(
-            "crackerjack_architect_guidance"
+            "crackerjack_architect_guidance",
         )
         if architect_guidance and architect_guidance.get("status") == "success":
             base_plan["external_guidance"] = architect_guidance
             base_plan["enhanced_patterns"] = architect_guidance.get("patterns", [])
             base_plan["external_validation"] = architect_guidance.get(
-                "validation_steps", []
+                "validation_steps",
+                [],
             )
 
             if "strategy" in architect_guidance:
@@ -132,7 +139,9 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         return await self._apply_fixes_with_plan(issues, plan)
 
     async def _validate_with_external_agents(
-        self, result: FixResult, plan: dict[str, t.Any]
+        self,
+        result: FixResult,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         external_validation = plan.get("external_validation", [])
 
@@ -144,7 +153,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             for validation_step in external_validation
         ]
 
-        enhanced_result = FixResult(
+        return FixResult(
             success=result.success,
             confidence=min(result.confidence + 0.1, 1.0),
             fixes_applied=result.fixes_applied.copy(),
@@ -153,17 +162,19 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             files_modified=result.files_modified.copy(),
         )
 
-        return enhanced_result
-
     def _update_consultation_stats(
-        self, strategic_consultations: dict[str, t.Any], result: FixResult
+        self,
+        strategic_consultations: dict[str, t.Any],
+        result: FixResult,
     ) -> None:
         if strategic_consultations.get("crackerjack_architect_guidance"):
             if result.success and result.confidence > 0.8:
                 self._external_consultation_stats["improvements_achieved"] += 1
 
     async def _handle_with_single_agent_enhanced(
-        self, agent: t.Any, issue: Issue
+        self,
+        agent: t.Any,
+        issue: Issue,
     ) -> FixResult:
         internal_result = await super()._handle_with_single_agent(agent, issue)
 
@@ -173,21 +184,22 @@ class EnhancedAgentCoordinator(AgentCoordinator):
             and not internal_result.success
         ):
             recommended_agents = self.claude_bridge.get_recommended_external_agents(
-                issue
+                issue,
             )
             if recommended_agents:
                 self._external_consultation_stats["consultations_requested"] += 1
 
                 consultation = await self.claude_bridge.consult_external_agent(
-                    issue, recommended_agents[0]
+                    issue,
+                    recommended_agents[0],
                 )
 
                 if consultation.get("status") == "success":
                     self._external_consultation_stats["consultations_successful"] += 1
-                    enhanced_result = self.claude_bridge.create_enhanced_fix_result(
-                        internal_result, [consultation]
+                    return self.claude_bridge.create_enhanced_fix_result(
+                        internal_result,
+                        [consultation],
                     )
-                    return enhanced_result
 
         return internal_result
 
@@ -218,8 +230,12 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
 
 def create_enhanced_coordinator(
-    context: AgentContext, cache: t.Any = None, enable_external_agents: bool = True
+    context: AgentContext,
+    cache: t.Any = None,
+    enable_external_agents: bool = True,
 ) -> EnhancedAgentCoordinator:
     return EnhancedAgentCoordinator(
-        context=context, cache=cache, enable_external_agents=enable_external_agents
+        context=context,
+        cache=cache,
+        enable_external_agents=enable_external_agents,
     )

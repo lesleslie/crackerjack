@@ -4,7 +4,8 @@ import typing as t
 import urllib.parse
 from pathlib import Path
 
-from ..errors import ErrorCode, ExecutionError
+from crackerjack.errors import ErrorCode, ExecutionError
+
 from .regex_patterns import validate_path_security
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
@@ -50,7 +51,9 @@ class SecurePathValidator:
 
     @classmethod
     def validate_safe_path(
-        cls, path: str | Path, base_directory: Path | None = None
+        cls,
+        path: str | Path,
+        base_directory: Path | None = None,
     ) -> Path:
         path_str = str(path)
 
@@ -84,7 +87,9 @@ class SecurePathValidator:
 
     @classmethod
     def validate_file_path(
-        cls, file_path: Path, base_directory: Path | None = None
+        cls,
+        file_path: Path,
+        base_directory: Path | None = None,
     ) -> Path:
         return cls.validate_safe_path(file_path, base_directory)
 
@@ -103,13 +108,18 @@ class SecurePathValidator:
 
         result = validated_base.joinpath(*parts)
 
-        if not cls.is_within_directory(result, validated_base):
+        resolved_result = result.resolve()
+        resolved_base = validated_base.resolve()
+
+        try:
+            resolved_result.relative_to(resolved_base)
+        except ValueError:
             raise ExecutionError(
                 message=f"Joined path escapes base directory: {result} not within {validated_base}",
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        return result
+        return resolved_result
 
     @classmethod
     def normalize_path(cls, path: Path) -> Path:
@@ -197,15 +207,14 @@ class SecurePathValidator:
 
         validation_results = validate_path_security(path_str)
 
-        if validation_results["suspicious_patterns"]:
-            if (
-                "detect_parent_directory_in_path"
-                in validation_results["suspicious_patterns"]
-            ):
-                raise ExecutionError(
-                    message=f"Parent directory reference in resolved path: {path}",
-                    error_code=ErrorCode.VALIDATION_ERROR,
-                )
+        if validation_results["suspicious_patterns"] and (
+            "detect_parent_directory_in_path"
+            in validation_results["suspicious_patterns"]
+        ):
+            raise ExecutionError(
+                message=f"Parent directory reference in resolved path: {path}",
+                error_code=ErrorCode.VALIDATION_ERROR,
+            )
 
         suspicious_detected = [
             pattern
@@ -264,15 +273,15 @@ class SecurePathValidator:
 
     @classmethod
     def create_secure_backup_path(
-        cls, original_path: Path, base_directory: Path | None = None
+        cls,
+        original_path: Path,
+        base_directory: Path | None = None,
     ) -> Path:
         validated_original = cls.validate_file_path(original_path, base_directory)
 
         backup_path = validated_original.parent / f"{validated_original.name}.backup"
 
-        validated_backup = cls.validate_file_path(backup_path, base_directory)
-
-        return validated_backup
+        return cls.validate_file_path(backup_path, base_directory)
 
     @classmethod
     def create_secure_temp_file(
@@ -289,7 +298,11 @@ class SecurePathValidator:
 
         try:
             temp_file = tempfile.NamedTemporaryFile(
-                mode="w+b", suffix=suffix, prefix=prefix, dir=directory, delete=False
+                mode="w+b",
+                suffix=suffix,
+                prefix=prefix,
+                dir=directory,
+                delete=False,
             )
 
             os.chmod(temp_file.name, 0o600)
@@ -311,12 +324,15 @@ class SecurePathValidator:
 class AtomicFileOperations:
     @staticmethod
     def atomic_write(
-        file_path: Path, content: str | bytes, base_directory: Path | None = None
+        file_path: Path,
+        content: str | bytes,
+        base_directory: Path | None = None,
     ) -> None:
         security_logger = get_security_logger()
 
         validated_path = SecurePathValidator.validate_safe_path(
-            file_path, base_directory
+            file_path,
+            base_directory,
         )
 
         temp_file = None
@@ -365,12 +381,15 @@ class AtomicFileOperations:
 
     @staticmethod
     def atomic_backup_and_write(
-        file_path: Path, new_content: str | bytes, base_directory: Path | None = None
+        file_path: Path,
+        new_content: str | bytes,
+        base_directory: Path | None = None,
     ) -> Path:
         security_logger = get_security_logger()
 
         validated_path = SecurePathValidator.validate_safe_path(
-            file_path, base_directory
+            file_path,
+            base_directory,
         )
 
         if not validated_path.exists():
@@ -382,18 +401,23 @@ class AtomicFileOperations:
         SecurePathValidator.validate_file_size(validated_path)
 
         backup_path = SecurePathValidator.create_secure_backup_path(
-            validated_path, base_directory
+            validated_path,
+            base_directory,
         )
 
         try:
             original_content = validated_path.read_bytes()
 
             AtomicFileOperations.atomic_write(
-                backup_path, original_content, base_directory
+                backup_path,
+                original_content,
+                base_directory,
             )
 
             AtomicFileOperations.atomic_write(
-                validated_path, new_content, base_directory
+                validated_path,
+                new_content,
+                base_directory,
             )
 
             security_logger.log_backup_created(
@@ -430,6 +454,7 @@ class SubprocessPathValidator:
         "/sys",
         "/proc",
         "/dev",
+        "/dev/null",
         "/var/log",
         "/usr/bin/sudo",
         "/usr/bin/su",
@@ -440,14 +465,33 @@ class SubprocessPathValidator:
         "/var/spool/cron",
     }
 
+    DANGEROUS_EXECUTABLES = {
+        "/usr/bin/sudo",
+        "/bin/sudo",
+        "/usr/bin/su",
+        "/bin/su",
+        "/usr/bin/passwd",
+        "/bin/passwd",
+        "/usr/sbin/visudo",
+        "/usr/bin/ssh",
+        "/usr/bin/scp",
+        "/usr/bin/rsync",
+        "/bin/rm",
+        "/usr/bin/rm",
+        "/bin/rmdir",
+        "/usr/bin/rmdir",
+        "/sbin/reboot",
+        "/sbin/shutdown",
+        "/usr/sbin/reboot",
+        "/usr/sbin/shutdown",
+    }
+
     @classmethod
     def validate_subprocess_cwd(cls, cwd: Path | str | None) -> Path | None:
         if cwd is None:
             return None
 
-        validated_cwd = SecurePathValidator.validate_safe_path(cwd)
-
-        cwd_str = str(validated_cwd)
+        cwd_str = str(cwd)
 
         if cwd_str in cls.FORBIDDEN_SUBPROCESS_PATHS:
             security_logger = get_security_logger()
@@ -461,63 +505,51 @@ class SubprocessPathValidator:
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 
-        validation_results = validate_path_security(cwd_str)
+        dangerous_dirs = {
+            "/etc",
+            "/boot",
+            "/sys/kernel",
+            "/proc",
+            "/dev",
+            "/root",
+            "/var/log",
+        }
 
-        if validation_results["dangerous_directories"]:
-            detected_pattern = validation_results["dangerous_directories"][0]
-            security_logger = get_security_logger()
-            security_logger.log_dangerous_path_detected(
-                path=cwd_str,
-                dangerous_component=f"pattern: {detected_pattern}",
-                context="subprocess_cwd_validation",
-            )
-            raise ExecutionError(
-                message=f"Dangerous subprocess working directory pattern: {cwd_str}",
-                error_code=ErrorCode.VALIDATION_ERROR,
-            )
+        for dangerous_dir in dangerous_dirs:
+            if cwd_str == dangerous_dir or cwd_str.startswith(dangerous_dir + "/"):
+                security_logger = get_security_logger()
+                security_logger.log_dangerous_path_detected(
+                    path=cwd_str,
+                    dangerous_component=f"dangerous_directory: {dangerous_dir}",
+                    context="subprocess_cwd_validation",
+                )
+                raise ExecutionError(
+                    message=f"Dangerous subprocess working directory: {cwd_str}",
+                    error_code=ErrorCode.VALIDATION_ERROR,
+                )
 
+        validated_cwd = SecurePathValidator.validate_safe_path(cwd)
         return validated_cwd
 
     @classmethod
     def validate_executable_path(cls, executable: str | Path) -> Path:
-        exec_path = Path(executable)
+        exec_str = str(executable)
 
-        if not str(executable).startswith(("/", "./", "../")):
-            return exec_path
+        if not exec_str.startswith(("/", "./", "../", "\\")):
+            return Path(executable)
 
-        validated_exec = SecurePathValidator.validate_safe_path(exec_path)
+        validated_exec = SecurePathValidator.validate_safe_path(Path(exec_str))
+        resolved_str = str(validated_exec)
 
-        exec_str = str(validated_exec)
-
-        dangerous_executables = {
-            "/usr/bin/sudo",
-            "/bin/sudo",
-            "/usr/bin/su",
-            "/bin/su",
-            "/usr/bin/passwd",
-            "/bin/passwd",
-            "/usr/sbin/visudo",
-            "/usr/bin/ssh",
-            "/usr/bin/scp",
-            "/usr/bin/rsync",
-            "/bin/rm",
-            "/usr/bin/rm",
-            "/bin/rmdir",
-            "/usr/bin/rmdir",
-            "/sbin/reboot",
-            "/sbin/shutdown",
-            "/usr/sbin/reboot",
-        }
-
-        if exec_str in dangerous_executables:
+        if resolved_str in cls.DANGEROUS_EXECUTABLES:
             security_logger = get_security_logger()
             security_logger.log_dangerous_path_detected(
-                path=exec_str,
+                path=resolved_str,
                 dangerous_component="dangerous_executable",
                 context="subprocess_executable_validation",
             )
             raise ExecutionError(
-                message=f"Dangerous executable blocked: {exec_str}",
+                message=f"Dangerous executable blocked: {resolved_str}",
                 error_code=ErrorCode.VALIDATION_ERROR,
             )
 

@@ -38,7 +38,7 @@ class TestProactiveAgent:
                     "validation": ["test_validation"],
                 }
 
-            async def can_handle(self, issue):
+            async def can_handle(self, issue) -> float:
                 return 0.8
 
             async def analyze_and_fix(self, issue):
@@ -50,7 +50,7 @@ class TestProactiveAgent:
         return MockProactiveAgent(agent_context)
 
     @pytest.mark.asyncio
-    async def test_proactive_fix_with_planning(self, mock_proactive_agent, test_issue):
+    async def test_proactive_fix_with_planning(self, mock_proactive_agent, test_issue) -> None:
         result = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
 
         assert isinstance(result, FixResult)
@@ -61,7 +61,7 @@ class TestProactiveAgent:
         assert cache_key in mock_proactive_agent._planning_cache
 
     @pytest.mark.asyncio
-    async def test_planning_cache(self, mock_proactive_agent, test_issue):
+    async def test_planning_cache(self, mock_proactive_agent, test_issue) -> None:
         result1 = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
 
         result2 = await mock_proactive_agent.analyze_and_fix_proactively(test_issue)
@@ -69,7 +69,7 @@ class TestProactiveAgent:
         assert result1.confidence == result2.confidence
         assert len(mock_proactive_agent._planning_cache) == 1
 
-    def test_pattern_caching(self, mock_proactive_agent, test_issue):
+    def test_pattern_caching(self, mock_proactive_agent, test_issue) -> None:
         plan = {"strategy": "test", "patterns": ["pattern1"]}
         result = FixResult(success=True, confidence=0.9, fixes_applied=["fix1"])
 
@@ -82,7 +82,7 @@ class TestProactiveAgent:
         assert pattern_key in cached_patterns
         assert cached_patterns[pattern_key]["confidence"] == 0.9
 
-    def test_planning_confidence_scoring(self, mock_proactive_agent, test_issue):
+    def test_planning_confidence_scoring(self, mock_proactive_agent, test_issue) -> None:
         confidence = mock_proactive_agent.get_planning_confidence(test_issue)
         assert confidence == 0.5
 
@@ -115,9 +115,9 @@ class TestArchitectAgent:
         )
 
     @pytest.mark.asyncio
-    async def test_can_handle_various_issues(self, architect_agent):
+    async def test_can_handle_various_issues(self, architect_agent) -> None:
         complexity_issue = Issue(
-            id="test", type=IssueType.COMPLEXITY, severity=Priority.HIGH, message="test"
+            id="test", type=IssueType.COMPLEXITY, severity=Priority.HIGH, message="test",
         )
         confidence = await architect_agent.can_handle(complexity_issue)
         assert confidence == 0.9
@@ -132,13 +132,13 @@ class TestArchitectAgent:
         assert confidence == 0.85
 
         format_issue = Issue(
-            id="test", type=IssueType.FORMATTING, severity=Priority.LOW, message="test"
+            id="test", type=IssueType.FORMATTING, severity=Priority.LOW, message="test",
         )
         confidence = await architect_agent.can_handle(format_issue)
         assert confidence == 0.4
 
     @pytest.mark.asyncio
-    async def test_planning_for_complex_issues(self, architect_agent, complexity_issue):
+    async def test_planning_for_complex_issues(self, architect_agent, complexity_issue) -> None:
         plan = await architect_agent.plan_before_action(complexity_issue)
 
         assert isinstance(plan, dict)
@@ -151,7 +151,7 @@ class TestArchitectAgent:
         assert len(plan["patterns"]) > 0
 
     @pytest.mark.asyncio
-    async def test_planning_for_simple_issues(self, architect_agent):
+    async def test_planning_for_simple_issues(self, architect_agent) -> None:
         simple_issue = Issue(
             id="simple",
             type=IssueType.FORMATTING,
@@ -165,16 +165,16 @@ class TestArchitectAgent:
         assert plan["approach"] == "apply_standard_formatting"
 
     @pytest.mark.asyncio
-    async def test_fix_execution_with_plan(self, architect_agent, complexity_issue):
+    async def test_fix_execution_with_plan(self, architect_agent, complexity_issue) -> None:
         result = await architect_agent.analyze_and_fix(complexity_issue)
 
         assert isinstance(result, FixResult)
         assert result.success
         assert result.confidence >= 0.7
         assert len(result.fixes_applied) > 0
-        assert "crackerjack - architect" in " ".join(result.fixes_applied)
+        assert "architect agent" in " ".join(result.fixes_applied)
 
-    def test_supported_types(self, architect_agent):
+    def test_supported_types(self, architect_agent) -> None:
         supported = architect_agent.get_supported_types()
 
         expected_types = {
@@ -232,10 +232,10 @@ class TestProactiveAgentCoordination:
             ),
         ]
 
-    def test_proactive_mode_enabled_by_default(self, coordinator):
+    def test_proactive_mode_enabled_by_default(self, coordinator) -> None:
         assert coordinator.proactive_mode is True
 
-    def test_set_proactive_mode(self, coordinator):
+    def test_set_proactive_mode(self, coordinator) -> None:
         coordinator.set_proactive_mode(False)
         assert coordinator.proactive_mode is False
 
@@ -243,18 +243,18 @@ class TestProactiveAgentCoordination:
         assert coordinator.proactive_mode is True
 
     @pytest.mark.asyncio
-    async def test_proactive_planning_flow(self, coordinator, test_issues):
+    async def test_proactive_planning_flow(self, coordinator, test_issues) -> None:
         mock_architect = MagicMock()
         mock_architect.plan_before_action = AsyncMock(
             return_value={
                 "strategy": "test_strategy",
                 "patterns": ["test_pattern"],
                 "validation": ["test_validation"],
-            }
+            },
         )
 
         with patch.object(
-            coordinator, "_get_architect_agent", return_value=mock_architect
+            coordinator, "_get_architect_agent", return_value=mock_architect,
         ):
             result = await coordinator.handle_issues_proactively(test_issues)
 
@@ -262,7 +262,7 @@ class TestProactiveAgentCoordination:
         mock_architect.plan_before_action.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_fallback_to_reactive_mode(self, coordinator, test_issues):
+    async def test_fallback_to_reactive_mode(self, coordinator, test_issues) -> None:
         coordinator.set_proactive_mode(False)
 
         with patch.object(coordinator, "handle_issues") as mock_handle:
@@ -273,7 +273,7 @@ class TestProactiveAgentCoordination:
             mock_handle.assert_called_once_with(test_issues)
 
     @pytest.mark.asyncio
-    async def test_architect_agent_availability(self, coordinator):
+    async def test_architect_agent_availability(self, coordinator) -> None:
         architect = coordinator._get_architect_agent()
 
         assert architect is not None
@@ -317,16 +317,16 @@ class TestPatternCache:
             files_modified=["cache_test.py"],
         )
 
-    def test_cache_initialization(self, pattern_cache, temp_project_path):
+    def test_cache_initialization(self, pattern_cache, temp_project_path) -> None:
         assert pattern_cache.project_path == temp_project_path
         assert pattern_cache.cache_dir.exists()
         assert not pattern_cache._loaded
 
     def test_cache_successful_pattern(
-        self, pattern_cache, test_issue, test_plan, test_result
-    ):
+        self, pattern_cache, test_issue, test_plan, test_result,
+    ) -> None:
         pattern_id = pattern_cache.cache_successful_pattern(
-            test_issue, test_plan, test_result
+            test_issue, test_plan, test_result,
         )
 
         assert pattern_id.startswith(f"{test_issue.type.value}_")
@@ -339,8 +339,8 @@ class TestPatternCache:
         assert cached_pattern.confidence == test_result.confidence
 
     def test_get_patterns_for_issue(
-        self, pattern_cache, test_issue, test_plan, test_result
-    ):
+        self, pattern_cache, test_issue, test_plan, test_result,
+    ) -> None:
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
         patterns = pattern_cache.get_patterns_for_issue(test_issue)
@@ -349,7 +349,7 @@ class TestPatternCache:
         assert patterns[0].issue_type == test_issue.type
         assert patterns[0].strategy == test_plan["strategy"]
 
-    def test_get_best_pattern(self, pattern_cache, test_issue, test_plan, test_result):
+    def test_get_best_pattern(self, pattern_cache, test_issue, test_plan, test_result) -> None:
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
         best_pattern = pattern_cache.get_best_pattern_for_issue(test_issue)
@@ -359,10 +359,10 @@ class TestPatternCache:
         assert best_pattern.confidence == test_result.confidence
 
     def test_pattern_usage_tracking(
-        self, pattern_cache, test_issue, test_plan, test_result
-    ):
+        self, pattern_cache, test_issue, test_plan, test_result,
+    ) -> None:
         pattern_id = pattern_cache.cache_successful_pattern(
-            test_issue, test_plan, test_result
+            test_issue, test_plan, test_result,
         )
 
         success = pattern_cache.use_pattern(pattern_id)
@@ -373,10 +373,10 @@ class TestPatternCache:
         assert pattern.last_used > 0
 
     def test_success_rate_updates(
-        self, pattern_cache, test_issue, test_plan, test_result
-    ):
+        self, pattern_cache, test_issue, test_plan, test_result,
+    ) -> None:
         pattern_id = pattern_cache.cache_successful_pattern(
-            test_issue, test_plan, test_result
+            test_issue, test_plan, test_result,
         )
 
         pattern_cache.use_pattern(pattern_id)
@@ -389,8 +389,8 @@ class TestPatternCache:
         assert pattern.success_rate == 0.5
 
     def test_pattern_statistics(
-        self, pattern_cache, test_issue, test_plan, test_result
-    ):
+        self, pattern_cache, test_issue, test_plan, test_result,
+    ) -> None:
         pattern_cache.cache_successful_pattern(test_issue, test_plan, test_result)
 
         stats = pattern_cache.get_pattern_statistics()
@@ -400,9 +400,9 @@ class TestPatternCache:
         assert stats["average_success_rate"] == 1.0
         assert len(stats["most_used_patterns"]) <= 5
 
-    def test_cache_persistence(self, pattern_cache, test_issue, test_plan, test_result):
+    def test_cache_persistence(self, pattern_cache, test_issue, test_plan, test_result) -> None:
         pattern_id = pattern_cache.cache_successful_pattern(
-            test_issue, test_plan, test_result
+            test_issue, test_plan, test_result,
         )
 
         new_cache = PatternCache(pattern_cache.project_path)
@@ -411,7 +411,7 @@ class TestPatternCache:
         assert len(patterns) == 1
         assert patterns[0].pattern_id == pattern_id
 
-    def test_cleanup_old_patterns(self, pattern_cache):
+    def test_cleanup_old_patterns(self, pattern_cache) -> None:
         old_time = time.time() - (31 * 24 * 60 * 60)
 
         old_pattern = CachedPattern(
@@ -487,7 +487,7 @@ print("This line appears multiple times")
             yield project_path
 
     @pytest.mark.asyncio
-    async def test_end_to_end_proactive_workflow(self, temp_project_path):
+    async def test_end_to_end_proactive_workflow(self, temp_project_path) -> None:
         agent_context = AgentContext(project_path=temp_project_path)
         coordinator = AgentCoordinator(agent_context)
         coordinator.initialize_agents()

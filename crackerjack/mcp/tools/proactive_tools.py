@@ -2,7 +2,8 @@ import typing as t
 
 
 def _create_architectural_assessment(
-    args: str, parsed_kwargs: dict[str, t.Any]
+    args: str,
+    parsed_kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     assessment = {
         "feature": parsed_kwargs.get("feature", "unknown"),
@@ -25,7 +26,7 @@ def _create_architectural_assessment(
                 "Reduces iteration cycles by 50 % +",
                 "Ensures consistency with project standards",
             ],
-        }
+        },
     )
 
     complexity = parsed_kwargs.get("complexity", "medium")
@@ -36,7 +37,7 @@ def _create_architectural_assessment(
                 "priority": "high",
                 "reason": "Complex features require careful structural planning",
                 "action": 'Task tool with subagent_type ="refactoring-specialist" for complexity management',
-            }
+            },
         )
 
     feature = parsed_kwargs.get("feature", "")
@@ -49,7 +50,7 @@ def _create_architectural_assessment(
                 "priority": "medium",
                 "reason": "Security-sensitive feature requires expert review",
                 "action": 'Task tool with subagent_type ="security-auditor" for security validation',
-            }
+            },
         )
 
     assessment["proactive_recommendations"] = recommendations
@@ -167,14 +168,15 @@ def _create_pattern_suggestions(problem_context: str) -> dict[str, t.Any]:
                     "Better maintainability",
                     "Team alignment",
                 ],
-            }
+            },
         ]
 
     return pattern_suggestions
 
 
 def _add_complexity_patterns(
-    pattern_suggestions: dict[str, t.Any], problem_context: str
+    pattern_suggestions: dict[str, t.Any],
+    problem_context: str,
 ) -> None:
     if any(
         keyword in problem_context.lower()
@@ -200,12 +202,13 @@ def _add_complexity_patterns(
                         "Enables better mocking",
                     ],
                 },
-            ]
+            ],
         )
 
 
 def _add_dry_patterns(
-    pattern_suggestions: dict[str, t.Any], problem_context: str
+    pattern_suggestions: dict[str, t.Any],
+    problem_context: str,
 ) -> None:
     if any(
         keyword in problem_context.lower() for keyword in ("duplicate", "repeat", "dry")
@@ -230,12 +233,13 @@ def _add_dry_patterns(
                         "Easier testing",
                     ],
                 },
-            ]
+            ],
         )
 
 
 def _add_performance_patterns(
-    pattern_suggestions: dict[str, t.Any], problem_context: str
+    pattern_suggestions: dict[str, t.Any],
+    problem_context: str,
 ) -> None:
     if any(
         keyword in problem_context.lower()
@@ -261,12 +265,13 @@ def _add_performance_patterns(
                         "Better for large datasets",
                     ],
                 },
-            ]
+            ],
         )
 
 
 def _add_security_patterns(
-    pattern_suggestions: dict[str, t.Any], problem_context: str
+    pattern_suggestions: dict[str, t.Any],
+    problem_context: str,
 ) -> None:
     if any(
         keyword in problem_context.lower() for keyword in ("security", "safe", "secure")
@@ -291,7 +296,7 @@ def _add_security_patterns(
                         "Data integrity",
                     ],
                 },
-            ]
+            ],
         )
 
 
@@ -307,7 +312,7 @@ def _create_error_response(error: Exception, recommendation: str) -> str:
                 "dry_principle",
             ],
             "recommendation": recommendation,
-        }
+        },
     )
 
 
@@ -346,7 +351,8 @@ def _register_validate_architecture_tool(mcp_app: t.Any) -> None:
             return json.dumps(validation, indent=2)
         except Exception as e:
             return _create_error_response(
-                e, "Run standard crackerjack validation: python-m crackerjack"
+                e,
+                "Run standard crackerjack validation: python-m crackerjack",
             )
 
 

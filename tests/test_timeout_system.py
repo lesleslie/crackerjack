@@ -1,5 +1,4 @@
-"""
-Tests for the comprehensive timeout handling system.
+"""Tests for the comprehensive timeout handling system.
 
 This module tests the timeout manager, performance monitor,
 and service watchdog components to ensure they prevent hanging.
@@ -33,16 +32,16 @@ from crackerjack.core.timeout_manager import (
 class TestTimeoutManager:
     """Test the AsyncTimeoutManager functionality."""
 
-    def test_timeout_config_creation(self):
+    def test_timeout_config_creation(self) -> None:
         """Test creating timeout configuration."""
         config = TimeoutConfig(
-            default_timeout=30.0, operation_timeouts={"test_op": 10.0}, max_retries=5
+            default_timeout=30.0, operation_timeouts={"test_op": 10.0}, max_retries=5,
         )
         assert config.default_timeout == 30.0
         assert config.operation_timeouts["test_op"] == 10.0
         assert config.max_retries == 5
 
-    def test_timeout_manager_initialization(self):
+    def test_timeout_manager_initialization(self) -> None:
         """Test timeout manager initialization."""
         config = TimeoutConfig(default_timeout=15.0)
         manager = AsyncTimeoutManager(config)
@@ -51,7 +50,7 @@ class TestTimeoutManager:
         assert manager.get_timeout("unknown_operation") == 15.0
         assert len(manager.circuit_breakers) == 0
 
-    def test_get_operation_timeout(self):
+    def test_get_operation_timeout(self) -> None:
         """Test getting operation-specific timeouts."""
         config = TimeoutConfig(
             default_timeout=10.0,
@@ -67,11 +66,11 @@ class TestTimeoutManager:
         assert manager.get_timeout("unknown_operation") == 10.0
 
     @pytest.mark.asyncio
-    async def test_timeout_context_success(self):
+    async def test_timeout_context_success(self) -> None:
         """Test successful operation with timeout context."""
         manager = AsyncTimeoutManager()
 
-        async def quick_operation():
+        async def quick_operation() -> str:
             await asyncio.sleep(0.02)
             return "success"
 
@@ -80,11 +79,11 @@ class TestTimeoutManager:
             assert result == "success"
 
     @pytest.mark.asyncio
-    async def test_timeout_context_timeout(self):
+    async def test_timeout_context_timeout(self) -> None:
         """Test timeout context with operation that times out."""
         manager = AsyncTimeoutManager()
 
-        async def slow_operation():
+        async def slow_operation() -> str:
             await asyncio.sleep(0.3)
             return "should not reach here"
 
@@ -93,14 +92,14 @@ class TestTimeoutManager:
                 await slow_operation()
 
         assert exc_info.value.operation == "test_op"
-        assert exc_info.value.timeout == 0.5
+        assert exc_info.value.timeout == 0.05
 
     @pytest.mark.asyncio
-    async def test_with_timeout_success(self):
+    async def test_with_timeout_success(self) -> None:
         """Test with_timeout method success."""
         manager = AsyncTimeoutManager()
 
-        async def quick_operation():
+        async def quick_operation() -> str:
             await asyncio.sleep(0.02)
             return "completed"
 
@@ -113,11 +112,11 @@ class TestTimeoutManager:
         assert result == "completed"
 
     @pytest.mark.asyncio
-    async def test_with_timeout_failure(self):
+    async def test_with_timeout_failure(self) -> None:
         """Test with_timeout method with timeout."""
         manager = AsyncTimeoutManager()
 
-        async def slow_operation():
+        async def slow_operation() -> str:
             await asyncio.sleep(0.3)
             return "should not complete"
 
@@ -130,13 +129,13 @@ class TestTimeoutManager:
             )
 
     @pytest.mark.asyncio
-    async def test_retry_strategy(self):
+    async def test_retry_strategy(self) -> None:
         """Test that retry strategy is recognized (implementation limitation note)."""
         manager = AsyncTimeoutManager(
-            TimeoutConfig(max_retries=2, base_retry_delay=0.1)
+            TimeoutConfig(max_retries=2, base_retry_delay=0.1),
         )
 
-        async def simple_operation():
+        async def simple_operation() -> str:
             return "completed"
 
         # Test that retry strategy doesn't break the timeout mechanism
@@ -149,7 +148,7 @@ class TestTimeoutManager:
         )
         assert result == "completed"
 
-    def test_circuit_breaker_state_tracking(self):
+    def test_circuit_breaker_state_tracking(self) -> None:
         """Test circuit breaker state management."""
         manager = AsyncTimeoutManager(TimeoutConfig(failure_threshold=2))
 
@@ -163,7 +162,7 @@ class TestTimeoutManager:
         manager._update_circuit_breaker("test_op", False)
         assert manager._check_circuit_breaker("test_op") is False  # Should be open now
 
-    def test_global_timeout_manager(self):
+    def test_global_timeout_manager(self) -> None:
         """Test global timeout manager functionality."""
         # Get global instance
         manager1 = get_timeout_manager()
@@ -183,7 +182,7 @@ class TestTimeoutManager:
 class TestPerformanceMonitor:
     """Test the AsyncPerformanceMonitor functionality."""
 
-    def test_performance_monitor_initialization(self):
+    def test_performance_monitor_initialization(self) -> None:
         """Test performance monitor initialization."""
         monitor = AsyncPerformanceMonitor()
 
@@ -191,7 +190,7 @@ class TestPerformanceMonitor:
         assert len(monitor.timeout_events) == 0
         assert monitor.start_time > 0
 
-    def test_record_operation_success(self):
+    def test_record_operation_success(self) -> None:
         """Test recording successful operations."""
         monitor = AsyncPerformanceMonitor()
 
@@ -207,7 +206,7 @@ class TestPerformanceMonitor:
         assert metrics.success_rate == 100.0
         assert metrics.average_time > 0
 
-    def test_record_operation_failure(self):
+    def test_record_operation_failure(self) -> None:
         """Test recording failed operations."""
         monitor = AsyncPerformanceMonitor()
 
@@ -222,7 +221,7 @@ class TestPerformanceMonitor:
         assert metrics.failed_calls == 1
         assert metrics.success_rate == 0.0
 
-    def test_record_operation_timeout(self):
+    def test_record_operation_timeout(self) -> None:
         """Test recording timeout events."""
         monitor = AsyncPerformanceMonitor()
 
@@ -239,7 +238,7 @@ class TestPerformanceMonitor:
         assert timeout_events[0].expected_timeout == 5.0
         assert timeout_events[0].error_message == "Test timeout"
 
-    def test_performance_alerts(self):
+    def test_performance_alerts(self) -> None:
         """Test performance alert generation."""
         monitor = AsyncPerformanceMonitor()
 
@@ -259,7 +258,7 @@ class TestPerformanceMonitor:
         assert len(success_rate_alerts) > 0
         assert success_rate_alerts[0]["operation"] == "failing_op"
 
-    def test_summary_stats(self):
+    def test_summary_stats(self) -> None:
         """Test summary statistics generation."""
         monitor = AsyncPerformanceMonitor()
 
@@ -279,7 +278,7 @@ class TestPerformanceMonitor:
         assert stats["timeout_rate"] == 20.0
         assert stats["unique_operations"] == 1
 
-    def test_global_performance_monitor(self):
+    def test_global_performance_monitor(self) -> None:
         """Test global performance monitor."""
         monitor1 = get_performance_monitor()
         monitor2 = get_performance_monitor()
@@ -307,13 +306,13 @@ class TestServiceWatchdog:
             max_restarts=2,
         )
 
-    def test_watchdog_initialization(self, watchdog):
+    def test_watchdog_initialization(self, watchdog) -> None:
         """Test watchdog initialization."""
         assert not watchdog.is_running
         assert len(watchdog.services) == 0
         assert watchdog.monitor_task is None
 
-    def test_add_service(self, watchdog, test_service_config):
+    def test_add_service(self, watchdog, test_service_config) -> None:
         """Test adding a service to watchdog."""
         watchdog.add_service("test_service", test_service_config)
 
@@ -321,14 +320,14 @@ class TestServiceWatchdog:
         assert watchdog.services["test_service"].config.name == "Test Service"
         assert watchdog.services["test_service"].state == ServiceState.STOPPED
 
-    def test_remove_service(self, watchdog, test_service_config):
+    def test_remove_service(self, watchdog, test_service_config) -> None:
         """Test removing a service from watchdog."""
         watchdog.add_service("test_service", test_service_config)
         watchdog.remove_service("test_service")
 
         assert "test_service" not in watchdog.services
 
-    def test_service_status_properties(self, test_service_config):
+    def test_service_status_properties(self, test_service_config) -> None:
         """Test service status properties."""
         from crackerjack.core.service_watchdog import ServiceStatus
 
@@ -344,7 +343,7 @@ class TestServiceWatchdog:
         assert status.uptime > 9  # Should be around 10 seconds
 
     @pytest.mark.asyncio
-    async def test_start_stop_watchdog(self, watchdog):
+    async def test_start_stop_watchdog(self, watchdog) -> None:
         """Test starting and stopping the watchdog."""
         # Start watchdog
         await watchdog.start_watchdog()
@@ -358,7 +357,7 @@ class TestServiceWatchdog:
         await watchdog.stop_watchdog()
         assert not watchdog.is_running
 
-    def test_get_service_status(self, watchdog, test_service_config):
+    def test_get_service_status(self, watchdog, test_service_config) -> None:
         """Test getting service status."""
         watchdog.add_service("test_service", test_service_config)
 
@@ -370,7 +369,7 @@ class TestServiceWatchdog:
         status = watchdog.get_service_status("nonexistent")
         assert status is None
 
-    def test_get_all_services_status(self, watchdog, test_service_config):
+    def test_get_all_services_status(self, watchdog, test_service_config) -> None:
         """Test getting all services status."""
         watchdog.add_service("test_service", test_service_config)
 
@@ -383,7 +382,7 @@ class TestAsyncWorkflowIntegration:
     """Test integration of timeout system with async workflows."""
 
     @pytest.mark.asyncio
-    async def test_workflow_with_timeouts(self):
+    async def test_workflow_with_timeouts(self) -> None:
         """Test that workflows use timeout protection."""
         from pathlib import Path
 
@@ -417,14 +416,14 @@ class TestAsyncWorkflowIntegration:
 
 
 @pytest.mark.asyncio
-async def test_comprehensive_timeout_prevention():
+async def test_comprehensive_timeout_prevention() -> None:
     """Integration test to verify timeout prevention works end-to-end."""
     manager = AsyncTimeoutManager(TimeoutConfig(default_timeout=0.1))
 
     # Test that hanging operations are prevented
     start_time = time.time()
 
-    async def hanging_task():
+    async def hanging_task() -> str:
         await asyncio.sleep(0.5)  # Would hang without timeout
         return "should not complete"
 
@@ -450,7 +449,7 @@ async def test_comprehensive_timeout_prevention():
     assert metrics.success_rate == 0.0
 
 
-def test_timeout_system_components_available():
+def test_timeout_system_components_available() -> None:
     """Test that all timeout system components are properly available."""
     # Verify imports work
     from crackerjack.core.performance_monitor import (

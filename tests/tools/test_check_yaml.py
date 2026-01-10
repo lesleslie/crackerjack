@@ -8,7 +8,7 @@ from crackerjack.tools.check_yaml import main, validate_yaml_file
 class TestYAMLValidation:
     """Test YAML validation logic."""
 
-    def test_validates_simple_yaml(self, tmp_path):
+    def test_validates_simple_yaml(self, tmp_path) -> None:
         """Test validation of simple YAML."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("key: value\n")
@@ -17,7 +17,7 @@ class TestYAMLValidation:
         assert is_valid
         assert error_msg is None
 
-    def test_validates_nested_yaml(self, tmp_path):
+    def test_validates_nested_yaml(self, tmp_path) -> None:
         """Test validation of nested YAML."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -33,7 +33,7 @@ parent:
         assert is_valid
         assert error_msg is None
 
-    def test_validates_list_yaml(self, tmp_path):
+    def test_validates_list_yaml(self, tmp_path) -> None:
         """Test validation of YAML with lists."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -48,7 +48,7 @@ items:
         assert is_valid
         assert error_msg is None
 
-    def test_detects_invalid_indentation(self, tmp_path):
+    def test_detects_invalid_indentation(self, tmp_path) -> None:
         """Test detection of invalid indentation."""
         yaml_file = tmp_path / "test.yaml"
         # Note: YAML parsers are lenient with indentation, this is actually valid
@@ -62,7 +62,7 @@ parent:
         assert is_valid  # YAML accepts mixed indentation
         assert error_msg is None
 
-    def test_detects_invalid_syntax(self, tmp_path):
+    def test_detects_invalid_syntax(self, tmp_path) -> None:
         """Test detection of invalid YAML syntax."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("key: [unclosed array\n")
@@ -71,7 +71,7 @@ parent:
         assert not is_valid
         assert error_msg is not None
 
-    def test_detects_duplicate_keys(self, tmp_path):
+    def test_detects_duplicate_keys(self, tmp_path) -> None:
         """Test detection of duplicate keys."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -84,7 +84,7 @@ key: value2
         assert not is_valid
         assert error_msg is not None
 
-    def test_handles_empty_file(self, tmp_path):
+    def test_handles_empty_file(self, tmp_path) -> None:
         """Test handling of empty YAML file."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("")
@@ -93,7 +93,7 @@ key: value2
         assert is_valid  # Empty YAML is valid
         assert error_msg is None
 
-    def test_handles_comments(self, tmp_path):
+    def test_handles_comments(self, tmp_path) -> None:
         """Test handling of YAML comments."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -110,14 +110,14 @@ key: value  # Inline comment
 class TestYAMLCLI:
     """Test check_yaml CLI interface."""
 
-    def test_cli_help(self):
+    def test_cli_help(self) -> None:
         """Test --help displays correctly."""
         with pytest.raises(SystemExit) as exc_info:
             main(["--help"])
 
         assert exc_info.value.code == 0
 
-    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch):
+    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch) -> None:
         """Test CLI with no arguments uses current directory."""
         monkeypatch.chdir(tmp_path)
 
@@ -131,7 +131,7 @@ class TestYAMLCLI:
         # Should validate both files and return 0
         assert exit_code == 0
 
-    def test_cli_with_file_arguments(self, tmp_path):
+    def test_cli_with_file_arguments(self, tmp_path) -> None:
         """Test CLI with explicit file arguments."""
         test_file1 = tmp_path / "test1.yaml"
         test_file2 = tmp_path / "test2.yaml"
@@ -143,7 +143,7 @@ class TestYAMLCLI:
 
         assert exit_code == 0  # All files valid
 
-    def test_cli_detects_errors(self, tmp_path):
+    def test_cli_detects_errors(self, tmp_path) -> None:
         """Test CLI detects YAML errors."""
         invalid_file = tmp_path / "invalid.yaml"
         invalid_file.write_text("key: [unclosed\n")
@@ -152,7 +152,7 @@ class TestYAMLCLI:
 
         assert exit_code == 1  # Errors found
 
-    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys):
+    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys) -> None:
         """Test CLI with no files to check."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
@@ -164,14 +164,14 @@ class TestYAMLCLI:
         captured = capsys.readouterr()
         assert "No YAML files to check" in captured.out
 
-    def test_cli_nonexistent_file(self, tmp_path):
+    def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI with nonexistent file."""
         exit_code = main([str(tmp_path / "nonexistent.yaml")])
 
         # Should handle gracefully
         assert exit_code == 0  # No files processed
 
-    def test_cli_mixed_valid_and_invalid(self, tmp_path, capsys):
+    def test_cli_mixed_valid_and_invalid(self, tmp_path, capsys) -> None:
         """Test CLI with mix of valid and invalid files."""
         valid_file = tmp_path / "valid.yaml"
         invalid_file = tmp_path / "invalid.yaml"
@@ -186,7 +186,7 @@ class TestYAMLCLI:
         assert "✓" in captured.out  # Valid file marked
         assert "✗" in captured.err  # Invalid file marked
 
-    def test_cli_unsafe_flag(self, tmp_path):
+    def test_cli_unsafe_flag(self, tmp_path) -> None:
         """Test --unsafe flag (currently doesn't change behavior)."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("key: value\n")
@@ -199,7 +199,7 @@ class TestYAMLCLI:
 class TestYAMLEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_unicode_content(self, tmp_path):
+    def test_unicode_content(self, tmp_path) -> None:
         """Test handling of Unicode content."""
         yaml_file = tmp_path / "test.yaml"
         yaml_file.write_text("greeting: 你好世界\n", encoding="utf-8")
@@ -208,7 +208,7 @@ class TestYAMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_very_large_yaml(self, tmp_path):
+    def test_very_large_yaml(self, tmp_path) -> None:
         """Test handling of very large YAML files."""
         yaml_file = tmp_path / "test.yaml"
         # Generate large YAML with 1000 keys
@@ -219,7 +219,7 @@ class TestYAMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_deeply_nested_yaml(self, tmp_path):
+    def test_deeply_nested_yaml(self, tmp_path) -> None:
         """Test handling of deeply nested YAML."""
         yaml_file = tmp_path / "test.yaml"
         # Create deeply nested structure
@@ -234,7 +234,7 @@ class TestYAMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_multiline_strings(self, tmp_path):
+    def test_multiline_strings(self, tmp_path) -> None:
         """Test handling of multiline strings."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -249,7 +249,7 @@ description: |
         assert is_valid
         assert error_msg is None
 
-    def test_yaml_anchors_and_aliases(self, tmp_path):
+    def test_yaml_anchors_and_aliases(self, tmp_path) -> None:
         """Test handling of YAML anchors and aliases."""
         yaml_file = tmp_path / "test.yaml"
         # Note: Current implementation doesn't support merge keys (<<:)
@@ -269,7 +269,7 @@ production:
         assert not is_valid
         assert "merge" in error_msg.lower() or "constructor" in error_msg.lower()
 
-    def test_special_yaml_values(self, tmp_path):
+    def test_special_yaml_values(self, tmp_path) -> None:
         """Test handling of special YAML values."""
         yaml_file = tmp_path / "test.yaml"
         content = """
@@ -285,7 +285,7 @@ float_value: 3.14
         assert is_valid
         assert error_msg is None
 
-    def test_missing_file(self, tmp_path):
+    def test_missing_file(self, tmp_path) -> None:
         """Test handling of missing file."""
         missing_file = tmp_path / "nonexistent.yaml"
 
@@ -297,7 +297,7 @@ float_value: 3.14
 class TestYAMLIntegration:
     """Integration tests with real-world scenarios."""
 
-    def test_github_actions_workflow(self, tmp_path):
+    def test_github_actions_workflow(self, tmp_path) -> None:
         """Test validation of GitHub Actions workflow."""
         yaml_file = tmp_path / "workflow.yml"
         content = """
@@ -322,7 +322,7 @@ jobs:
         assert is_valid
         assert error_msg is None
 
-    def test_docker_compose_file(self, tmp_path):
+    def test_docker_compose_file(self, tmp_path) -> None:
         """Test validation of docker-compose.yml."""
         yaml_file = tmp_path / "docker-compose.yml"
         content = """
@@ -345,7 +345,7 @@ services:
         assert is_valid
         assert error_msg is None
 
-    def test_kubernetes_manifest(self, tmp_path):
+    def test_kubernetes_manifest(self, tmp_path) -> None:
         """Test validation of Kubernetes manifest."""
         yaml_file = tmp_path / "deployment.yaml"
         content = """
@@ -375,7 +375,7 @@ spec:
         assert is_valid
         assert error_msg is None
 
-    def test_pre_commit_config(self, tmp_path):
+    def test_pre_commit_config(self, tmp_path) -> None:
         """Test validation of .pre-commit-config.yaml."""
         yaml_file = tmp_path / ".pre-commit-config.yaml"
         content = """
@@ -393,7 +393,7 @@ repos:
         assert is_valid
         assert error_msg is None
 
-    def test_mixed_file_extensions(self, tmp_path):
+    def test_mixed_file_extensions(self, tmp_path) -> None:
         """Test CLI with .yaml and .yml files."""
         yaml_file = tmp_path / "test.yaml"
         yml_file = tmp_path / "test.yml"

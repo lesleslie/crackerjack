@@ -40,7 +40,8 @@ class SemgrepAdapter(BaseToolAdapter):
     def __init__(self, settings: SemgrepSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "SemgrepAdapter initialized", extra={"has_settings": settings is not None}
+            "SemgrepAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -77,7 +78,8 @@ class SemgrepAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name, "scan"]
 

@@ -107,20 +107,27 @@ class HookExecutor:
         return self._execute_sequential(strategy)
 
     def _apply_retries_if_needed(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         if strategy.retry_policy != RetryPolicy.NONE:
             return self._handle_retries(strategy, results)
         return results
 
     def _create_execution_result(
-        self, strategy: HookStrategy, results: list[HookResult], start_time: float
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
+        start_time: float,
     ) -> HookExecutionResult:
         total_duration = time.time() - start_time
         success = all(r.status == "passed" for r in results)
 
         performance_gain = self._calculate_performance_gain(
-            strategy, results, total_duration
+            strategy,
+            results,
+            total_duration,
         )
 
         if not self.quiet:
@@ -135,7 +142,10 @@ class HookExecutor:
         )
 
     def _calculate_performance_gain(
-        self, strategy: HookStrategy, results: list[HookResult], total_duration: float
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
+        total_duration: float,
     ) -> float:
         estimated_sequential = sum(
             getattr(hook, "timeout", 30) for hook in strategy.hooks
@@ -193,7 +203,9 @@ class HookExecutor:
         return results
 
     def _execute_single_hook_with_progress(
-        self, hook: HookDefinition, results: list[HookResult]
+        self,
+        hook: HookDefinition,
+        results: list[HookResult],
     ) -> None:
         if self._progress_start_callback:
             with suppress(Exception):
@@ -228,7 +240,9 @@ class HookExecutor:
                 self._handle_future_result(future, future_to_hook, results)
 
     def _create_run_hook_func(
-        self, results: list[HookResult], other_hooks: list[HookDefinition]
+        self,
+        results: list[HookResult],
+        other_hooks: list[HookDefinition],
     ) -> t.Callable[[HookDefinition], HookResult]:
         def _run_with_start(h: HookDefinition) -> HookResult:
             if self._progress_start_callback:
@@ -241,7 +255,10 @@ class HookExecutor:
         return _run_with_start
 
     def _handle_future_result(
-        self, future, future_to_hook: dict, results: list[HookResult]
+        self,
+        future,
+        future_to_hook: dict,
+        results: list[HookResult],
     ) -> None:
         try:
             result = future.result()
@@ -324,7 +341,8 @@ class HookExecutor:
         return changed_files or None
 
     def _run_hook_subprocess(
-        self, hook: HookDefinition
+        self,
+        hook: HookDefinition,
     ) -> subprocess.CompletedProcess[str]:
         clean_env = self._get_clean_environment()
 
@@ -360,7 +378,10 @@ class HookExecutor:
             )
 
             return subprocess.CompletedProcess(
-                args=hook.get_command(), returncode=1, stdout="", stderr=str(e)
+                args=hook.get_command(),
+                returncode=1,
+                stdout="",
+                stderr=str(e),
             )
 
     def _run_with_monitoring(
@@ -393,7 +414,7 @@ class HookExecutor:
         def on_stall(hook_name: str, metrics: ProcessMetrics) -> None:
             self.console.print(
                 f"[yellow]⚠️ {hook_name} may be hung "
-                f"(CPU < 0.1% for 3+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]"
+                f"(CPU < 0.1% for 3+ min, elapsed: {metrics.elapsed_seconds:.1f}s)[/yellow]",
             )
 
         monitor.monitor_process(process, hook.name, hook.timeout, on_stall)
@@ -418,7 +439,9 @@ class HookExecutor:
             monitor.stop_monitoring()
 
     def _display_hook_output_if_needed(
-        self, result: subprocess.CompletedProcess[str], hook_name: str = ""
+        self,
+        result: subprocess.CompletedProcess[str],
+        hook_name: str = "",
     ) -> None:
         if hook_name == "complexipy" and not self.debug:
             return
@@ -442,7 +465,10 @@ class HookExecutor:
         issues_found = self._extract_issues_from_process_output(hook, result, status)
 
         status = self._update_status_for_reporting_tools(
-            hook, status, issues_found, result
+            hook,
+            status,
+            issues_found,
+            result,
         )
 
         parsed_output = self._parse_hook_output(result, hook.name)
@@ -450,7 +476,9 @@ class HookExecutor:
         exit_code, error_message = self._determine_exit_code_and_error(status, result)
 
         issues_found = self._handle_no_issues_for_failed_hook(
-            status, issues_found, result
+            status,
+            issues_found,
+            result,
         )
 
         issues_count = self._calculate_issues_count(status, issues_found)
@@ -470,24 +498,24 @@ class HookExecutor:
         )
 
     def _determine_initial_status(
-        self, hook: HookDefinition, result: subprocess.CompletedProcess[str]
+        self,
+        hook: HookDefinition,
+        result: subprocess.CompletedProcess[str],
     ) -> str:
         reporting_tools = {"complexipy", "refurb", "gitleaks", "creosote"}
 
         if self.debug and hook.name in reporting_tools:
             self.console.print(
                 f"[yellow]DEBUG _create_hook_result_from_process: hook={hook.name}, "
-                f"returncode={result.returncode}[/yellow]"
+                f"returncode={result.returncode}[/yellow]",
             )
 
         if hook.is_formatting and result.returncode == 1:
             output_text = result.stdout + result.stderr
             if "files were modified by this hook" in output_text:
                 return "passed"
-            else:
-                return "failed"
-        else:
-            return "passed" if result.returncode == 0 else "failed"
+            return "failed"
+        return "passed" if result.returncode == 0 else "failed"
 
     def _update_status_for_reporting_tools(
         self,
@@ -504,13 +532,15 @@ class HookExecutor:
         if hook.name in reporting_tools and self.debug and result:
             self.console.print(
                 f"[yellow]DEBUG {hook.name}: returncode={result.returncode}, "
-                f"issues={len(issues_found)}, status={status}[/yellow]"
+                f"issues={len(issues_found)}, status={status}[/yellow]",
             )
 
         return status
 
     def _determine_exit_code_and_error(
-        self, status: str, result: subprocess.CompletedProcess[str]
+        self,
+        status: str,
+        result: subprocess.CompletedProcess[str],
     ) -> tuple[int | None, str | None]:
         exit_code = result.returncode if status == "failed" else None
         error_message = None
@@ -549,7 +579,7 @@ class HookExecutor:
         if self.debug and hook.name in reporting_tools:
             self.console.print(
                 f"[yellow]DEBUG _extract_issues: hook={hook.name}, status={status}, "
-                f"output_len={len(error_output)}[/yellow]"
+                f"output_len={len(error_output)}[/yellow]",
             )
 
         if hook.name == "semgrep":
@@ -559,11 +589,16 @@ class HookExecutor:
             return self._extract_issues_for_reporting_tools(hook, error_output)
 
         return self._extract_issues_for_regular_tools(
-            hook, error_output, status, result
+            hook,
+            error_output,
+            status,
+            result,
         )
 
     def _extract_issues_for_reporting_tools(
-        self, hook: HookDefinition, error_output: str
+        self,
+        hook: HookDefinition,
+        error_output: str,
     ) -> list[str]:
         if hook.name == "complexipy":
             return self._parse_complexipy_issues(error_output)
@@ -642,7 +677,8 @@ class HookExecutor:
                 continue
 
             match = re.search(
-                r"(.+?):\s*(\d+):\s*\d+\s+\[(\w+)\]:\s*(.+)", line.strip()
+                r"(.+?):\s*(\d+):\s*\d+\s+\[(\w+)\]:\s*(.+)",
+                line.strip(),
             )
 
             if match:
@@ -751,14 +787,16 @@ class HookExecutor:
             if error_type in INFRA_ERROR_TYPES:
                 self.console.print(
                     f"[yellow]Warning: Semgrep infrastructure error: "
-                    f"{error_type}: {error_msg}[/yellow]"
+                    f"{error_type}: {error_msg}[/yellow]",
                 )
             else:
                 issues.append(f"{error_type}: {error_msg}")
         return issues
 
     def _create_timeout_result(
-        self, hook: HookDefinition, start_time: float
+        self,
+        hook: HookDefinition,
+        start_time: float,
     ) -> HookResult:
         duration = time.time() - start_time
         return HookResult(
@@ -775,7 +813,10 @@ class HookExecutor:
         )
 
     def _create_error_result(
-        self, hook: HookDefinition, start_time: float, error: Exception
+        self,
+        hook: HookDefinition,
+        start_time: float,
+        error: Exception,
     ) -> HookResult:
         duration = time.time() - start_time
         return HookResult(
@@ -809,7 +850,10 @@ class HookExecutor:
         return "semgrep" in output.lower() or "semgrep" in args_str.lower()
 
     def _create_parse_result(
-        self, files_processed: int, exit_code: int, output: str
+        self,
+        files_processed: int,
+        exit_code: int,
+        output: str,
     ) -> dict[str, t.Any]:
         return {
             "hook_id": None,
@@ -899,7 +943,7 @@ class HookExecutor:
             if isinstance(match, tuple):
                 if len(match) == 2:
                     return self._handle_issues_in_files_match(match)
-                elif len(match) == 1 and "no issues" not in output.lower():
+                if len(match) == 1 and "no issues" not in output.lower():
                     continue
             elif "no issues" in output.lower():
                 return 0
@@ -998,7 +1042,9 @@ class HookExecutor:
         return self._retry_all_formatting_hooks(strategy, results)
 
     def _find_failed_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> set[str]:
         formatting_hooks_failed: set[str] = set()
 
@@ -1010,7 +1056,9 @@ class HookExecutor:
         return formatting_hooks_failed
 
     def _retry_all_formatting_hooks(
-        self, strategy: HookStrategy, results: list[HookResult]
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
     ) -> list[HookResult]:
         updated_results: list[HookResult] = []
         for i, hook in enumerate(strategy.hooks):
@@ -1039,7 +1087,10 @@ class HookExecutor:
         return [i for i, r in enumerate(results) if r.status == "failed"]
 
     def _retry_failed_hooks(
-        self, strategy: HookStrategy, results: list[HookResult], failed_hooks: list[int]
+        self,
+        strategy: HookStrategy,
+        results: list[HookResult],
+        failed_hooks: list[int],
     ) -> list[HookResult]:
         updated_results: list[HookResult] = results.copy()
         for i in failed_hooks:
@@ -1075,7 +1126,7 @@ class HookExecutor:
         for key, value in os.environ.items():
             if key not in python_vars_to_exclude and key not in clean_env:
                 if not key.startswith(
-                    ("PYTHON", "PIP_", "CONDA_", "VIRTUAL_", "__PYVENV")
+                    ("PYTHON", "PIP_", "CONDA_", "VIRTUAL_", "__PYVENV"),
                 ):
                     if key not in {"LD_PRELOAD", "DYLD_INSERT_LIBRARIES", "IFS", "PS4"}:
                         clean_env[key] = value

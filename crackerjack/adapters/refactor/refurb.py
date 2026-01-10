@@ -43,7 +43,8 @@ class RefurbAdapter(BaseToolAdapter):
     def __init__(self, settings: RefurbSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "RefurbAdapter initialized", extra={"has_settings": settings is not None}
+            "RefurbAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -85,7 +86,8 @@ class RefurbAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 

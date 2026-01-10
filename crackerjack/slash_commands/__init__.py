@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from ..errors import ErrorCode, ExecutionError
-from ..services.input_validator import validate_and_sanitize_string
+from crackerjack.errors import ErrorCode, ExecutionError
+from crackerjack.services.input_validator import validate_and_sanitize_string
 
 SLASH_COMMANDS_DIR = Path(__file__).parent
 
@@ -9,13 +9,15 @@ SLASH_COMMANDS_DIR = Path(__file__).parent
 def get_slash_command_path(command_name: str) -> Path:
     try:
         sanitized_name = validate_and_sanitize_string(
-            command_name, max_length=50, strict_alphanumeric=True
+            command_name,
+            max_length=50,
+            strict_alphanumeric=True,
         )
 
         command_path = SLASH_COMMANDS_DIR / f"{sanitized_name}.md"
 
         if not str(command_path.resolve()).startswith(
-            str(SLASH_COMMANDS_DIR.resolve())
+            str(SLASH_COMMANDS_DIR.resolve()),
         ):
             raise ExecutionError(
                 message=f"Command path outside allowed directory: {command_name}",
@@ -41,7 +43,9 @@ def list_available_commands() -> list[str]:
 
             try:
                 validate_and_sanitize_string(
-                    command_name, max_length=50, strict_alphanumeric=True
+                    command_name,
+                    max_length=50,
+                    strict_alphanumeric=True,
                 )
                 commands.append(command_name)
             except ExecutionError:

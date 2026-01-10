@@ -154,7 +154,10 @@ class DependencyResolver:
 
             if param.annotation != inspect.Parameter.empty:
                 self._resolve_parameter_dependency(
-                    kwargs, param_name, param, implementation.__name__
+                    kwargs,
+                    param_name,
+                    param,
+                    implementation.__name__,
                 )
 
         return kwargs
@@ -186,7 +189,9 @@ class DependencyResolver:
             )
 
     def _instantiate_with_logging(
-        self, implementation: type, kwargs: dict[str, Any]
+        self,
+        implementation: type,
+        kwargs: dict[str, Any],
     ) -> Any:
         instance = implementation(**kwargs)
         self.logger.debug(
@@ -450,7 +455,9 @@ class ServiceCollectionBuilder:
         self.container.register_transient(
             HookManager,
             factory=lambda: HookManagerImpl(
-                console=console, pkg_path=pkg_path, verbose=self.verbose
+                console=console,
+                pkg_path=pkg_path,
+                verbose=self.verbose,
             ),
         )
 
@@ -513,7 +520,7 @@ class ServiceCollectionBuilder:
             git_service = GitService(console, pkg_path)
             service = InitializationService(console, filesystem, git_service, pkg_path)
 
-            return t.cast(InitializationServiceProtocol, service)
+            return t.cast("InitializationServiceProtocol", service)
 
         self.container.register_transient(
             InitializationServiceProtocol,

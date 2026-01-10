@@ -25,7 +25,7 @@ from crackerjack.services.secure_subprocess import (
 class TestSubprocessSecurityConfig:
     """Test security configuration for subprocess execution."""
 
-    def test_default_config_values(self):
+    def test_default_config_values(self) -> None:
         """Test default security configuration values."""
         config = SubprocessSecurityConfig()
 
@@ -37,7 +37,7 @@ class TestSubprocessSecurityConfig:
         assert config.enable_path_validation is True
         assert config.enable_command_logging is True
 
-    def test_custom_config_values(self):
+    def test_custom_config_values(self) -> None:
         """Test custom security configuration values."""
         config = SubprocessSecurityConfig(
             max_command_length=5000,
@@ -51,7 +51,7 @@ class TestSubprocessSecurityConfig:
         assert config.max_timeout == 1800
         assert config.enable_path_validation is False
 
-    def test_blocked_executables_default(self):
+    def test_blocked_executables_default(self) -> None:
         """Test default blocked executables list."""
         config = SubprocessSecurityConfig()
 
@@ -63,14 +63,14 @@ class TestSubprocessSecurityConfig:
         assert "nc" in config.blocked_executables
         assert "eval" in config.blocked_executables
 
-    def test_custom_allowed_executables(self):
+    def test_custom_allowed_executables(self) -> None:
         """Test custom allowed executables whitelist."""
         allowed = {"git", "python", "pytest"}
         config = SubprocessSecurityConfig(allowed_executables=allowed)
 
         assert config.allowed_executables == allowed
 
-    def test_custom_blocked_executables(self):
+    def test_custom_blocked_executables(self) -> None:
         """Test custom blocked executables blacklist."""
         blocked = {"custom_dangerous_cmd"}
         config = SubprocessSecurityConfig(blocked_executables=blocked)
@@ -89,12 +89,12 @@ class TestSecureSubprocessExecutorValidation:
         config = SubprocessSecurityConfig(enable_command_logging=False)
         return SecureSubprocessExecutor(config)
 
-    def test_validate_command_empty_raises_error(self, executor):
+    def test_validate_command_empty_raises_error(self, executor) -> None:
         """Test validation fails for empty command."""
         with pytest.raises(CommandValidationError, match="Command cannot be empty"):
             executor._validate_command([])
 
-    def test_validate_command_too_long_raises_error(self, executor):
+    def test_validate_command_too_long_raises_error(self, executor) -> None:
         """Test validation fails for excessively long command."""
         # Create command that exceeds max_command_length
         long_arg = "x" * 15000
@@ -103,7 +103,7 @@ class TestSecureSubprocessExecutorValidation:
         with pytest.raises(CommandValidationError, match="Command too long"):
             executor._validate_command(command)
 
-    def test_validate_command_arg_too_long_filters_it(self, executor):
+    def test_validate_command_arg_too_long_filters_it(self, executor) -> None:
         """Test validation filters arguments that are too long."""
         # Argument exceeds max_arg_length (4096)
         long_arg = "x" * 5000
@@ -112,7 +112,7 @@ class TestSecureSubprocessExecutorValidation:
         with pytest.raises(CommandValidationError):
             executor._validate_command(command)
 
-    def test_validate_command_dangerous_patterns_rejected(self, executor):
+    def test_validate_command_dangerous_patterns_rejected(self, executor) -> None:
         """Test dangerous shell patterns are rejected."""
         dangerous_commands = [
             ["echo", "test; rm -rf /"],  # Command chaining
@@ -127,7 +127,7 @@ class TestSecureSubprocessExecutorValidation:
             with pytest.raises(CommandValidationError):
                 executor._validate_command(cmd)
 
-    def test_validate_command_safe_command_passes(self, executor):
+    def test_validate_command_safe_command_passes(self, executor) -> None:
         """Test safe commands pass validation."""
         safe_commands = [
             ["python", "-m", "pytest"],
@@ -141,7 +141,7 @@ class TestSecureSubprocessExecutorValidation:
             validated = executor._validate_command(cmd)
             assert len(validated) > 0
 
-    def test_validate_command_git_refs_allowed(self, executor):
+    def test_validate_command_git_refs_allowed(self, executor) -> None:
         """Test git reference patterns are allowed."""
         # Git uses special characters that should be allowed
         git_commands = [
@@ -157,7 +157,7 @@ class TestSecureSubprocessExecutorValidation:
             validated = executor._validate_command(cmd)
             assert len(validated) > 0
 
-    def test_validate_command_blocked_executable(self, executor):
+    def test_validate_command_blocked_executable(self, executor) -> None:
         """Test blocked executables are rejected."""
         blocked_commands = [
             ["rm", "-rf", "/tmp/test"],
@@ -171,7 +171,7 @@ class TestSecureSubprocessExecutorValidation:
             with pytest.raises(CommandValidationError, match="blocked"):
                 executor._validate_command(cmd)
 
-    def test_validate_command_allowed_executable_only(self):
+    def test_validate_command_allowed_executable_only(self) -> None:
         """Test allowlist enforcement."""
         config = SubprocessSecurityConfig(
             allowed_executables={"git", "python"},
@@ -187,7 +187,7 @@ class TestSecureSubprocessExecutorValidation:
         with pytest.raises(CommandValidationError, match="not in allowlist"):
             executor._validate_command(["ls", "-la"])
 
-    def test_validate_command_git_commit_message_special_chars(self, executor):
+    def test_validate_command_git_commit_message_special_chars(self, executor) -> None:
         """Test git commit messages can contain parentheses."""
         # Commit messages often contain parentheses which should be allowed
         cmd = ["git", "commit", "-m", "feat(core): add new feature"]
@@ -207,7 +207,7 @@ class TestSecureSubprocessExecutorEnvironment:
         config = SubprocessSecurityConfig(enable_command_logging=False)
         return SecureSubprocessExecutor(config)
 
-    def test_sanitize_environment_removes_dangerous_vars(self, executor):
+    def test_sanitize_environment_removes_dangerous_vars(self, executor) -> None:
         """Test dangerous environment variables are removed."""
         dangerous_env = {
             "HOME": "/home/user",
@@ -226,7 +226,7 @@ class TestSecureSubprocessExecutorEnvironment:
         # Safe vars should remain
         assert sanitized["HOME"] == "/home/user"
 
-    def test_sanitize_environment_adds_safe_vars(self, executor, monkeypatch):
+    def test_sanitize_environment_adds_safe_vars(self, executor, monkeypatch) -> None:
         """Test safe environment variables are added."""
         monkeypatch.setenv("HOME", "/home/test")
         monkeypatch.setenv("USER", "testuser")
@@ -238,7 +238,7 @@ class TestSecureSubprocessExecutorEnvironment:
         assert "HOME" in sanitized
         assert "USER" in sanitized
 
-    def test_sanitize_environment_filters_long_values(self, executor):
+    def test_sanitize_environment_filters_long_values(self, executor) -> None:
         """Test environment values exceeding max length are filtered."""
         long_value = "x" * 40000  # Exceeds max_env_var_length (32768)
         env = {
@@ -252,7 +252,7 @@ class TestSecureSubprocessExecutorEnvironment:
         assert "LONG_VAR" not in sanitized
         assert "HOME" in sanitized
 
-    def test_sanitize_environment_filters_injection_patterns(self, executor):
+    def test_sanitize_environment_filters_injection_patterns(self, executor) -> None:
         """Test environment values with injection patterns are filtered."""
         env = {
             "SAFE_VAR": "normal_value",
@@ -269,7 +269,7 @@ class TestSecureSubprocessExecutorEnvironment:
         assert "INJECT_3" not in sanitized
         assert "SAFE_VAR" in sanitized
 
-    def test_sanitize_environment_too_many_vars(self, executor):
+    def test_sanitize_environment_too_many_vars(self, executor) -> None:
         """Test validation fails with too many environment variables."""
         # Create more vars than max_env_vars (1000)
         large_env = {f"VAR_{i}": f"value_{i}" for i in range(1100)}
@@ -277,7 +277,7 @@ class TestSecureSubprocessExecutorEnvironment:
         with pytest.raises(EnvironmentValidationError, match="Too many environment"):
             executor._sanitize_environment(large_env)
 
-    def test_sanitize_environment_defaults_to_os_environ(self, executor):
+    def test_sanitize_environment_defaults_to_os_environ(self, executor) -> None:
         """Test None environment defaults to os.environ copy."""
         sanitized = executor._sanitize_environment(None)
 
@@ -298,25 +298,25 @@ class TestSecureSubprocessExecutorPathValidation:
         config = SubprocessSecurityConfig(enable_command_logging=False)
         return SecureSubprocessExecutor(config)
 
-    def test_validate_cwd_none_returns_none(self, executor):
+    def test_validate_cwd_none_returns_none(self, executor) -> None:
         """Test None working directory passes through."""
         assert executor._validate_cwd(None) is None
 
-    def test_validate_cwd_valid_path(self, executor, tmp_path):
+    def test_validate_cwd_valid_path(self, executor, tmp_path) -> None:
         """Test validation of valid working directory."""
         validated = executor._validate_cwd(tmp_path)
 
         assert isinstance(validated, Path)
         assert validated.exists()
 
-    def test_validate_cwd_string_path(self, executor, tmp_path):
+    def test_validate_cwd_string_path(self, executor, tmp_path) -> None:
         """Test validation works with string paths."""
         validated = executor._validate_cwd(str(tmp_path))
 
         assert isinstance(validated, Path)
         assert validated == tmp_path
 
-    def test_validate_cwd_dangerous_system_paths(self, executor):
+    def test_validate_cwd_dangerous_system_paths(self, executor) -> None:
         """Test dangerous system paths are rejected."""
         dangerous_paths = [
             "/etc",
@@ -329,7 +329,7 @@ class TestSecureSubprocessExecutorPathValidation:
             with pytest.raises(CommandValidationError, match="Dangerous working directory"):
                 executor._validate_cwd(path)
 
-    def test_validate_cwd_path_traversal_rejected(self, executor, tmp_path):
+    def test_validate_cwd_path_traversal_rejected(self, executor, tmp_path) -> None:
         """Test path traversal patterns are rejected."""
         # Try to use .. in resolved path
         dangerous_path = tmp_path / ".." / ".." / "etc"
@@ -337,7 +337,7 @@ class TestSecureSubprocessExecutorPathValidation:
         with pytest.raises(CommandValidationError):
             executor._validate_cwd(dangerous_path)
 
-    def test_validate_cwd_disabled_validation(self, tmp_path):
+    def test_validate_cwd_disabled_validation(self, tmp_path) -> None:
         """Test path validation can be disabled."""
         config = SubprocessSecurityConfig(
             enable_path_validation=False,
@@ -361,32 +361,32 @@ class TestSecureSubprocessExecutorTimeout:
         config = SubprocessSecurityConfig(enable_command_logging=False)
         return SecureSubprocessExecutor(config)
 
-    def test_validate_timeout_none_returns_none(self, executor):
+    def test_validate_timeout_none_returns_none(self, executor) -> None:
         """Test None timeout passes through."""
         assert executor._validate_timeout(None) is None
 
-    def test_validate_timeout_valid(self, executor):
+    def test_validate_timeout_valid(self, executor) -> None:
         """Test valid timeout is accepted."""
         assert executor._validate_timeout(30.0) == 30.0
         assert executor._validate_timeout(300.0) == 300.0
 
-    def test_validate_timeout_negative_rejected(self, executor):
+    def test_validate_timeout_negative_rejected(self, executor) -> None:
         """Test negative timeout is rejected."""
         with pytest.raises(CommandValidationError, match="must be positive"):
             executor._validate_timeout(-1.0)
 
-    def test_validate_timeout_zero_rejected(self, executor):
+    def test_validate_timeout_zero_rejected(self, executor) -> None:
         """Test zero timeout is rejected."""
         with pytest.raises(CommandValidationError, match="must be positive"):
             executor._validate_timeout(0.0)
 
-    def test_validate_timeout_too_large_rejected(self, executor):
+    def test_validate_timeout_too_large_rejected(self, executor) -> None:
         """Test timeout exceeding maximum is rejected."""
         # max_timeout is 3600 by default
         with pytest.raises(CommandValidationError, match="Timeout too large"):
             executor._validate_timeout(5000.0)
 
-    def test_validate_timeout_at_max_allowed(self, executor):
+    def test_validate_timeout_at_max_allowed(self, executor) -> None:
         """Test timeout at exactly maximum is allowed."""
         # max_timeout is 3600
         assert executor._validate_timeout(3600.0) == 3600.0
@@ -404,7 +404,7 @@ class TestSecureSubprocessExecutorExecution:
         return SecureSubprocessExecutor(config)
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_execute_secure_success(self, mock_run, executor):
+    def test_execute_secure_success(self, mock_run, executor) -> None:
         """Test successful command execution."""
         mock_result = subprocess.CompletedProcess(
             args=["echo", "test"],
@@ -421,7 +421,7 @@ class TestSecureSubprocessExecutorExecution:
         mock_run.assert_called_once()
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_execute_secure_with_cwd(self, mock_run, executor, tmp_path):
+    def test_execute_secure_with_cwd(self, mock_run, executor, tmp_path) -> None:
         """Test execution with working directory."""
         mock_result = subprocess.CompletedProcess(
             args=["ls"],
@@ -439,7 +439,7 @@ class TestSecureSubprocessExecutorExecution:
         assert call_kwargs["cwd"] == tmp_path
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_execute_secure_with_custom_env(self, mock_run, executor):
+    def test_execute_secure_with_custom_env(self, mock_run, executor) -> None:
         """Test execution with custom environment."""
         mock_result = subprocess.CompletedProcess(
             args=["env"],
@@ -458,7 +458,7 @@ class TestSecureSubprocessExecutorExecution:
         assert "CUSTOM_VAR" in call_kwargs["env"]
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_execute_secure_with_timeout(self, mock_run, executor):
+    def test_execute_secure_with_timeout(self, mock_run, executor) -> None:
         """Test execution with timeout."""
         mock_result = subprocess.CompletedProcess(
             args=["sleep", "1"],
@@ -475,19 +475,19 @@ class TestSecureSubprocessExecutorExecution:
         call_kwargs = mock_run.call_args.kwargs
         assert call_kwargs["timeout"] == 5.0
 
-    def test_execute_secure_validates_command(self, executor):
+    def test_execute_secure_validates_command(self, executor) -> None:
         """Test execution validates command before running."""
         # Dangerous command should be rejected before execution
         with pytest.raises(CommandValidationError):
             executor.execute_secure(["rm", "-rf", "/"])
 
-    def test_execute_secure_validates_timeout(self, executor):
+    def test_execute_secure_validates_timeout(self, executor) -> None:
         """Test execution validates timeout before running."""
         with pytest.raises(CommandValidationError):
             executor.execute_secure(["echo", "test"], timeout=-1.0)
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_execute_secure_handles_subprocess_error(self, mock_run, executor):
+    def test_execute_secure_handles_subprocess_error(self, mock_run, executor) -> None:
         """Test handling of subprocess execution errors."""
         mock_run.side_effect = subprocess.CalledProcessError(
             returncode=1,
@@ -504,7 +504,7 @@ class TestSecureSubprocessExecutorExecution:
 class TestGlobalExecutor:
     """Test global executor singleton."""
 
-    def test_get_secure_executor_returns_singleton(self):
+    def test_get_secure_executor_returns_singleton(self) -> None:
         """Test global executor is a singleton."""
         # Reset global executor
         import crackerjack.services.secure_subprocess as module
@@ -515,7 +515,7 @@ class TestGlobalExecutor:
 
         assert executor1 is executor2
 
-    def test_get_secure_executor_with_config(self):
+    def test_get_secure_executor_with_config(self) -> None:
         """Test creating global executor with custom config."""
         # Reset global executor
         import crackerjack.services.secure_subprocess as module
@@ -526,7 +526,7 @@ class TestGlobalExecutor:
 
         assert executor.config.max_timeout == 1000
 
-    def test_get_secure_executor_respects_debug_env(self, monkeypatch):
+    def test_get_secure_executor_respects_debug_env(self, monkeypatch) -> None:
         """Test executor respects CRACKERJACK_DEBUG environment variable."""
         # Reset global executor
         import crackerjack.services.secure_subprocess as module
@@ -549,7 +549,7 @@ class TestSecurityPatterns:
         config = SubprocessSecurityConfig(enable_command_logging=False)
         return SecureSubprocessExecutor(config)
 
-    def test_dangerous_patterns_defined(self, executor):
+    def test_dangerous_patterns_defined(self, executor) -> None:
         """Test dangerous patterns are properly defined."""
         assert len(executor.dangerous_patterns) > 0
         # Check key patterns
@@ -557,17 +557,17 @@ class TestSecurityPatterns:
         assert any("|" in pattern for pattern in executor.dangerous_patterns)
         assert any("`" in pattern for pattern in executor.dangerous_patterns)
 
-    def test_allowed_git_patterns_defined(self, executor):
+    def test_allowed_git_patterns_defined(self, executor) -> None:
         """Test allowed git patterns are defined."""
         assert len(executor.allowed_git_patterns) > 0
 
-    def test_dangerous_env_vars_defined(self, executor):
+    def test_dangerous_env_vars_defined(self, executor) -> None:
         """Test dangerous environment variables are listed."""
         assert "LD_PRELOAD" in executor.dangerous_env_vars
         assert "PYTHONPATH" in executor.dangerous_env_vars
         assert "DYLD_INSERT_LIBRARIES" in executor.dangerous_env_vars
 
-    def test_safe_env_vars_defined(self, executor):
+    def test_safe_env_vars_defined(self, executor) -> None:
         """Test safe environment variables are listed."""
         assert "HOME" in executor.safe_env_vars
         assert "USER" in executor.safe_env_vars

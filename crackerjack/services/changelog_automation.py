@@ -48,17 +48,20 @@ class ChangelogGenerator:
         }
 
         self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
-            r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$"
+            r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$",
         )
 
         self.breaking_change_pattern = (
             re.compile(  # REGEX OK: breaking change detection
-                r"BREAKING\s*CHANGE[:]\s*(.+)", re.IGNORECASE | re.MULTILINE
+                r"BREAKING\s*CHANGE[:]\s*(.+)",
+                re.IGNORECASE | re.MULTILINE,
             )
         )
 
     def parse_commit_message(
-        self, commit_message: str, commit_hash: str = ""
+        self,
+        commit_message: str,
+        commit_hash: str = "",
     ) -> ChangelogEntry | None:
         lines = commit_message.strip().split("\n")
         header = lines[0].strip()
@@ -79,7 +82,9 @@ class ChangelogGenerator:
         changelog_section = self.type_mappings.get(commit_type, "Changed")
 
         formatted_description = self._format_description(
-            description, scope, commit_type
+            description,
+            scope,
+            commit_type,
         )
 
         return ChangelogEntry(
@@ -90,7 +95,10 @@ class ChangelogGenerator:
         )
 
     def _parse_non_conventional_commit(
-        self, header: str, body: str, commit_hash: str
+        self,
+        header: str,
+        body: str,
+        commit_hash: str,
     ) -> ChangelogEntry | None:
         header_lower = header.lower()
 
@@ -124,18 +132,22 @@ class ChangelogGenerator:
         )
 
     def _format_description(
-        self, description: str, scope: str, commit_type: str
+        self,
+        description: str,
+        scope: str,
+        commit_type: str,
     ) -> str:
         description = description[0].upper() + description[1:] if description else ""
 
-        if scope:
-            if scope.lower() not in description.lower():
-                description = f"{scope}: {description}"
+        if scope and scope.lower() not in description.lower():
+            description = f"{scope}: {description}"
 
         return description
 
     def generate_changelog_entries(
-        self, since_version: str | None = None, target_file: Path | None = None
+        self,
+        since_version: str | None = None,
+        target_file: Path | None = None,
     ) -> dict[str, list[ChangelogEntry]]:
         try:
             git_result = self._get_git_commits(since_version)
@@ -154,7 +166,7 @@ class ChangelogGenerator:
         result = self.git._run_git_command(git_command)
         if result.returncode != 0:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Failed to get git log: {result.stderr}"
+                f"[yellow]⚠️[/yellow] Failed to get git log: {result.stderr}",
             )
             return None
 
@@ -172,7 +184,8 @@ class ChangelogGenerator:
         return ["log", "-50", "--oneline", "--no-merges"]
 
     def _parse_commits_to_entries(
-        self, git_output: str
+        self,
+        git_output: str,
     ) -> dict[str, list[ChangelogEntry]]:
         entries_by_type: dict[str, list[ChangelogEntry]] = {}
 
@@ -200,7 +213,7 @@ class ChangelogGenerator:
 
     def _get_full_commit_message(self, commit_hash: str, fallback_message: str) -> str:
         full_commit_result = self.git._run_git_command(
-            ["show", "--format=%B", "--no-patch", commit_hash]
+            ["show", "--format=%B", "--no-patch", commit_hash],
         )
 
         return (
@@ -210,7 +223,9 @@ class ChangelogGenerator:
         )
 
     def _add_entry_to_collection(
-        self, entry: ChangelogEntry, entries_by_type: dict[str, list[ChangelogEntry]]
+        self,
+        entry: ChangelogEntry,
+        entries_by_type: dict[str, list[ChangelogEntry]],
     ) -> None:
         if entry.type not in entries_by_type:
             entries_by_type[entry.type] = []
@@ -241,7 +256,7 @@ class ChangelogGenerator:
             changelog_path.write_text(updated_content, encoding="utf-8")
 
             self.console.print(
-                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections"
+                f"[green]✅[/green] Updated {changelog_path.name} with {len(entries_by_type)} sections",
             )
             return True
 
@@ -250,7 +265,9 @@ class ChangelogGenerator:
             return False
 
     def _generate_changelog_section(
-        self, version: str, entries_by_type: dict[str, list[ChangelogEntry]]
+        self,
+        version: str,
+        entries_by_type: dict[str, list[ChangelogEntry]],
     ) -> str:
         today = datetime.now().strftime("%Y-%m-%d")
         section_lines = [f"## [{version}] - {today}", ""]
@@ -277,7 +294,7 @@ class ChangelogGenerator:
                     section_lines.extend((f"### {section_name}", ""))
 
                     entries.sort(
-                        key=lambda e: (not e.breaking_change, e.description.lower())
+                        key=lambda e: (not e.breaking_change, e.description.lower()),
                     )
 
                     for entry in entries:
@@ -314,10 +331,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return "\n".join(new_lines)
 
     def generate_changelog_from_commits(
-        self, changelog_path: Path, version: str, since_version: str | None = None
+        self,
+        changelog_path: Path,
+        version: str,
+        since_version: str | None = None,
     ) -> bool:
         self.console.print(
-            f"[cyan]📝[/cyan] Generating changelog entries for version {version}..."
+            f"[cyan]📝[/cyan] Generating changelog entries for version {version}...",
         )
 
         entries = self.generate_changelog_entries(since_version)
@@ -330,7 +350,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         return self.update_changelog(changelog_path, version, entries)
 
     def _display_changelog_preview(
-        self, entries_by_type: dict[str, list[ChangelogEntry]]
+        self,
+        entries_by_type: dict[str, list[ChangelogEntry]],
     ) -> None:
         self.console.print("[cyan]📋[/cyan] Changelog preview:")
 

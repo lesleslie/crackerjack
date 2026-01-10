@@ -140,7 +140,9 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         }
 
     def analyze_quality_trend(
-        self, days: int = 30, min_data_points: int = 5
+        self,
+        days: int = 30,
+        min_data_points: int = 5,
     ) -> QualityTrend | None:
         baselines = self.get_recent_baselines(limit=days * 2)
 
@@ -162,7 +164,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         n = len(scores)
         sum_x = sum(timestamps)
         sum_y = sum(scores)
-        sum_xy = sum(x * y for x, y in zip(timestamps, scores))
+        sum_xy = sum(x * y for x, y in zip(timestamps, scores, strict=False))
         sum_x2 = sum(x * x for x in timestamps)
 
         if n * sum_x2 - sum_x * sum_x == 0:
@@ -197,7 +199,9 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         )
 
     def check_quality_alerts(
-        self, current_metrics: dict[str, t.Any], baseline_git_hash: str | None = None
+        self,
+        current_metrics: dict[str, t.Any],
+        baseline_git_hash: str | None = None,
     ) -> list[QualityAlert]:
         alerts: list[QualityAlert] = []
         baseline = self.get_baseline(baseline_git_hash)
@@ -236,11 +240,12 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     - self.alert_thresholds["quality_score_drop"],
                     triggered_at=datetime.now(),
                     git_hash=git_hash,
-                )
+                ),
             )
 
         coverage_drop = baseline.coverage_percent - current_metrics.get(
-            "coverage_percent", 0
+            "coverage_percent",
+            0,
         )
         if coverage_drop >= self.alert_thresholds["coverage_drop"]:
             alerts.append(
@@ -253,7 +258,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     - self.alert_thresholds["coverage_drop"],
                     triggered_at=datetime.now(),
                     git_hash=git_hash,
-                )
+                ),
             )
 
         security_increase = (
@@ -271,7 +276,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     - 1,
                     triggered_at=datetime.now(),
                     git_hash=git_hash,
-                )
+                ),
             )
 
         type_errors = current_metrics.get("type_errors", 0)
@@ -285,7 +290,7 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     threshold_value=self.alert_thresholds["type_errors_threshold"],
                     triggered_at=datetime.now(),
                     git_hash=git_hash,
-                )
+                ),
             )
 
         return alerts
@@ -307,35 +312,41 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         return recommendations
 
     def _add_coverage_recommendations(
-        self, metrics: dict[str, t.Any], recommendations: list[str]
+        self,
+        metrics: dict[str, t.Any],
+        recommendations: list[str],
     ) -> None:
         coverage = metrics.get("coverage_percent", 0)
         if coverage < 80:
             recommendations.append(
-                f"📊 Increase test coverage from {coverage:.1f}% to 80%+ by adding tests for uncovered code paths"
+                f"📊 Increase test coverage from {coverage:.1f}% to 80%+ by adding tests for uncovered code paths",
             )
         elif coverage < 95:
             recommendations.append(
-                f"🎯 Consider targeting 95%+ coverage (currently {coverage:.1f}%) for better code quality"
+                f"🎯 Consider targeting 95%+ coverage (currently {coverage:.1f}%) for better code quality",
             )
 
     def _add_error_recommendations(
-        self, metrics: dict[str, t.Any], recommendations: list[str]
+        self,
+        metrics: dict[str, t.Any],
+        recommendations: list[str],
     ) -> None:
         type_errors = metrics.get("type_errors", 0)
         if type_errors > 0:
             recommendations.append(
-                f"🔧 Fix {type_errors} type errors to improve code reliability"
+                f"🔧 Fix {type_errors} type errors to improve code reliability",
             )
 
         security_issues = metrics.get("security_issues", 0)
         if security_issues > 0:
             recommendations.append(
-                f"🔒 Address {security_issues} security issues immediately"
+                f"🔒 Address {security_issues} security issues immediately",
             )
 
     def _add_trend_recommendations(
-        self, trend: QualityTrend | None, recommendations: list[str]
+        self,
+        trend: QualityTrend | None,
+        recommendations: list[str],
     ) -> None:
         if not trend:
             return
@@ -351,25 +362,31 @@ class EnhancedQualityBaselineService(QualityBaselineService):
             recommendations.append(message)
 
     def _add_alert_recommendations(
-        self, alerts: list[QualityAlert], recommendations: list[str]
+        self,
+        alerts: list[QualityAlert],
+        recommendations: list[str],
     ) -> None:
         critical_alerts = [a for a in alerts if a.severity == AlertSeverity.CRITICAL]
         if critical_alerts:
             recommendations.append(
-                f"🚨 Address {len(critical_alerts)} critical quality issues before proceeding"
+                f"🚨 Address {len(critical_alerts)} critical quality issues before proceeding",
             )
 
     def _add_general_recommendations(
-        self, metrics: dict[str, t.Any], recommendations: list[str]
+        self,
+        metrics: dict[str, t.Any],
+        recommendations: list[str],
     ) -> None:
         hook_failures = metrics.get("hook_failures", 0)
         if hook_failures > 0:
             recommendations.append(
-                f"⚙️ Fix {hook_failures} pre-commit hook failures to streamline development"
+                f"⚙️ Fix {hook_failures} pre-commit hook failures to streamline development",
             )
 
     def generate_comprehensive_report(
-        self, current_metrics: dict[str, t.Any] | None = None, days: int = 30
+        self,
+        current_metrics: dict[str, t.Any] | None = None,
+        days: int = 30,
     ) -> QualityReport:
         current_baseline = None
         if current_metrics:
@@ -398,7 +415,8 @@ class EnhancedQualityBaselineService(QualityBaselineService):
                     test_pass_rate=current_metrics.get("test_pass_rate", 0.0),
                     hook_failures=current_metrics.get("hook_failures", 0),
                     complexity_violations=current_metrics.get(
-                        "complexity_violations", 0
+                        "complexity_violations",
+                        0,
                     ),
                     security_issues=current_metrics.get("security_issues", 0),
                     type_errors=current_metrics.get("type_errors", 0),
@@ -442,13 +460,17 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         )
 
     def export_report(
-        self, report: QualityReport, output_path: Path, format: str = "json"
+        self,
+        report: QualityReport,
+        output_path: Path,
+        format: str = "json",
     ) -> None:
         if format.lower() == "json":
             with output_path.open("w") as f:
                 json.dump(report.to_dict(), f, indent=2, default=str)
         else:
-            raise ValueError(f"Unsupported export format: {format}")
+            msg = f"Unsupported export format: {format}"
+            raise ValueError(msg)
 
     def set_alert_threshold(self, metric: str, threshold: float) -> None:
         self.alert_thresholds[metric] = threshold
@@ -457,7 +479,9 @@ class EnhancedQualityBaselineService(QualityBaselineService):
         return self.alert_thresholds.copy()
 
     def create_unified_metrics(
-        self, current_metrics: dict[str, t.Any], active_job_count: int = 0
+        self,
+        current_metrics: dict[str, t.Any],
+        active_job_count: int = 0,
     ) -> UnifiedMetrics:
         score_metrics = {
             k: v

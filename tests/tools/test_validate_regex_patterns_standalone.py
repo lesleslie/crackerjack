@@ -17,9 +17,9 @@ def _load_standalone_module() -> object:
 
 
 _mod = _load_standalone_module()
-RegexVisitor = getattr(_mod, "RegexVisitor")
-main = getattr(_mod, "main")
-validate_file = getattr(_mod, "validate_file")
+RegexVisitor = _mod.RegexVisitor
+main = _mod.main
+validate_file = _mod.validate_file
 
 
 def write(tmpdir: Path, rel: str, content: str) -> Path:

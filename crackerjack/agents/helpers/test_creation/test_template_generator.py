@@ -32,7 +32,7 @@ class TestTemplateGenerator:
     def _prepare_test_generation_params(self, module_file: Path) -> dict[str, Any]:
         module_name = self._get_module_import_path(module_file)
         module_category = self._categorize_module(
-            str(module_file.relative_to(self.context.project_path))
+            str(module_file.relative_to(self.context.project_path)),
         )
         return {
             "module_name": module_name,
@@ -53,10 +53,10 @@ class TestTemplateGenerator:
         )
 
         function_tests = await self._generate_function_tests_content(
-            functions, test_params["module_category"]
+            functions, test_params["module_category"],
         )
         class_tests = await self._generate_class_tests_content(
-            classes, test_params["module_category"]
+            classes, test_params["module_category"],
         )
         integration_tests = await self._generate_integration_tests_content(
             test_params["module_file"],
@@ -68,12 +68,12 @@ class TestTemplateGenerator:
         return base_content + function_tests + class_tests + integration_tests
 
     async def _generate_function_tests_content(
-        self, functions: list[dict[str, Any]], module_category: str
+        self, functions: list[dict[str, Any]], module_category: str,
     ) -> str:
         return await self._generate_enhanced_function_tests(functions, module_category)
 
     async def _generate_class_tests_content(
-        self, classes: list[dict[str, Any]], module_category: str
+        self, classes: list[dict[str, Any]], module_category: str,
     ) -> str:
         return await self._generate_enhanced_class_tests(classes, module_category)
 
@@ -85,11 +85,11 @@ class TestTemplateGenerator:
         module_category: str,
     ) -> str:
         return await self._generate_integration_tests(
-            module_file, functions, classes, module_category
+            module_file, functions, classes, module_category,
         )
 
     def _generate_enhanced_test_file_header(
-        self, module_name: str, module_file: Path, module_category: str
+        self, module_name: str, module_file: Path, module_category: str,
     ) -> str:
         imports = [
             "import pytest",
@@ -105,7 +105,7 @@ class TestTemplateGenerator:
                 [
                     "from crackerjack.agents.base import AgentContext, FixResult, "
                     "Issue, IssueType",
-                ]
+                ],
             )
 
         imports_str = "\n".join(imports)
@@ -116,11 +116,9 @@ class TestTemplateGenerator:
 
             importable_items = []
             for node in ast.walk(tree):
-                if isinstance(node, ast.ClassDef) and not node.name.startswith("_"):
-                    importable_items.append(node.name)
-                elif isinstance(
-                    node, ast.FunctionDef | ast.AsyncFunctionDef
-                ) and not node.name.startswith("_"):
+                if (isinstance(node, ast.ClassDef) and not node.name.startswith("_")) or (isinstance(
+                    node, ast.FunctionDef | ast.AsyncFunctionDef,
+                ) and not node.name.startswith("_")):
                     importable_items.append(node.name)
 
             if importable_items:
@@ -170,7 +168,7 @@ class TestTemplateGenerator:
         func_name = func_info["name"]
         args = func_info.get("args", [])
 
-        test_template = f"""def test_{func_name}_basic(self):
+        return f"""def test_{func_name}_basic(self):
     \"\"\"Test basic functionality of {func_name}.\"\"\"
     try:
         result = {func_name}({self._generate_default_args(args)})
@@ -182,10 +180,9 @@ class TestTemplateGenerator:
     except Exception as e:
         pytest.fail(f"Unexpected error in {func_name}: {{e}}")"""
 
-        return test_template
 
     async def _generate_enhanced_function_tests(
-        self, functions: list[dict[str, Any]], module_category: str
+        self, functions: list[dict[str, Any]], module_category: str,
     ) -> str:
         if not functions:
             return ""
@@ -193,14 +190,14 @@ class TestTemplateGenerator:
         test_methods = []
         for func in functions:
             func_tests = await self._generate_all_tests_for_function(
-                func, module_category
+                func, module_category,
             )
             test_methods.extend(func_tests)
 
         return "\n".join(test_methods)
 
     async def _generate_all_tests_for_function(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> list[str]:
         func_tests = []
 
@@ -208,14 +205,14 @@ class TestTemplateGenerator:
         func_tests.append(basic_test)
 
         additional_tests = await self._generate_conditional_tests_for_function(
-            func, module_category
+            func, module_category,
         )
         func_tests.extend(additional_tests)
 
         return func_tests
 
     async def _generate_conditional_tests_for_function(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> list[str]:
         tests = []
         args = func.get("args", [])
@@ -223,7 +220,7 @@ class TestTemplateGenerator:
 
         if self._should_generate_parametrized_test(args):
             parametrized_test = await self._generate_parametrized_test(
-                func, module_category
+                func, module_category,
             )
             tests.append(parametrized_test)
 
@@ -248,7 +245,7 @@ class TestTemplateGenerator:
         return has_multiple_args or is_complex_function
 
     async def _generate_basic_function_test(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> str:
         func_name = func["name"]
         args = func.get("args", [])
@@ -257,7 +254,7 @@ class TestTemplateGenerator:
         return template_generator(func_name, args)
 
     def _get_test_template_generator(
-        self, module_category: str
+        self, module_category: str,
     ) -> Callable[[str, list[str]], str]:
         return {
             "agent": self._generate_agent_test_template,
@@ -284,7 +281,7 @@ class TestTemplateGenerator:
         )
 
         return template.replace("FUNC_NAME", func_name).replace(
-            "ARGS", self._generate_smart_default_args(args)
+            "ARGS", self._generate_smart_default_args(args),
         )
 
     def _generate_async_test_template(self, func_name: str, args: list[str]) -> str:
@@ -310,7 +307,7 @@ class TestTemplateGenerator:
         )
 
         return template.replace("FUNC_NAME", func_name).replace(
-            "ARGS", self._generate_smart_default_args(args)
+            "ARGS", self._generate_smart_default_args(args),
         )
 
     def _generate_default_test_template(self, func_name: str, args: list[str]) -> str:
@@ -330,11 +327,11 @@ class TestTemplateGenerator:
         )
 
         return template.replace("FUNC_NAME", func_name).replace(
-            "ARGS", self._generate_smart_default_args(args)
+            "ARGS", self._generate_smart_default_args(args),
         )
 
     async def _generate_parametrized_test(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> str:
         func_name = func["name"]
         args = func.get("args", [])
@@ -346,7 +343,7 @@ class TestTemplateGenerator:
 
         parametrize_decorator = f"@pytest.mark.parametrize({test_cases})"
 
-        test_template = (
+        return (
             f" {parametrize_decorator}\n"
             f" def test_{func_name}_with_parameters(self, "
             f"{', '.join(args) if len(args) <= 5 else 'test_input'}):\n"
@@ -365,15 +362,14 @@ class TestTemplateGenerator:
             ' pytest.fail(f"Unexpected error with parameters: {e}")'
         )
 
-        return test_template
 
     async def _generate_error_handling_test(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> str:
         func_name = func["name"]
         args = func.get("args", [])
 
-        test_template = (
+        return (
             f" def test_{func_name}_error_handling(self):\n"
             f' """Test {func_name} error handling with invalid inputs."""\n'
             "\n"
@@ -387,15 +383,14 @@ class TestTemplateGenerator:
             f"{self._generate_edge_case_args(args, 'empty')})"
         )
 
-        return test_template
 
     async def _generate_edge_case_test(
-        self, func: dict[str, Any], module_category: str
+        self, func: dict[str, Any], module_category: str,
     ) -> str:
         func_name = func["name"]
         args = func.get("args", [])
 
-        test_template = (
+        return (
             f" def test_{func_name}_edge_cases(self):\n"
             f' """Test {func_name} with edge case scenarios."""\n'
             "\n"
@@ -417,7 +412,6 @@ class TestTemplateGenerator:
             '{e}")'
         )
 
-        return test_template
 
     def _generate_test_parameters(self, args: list[str]) -> str:
         if not args or len(args) > 5:
@@ -464,23 +458,23 @@ class TestTemplateGenerator:
 
         if self._is_path_arg(arg_lower):
             return 'Path("test_file.txt")'
-        elif self._is_url_arg(arg_lower):
+        if self._is_url_arg(arg_lower):
             return '"https: //example.com"'
-        elif self._is_email_arg(arg_lower):
+        if self._is_email_arg(arg_lower):
             return '"test@example.com"'
-        elif self._is_id_arg(arg_lower):
+        if self._is_id_arg(arg_lower):
             return '"test-id-123"'
-        elif self._is_name_arg(arg_lower):
+        if self._is_name_arg(arg_lower):
             return '"test_name"'
-        elif self._is_numeric_arg(arg_lower):
+        if self._is_numeric_arg(arg_lower):
             return "10"
-        elif self._is_boolean_arg(arg_lower):
+        if self._is_boolean_arg(arg_lower):
             return "True"
-        elif self._is_text_arg(arg_lower):
+        if self._is_text_arg(arg_lower):
             return '"test data"'
-        elif self._is_list_arg(arg_lower):
+        if self._is_list_arg(arg_lower):
             return '["test1", "test2"]'
-        elif self._is_dict_arg(arg_lower):
+        if self._is_dict_arg(arg_lower):
             return '{"key": "value"}'
         return '"test"'
 
@@ -528,16 +522,16 @@ class TestTemplateGenerator:
             return ""
 
         placeholders = self._generate_placeholders_by_case_type(
-            filtered_args, case_type
+            filtered_args, case_type,
         )
         return ", ".join(placeholders)
 
     def _generate_placeholders_by_case_type(
-        self, filtered_args: list[str], case_type: str
+        self, filtered_args: list[str], case_type: str,
     ) -> list[str]:
         if case_type == "empty":
             return self._generate_empty_case_placeholders(filtered_args)
-        elif case_type == "boundary":
+        if case_type == "boundary":
             return self._generate_boundary_case_placeholders(filtered_args)
 
         return self._generate_extreme_case_placeholders(filtered_args)
@@ -557,7 +551,7 @@ class TestTemplateGenerator:
         return placeholders
 
     def _generate_boundary_case_placeholders(
-        self, filtered_args: list[str]
+        self, filtered_args: list[str],
     ) -> list[str]:
         placeholders = []
         for arg in filtered_args:
@@ -571,7 +565,7 @@ class TestTemplateGenerator:
         return placeholders
 
     def _generate_extreme_case_placeholders(
-        self, filtered_args: list[str]
+        self, filtered_args: list[str],
     ) -> list[str]:
         placeholders = []
         for arg in filtered_args:
@@ -583,27 +577,27 @@ class TestTemplateGenerator:
         return placeholders
 
     async def _generate_enhanced_class_tests(
-        self, classes: list[dict[str, Any]], module_category: str
+        self, classes: list[dict[str, Any]], module_category: str,
     ) -> str:
         if not classes:
             return ""
 
         test_components = await self._generate_all_class_test_components(
-            classes, module_category
+            classes, module_category,
         )
         return self._combine_class_test_elements(
-            test_components["fixtures"], test_components["test_methods"]
+            test_components["fixtures"], test_components["test_methods"],
         )
 
     async def _generate_all_class_test_components(
-        self, classes: list[dict[str, Any]], module_category: str
+        self, classes: list[dict[str, Any]], module_category: str,
     ) -> dict[str, list[str]]:
         fixtures = []
         test_methods = []
 
         for cls in classes:
             class_components = await self._generate_single_class_test_components(
-                cls, module_category
+                cls, module_category,
             )
             fixtures.extend(class_components["fixtures"])
             test_methods.extend(class_components["test_methods"])
@@ -611,7 +605,7 @@ class TestTemplateGenerator:
         return {"fixtures": fixtures, "test_methods": test_methods}
 
     async def _generate_single_class_test_components(
-        self, cls: dict[str, Any], module_category: str
+        self, cls: dict[str, Any], module_category: str,
     ) -> dict[str, list[str]]:
         fixtures = []
         test_methods = []
@@ -622,24 +616,24 @@ class TestTemplateGenerator:
             fixtures.append(fixture)
 
         core_tests = await self._generate_core_class_tests(
-            cls, methods, module_category
+            cls, methods, module_category,
         )
         test_methods.extend(core_tests)
 
         return {"fixtures": fixtures, "test_methods": test_methods}
 
     async def _generate_core_class_tests(
-        self, cls: dict[str, Any], methods: list[str], module_category: str
+        self, cls: dict[str, Any], methods: list[str], module_category: str,
     ) -> list[str]:
         test_methods = []
 
         instantiation_test = await self._generate_class_instantiation_test(
-            cls, module_category
+            cls, module_category,
         )
         test_methods.append(instantiation_test)
 
         method_tests = await self._generate_method_tests(
-            cls, methods[:5], module_category
+            cls, methods[:5], module_category,
         )
         test_methods.extend(method_tests)
 
@@ -650,25 +644,25 @@ class TestTemplateGenerator:
         return test_methods
 
     async def _generate_method_tests(
-        self, cls: dict[str, Any], methods: list[str], module_category: str
+        self, cls: dict[str, Any], methods: list[str], module_category: str,
     ) -> list[str]:
         method_tests = []
         for method in methods:
             method_test = await self._generate_class_method_test(
-                cls, method, module_category
+                cls, method, module_category,
             )
             method_tests.append(method_test)
         return method_tests
 
     def _combine_class_test_elements(
-        self, fixtures: list[str], test_methods: list[str]
+        self, fixtures: list[str], test_methods: list[str],
     ) -> str:
         fixture_section = "\n".join(fixtures) if fixtures else ""
         test_section = "\n".join(test_methods)
         return fixture_section + test_section
 
     async def _generate_class_fixture(
-        self, cls: dict[str, Any], module_category: str
+        self, cls: dict[str, Any], module_category: str,
     ) -> str:
         class_name = cls["name"]
 
@@ -719,11 +713,11 @@ class TestTemplateGenerator:
 
     @staticmethod
     async def _generate_class_instantiation_test(
-        class_info: dict[str, Any], module_category: str
+        class_info: dict[str, Any], module_category: str,
     ) -> str:
         class_name = class_info["name"]
 
-        test_template = (
+        return (
             f" def test_{class_name.lower()}_instantiation(self, {class_name.lower()}_instance):\n"
             f' """Test successful instantiation of {class_name}."""\n'
             f" assert {class_name.lower()}_instance is not None\n"
@@ -733,10 +727,9 @@ class TestTemplateGenerator:
             f' assert {class_name.lower()}_instance.__class__.__name__ == "{class_name}"'
         )
 
-        return test_template
 
     async def _generate_class_method_test(
-        self, cls: dict[str, Any], method_name: str, module_category: str
+        self, cls: dict[str, Any], method_name: str, module_category: str,
     ) -> str:
         class_name = cls["name"]
 
@@ -755,7 +748,7 @@ class TestTemplateGenerator:
     def _generate_agent_method_test(self, class_name: str, method_name: str) -> str:
         if method_name == "can_handle":
             return self._generate_can_handle_test(class_name)
-        elif method_name == "analyze_and_fix":
+        if method_name == "analyze_and_fix":
             return self._generate_analyze_and_fix_test(class_name)
         return self._generate_generic_agent_method_test(class_name, method_name)
 
@@ -793,7 +786,7 @@ class TestTemplateGenerator:
         )
 
     def _generate_generic_agent_method_test(
-        self, class_name: str, method_name: str
+        self, class_name: str, method_name: str,
     ) -> str:
         return (
             " @pytest.mark.asyncio\n"
@@ -861,14 +854,14 @@ class TestTemplateGenerator:
         )
 
     async def _generate_class_property_test(
-        self, cls: dict[str, Any], module_category: str
+        self, cls: dict[str, Any], module_category: str,
     ) -> str:
         class_name = cls["name"]
 
         if module_category not in ("service", "manager", "agent"):
             return ""
 
-        test_template = (
+        return (
             f" def test_{class_name.lower()}_properties(self, {class_name.lower()}_instance):\n"
             f' """Test {class_name} properties and attributes."""\n'
             "\n"
@@ -881,7 +874,6 @@ class TestTemplateGenerator:
             " str_repr.lower()"
         )
 
-        return test_template
 
     async def _generate_integration_tests(
         self,
@@ -896,7 +888,7 @@ class TestTemplateGenerator:
         if len(functions) < 3 and len(classes) < 2:
             return ""
 
-        integration_tests = (
+        return (
             "\n\n"
             " @pytest.mark.integration\n"
             f" def test_{module_file.stem}_integration(self):\n"
@@ -918,7 +910,6 @@ class TestTemplateGenerator:
             ' pytest.skip("Performance test needs manual implementation")'
         )
 
-        return integration_tests
 
     def _generate_default_args(self, args: list[str]) -> str:
         if not args or args == ["self"]:
@@ -946,14 +937,14 @@ class TestTemplateGenerator:
     def _categorize_module(self, relative_path: str) -> str:
         if "managers/" in relative_path:
             return "manager"
-        elif "services/" in relative_path:
+        if "services/" in relative_path:
             return "service"
-        elif "core/" in relative_path:
+        if "core/" in relative_path:
             return "core"
-        elif "agents/" in relative_path:
+        if "agents/" in relative_path:
             return "agent"
-        elif "models/" in relative_path:
+        if "models/" in relative_path:
             return "model"
-        elif "executors/" in relative_path:
+        if "executors/" in relative_path:
             return "executor"
         return "utility"

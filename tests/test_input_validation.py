@@ -1,5 +1,4 @@
-"""
-Comprehensive tests for input validation security framework.
+"""Comprehensive tests for input validation security framework.
 
 Tests all validation scenarios including:
 - Command injection prevention
@@ -32,20 +31,20 @@ from crackerjack.services.security_logger import SecurityEventLevel
 class TestInputSanitizer:
     """Test the core input sanitization functionality."""
 
-    def test_sanitize_string_valid_input(self):
+    def test_sanitize_string_valid_input(self) -> None:
         """Test string sanitization with valid input."""
         result = InputSanitizer.sanitize_string("valid_input_123")
         assert result.valid
         assert result.sanitized_value == "valid_input_123"
         assert result.validation_type == "string_sanitization"
 
-    def test_sanitize_string_with_whitespace(self):
+    def test_sanitize_string_with_whitespace(self) -> None:
         """Test string sanitization removes whitespace."""
         result = InputSanitizer.sanitize_string("  spaced input  ")
         assert result.valid
         assert result.sanitized_value == "spaced input"
 
-    def test_sanitize_string_length_exceeded(self):
+    def test_sanitize_string_length_exceeded(self) -> None:
         """Test string length limit enforcement."""
         long_string = "a" * 1001
         result = InputSanitizer.sanitize_string(long_string, max_length=1000)
@@ -53,7 +52,7 @@ class TestInputSanitizer:
         assert result.security_level == SecurityEventLevel.HIGH
         assert "too long" in result.error_message
 
-    def test_sanitize_string_null_byte_injection(self):
+    def test_sanitize_string_null_byte_injection(self) -> None:
         """Test null byte injection prevention."""
         malicious_input = "normal_string\x00/etc/passwd"
         result = InputSanitizer.sanitize_string(malicious_input)
@@ -61,14 +60,14 @@ class TestInputSanitizer:
         assert result.security_level == SecurityEventLevel.CRITICAL
         assert "Null byte detected" in result.error_message
 
-    def test_sanitize_string_control_characters(self):
+    def test_sanitize_string_control_characters(self) -> None:
         """Test control character detection."""
         malicious_input = "string_with\x01control_chars"
         result = InputSanitizer.sanitize_string(malicious_input)
         assert not result.valid
         assert result.security_level == SecurityEventLevel.HIGH
 
-    def test_sanitize_string_shell_metacharacters(self):
+    def test_sanitize_string_shell_metacharacters(self) -> None:
         """Test shell metacharacter detection."""
         test_cases = [
             "command; rm -rf /",
@@ -85,26 +84,26 @@ class TestInputSanitizer:
             assert not result.valid, f"Should reject: {malicious_input}"
             assert result.security_level == SecurityEventLevel.CRITICAL
 
-    def test_sanitize_string_allow_shell_chars(self):
+    def test_sanitize_string_allow_shell_chars(self) -> None:
         """Test allowing shell characters when explicitly enabled."""
         result = InputSanitizer.sanitize_string(
-            "command | grep something", allow_shell_chars=True
+            "command | grep something", allow_shell_chars=True,
         )
         assert result.valid
 
-    def test_sanitize_string_strict_alphanumeric(self):
+    def test_sanitize_string_strict_alphanumeric(self) -> None:
         """Test strict alphanumeric mode."""
         result = InputSanitizer.sanitize_string(
-            "valid_name-123", strict_alphanumeric=True
+            "valid_name-123", strict_alphanumeric=True,
         )
         assert result.valid
 
         result = InputSanitizer.sanitize_string(
-            "invalid@email.com", strict_alphanumeric=True
+            "invalid@email.com", strict_alphanumeric=True,
         )
         assert not result.valid
 
-    def test_sanitize_string_sql_injection_patterns(self):
+    def test_sanitize_string_sql_injection_patterns(self) -> None:
         """Test SQL injection pattern detection."""
         sql_injection_attempts = [
             "'; DROP TABLE users; --",
@@ -121,7 +120,7 @@ class TestInputSanitizer:
             assert not result.valid, f"Should reject SQL injection: {sql_attack}"
             assert result.security_level == SecurityEventLevel.CRITICAL
 
-    def test_sanitize_string_code_injection_patterns(self):
+    def test_sanitize_string_code_injection_patterns(self) -> None:
         """Test code injection pattern detection."""
         code_injection_attempts = [
             "eval('malicious_code')",
@@ -138,7 +137,7 @@ class TestInputSanitizer:
             assert not result.valid, f"Should reject code injection: {code_attack}"
             assert result.security_level == SecurityEventLevel.CRITICAL
 
-    def test_sanitize_json_valid(self):
+    def test_sanitize_json_valid(self) -> None:
         """Test JSON validation with valid input."""
         valid_json = '{"key": "value", "nested": {"array": [1, 2, 3]}}'
         result = InputSanitizer.sanitize_json(valid_json)
@@ -148,14 +147,14 @@ class TestInputSanitizer:
             "nested": {"array": [1, 2, 3]},
         }
 
-    def test_sanitize_json_size_limit(self):
+    def test_sanitize_json_size_limit(self) -> None:
         """Test JSON size limit enforcement."""
         large_json = '{"data": "' + "x" * 1000 + '"}'
         result = InputSanitizer.sanitize_json(large_json, max_size=500)
         assert not result.valid
         assert result.security_level == SecurityEventLevel.HIGH
 
-    def test_sanitize_json_depth_limit(self):
+    def test_sanitize_json_depth_limit(self) -> None:
         """Test JSON nesting depth limit."""
         # Create deeply nested JSON
         nested_json = '{"level1": {"level2": {"level3": {"level4": {"level5": {"level6": "deep"}}}}}}'
@@ -163,20 +162,20 @@ class TestInputSanitizer:
         assert not result.valid
         assert result.security_level == SecurityEventLevel.HIGH
 
-    def test_sanitize_json_invalid_syntax(self):
+    def test_sanitize_json_invalid_syntax(self) -> None:
         """Test JSON syntax error handling."""
         invalid_json = '{"key": "value",}'  # Trailing comma
         result = InputSanitizer.sanitize_json(invalid_json)
         assert not result.valid
         assert result.security_level == SecurityEventLevel.MEDIUM
 
-    def test_sanitize_path_valid(self):
+    def test_sanitize_path_valid(self) -> None:
         """Test path validation with valid input."""
         result = InputSanitizer.sanitize_path("valid/path/file.txt")
         assert result.valid
         assert isinstance(result.sanitized_value, Path)
 
-    def test_sanitize_path_traversal_attack(self):
+    def test_sanitize_path_traversal_attack(self) -> None:
         """Test path traversal attack prevention."""
         malicious_paths = [
             "../../../etc/passwd",
@@ -190,7 +189,7 @@ class TestInputSanitizer:
             # Some may be valid after resolution, but dangerous components should be caught
             # The actual traversal protection is tested in the base directory constraint test
 
-    def test_sanitize_path_dangerous_components(self):
+    def test_sanitize_path_dangerous_components(self) -> None:
         """Test dangerous path component detection."""
         dangerous_paths = [
             "CON",  # Windows reserved name
@@ -204,19 +203,19 @@ class TestInputSanitizer:
             assert not result.valid
             assert result.security_level == SecurityEventLevel.CRITICAL
 
-    def test_sanitize_path_base_directory_constraint(self):
+    def test_sanitize_path_base_directory_constraint(self) -> None:
         """Test base directory constraint enforcement."""
         base_dir = Path("/safe/directory")
 
         # Valid path within base directory
         result = InputSanitizer.sanitize_path(
-            "/safe/directory/file.txt", base_directory=base_dir
+            "/safe/directory/file.txt", base_directory=base_dir,
         )
         assert result.valid
 
         # Invalid path outside base directory
         result = InputSanitizer.sanitize_path(
-            "/unsafe/directory/file.txt", base_directory=base_dir
+            "/unsafe/directory/file.txt", base_directory=base_dir,
         )
         assert not result.valid
         assert result.security_level == SecurityEventLevel.CRITICAL
@@ -235,29 +234,29 @@ class TestSecureInputValidator:
         )
         return SecureInputValidator(config)
 
-    def test_validate_project_name_valid(self, validator):
+    def test_validate_project_name_valid(self, validator) -> None:
         """Test valid project name validation."""
         result = validator.validate_project_name("valid-project_123")
         assert result.valid
         assert result.sanitized_value == "valid-project_123"
 
-    def test_validate_project_name_invalid(self, validator):
+    def test_validate_project_name_invalid(self, validator) -> None:
         """Test invalid project name validation."""
         result = validator.validate_project_name("project@with!special#chars")
         assert not result.valid
 
-    def test_validate_job_id_valid(self, validator):
+    def test_validate_job_id_valid(self, validator) -> None:
         """Test valid job ID validation."""
         result = validator.validate_job_id("job-123-abc-def")
         assert result.valid
 
-    def test_validate_job_id_invalid_format(self, validator):
+    def test_validate_job_id_invalid_format(self, validator) -> None:
         """Test invalid job ID format."""
         result = validator.validate_job_id("job@123#invalid")
         assert not result.valid
         assert result.security_level == SecurityEventLevel.HIGH
 
-    def test_validate_command_args_string(self, validator):
+    def test_validate_command_args_string(self, validator) -> None:
         """Test command arguments validation (string)."""
         result = validator.validate_command_args("safe command")
         assert result.valid
@@ -265,7 +264,7 @@ class TestSecureInputValidator:
         result = validator.validate_command_args("dangerous; command")
         assert not result.valid
 
-    def test_validate_command_args_list(self, validator):
+    def test_validate_command_args_list(self, validator) -> None:
         """Test command arguments validation (list)."""
         result = validator.validate_command_args(["safe", "args", "list"])
         assert result.valid
@@ -274,44 +273,44 @@ class TestSecureInputValidator:
         result = validator.validate_command_args(["safe", "dangerous;", "list"])
         assert not result.valid
 
-    def test_validate_json_payload_valid(self, validator):
+    def test_validate_json_payload_valid(self, validator) -> None:
         """Test JSON payload validation."""
         valid_json = '{"key": "value", "number": 123}'
         result = validator.validate_json_payload(valid_json)
         assert result.valid
         assert result.sanitized_value == {"key": "value", "number": 123}
 
-    def test_validate_json_payload_invalid(self, validator):
+    def test_validate_json_payload_invalid(self, validator) -> None:
         """Test invalid JSON payload."""
         invalid_json = '{"invalid": json}'
         result = validator.validate_json_payload(invalid_json)
         assert not result.valid
 
-    def test_validate_file_path_valid(self, validator):
+    def test_validate_file_path_valid(self, validator) -> None:
         """Test file path validation."""
         result = validator.validate_file_path("safe/file/path.txt")
         assert result.valid
 
-    def test_validate_file_path_traversal(self, validator):
+    def test_validate_file_path_traversal(self, validator) -> None:
         """Test path traversal prevention."""
         base_dir = Path("/safe/base")
         result = validator.validate_file_path(
-            "../../../etc/passwd", base_directory=base_dir
+            "../../../etc/passwd", base_directory=base_dir,
         )
         assert not result.valid
 
-    def test_validate_environment_var_valid(self, validator):
+    def test_validate_environment_var_valid(self, validator) -> None:
         """Test environment variable validation."""
         result = validator.validate_environment_var("VALID_VAR_NAME", "safe_value")
         assert result.valid
 
-    def test_validate_environment_var_invalid_name(self, validator):
+    def test_validate_environment_var_invalid_name(self, validator) -> None:
         """Test invalid environment variable name."""
         result = validator.validate_environment_var("invalid-var-name", "value")
         assert not result.valid
 
     @patch("crackerjack.services.input_validator.get_security_logger")
-    def test_validation_failure_logging(self, mock_logger, validator):
+    def test_validation_failure_logging(self, mock_logger, validator) -> None:
         """Test that validation failures are logged."""
         mock_security_logger = Mock()
         mock_logger.return_value = mock_security_logger
@@ -329,7 +328,7 @@ class TestSecureInputValidator:
 class TestValidationDecorator:
     """Test the validation_required decorator."""
 
-    def test_validation_decorator_valid_input(self):
+    def test_validation_decorator_valid_input(self) -> None:
         """Test decorator with valid input."""
 
         @validation_required()
@@ -339,7 +338,7 @@ class TestValidationDecorator:
         result = test_function("valid", arg2="also_valid")
         assert result == "valid_also_valid"
 
-    def test_validation_decorator_invalid_input(self):
+    def test_validation_decorator_invalid_input(self) -> None:
         """Test decorator with invalid input."""
 
         @validation_required()
@@ -349,7 +348,7 @@ class TestValidationDecorator:
         with pytest.raises(ExecutionError):
             test_function("invalid; command")
 
-    def test_validation_decorator_kwargs_only(self):
+    def test_validation_decorator_kwargs_only(self) -> None:
         """Test decorator validating only kwargs."""
 
         @validation_required(validate_args=False, validate_kwargs=True)
@@ -368,34 +367,34 @@ class TestValidationDecorator:
 class TestConvenienceFunctions:
     """Test convenience validation functions."""
 
-    def test_validate_and_sanitize_string_valid(self):
+    def test_validate_and_sanitize_string_valid(self) -> None:
         """Test convenience string validation."""
         result = validate_and_sanitize_string("valid_string")
         assert result == "valid_string"
 
-    def test_validate_and_sanitize_string_invalid(self):
+    def test_validate_and_sanitize_string_invalid(self) -> None:
         """Test convenience string validation failure."""
         with pytest.raises(ExecutionError) as exc_info:
             validate_and_sanitize_string("invalid; string")
 
         assert "validation failed" in str(exc_info.value).lower()
 
-    def test_validate_and_sanitize_path_valid(self):
+    def test_validate_and_sanitize_path_valid(self) -> None:
         """Test convenience path validation."""
         result = validate_and_sanitize_path("valid/path.txt")
         assert isinstance(result, Path)
 
-    def test_validate_and_sanitize_path_invalid(self):
+    def test_validate_and_sanitize_path_invalid(self) -> None:
         """Test convenience path validation failure."""
         with pytest.raises(ExecutionError):
             validate_and_sanitize_path("CON")  # Windows reserved name
 
-    def test_validate_and_parse_json_valid(self):
+    def test_validate_and_parse_json_valid(self) -> None:
         """Test convenience JSON validation."""
         result = validate_and_parse_json('{"key": "value"}')
         assert result == {"key": "value"}
 
-    def test_validate_and_parse_json_invalid(self):
+    def test_validate_and_parse_json_invalid(self) -> None:
         """Test convenience JSON validation failure."""
         with pytest.raises(ExecutionError):
             validate_and_parse_json('{"invalid": json}')
@@ -404,7 +403,7 @@ class TestConvenienceFunctions:
 class TestValidationConfig:
     """Test validation configuration."""
 
-    def test_validation_config_defaults(self):
+    def test_validation_config_defaults(self) -> None:
         """Test default validation configuration."""
         config = ValidationConfig()
         assert config.MAX_STRING_LENGTH == 10000
@@ -414,7 +413,7 @@ class TestValidationConfig:
         assert not config.ALLOW_SHELL_METACHARACTERS
         assert not config.STRICT_ALPHANUMERIC_MODE
 
-    def test_validation_config_custom(self):
+    def test_validation_config_custom(self) -> None:
         """Test custom validation configuration."""
         config = ValidationConfig(
             MAX_STRING_LENGTH=500,
@@ -430,7 +429,7 @@ class TestSecurityLogging:
     """Test security event logging integration."""
 
     @patch("crackerjack.services.input_validator.get_security_logger")
-    def test_command_injection_logging(self, mock_logger_func):
+    def test_command_injection_logging(self, mock_logger_func) -> None:
         """Test command injection attempt logging."""
         mock_logger = Mock()
         mock_logger_func.return_value = mock_logger
@@ -447,7 +446,7 @@ class TestSecurityLogging:
         mock_logger_func.assert_called()
 
     @patch("crackerjack.services.input_validator.get_security_logger")
-    def test_path_traversal_logging(self, mock_logger_func):
+    def test_path_traversal_logging(self, mock_logger_func) -> None:
         """Test path traversal attempt logging."""
         mock_logger = Mock()
         mock_logger_func.return_value = mock_logger
@@ -463,7 +462,7 @@ class TestSecurityLogging:
 class TestIntegrationScenarios:
     """Test realistic integration scenarios."""
 
-    def test_mcp_tool_parameter_validation(self):
+    def test_mcp_tool_parameter_validation(self) -> None:
         """Test MCP tool parameter validation scenario."""
         validator = SecureInputValidator()
 
@@ -473,7 +472,7 @@ class TestIntegrationScenarios:
 
         # Validate stage
         stage_result = validator.sanitizer.sanitize_string(
-            stage_arg, max_length=50, strict_alphanumeric=True
+            stage_arg, max_length=50, strict_alphanumeric=True,
         )
         assert stage_result.valid
 
@@ -482,7 +481,7 @@ class TestIntegrationScenarios:
         assert json_result.valid
         assert json_result.sanitized_value == {"dry_run": True, "verbose": False}
 
-    def test_websocket_job_id_validation(self):
+    def test_websocket_job_id_validation(self) -> None:
         """Test WebSocket job ID validation scenario."""
         validator = SecureInputValidator()
 
@@ -510,7 +509,7 @@ class TestIntegrationScenarios:
             result = validator.validate_job_id(job_id)
             assert not result.valid, f"Should reject: {job_id}"
 
-    def test_project_initialization_validation(self):
+    def test_project_initialization_validation(self) -> None:
         """Test project initialization validation scenario."""
         validator = SecureInputValidator()
 
@@ -526,7 +525,7 @@ class TestIntegrationScenarios:
             result = validator.validate_project_name(name)
             assert not result.valid, f"Should reject project name: {name}"
 
-    def test_command_execution_validation(self):
+    def test_command_execution_validation(self) -> None:
         """Test command execution validation scenario."""
         validator = SecureInputValidator()
 

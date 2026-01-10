@@ -15,7 +15,7 @@ def preserve_signature[F: t.Callable[..., t.Any]](
 ) -> t.Callable[[t.Callable[..., t.Any]], F]:
     def decorator(func: t.Callable[..., t.Any]) -> F:
         wrapped = wrapper(func)
-        return t.cast(F, wraps(func)(wrapped))
+        return t.cast("F", wraps(func)(wrapped))
 
     return decorator
 

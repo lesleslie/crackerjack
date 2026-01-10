@@ -13,13 +13,9 @@ from functools import wraps
 
 from rich.console import Console
 
-from ..errors import (
-    CrackerjackError,
-    ValidationError,
-)
-from ..errors import (
-    TimeoutError as CrackerjackTimeoutError,
-)
+from crackerjack.errors import CrackerjackError, ValidationError
+from crackerjack.errors import TimeoutError as CrackerjackTimeoutError
+
 from .helpers import format_exception_chain, get_function_context, is_async_function
 
 
@@ -123,23 +119,31 @@ def handle_errors(
                     return await target(*args, **kwargs)
                 except _error_types as e:
                     return _handle_exception(
-                        e, target, transform_to, fallback, suppress, _console
+                        e,
+                        target,
+                        transform_to,
+                        fallback,
+                        suppress,
+                        _console,
                     )
 
             return async_wrapper
 
-        else:
+        @wraps(inner_func)
+        def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+            try:
+                return target(*args, **kwargs)
+            except _error_types as e:
+                return _handle_exception(
+                    e,
+                    target,
+                    transform_to,
+                    fallback,
+                    suppress,
+                    _console,
+                )
 
-            @wraps(inner_func)
-            def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    return target(*args, **kwargs)
-                except _error_types as e:
-                    return _handle_exception(
-                        e, target, transform_to, fallback, suppress, _console
-                    )
-
-            return sync_wrapper
+        return sync_wrapper
 
     if func is not None and callable(func):
         return decorator(func)
@@ -195,17 +199,15 @@ def log_errors(
 
             return async_wrapper
 
-        else:
+        @wraps(func)
+        def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
+            try:
+                return func(*args, **kwargs)
+            except Exception as e:
+                _log_exception(func, e)
+                raise
 
-            @wraps(func)
-            def sync_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
-                try:
-                    return func(*args, **kwargs)
-                except Exception as e:
-                    _log_exception(func, e)
-                    raise
-
-            return sync_wrapper
+        return sync_wrapper
 
     return decorator
 
@@ -267,14 +269,18 @@ def retry(
     backoff: float = 0.0,
 ) -> t.Callable[[t.Callable[..., t.Any]], t.Callable[..., t.Any]]:
     if max_attempts < 1:
-        raise ValueError("max_attempts must be >= 1")
+        msg = "max_attempts must be >= 1"
+        raise ValueError(msg)
 
     retry_exceptions = tuple(exceptions) if exceptions else (Exception,)
 
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
             return _create_async_retry_wrapper(
-                func, max_attempts, retry_exceptions, backoff
+                func,
+                max_attempts,
+                retry_exceptions,
+                backoff,
             )
         return _create_sync_retry_wrapper(func, max_attempts, retry_exceptions, backoff)
 
@@ -293,7 +299,8 @@ def with_timeout(
             async def async_wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
                 try:
                     return await asyncio.wait_for(
-                        func(*args, **kwargs), timeout=seconds
+                        func(*args, **kwargs),
+                        timeout=seconds,
                     )
                 except TimeoutError as exc:
                     message = error_message or f"Operation timed out after {seconds}s"
@@ -317,7 +324,9 @@ def with_timeout(
 
 
 def _execute_single_validator(
-    validate: t.Callable[[t.Any], bool], param: str, value: t.Any
+    validate: t.Callable[[t.Any], bool],
+    param: str,
+    value: t.Any,
 ) -> None:
     try:
         result = validate(value)
@@ -332,7 +341,9 @@ def _execute_single_validator(
 
 
 def _check_type_annotation_against_signature(
-    name: str, value: t.Any, signature: inspect.Signature
+    name: str,
+    value: t.Any,
+    signature: inspect.Signature,
 ) -> None:
     parameter = signature.parameters.get(name)
     if not parameter or parameter.annotation is inspect.Signature.empty:
@@ -387,7 +398,8 @@ def _normalize_validators(
 
 def _create_validator_runner(
     validator_map: dict[
-        str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
+        str,
+        t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
     ],
 ) -> t.Callable[[str, t.Any], None]:
     def _run_validators(param: str, value: t.Any) -> None:
@@ -404,7 +416,8 @@ def _create_validator_runner(
 def validate_args(
     *,
     validators: dict[
-        str, t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]]
+        str,
+        t.Callable[[t.Any], bool] | t.Iterable[t.Callable[[t.Any], bool]],
     ]
     | None = None,
     type_check: bool = False,
@@ -493,7 +506,10 @@ def graceful_degradation(
     def decorator(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
         if is_async_function(func):
             return _create_async_degradation_wrapper(
-                func, fallback_value, warn, _console
+                func,
+                fallback_value,
+                warn,
+                _console,
             )
         return _create_sync_degradation_wrapper(func, fallback_value, warn, _console)
 

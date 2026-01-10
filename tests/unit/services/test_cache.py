@@ -17,7 +17,7 @@ from crackerjack.services.cache import CacheStats, CrackerjackCache
 class TestCacheStats:
     """Test cache statistics tracking."""
 
-    def test_cache_stats_initialization(self):
+    def test_cache_stats_initialization(self) -> None:
         """Test CacheStats initializes with zero values."""
         stats = CacheStats()
 
@@ -26,31 +26,31 @@ class TestCacheStats:
         assert stats.evictions == 0
         assert stats.total_entries == 0
 
-    def test_cache_stats_hit_rate_zero(self):
+    def test_cache_stats_hit_rate_zero(self) -> None:
         """Test hit rate is 0% with no requests."""
         stats = CacheStats()
 
         assert stats.hit_rate == 0.0
 
-    def test_cache_stats_hit_rate_calculation(self):
+    def test_cache_stats_hit_rate_calculation(self) -> None:
         """Test hit rate calculation with hits and misses."""
         stats = CacheStats(hits=75, misses=25)
 
         assert stats.hit_rate == 75.0
 
-    def test_cache_stats_hit_rate_all_hits(self):
+    def test_cache_stats_hit_rate_all_hits(self) -> None:
         """Test hit rate is 100% with all hits."""
         stats = CacheStats(hits=100, misses=0)
 
         assert stats.hit_rate == 100.0
 
-    def test_cache_stats_hit_rate_all_misses(self):
+    def test_cache_stats_hit_rate_all_misses(self) -> None:
         """Test hit rate is 0% with all misses."""
         stats = CacheStats(hits=0, misses=100)
 
         assert stats.hit_rate == 0.0
 
-    def test_cache_stats_to_dict(self):
+    def test_cache_stats_to_dict(self) -> None:
         """Test converting cache stats to dictionary."""
         stats = CacheStats(hits=10, misses=5, evictions=2, total_entries=15)
 
@@ -67,7 +67,7 @@ class TestCacheStats:
 class TestCrackerjackCacheInitialization:
     """Test cache initialization and backend setup."""
 
-    def test_initialization_with_defaults(self):
+    def test_initialization_with_defaults(self) -> None:
         """Test cache initializes with default values."""
         cache = CrackerjackCache(backend=Mock())
 
@@ -75,35 +75,35 @@ class TestCrackerjackCacheInitialization:
         assert cache.enable_disk_cache is True
         assert isinstance(cache.stats, CacheStats)
 
-    def test_initialization_with_custom_cache_dir(self, tmp_path):
+    def test_initialization_with_custom_cache_dir(self, tmp_path) -> None:
         """Test cache initializes with custom directory."""
         custom_dir = tmp_path / "custom_cache"
         cache = CrackerjackCache(cache_dir=custom_dir, backend=Mock())
 
         assert cache.cache_dir == custom_dir
 
-    def test_initialization_with_backend(self):
+    def test_initialization_with_backend(self) -> None:
         """Test cache initializes with provided backend."""
         mock_backend = Mock()
         cache = CrackerjackCache(backend=mock_backend)
 
         assert cache._backend == mock_backend
 
-    def test_initialization_without_backend_fallback(self):
+    def test_initialization_without_backend_fallback(self) -> None:
         """Test cache falls back when backend unavailable."""
         with patch("crackerjack.services.cache.get_cache", side_effect=RuntimeError("Backend unavailable")):
             cache = CrackerjackCache()
 
             assert cache._backend is None
 
-    def test_expensive_hooks_defined(self):
+    def test_expensive_hooks_defined(self) -> None:
         """Test expensive hooks set is properly defined."""
         assert "pyright" in CrackerjackCache.EXPENSIVE_HOOKS
         assert "bandit" in CrackerjackCache.EXPENSIVE_HOOKS
         assert "vulture" in CrackerjackCache.EXPENSIVE_HOOKS
         assert "complexipy" in CrackerjackCache.EXPENSIVE_HOOKS
 
-    def test_hook_disk_ttls_defined(self):
+    def test_hook_disk_ttls_defined(self) -> None:
         """Test TTL values for expensive hooks."""
         ttls = CrackerjackCache.HOOK_DISK_TTLS
 
@@ -129,7 +129,7 @@ class TestCrackerjackCacheHookResults:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend)
 
-    def test_get_hook_result_miss(self, cache, mock_backend):
+    def test_get_hook_result_miss(self, cache, mock_backend) -> None:
         """Test getting hook result with cache miss."""
         mock_backend.get.return_value = None
 
@@ -139,7 +139,7 @@ class TestCrackerjackCacheHookResults:
         assert cache.stats.misses == 1
         assert cache.stats.hits == 0
 
-    def test_get_hook_result_hit(self, cache, mock_backend):
+    def test_get_hook_result_hit(self, cache, mock_backend) -> None:
         """Test getting hook result with cache hit."""
         cached_result = HookResult(
             hook_name="ruff",
@@ -155,7 +155,7 @@ class TestCrackerjackCacheHookResults:
         assert cache.stats.hits == 1
         assert cache.stats.misses == 0
 
-    def test_get_hook_result_without_backend(self):
+    def test_get_hook_result_without_backend(self) -> None:
         """Test get hook result with no backend returns None."""
         cache = CrackerjackCache(backend=None)
 
@@ -164,7 +164,7 @@ class TestCrackerjackCacheHookResults:
         assert result is None
         assert cache.stats.misses == 1
 
-    def test_set_hook_result(self, cache, mock_backend):
+    def test_set_hook_result(self, cache, mock_backend) -> None:
         """Test setting hook result in cache."""
         result = HookResult(
             hook_name="ruff",
@@ -178,7 +178,7 @@ class TestCrackerjackCacheHookResults:
         mock_backend.set.assert_called_once()
         assert cache.stats.total_entries == 1
 
-    def test_set_hook_result_without_backend(self):
+    def test_set_hook_result_without_backend(self) -> None:
         """Test set hook result with no backend does nothing."""
         cache = CrackerjackCache(backend=None)
         result = HookResult(
@@ -191,14 +191,14 @@ class TestCrackerjackCacheHookResults:
         # Should not raise
         cache.set_hook_result("ruff", ["hash1"], result)
 
-    def test_hook_cache_key_generation(self):
+    def test_hook_cache_key_generation(self) -> None:
         """Test hook cache key generation."""
         key = CrackerjackCache._get_hook_cache_key("ruff", ["hash1", "hash2"])
 
         assert key.startswith("hook_result:ruff:")
         assert len(key.split(":")) == 3
 
-    def test_hook_cache_key_deterministic(self):
+    def test_hook_cache_key_deterministic(self) -> None:
         """Test hook cache key is deterministic and order-independent."""
         key1 = CrackerjackCache._get_hook_cache_key("ruff", ["hash1", "hash2"])
         key2 = CrackerjackCache._get_hook_cache_key("ruff", ["hash2", "hash1"])
@@ -224,7 +224,7 @@ class TestCrackerjackCacheExpensiveHooks:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend, enable_disk_cache=True)
 
-    def test_get_expensive_hook_result_miss(self, cache, mock_backend):
+    def test_get_expensive_hook_result_miss(self, cache, mock_backend) -> None:
         """Test getting expensive hook result with cache miss."""
         mock_backend.get.return_value = None
 
@@ -234,7 +234,7 @@ class TestCrackerjackCacheExpensiveHooks:
         # Should have 2 misses: regular cache + expensive cache
         assert cache.stats.misses == 2
 
-    def test_get_expensive_hook_result_hit(self, cache, mock_backend):
+    def test_get_expensive_hook_result_hit(self, cache, mock_backend) -> None:
         """Test getting expensive hook result with cache hit."""
         cached_result = HookResult(
             hook_name="pyright",
@@ -249,14 +249,14 @@ class TestCrackerjackCacheExpensiveHooks:
         assert result == cached_result
         assert cache.stats.hits == 1
 
-    def test_get_expensive_hook_result_non_expensive_hook(self, cache):
+    def test_get_expensive_hook_result_non_expensive_hook(self, cache) -> None:
         """Test getting result for non-expensive hook."""
         # "ruff" is not in EXPENSIVE_HOOKS
         result = cache.get_expensive_hook_result("ruff", ["hash1"], "1.0.0")
 
         assert result is None
 
-    def test_set_expensive_hook_result(self, cache, mock_backend):
+    def test_set_expensive_hook_result(self, cache, mock_backend) -> None:
         """Test setting expensive hook result."""
         result = HookResult(
             hook_name="pyright",
@@ -270,7 +270,7 @@ class TestCrackerjackCacheExpensiveHooks:
         # Should call set twice: regular cache + expensive cache
         assert mock_backend.set.call_count == 2
 
-    def test_set_expensive_hook_result_non_expensive(self, cache, mock_backend):
+    def test_set_expensive_hook_result_non_expensive(self, cache, mock_backend) -> None:
         """Test setting result for non-expensive hook."""
         result = HookResult(
             hook_name="ruff",
@@ -284,7 +284,7 @@ class TestCrackerjackCacheExpensiveHooks:
         # Should only call set once (regular cache, not expensive)
         assert mock_backend.set.call_count == 1
 
-    def test_set_expensive_hook_result_disk_cache_disabled(self):
+    def test_set_expensive_hook_result_disk_cache_disabled(self) -> None:
         """Test expensive hook caching with disk cache disabled."""
         mock_backend = Mock()
         mock_backend.set = AsyncMock()
@@ -301,14 +301,14 @@ class TestCrackerjackCacheExpensiveHooks:
         # Should only set regular cache, not expensive disk cache
         assert mock_backend.set.call_count == 1
 
-    def test_versioned_cache_key_generation(self):
+    def test_versioned_cache_key_generation(self) -> None:
         """Test versioned cache key generation."""
         cache = CrackerjackCache(backend=Mock())
         key = cache._get_versioned_hook_cache_key("pyright", ["hash1"], "1.0.0")
 
         assert ":1.0.0" in key
 
-    def test_versioned_cache_key_without_version(self):
+    def test_versioned_cache_key_without_version(self) -> None:
         """Test versioned cache key without version."""
         cache = CrackerjackCache(backend=Mock())
         key = cache._get_versioned_hook_cache_key("pyright", ["hash1"], None)
@@ -334,7 +334,7 @@ class TestCrackerjackCacheFileHashes:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend)
 
-    def test_get_file_hash_miss(self, cache, mock_backend, tmp_path):
+    def test_get_file_hash_miss(self, cache, mock_backend, tmp_path) -> None:
         """Test getting file hash with cache miss."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -345,7 +345,7 @@ class TestCrackerjackCacheFileHashes:
         assert result is None
         assert cache.stats.misses == 1
 
-    def test_get_file_hash_hit(self, cache, mock_backend, tmp_path):
+    def test_get_file_hash_hit(self, cache, mock_backend, tmp_path) -> None:
         """Test getting file hash with cache hit."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -357,7 +357,7 @@ class TestCrackerjackCacheFileHashes:
         assert result == cached_hash
         assert cache.stats.hits == 1
 
-    def test_get_file_hash_without_backend(self, tmp_path):
+    def test_get_file_hash_without_backend(self, tmp_path) -> None:
         """Test get file hash with no backend."""
         cache = CrackerjackCache(backend=None)
         test_file = tmp_path / "test.py"
@@ -368,7 +368,7 @@ class TestCrackerjackCacheFileHashes:
         assert result is None
         assert cache.stats.misses == 1
 
-    def test_set_file_hash(self, cache, mock_backend, tmp_path):
+    def test_set_file_hash(self, cache, mock_backend, tmp_path) -> None:
         """Test setting file hash in cache."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -379,7 +379,7 @@ class TestCrackerjackCacheFileHashes:
         mock_backend.set.assert_called_once()
         assert cache.stats.total_entries == 1
 
-    def test_file_hash_cache_key_includes_mtime_and_size(self, cache, tmp_path):
+    def test_file_hash_cache_key_includes_mtime_and_size(self, cache, tmp_path) -> None:
         """Test file hash cache key includes mtime and size."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -412,7 +412,7 @@ class TestCrackerjackCacheConfigData:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend)
 
-    def test_get_config_data_miss(self, cache, mock_backend):
+    def test_get_config_data_miss(self, cache, mock_backend) -> None:
         """Test getting config data with cache miss."""
         mock_backend.get.return_value = None
 
@@ -421,7 +421,7 @@ class TestCrackerjackCacheConfigData:
         assert result is None
         assert cache.stats.misses == 1
 
-    def test_get_config_data_hit(self, cache, mock_backend):
+    def test_get_config_data_hit(self, cache, mock_backend) -> None:
         """Test getting config data with cache hit."""
         config_data = {"setting": "value"}
         mock_backend.get.return_value = config_data
@@ -431,7 +431,7 @@ class TestCrackerjackCacheConfigData:
         assert result == config_data
         assert cache.stats.hits == 1
 
-    def test_set_config_data(self, cache, mock_backend):
+    def test_set_config_data(self, cache, mock_backend) -> None:
         """Test setting config data in cache."""
         config_data = {"setting": "value"}
 
@@ -440,10 +440,10 @@ class TestCrackerjackCacheConfigData:
         mock_backend.set.assert_called_once()
         # Check cache key format
         call_args = mock_backend.set.call_args[0]
-        assert "config:test_config" == call_args[0]
+        assert call_args[0] == "config:test_config"
         assert cache.stats.total_entries == 1
 
-    def test_get_config_data_without_backend(self):
+    def test_get_config_data_without_backend(self) -> None:
         """Test get config data with no backend."""
         cache = CrackerjackCache(backend=None)
 
@@ -470,7 +470,7 @@ class TestCrackerjackCacheGenericOperations:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend)
 
-    def test_get_with_default(self, cache, mock_backend):
+    def test_get_with_default(self, cache, mock_backend) -> None:
         """Test generic get with default value."""
         mock_backend.get.return_value = None
 
@@ -478,7 +478,7 @@ class TestCrackerjackCacheGenericOperations:
 
         assert result == "default_value"
 
-    def test_get_with_value(self, cache, mock_backend):
+    def test_get_with_value(self, cache, mock_backend) -> None:
         """Test generic get returns cached value."""
         mock_backend.get.return_value = "cached_value"
 
@@ -486,7 +486,7 @@ class TestCrackerjackCacheGenericOperations:
 
         assert result == "cached_value"
 
-    def test_get_without_backend(self):
+    def test_get_without_backend(self) -> None:
         """Test generic get with no backend returns default."""
         cache = CrackerjackCache(backend=None)
 
@@ -494,7 +494,7 @@ class TestCrackerjackCacheGenericOperations:
 
         assert result == "default_value"
 
-    def test_set_with_ttl(self, cache, mock_backend):
+    def test_set_with_ttl(self, cache, mock_backend) -> None:
         """Test generic set with custom TTL."""
         cache.set("test_key", "test_value", ttl_seconds=7200)
 
@@ -502,7 +502,7 @@ class TestCrackerjackCacheGenericOperations:
         call_args = mock_backend.set.call_args
         assert call_args[1]["ttl"] == 7200
 
-    def test_set_with_default_ttl(self, cache, mock_backend):
+    def test_set_with_default_ttl(self, cache, mock_backend) -> None:
         """Test generic set with default TTL."""
         cache.set("test_key", "test_value")
 
@@ -528,7 +528,7 @@ class TestCrackerjackCacheAgentDecisions:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend, enable_disk_cache=True)
 
-    def test_get_agent_decision(self, cache, mock_backend):
+    def test_get_agent_decision(self, cache, mock_backend) -> None:
         """Test getting agent decision from cache."""
         decision_data = {"apply": True, "confidence": 0.9}
         mock_backend.get.return_value = decision_data
@@ -537,7 +537,7 @@ class TestCrackerjackCacheAgentDecisions:
 
         assert result == decision_data
 
-    def test_get_agent_decision_disk_cache_disabled(self):
+    def test_get_agent_decision_disk_cache_disabled(self) -> None:
         """Test get agent decision with disk cache disabled."""
         cache = CrackerjackCache(backend=Mock(), enable_disk_cache=False)
 
@@ -545,7 +545,7 @@ class TestCrackerjackCacheAgentDecisions:
 
         assert result is None
 
-    def test_set_agent_decision(self, cache, mock_backend):
+    def test_set_agent_decision(self, cache, mock_backend) -> None:
         """Test setting agent decision in cache."""
         decision_data = {"apply": True, "confidence": 0.9}
 
@@ -557,7 +557,7 @@ class TestCrackerjackCacheAgentDecisions:
         cache_key = call_args[0]
         assert cache_key.endswith(":1.0.0")  # AGENT_VERSION
 
-    def test_set_agent_decision_disk_cache_disabled(self):
+    def test_set_agent_decision_disk_cache_disabled(self) -> None:
         """Test set agent decision with disk cache disabled."""
         mock_backend = Mock()
         mock_backend.set = AsyncMock()
@@ -587,7 +587,7 @@ class TestCrackerjackCacheQualityBaseline:
         """Create cache with mock backend."""
         return CrackerjackCache(backend=mock_backend, enable_disk_cache=True)
 
-    def test_get_quality_baseline(self, cache, mock_backend):
+    def test_get_quality_baseline(self, cache, mock_backend) -> None:
         """Test getting quality baseline from cache."""
         baseline_data = {"coverage": 85.5, "complexity": 12}
         mock_backend.get.return_value = baseline_data
@@ -596,7 +596,7 @@ class TestCrackerjackCacheQualityBaseline:
 
         assert result == baseline_data
 
-    def test_get_quality_baseline_disk_cache_disabled(self):
+    def test_get_quality_baseline_disk_cache_disabled(self) -> None:
         """Test get quality baseline with disk cache disabled."""
         cache = CrackerjackCache(backend=Mock(), enable_disk_cache=False)
 
@@ -604,7 +604,7 @@ class TestCrackerjackCacheQualityBaseline:
 
         assert result is None
 
-    def test_set_quality_baseline(self, cache, mock_backend):
+    def test_set_quality_baseline(self, cache, mock_backend) -> None:
         """Test setting quality baseline in cache."""
         metrics = {"coverage": 85.5, "complexity": 12}
 
@@ -617,7 +617,7 @@ class TestCrackerjackCacheQualityBaseline:
         # Check long TTL (30 days)
         assert mock_backend.set.call_args[1]["ttl"] == 2592000
 
-    def test_set_quality_baseline_disk_cache_disabled(self):
+    def test_set_quality_baseline_disk_cache_disabled(self) -> None:
         """Test set quality baseline with disk cache disabled."""
         mock_backend = Mock()
         mock_backend.set = AsyncMock()
@@ -634,14 +634,14 @@ class TestCrackerjackCacheQualityBaseline:
 class TestCrackerjackCacheUtilities:
     """Test cache utility methods."""
 
-    def test_invalidate_hook_cache_logs_warning(self):
+    def test_invalidate_hook_cache_logs_warning(self) -> None:
         """Test invalidate hook cache logs warning."""
         cache = CrackerjackCache(backend=Mock())
 
         # Should not raise, just logs warning
         cache.invalidate_hook_cache("ruff")
 
-    def test_cleanup_all_returns_zeros(self):
+    def test_cleanup_all_returns_zeros(self) -> None:
         """Test cleanup all returns zero counts."""
         cache = CrackerjackCache(backend=Mock())
 
@@ -652,7 +652,7 @@ class TestCrackerjackCacheUtilities:
         assert result["config"] == 0
         assert result["disk_cache"] == 0
 
-    def test_get_cache_stats(self):
+    def test_get_cache_stats(self) -> None:
         """Test getting cache statistics."""
         cache = CrackerjackCache(backend=Mock())
         cache.stats.hits = 10
@@ -678,7 +678,7 @@ class TestCrackerjackCacheAsyncHandling:
         backend.set = AsyncMock()
         return backend
 
-    def test_run_async_executes_coroutine(self, mock_backend):
+    def test_run_async_executes_coroutine(self, mock_backend) -> None:
         """Test _run_async executes async operations."""
         cache = CrackerjackCache(backend=mock_backend)
 
@@ -687,7 +687,7 @@ class TestCrackerjackCacheAsyncHandling:
         assert result == "test_value"
         mock_backend.get.assert_called_once()
 
-    def test_run_async_handles_runtime_error(self, mock_backend):
+    def test_run_async_handles_runtime_error(self, mock_backend) -> None:
         """Test _run_async handles asyncio runtime errors."""
         cache = CrackerjackCache(backend=mock_backend)
 
@@ -711,7 +711,7 @@ class TestCrackerjackCacheAsyncHandling:
 class TestCrackerjackCacheConstants:
     """Test cache constant definitions."""
 
-    def test_expensive_hooks_set(self):
+    def test_expensive_hooks_set(self) -> None:
         """Test EXPENSIVE_HOOKS contains expected values."""
         hooks = CrackerjackCache.EXPENSIVE_HOOKS
 
@@ -725,7 +725,7 @@ class TestCrackerjackCacheConstants:
         assert "refurb" in hooks
         assert "zuban" in hooks
 
-    def test_hook_disk_ttls_mapping(self):
+    def test_hook_disk_ttls_mapping(self) -> None:
         """Test HOOK_DISK_TTLS has correct structure."""
         ttls = CrackerjackCache.HOOK_DISK_TTLS
 
@@ -736,6 +736,6 @@ class TestCrackerjackCacheConstants:
             assert isinstance(ttls[hook], int)
             assert ttls[hook] > 0
 
-    def test_agent_version_defined(self):
+    def test_agent_version_defined(self) -> None:
         """Test AGENT_VERSION is defined."""
         assert CrackerjackCache.AGENT_VERSION == "1.0.0"

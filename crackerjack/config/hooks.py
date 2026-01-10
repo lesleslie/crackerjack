@@ -46,7 +46,8 @@ class HookDefinition:
         if self._direct_cmd_cache is None:
             try:
                 self._direct_cmd_cache = get_tool_command(
-                    self.name, pkg_path=Path.cwd()
+                    self.name,
+                    pkg_path=Path.cwd(),
                 )
             except KeyError as exc:
                 msg = f"Hook '{self.name}' is not registered for direct execution."

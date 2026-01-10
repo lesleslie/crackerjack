@@ -50,7 +50,7 @@ class CircuitBreakerState:
 
 
 class ToolProxy:
-    def __init__(self, console: Console | None = None):
+    def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self.health_status: dict[str, ToolHealthStatus] = {}
         self.circuit_breakers: dict[str, CircuitBreakerState] = {}
@@ -128,13 +128,14 @@ class ToolProxy:
 
             if tool_name == "zuban":
                 return self._check_zuban_health()
-            elif tool_name == "skylos":
+            if tool_name == "skylos":
                 return self._check_skylos_health()
 
             import subprocess
 
             result = subprocess.run(
                 ["uv", "run", tool_name, "--version"],
+                check=False,
                 capture_output=True,
                 timeout=10,
                 text=True,
@@ -151,6 +152,7 @@ class ToolProxy:
         try:
             result = subprocess.run(
                 ["uv", "run", "zuban", "--version"],
+                check=False,
                 capture_output=True,
                 timeout=10,
                 text=True,
@@ -164,6 +166,7 @@ class ToolProxy:
 
                 result = subprocess.run(
                     ["uv", "run", "zuban", "check", str(temp_file)],
+                    check=False,
                     capture_output=True,
                     timeout=5,
                     text=True,
@@ -183,6 +186,7 @@ class ToolProxy:
         try:
             result = subprocess.run(
                 ["uv", "run", "skylos", "--version"],
+                check=False,
                 capture_output=True,
                 timeout=10,
                 text=True,
@@ -197,10 +201,8 @@ class ToolProxy:
                 return asyncio.run(self._execute_adapter_async(tool_name, args))
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Adapter execution failed for {tool_name}: {e}[/yellow]"
+                    f"[yellow]Adapter execution failed for {tool_name}: {e}[/yellow]",
                 )
-
-                pass
 
         return self._execute_direct(tool_name, args)
 
@@ -220,8 +222,8 @@ class ToolProxy:
         import subprocess
 
         try:
-            cmd = ["uv", "run", tool_name] + args
-            result = subprocess.run(cmd, timeout=300)
+            cmd = ["uv", "run", tool_name, *args]
+            result = subprocess.run(cmd, check=False, timeout=300)
             return result.returncode
 
         except subprocess.TimeoutExpired:
@@ -229,7 +231,7 @@ class ToolProxy:
             return 1
         except Exception as e:
             self.console.print(
-                f"[red]Direct execution failed for {tool_name}: {e}[/red]"
+                f"[red]Direct execution failed for {tool_name}: {e}[/red]",
             )
             return 1
 
@@ -248,12 +250,12 @@ class ToolProxy:
 
         if not fallbacks:
             self.console.print(
-                f"[yellow]No fallback available for {tool_name}. Skipping with warning.[/yellow]"
+                f"[yellow]No fallback available for {tool_name}. Skipping with warning.[/yellow]",
             )
             return 0
 
         self.console.print(
-            f"[yellow]Trying fallback tools for {tool_name}: {', '.join(fallbacks)}[/yellow]"
+            f"[yellow]Trying fallback tools for {tool_name}: {', '.join(fallbacks)}[/yellow]",
         )
 
         for fallback in fallbacks:
@@ -262,14 +264,14 @@ class ToolProxy:
                     result = self._execute_direct(fallback, args)
                     if result == 0:
                         self.console.print(
-                            f"[green]Fallback {fallback} succeeded[/green]"
+                            f"[green]Fallback {fallback} succeeded[/green]",
                         )
                         return 0
             except Exception:
                 continue
 
         self.console.print(
-            f"[yellow]All fallbacks failed for {tool_name}. Continuing...[/yellow]"
+            f"[yellow]All fallbacks failed for {tool_name}. Continuing...[/yellow]",
         )
         return 0
 
@@ -279,12 +281,12 @@ class ToolProxy:
 
         self.console.print(
             f"[yellow]Circuit breaker open for {tool_name}. "
-            f"Will retry in {retry_minutes} minutes.[/yellow]"
+            f"Will retry in {retry_minutes} minutes.[/yellow]",
         )
 
     def _handle_unhealthy_tool(self, tool_name: str) -> None:
         self.console.print(
-            f"[yellow]Tool {tool_name} is unhealthy. Trying fallbacks...[/yellow]"
+            f"[yellow]Tool {tool_name} is unhealthy. Trying fallbacks...[/yellow]",
         )
 
     def _create_zuban_adapter(self) -> t.Any | None:
@@ -328,7 +330,7 @@ class ToolProxy:
     def get_tool_status(self) -> dict[str, dict[str, t.Any]]:
         status = {}
 
-        for tool_name in self.tool_adapters.keys():
+        for tool_name in self.tool_adapters:
             circuit_breaker = self._get_circuit_breaker(tool_name)
             health_status = self.health_status.get(tool_name)
 
@@ -347,7 +349,6 @@ class ToolProxy:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Usage: python -m crackerjack.executors.tool_proxy <tool_name> [args...]")
         sys.exit(1)
 
     tool_name = sys.argv[1]

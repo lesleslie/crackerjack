@@ -1,17 +1,17 @@
 from __future__ import annotations
 
 import typing as t
-from pathlib import Path
 from typing import Protocol, runtime_checkable
-from uuid import UUID
-
-from crackerjack.adapters._tool_adapter_base import (
-    ToolAdapterSettings,
-    ToolExecutionResult,
-    ToolIssue,
-)
 
 if t.TYPE_CHECKING:
+    from pathlib import Path
+    from uuid import UUID
+
+    from crackerjack.adapters._tool_adapter_base import (
+        ToolAdapterSettings,
+        ToolExecutionResult,
+        ToolIssue,
+    )
     from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QACheckType
 
@@ -56,6 +56,6 @@ class SASTAdapterProtocol(Protocol):
 SASTAdapter = SASTAdapterProtocol
 
 __all__ = [
-    "SASTAdapterProtocol",
     "SASTAdapter",
+    "SASTAdapterProtocol",
 ]

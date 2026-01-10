@@ -44,14 +44,15 @@ async def execute_smart_agent_task(
         }
 
         execution_strategy = strategy_map.get(
-            strategy.lower(), ExecutionStrategy.SINGLE_BEST
+            strategy.lower(),
+            ExecutionStrategy.SINGLE_BEST,
         )
 
         system = await get_intelligent_agent_system()
 
         logger.info(
             f"Executing smart task: '{task_description[:50]}...' "
-            f"(context: {context_type}, strategy: {strategy})"
+            f"(context: {context_type}, strategy: {strategy})",
         )
 
         result = await system.execute_smart_task(
@@ -80,10 +81,14 @@ async def execute_smart_agent_task(
                         "confidence": getattr(result.result, "confidence", 0.0),
                         "fixes_applied": getattr(result.result, "fixes_applied", []),
                         "remaining_issues": getattr(
-                            result.result, "remaining_issues", []
+                            result.result,
+                            "remaining_issues",
+                            [],
                         ),
                         "recommendations": getattr(
-                            result.result, "recommendations", []
+                            result.result,
+                            "recommendations",
+                            [],
                         ),
                         "files_modified": getattr(result.result, "files_modified", []),
                     }
@@ -97,7 +102,7 @@ async def execute_smart_agent_task(
         if result.success:
             logger.info(
                 f"Smart task completed successfully using {len(result.agents_used)} agents "
-                f"in {result.execution_time: .2f}s"
+                f"in {result.execution_time: .2f}s",
             )
         else:
             logger.warning(f"Smart task failed: {result.recommendations}")
@@ -159,7 +164,7 @@ async def get_smart_agent_recommendation(
                     "recommended_agent": agent_name,
                     "confidence": confidence,
                     "has_recommendation": True,
-                }
+                },
             )
         else:
             response.update(
@@ -168,7 +173,7 @@ async def get_smart_agent_recommendation(
                     "confidence": 0.0,
                     "has_recommendation": False,
                     "message": "No suitable agent found for this task",
-                }
+                },
             )
 
         if include_analysis:
@@ -178,7 +183,8 @@ async def get_smart_agent_recommendation(
             except Exception as e:
                 logger.warning(f"Failed to analyze task complexity: {e}")
                 response["complexity_analysis"] = json.dumps(
-                    {"error": str(e)}, indent=2
+                    {"error": str(e)},
+                    indent=2,
                 )
 
         logger.debug(f"Generated recommendation for task: {task_description[:50]}")

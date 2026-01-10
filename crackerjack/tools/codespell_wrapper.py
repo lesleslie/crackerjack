@@ -29,10 +29,6 @@ def main(argv: list[str] | None = None) -> int:
         )
         return result.returncode
     except FileNotFoundError:
-        print(
-            "Error: codespell not found. Install with: uv pip install codespell",
-            file=sys.stderr,
-        )  # noqa: T201
         return 127
     except Exception as e:
         print(f"Error running codespell: {e}", file=sys.stderr)  # noqa: T201

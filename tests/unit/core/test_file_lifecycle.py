@@ -7,6 +7,7 @@ batch operations, and safe file operations.
 import asyncio
 import os
 from pathlib import Path
+from typing import Never
 from unittest.mock import Mock, patch
 
 import pytest
@@ -29,7 +30,7 @@ from crackerjack.core.resource_manager import ResourceManager
 class TestAtomicFileWriterInitialization:
     """Test AtomicFileWriter initialization."""
 
-    def test_initialization_basic(self, tmp_path):
+    def test_initialization_basic(self, tmp_path) -> None:
         """Test basic initialization."""
         target = tmp_path / "test.txt"
 
@@ -41,7 +42,7 @@ class TestAtomicFileWriterInitialization:
         assert writer.temp_path is None
         assert writer.backup_path is None
 
-    def test_initialization_no_backup(self, tmp_path):
+    def test_initialization_no_backup(self, tmp_path) -> None:
         """Test initialization without backup."""
         target = tmp_path / "test.txt"
 
@@ -49,7 +50,7 @@ class TestAtomicFileWriterInitialization:
 
         assert writer.backup is False
 
-    def test_initialization_with_manager(self, tmp_path):
+    def test_initialization_with_manager(self, tmp_path) -> None:
         """Test initialization with resource manager."""
         target = tmp_path / "test.txt"
         manager = ResourceManager()
@@ -64,7 +65,7 @@ class TestAtomicFileWriterLifecycle:
     """Test AtomicFileWriter lifecycle."""
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_temp_file(self, tmp_path):
+    async def test_initialize_creates_temp_file(self, tmp_path) -> None:
         """Test initialization creates temp file."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -78,7 +79,7 @@ class TestAtomicFileWriterLifecycle:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_backup(self, tmp_path):
+    async def test_initialize_creates_backup(self, tmp_path) -> None:
         """Test initialization creates backup of existing file."""
         target = tmp_path / "test.txt"
         target.write_text("original content")
@@ -93,7 +94,7 @@ class TestAtomicFileWriterLifecycle:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_initialize_no_backup_for_new_file(self, tmp_path):
+    async def test_initialize_no_backup_for_new_file(self, tmp_path) -> None:
         """Test no backup created for non-existent file."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=True)
@@ -105,7 +106,7 @@ class TestAtomicFileWriterLifecycle:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_cleanup_removes_temp_file(self, tmp_path):
+    async def test_cleanup_removes_temp_file(self, tmp_path) -> None:
         """Test cleanup removes temp file."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -118,7 +119,7 @@ class TestAtomicFileWriterLifecycle:
         assert not temp_path.exists()
 
     @pytest.mark.asyncio
-    async def test_cleanup_removes_backup(self, tmp_path):
+    async def test_cleanup_removes_backup(self, tmp_path) -> None:
         """Test cleanup removes backup file."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -137,7 +138,7 @@ class TestAtomicFileWriterOperations:
     """Test AtomicFileWriter write operations."""
 
     @pytest.mark.asyncio
-    async def test_write_content(self, tmp_path):
+    async def test_write_content(self, tmp_path) -> None:
         """Test writing content."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -151,7 +152,7 @@ class TestAtomicFileWriterOperations:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_write_without_initialize_raises_error(self, tmp_path):
+    async def test_write_without_initialize_raises_error(self, tmp_path) -> None:
         """Test writing without initialization raises error."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -160,7 +161,7 @@ class TestAtomicFileWriterOperations:
             writer.write("content")
 
     @pytest.mark.asyncio
-    async def test_writelines(self, tmp_path):
+    async def test_writelines(self, tmp_path) -> None:
         """Test writing lines."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -174,7 +175,7 @@ class TestAtomicFileWriterOperations:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_flush_syncs_data(self, tmp_path):
+    async def test_flush_syncs_data(self, tmp_path) -> None:
         """Test flush syncs data to disk."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -194,7 +195,7 @@ class TestAtomicFileWriterCommitRollback:
     """Test AtomicFileWriter commit and rollback."""
 
     @pytest.mark.asyncio
-    async def test_commit_replaces_target(self, tmp_path):
+    async def test_commit_replaces_target(self, tmp_path) -> None:
         """Test commit replaces target file."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -209,7 +210,7 @@ class TestAtomicFileWriterCommitRollback:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_commit_without_initialize_raises_error(self, tmp_path):
+    async def test_commit_without_initialize_raises_error(self, tmp_path) -> None:
         """Test commit without initialization raises error."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -218,7 +219,7 @@ class TestAtomicFileWriterCommitRollback:
             await writer.commit()
 
     @pytest.mark.asyncio
-    async def test_commit_failure_restores_backup(self, tmp_path):
+    async def test_commit_failure_restores_backup(self, tmp_path) -> None:
         """Test commit failure restores from backup."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -235,7 +236,7 @@ class TestAtomicFileWriterCommitRollback:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_rollback_restores_backup(self, tmp_path):
+    async def test_rollback_restores_backup(self, tmp_path) -> None:
         """Test rollback restores from backup."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -250,7 +251,7 @@ class TestAtomicFileWriterCommitRollback:
         await writer.cleanup()
 
     @pytest.mark.asyncio
-    async def test_rollback_without_backup_does_nothing(self, tmp_path):
+    async def test_rollback_without_backup_does_nothing(self, tmp_path) -> None:
         """Test rollback without backup does nothing."""
         target = tmp_path / "test.txt"
         writer = AtomicFileWriter(target, backup=False)
@@ -265,7 +266,7 @@ class TestAtomicFileWriterCommitRollback:
 class TestLockedFileResourceInitialization:
     """Test LockedFileResource initialization."""
 
-    def test_initialization_basic(self, tmp_path):
+    def test_initialization_basic(self, tmp_path) -> None:
         """Test basic initialization."""
         target = tmp_path / "test.txt"
 
@@ -275,7 +276,7 @@ class TestLockedFileResourceInitialization:
         assert resource.mode == "r+"
         assert resource.timeout == 30.0
 
-    def test_initialization_custom_mode(self, tmp_path):
+    def test_initialization_custom_mode(self, tmp_path) -> None:
         """Test initialization with custom mode."""
         target = tmp_path / "test.txt"
 
@@ -283,7 +284,7 @@ class TestLockedFileResourceInitialization:
 
         assert resource.mode == "w"
 
-    def test_initialization_custom_timeout(self, tmp_path):
+    def test_initialization_custom_timeout(self, tmp_path) -> None:
         """Test initialization with custom timeout."""
         target = tmp_path / "test.txt"
 
@@ -297,7 +298,7 @@ class TestLockedFileResourceLocking:
     """Test LockedFileResource file locking."""
 
     @pytest.mark.asyncio
-    async def test_initialize_acquires_lock(self, tmp_path):
+    async def test_initialize_acquires_lock(self, tmp_path) -> None:
         """Test initialization acquires file lock."""
         target = tmp_path / "test.txt"
         target.write_text("content")
@@ -310,7 +311,7 @@ class TestLockedFileResourceLocking:
         await resource.cleanup()
 
     @pytest.mark.asyncio
-    async def test_cleanup_releases_lock(self, tmp_path):
+    async def test_cleanup_releases_lock(self, tmp_path) -> None:
         """Test cleanup releases file lock."""
         target = tmp_path / "test.txt"
         target.write_text("content")
@@ -322,7 +323,7 @@ class TestLockedFileResourceLocking:
         assert resource._file_handle.closed
 
     @pytest.mark.asyncio
-    async def test_file_handle_property(self, tmp_path):
+    async def test_file_handle_property(self, tmp_path) -> None:
         """Test file_handle property."""
         target = tmp_path / "test.txt"
         target.write_text("content")
@@ -338,7 +339,7 @@ class TestLockedFileResourceLocking:
         await resource.cleanup()
 
     @pytest.mark.asyncio
-    async def test_file_handle_property_not_initialized(self, tmp_path):
+    async def test_file_handle_property_not_initialized(self, tmp_path) -> None:
         """Test file_handle property raises error when not initialized."""
         target = tmp_path / "test.txt"
         resource = LockedFileResource(target)
@@ -352,7 +353,7 @@ class TestLockedFileResourceOperations:
     """Test LockedFileResource read/write operations."""
 
     @pytest.mark.asyncio
-    async def test_read_content(self, tmp_path):
+    async def test_read_content(self, tmp_path) -> None:
         """Test reading file content."""
         target = tmp_path / "test.txt"
         target.write_text("test content")
@@ -367,7 +368,7 @@ class TestLockedFileResourceOperations:
         await resource.cleanup()
 
     @pytest.mark.asyncio
-    async def test_write_content(self, tmp_path):
+    async def test_write_content(self, tmp_path) -> None:
         """Test writing file content."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -382,7 +383,7 @@ class TestLockedFileResourceOperations:
         assert target.read_text() == "updated"
 
     @pytest.mark.asyncio
-    async def test_write_truncates_file(self, tmp_path):
+    async def test_write_truncates_file(self, tmp_path) -> None:
         """Test write truncates file."""
         target = tmp_path / "test.txt"
         target.write_text("long original content")
@@ -401,7 +402,7 @@ class TestLockedFileResourceOperations:
 class TestSafeDirectoryCreatorInitialization:
     """Test SafeDirectoryCreator initialization."""
 
-    def test_initialization_basic(self, tmp_path):
+    def test_initialization_basic(self, tmp_path) -> None:
         """Test basic initialization."""
         target = tmp_path / "newdir"
 
@@ -411,7 +412,7 @@ class TestSafeDirectoryCreatorInitialization:
         assert creator.cleanup_on_error is True
         assert creator._created_dirs == []
 
-    def test_initialization_no_cleanup(self, tmp_path):
+    def test_initialization_no_cleanup(self, tmp_path) -> None:
         """Test initialization without cleanup."""
         target = tmp_path / "newdir"
 
@@ -425,7 +426,7 @@ class TestSafeDirectoryCreatorOperations:
     """Test SafeDirectoryCreator directory operations."""
 
     @pytest.mark.asyncio
-    async def test_initialize_creates_directory(self, tmp_path):
+    async def test_initialize_creates_directory(self, tmp_path) -> None:
         """Test initialization creates directory."""
         target = tmp_path / "new" / "nested" / "dir"
 
@@ -436,7 +437,7 @@ class TestSafeDirectoryCreatorOperations:
         assert target.is_dir()
 
     @pytest.mark.asyncio
-    async def test_initialize_tracks_created_dirs(self, tmp_path):
+    async def test_initialize_tracks_created_dirs(self, tmp_path) -> None:
         """Test initialization tracks created directories."""
         target = tmp_path / "new" / "nested" / "dir"
 
@@ -446,7 +447,7 @@ class TestSafeDirectoryCreatorOperations:
         assert len(creator._created_dirs) == 3
 
     @pytest.mark.asyncio
-    async def test_cleanup_removes_empty_dirs(self, tmp_path):
+    async def test_cleanup_removes_empty_dirs(self, tmp_path) -> None:
         """Test cleanup removes empty directories."""
         target = tmp_path / "new" / "nested" / "dir"
 
@@ -459,7 +460,7 @@ class TestSafeDirectoryCreatorOperations:
         assert not target.exists()
 
     @pytest.mark.asyncio
-    async def test_cleanup_preserves_non_empty_dirs(self, tmp_path):
+    async def test_cleanup_preserves_non_empty_dirs(self, tmp_path) -> None:
         """Test cleanup preserves non-empty directories."""
         target = tmp_path / "new" / "nested" / "dir"
 
@@ -479,7 +480,7 @@ class TestSafeDirectoryCreatorOperations:
 class TestBatchFileOperationsInitialization:
     """Test BatchFileOperations initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         batch = BatchFileOperations()
 
@@ -487,7 +488,7 @@ class TestBatchFileOperationsInitialization:
         assert batch.operations == []
         assert batch.rollback_operations == []
 
-    def test_initialization_with_manager(self):
+    def test_initialization_with_manager(self) -> None:
         """Test initialization with resource manager."""
         manager = ResourceManager()
 
@@ -500,7 +501,7 @@ class TestBatchFileOperationsInitialization:
 class TestBatchFileOperationsWriteOperation:
     """Test BatchFileOperations write operation."""
 
-    def test_add_write_operation(self, tmp_path):
+    def test_add_write_operation(self, tmp_path) -> None:
         """Test adding write operation."""
         target = tmp_path / "test.txt"
         batch = BatchFileOperations()
@@ -515,7 +516,7 @@ class TestBatchFileOperationsWriteOperation:
 class TestBatchFileOperationsCopyOperation:
     """Test BatchFileOperations copy operation."""
 
-    def test_add_copy_operation(self, tmp_path):
+    def test_add_copy_operation(self, tmp_path) -> None:
         """Test adding copy operation."""
         source = tmp_path / "source.txt"
         dest = tmp_path / "dest.txt"
@@ -527,7 +528,7 @@ class TestBatchFileOperationsCopyOperation:
         assert len(batch.rollback_operations) == 1
 
     @pytest.mark.asyncio
-    async def test_copy_operation_execution(self, tmp_path):
+    async def test_copy_operation_execution(self, tmp_path) -> None:
         """Test copy operation execution."""
         source = tmp_path / "source.txt"
         source.write_text("content")
@@ -546,7 +547,7 @@ class TestBatchFileOperationsCopyOperation:
 class TestBatchFileOperationsMoveOperation:
     """Test BatchFileOperations move operation."""
 
-    def test_add_move_operation(self, tmp_path):
+    def test_add_move_operation(self, tmp_path) -> None:
         """Test adding move operation."""
         source = tmp_path / "source.txt"
         dest = tmp_path / "dest.txt"
@@ -558,7 +559,7 @@ class TestBatchFileOperationsMoveOperation:
         assert len(batch.rollback_operations) == 1
 
     @pytest.mark.asyncio
-    async def test_move_operation_execution(self, tmp_path):
+    async def test_move_operation_execution(self, tmp_path) -> None:
         """Test move operation execution."""
         source = tmp_path / "source.txt"
         source.write_text("content")
@@ -577,7 +578,7 @@ class TestBatchFileOperationsMoveOperation:
 class TestBatchFileOperationsDeleteOperation:
     """Test BatchFileOperations delete operation."""
 
-    def test_add_delete_operation(self, tmp_path):
+    def test_add_delete_operation(self, tmp_path) -> None:
         """Test adding delete operation."""
         target = tmp_path / "test.txt"
         batch = BatchFileOperations()
@@ -588,7 +589,7 @@ class TestBatchFileOperationsDeleteOperation:
         assert len(batch.rollback_operations) == 1
 
     @pytest.mark.asyncio
-    async def test_delete_operation_execution(self, tmp_path):
+    async def test_delete_operation_execution(self, tmp_path) -> None:
         """Test delete operation execution."""
         target = tmp_path / "test.txt"
         target.write_text("content")
@@ -606,7 +607,7 @@ class TestBatchFileOperationsCommitRollback:
     """Test BatchFileOperations commit and rollback."""
 
     @pytest.mark.asyncio
-    async def test_commit_all_executes_operations(self, tmp_path):
+    async def test_commit_all_executes_operations(self, tmp_path) -> None:
         """Test commit_all executes all operations."""
         source = tmp_path / "source.txt"
         source.write_text("content")
@@ -620,7 +621,7 @@ class TestBatchFileOperationsCommitRollback:
         assert dest.exists()
 
     @pytest.mark.asyncio
-    async def test_commit_all_rollback_on_failure(self, tmp_path):
+    async def test_commit_all_rollback_on_failure(self, tmp_path) -> None:
         """Test commit_all rolls back on failure."""
         batch = BatchFileOperations()
 
@@ -630,10 +631,11 @@ class TestBatchFileOperationsCommitRollback:
         batch.add_delete_operation(file1, backup=False)
 
         # Add failing operation
-        def failing_op():
-            raise RuntimeError("Simulated failure")
+        def failing_op() -> Never:
+            msg = "Simulated failure"
+            raise RuntimeError(msg)
 
-        def rollback_op():
+        def rollback_op() -> None:
             file1.write_text("restored")
 
         batch.operations.append(failing_op)
@@ -648,7 +650,7 @@ class TestContextManagers:
     """Test context manager functions."""
 
     @pytest.mark.asyncio
-    async def test_atomic_file_write_context(self, tmp_path):
+    async def test_atomic_file_write_context(self, tmp_path) -> None:
         """Test atomic_file_write context manager."""
         target = tmp_path / "test.txt"
 
@@ -658,7 +660,7 @@ class TestContextManagers:
         assert target.read_text() == "content"
 
     @pytest.mark.asyncio
-    async def test_atomic_file_write_rollback_on_exception(self, tmp_path):
+    async def test_atomic_file_write_rollback_on_exception(self, tmp_path) -> None:
         """Test atomic_file_write rolls back on exception."""
         target = tmp_path / "test.txt"
         target.write_text("original")
@@ -666,14 +668,15 @@ class TestContextManagers:
         try:
             async with atomic_file_write(target, backup=True) as writer:
                 writer.write("updated")
-                raise RuntimeError("Test error")
+                msg = "Test error"
+                raise RuntimeError(msg)
         except RuntimeError:
             pass
 
         assert target.read_text() == "original"
 
     @pytest.mark.asyncio
-    async def test_locked_file_access_context(self, tmp_path):
+    async def test_locked_file_access_context(self, tmp_path) -> None:
         """Test locked_file_access context manager."""
         target = tmp_path / "test.txt"
         target.write_text("content")
@@ -684,7 +687,7 @@ class TestContextManagers:
         assert content == "content"
 
     @pytest.mark.asyncio
-    async def test_safe_directory_creation_context(self, tmp_path):
+    async def test_safe_directory_creation_context(self, tmp_path) -> None:
         """Test safe_directory_creation context manager."""
         target = tmp_path / "new" / "dir"
 
@@ -694,7 +697,7 @@ class TestContextManagers:
         assert target.exists()
 
     @pytest.mark.asyncio
-    async def test_batch_file_operations_context(self, tmp_path):
+    async def test_batch_file_operations_context(self, tmp_path) -> None:
         """Test batch_file_operations context manager."""
         source = tmp_path / "source.txt"
         source.write_text("content")
@@ -711,7 +714,7 @@ class TestSafeFileOperationsRead:
     """Test SafeFileOperations read methods."""
 
     @pytest.mark.asyncio
-    async def test_safe_read_text_success(self, tmp_path):
+    async def test_safe_read_text_success(self, tmp_path) -> None:
         """Test safe_read_text with UTF-8."""
         target = tmp_path / "test.txt"
         target.write_text("content", encoding="utf-8")
@@ -721,7 +724,7 @@ class TestSafeFileOperationsRead:
         assert content == "content"
 
     @pytest.mark.asyncio
-    async def test_safe_read_text_fallback_encoding(self, tmp_path):
+    async def test_safe_read_text_fallback_encoding(self, tmp_path) -> None:
         """Test safe_read_text with fallback encoding."""
         target = tmp_path / "test.txt"
         target.write_bytes(b"content\xff")
@@ -731,7 +734,7 @@ class TestSafeFileOperationsRead:
         assert "content" in content
 
     @pytest.mark.asyncio
-    async def test_safe_read_text_file_not_found(self, tmp_path):
+    async def test_safe_read_text_file_not_found(self, tmp_path) -> None:
         """Test safe_read_text with non-existent file."""
         target = tmp_path / "nonexistent.txt"
 
@@ -744,18 +747,18 @@ class TestSafeFileOperationsWrite:
     """Test SafeFileOperations write methods."""
 
     @pytest.mark.asyncio
-    async def test_safe_write_text_atomic(self, tmp_path):
+    async def test_safe_write_text_atomic(self, tmp_path) -> None:
         """Test safe_write_text with atomic write."""
         target = tmp_path / "test.txt"
 
         await SafeFileOperations.safe_write_text(
-            target, "content", atomic=True, backup=False
+            target, "content", atomic=True, backup=False,
         )
 
         assert target.read_text() == "content"
 
     @pytest.mark.asyncio
-    async def test_safe_write_text_non_atomic(self, tmp_path):
+    async def test_safe_write_text_non_atomic(self, tmp_path) -> None:
         """Test safe_write_text without atomic write."""
         target = tmp_path / "subdir" / "test.txt"
 
@@ -769,20 +772,20 @@ class TestSafeFileOperationsCopy:
     """Test SafeFileOperations copy methods."""
 
     @pytest.mark.asyncio
-    async def test_safe_copy_file_success(self, tmp_path):
+    async def test_safe_copy_file_success(self, tmp_path) -> None:
         """Test safe_copy_file success."""
         source = tmp_path / "source.txt"
         source.write_text("content")
         dest = tmp_path / "dest.txt"
 
         await SafeFileOperations.safe_copy_file(
-            source, dest, preserve_metadata=True, backup=False
+            source, dest, preserve_metadata=True, backup=False,
         )
 
         assert dest.read_text() == "content"
 
     @pytest.mark.asyncio
-    async def test_safe_copy_file_source_not_found(self, tmp_path):
+    async def test_safe_copy_file_source_not_found(self, tmp_path) -> None:
         """Test safe_copy_file with non-existent source."""
         source = tmp_path / "nonexistent.txt"
         dest = tmp_path / "dest.txt"
@@ -791,7 +794,7 @@ class TestSafeFileOperationsCopy:
             await SafeFileOperations.safe_copy_file(source, dest)
 
     @pytest.mark.asyncio
-    async def test_safe_copy_file_with_backup(self, tmp_path):
+    async def test_safe_copy_file_with_backup(self, tmp_path) -> None:
         """Test safe_copy_file creates backup."""
         source = tmp_path / "source.txt"
         source.write_text("new content")
@@ -809,7 +812,7 @@ class TestSafeFileOperationsMove:
     """Test SafeFileOperations move methods."""
 
     @pytest.mark.asyncio
-    async def test_safe_move_file_success(self, tmp_path):
+    async def test_safe_move_file_success(self, tmp_path) -> None:
         """Test safe_move_file success."""
         source = tmp_path / "source.txt"
         source.write_text("content")
@@ -821,7 +824,7 @@ class TestSafeFileOperationsMove:
         assert not source.exists()
 
     @pytest.mark.asyncio
-    async def test_safe_move_file_source_not_found(self, tmp_path):
+    async def test_safe_move_file_source_not_found(self, tmp_path) -> None:
         """Test safe_move_file with non-existent source."""
         source = tmp_path / "nonexistent.txt"
         dest = tmp_path / "dest.txt"
@@ -830,7 +833,7 @@ class TestSafeFileOperationsMove:
             await SafeFileOperations.safe_move_file(source, dest)
 
     @pytest.mark.asyncio
-    async def test_safe_move_file_with_backup(self, tmp_path):
+    async def test_safe_move_file_with_backup(self, tmp_path) -> None:
         """Test safe_move_file creates and removes backup."""
         source = tmp_path / "source.txt"
         source.write_text("new content")

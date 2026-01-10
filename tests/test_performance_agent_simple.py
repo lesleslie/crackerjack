@@ -53,7 +53,7 @@ class TestPerformanceAgentSimple:
 
     @pytest.mark.asyncio
     async def test_analyze_and_fix_with_nonexistent_file(
-        self, performance_agent
+        self, performance_agent,
     ) -> None:
         issue = Issue(
             id="perf - 002",

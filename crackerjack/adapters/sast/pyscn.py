@@ -45,7 +45,8 @@ class PyscnAdapter(BaseToolAdapter):
     def __init__(self, settings: PyscnSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "PyscnAdapter initialized", extra={"has_settings": settings is not None}
+            "PyscnAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -85,7 +86,8 @@ class PyscnAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name, "check"]
 
@@ -174,7 +176,10 @@ class PyscnAdapter(BaseToolAdapter):
         return "error"
 
     def _extract_message(
-        self, severity_and_message: str, message: str, severity: str
+        self,
+        severity_and_message: str,
+        message: str,
+        severity: str,
     ) -> str:
         if message:
             return message

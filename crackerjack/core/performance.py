@@ -107,8 +107,8 @@ def memoize_with_ttl(
             cache[key] = (time.time(), result)
             return result
 
-        setattr(wrapper, "cache_clear", cache.clear)
-        setattr(wrapper, "cache_info", lambda: {"size": len(cache), "ttl": ttl})
+        wrapper.cache_clear = cache.clear
+        wrapper.cache_info = lambda: {"size": len(cache), "ttl": ttl}
         return wrapper
 
     return decorator
@@ -148,7 +148,7 @@ class OptimizedFileWatcher:
         cache_key = f"modified_since_{since}"
         cached = self._file_cache.get(cache_key)
         if cached is not None:
-            return t.cast(list[Path], cached)
+            return t.cast("list[Path]", cached)
         modified_files: list[Path] = []
         for py_file in self.get_python_files():
             try:
@@ -163,7 +163,7 @@ class OptimizedFileWatcher:
         self._file_cache.clear()
 
         if hasattr(self.get_python_files, "cache_clear"):
-            cache_clear = getattr(self.get_python_files, "cache_clear")
+            cache_clear = self.get_python_files.cache_clear
             cache_clear()
 
 

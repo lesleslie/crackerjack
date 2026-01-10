@@ -6,20 +6,20 @@ from pathlib import Path
 import pytest
 
 from crackerjack.core.file_lifecycle import (
-    SafeFileOperations,
-    atomic_file_write,
-    locked_file_access,
-    safe_directory_creation,
-    batch_file_operations,
     AtomicFileWriter,
+    BatchFileOperations,
     LockedFileResource,
     SafeDirectoryCreator,
-    BatchFileOperations
+    SafeFileOperations,
+    atomic_file_write,
+    batch_file_operations,
+    locked_file_access,
+    safe_directory_creation,
 )
 
 
 @pytest.mark.asyncio
-async def test_atomic_file_write_basic():
+async def test_atomic_file_write_basic() -> None:
     """Test basic functionality of atomic_file_write."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -33,15 +33,15 @@ async def test_atomic_file_write_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_locked_file_access_basic():
+async def test_locked_file_access_basic() -> None:
     """Test basic functionality of locked_file_access."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("test content")
         tmp.flush()
 
     try:
-        async with locked_file_access(tmp_path, mode='r+') as resource:
+        async with locked_file_access(tmp_path, mode="r+") as resource:
             content = resource.read()
             assert content == "test content"
     finally:
@@ -49,7 +49,7 @@ async def test_locked_file_access_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_safe_directory_creation_basic():
+async def test_safe_directory_creation_basic() -> None:
     """Test basic functionality of safe_directory_creation."""
     test_dir = Path(tempfile.mkdtemp()) / "nested" / "subdir"
 
@@ -64,7 +64,7 @@ async def test_safe_directory_creation_basic():
             shutil.rmtree(base_dir)
 
 @pytest.mark.asyncio
-async def test_batch_file_operations_basic():
+async def test_batch_file_operations_basic() -> None:
     """Test basic functionality of batch_file_operations."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -78,7 +78,7 @@ async def test_batch_file_operations_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_write_basic():
+async def test_write_basic() -> None:
     """Test basic functionality of AtomicFileWriter.write method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -92,7 +92,7 @@ async def test_write_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_writelines_basic():
+async def test_writelines_basic() -> None:
     """Test basic functionality of AtomicFileWriter.writelines method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -108,7 +108,7 @@ async def test_writelines_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_flush_basic():
+async def test_flush_basic() -> None:
     """Test basic functionality of AtomicFileWriter.flush method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -123,7 +123,7 @@ async def test_flush_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_commit_basic():
+async def test_commit_basic() -> None:
     """Test basic functionality of AtomicFileWriter.commit method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -140,9 +140,9 @@ async def test_commit_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_rollback_basic():
+async def test_rollback_basic() -> None:
     """Test basic functionality of AtomicFileWriter.rollback method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("original content")
         tmp.flush()
@@ -161,15 +161,15 @@ async def test_rollback_basic():
         if tmp_path.exists():
             tmp_path.unlink()
 
-def test_file_handle_basic():
+def test_file_handle_basic() -> None:
     """Test basic functionality of LockedFileResource.file_handle property."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("test content")
         tmp.flush()
 
-    async def run_test():
-        resource = LockedFileResource(tmp_path, mode='r+')
+    async def run_test() -> None:
+        resource = LockedFileResource(tmp_path, mode="r+")
         await resource.initialize()
         handle = resource.file_handle
         assert handle is not None
@@ -182,15 +182,15 @@ def test_file_handle_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_read_basic():
+async def test_read_basic() -> None:
     """Test basic functionality of LockedFileResource.read method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("test content")
         tmp.flush()
 
     try:
-        async with locked_file_access(tmp_path, mode='r') as resource:
+        async with locked_file_access(tmp_path, mode="r") as resource:
             content = resource.read()
             assert content == "test content"
     finally:
@@ -198,7 +198,7 @@ async def test_read_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_add_write_operation_basic():
+async def test_add_write_operation_basic() -> None:
     """Test basic functionality of BatchFileOperations.add_write_operation method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -213,9 +213,9 @@ async def test_add_write_operation_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_add_copy_operation_basic():
+async def test_add_copy_operation_basic() -> None:
     """Test basic functionality of BatchFileOperations.add_copy_operation method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -235,9 +235,9 @@ async def test_add_copy_operation_basic():
             dest_path.unlink()
 
 @pytest.mark.asyncio
-async def test_add_move_operation_basic():
+async def test_add_move_operation_basic() -> None:
     """Test basic functionality of BatchFileOperations.add_move_operation method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -258,9 +258,9 @@ async def test_add_move_operation_basic():
             src_path.unlink()
 
 @pytest.mark.asyncio
-async def test_add_delete_operation_basic():
+async def test_add_delete_operation_basic() -> None:
     """Test basic functionality of BatchFileOperations.add_delete_operation method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("content to delete")
         tmp.flush()
@@ -276,7 +276,7 @@ async def test_add_delete_operation_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_commit_all_basic():
+async def test_commit_all_basic() -> None:
     """Test basic functionality of BatchFileOperations.commit_all method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -290,9 +290,9 @@ async def test_commit_all_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_safe_read_text_basic():
+async def test_safe_read_text_basic() -> None:
     """Test basic functionality of SafeFileOperations.safe_read_text method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False, encoding='utf-8') as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False, encoding="utf-8") as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("test content")
         tmp.flush()
@@ -305,7 +305,7 @@ async def test_safe_read_text_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_safe_write_text_basic():
+async def test_safe_write_text_basic() -> None:
     """Test basic functionality of SafeFileOperations.safe_write_text method."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -318,9 +318,9 @@ async def test_safe_write_text_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_safe_copy_file_basic():
+async def test_safe_copy_file_basic() -> None:
     """Test basic functionality of SafeFileOperations.safe_copy_file method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -338,9 +338,9 @@ async def test_safe_copy_file_basic():
             dest_path.unlink()
 
 @pytest.mark.asyncio
-async def test_safe_move_file_basic():
+async def test_safe_move_file_basic() -> None:
     """Test basic functionality of SafeFileOperations.safe_move_file method."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -362,7 +362,7 @@ async def test_safe_move_file_basic():
 # methods of BatchFileOperations and not meant to be called directly from outside
 # So we'll skip these tests or provide appropriate tests for them
 @pytest.mark.asyncio
-async def test_write_op_basic():
+async def test_write_op_basic() -> None:
     """Test that write_op is created properly as part of add_write_operation."""
     with tempfile.NamedTemporaryFile(delete=False) as tmp:
         tmp_path = Path(tmp.name)
@@ -378,9 +378,9 @@ async def test_write_op_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_rollback_op_basic():
+async def test_rollback_op_basic() -> None:
     """Test that rollback_op is created properly as part of add_write_operation."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("original content")
         tmp.flush()
@@ -395,9 +395,9 @@ async def test_rollback_op_basic():
             tmp_path.unlink()
 
 @pytest.mark.asyncio
-async def test_copy_op_basic():
+async def test_copy_op_basic() -> None:
     """Test that copy_op is created properly as part of add_copy_operation."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -418,9 +418,9 @@ async def test_copy_op_basic():
             dest_path.unlink()
 
 @pytest.mark.asyncio
-async def test_move_op_basic():
+async def test_move_op_basic() -> None:
     """Test that move_op is created properly as part of add_move_operation."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as src_tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as src_tmp:
         src_path = Path(src_tmp.name)
         src_tmp.write("source content")
         src_tmp.flush()
@@ -442,9 +442,9 @@ async def test_move_op_basic():
             src_path.unlink()
 
 @pytest.mark.asyncio
-async def test_delete_op_basic():
+async def test_delete_op_basic() -> None:
     """Test that delete_op is created properly as part of add_delete_operation."""
-    with tempfile.NamedTemporaryFile(mode='w', delete=False) as tmp:
+    with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
         tmp_path = Path(tmp.name)
         tmp.write("content to delete")
         tmp.flush()

@@ -5,7 +5,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, Field
 
-from ..errors import ErrorCode, ExecutionError
+from crackerjack.errors import ErrorCode, ExecutionError
+
 from .regex_patterns import SAFE_PATTERNS
 from .security_logger import (
     SecurityEventLevel,
@@ -132,7 +133,9 @@ class InputSanitizer:
         sanitized = value.strip()
 
         return ValidationResult(
-            valid=True, sanitized_value=sanitized, validation_type="string_sanitization"
+            valid=True,
+            sanitized_value=sanitized,
+            validation_type="string_sanitization",
         )
 
     @classmethod
@@ -159,7 +162,9 @@ class InputSanitizer:
 
     @classmethod
     def _validate_string_security(
-        cls, value: str, allow_shell_chars: bool
+        cls,
+        value: str,
+        allow_shell_chars: bool,
     ) -> ValidationResult:
         if "\x00" in value:
             return ValidationResult(
@@ -231,7 +236,10 @@ class InputSanitizer:
 
     @classmethod
     def sanitize_json(
-        cls, value: str, max_size: int = 1024 * 1024, max_depth: int = 10
+        cls,
+        value: str,
+        max_size: int = 1024 * 1024,
+        max_depth: int = 10,
     ) -> ValidationResult:
         if len(value) > max_size:
             return ValidationResult(
@@ -254,7 +262,7 @@ class InputSanitizer:
                         if obj
                         else current_depth
                     )
-                elif isinstance(obj, list):
+                if isinstance(obj, list):
                     return (
                         max(check_depth(item, current_depth + 1) for item in obj)
                         if obj
@@ -272,7 +280,9 @@ class InputSanitizer:
                 )
 
             return ValidationResult(
-                valid=True, sanitized_value=parsed, validation_type="json_parsing"
+                valid=True,
+                sanitized_value=parsed,
+                validation_type="json_parsing",
             )
 
         except json.JSONDecodeError as e:
@@ -299,7 +309,9 @@ class InputSanitizer:
 
             if base_directory:
                 base_result = cls._validate_base_directory(
-                    path, base_directory, allow_absolute
+                    path,
+                    base_directory,
+                    allow_absolute,
                 )
                 if not base_result.valid:
                     return base_result
@@ -308,7 +320,10 @@ class InputSanitizer:
                 resolved = path.resolve()
 
             absolute_result = cls._validate_absolute_path(
-                resolved, allow_absolute, base_directory, path.is_absolute()
+                resolved,
+                allow_absolute,
+                base_directory,
+                path.is_absolute(),
             )
             if not absolute_result.valid:
                 return absolute_result
@@ -341,7 +356,10 @@ class InputSanitizer:
 
     @classmethod
     def _validate_base_directory(
-        cls, path: Path, base_directory: Path, allow_absolute: bool
+        cls,
+        path: Path,
+        base_directory: Path,
+        allow_absolute: bool,
     ) -> ValidationResult:
         base_resolved = base_directory.resolve()
 
@@ -377,7 +395,9 @@ class InputSanitizer:
                 )
 
         return ValidationResult(
-            valid=True, sanitized_value=resolved, validation_type="base_directory"
+            valid=True,
+            sanitized_value=resolved,
+            validation_type="base_directory",
         )
 
     @classmethod
@@ -404,7 +424,7 @@ class InputSanitizer:
 
 
 class SecureInputValidator:
-    def __init__(self, config: ValidationConfig | None = None):
+    def __init__(self, config: ValidationConfig | None = None) -> None:
         self.config = config or ValidationConfig()
         self.logger = get_security_logger()
         self.sanitizer = InputSanitizer()
@@ -420,7 +440,10 @@ class SecureInputValidator:
 
         if not result.valid:
             self._log_validation_failure(
-                "project_name", name, result.error_message, result.security_level
+                "project_name",
+                name,
+                result.error_message,
+                result.security_level,
             )
 
         return result
@@ -435,7 +458,10 @@ class SecureInputValidator:
                 validation_type="job_id_format",
             )
             self._log_validation_failure(
-                "job_id", job_id, result.error_message, result.security_level
+                "job_id",
+                job_id,
+                result.error_message,
+                result.security_level,
             )
             return result
 
@@ -448,7 +474,10 @@ class SecureInputValidator:
 
         if not result.valid:
             self._log_validation_failure(
-                "job_id", job_id, result.error_message, result.security_level
+                "job_id",
+                job_id,
+                result.error_message,
+                result.security_level,
             )
 
         return result
@@ -499,7 +528,10 @@ class SecureInputValidator:
 
         if not result.valid:
             self._log_validation_failure(
-                "command_args", str(args), result.error_message, result.security_level
+                "command_args",
+                str(args),
+                result.error_message,
+                result.security_level,
             )
 
         return result
@@ -531,7 +563,10 @@ class SecureInputValidator:
 
         if not result.valid:
             self._log_validation_failure(
-                "file_path", str(path), result.error_message, result.security_level
+                "file_path",
+                str(path),
+                result.error_message,
+                result.security_level,
             )
 
         return result
@@ -546,12 +581,17 @@ class SecureInputValidator:
                 validation_type="env_var_name",
             )
             self._log_validation_failure(
-                "env_var_name", name, result.error_message, result.security_level
+                "env_var_name",
+                name,
+                result.error_message,
+                result.security_level,
             )
             return result
 
         result = self.sanitizer.sanitize_string(
-            value, max_length=self.config.MAX_STRING_LENGTH, allow_shell_chars=False
+            value,
+            max_length=self.config.MAX_STRING_LENGTH,
+            allow_shell_chars=False,
         )
 
         if not result.valid:
@@ -607,7 +647,8 @@ def validation_required(
 
 
 def _validate_function_args(
-    validator: SecureInputValidator, args: tuple[t.Any, ...]
+    validator: SecureInputValidator,
+    args: tuple[t.Any, ...],
 ) -> None:
     for i, arg in enumerate(args):
         if isinstance(arg, str):
@@ -620,7 +661,8 @@ def _validate_function_args(
 
 
 def _validate_function_kwargs(
-    validator: SecureInputValidator, kwargs: dict[str, t.Any]
+    validator: SecureInputValidator,
+    kwargs: dict[str, t.Any],
 ) -> None:
     for key, value in kwargs.items():
         if isinstance(value, str):

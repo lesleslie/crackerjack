@@ -1,59 +1,59 @@
 """Tests for decorators utilities module."""
 
 import asyncio
-import typing as t
 import types
+import typing as t
 from unittest.mock import Mock
 
 import pytest
 
 from crackerjack.decorators.utils import (
+    format_exception_chain,
+    get_function_context,
     is_async_function,
     preserve_signature,
-    get_function_context,
-    format_exception_chain,
 )
 
 
 class TestDecoratorUtils:
     """Tests for decorator utility functions."""
 
-    def test_is_async_function_with_async_func(self):
+    def test_is_async_function_with_async_func(self) -> None:
         """Test is_async_function with async function."""
 
-        async def async_func():
+        async def async_func() -> None:
             pass
 
         assert is_async_function(async_func) is True
 
-    def test_is_async_function_with_sync_func(self):
+    def test_is_async_function_with_sync_func(self) -> None:
         """Test is_async_function with synchronous function."""
 
-        def sync_func():
+        def sync_func() -> None:
             pass
 
         assert is_async_function(sync_func) is False
 
-    def test_is_async_function_with_lambda(self):
+    def test_is_async_function_with_lambda(self) -> None:
         """Test is_async_function with lambda."""
-
-        lambda_func = lambda x: x * 2
+        def lambda_func(x):
+            return x * 2
         assert is_async_function(lambda_func) is False
 
-    def test_is_async_function_with_method(self):
+    def test_is_async_function_with_method(self) -> None:
         """Test is_async_function with class method."""
 
         class TestClass:
-            def sync_method(self):
+            def sync_method(self) -> None:
                 pass
 
-            async def async_method(self):
+            async def async_method(self) -> None:
                 pass
 
         assert is_async_function(TestClass.sync_method) is False
         assert is_async_function(TestClass.async_method) is True
 
-    def test_preserve_signature_basic(self):
+    def test_preserve_signature_basic(self) -> None:
         """Test preserve_signature decorator."""
 
         def wrapper(func):
@@ -69,9 +69,9 @@ class TestDecoratorUtils:
 
         result = decorated(original_func)
         assert callable(result)
-        assert hasattr(result, '__wrapped__')
+        assert hasattr(result, "__wrapped__")
 
-    def test_preserve_signature_with_parameters(self):
+    def test_preserve_signature_with_parameters(self) -> None:
         """Test preserve_signature with parameterized functions."""
 
         def wrapper(func):
@@ -90,7 +90,7 @@ class TestDecoratorUtils:
         assert result(1, "test") == "1-test"
         assert result(1) == "1-default"
 
-    def test_get_function_context_sync(self):
+    def test_get_function_context_sync(self) -> None:
         """Test get_function_context with synchronous function."""
 
         def test_func(x: int) -> str:
@@ -104,7 +104,7 @@ class TestDecoratorUtils:
         assert context["qualname"] == "TestDecoratorUtils.test_get_function_context_sync.<locals>.test_func"
         assert context["is_async"] is False
 
-    def test_get_function_context_async(self):
+    def test_get_function_context_async(self) -> None:
         """Test get_function_context with async function."""
 
         async def async_test_func(x: int) -> str:
@@ -117,16 +117,15 @@ class TestDecoratorUtils:
         assert context["module"] == "tests.test_decorators_utils"
         assert context["is_async"] is True
 
-    def test_get_function_context_lambda(self):
+    def test_get_function_context_lambda(self) -> None:
         """Test get_function_context with lambda function."""
-
-        lambda_func = lambda x: x * 2
-        context = get_function_context(lambda_func)
+        actual_lambda = lambda x: x * 2
+        context = get_function_context(actual_lambda)
 
         assert context["function_name"] == "<lambda>"
         assert context["is_async"] is False
 
-    def test_get_function_context_method(self):
+    def test_get_function_context_method(self) -> None:
         """Test get_function_context with class method."""
 
         class TestClass:
@@ -138,25 +137,26 @@ class TestDecoratorUtils:
         assert context["function_name"] == "method"
         assert context["is_async"] is False
 
-    def test_format_exception_chain_simple(self):
+    def test_format_exception_chain_simple(self) -> None:
         """Test format_exception_chain with simple exception."""
-
         try:
-            raise ValueError("test error")
+            msg = "test error"
+            raise ValueError(msg)
         except ValueError as e:
             chain = format_exception_chain(e)
 
             assert len(chain) == 1
             assert "ValueError: test error" in chain[0]
 
-    def test_format_exception_chain_with_cause(self):
+    def test_format_exception_chain_with_cause(self) -> None:
         """Test format_exception_chain with exception chain."""
-
         try:
-            raise ValueError("inner error")
+            msg = "inner error"
+            raise ValueError(msg)
         except ValueError as e:
             try:
-                raise RuntimeError("outer error") from e
+                msg = "outer error"
+                raise RuntimeError(msg) from e
             except RuntimeError as outer_e:
                 chain = format_exception_chain(outer_e)
 
@@ -164,14 +164,15 @@ class TestDecoratorUtils:
                 assert "RuntimeError: outer error" in chain[0]
                 assert "ValueError: inner error" in chain[1]
 
-    def test_format_exception_chain_with_context(self):
+    def test_format_exception_chain_with_context(self) -> None:
         """Test format_exception_chain with exception context."""
-
         try:
-            raise ValueError("context error")
+            msg = "context error"
+            raise ValueError(msg)
         except ValueError:
             try:
-                raise RuntimeError("main error")
+                msg = "main error"
+                raise RuntimeError(msg)
             except RuntimeError as e:
                 chain = format_exception_chain(e)
 
@@ -179,14 +180,13 @@ class TestDecoratorUtils:
                 assert len(chain) >= 1
                 assert "RuntimeError: main error" in chain[0]
 
-    def test_format_exception_chain_empty(self):
+    def test_format_exception_chain_empty(self) -> None:
         """Test format_exception_chain with no exception."""
-
         # This should not raise an error
         chain = format_exception_chain(Exception("test"))
         assert len(chain) >= 1
 
-    def test_preserve_signature_preserves_name(self):
+    def test_preserve_signature_preserves_name(self) -> None:
         """Test that preserve_signature preserves function name."""
 
         def wrapper(func):
@@ -196,13 +196,13 @@ class TestDecoratorUtils:
 
         decorated = preserve_signature(wrapper)
 
-        def original_func():
+        def original_func() -> None:
             pass
 
         result = decorated(original_func)
         assert result.__name__ == original_func.__name__
 
-    def test_preserve_signature_preserves_docstring(self):
+    def test_preserve_signature_preserves_docstring(self) -> None:
         """Test that preserve_signature preserves docstring."""
 
         def wrapper(func):
@@ -212,14 +212,13 @@ class TestDecoratorUtils:
 
         decorated = preserve_signature(wrapper)
 
-        def original_func():
+        def original_func() -> None:
             """Original docstring."""
-            pass
 
         result = decorated(original_func)
         assert result.__doc__ == "Original docstring."
 
-    def test_preserve_signature_with_async_wrapper(self):
+    def test_preserve_signature_with_async_wrapper(self) -> None:
         """Test preserve_signature with async wrapper."""
 
         def wrapper(func):
@@ -229,31 +228,32 @@ class TestDecoratorUtils:
 
         decorated = preserve_signature(wrapper)
 
-        async def async_func():
+        async def async_func() -> str:
             return "async result"
 
         result = decorated(async_func)
         assert asyncio.iscoroutinefunction(result)
 
-    def test_get_function_context_builtin(self):
+    def test_get_function_context_builtin(self) -> None:
         """Test get_function_context with built-in function."""
-
         context = get_function_context(len)
 
         assert context["function_name"] == "len"
         assert context["is_async"] is False
 
-    def test_format_exception_chain_complex(self):
+    def test_format_exception_chain_complex(self) -> None:
         """Test format_exception_chain with complex exception hierarchy."""
-
         try:
-            raise ValueError("level 1")
+            msg = "level 1"
+            raise ValueError(msg)
         except ValueError as e1:
             try:
-                raise TypeError("level 2") from e1
+                msg = "level 2"
+                raise TypeError(msg) from e1
             except TypeError as e2:
                 try:
-                    raise RuntimeError("level 3") from e2
+                    msg = "level 3"
+                    raise RuntimeError(msg) from e2
                 except RuntimeError as e3:
                     chain = format_exception_chain(e3)
 
@@ -262,7 +262,7 @@ class TestDecoratorUtils:
                     assert "TypeError: level 2" in chain[1]
                     assert "ValueError: level 1" in chain[2]
 
-    def test_preserve_signature_with_class_method(self):
+    def test_preserve_signature_with_class_method(self) -> None:
         """Test preserve_signature with class method."""
 
         def wrapper(func):
@@ -279,9 +279,8 @@ class TestDecoratorUtils:
         result = decorated(TestClass.method)
         assert callable(result)
 
-    def test_is_async_function_with_coroutine(self):
+    def test_is_async_function_with_coroutine(self) -> None:
         """Test is_async_function with coroutine function."""
-
         decorator = getattr(asyncio, "coroutine", types.coroutine)
 
         @decorator
@@ -292,7 +291,7 @@ class TestDecoratorUtils:
         result = is_async_function(coroutine_func)
         assert isinstance(result, bool)
 
-    def test_preserve_signature_type_annotations(self):
+    def test_preserve_signature_type_annotations(self) -> None:
         """Test that preserve_signature works with type annotations."""
 
         def wrapper(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
@@ -308,9 +307,8 @@ class TestDecoratorUtils:
         result = decorated(typed_func)
         assert callable(result)
 
-    def test_get_function_context_comprehensive(self):
+    def test_get_function_context_comprehensive(self) -> None:
         """Comprehensive test of get_function_context."""
-
         # Test various function types
         functions = [
             (lambda: None, "lambda"),
@@ -318,7 +316,7 @@ class TestDecoratorUtils:
             (str.upper, "method"),
         ]
 
-        for func, func_type in functions:
+        for func, _func_type in functions:
             context = get_function_context(func)
             assert "function_name" in context
             assert "module" in context
@@ -326,9 +324,8 @@ class TestDecoratorUtils:
             assert "is_async" in context
             assert isinstance(context["is_async"], bool)
 
-    def test_format_exception_chain_edge_cases(self):
+    def test_format_exception_chain_edge_cases(self) -> None:
         """Test format_exception_chain edge cases."""
-
         # Test with exception that has no cause or context
         exc = Exception("standalone")
         chain = format_exception_chain(exc)

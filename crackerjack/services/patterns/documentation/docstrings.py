@@ -1,6 +1,6 @@
 import re
 
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
 
 PATTERNS = {
     "docstring_triple_double": ValidatedPattern(

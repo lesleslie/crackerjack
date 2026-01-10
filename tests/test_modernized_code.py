@@ -337,7 +337,7 @@ class TestWorkflowOptions:
 
     def test_from_args_with_attributes(self) -> None:
         class MockArgs:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.strip_code = True
                 self.run_tests = True
                 self.publish = "pypi"
@@ -361,7 +361,7 @@ class TestWorkflowOptions:
 
     def test_from_args_missing_attributes(self) -> None:
         class MockArgs:
-            def __init__(self):
+            def __init__(self) -> None:
                 self.strip_code = True
 
         args = MockArgs()

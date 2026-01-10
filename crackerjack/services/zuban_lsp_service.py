@@ -84,14 +84,14 @@ class ZubanLSPService:
                 return False
 
             self.console.print(
-                f"[green]✅ Zuban LSP server started (PID: {self.process.pid})[/green]"
+                f"[green]✅ Zuban LSP server started (PID: {self.process.pid})[/green]",
             )
             logger.info(f"Zuban LSP server started with PID {self.process.pid}")
             return True
 
         except Exception as e:
             self.console.print(f"[red]❌ Error starting Zuban LSP server: {e}[/red]")
-            logger.error(f"Failed to start Zuban LSP server: {e}")
+            logger.exception(f"Failed to start Zuban LSP server: {e}")
             return False
 
     async def stop(self) -> None:
@@ -106,7 +106,7 @@ class ZubanLSPService:
             try:
                 self.process.wait(timeout=5.0)
                 self.console.print(
-                    "[green]✅ Zuban LSP server stopped gracefully[/green]"
+                    "[green]✅ Zuban LSP server stopped gracefully[/green]",
                 )
             except subprocess.TimeoutExpired:
                 self.process.kill()
@@ -114,7 +114,7 @@ class ZubanLSPService:
                 self.console.print("[yellow]⚠️ Zuban LSP server force stopped[/yellow]")
 
         except Exception as e:
-            logger.error(f"Error stopping Zuban LSP server: {e}")
+            logger.exception(f"Error stopping Zuban LSP server: {e}")
 
         finally:
             self.process = None
@@ -128,8 +128,7 @@ class ZubanLSPService:
         try:
             if self.mode == "stdio":
                 return self._check_stdio_health()
-            else:
-                return self._check_tcp_health()
+            return self._check_tcp_health()
 
         except Exception as e:
             logger.warning(f"Health check failed: {e}")
@@ -156,7 +155,7 @@ class ZubanLSPService:
         success = await self.start()
         if success:
             self.console.print(
-                "[green]✅ Zuban LSP server restarted successfully[/green]"
+                "[green]✅ Zuban LSP server restarted successfully[/green]",
             )
         else:
             self.console.print("[red]❌ Failed to restart Zuban LSP server[/red]")
@@ -177,7 +176,9 @@ class ZubanLSPService:
         }
 
     async def send_lsp_request(
-        self, method: str, params: dict[str, t.Any] | None = None
+        self,
+        method: str,
+        params: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any] | None:
         if not self.is_running or not self.process or not self.process.stdin:
             return None
@@ -205,45 +206,47 @@ class ZubanLSPService:
                 return {"status": "notification_sent", "id": request_id}
 
             try:
-                response = await self._read_lsp_response(request_id, timeout=5.0)
-                return response
+                return await self._read_lsp_response(request_id, timeout=5.0)
             except TimeoutError:
                 logger.warning(f"LSP request {method} timed out")
                 return {"status": "timeout", "id": request_id}
 
         except Exception as e:
-            logger.error(f"Failed to send LSP request: {e}")
+            logger.exception(f"Failed to send LSP request: {e}")
             return None
 
     async def _read_lsp_response(
-        self, expected_id: int, timeout: float = 5.0
+        self,
+        expected_id: int,
+        timeout: float = 5.0,
     ) -> dict[str, t.Any] | None:
         if not self.process or not self.process.stdout:
             return None
 
         try:
             response_data = await asyncio.wait_for(
-                self._read_message_from_stdout(), timeout=timeout
+                self._read_message_from_stdout(),
+                timeout=timeout,
             )
 
             if not response_data:
                 return None
 
             response = json.loads(response_data)
-            typed_response = t.cast(dict[str, t.Any], response)
+            typed_response = t.cast("dict[str, t.Any]", response)
 
             if typed_response.get("id") == expected_id:
                 return typed_response
 
             logger.debug(
-                f"Received response for ID {typed_response.get('id')}, expected {expected_id}"
+                f"Received response for ID {typed_response.get('id')}, expected {expected_id}",
             )
             return typed_response
 
         except TimeoutError:
             raise
         except Exception as e:
-            logger.error(f"Failed to read LSP response: {e}")
+            logger.exception(f"Failed to read LSP response: {e}")
             return None
 
     async def _read_message_from_stdout(self) -> str | None:
@@ -265,7 +268,7 @@ class ZubanLSPService:
             return content_bytes.decode("utf-8")
 
         except Exception as e:
-            logger.error(f"Failed to read LSP message: {e}")
+            logger.exception(f"Failed to read LSP message: {e}")
             return None
 
     async def _read_line_async(self) -> str:
@@ -281,8 +284,7 @@ class ZubanLSPService:
             return b""
 
         loop = asyncio.get_event_loop()
-        data = await loop.run_in_executor(None, self.process.stdout.read, count)  # type: ignore[call-arg]
-        return data
+        return await loop.run_in_executor(None, self.process.stdout.read, count)  # type: ignore[call-arg]
 
 
 async def create_zuban_lsp_service(
@@ -290,5 +292,4 @@ async def create_zuban_lsp_service(
     mode: str = "tcp",
     console: Console | None = None,
 ) -> ZubanLSPService:
-    service = ZubanLSPService(port=port, mode=mode, console=console)
-    return service
+    return ZubanLSPService(port=port, mode=mode, console=console)

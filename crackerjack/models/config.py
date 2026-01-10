@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from crackerjack.config.settings import (
     AdvancedSettings,
@@ -21,6 +20,9 @@ from crackerjack.config.settings import (
 from crackerjack.config.settings import (
     CleanupSettings as CleanupSettingsModel,
 )
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 
 @dataclass
@@ -367,15 +369,11 @@ class WorkflowOptions:
             return True
         if attr in {"publish", "bump"} and "publishing" in kwargs:
             return True
-        if attr in {"interactive", "dry_run"} and "execution" in kwargs:
-            return True
-        return False
+        return bool(attr in {"interactive", "dry_run"} and "execution" in kwargs)
 
     def _set_kwargs_attributes(self, kwargs: dict[str, Any]) -> None:
         for attr, value in kwargs.items():
-            if hasattr(self.__class__, attr):
-                setattr(self, attr, value)
-            elif hasattr(self, attr):
+            if hasattr(self.__class__, attr) or hasattr(self, attr):
                 setattr(self, attr, value)
 
     def __init__(
@@ -415,13 +413,19 @@ class WorkflowOptions:
             dry_run=False,
         )
         self.progress = progress or ProgressConfig(
-            track_progress=False, resume_from=None, progress_file=None
+            track_progress=False,
+            resume_from=None,
+            progress_file=None,
         )
         self.cleanup = cleanup or CleanupConfig(
-            auto_cleanup=True, keep_debug_logs=5, keep_coverage_files=10
+            auto_cleanup=True,
+            keep_debug_logs=5,
+            keep_coverage_files=10,
         )
         self.advanced = advanced or AdvancedConfig(
-            enabled=False, license_key=None, organization=None
+            enabled=False,
+            license_key=None,
+            organization=None,
         )
         self.mcp_server = mcp_server or MCPServerConfig(
             http_port=8676,
@@ -430,7 +434,11 @@ class WorkflowOptions:
             http_enabled=False,
         )
         self.zuban_lsp = zuban_lsp or ZubanLSPConfig(
-            enabled=True, auto_start=True, port=8677, mode="stdio", timeout=30
+            enabled=True,
+            auto_start=True,
+            port=8677,
+            mode="stdio",
+            timeout=30,
         )
 
         for attr, value in kwargs.items():
@@ -816,15 +824,15 @@ def get_workflow_options() -> CrackerjackSettings:
 
 __all__ = [
     "AIConfig",
+    "AdvancedConfig",
     "CleaningConfig",
     "CleanupConfig",
-    "AdvancedConfig",
     "ExecutionConfig",
     "GitConfig",
     "HookConfig",
     "MCPServerConfig",
-    "PublishConfig",
     "ProgressConfig",
+    "PublishConfig",
     "TestConfig",
     "WorkflowOptions",
     "ZubanLSPConfig",

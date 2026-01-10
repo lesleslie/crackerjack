@@ -30,11 +30,10 @@ class AutofixCoordinator:
 
             if mode == "fast":
                 return self._apply_fast_stage_fixes()
-            elif mode == "comprehensive":
+            if mode == "comprehensive":
                 return self._apply_comprehensive_stage_fixes(hook_results)
-            else:
-                self.logger.warning(f"Unknown autofix mode: {mode}")
-                return False
+            self.logger.warning(f"Unknown autofix mode: {mode}")
+            return False
         except Exception:
             self.logger.exception("Error applying autofix")
             return False
@@ -91,7 +90,8 @@ class AutofixCoordinator:
         return failed_hooks
 
     def _get_hook_specific_fixes(
-        self, failed_hooks: set[str]
+        self,
+        failed_hooks: set[str],
     ) -> list[tuple[list[str], str]]:
         fixes = []
 
@@ -122,6 +122,7 @@ class AutofixCoordinator:
             self.logger.info(f"Running fix command: {description}")
             result = subprocess.run(
                 cmd,
+                check=False,
                 cwd=self.pkg_path,
                 capture_output=True,
                 text=True,
@@ -133,7 +134,9 @@ class AutofixCoordinator:
             return False
 
     def _handle_command_result(
-        self, result: subprocess.CompletedProcess[str], description: str
+        self,
+        result: subprocess.CompletedProcess[str],
+        description: str,
     ) -> bool:
         if result.returncode == 0:
             self.logger.info(f"Fix command succeeded: {description}")
@@ -242,10 +245,7 @@ class AutofixCoordinator:
             "trailing-whitespace",
         ]
 
-        if len(cmd) > 2 and cmd[2] in allowed_tools:
-            return True
-
-        return False
+        return bool(len(cmd) > 2 and cmd[2] in allowed_tools)
 
     def _validate_hook_result(self, result: object) -> bool:
         name = getattr(result, "name", None)
@@ -258,10 +258,7 @@ class AutofixCoordinator:
             return False
 
         valid_statuses = ["Passed", "Failed", "Skipped", "Error"]
-        if status not in valid_statuses:
-            return False
-
-        return True
+        return status in valid_statuses
 
     def _should_skip_autofix(self, hook_results: list[object]) -> bool:
         for result in hook_results:

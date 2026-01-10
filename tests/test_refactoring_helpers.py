@@ -11,14 +11,14 @@ from crackerjack.agents.refactoring_helpers import ComplexityCalculator
 class TestComplexityCalculator:
     """Tests for ComplexityCalculator."""
 
-    def test_complexity_calculator_initialization(self):
+    def test_complexity_calculator_initialization(self) -> None:
         """Test ComplexityCalculator initialization."""
         calculator = ComplexityCalculator()
         assert calculator.complexity == 0
         assert calculator.nesting_level == 0
         assert calculator.binary_sequences == 0
 
-    def test_complexity_calculator_simple_function(self):
+    def test_complexity_calculator_simple_function(self) -> None:
         """Test complexity calculation for simple function."""
         code = """
 def simple_function():
@@ -31,7 +31,7 @@ def simple_function():
         # Simple function should have low complexity
         assert calculator.complexity >= 0
 
-    def test_complexity_calculator_with_if_statement(self):
+    def test_complexity_calculator_with_if_statement(self) -> None:
         """Test complexity calculation with if statement."""
         code = """
 def function_with_if(x):
@@ -46,7 +46,7 @@ def function_with_if(x):
         # Should have complexity from if statement
         assert calculator.complexity > 0
 
-    def test_complexity_calculator_with_nested_if(self):
+    def test_complexity_calculator_with_nested_if(self) -> None:
         """Test complexity calculation with nested if statements."""
         code = """
 def nested_if_function(x, y):
@@ -64,7 +64,7 @@ def nested_if_function(x, y):
         base_complexity = calculator.complexity
         assert base_complexity > 1
 
-    def test_complexity_calculator_with_loop(self):
+    def test_complexity_calculator_with_loop(self) -> None:
         """Test complexity calculation with for loop."""
         code = """
 def function_with_loop(items):
@@ -81,7 +81,7 @@ def function_with_loop(items):
         # Loop and nested if should contribute to complexity
         assert calculator.complexity > 1
 
-    def test_complexity_calculator_with_try_except(self):
+    def test_complexity_calculator_with_try_except(self) -> None:
         """Test complexity calculation with try-except."""
         code = """
 def function_with_try():
@@ -97,7 +97,7 @@ def function_with_try():
         # Try-except should contribute to complexity
         assert calculator.complexity > 0
 
-    def test_complexity_calculator_with_boolean_operations(self):
+    def test_complexity_calculator_with_boolean_operations(self) -> None:
         """Test complexity calculation with boolean operations."""
         code = """
 def function_with_bool(x, y):
@@ -112,7 +112,7 @@ def function_with_bool(x, y):
         # Boolean operations should contribute to complexity
         assert calculator.complexity > 0
 
-    def test_complexity_calculator_with_comprehensions(self):
+    def test_complexity_calculator_with_comprehensions(self) -> None:
         """Test complexity calculation with list comprehension."""
         code = """
 def function_with_comprehension():
@@ -127,7 +127,7 @@ def function_with_comprehension():
         # Comprehension should contribute to complexity
         assert calculator.complexity > 0
 
-    def test_complexity_calculator_complex_function(self):
+    def test_complexity_calculator_complex_function(self) -> None:
         """Test complexity calculation for complex function."""
         code = """
 def complex_function(data):
@@ -153,7 +153,7 @@ def complex_function(data):
         # Complex function should have higher complexity
         assert calculator.complexity > 5
 
-    def test_complexity_calculator_empty_function(self):
+    def test_complexity_calculator_empty_function(self) -> None:
         """Test complexity calculation for empty function."""
         code = """
 def empty_function():
@@ -166,7 +166,7 @@ def empty_function():
         # Empty function should have minimal complexity
         assert calculator.complexity >= 0
 
-    def test_complexity_calculator_multiple_functions(self):
+    def test_complexity_calculator_multiple_functions(self) -> None:
         """Test complexity calculation with multiple functions."""
         code = """
 def simple_function():
@@ -184,7 +184,7 @@ def complex_function(x):
         # Should calculate complexity for all functions
         assert calculator.complexity > 0
 
-    def test_complexity_calculator_nesting_level(self):
+    def test_complexity_calculator_nesting_level(self) -> None:
         """Test that nesting level is tracked correctly."""
         calculator = ComplexityCalculator()
 
@@ -199,7 +199,7 @@ def complex_function(x):
         assert calculator.nesting_level == 1
         assert calculator.complexity == 2
 
-    def test_complexity_calculator_binary_sequences(self):
+    def test_complexity_calculator_binary_sequences(self) -> None:
         """Test that binary sequences are tracked."""
         calculator = ComplexityCalculator()
 
@@ -212,35 +212,35 @@ def complex_function(x):
 
         assert calculator.binary_sequences == 1
 
-    def test_complexity_calculator_visit_methods(self):
+    def test_complexity_calculator_visit_methods(self) -> None:
         """Test that visit methods exist and are callable."""
         calculator = ComplexityCalculator()
 
         # Test that all expected visit methods exist
-        assert hasattr(calculator, 'visit_If')
-        assert hasattr(calculator, 'visit_For')
-        assert hasattr(calculator, 'visit_While')
-        assert hasattr(calculator, 'visit_Try')
-        assert hasattr(calculator, 'visit_With')
-        assert hasattr(calculator, 'visit_BoolOp')
-        assert hasattr(calculator, 'visit_ListComp')
-        assert hasattr(calculator, 'visit_DictComp')
-        assert hasattr(calculator, 'visit_SetComp')
-        assert hasattr(calculator, 'visit_GeneratorExp')
+        assert hasattr(calculator, "visit_If")
+        assert hasattr(calculator, "visit_For")
+        assert hasattr(calculator, "visit_While")
+        assert hasattr(calculator, "visit_Try")
+        assert hasattr(calculator, "visit_With")
+        assert hasattr(calculator, "visit_BoolOp")
+        assert hasattr(calculator, "visit_ListComp")
+        assert hasattr(calculator, "visit_DictComp")
+        assert hasattr(calculator, "visit_SetComp")
+        assert hasattr(calculator, "visit_GeneratorExp")
 
-    def test_complexity_calculator_private_methods(self):
+    def test_complexity_calculator_private_methods(self) -> None:
         """Test that private processing methods exist."""
         calculator = ComplexityCalculator()
 
         # Test that private methods exist
-        assert hasattr(calculator, '_process_conditional_node')
-        assert hasattr(calculator, '_process_loop_node')
-        assert hasattr(calculator, '_process_try_node')
-        assert hasattr(calculator, '_process_context_node')
-        assert hasattr(calculator, '_process_boolean_operation')
-        assert hasattr(calculator, '_process_comprehension')
+        assert hasattr(calculator, "_process_conditional_node")
+        assert hasattr(calculator, "_process_loop_node")
+        assert hasattr(calculator, "_process_try_node")
+        assert hasattr(calculator, "_process_context_node")
+        assert hasattr(calculator, "_process_boolean_operation")
+        assert hasattr(calculator, "_process_comprehension")
 
-    def test_complexity_calculator_comparison(self):
+    def test_complexity_calculator_comparison(self) -> None:
         """Test complexity comparison between simple and complex functions."""
         # Simple function
         simple_code = "def simple(): return 42"
@@ -267,12 +267,12 @@ def complex_func(x, y, z):
         # Complex function should have higher complexity
         assert complex_calc.complexity > simple_calc.complexity
 
-    def test_complexity_calculator_inheritance(self):
+    def test_complexity_calculator_inheritance(self) -> None:
         """Test that ComplexityCalculator inherits from ast.NodeVisitor."""
         calculator = ComplexityCalculator()
         assert isinstance(calculator, ast.NodeVisitor)
 
-    def test_complexity_calculator_visit_implementation(self):
+    def test_complexity_calculator_visit_implementation(self) -> None:
         """Test that visit methods are properly implemented."""
         calculator = ComplexityCalculator()
 

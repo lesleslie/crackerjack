@@ -8,7 +8,7 @@ from crackerjack.tools.check_toml import main, validate_toml_file
 class TestTOMLValidation:
     """Test TOML validation logic."""
 
-    def test_validates_simple_toml(self, tmp_path):
+    def test_validates_simple_toml(self, tmp_path) -> None:
         """Test validation of simple TOML."""
         toml_file = tmp_path / "test.toml"
         toml_file.write_text('key = "value"\n')
@@ -17,7 +17,7 @@ class TestTOMLValidation:
         assert is_valid
         assert error_msg is None
 
-    def test_validates_nested_tables(self, tmp_path):
+    def test_validates_nested_tables(self, tmp_path) -> None:
         """Test validation of nested TOML tables."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -36,7 +36,7 @@ key3 = "value3"
         assert is_valid
         assert error_msg is None
 
-    def test_validates_arrays(self, tmp_path):
+    def test_validates_arrays(self, tmp_path) -> None:
         """Test validation of TOML arrays."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -55,7 +55,7 @@ name = "second"
         assert is_valid
         assert error_msg is None
 
-    def test_detects_invalid_syntax(self, tmp_path):
+    def test_detects_invalid_syntax(self, tmp_path) -> None:
         """Test detection of invalid TOML syntax."""
         toml_file = tmp_path / "test.toml"
         toml_file.write_text('key = "unclosed string\n')
@@ -64,7 +64,7 @@ name = "second"
         assert not is_valid
         assert error_msg is not None
 
-    def test_detects_duplicate_keys(self, tmp_path):
+    def test_detects_duplicate_keys(self, tmp_path) -> None:
         """Test detection of duplicate keys."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -77,7 +77,7 @@ key = "value2"
         assert not is_valid
         assert error_msg is not None
 
-    def test_detects_invalid_table_syntax(self, tmp_path):
+    def test_detects_invalid_table_syntax(self, tmp_path) -> None:
         """Test detection of invalid table syntax."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -93,7 +93,7 @@ key = "duplicate_table"
         assert not is_valid
         assert error_msg is not None
 
-    def test_handles_empty_file(self, tmp_path):
+    def test_handles_empty_file(self, tmp_path) -> None:
         """Test handling of empty TOML file."""
         toml_file = tmp_path / "test.toml"
         toml_file.write_text("")
@@ -102,7 +102,7 @@ key = "duplicate_table"
         assert is_valid  # Empty TOML is valid
         assert error_msg is None
 
-    def test_handles_comments(self, tmp_path):
+    def test_handles_comments(self, tmp_path) -> None:
         """Test handling of TOML comments."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -122,14 +122,14 @@ nested = "value"
 class TestTOMLCLI:
     """Test check_toml CLI interface."""
 
-    def test_cli_help(self):
+    def test_cli_help(self) -> None:
         """Test --help displays correctly."""
         with pytest.raises(SystemExit) as exc_info:
             main(["--help"])
 
         assert exc_info.value.code == 0
 
-    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch):
+    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch) -> None:
         """Test CLI with no arguments uses current directory."""
         monkeypatch.chdir(tmp_path)
 
@@ -143,7 +143,7 @@ class TestTOMLCLI:
         # Should validate both files and return 0
         assert exit_code == 0
 
-    def test_cli_with_file_arguments(self, tmp_path):
+    def test_cli_with_file_arguments(self, tmp_path) -> None:
         """Test CLI with explicit file arguments."""
         test_file1 = tmp_path / "test1.toml"
         test_file2 = tmp_path / "test2.toml"
@@ -155,7 +155,7 @@ class TestTOMLCLI:
 
         assert exit_code == 0  # All files valid
 
-    def test_cli_detects_errors(self, tmp_path):
+    def test_cli_detects_errors(self, tmp_path) -> None:
         """Test CLI detects TOML errors."""
         invalid_file = tmp_path / "invalid.toml"
         invalid_file.write_text('key = "unclosed\n')
@@ -164,7 +164,7 @@ class TestTOMLCLI:
 
         assert exit_code == 1  # Errors found
 
-    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys):
+    def test_cli_no_files_to_check(self, tmp_path, monkeypatch, capsys) -> None:
         """Test CLI with no files to check."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
@@ -176,14 +176,14 @@ class TestTOMLCLI:
         captured = capsys.readouterr()
         assert "No TOML files to check" in captured.out
 
-    def test_cli_nonexistent_file(self, tmp_path):
+    def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI with nonexistent file."""
         exit_code = main([str(tmp_path / "nonexistent.toml")])
 
         # Should handle gracefully
         assert exit_code == 0  # No files processed
 
-    def test_cli_mixed_valid_and_invalid(self, tmp_path, capsys):
+    def test_cli_mixed_valid_and_invalid(self, tmp_path, capsys) -> None:
         """Test CLI with mix of valid and invalid files."""
         valid_file = tmp_path / "valid.toml"
         invalid_file = tmp_path / "invalid.toml"
@@ -203,7 +203,7 @@ class TestTOMLCLI:
 class TestTOMLEdgeCases:
     """Test edge cases and error conditions."""
 
-    def test_unicode_content(self, tmp_path):
+    def test_unicode_content(self, tmp_path) -> None:
         """Test handling of Unicode content."""
         toml_file = tmp_path / "test.toml"
         toml_file.write_text('greeting = "你好世界"\n', encoding="utf-8")
@@ -212,7 +212,7 @@ class TestTOMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_very_large_toml(self, tmp_path):
+    def test_very_large_toml(self, tmp_path) -> None:
         """Test handling of very large TOML files."""
         toml_file = tmp_path / "test.toml"
         # Generate large TOML with 1000 keys
@@ -223,7 +223,7 @@ class TestTOMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_deeply_nested_tables(self, tmp_path):
+    def test_deeply_nested_tables(self, tmp_path) -> None:
         """Test handling of deeply nested TOML tables."""
         toml_file = tmp_path / "test.toml"
         # Create deeply nested structure
@@ -237,7 +237,7 @@ class TestTOMLEdgeCases:
         assert is_valid
         assert error_msg is None
 
-    def test_multiline_strings(self, tmp_path):
+    def test_multiline_strings(self, tmp_path) -> None:
         """Test handling of multiline strings."""
         toml_file = tmp_path / "test.toml"
         content = '''
@@ -253,7 +253,7 @@ lines of content
         assert is_valid
         assert error_msg is None
 
-    def test_special_toml_values(self, tmp_path):
+    def test_special_toml_values(self, tmp_path) -> None:
         """Test handling of special TOML values."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -270,7 +270,7 @@ array = [1, 2, 3]
         assert is_valid
         assert error_msg is None
 
-    def test_missing_file(self, tmp_path):
+    def test_missing_file(self, tmp_path) -> None:
         """Test handling of missing file."""
         missing_file = tmp_path / "nonexistent.toml"
 
@@ -278,7 +278,7 @@ array = [1, 2, 3]
         assert not is_valid
         assert "Error reading file" in error_msg
 
-    def test_inline_tables(self, tmp_path):
+    def test_inline_tables(self, tmp_path) -> None:
         """Test handling of inline tables."""
         toml_file = tmp_path / "test.toml"
         content = """
@@ -295,7 +295,7 @@ point = { x = 1, y = 2 }
 class TestTOMLIntegration:
     """Integration tests with real-world scenarios."""
 
-    def test_pyproject_toml(self, tmp_path):
+    def test_pyproject_toml(self, tmp_path) -> None:
         """Test validation of pyproject.toml."""
         toml_file = tmp_path / "pyproject.toml"
         content = """
@@ -326,7 +326,7 @@ python_files = ["test_*.py"]
         assert is_valid
         assert error_msg is None
 
-    def test_cargo_toml(self, tmp_path):
+    def test_cargo_toml(self, tmp_path) -> None:
         """Test validation of Cargo.toml (Rust)."""
         toml_file = tmp_path / "Cargo.toml"
         content = """
@@ -348,7 +348,7 @@ criterion = "0.5"
         assert is_valid
         assert error_msg is None
 
-    def test_config_toml(self, tmp_path):
+    def test_config_toml(self, tmp_path) -> None:
         """Test validation of application config.toml."""
         toml_file = tmp_path / "config.toml"
         content = """
@@ -372,7 +372,7 @@ format = "json"
         assert is_valid
         assert error_msg is None
 
-    def test_mixed_file_extensions(self, tmp_path):
+    def test_mixed_file_extensions(self, tmp_path) -> None:
         """Test CLI with various TOML files."""
         toml_file1 = tmp_path / "config.toml"
         toml_file2 = tmp_path / "settings.toml"
@@ -384,7 +384,7 @@ format = "json"
 
         assert exit_code == 0  # Both files valid
 
-    def test_dotted_keys(self, tmp_path):
+    def test_dotted_keys(self, tmp_path) -> None:
         """Test validation of dotted keys."""
         toml_file = tmp_path / "test.toml"
         content = """

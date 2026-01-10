@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
-"""
-Test script to verify the hook output parsing with actual semgrep output.
-"""
+"""Test script to verify the hook output parsing with actual semgrep output."""
 
 import tempfile
 from pathlib import Path
-from crackerjack.executors.hook_executor import HookExecutor
-from rich.console import Console
 from subprocess import CompletedProcess
 
+from rich.console import Console
 
-def test_actual_semgrep_output():
+from crackerjack.executors.hook_executor import HookExecutor
+
+
+def test_actual_semgrep_output() -> None:
     # Create a mock HookExecutor
     console = Console()
     pkg_path = Path.cwd()
@@ -23,20 +23,14 @@ def test_actual_semgrep_output():
         args=["uvx", "semgrep", "--config=p/python", "--json", "crackerjack/executors/"],
         returncode=0,
         stdout=real_output,
-        stderr="Ran 151 rules on 9 files: 0 findings."
+        stderr="Ran 151 rules on 9 files: 0 findings.",
     )
 
     parsed = executor._parse_hook_output(result)
-    print(f"Test with real semgrep output:")
-    print(f"  Files processed: {parsed['files_processed']}")
-    print(f"  Expected: 0 (no issues found)")
-    print(f"  Result: {'PASS' if parsed['files_processed'] == 0 else 'FAIL'}")
-    print(f"  Raw output preview: {real_output[:100]}...")
-    print()
 
 
-def test_semgrep_with_issues():
-    """Test with semgrep output that has issues"""
+def test_semgrep_with_issues() -> None:
+    """Test with semgrep output that has issues."""
     # Simulated output with some results
     stdout_with_issues = '{"version":"1.142.1","results":[{"path":"test_file1.py","check_id":"python.sqlalchemy.security.sql-injection.sql-injection","line":10},{"path":"test_file2.py","check_id":"python.django.security.audit.xss.audit-xss","line":15},{"path":"test_file1.py","check_id":"python.django.security.injection.runserver.runserver-bind-all-interfaces","line":8}],"errors":[],"paths":{"scanned":["test_file1.py","test_file2.py"]},"time":{}}'
 
@@ -49,15 +43,10 @@ def test_semgrep_with_issues():
         args=["uvx", "semgrep", "--config=p/python", "--json", "."],
         returncode=1,  # Semgrep returns 1 when issues are found
         stdout=stdout_with_issues,
-        stderr=""
+        stderr="",
     )
 
     parsed = executor._parse_hook_output(result)
-    print(f"Test with semgrep output containing issues:")
-    print(f"  Files processed: {parsed['files_processed']}")
-    print(f"  Expected: 2 (two unique files with issues)")
-    print(f"  Result: {'PASS' if parsed['files_processed'] == 2 else 'FAIL'}")
-    print()
 
 
 if __name__ == "__main__":

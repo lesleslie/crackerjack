@@ -24,7 +24,7 @@ from crackerjack.mcp.state import (
 class TestStageStatusEnum:
     """Test StageStatus enum."""
 
-    def test_stage_status_values(self):
+    def test_stage_status_values(self) -> None:
         """Test StageStatus enum values."""
         assert StageStatus.PENDING == "pending"
         assert StageStatus.RUNNING == "running"
@@ -37,7 +37,7 @@ class TestStageStatusEnum:
 class TestPriorityEnum:
     """Test Priority enum."""
 
-    def test_priority_values(self):
+    def test_priority_values(self) -> None:
         """Test Priority enum values."""
         assert Priority.CRITICAL == "critical"
         assert Priority.HIGH == "high"
@@ -49,7 +49,7 @@ class TestPriorityEnum:
 class TestIssue:
     """Test Issue dataclass."""
 
-    def test_issue_initialization(self):
+    def test_issue_initialization(self) -> None:
         """Test Issue initialization."""
         issue = Issue(
             id="issue1",
@@ -69,7 +69,7 @@ class TestIssue:
         assert issue.suggested_fix is None
         assert issue.auto_fixable is False
 
-    def test_issue_with_all_fields(self):
+    def test_issue_with_all_fields(self) -> None:
         """Test Issue with all fields specified."""
         issue = Issue(
             id="issue1",
@@ -88,7 +88,7 @@ class TestIssue:
         assert issue.suggested_fix == "Add type annotation"
         assert issue.auto_fixable is True
 
-    def test_issue_to_dict(self):
+    def test_issue_to_dict(self) -> None:
         """Test Issue to_dict method."""
         issue = Issue(
             id="issue1",
@@ -109,7 +109,7 @@ class TestIssue:
 class TestStageResult:
     """Test StageResult dataclass."""
 
-    def test_stage_result_initialization(self):
+    def test_stage_result_initialization(self) -> None:
         """Test StageResult initialization."""
         start_time = time.time()
         result = StageResult(
@@ -127,7 +127,7 @@ class TestStageResult:
         assert result.fixes_applied == []
         assert result.error_message is None
 
-    def test_stage_result_with_end_time(self):
+    def test_stage_result_with_end_time(self) -> None:
         """Test StageResult with end_time calculates duration."""
         start_time = time.time()
         end_time = start_time + 10.5
@@ -141,7 +141,7 @@ class TestStageResult:
 
         assert result.duration == 10.5
 
-    def test_stage_result_to_dict(self):
+    def test_stage_result_to_dict(self) -> None:
         """Test StageResult to_dict method."""
         issue = Issue(
             id="issue1",
@@ -169,7 +169,7 @@ class TestStageResult:
 class TestSessionState:
     """Test SessionState dataclass."""
 
-    def test_session_state_initialization(self):
+    def test_session_state_initialization(self) -> None:
         """Test SessionState initialization."""
         start_time = time.time()
         state = SessionState(
@@ -185,7 +185,7 @@ class TestSessionState:
         assert state.fixes_applied == []
         assert state.metadata == {}
 
-    def test_session_state_with_data(self):
+    def test_session_state_with_data(self) -> None:
         """Test SessionState with data."""
         issue = Issue(id="i1", type="error", message="Test", file_path="/test.py")
         stage_result = StageResult(
@@ -210,7 +210,7 @@ class TestSessionState:
         assert state.fixes_applied == ["fix1"]
         assert state.metadata == {"key": "value"}
 
-    def test_session_state_to_dict(self):
+    def test_session_state_to_dict(self) -> None:
         """Test SessionState to_dict method."""
         stage_result = StageResult(
             stage="test",
@@ -234,7 +234,7 @@ class TestSessionState:
 class TestStateManagerInitialization:
     """Test StateManager initialization."""
 
-    def test_initialization_default(self, tmp_path):
+    def test_initialization_default(self, tmp_path) -> None:
         """Test default initialization."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -243,7 +243,7 @@ class TestStateManagerInitialization:
         assert isinstance(manager.session_state, SessionState)
         assert len(manager.session_state.session_id) == 8
 
-    def test_initialization_creates_directories(self, tmp_path):
+    def test_initialization_creates_directories(self, tmp_path) -> None:
         """Test initialization creates necessary directories."""
         state_dir = tmp_path / "state"
 
@@ -258,7 +258,7 @@ class TestStateManagerStages:
     """Test StateManager stage management."""
 
     @pytest.mark.asyncio
-    async def test_start_stage(self, tmp_path):
+    async def test_start_stage(self, tmp_path) -> None:
         """Test starting a stage."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -269,7 +269,7 @@ class TestStateManagerStages:
         assert manager.session_state.stages["linting"].status == StageStatus.RUNNING
 
     @pytest.mark.asyncio
-    async def test_complete_stage(self, tmp_path):
+    async def test_complete_stage(self, tmp_path) -> None:
         """Test completing a stage."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -281,7 +281,7 @@ class TestStateManagerStages:
         assert manager.session_state.stages["linting"].end_time is not None
 
     @pytest.mark.asyncio
-    async def test_complete_stage_with_issues(self, tmp_path):
+    async def test_complete_stage_with_issues(self, tmp_path) -> None:
         """Test completing stage with issues."""
         manager = StateManager(state_dir=tmp_path)
         issue = Issue(id="i1", type="error", message="Test", file_path="/test.py")
@@ -293,7 +293,7 @@ class TestStateManagerStages:
         assert len(manager.session_state.global_issues) == 1
 
     @pytest.mark.asyncio
-    async def test_complete_stage_with_fixes(self, tmp_path):
+    async def test_complete_stage_with_fixes(self, tmp_path) -> None:
         """Test completing stage with fixes."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -304,7 +304,7 @@ class TestStateManagerStages:
         assert manager.session_state.fixes_applied == ["fix1", "fix2"]
 
     @pytest.mark.asyncio
-    async def test_fail_stage(self, tmp_path):
+    async def test_fail_stage(self, tmp_path) -> None:
         """Test failing a stage."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -316,7 +316,7 @@ class TestStateManagerStages:
         assert manager.session_state.current_stage is None
 
     @pytest.mark.asyncio
-    async def test_update_stage_status(self, tmp_path):
+    async def test_update_stage_status(self, tmp_path) -> None:
         """Test updating stage status."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -326,7 +326,7 @@ class TestStateManagerStages:
         assert manager.session_state.stages["testing"].status == StageStatus.RUNNING
 
     @pytest.mark.asyncio
-    async def test_update_stage_status_completed(self, tmp_path):
+    async def test_update_stage_status_completed(self, tmp_path) -> None:
         """Test updating stage status to completed sets end_time."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -341,7 +341,7 @@ class TestStateManagerIssues:
     """Test StateManager issue handling."""
 
     @pytest.mark.asyncio
-    async def test_add_issue(self, tmp_path):
+    async def test_add_issue(self, tmp_path) -> None:
         """Test adding an issue."""
         manager = StateManager(state_dir=tmp_path)
         issue = Issue(id="i1", type="error", message="Test", file_path="/test.py")
@@ -351,7 +351,7 @@ class TestStateManagerIssues:
         assert len(manager.session_state.global_issues) == 1
         assert manager.session_state.global_issues[0].id == "i1"
 
-    def test_remove_issue(self, tmp_path):
+    def test_remove_issue(self, tmp_path) -> None:
         """Test removing an issue."""
         manager = StateManager(state_dir=tmp_path)
         issue = Issue(id="i1", type="error", message="Test", file_path="/test.py")
@@ -362,7 +362,7 @@ class TestStateManagerIssues:
         assert removed is True
         assert len(manager.session_state.global_issues) == 0
 
-    def test_remove_issue_nonexistent(self, tmp_path):
+    def test_remove_issue_nonexistent(self, tmp_path) -> None:
         """Test removing non-existent issue."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -370,7 +370,7 @@ class TestStateManagerIssues:
 
         assert removed is False
 
-    def test_get_issues_by_priority(self, tmp_path):
+    def test_get_issues_by_priority(self, tmp_path) -> None:
         """Test getting issues by priority."""
         manager = StateManager(state_dir=tmp_path)
         issue1 = Issue(
@@ -394,11 +394,11 @@ class TestStateManagerIssues:
         assert len(high_issues) == 1
         assert high_issues[0].id == "i1"
 
-    def test_get_issues_by_type(self, tmp_path):
+    def test_get_issues_by_type(self, tmp_path) -> None:
         """Test getting issues by type."""
         manager = StateManager(state_dir=tmp_path)
         issue1 = Issue(
-            id="i1", type="syntax_error", message="Test", file_path="/test.py"
+            id="i1", type="syntax_error", message="Test", file_path="/test.py",
         )
         issue2 = Issue(id="i2", type="type_error", message="Test", file_path="/test.py")
         manager.session_state.global_issues = [issue1, issue2]
@@ -408,7 +408,7 @@ class TestStateManagerIssues:
         assert len(syntax_errors) == 1
         assert syntax_errors[0].id == "i1"
 
-    def test_get_auto_fixable_issues(self, tmp_path):
+    def test_get_auto_fixable_issues(self, tmp_path) -> None:
         """Test getting auto-fixable issues."""
         manager = StateManager(state_dir=tmp_path)
         issue1 = Issue(
@@ -438,7 +438,7 @@ class TestStateManagerSummary:
     """Test StateManager session summary."""
 
     @pytest.mark.asyncio
-    async def test_get_session_summary_empty(self, tmp_path):
+    async def test_get_session_summary_empty(self, tmp_path) -> None:
         """Test session summary with no data."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -450,7 +450,7 @@ class TestStateManagerSummary:
         assert summary["total_fixes"] == 0
 
     @pytest.mark.asyncio
-    async def test_get_session_summary_with_data(self, tmp_path):
+    async def test_get_session_summary_with_data(self, tmp_path) -> None:
         """Test session summary with data."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -480,7 +480,7 @@ class TestStateManagerCheckpoints:
     """Test StateManager checkpoint functionality."""
 
     @pytest.mark.asyncio
-    async def test_save_checkpoint(self, tmp_path):
+    async def test_save_checkpoint(self, tmp_path) -> None:
         """Test saving a checkpoint."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -490,7 +490,7 @@ class TestStateManagerCheckpoints:
         assert checkpoint_file.exists()
 
     @pytest.mark.asyncio
-    async def test_save_checkpoint_with_data(self, tmp_path):
+    async def test_save_checkpoint_with_data(self, tmp_path) -> None:
         """Test saving checkpoint with session data."""
         manager = StateManager(state_dir=tmp_path)
         await manager.start_stage("testing")
@@ -505,7 +505,7 @@ class TestStateManagerCheckpoints:
         assert "timestamp" in data
         assert "session_state" in data
 
-    def test_load_checkpoint(self, tmp_path):
+    def test_load_checkpoint(self, tmp_path) -> None:
         """Test loading a checkpoint."""
         manager = StateManager(state_dir=tmp_path)
         original_session_id = manager.session_state.session_id
@@ -535,7 +535,7 @@ class TestStateManagerCheckpoints:
         assert manager.session_state.session_id == "restored123"
         assert manager.session_state.session_id != original_session_id
 
-    def test_load_checkpoint_nonexistent(self, tmp_path):
+    def test_load_checkpoint_nonexistent(self, tmp_path) -> None:
         """Test loading non-existent checkpoint."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -543,7 +543,7 @@ class TestStateManagerCheckpoints:
 
         assert loaded is False
 
-    def test_list_checkpoints_empty(self, tmp_path):
+    def test_list_checkpoints_empty(self, tmp_path) -> None:
         """Test listing checkpoints when none exist."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -552,7 +552,7 @@ class TestStateManagerCheckpoints:
         assert checkpoints == []
 
     @pytest.mark.asyncio
-    async def test_list_checkpoints_with_data(self, tmp_path):
+    async def test_list_checkpoints_with_data(self, tmp_path) -> None:
         """Test listing checkpoints."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -570,7 +570,7 @@ class TestStateManagerCheckpoints:
 class TestStateManagerSession:
     """Test StateManager session lifecycle."""
 
-    def test_start_session(self, tmp_path):
+    def test_start_session(self, tmp_path) -> None:
         """Test starting a session."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -580,7 +580,7 @@ class TestStateManagerSession:
         state_file = manager.state_dir / "current_session.json"
         assert state_file.exists()
 
-    def test_complete_session(self, tmp_path):
+    def test_complete_session(self, tmp_path) -> None:
         """Test completing a session."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -590,7 +590,7 @@ class TestStateManagerSession:
         assert "completed_time" in manager.session_state.metadata
 
     @pytest.mark.asyncio
-    async def test_reset_session(self, tmp_path):
+    async def test_reset_session(self, tmp_path) -> None:
         """Test resetting a session."""
         manager = StateManager(state_dir=tmp_path)
         original_session_id = manager.session_state.session_id
@@ -606,7 +606,7 @@ class TestStateManagerSession:
 class TestStateManagerPersistence:
     """Test StateManager state persistence."""
 
-    def test_save_state_sync(self, tmp_path):
+    def test_save_state_sync(self, tmp_path) -> None:
         """Test synchronous state saving."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -615,7 +615,7 @@ class TestStateManagerPersistence:
         state_file = manager.state_dir / "current_session.json"
         assert state_file.exists()
 
-    def test_save_state_sync_creates_json(self, tmp_path):
+    def test_save_state_sync_creates_json(self, tmp_path) -> None:
         """Test state file contains valid JSON."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -628,7 +628,7 @@ class TestStateManagerPersistence:
         assert "session_id" in data
         assert "start_time" in data
 
-    def test_load_state_nonexistent(self, tmp_path):
+    def test_load_state_nonexistent(self, tmp_path) -> None:
         """Test loading non-existent state."""
         manager = StateManager(state_dir=tmp_path)
 
@@ -636,7 +636,7 @@ class TestStateManagerPersistence:
 
         assert loaded is False
 
-    def test_load_state_success(self, tmp_path):
+    def test_load_state_success(self, tmp_path) -> None:
         """Test loading existing state."""
         manager = StateManager(state_dir=tmp_path)
 

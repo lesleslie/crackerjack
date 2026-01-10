@@ -80,7 +80,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                     "coverage": initial_coverage,
                     "commit": "baseline",
                     "milestone": False,
-                }
+                },
             ],
             "milestones_achieved": [],
             "next_milestone": self._get_next_milestone(initial_coverage),
@@ -88,13 +88,13 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
-            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage: .2f}% baseline"
+            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage: .2f}% baseline",
         )
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
         if not self.ratchet_file.exists():
             return {}
-        return t.cast(dict[str, t.Any], json.loads(self.ratchet_file.read_text()))
+        return t.cast("dict[str, t.Any]", json.loads(self.ratchet_file.read_text()))
 
     def get_status_report(self) -> dict[str, t.Any]:
         return self.get_ratchet_data()
@@ -150,9 +150,11 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "allowed": False,
                 "baseline_updated": False,
             }
-        elif new_coverage > current_baseline + 0.01:
+        if new_coverage > current_baseline + 0.01:
             milestones_hit = self._check_milestones(
-                current_baseline, new_coverage, data
+                current_baseline,
+                new_coverage,
+                data,
             )
             self._update_baseline(new_coverage, data, milestones_hit)
             self._update_pyproject_requirement(new_coverage)
@@ -180,7 +182,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         }
 
     def _check_milestones(
-        self, old_coverage: float, new_coverage: float, data: dict[str, t.Any]
+        self,
+        old_coverage: float,
+        new_coverage: float,
+        data: dict[str, t.Any],
     ) -> list[float]:
         achieved_milestones = set(data.get("milestones_achieved", []))
         return [
@@ -199,7 +204,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         return None
 
     def _update_baseline(
-        self, new_coverage: float, data: dict[str, t.Any], milestones_hit: list[float]
+        self,
+        new_coverage: float,
+        data: dict[str, t.Any],
+        milestones_hit: list[float],
     ) -> None:
         data["baseline"] = new_coverage
         data["current_minimum"] = new_coverage
@@ -212,7 +220,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 "commit": "current",
                 "milestone": len(milestones_hit) > 0,
                 "milestones_hit": milestones_hit,
-            }
+            },
         )
 
         for milestone in milestones_hit:
@@ -235,18 +243,18 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             if updated_content != content:
                 updated_content = (
                     FileSystemService.clean_trailing_whitespace_and_newlines(
-                        updated_content
+                        updated_content,
                     )
                 )
 
                 self.pyproject_file.write_text(updated_content)
                 self.console.print(
-                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage: .0f}%"
+                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage: .0f}%",
                 )
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Failed to update pyproject.toml: {e}"
+                f"[yellow]⚠️[/ yellow] Failed to update pyproject.toml: {e}",
             )
 
     def get_progress_visualization(self) -> str:
@@ -292,7 +300,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         if end_coverage > start_coverage + 0.5:
             return "improving"
-        elif end_coverage < start_coverage - 0.5:
+        if end_coverage < start_coverage - 0.5:
             return "declining"
         return "stable"
 
@@ -300,19 +308,19 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         for milestone in milestones:
             if milestone == 100.0:
                 self.console.print(
-                    "[gold]🎉🏆 PERFECT ! 100 % COVERAGE ACHIEVED ! 🏆🎉[/ gold]"
+                    "[gold]🎉🏆 PERFECT ! 100 % COVERAGE ACHIEVED ! 🏆🎉[/ gold]",
                 )
             elif milestone >= 90:
                 self.console.print(
-                    f"[gold]🏆 Milestone achieved: {milestone: .0f}% coverage ! Approaching perfection ![/ gold]"
+                    f"[gold]🏆 Milestone achieved: {milestone: .0f}% coverage ! Approaching perfection ![/ gold]",
                 )
             elif milestone >= 50:
                 self.console.print(
-                    f"[green]🎯 Milestone achieved: {milestone: .0f}% coverage ! Great progress ![/ green]"
+                    f"[green]🎯 Milestone achieved: {milestone: .0f}% coverage ! Great progress ![/ green]",
                 )
             else:
                 self.console.print(
-                    f"[cyan]📈 Milestone achieved: {milestone: .0f}% coverage ! Keep it up ![/ cyan]"
+                    f"[cyan]📈 Milestone achieved: {milestone: .0f}% coverage ! Keep it up ![/ cyan]",
                 )
 
     def show_progress_with_spinner(self) -> None:
@@ -330,7 +338,9 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             TextColumn("[progress.percentage]{task.percentage: > 3.0f}%"),
         ) as progress:
             task = progress.add_task(
-                "Coverage Progress", total=target, completed=current
+                "Coverage Progress",
+                total=target,
+                completed=current,
             )
             progress.update(task, description=f"Coverage: {current: .1f}% / 100 %")
 
@@ -365,7 +375,8 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
             coverage_data = json.loads(coverage_file.read_text())
             current_coverage = coverage_data.get("totals", {}).get(
-                "percent_covered", 0.0
+                "percent_covered",
+                0.0,
             )
 
             result = self.update_coverage(current_coverage)

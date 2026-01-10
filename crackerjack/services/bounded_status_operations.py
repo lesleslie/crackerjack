@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import os
 import time
 import typing as t
@@ -68,7 +69,7 @@ class CircuitBreakerOpenError(Exception):
 
 
 class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
-    def __init__(self, limits: OperationLimits | None = None):
+    def __init__(self, limits: OperationLimits | None = None) -> None:
         self.limits = limits or OperationLimits()
         self.security_logger = get_security_logger()
 
@@ -82,7 +83,7 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
         self._operation_history: list[OperationMetrics] = []
 
         self._circuit_states: dict[str, OperationState] = defaultdict(
-            lambda: OperationState.CLOSED  # type: ignore[misc]
+            lambda: OperationState.CLOSED,  # type: ignore[misc]
         )
         self._failure_counts: dict[str, int] = defaultdict(int)
         self._last_failure_times: dict[str, float] = {}
@@ -158,7 +159,10 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                 self._active_operations[operation_id] = metrics
 
             result = await self._execute_with_monitoring(
-                operation_func, metrics, *args, **kwargs
+                operation_func,
+                metrics,
+                *args,
+                **kwargs,
             )
 
             metrics.success = True
@@ -237,12 +241,15 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                             - (current_time - last_failure),
                         },
                     )
+                    msg = f"Circuit breaker open for {operation_type}"
                     raise CircuitBreakerOpenError(
-                        f"Circuit breaker open for {operation_type}"
+                        msg,
                     )
 
     def _validate_and_reserve_operation(
-        self, operation_type: str, client_id: str
+        self,
+        operation_type: str,
+        client_id: str,
     ) -> str:
         current_time = time.time()
         operation_id = f"{operation_type}_{client_id}_{int(current_time * 1000)}"
@@ -256,8 +263,9 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                     client_id=client_id,
                     operation=operation_type,
                 )
+                msg = f"Maximum concurrent operations exceeded: {len(self._active_operations)}"
                 raise OperationLimitExceededError(
-                    f"Maximum concurrent operations exceeded: {len(self._active_operations)}"
+                    msg,
                 )
 
             client_ops = self._client_operations[client_id]
@@ -273,8 +281,9 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                     client_id=client_id,
                     operation=operation_type,
                 )
+                msg = f"Operation rate limit exceeded: {len(client_ops)} operations/min"
                 raise OperationLimitExceededError(
-                    f"Operation rate limit exceeded: {len(client_ops)} operations/min"
+                    msg,
                 )
 
             if (
@@ -288,8 +297,9 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                     client_id=client_id,
                     operation=operation_type,
                 )
+                msg = f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024: .1f}MB"
                 raise OperationLimitExceededError(
-                    f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024: .1f}MB"
+                    msg,
                 )
 
             client_ops.append(current_time)
@@ -306,12 +316,10 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
         monitor_task = asyncio.create_task(self._monitor_operation(metrics))
 
         try:
-            result = await asyncio.wait_for(
+            return await asyncio.wait_for(
                 operation_func(*args, **kwargs),
                 timeout=self.limits.timeout_seconds,
             )
-
-            return result
 
         except TimeoutError:
             self.security_logger.log_security_event(
@@ -325,16 +333,15 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                     "timeout": self.limits.timeout_seconds,
                 },
             )
+            msg = f"Operation timed out after {self.limits.timeout_seconds}s"
             raise TimeoutError(
-                f"Operation timed out after {self.limits.timeout_seconds}s"
+                msg,
             )
 
         finally:
             monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await monitor_task
-            except asyncio.CancelledError:
-                pass
 
     async def _monitor_operation(self, metrics: OperationMetrics) -> None:
         try:
@@ -438,7 +445,8 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                 self._operation_history.pop(0)
 
             self._total_memory_usage = max(
-                0, self._total_memory_usage - metrics.memory_usage
+                0,
+                self._total_memory_usage - metrics.memory_usage,
             )
             self._total_cpu_time += metrics.cpu_time
             self._total_file_operations += metrics.file_operations
@@ -526,5 +534,9 @@ async def execute_bounded_status_operation(
 ) -> t.Any:
     operations_manager = get_bounded_status_operations()
     return await operations_manager.execute_bounded_operation(
-        operation_type, client_id, operation_func, *args, **kwargs
+        operation_type,
+        client_id,
+        operation_func,
+        *args,
+        **kwargs,
     )

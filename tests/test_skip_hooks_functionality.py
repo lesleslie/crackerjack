@@ -16,9 +16,9 @@ class TestSkipHooksFunctionality:
 
     def test_skip_hooks_option_exists_in_help(self) -> None:
         """Test that the -s/--skip-hooks option exists in help output."""
-        # Get help output
+        # Get help output for the run subcommand
         result = subprocess.run(
-            [sys.executable, "-m", "crackerjack", "--help"],
+            [sys.executable, "-m", "crackerjack", "run", "--help"],
             capture_output=True,
             text=True,
             check=False,
@@ -30,7 +30,7 @@ class TestSkipHooksFunctionality:
         # Check if skip-hooks option is mentioned
         help_output = result.stdout
         assert "--skip-hooks" in help_output
-        assert "-s" in help_output
+        assert "-x" in help_output  # Short form is -x, not -s
 
     def test_skip_hooks_attribute_exists_in_options_protocol(self) -> None:
         """Test that skip_hooks attribute exists in OptionsProtocol."""
@@ -38,32 +38,20 @@ class TestSkipHooksFunctionality:
         assert hasattr(OptionsProtocol, "skip_hooks")
 
     def test_skip_hooks_functionality_with_subprocess(self) -> None:
-        """Test that the -s/--skip-hooks option skips pre-commit hooks."""
+        """Test that the -x/--skip-hooks option skips pre-commit hooks."""
         # Create a temporary directory for testing
         with tempfile.TemporaryDirectory() as tmp_dir:
             test_dir = Path(tmp_dir)
 
-            # Initialize a new project
+            # Run crackerjack with -x flag (skip hooks) using run subcommand
             result = subprocess.run(
                 [
                     sys.executable,
                     "-m",
                     "crackerjack",
-                    "--no-config-updates",  # Don't update configs for this test
-                ],
-                cwd=test_dir,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-
-            # Run crackerjack with -s flag (should skip hooks)
-            result = subprocess.run(
-                [
-                    sys.executable,
-                    "-m",
-                    "crackerjack",
-                    "-s",  # Skip hooks
+                    "run",
+                    "-x",  # Skip hooks
+                    "--skip-hooks",  # Long form
                     "--no-config-updates",  # Don't update configs for this test
                 ],
                 cwd=test_dir,

@@ -18,7 +18,7 @@ from crackerjack.config.global_lock_config import GlobalLockConfig
 class TestGlobalLockConfig:
     """Test GlobalLockConfig functionality."""
 
-    def test_default_initialization(self):
+    def test_default_initialization(self) -> None:
         """Test default configuration values."""
         config = GlobalLockConfig()
 
@@ -34,7 +34,7 @@ class TestGlobalLockConfig:
         expected_dir = Path.home() / ".crackerjack" / "locks"
         assert config.lock_directory == expected_dir
 
-    def test_lock_directory_creation(self, tmp_path):
+    def test_lock_directory_creation(self, tmp_path) -> None:
         """Test that lock directory is created."""
         lock_dir = tmp_path / "custom_locks"
 
@@ -44,7 +44,7 @@ class TestGlobalLockConfig:
         assert lock_dir.exists()
         assert lock_dir.is_dir()
 
-    def test_hostname_property(self):
+    def test_hostname_property(self) -> None:
         """Test hostname property returns current system hostname."""
         import socket
 
@@ -52,7 +52,7 @@ class TestGlobalLockConfig:
         expected_hostname = socket.gethostname()
         assert config.hostname == expected_hostname
 
-    def test_session_id_generation(self):
+    def test_session_id_generation(self) -> None:
         """Test session ID generation creates a unique ID."""
         config = GlobalLockConfig()
 
@@ -63,7 +63,7 @@ class TestGlobalLockConfig:
         # Should be deterministic for same instance
         assert config.session_id == config.session_id
 
-    def test_lock_file_path_generation(self, tmp_path):
+    def test_lock_file_path_generation(self, tmp_path) -> None:
         """Test lock file path generation for hooks."""
         lock_dir = tmp_path / "locks"
         config = GlobalLockConfig(lock_directory=lock_dir)
@@ -87,7 +87,7 @@ class TestGlobalLockConfig:
             expected_path = lock_dir / f"{hook_name}.lock"
             assert lock_path == expected_path
 
-    def test_configuration_validation_types(self):
+    def test_configuration_validation_types(self) -> None:
         """Test configuration with various data types."""
         # Test with valid types using backwards compatibility API
         config = GlobalLockConfig(
@@ -108,7 +108,7 @@ class TestGlobalLockConfig:
         assert config.retry_delay_seconds == 2.5
         assert config.enable_lock_monitoring is False
 
-    def test_multiple_config_instances_independent(self, tmp_path):
+    def test_multiple_config_instances_independent(self, tmp_path) -> None:
         """Test that multiple GlobalLockConfig instances are independent."""
         dir1 = tmp_path / "locks1"
         dir2 = tmp_path / "locks2"
@@ -123,7 +123,7 @@ class TestGlobalLockConfig:
         assert dir1.exists()
         assert dir2.exists()
 
-    def test_lock_path_special_characters(self, tmp_path):
+    def test_lock_path_special_characters(self, tmp_path) -> None:
         """Test lock path generation with special characters in hook names."""
         lock_dir = tmp_path / "locks"
         config = GlobalLockConfig(lock_directory=lock_dir)
@@ -143,7 +143,7 @@ class TestGlobalLockConfig:
             assert lock_path.parent == lock_dir
             assert lock_path.suffix == ".lock"
 
-    def test_lock_path_sanitizes_slashes(self, tmp_path):
+    def test_lock_path_sanitizes_slashes(self, tmp_path) -> None:
         """Test that lock path generation sanitizes forward slashes."""
         lock_dir = tmp_path / "locks"
         config = GlobalLockConfig(lock_directory=lock_dir)
@@ -155,7 +155,7 @@ class TestGlobalLockConfig:
         expected_path = lock_dir / "hook_with_slashes.lock"
         assert lock_path == expected_path
 
-    def test_nested_directories_creation(self, tmp_path):
+    def test_nested_directories_creation(self, tmp_path) -> None:
         """Test that nested directory structure is created."""
         nested_dir = tmp_path / "level1" / "level2" / "locks"
 
@@ -170,7 +170,7 @@ class TestGlobalLockConfig:
 class TestGlobalLockConfigEdgeCases:
     """Test edge cases and error conditions for GlobalLockConfig."""
 
-    def test_lock_directory_with_pathlib_path(self, tmp_path):
+    def test_lock_directory_with_pathlib_path(self, tmp_path) -> None:
         """Test configuration with pathlib.Path object."""
         lock_dir_path = tmp_path / "pathlib_locks"
 
@@ -179,17 +179,17 @@ class TestGlobalLockConfigEdgeCases:
         assert config.lock_directory == lock_dir_path
         assert lock_dir_path.exists()
 
-    def test_zero_timeout_configuration(self):
+    def test_zero_timeout_configuration(self) -> None:
         """Test configuration with edge case timeout values."""
         config = GlobalLockConfig(
-            timeout_seconds=0.0, stale_lock_hours=0.0, session_heartbeat_interval=0.1
+            timeout_seconds=0.0, stale_lock_hours=0.0, session_heartbeat_interval=0.1,
         )
 
         assert config.timeout_seconds == 0.0
         assert config.stale_lock_hours == 0.0
         assert config.session_heartbeat_interval == 0.1
 
-    def test_very_long_hook_names(self, tmp_path):
+    def test_very_long_hook_names(self, tmp_path) -> None:
         """Test lock path generation with very long hook names."""
         lock_dir = tmp_path / "locks"
         config = GlobalLockConfig(lock_directory=lock_dir)
@@ -203,13 +203,13 @@ class TestGlobalLockConfigEdgeCases:
         assert lock_path.suffix == ".lock"
 
     @pytest.mark.parametrize("invalid_timeout", [-1, -10.5])
-    def test_negative_timeout_handling(self, invalid_timeout):
+    def test_negative_timeout_handling(self, invalid_timeout) -> None:
         """Test behavior with negative timeout values."""
         # Configuration should accept negative values (validation may be elsewhere)
         config = GlobalLockConfig(timeout_seconds=invalid_timeout)
         assert config.timeout_seconds == invalid_timeout
 
-    def test_file_permission_errors_handling(self, tmp_path, monkeypatch):
+    def test_file_permission_errors_handling(self, tmp_path, monkeypatch) -> None:
         """Test handling of file permission errors during directory creation."""
         # This test simulates permission errors that might occur in real scenarios
         lock_dir = tmp_path / "permission_denied"
@@ -219,7 +219,8 @@ class TestGlobalLockConfigEdgeCases:
 
         def mock_mkdir(self, *args, **kwargs):
             if self == lock_dir:
-                raise PermissionError("Permission denied")
+                msg = "Permission denied"
+                raise PermissionError(msg)
             return original_mkdir(self, *args, **kwargs)
 
         monkeypatch.setattr(Path, "mkdir", mock_mkdir)
@@ -232,7 +233,7 @@ class TestGlobalLockConfigEdgeCases:
 class TestGlobalLockConfigIntegration:
     """Integration tests for GlobalLockConfig with real filesystem operations."""
 
-    def test_real_filesystem_integration(self):
+    def test_real_filesystem_integration(self) -> None:
         """Test with real filesystem in temporary directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
             lock_dir = Path(temp_dir) / "integration_locks"
@@ -255,7 +256,7 @@ class TestGlobalLockConfigIntegration:
             assert lock_path.exists()
             assert lock_path.read_text() == json.dumps(lock_data)
 
-    def test_multiple_sequential_config_creation(self, tmp_path):
+    def test_multiple_sequential_config_creation(self, tmp_path) -> None:
         """Test multiple GlobalLockConfig instances created sequentially."""
         results = []
 
@@ -268,7 +269,7 @@ class TestGlobalLockConfigIntegration:
                     "session_id": config.session_id,
                     "directory": str(config.lock_directory),
                     "exists": lock_dir.exists(),
-                }
+                },
             )
 
         # Verify all configs were created successfully

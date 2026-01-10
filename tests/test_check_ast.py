@@ -3,10 +3,10 @@
 import tempfile
 from pathlib import Path
 
-from crackerjack.tools.check_ast import validate_ast_file, main
+from crackerjack.tools.check_ast import main, validate_ast_file
 
 
-def test_validate_ast_file_valid_syntax():
+def test_validate_ast_file_valid_syntax() -> None:
     """Test that validate_ast_file returns True for valid Python syntax."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("def hello():\n    print('Hello, world!')\n")
@@ -21,7 +21,7 @@ def test_validate_ast_file_valid_syntax():
         file_path.unlink()
 
 
-def test_validate_ast_file_invalid_syntax():
+def test_validate_ast_file_invalid_syntax() -> None:
     """Test that validate_ast_file returns False for invalid Python syntax."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("def hello(\n    print('Hello, world!')\n")  # Missing closing parenthesis
@@ -37,7 +37,7 @@ def test_validate_ast_file_invalid_syntax():
         file_path.unlink()
 
 
-def test_main_with_valid_file():
+def test_main_with_valid_file() -> None:
     """Test main function with a file that has valid AST."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("x = 1\ny = 2\n")
@@ -51,7 +51,7 @@ def test_main_with_valid_file():
         file_path.unlink()
 
 
-def test_main_with_invalid_file():
+def test_main_with_invalid_file() -> None:
     """Test main function with a file that has invalid AST."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
         f.write("if True:\n    x =\n")  # Invalid syntax
@@ -65,7 +65,7 @@ def test_main_with_invalid_file():
         file_path.unlink()
 
 
-def test_main_with_multiple_files():
+def test_main_with_multiple_files() -> None:
     """Test main function with multiple files."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f1:
         f1.write("x = 1\n")
@@ -85,7 +85,7 @@ def test_main_with_multiple_files():
         file2_path.unlink()
 
 
-def test_main_with_nonexistent_file():
+def test_main_with_nonexistent_file() -> None:
     """Test main function with a nonexistent file."""
     nonexistent_path = Path("/nonexistent/file.py")
     result = main([str(nonexistent_path)])

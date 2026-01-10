@@ -45,7 +45,8 @@ def register_all_skills(
     enable_hybrid_skills: bool = True,
 ) -> dict[str, AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry]:
     registries: dict[
-        str, AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry
+        str,
+        AgentSkillRegistry | MCPSkillRegistry | HybridSkillRegistry,
     ] = {}
 
     if enable_agent_skills:

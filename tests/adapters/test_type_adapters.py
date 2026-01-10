@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from crackerjack.adapters.type.ty import TyAdapter, TySettings
-from crackerjack.adapters.type.pyrefly import PyreflyAdapter, PyreflySettings
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult, ToolIssue
+from crackerjack.adapters.type.pyrefly import PyreflyAdapter, PyreflySettings
+from crackerjack.adapters.type.ty import TyAdapter, TySettings
 
 
 class TestTyAdapter:
@@ -18,7 +18,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_initialization(self) -> None:
         """Test basic initialization of TyAdapter."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             adapter = TyAdapter()
             assert adapter.settings is None
 
@@ -31,7 +31,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_build_command_basic(self) -> None:
         """Test building a basic ty command."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             settings = TySettings(use_json_output=True, strict_mode=False,
                                 ignore_missing_imports=False, follow_imports="normal",
                                 incremental=True, warn_unused_ignores=True)
@@ -49,7 +49,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_build_command_with_options(self) -> None:
         """Test building a ty command with various options."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             settings = TySettings(
                 strict_mode=True,
                 ignore_missing_imports=True,
@@ -87,7 +87,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_parse_json_output(self) -> None:
         """Test parsing JSON output from ty."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             adapter = TyAdapter()
             await adapter.init()
 
@@ -102,11 +102,11 @@ class TestTyAdapter:
                                 "column": 5,
                                 "message": "Incompatible types",
                                 "severity": "error",
-                                "code": "assignment"
-                            }
-                        ]
-                    }
-                ]
+                                "code": "assignment",
+                            },
+                        ],
+                    },
+                ],
             })
 
             result = await self._create_mock_result(json_output)
@@ -124,7 +124,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_parse_text_output(self) -> None:
         """Test parsing text output from ty."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             adapter = TyAdapter()
             await adapter.init()
 
@@ -146,7 +146,7 @@ class TestTyAdapter:
     @pytest.mark.asyncio
     async def test_parse_empty_output(self) -> None:
         """Test parsing empty output."""
-        with patch.object(TyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(TyAdapter, "validate_tool_available", return_value=True):
             adapter = TyAdapter()
             await adapter.init()
 
@@ -171,7 +171,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_initialization(self) -> None:
         """Test basic initialization of PyreflyAdapter."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             adapter = PyreflyAdapter()
             assert adapter.settings is None
 
@@ -184,7 +184,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_build_command_basic(self) -> None:
         """Test building a basic pyrefly command."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             settings = PyreflySettings(use_json_output=True, strict_mode=False,
                                      ignore_missing_imports=False, follow_imports="normal",
                                      incremental=True, warn_unused_ignores=True)
@@ -202,7 +202,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_build_command_with_options(self) -> None:
         """Test building a pyrefly command with various options."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             settings = PyreflySettings(
                 strict_mode=True,
                 ignore_missing_imports=True,
@@ -230,7 +230,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_parse_json_output(self) -> None:
         """Test parsing JSON output from pyrefly."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             adapter = PyreflyAdapter()
             await adapter.init()
 
@@ -245,11 +245,11 @@ class TestPyreflyAdapter:
                                 "column": 3,
                                 "message": "Undefined variable 'x'",
                                 "severity": "error",
-                                "code": "name-defined"
-                            }
-                        ]
-                    }
-                ]
+                                "code": "name-defined",
+                            },
+                        ],
+                    },
+                ],
             })
 
             result = self._create_mock_result(json_output)
@@ -277,7 +277,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_parse_text_output(self) -> None:
         """Test parsing text output from pyrefly."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             adapter = PyreflyAdapter()
             await adapter.init()
 
@@ -299,7 +299,7 @@ class TestPyreflyAdapter:
     @pytest.mark.asyncio
     async def test_parse_empty_output(self) -> None:
         """Test parsing empty output."""
-        with patch.object(PyreflyAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyreflyAdapter, "validate_tool_available", return_value=True):
             adapter = PyreflyAdapter()
             await adapter.init()
 

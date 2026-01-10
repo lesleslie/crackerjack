@@ -68,15 +68,15 @@ class EmbeddingService:
             self._model_loaded = True
 
             logger.info(
-                f"Successfully loaded tokenizer for: {self.config.embedding_model}"
+                f"Successfully loaded tokenizer for: {self.config.embedding_model}",
             )
             logger.warning(
-                "ONNX session not implemented yet - using fallback embeddings"
+                "ONNX session not implemented yet - using fallback embeddings",
             )
 
         except Exception as e:
-            logger.error(
-                f"Failed to load embedding model {self.config.embedding_model}: {e}"
+            logger.exception(
+                f"Failed to load embedding model {self.config.embedding_model}: {e}",
             )
             self._session = None
             self._tokenizer = None
@@ -88,12 +88,12 @@ class EmbeddingService:
             raise ValueError(msg)
 
         try:
-            embedding = self._generate_fallback_embedding(text)
-            return embedding
+            return self._generate_fallback_embedding(text)
 
         except Exception as e:
-            logger.error(f"Failed to generate embedding for text: {e}")
-            raise RuntimeError(f"Embedding generation failed: {e}") from e
+            logger.exception(f"Failed to generate embedding for text: {e}")
+            msg = f"Embedding generation failed: {e}"
+            raise RuntimeError(msg) from e
 
     def _generate_fallback_embedding(self, text: str) -> list[float]:
         text_hash = hashlib.sha256(text.encode()).hexdigest()
@@ -139,11 +139,14 @@ class EmbeddingService:
             return result
 
         except Exception as e:
-            logger.error(f"Failed to generate batch embeddings: {e}")
-            raise RuntimeError(f"Batch embedding generation failed: {e}") from e
+            logger.exception(f"Failed to generate batch embeddings: {e}")
+            msg = f"Batch embedding generation failed: {e}"
+            raise RuntimeError(msg) from e
 
     def calculate_similarity(
-        self, embedding1: list[float], embedding2: list[float]
+        self,
+        embedding1: list[float],
+        embedding2: list[float],
     ) -> float:
         if not embedding1 or not embedding2:
             msg = "Cannot calculate similarity for empty embeddings"
@@ -171,11 +174,14 @@ class EmbeddingService:
             return max(0.0, min(1.0, float(similarity)))
 
         except Exception as e:
-            logger.error(f"Failed to calculate similarity: {e}")
-            raise RuntimeError(f"Similarity calculation failed: {e}") from e
+            logger.exception(f"Failed to calculate similarity: {e}")
+            msg = f"Similarity calculation failed: {e}"
+            raise RuntimeError(msg) from e
 
     def calculate_similarities_batch(
-        self, query_embedding: list[float], embeddings: list[list[float]]
+        self,
+        query_embedding: list[float],
+        embeddings: list[list[float]],
     ) -> list[float]:
         if not query_embedding:
             msg = "Query embedding cannot be empty"
@@ -204,8 +210,9 @@ class EmbeddingService:
             return similarities.tolist()
 
         except Exception as e:
-            logger.error(f"Failed to calculate batch similarities: {e}")
-            raise RuntimeError(f"Batch similarity calculation failed: {e}") from e
+            logger.exception(f"Failed to calculate batch similarities: {e}")
+            msg = f"Batch similarity calculation failed: {e}"
+            raise RuntimeError(msg) from e
 
     def get_text_hash(self, text: str) -> str:
         return hashlib.sha256(text.encode("utf-8")).hexdigest()

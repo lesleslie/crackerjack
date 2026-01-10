@@ -106,7 +106,7 @@ class HybridSkill(AgentSkill):
         return mapping
 
     def generate_default_tools(self) -> list[ToolMapping]:
-        mappings = [
+        return [
             self.register_tool(
                 operation="can_handle",
                 description=f"Check if {self.metadata.name} can handle an issue",
@@ -214,8 +214,6 @@ class HybridSkill(AgentSkill):
             ),
         ]
 
-        return mappings
-
     def get_tool_mappings(self) -> list[ToolMapping]:
         return self._tool_mappings
 
@@ -227,33 +225,34 @@ class HybridSkill(AgentSkill):
         mapping = self.delegator.get_tool_mapping(tool_name)
 
         if not mapping or mapping.skill_id != self.skill_id:
-            raise ValueError(f"Tool {tool_name} not found in skill {self.skill_id}")
+            msg = f"Tool {tool_name} not found in skill {self.skill_id}"
+            raise ValueError(msg)
 
         if mapping.method_name == "can_handle":
             issue = self._parse_issue(kwargs)
             confidence = await self.can_handle(issue)
             return {"can_handle": confidence > 0, "confidence": confidence}
 
-        elif mapping.method_name == "execute":
+        if mapping.method_name == "execute":
             issue = self._parse_issue(kwargs)
             timeout = kwargs.get("timeout")
             result = await self.execute(issue, timeout)
             return result.to_dict()
 
-        elif mapping.method_name == "batch_execute":
+        if mapping.method_name == "batch_execute":
             issues_data = kwargs.get("issues", [])
             issues = [self._parse_issue(i) for i in issues_data]
             results_coro = self.batch_execute(issues)
             results = await results_coro
             return {"results": [r.to_dict() for r in results]}
 
-        elif mapping.method_name == "get_info":
+        if mapping.method_name == "get_info":
             info = self.get_info()
             info["tool_count"] = len(self._tool_mappings)
             return info
 
-        else:
-            raise ValueError(f"Unknown method: {mapping.method_name}")
+        msg = f"Unknown method: {mapping.method_name}"
+        raise ValueError(msg)
 
     def _parse_issue(self, data: dict[str, t.Any]) -> Issue:
         from crackerjack.agents.base import Priority
@@ -318,8 +317,8 @@ class HybridSkillRegistry(AgentSkillRegistry):
             try:
                 skill = self.register_hybrid_skill(agent_class, context)
                 skills.append(skill)
-            except Exception as e:
-                print(f"Warning: Failed to register {agent_class.__name__}: {e}")
+            except Exception:
+                pass
 
         return skills
 
@@ -331,12 +330,14 @@ class HybridSkillRegistry(AgentSkillRegistry):
         mapping = self.delegator.get_tool_mapping(tool_name)
 
         if not mapping:
-            raise ValueError(f"Tool {tool_name} not found")
+            msg = f"Tool {tool_name} not found"
+            raise ValueError(msg)
 
         skill = self.get_skill(mapping.skill_id)
 
         if not skill or not isinstance(skill, HybridSkill):
-            raise ValueError(f"Skill {mapping.skill_id} not found or not hybrid")
+            msg = f"Skill {mapping.skill_id} not found or not hybrid"
+            raise ValueError(msg)
 
         return await skill.execute_via_tool(tool_name, **kwargs)
 

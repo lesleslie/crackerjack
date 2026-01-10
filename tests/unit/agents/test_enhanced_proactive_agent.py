@@ -45,7 +45,7 @@ class TestEnhancedProactiveAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test EnhancedProactiveAgent initializes correctly."""
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             agent = TestEnhancedProactiveAgentImpl(context)
@@ -54,7 +54,7 @@ class TestEnhancedProactiveAgentInitialization:
             assert agent._external_consultation_enabled is True
             assert hasattr(agent, "claude_bridge")
 
-    def test_enable_external_consultation(self, context):
+    def test_enable_external_consultation(self, context) -> None:
         """Test enabling/disabling external consultation."""
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             agent = TestEnhancedProactiveAgentImpl(context)
@@ -83,7 +83,7 @@ class TestEnhancedProactiveAgentExecution:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    async def test_execute_with_plan_no_consultation_needed(self, agent):
+    async def test_execute_with_plan_no_consultation_needed(self, agent) -> None:
         """Test execution when external consultation not needed."""
         issue = Issue(
             id="test-001",
@@ -101,7 +101,7 @@ class TestEnhancedProactiveAgentExecution:
 
                 assert result == internal_result
 
-    async def test_execute_with_plan_with_consultation(self, agent):
+    async def test_execute_with_plan_with_consultation(self, agent) -> None:
         """Test execution with external consultation."""
         issue = Issue(
             id="test-001",
@@ -127,7 +127,7 @@ class TestEnhancedProactiveAgentExecution:
 
                         assert result == enhanced_result
 
-    async def test_execute_internal_fix(self, agent):
+    async def test_execute_internal_fix(self, agent) -> None:
         """Test executing internal fix."""
         issue = Issue(
             id="test-001",
@@ -155,7 +155,7 @@ class TestEnhancedProactiveAgentConsultationDecision:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    def test_should_consult_disabled(self, agent):
+    def test_should_consult_disabled(self, agent) -> None:
         """Test that consultation is skipped when disabled."""
         agent.enable_external_consultation(False)
 
@@ -172,7 +172,7 @@ class TestEnhancedProactiveAgentConsultationDecision:
 
         assert result is False
 
-    def test_should_consult_low_confidence(self, agent):
+    def test_should_consult_low_confidence(self, agent) -> None:
         """Test consultation for low confidence internal result."""
         issue = Issue(
             id="test-001",
@@ -189,7 +189,7 @@ class TestEnhancedProactiveAgentConsultationDecision:
 
         assert result is True
 
-    def test_should_consult_external_strategy(self, agent):
+    def test_should_consult_external_strategy(self, agent) -> None:
         """Test consultation when plan specifies external strategy."""
         issue = Issue(
             id="test-001",
@@ -206,7 +206,7 @@ class TestEnhancedProactiveAgentConsultationDecision:
 
         assert result is True
 
-    def test_should_consult_internal_failure(self, agent):
+    def test_should_consult_internal_failure(self, agent) -> None:
         """Test consultation when internal fix fails."""
         issue = Issue(
             id="test-001",
@@ -236,7 +236,7 @@ class TestEnhancedProactiveAgentExternalConsultation:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    async def test_consult_external_agents_success(self, agent):
+    async def test_consult_external_agents_success(self, agent) -> None:
         """Test successful external agent consultation."""
         issue = Issue(
             id="test-001",
@@ -247,11 +247,11 @@ class TestEnhancedProactiveAgentExternalConsultation:
         plan = {}
 
         agent.claude_bridge.get_recommended_external_agents = Mock(
-            return_value=["architect", "python-pro"]
+            return_value=["architect", "python-pro"],
         )
         agent.claude_bridge.verify_agent_availability = Mock(return_value=True)
         agent.claude_bridge.consult_external_agent = AsyncMock(
-            return_value={"status": "success", "recommendations": ["Advice"]}
+            return_value={"status": "success", "recommendations": ["Advice"]},
         )
 
         consultations = await agent._consult_external_agents(issue, plan)
@@ -259,7 +259,7 @@ class TestEnhancedProactiveAgentExternalConsultation:
         assert len(consultations) == 2
         assert all(c["status"] == "success" for c in consultations)
 
-    async def test_consult_external_agents_unavailable(self, agent):
+    async def test_consult_external_agents_unavailable(self, agent) -> None:
         """Test consultation when agents unavailable."""
         issue = Issue(
             id="test-001",
@@ -270,7 +270,7 @@ class TestEnhancedProactiveAgentExternalConsultation:
         plan = {}
 
         agent.claude_bridge.get_recommended_external_agents = Mock(
-            return_value=["architect"]
+            return_value=["architect"],
         )
         agent.claude_bridge.verify_agent_availability = Mock(return_value=False)
 
@@ -278,7 +278,7 @@ class TestEnhancedProactiveAgentExternalConsultation:
 
         assert len(consultations) == 0
 
-    async def test_consult_external_agents_limited(self, agent):
+    async def test_consult_external_agents_limited(self, agent) -> None:
         """Test consultation limits to top 2 agents."""
         issue = Issue(
             id="test-001",
@@ -289,11 +289,11 @@ class TestEnhancedProactiveAgentExternalConsultation:
         plan = {}
 
         agent.claude_bridge.get_recommended_external_agents = Mock(
-            return_value=["agent1", "agent2", "agent3", "agent4"]
+            return_value=["agent1", "agent2", "agent3", "agent4"],
         )
         agent.claude_bridge.verify_agent_availability = Mock(return_value=True)
         agent.claude_bridge.consult_external_agent = AsyncMock(
-            return_value={"status": "success"}
+            return_value={"status": "success"},
         )
 
         consultations = await agent._consult_external_agents(issue, plan)
@@ -313,18 +313,18 @@ class TestEnhancedProactiveAgentResultCombination:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    def test_combine_results_no_consultations(self, agent):
+    def test_combine_results_no_consultations(self, agent) -> None:
         """Test combining when no external consultations."""
         internal_result = FixResult(success=True, confidence=0.7)
         consultations = []
 
         result = agent._combine_internal_and_external_results(
-            internal_result, consultations
+            internal_result, consultations,
         )
 
         assert result == internal_result
 
-    def test_combine_results_with_consultations(self, agent):
+    def test_combine_results_with_consultations(self, agent) -> None:
         """Test combining with external consultations."""
         internal_result = FixResult(
             success=True,
@@ -343,11 +343,11 @@ class TestEnhancedProactiveAgentResultCombination:
         )
 
         agent.claude_bridge.create_enhanced_fix_result = Mock(
-            return_value=enhanced_result
+            return_value=enhanced_result,
         )
 
         result = agent._combine_internal_and_external_results(
-            internal_result, consultations
+            internal_result, consultations,
         )
 
         # Should have consultation metadata
@@ -367,7 +367,7 @@ class TestEnhancedProactiveAgentPlanning:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    async def test_plan_before_action_external_strategy(self, agent):
+    async def test_plan_before_action_external_strategy(self, agent) -> None:
         """Test planning that suggests external consultation."""
         issue = Issue(
             id="test-001",
@@ -383,7 +383,7 @@ class TestEnhancedProactiveAgentPlanning:
         assert plan["strategy"] == "external_specialist_guided"
         assert "external_guidance" in plan["patterns"]
 
-    async def test_plan_before_action_internal_strategy(self, agent):
+    async def test_plan_before_action_internal_strategy(self, agent) -> None:
         """Test planning that uses internal strategy."""
         issue = Issue(
             id="test-001",
@@ -404,7 +404,7 @@ class TestEnhancedProactiveAgentPlanning:
 class TestEnhanceAgentWithClaudeCodeBridge:
     """Test agent enhancement function."""
 
-    def test_enhance_agent_with_bridge(self, tmp_path):
+    def test_enhance_agent_with_bridge(self, tmp_path) -> None:
         """Test enhancing an agent class with Claude Code bridge."""
         from crackerjack.agents.proactive_agent import ProactiveAgent
 
@@ -442,7 +442,7 @@ class TestEnhancedProactiveAgentIntegration:
         with patch("crackerjack.agents.enhanced_proactive_agent.ClaudeCodeBridge"):
             return TestEnhancedProactiveAgentImpl(context)
 
-    def test_agent_maintains_consultation_state(self, agent):
+    def test_agent_maintains_consultation_state(self, agent) -> None:
         """Test that agent maintains consultation state across operations."""
         # Initially enabled
         assert agent._external_consultation_enabled is True
@@ -454,7 +454,7 @@ class TestEnhancedProactiveAgentIntegration:
         # State should remain across multiple checks
         assert agent._external_consultation_enabled is False
 
-    def test_agent_bridge_integration(self, agent):
+    def test_agent_bridge_integration(self, agent) -> None:
         """Test that Claude Code bridge is properly integrated."""
         assert hasattr(agent, "claude_bridge")
         assert agent.claude_bridge is not None

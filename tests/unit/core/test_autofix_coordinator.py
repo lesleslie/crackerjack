@@ -17,7 +17,7 @@ from crackerjack.core.autofix_coordinator import AutofixCoordinator
 class TestAutofixCoordinatorInitialization:
     """Test AutofixCoordinator initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization with DI."""
         coordinator = AutofixCoordinator()
 
@@ -25,32 +25,32 @@ class TestAutofixCoordinatorInitialization:
         assert coordinator.pkg_path == Path.cwd()
         assert coordinator.logger is not None
 
-    def test_initialization_with_console(self):
+    def test_initialization_with_console(self) -> None:
         """Test initialization with provided console."""
         mock_console = Mock()
         coordinator = AutofixCoordinator(console=mock_console)
 
         assert coordinator.console == mock_console
 
-    def test_initialization_with_pkg_path(self, tmp_path):
+    def test_initialization_with_pkg_path(self, tmp_path) -> None:
         """Test initialization with provided pkg_path."""
         coordinator = AutofixCoordinator(pkg_path=tmp_path)
 
         assert coordinator.pkg_path == tmp_path
 
-    def test_initialization_with_logger(self):
+    def test_initialization_with_logger(self) -> None:
         """Test initialization with provided logger."""
         mock_logger = Mock()
         coordinator = AutofixCoordinator(logger=mock_logger)
 
         assert coordinator.logger == mock_logger
 
-    def test_initialization_logger_binding(self):
+    def test_initialization_logger_binding(self) -> None:
         """Test logger is bound with context."""
         coordinator = AutofixCoordinator()
         assert coordinator.logger is not None
 
-    def test_initialization_logger_without_bind(self):
+    def test_initialization_logger_without_bind(self) -> None:
         """Test logger initialization when bind method not available."""
         mock_logger = Mock(spec=[])
         coordinator = AutofixCoordinator(logger=mock_logger)
@@ -70,7 +70,7 @@ class TestAutofixCoordinatorValidation:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_validate_fix_command_valid_ruff(self, coordinator):
+    def test_validate_fix_command_valid_ruff(self, coordinator) -> None:
         """Test validation of valid ruff command."""
         cmd = ["uv", "run", "ruff", "check", "."]
 
@@ -78,7 +78,7 @@ class TestAutofixCoordinatorValidation:
 
         assert result is True
 
-    def test_validate_fix_command_valid_bandit(self, coordinator):
+    def test_validate_fix_command_valid_bandit(self, coordinator) -> None:
         """Test validation of valid bandit command."""
         cmd = ["uv", "run", "bandit", "-r", "."]
 
@@ -86,19 +86,19 @@ class TestAutofixCoordinatorValidation:
 
         assert result is True
 
-    def test_validate_fix_command_empty_list(self, coordinator):
+    def test_validate_fix_command_empty_list(self, coordinator) -> None:
         """Test validation of empty command."""
         result = coordinator.validate_fix_command([])
 
         assert result is False
 
-    def test_validate_fix_command_too_short(self, coordinator):
+    def test_validate_fix_command_too_short(self, coordinator) -> None:
         """Test validation of command too short."""
         result = coordinator.validate_fix_command(["uv"])
 
         assert result is False
 
-    def test_validate_fix_command_not_uv(self, coordinator):
+    def test_validate_fix_command_not_uv(self, coordinator) -> None:
         """Test validation of command not starting with uv."""
         cmd = ["python", "run", "ruff"]
 
@@ -106,7 +106,7 @@ class TestAutofixCoordinatorValidation:
 
         assert result is False
 
-    def test_validate_fix_command_not_run(self, coordinator):
+    def test_validate_fix_command_not_run(self, coordinator) -> None:
         """Test validation of command without run."""
         cmd = ["uv", "exec", "ruff"]
 
@@ -114,7 +114,7 @@ class TestAutofixCoordinatorValidation:
 
         assert result is False
 
-    def test_validate_fix_command_disallowed_tool(self, coordinator):
+    def test_validate_fix_command_disallowed_tool(self, coordinator) -> None:
         """Test validation of disallowed tool."""
         cmd = ["uv", "run", "pytest", "."]
 
@@ -122,7 +122,7 @@ class TestAutofixCoordinatorValidation:
 
         assert result is False
 
-    def test_validate_hook_result_valid(self, coordinator):
+    def test_validate_hook_result_valid(self, coordinator) -> None:
         """Test validation of valid hook result."""
         result = Mock()
         result.name = "test-hook"
@@ -132,7 +132,7 @@ class TestAutofixCoordinatorValidation:
 
         assert valid is True
 
-    def test_validate_hook_result_failed_status(self, coordinator):
+    def test_validate_hook_result_failed_status(self, coordinator) -> None:
         """Test validation of hook result with Failed status."""
         result = Mock()
         result.name = "test-hook"
@@ -142,7 +142,7 @@ class TestAutofixCoordinatorValidation:
 
         assert valid is True
 
-    def test_validate_hook_result_missing_name(self, coordinator):
+    def test_validate_hook_result_missing_name(self, coordinator) -> None:
         """Test validation of hook result without name."""
         result = Mock()
         result.name = None
@@ -152,7 +152,7 @@ class TestAutofixCoordinatorValidation:
 
         assert valid is False
 
-    def test_validate_hook_result_missing_status(self, coordinator):
+    def test_validate_hook_result_missing_status(self, coordinator) -> None:
         """Test validation of hook result without status."""
         result = Mock()
         result.name = "test-hook"
@@ -162,7 +162,7 @@ class TestAutofixCoordinatorValidation:
 
         assert valid is False
 
-    def test_validate_hook_result_invalid_status(self, coordinator):
+    def test_validate_hook_result_invalid_status(self, coordinator) -> None:
         """Test validation of hook result with invalid status."""
         result = Mock()
         result.name = "test-hook"
@@ -172,7 +172,7 @@ class TestAutofixCoordinatorValidation:
 
         assert valid is False
 
-    def test_validate_hook_result_non_string_name(self, coordinator):
+    def test_validate_hook_result_non_string_name(self, coordinator) -> None:
         """Test validation of hook result with non-string name."""
         result = Mock()
         result.name = 123
@@ -195,7 +195,7 @@ class TestAutofixCoordinatorSkipLogic:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_should_skip_autofix_no_errors(self, coordinator):
+    def test_should_skip_autofix_no_errors(self, coordinator) -> None:
         """Test should not skip when no import errors."""
         result1 = Mock()
         result1.raw_output = "Everything is fine"
@@ -204,7 +204,7 @@ class TestAutofixCoordinatorSkipLogic:
 
         assert should_skip is False
 
-    def test_should_skip_autofix_import_error(self, coordinator):
+    def test_should_skip_autofix_import_error(self, coordinator) -> None:
         """Test should skip when ImportError present."""
         result1 = Mock()
         result1.raw_output = "ImportError: cannot import name 'foo'"
@@ -213,7 +213,7 @@ class TestAutofixCoordinatorSkipLogic:
 
         assert should_skip is True
 
-    def test_should_skip_autofix_module_not_found_error(self, coordinator):
+    def test_should_skip_autofix_module_not_found_error(self, coordinator) -> None:
         """Test should skip when ModuleNotFoundError present."""
         result1 = Mock()
         result1.raw_output = "ModuleNotFoundError: No module named 'bar'"
@@ -222,7 +222,7 @@ class TestAutofixCoordinatorSkipLogic:
 
         assert should_skip is True
 
-    def test_should_skip_autofix_case_insensitive(self, coordinator):
+    def test_should_skip_autofix_case_insensitive(self, coordinator) -> None:
         """Test skip detection is case-insensitive."""
         result1 = Mock()
         result1.raw_output = "IMPORTERROR: Cannot import"
@@ -231,7 +231,7 @@ class TestAutofixCoordinatorSkipLogic:
 
         assert should_skip is True
 
-    def test_should_skip_autofix_no_raw_output(self, coordinator):
+    def test_should_skip_autofix_no_raw_output(self, coordinator) -> None:
         """Test should not skip when no raw_output."""
         result1 = Mock()
         result1.raw_output = None
@@ -240,7 +240,7 @@ class TestAutofixCoordinatorSkipLogic:
 
         assert should_skip is False
 
-    def test_should_skip_autofix_empty_list(self, coordinator):
+    def test_should_skip_autofix_empty_list(self, coordinator) -> None:
         """Test should not skip with empty results."""
         should_skip = coordinator.should_skip_autofix([])
 
@@ -259,7 +259,7 @@ class TestAutofixCoordinatorSuccessPatterns:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_check_tool_success_patterns_process_result_success(self, coordinator):
+    def test_check_tool_success_patterns_process_result_success(self, coordinator) -> None:
         """Test success pattern with successful process result."""
         result = Mock()
         result.returncode = 0
@@ -268,7 +268,7 @@ class TestAutofixCoordinatorSuccessPatterns:
 
         assert success is True
 
-    def test_check_tool_success_patterns_process_result_with_fixed(self, coordinator):
+    def test_check_tool_success_patterns_process_result_with_fixed(self, coordinator) -> None:
         """Test success pattern with 'fixed' in output."""
         result = Mock()
         result.returncode = 1
@@ -279,15 +279,15 @@ class TestAutofixCoordinatorSuccessPatterns:
 
         assert success is True
 
-    def test_check_tool_success_patterns_string_result(self, coordinator):
+    def test_check_tool_success_patterns_string_result(self, coordinator) -> None:
         """Test success pattern with string result."""
         success = coordinator.check_tool_success_patterns(
-            ["uv", "run", "ruff"], "Files formatted successfully"
+            ["uv", "run", "ruff"], "Files formatted successfully",
         )
 
         assert success is True
 
-    def test_check_tool_success_patterns_empty_cmd(self, coordinator):
+    def test_check_tool_success_patterns_empty_cmd(self, coordinator) -> None:
         """Test success pattern with empty command."""
         result = Mock()
         result.returncode = 0
@@ -296,31 +296,31 @@ class TestAutofixCoordinatorSuccessPatterns:
 
         assert success is False
 
-    def test_has_success_patterns_fixed(self, coordinator):
+    def test_has_success_patterns_fixed(self, coordinator) -> None:
         """Test detecting 'fixed' pattern."""
         result = coordinator._has_success_patterns("2 files fixed")
 
         assert result is True
 
-    def test_has_success_patterns_formatted(self, coordinator):
+    def test_has_success_patterns_formatted(self, coordinator) -> None:
         """Test detecting 'formatted' pattern."""
         result = coordinator._has_success_patterns("Files formatted")
 
         assert result is True
 
-    def test_has_success_patterns_would_reformat(self, coordinator):
+    def test_has_success_patterns_would_reformat(self, coordinator) -> None:
         """Test detecting 'would reformat' pattern."""
         result = coordinator._has_success_patterns("Would reformat 3 files")
 
         assert result is True
 
-    def test_has_success_patterns_no_match(self, coordinator):
+    def test_has_success_patterns_no_match(self, coordinator) -> None:
         """Test no success pattern detected."""
         result = coordinator._has_success_patterns("Error occurred")
 
         assert result is False
 
-    def test_has_success_patterns_empty_output(self, coordinator):
+    def test_has_success_patterns_empty_output(self, coordinator) -> None:
         """Test empty output has no patterns."""
         result = coordinator._has_success_patterns("")
 
@@ -339,7 +339,7 @@ class TestAutofixCoordinatorExtractFailedHooks:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_extract_failed_hooks_single_failure(self, coordinator):
+    def test_extract_failed_hooks_single_failure(self, coordinator) -> None:
         """Test extracting single failed hook."""
         result1 = Mock()
         result1.name = "hook1"
@@ -349,7 +349,7 @@ class TestAutofixCoordinatorExtractFailedHooks:
 
         assert failed == {"hook1"}
 
-    def test_extract_failed_hooks_multiple_failures(self, coordinator):
+    def test_extract_failed_hooks_multiple_failures(self, coordinator) -> None:
         """Test extracting multiple failed hooks."""
         result1 = Mock()
         result1.name = "hook1"
@@ -363,7 +363,7 @@ class TestAutofixCoordinatorExtractFailedHooks:
 
         assert failed == {"hook1", "hook2"}
 
-    def test_extract_failed_hooks_mixed_statuses(self, coordinator):
+    def test_extract_failed_hooks_mixed_statuses(self, coordinator) -> None:
         """Test extracting only failed hooks from mixed results."""
         result1 = Mock()
         result1.name = "hook1"
@@ -381,13 +381,13 @@ class TestAutofixCoordinatorExtractFailedHooks:
 
         assert failed == {"hook2"}
 
-    def test_extract_failed_hooks_empty_list(self, coordinator):
+    def test_extract_failed_hooks_empty_list(self, coordinator) -> None:
         """Test extracting from empty results."""
         failed = coordinator._extract_failed_hooks([])
 
         assert failed == set()
 
-    def test_extract_failed_hooks_invalid_results(self, coordinator):
+    def test_extract_failed_hooks_invalid_results(self, coordinator) -> None:
         """Test extracting with invalid hook results."""
         result1 = Mock()
         result1.name = None
@@ -410,7 +410,7 @@ class TestAutofixCoordinatorHookSpecificFixes:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_get_hook_specific_fixes_bandit(self, coordinator):
+    def test_get_hook_specific_fixes_bandit(self, coordinator) -> None:
         """Test getting bandit-specific fixes."""
         fixes = coordinator._get_hook_specific_fixes({"bandit"})
 
@@ -418,13 +418,13 @@ class TestAutofixCoordinatorHookSpecificFixes:
         assert fixes[0][0] == ["uv", "run", "bandit", "-r", "."]
         assert fixes[0][1] == "bandit analysis"
 
-    def test_get_hook_specific_fixes_no_matches(self, coordinator):
+    def test_get_hook_specific_fixes_no_matches(self, coordinator) -> None:
         """Test getting fixes for hooks without specific fixes."""
         fixes = coordinator._get_hook_specific_fixes({"ruff", "trailing-whitespace"})
 
         assert len(fixes) == 0
 
-    def test_get_hook_specific_fixes_empty_set(self, coordinator):
+    def test_get_hook_specific_fixes_empty_set(self, coordinator) -> None:
         """Test getting fixes for empty hook set."""
         fixes = coordinator._get_hook_specific_fixes(set())
 
@@ -442,10 +442,10 @@ class TestAutofixCoordinatorCommandExecution:
         mock_logger = Mock()
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(
-            console=mock_console, logger=mock_logger, pkg_path=tmp_path
+            console=mock_console, logger=mock_logger, pkg_path=tmp_path,
         )
 
-    def test_run_fix_command_success(self, coordinator):
+    def test_run_fix_command_success(self, coordinator) -> None:
         """Test running successful fix command."""
         cmd = ["uv", "run", "ruff", "check", "."]
 
@@ -457,7 +457,7 @@ class TestAutofixCoordinatorCommandExecution:
             assert result is True
             mock_run.assert_called_once()
 
-    def test_run_fix_command_invalid_command(self, coordinator):
+    def test_run_fix_command_invalid_command(self, coordinator) -> None:
         """Test running invalid command."""
         cmd = ["python", "run", "ruff"]
 
@@ -465,7 +465,7 @@ class TestAutofixCoordinatorCommandExecution:
 
         assert result is False
 
-    def test_run_fix_command_timeout(self, coordinator):
+    def test_run_fix_command_timeout(self, coordinator) -> None:
         """Test command execution with subprocess parameters."""
         cmd = ["uv", "run", "ruff", "check", "."]
 
@@ -478,7 +478,7 @@ class TestAutofixCoordinatorCommandExecution:
             call_kwargs = mock_run.call_args[1]
             assert call_kwargs["timeout"] == 300
 
-    def test_run_fix_command_exception(self, coordinator):
+    def test_run_fix_command_exception(self, coordinator) -> None:
         """Test command execution with exception."""
         cmd = ["uv", "run", "ruff", "check", "."]
 
@@ -489,7 +489,7 @@ class TestAutofixCoordinatorCommandExecution:
 
             assert result is False
 
-    def test_run_fix_command_cwd_set(self, coordinator, tmp_path):
+    def test_run_fix_command_cwd_set(self, coordinator, tmp_path) -> None:
         """Test command runs in correct working directory."""
         cmd = ["uv", "run", "ruff", "check", "."]
 
@@ -514,7 +514,7 @@ class TestAutofixCoordinatorCommandResult:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_handle_command_result_success(self, coordinator):
+    def test_handle_command_result_success(self, coordinator) -> None:
         """Test handling successful command result."""
         result = Mock(returncode=0, stdout="", stderr="")
 
@@ -522,7 +522,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert success is True
 
-    def test_handle_command_result_failure_with_fix_indicator(self, coordinator):
+    def test_handle_command_result_failure_with_fix_indicator(self, coordinator) -> None:
         """Test handling failed command with fix indicator."""
         result = Mock(returncode=1, stdout="2 files fixed", stderr="")
 
@@ -530,7 +530,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert success is True
 
-    def test_handle_command_result_failure(self, coordinator):
+    def test_handle_command_result_failure(self, coordinator) -> None:
         """Test handling failed command."""
         result = Mock(returncode=1, stdout="", stderr="Error occurred")
 
@@ -538,7 +538,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert success is False
 
-    def test_is_successful_fix_with_fixed(self, coordinator):
+    def test_is_successful_fix_with_fixed(self, coordinator) -> None:
         """Test detecting successful fix with 'fixed'."""
         result = Mock(returncode=1, stdout="2 files fixed", stderr="")
 
@@ -546,7 +546,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert is_success is True
 
-    def test_is_successful_fix_with_formatted(self, coordinator):
+    def test_is_successful_fix_with_formatted(self, coordinator) -> None:
         """Test detecting successful fix with 'formatted'."""
         result = Mock(returncode=1, stdout="Files formatted", stderr="")
 
@@ -554,7 +554,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert is_success is True
 
-    def test_is_successful_fix_no_indicators(self, coordinator):
+    def test_is_successful_fix_no_indicators(self, coordinator) -> None:
         """Test no success indicators found."""
         result = Mock(returncode=1, stdout="No changes", stderr="")
 
@@ -562,7 +562,7 @@ class TestAutofixCoordinatorCommandResult:
 
         assert is_success is False
 
-    def test_is_successful_fix_non_string_output(self, coordinator):
+    def test_is_successful_fix_non_string_output(self, coordinator) -> None:
         """Test handling non-string stdout/stderr."""
         result = Mock(returncode=1, stdout=123, stderr=456)
 
@@ -584,7 +584,7 @@ class TestAutofixCoordinatorApplyFixes:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_apply_autofix_for_hooks_fast_mode(self, coordinator):
+    def test_apply_autofix_for_hooks_fast_mode(self, coordinator) -> None:
         """Test applying autofix in fast mode."""
         with patch.object(coordinator, "_apply_fast_stage_fixes") as mock_fast:
             mock_fast.return_value = True
@@ -594,7 +594,7 @@ class TestAutofixCoordinatorApplyFixes:
             assert result is True
             mock_fast.assert_called_once()
 
-    def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator):
+    def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
         """Test applying autofix in comprehensive mode."""
         # Create hook result without raw_output to avoid triggering skip logic
         hook_results = [Mock(name="hook1", status="Failed", raw_output=None)]
@@ -607,13 +607,13 @@ class TestAutofixCoordinatorApplyFixes:
             assert result is True
             mock_comp.assert_called_once_with(hook_results)
 
-    def test_apply_autofix_for_hooks_unknown_mode(self, coordinator):
+    def test_apply_autofix_for_hooks_unknown_mode(self, coordinator) -> None:
         """Test applying autofix with unknown mode."""
         result = coordinator.apply_autofix_for_hooks("unknown", [])
 
         assert result is False
 
-    def test_apply_autofix_for_hooks_should_skip(self, coordinator):
+    def test_apply_autofix_for_hooks_should_skip(self, coordinator) -> None:
         """Test autofix skipped when should_skip is True."""
         result1 = Mock()
         result1.raw_output = "ImportError: cannot import"
@@ -622,7 +622,7 @@ class TestAutofixCoordinatorApplyFixes:
 
         assert result is False
 
-    def test_apply_autofix_for_hooks_exception(self, coordinator):
+    def test_apply_autofix_for_hooks_exception(self, coordinator) -> None:
         """Test autofix handles exceptions."""
         with patch.object(coordinator, "_should_skip_autofix") as mock_skip:
             mock_skip.side_effect = Exception("Test error")
@@ -631,7 +631,7 @@ class TestAutofixCoordinatorApplyFixes:
 
             assert result is False
 
-    def test_execute_fast_fixes_all_successful(self, coordinator):
+    def test_execute_fast_fixes_all_successful(self, coordinator) -> None:
         """Test executing fast fixes successfully."""
         with patch.object(coordinator, "_run_fix_command") as mock_run:
             mock_run.return_value = True
@@ -641,7 +641,7 @@ class TestAutofixCoordinatorApplyFixes:
             assert result is True
             assert mock_run.call_count == 2  # ruff format + ruff check
 
-    def test_execute_fast_fixes_one_failure(self, coordinator):
+    def test_execute_fast_fixes_one_failure(self, coordinator) -> None:
         """Test executing fast fixes with one failure."""
         with patch.object(coordinator, "_run_fix_command") as mock_run:
             mock_run.side_effect = [True, False]
@@ -650,7 +650,7 @@ class TestAutofixCoordinatorApplyFixes:
 
             assert result is False
 
-    def test_apply_comprehensive_stage_fixes_no_failures(self, coordinator):
+    def test_apply_comprehensive_stage_fixes_no_failures(self, coordinator) -> None:
         """Test comprehensive fixes with no failures."""
         result1 = Mock(name="hook1", status="Passed")
 
@@ -658,7 +658,7 @@ class TestAutofixCoordinatorApplyFixes:
 
         assert result is True
 
-    def test_apply_comprehensive_stage_fixes_with_failures(self, coordinator):
+    def test_apply_comprehensive_stage_fixes_with_failures(self, coordinator) -> None:
         """Test comprehensive fixes with failures."""
         # Create a proper hook result with string attributes
         result1 = Mock()
@@ -675,7 +675,7 @@ class TestAutofixCoordinatorApplyFixes:
                 assert result is True
                 mock_run.assert_called_once()
 
-    def test_apply_comprehensive_stage_fixes_fast_fails(self, coordinator):
+    def test_apply_comprehensive_stage_fixes_fast_fails(self, coordinator) -> None:
         """Test comprehensive fixes when fast fixes fail."""
         # Create a proper hook result with string attributes
         result1 = Mock()
@@ -702,7 +702,7 @@ class TestAutofixCoordinatorPublicAPI:
         mock_logger.bind.return_value = mock_logger
         return AutofixCoordinator(console=mock_console, logger=mock_logger)
 
-    def test_apply_fast_stage_fixes_facade(self, coordinator):
+    def test_apply_fast_stage_fixes_facade(self, coordinator) -> None:
         """Test apply_fast_stage_fixes public method."""
         with patch.object(coordinator, "_apply_fast_stage_fixes") as mock_private:
             mock_private.return_value = True
@@ -712,12 +712,12 @@ class TestAutofixCoordinatorPublicAPI:
             assert result is True
             mock_private.assert_called_once()
 
-    def test_apply_comprehensive_stage_fixes_facade(self, coordinator):
+    def test_apply_comprehensive_stage_fixes_facade(self, coordinator) -> None:
         """Test apply_comprehensive_stage_fixes public method."""
         hook_results = [Mock()]
 
         with patch.object(
-            coordinator, "_apply_comprehensive_stage_fixes"
+            coordinator, "_apply_comprehensive_stage_fixes",
         ) as mock_private:
             mock_private.return_value = True
 

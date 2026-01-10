@@ -9,10 +9,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from crackerjack.adapters._qa_adapter_base import QAAdapterBase, QABaseSettings
-from crackerjack.models.adapter_metadata import AdapterMetadata
 from crackerjack.models.qa_results import QACheckType, QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
+    from crackerjack.models.adapter_metadata import AdapterMetadata
     from crackerjack.models.qa_config import QACheckConfig
 
 
@@ -120,9 +120,12 @@ class BaseToolAdapter(QAAdapterBase):
 
         available = await self.validate_tool_available()
         if not available:
-            raise RuntimeError(
+            msg = (
                 f"Tool '{self.tool_name}' not found in PATH. "
                 f"Please install it before using this adapter."
+            )
+            raise RuntimeError(
+                msg,
             )
 
         self._tool_version = await self.get_tool_version()
@@ -140,7 +143,8 @@ class BaseToolAdapter(QAAdapterBase):
 
             adapter_timeouts = settings.adapter_timeouts
             if adapter_timeouts and hasattr(
-                adapter_timeouts, f"{adapter_name}_timeout"
+                adapter_timeouts,
+                f"{adapter_name}_timeout",
             ):
                 timeout = getattr(adapter_timeouts, f"{adapter_name}_timeout")
                 logger.debug(
@@ -230,7 +234,9 @@ class BaseToolAdapter(QAAdapterBase):
         )
 
     async def _get_target_files(
-        self, files: list[Path] | None, config: QACheckConfig | None
+        self,
+        files: list[Path] | None,
+        config: QACheckConfig | None,
     ) -> list[Path]:
         if files:
             return files
@@ -269,7 +275,7 @@ class BaseToolAdapter(QAAdapterBase):
         ):
             standard_excludes.add("tests")
 
-        candidates = [p for p in root.rglob("*.py")]
+        candidates = list(root.rglob("*.py"))
         result: list[Path] = []
         for path in candidates:
             if any(excluded in path.parts for excluded in standard_excludes):
@@ -292,7 +298,8 @@ class BaseToolAdapter(QAAdapterBase):
         start_time: float,
     ) -> ToolExecutionResult:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         try:
             process = await asyncio.create_subprocess_exec(
@@ -387,7 +394,9 @@ class BaseToolAdapter(QAAdapterBase):
         return error_count, warning_count
 
     def _determine_qa_status_and_message(
-        self, exec_result: ToolExecutionResult, issues: list[ToolIssue]
+        self,
+        exec_result: ToolExecutionResult,
+        issues: list[ToolIssue],
     ) -> tuple[QAResultStatus, str]:
         if exec_result.error_message:
             return QAResultStatus.ERROR, exec_result.error_message

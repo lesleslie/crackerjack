@@ -67,7 +67,7 @@ class ComparisonReport:
 
 
 class ToolProfiler:
-    def __init__(self, cache_dir: Path | None = None):
+    def __init__(self, cache_dir: Path | None = None) -> None:
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
         self.results: dict[str, ProfileResult] = {}
 
@@ -133,7 +133,7 @@ class ToolProfiler:
                         recommendation=(
                             "Consider incremental execution or caching strategy"
                         ),
-                    )
+                    ),
                 )
 
             if result.mean_memory > 100.0:
@@ -146,7 +146,7 @@ class ToolProfiler:
                         value=result.mean_memory,
                         threshold=100.0,
                         recommendation="Optimize memory usage or implement streaming",
-                    )
+                    ),
                 )
 
             total_requests = result.cache_hits + result.cache_misses
@@ -159,7 +159,7 @@ class ToolProfiler:
                         value=result.cache_hit_rate,
                         threshold=50.0,
                         recommendation="Improve cache strategy or increase cache TTL",
-                    )
+                    ),
                 )
 
         severity_order = {"high": 0, "medium": 1, "low": 2}
@@ -182,7 +182,7 @@ class ToolProfiler:
                     f"- Total Mean Time: {total_time:.2f}s",
                     f"- Total Mean Memory: {total_memory:.2f}MB",
                     "",
-                ]
+                ],
             )
 
         lines.append("## Tool Performance")
@@ -197,7 +197,7 @@ class ToolProfiler:
                     f"- Mean Memory: {result.mean_memory:.2f}MB",
                     f"- Cache Hit Rate: {result.cache_hit_rate:.1f}%",
                     "",
-                ]
+                ],
             )
 
         bottlenecks = self.identify_bottlenecks()
@@ -212,7 +212,7 @@ class ToolProfiler:
                         f"- Threshold: {bottleneck.threshold:.2f}",
                         f"- Recommendation: {bottleneck.recommendation}",
                         "",
-                    ]
+                    ],
                 )
 
         return "\n".join(lines)

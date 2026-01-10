@@ -1,34 +1,35 @@
 """Tests for the regex patterns module."""
 
-import pytest
 import re
 from unittest.mock import patch
 
+import pytest
+
 from crackerjack.services.regex_patterns import (
-    CompiledPatternCache,
-    ValidatedPattern,
-    SAFE_PATTERNS,
-    validate_all_patterns,
-    find_pattern_for_text,
-    apply_safe_replacement,
-    get_pattern_description,
-    fix_multi_word_hyphenation,
-    update_pyproject_version,
-    apply_formatting_fixes,
-    apply_security_fixes,
-    apply_test_fixes,
-    is_valid_job_id,
-    remove_coverage_fail_under,
-    update_coverage_requirement,
-    sanitize_internal_urls,
-    apply_pattern_iteratively,
-    get_all_pattern_stats,
-    clear_all_caches,
-    get_cache_info,
-    validate_path_security,
     MAX_INPUT_SIZE,
     MAX_ITERATIONS,
-    PATTERN_CACHE_SIZE
+    PATTERN_CACHE_SIZE,
+    SAFE_PATTERNS,
+    CompiledPatternCache,
+    ValidatedPattern,
+    apply_formatting_fixes,
+    apply_pattern_iteratively,
+    apply_safe_replacement,
+    apply_security_fixes,
+    apply_test_fixes,
+    clear_all_caches,
+    find_pattern_for_text,
+    fix_multi_word_hyphenation,
+    get_all_pattern_stats,
+    get_cache_info,
+    get_pattern_description,
+    is_valid_job_id,
+    remove_coverage_fail_under,
+    sanitize_internal_urls,
+    update_coverage_requirement,
+    update_pyproject_version,
+    validate_all_patterns,
+    validate_path_security,
 )
 
 
@@ -92,7 +93,7 @@ class TestValidatedPattern:
             name="test_pattern",
             pattern=r"hello",
             replacement="hi",
-            test_cases=[("hello world", "hi world")]
+            test_cases=[("hello world", "hi world")],
         )
         result = pattern.apply("hello world")
         assert result == "hi world"
@@ -104,7 +105,7 @@ class TestValidatedPattern:
             pattern=r"test",
             replacement="replaced",
             test_cases=[("test test test", "replaced replaced replaced")],
-            global_replace=True
+            global_replace=True,
         )
         result = pattern.apply("test test test")
         assert result == "replaced replaced replaced"
@@ -116,7 +117,7 @@ class TestValidatedPattern:
             pattern=r"case",
             replacement="replaced",
             test_cases=[("CaSe", "replaced")],
-            flags=re.IGNORECASE
+            flags=re.IGNORECASE,
         )
         result = pattern.apply("CaSe")
         assert result == "replaced"
@@ -128,7 +129,7 @@ class TestValidatedPattern:
             pattern=r"test",
             replacement="replaced",
             test_cases=[("test test", "replaced replaced")],
-            global_replace=True
+            global_replace=True,
         )
         result = pattern.apply_iteratively("test test", max_iterations=2)
         assert result == "replaced replaced"
@@ -139,7 +140,7 @@ class TestValidatedPattern:
             name="test_iterative",
             pattern=r"test",
             replacement="test",
-            test_cases=[("test", "test")]
+            test_cases=[("test", "test")],
         )
         with pytest.raises(ValueError, match="max_iterations must be positive"):
             pattern.apply_iteratively("test", max_iterations=0)
@@ -150,7 +151,7 @@ class TestValidatedPattern:
             name="test_search",
             pattern=r"world",
             replacement="universe",
-            test_cases=[("hello world", "hello universe")]
+            test_cases=[("hello world", "hello universe")],
         )
         match = pattern.search("hello world")
         assert match is not None
@@ -161,7 +162,7 @@ class TestValidatedPattern:
             name="test_findall",
             pattern=r"nonexistent_pattern",
             replacement="repl",
-            test_cases=[("hello world", "hello world")]  # Pattern won't match anything
+            test_cases=[("hello world", "hello world")],  # Pattern won't match anything
         )
         results = pattern.findall("hello world")
         assert len(results) == 0  # No matches found
@@ -172,7 +173,7 @@ class TestValidatedPattern:
             name="test_test",
             pattern=r"hello",
             replacement="hi",
-            test_cases=[("hello world", "hi world")]
+            test_cases=[("hello world", "hi world")],
         )
         result = pattern.test("hello world")
         assert result is True
@@ -186,7 +187,7 @@ class TestValidatedPattern:
             name="test_large",
             pattern=r"test",
             replacement="replaced",
-            test_cases=[("test", "replaced")]
+            test_cases=[("test", "replaced")],
         )
 
         # Test with actual size limitation
@@ -201,7 +202,7 @@ class TestValidatedPattern:
                 name="invalid",
                 pattern="[invalid",
                 replacement="test",
-                test_cases=[("test", "test")]
+                test_cases=[("test", "test")],
             )
 
     def test_bad_replacement_syntax(self) -> None:
@@ -211,7 +212,7 @@ class TestValidatedPattern:
                 name="bad_repl",
                 pattern="test",
                 replacement=r"\\g < ",  # Bad replacement syntax
-                test_cases=[("test", "test")]
+                test_cases=[("test", "test")],
             )
 
 
@@ -267,7 +268,7 @@ class TestSafePatterns:
 
     def test_apply_security_fixes(self) -> None:
         """Test applying security fixes."""
-        content = 'yaml.load(data)\nhashlib.md5(input)\nrandom.choice(options)'
+        content = "yaml.load(data)\nhashlib.md5(input)\nrandom.choice(options)"
         result = apply_security_fixes(content)
         assert "yaml.safe_load(data)" in result
         assert "hashlib.sha256(input)" in result
