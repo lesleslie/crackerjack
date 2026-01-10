@@ -1,3 +1,27 @@
+
+⚠️  ⚠️  ⚠️  WARNING: FLAWED ANALYSIS ⚠️  ⚠️  ⚠️
+
+THIS FILE CONTAINS CRITICAL ERRORS.
+
+The original analysis claimed 18 modules (382 KB) could be safely removed.
+THIS WAS INCORRECT.
+
+Correct Analysis: Only 6 modules (~130 KB) are truly safe to remove.
+
+See CLEANUP_CORRECTION.md for accurate analysis.
+
+KEY ERRORS:
+1. Failed to trace CLI options → handlers → modules
+2. Missed imports in cli/handlers/*.py files
+3. Didn't verify execution paths
+4. Would have BROKEN WORKING FEATURES
+
+DO NOT USE the removal plan in this file.
+
+Use the corrected plan in CLEANUP_CORRECTION.md instead.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
 # Codebase Cleanup Recommendations
 
 ## Executive Summary
