@@ -66,7 +66,7 @@ async def run_with_mcp_server(command: str = "/ crackerjack: run") -> None:
         async with MockSession():
             try:
                 console.print(
-                    f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]"
+                    f"[yellow]Command '{command}' - WebSocket monitoring removed in Phase 1[/yellow]",
                 )
             except Exception as e:
                 console.print(f"[bold red]Error: {e}[/ bold red]")

@@ -31,7 +31,8 @@ class ResourceManager:
             self._resources.append(resource)
 
     def register_cleanup_callback(
-        self, callback: t.Callable[[], t.Awaitable[None]]
+        self,
+        callback: t.Callable[[], t.Awaitable[None]],
     ) -> None:
         with self._lock:
             if self._closed:
@@ -130,12 +131,13 @@ class ManagedTemporaryFile(ManagedResource):
                     self.path.unlink()
             except OSError as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to remove temporary file {self.path}: {e}"
+                    f"Failed to remove temporary file {self.path}: {e}",
                 )
 
     def write_text(self, content: str, encoding: str = "utf-8") -> None:
         if self._closed:
-            raise RuntimeError("Cannot write to closed temporary file")
+            msg = "Cannot write to closed temporary file"
+            raise RuntimeError(msg)
         self.path.write_text(content, encoding=encoding)
 
     def read_text(self, encoding: str = "utf-8") -> str:
@@ -164,7 +166,7 @@ class ManagedTemporaryDirectory(ManagedResource):
                     shutil.rmtree(self.path)
             except OSError as e:
                 logging.getLogger(__name__).warning(
-                    f"Failed to remove temporary directory {self.path}: {e}"
+                    f"Failed to remove temporary directory {self.path}: {e}",
                 )
 
 
@@ -194,14 +196,14 @@ class ManagedProcess(ManagedResource):
                         await asyncio.wait_for(self.process.wait(), timeout=2.0)
                     except TimeoutError:
                         logging.getLogger(__name__).warning(
-                            f"Process {self.process.pid} did not terminate after force kill"
+                            f"Process {self.process.pid} did not terminate after force kill",
                         )
 
             except ProcessLookupError:
                 pass
             except Exception as e:
                 logging.getLogger(__name__).warning(
-                    f"Error cleaning up process {self.process.pid}: {e}"
+                    f"Error cleaning up process {self.process.pid}: {e}",
                 )
 
 
@@ -324,7 +326,8 @@ async def with_resource_cleanup() -> t.AsyncIterator[ResourceContext]:
 
 @contextlib.asynccontextmanager
 async def with_temp_file(
-    suffix: str = "", prefix: str = "crackerjack-"
+    suffix: str = "",
+    prefix: str = "crackerjack-",
 ) -> t.AsyncIterator[ManagedTemporaryFile]:
     async with ResourceContext() as ctx:
         temp_file = ctx.managed_temp_file(suffix, prefix)
@@ -336,7 +339,8 @@ async def with_temp_file(
 
 @contextlib.asynccontextmanager
 async def with_temp_dir(
-    suffix: str = "", prefix: str = "crackerjack-"
+    suffix: str = "",
+    prefix: str = "crackerjack-",
 ) -> t.AsyncIterator[ManagedTemporaryDirectory]:
     async with ResourceContext() as ctx:
         temp_dir = ctx.managed_temp_dir(suffix, prefix)
@@ -399,7 +403,7 @@ class ResourceLeakDetector:
         return bool(
             self.open_files
             or self.active_processes
-            or any(not t.done() for t in self.active_tasks)
+            or any(not t.done() for t in self.active_tasks),
         )
 
 

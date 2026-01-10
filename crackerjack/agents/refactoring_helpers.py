@@ -66,7 +66,8 @@ class ComplexityCalculator(ast.NodeVisitor):
         self.generic_visit(node)
 
     def _process_comprehension(
-        self, node: ast.ListComp | ast.DictComp | ast.SetComp | ast.GeneratorExp
+        self,
+        node: ast.ListComp | ast.DictComp | ast.SetComp | ast.GeneratorExp,
     ) -> None:
         self.complexity += 1
 
@@ -82,7 +83,8 @@ class ComplexityCalculator(ast.NodeVisitor):
 
     def _has_complex_condition(self, node: ast.expr) -> bool:
         return (isinstance(node, ast.BoolOp) and len(node.values) > 2) or isinstance(
-            node, ast.Compare | ast.Call
+            node,
+            ast.Compare | ast.Call,
         )
 
 
@@ -177,7 +179,7 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
                 "name": node.name,
                 "line": node.lineno,
                 "methods": [],
-            }
+            },
         )
         self._visit_with_scope(node)
 
@@ -220,7 +222,8 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         return not name.startswith("_") and name != "__init__"
 
     def _create_function_info(
-        self, node: ast.FunctionDef | ast.AsyncFunctionDef
+        self,
+        node: ast.FunctionDef | ast.AsyncFunctionDef,
     ) -> dict[str, t.Any]:
         return {
             "name": node.name,
@@ -230,7 +233,9 @@ class EnhancedUsageAnalyzer(ast.NodeVisitor):
         }
 
     def _create_variable_info(
-        self, target: ast.Name, node: ast.Assign
+        self,
+        target: ast.Name,
+        node: ast.Assign,
     ) -> dict[str, t.Any]:
         return {
             "name": target.id,

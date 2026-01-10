@@ -1,10 +1,6 @@
 import re
-from typing import TYPE_CHECKING
 
 from .core import MAX_ITERATIONS, CompiledPatternCache, ValidatedPattern
-
-if TYPE_CHECKING:
-    pass
 
 
 def validate_all_patterns() -> dict[str, bool]:
@@ -15,9 +11,8 @@ def validate_all_patterns() -> dict[str, bool]:
         try:
             pattern._validate()
             results[name] = True
-        except ValueError as e:
+        except ValueError:
             results[name] = False
-            print(f"Pattern '{name}' failed validation: {e}")
     return results
 
 
@@ -31,7 +26,8 @@ def apply_safe_replacement(text: str, pattern_name: str) -> str:
     from . import SAFE_PATTERNS
 
     if pattern_name not in SAFE_PATTERNS:
-        raise ValueError(f"Unknown pattern: {pattern_name}")
+        msg = f"Unknown pattern: {pattern_name}"
+        raise ValueError(msg)
 
     return SAFE_PATTERNS[pattern_name].apply(text)
 
@@ -67,7 +63,8 @@ def update_pyproject_version(content: str, new_version: str) -> str:
     )
 
     return re.compile(pattern_obj.pattern, re.MULTILINE).sub(
-        temp_pattern.replacement, content
+        temp_pattern.replacement,
+        content,
     )
 
 
@@ -76,12 +73,11 @@ def apply_formatting_fixes(content: str) -> str:
 
     pattern = SAFE_PATTERNS["remove_trailing_whitespace"]
     content = re.compile(pattern.pattern, re.MULTILINE).sub(
-        pattern.replacement, content
+        pattern.replacement,
+        content,
     )
 
-    content = SAFE_PATTERNS["normalize_multiple_newlines"].apply(content)
-
-    return content
+    return SAFE_PATTERNS["normalize_multiple_newlines"].apply(content)
 
 
 def apply_security_fixes(content: str) -> str:
@@ -96,9 +92,7 @@ def apply_security_fixes(content: str) -> str:
     content = SAFE_PATTERNS["fix_weak_sha1_hash"].apply(content)
     content = SAFE_PATTERNS["fix_insecure_random_choice"].apply(content)
 
-    content = SAFE_PATTERNS["remove_debug_prints_with_secrets"].apply(content)
-
-    return content
+    return SAFE_PATTERNS["remove_debug_prints_with_secrets"].apply(content)
 
 
 def apply_test_fixes(content: str) -> str:
@@ -166,12 +160,15 @@ def sanitize_internal_urls(text: str) -> str:
 
 
 def apply_pattern_iteratively(
-    text: str, pattern_name: str, max_iterations: int = MAX_ITERATIONS
+    text: str,
+    pattern_name: str,
+    max_iterations: int = MAX_ITERATIONS,
 ) -> str:
     from . import SAFE_PATTERNS
 
     if pattern_name not in SAFE_PATTERNS:
-        raise ValueError(f"Unknown pattern: {pattern_name}")
+        msg = f"Unknown pattern: {pattern_name}"
+        raise ValueError(msg)
 
     return SAFE_PATTERNS[pattern_name].apply_iteratively(text, max_iterations)
 

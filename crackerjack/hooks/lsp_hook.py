@@ -41,7 +41,8 @@ def _fallback_to_zuban_check(console: Console, files_to_check: list[str]) -> int
 
     try:
         result = subprocess.run(
-            ["zuban", "check"] + files_to_check,
+            ["zuban", "check", *files_to_check],
+            check=False,
             capture_output=True,
             text=True,
             timeout=120,
@@ -57,7 +58,9 @@ def _fallback_to_zuban_check(console: Console, files_to_check: list[str]) -> int
 
 
 def _check_files_with_lsp(
-    console: Console, lsp_client: LSPClient, files_to_check: list[str]
+    console: Console,
+    lsp_client: LSPClient,
+    files_to_check: list[str],
 ) -> int:
     server_info = lsp_client.get_server_info()
     if server_info:

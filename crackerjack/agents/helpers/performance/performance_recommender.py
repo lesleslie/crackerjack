@@ -2,8 +2,8 @@ import operator
 import typing as t
 from dataclasses import dataclass
 
-from ....services.regex_patterns import SAFE_PATTERNS
-from ...base import AgentContext
+from crackerjack.agents.base import AgentContext
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 @dataclass
@@ -52,7 +52,9 @@ class PerformanceRecommender:
         return "\n".join(lines) if modified else content
 
     def _process_single_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         issue_type = issue["type"]
 
@@ -61,23 +63,25 @@ class PerformanceRecommender:
             "inefficient_list_operations_enhanced",
         ):
             return self._handle_list_operations_issue(lines, issue)
-        elif issue_type in (
+        if issue_type in (
             "string_concatenation_in_loop",
             "string_inefficiencies_enhanced",
         ):
             return self._handle_string_operations_issue(lines, issue)
-        elif issue_type == "repeated_expensive_operations":
+        if issue_type == "repeated_expensive_operations":
             return self._handle_repeated_operations_issue(lines, issue)
-        elif issue_type in ("nested_loops", "nested_loops_enhanced"):
+        if issue_type in ("nested_loops", "nested_loops_enhanced"):
             return self._handle_nested_loops_issue(lines, issue)
-        elif issue_type == "list_comprehension_opportunities":
+        if issue_type == "list_comprehension_opportunities":
             return self._handle_comprehension_opportunities_issue(lines, issue)
-        elif issue_type == "inefficient_builtin_usage":
+        if issue_type == "inefficient_builtin_usage":
             return self._handle_builtin_usage_issue(lines, issue)
         return self._create_no_change_result(lines)
 
     def _handle_list_operations_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._fix_list_operations_enhanced(lines, issue)
         description = None
@@ -90,7 +94,9 @@ class PerformanceRecommender:
         return self._create_optimization_result(new_lines, changed, description)
 
     def _handle_string_operations_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._fix_string_operations_enhanced(lines, issue)
         description = None
@@ -107,59 +113,73 @@ class PerformanceRecommender:
         return self._create_optimization_result(new_lines, changed, description)
 
     def _handle_repeated_operations_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._fix_repeated_operations(lines, issue)
 
         if changed:
             self.optimization_stats["repeated_ops_cached"] += len(
-                issue.get("instances", [])
+                issue.get("instances", []),
             )
 
         return self._create_optimization_result(new_lines, changed)
 
     def _handle_nested_loops_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._add_nested_loop_comments(lines, issue)
 
         if changed:
             self.optimization_stats["nested_loops_optimized"] += len(
-                issue.get("instances", [])
+                issue.get("instances", []),
             )
 
         return self._create_optimization_result(new_lines, changed)
 
     def _handle_comprehension_opportunities_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._apply_list_comprehension_optimizations(lines, issue)
 
         if changed:
             self.optimization_stats["comprehensions_applied"] += len(
-                issue.get("instances", [])
+                issue.get("instances", []),
             )
 
         return self._create_optimization_result(new_lines, changed)
 
     def _handle_builtin_usage_issue(
-        self, lines: list[str], issue: dict[str, t.Any]
+        self,
+        lines: list[str],
+        issue: dict[str, t.Any],
     ) -> OptimizationResult:
         new_lines, changed = self._add_builtin_caching_comments(lines, issue)
         return self._create_optimization_result(new_lines, changed)
 
     @staticmethod
     def _create_optimization_result(
-        lines: list[str], modified: bool, description: str | None = None
+        lines: list[str],
+        modified: bool,
+        description: str | None = None,
     ) -> OptimizationResult:
         return OptimizationResult(
-            lines=lines, modified=modified, optimization_description=description
+            lines=lines,
+            modified=modified,
+            optimization_description=description,
         )
 
     @staticmethod
     def _create_no_change_result(lines: list[str]) -> OptimizationResult:
         return OptimizationResult(
-            lines=lines, modified=False, optimization_description=None
+            lines=lines,
+            modified=False,
+            optimization_description=None,
         )
 
     def _fix_list_operations_enhanced(
@@ -184,12 +204,18 @@ class PerformanceRecommender:
 
                 if optimization_type == "append":
                     modified |= self._handle_append_optimization(
-                        lines, instance, line_idx, original_line
+                        lines,
+                        instance,
+                        line_idx,
+                        original_line,
                     )
 
                 elif optimization_type == "extend":
                     modified |= self._handle_extend_optimization(
-                        lines, instance, line_idx, original_line
+                        lines,
+                        instance,
+                        line_idx,
+                        original_line,
                     )
 
         return lines, modified
@@ -207,7 +233,8 @@ class PerformanceRecommender:
 
         if not list_pattern.test(current_line):
             for candidate_idx in range(
-                max(0, line_idx - 2), min(len(lines), line_idx + 3)
+                max(0, line_idx - 2),
+                min(len(lines), line_idx + 3),
             ):
                 if list_pattern.test(lines[candidate_idx]):
                     target_idx = candidate_idx
@@ -241,7 +268,8 @@ class PerformanceRecommender:
 
         if not extend_pattern.test(current_line):
             for candidate_idx in range(
-                max(0, line_idx - 2), min(len(lines), line_idx + 3)
+                max(0, line_idx - 2),
+                min(len(lines), line_idx + 3),
             ):
                 if extend_pattern.test(lines[candidate_idx]):
                     target_idx = candidate_idx
@@ -274,7 +302,8 @@ class PerformanceRecommender:
         concat_patterns = issue.get("string_concat_patterns", [])
         if concat_patterns:
             lines, concat_modified = self._fix_string_concatenation(
-                lines, {"instances": concat_patterns}
+                lines,
+                {"instances": concat_patterns},
             )
             modified = modified or concat_modified
 
@@ -311,7 +340,9 @@ class PerformanceRecommender:
 
         instances = issue.get("instances", [])
         for instance in sorted(
-            instances, key=operator.itemgetter("line_number"), reverse=True
+            instances,
+            key=operator.itemgetter("line_number"),
+            reverse=True,
         ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
@@ -321,7 +352,7 @@ class PerformanceRecommender:
                 ]
 
                 complexity = PerformanceRecommender._normalize_complexity_notation(
-                    instance.get("complexity", "O(n^2)")
+                    instance.get("complexity", "O(n^2)"),
                 )
                 priority = instance.get("priority", "medium")
                 priority_label = (
@@ -334,8 +365,9 @@ class PerformanceRecommender:
 
                 comment_lines.extend(
                     PerformanceRecommender._get_priority_specific_comments(
-                        indent, priority
-                    )
+                        indent,
+                        priority,
+                    ),
                 )
 
                 for i, comment in enumerate(comment_lines):
@@ -359,12 +391,12 @@ class PerformanceRecommender:
             if priority == "critical":
                 comment_lines.append(
                     f"{indent}# CRITICAL: Consider algorithmic redesign or"
-                    f" data structure changes"
+                    f" data structure changes",
                 )
             else:
                 comment_lines.append(
                     f"{indent}# Suggestion: Consider memoization, caching, "
-                    f" or hash tables"
+                    f" or hash tables",
                 )
 
         return comment_lines
@@ -378,7 +410,9 @@ class PerformanceRecommender:
 
         instances = issue.get("instances", [])
         for instance in sorted(
-            instances, key=operator.itemgetter("line_number"), reverse=True
+            instances,
+            key=operator.itemgetter("line_number"),
+            reverse=True,
         ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
@@ -405,7 +439,9 @@ class PerformanceRecommender:
 
         instances = issue.get("instances", [])
         for instance in sorted(
-            instances, key=operator.itemgetter("line_number"), reverse=True
+            instances,
+            key=operator.itemgetter("line_number"),
+            reverse=True,
         ):
             line_idx = instance["line_number"] - 1
             if line_idx < len(lines):
@@ -438,22 +474,28 @@ class PerformanceRecommender:
             return lines, modified
 
         for instance in sorted(
-            instances, key=operator.itemgetter("line_number"), reverse=True
+            instances,
+            key=operator.itemgetter("line_number"),
+            reverse=True,
         ):
             modified |= PerformanceRecommender._process_single_concatenation_instance(
-                lines, instance
+                lines,
+                instance,
             )
 
         return lines, modified
 
     @staticmethod
     def _process_single_concatenation_instance(
-        lines: list[str], instance: dict[str, t.Any]
+        lines: list[str],
+        instance: dict[str, t.Any],
     ) -> bool:
         original_idx = instance.get("line_number", 1) - 1
         target_content = instance.get("content", "").strip()
         candidate_indices: list[int] = PerformanceRecommender._find_candidate_indices(
-            lines, original_idx, target_content
+            lines,
+            original_idx,
+            target_content,
         )
 
         if not candidate_indices:
@@ -472,16 +514,21 @@ class PerformanceRecommender:
 
     @staticmethod
     def _find_candidate_indices(
-        lines: list[str], original_idx: int, target_content: str
+        lines: list[str],
+        original_idx: int,
+        target_content: str,
     ) -> list[int]:
         if PerformanceRecommender._is_valid_original_index(
-            lines, original_idx, target_content
+            lines,
+            original_idx,
+            target_content,
         ):
             return [original_idx]
 
         if target_content:
             exact_matches = PerformanceRecommender._find_exact_content_matches(
-                lines, target_content
+                lines,
+                target_content,
             )
             if exact_matches:
                 return exact_matches
@@ -490,7 +537,9 @@ class PerformanceRecommender:
 
     @staticmethod
     def _is_valid_original_index(
-        lines: list[str], original_idx: int, target_content: str
+        lines: list[str],
+        original_idx: int,
+        target_content: str,
     ) -> bool:
         if not (0 <= original_idx < len(lines)):
             return False
@@ -525,7 +574,7 @@ class PerformanceRecommender:
     @staticmethod
     def _fix_line_at_index(lines: list[str], line_idx: int, original_line: str) -> bool:
         modified = False
-        line_body, sep, comment = original_line.partition("#")
+        line_body, _sep, comment = original_line.partition("#")
         left, _, right = line_body.partition("+=")
         if not left.strip() or not right.strip():
             return False
@@ -537,18 +586,26 @@ class PerformanceRecommender:
         body_indent_str = " " * current_indent
 
         loop_start_idx = PerformanceRecommender._find_loop_start_idx(
-            lines, line_idx, current_indent
+            lines,
+            line_idx,
+            current_indent,
         )
 
-        parent_indent, parent_indent_str = (
+        _parent_indent, parent_indent_str = (
             PerformanceRecommender._get_parent_indent_info(
-                lines, loop_start_idx, current_indent
+                lines,
+                loop_start_idx,
+                current_indent,
             )
         )
 
         parts_name = f"{target}_parts"
         line_idx += PerformanceRecommender._ensure_parts_initialized(
-            lines, loop_start_idx, line_idx, parts_name, parent_indent_str
+            lines,
+            loop_start_idx,
+            line_idx,
+            parts_name,
+            parent_indent_str,
         )
 
         new_line = f"{body_indent_str}{parts_name}.append({expr})"
@@ -558,14 +615,21 @@ class PerformanceRecommender:
         modified = True
 
         modified |= PerformanceRecommender._add_join_statement(
-            lines, loop_start_idx, line_idx, target, parts_name, parent_indent_str
+            lines,
+            loop_start_idx,
+            line_idx,
+            target,
+            parts_name,
+            parent_indent_str,
         )
 
         return modified
 
     @staticmethod
     def _find_loop_start_idx(
-        lines: list[str], line_idx: int, current_indent: int
+        lines: list[str],
+        line_idx: int,
+        current_indent: int,
     ) -> int | None:
         for i in range(line_idx - 1, -1, -1):
             candidate = lines[i]
@@ -579,7 +643,9 @@ class PerformanceRecommender:
 
     @staticmethod
     def _get_parent_indent_info(
-        lines: list[str], loop_start_idx: int | None, current_indent: int
+        lines: list[str],
+        loop_start_idx: int | None,
+        current_indent: int,
     ) -> tuple[int, str]:
         parent_indent = (
             len(lines[loop_start_idx]) - len(lines[loop_start_idx].lstrip())
@@ -636,7 +702,9 @@ class PerformanceRecommender:
         loop_body_indent = current_indent
 
         insert_at = PerformanceRecommender._find_loop_end_insertion_point(
-            lines, line_idx, loop_body_indent
+            lines,
+            line_idx,
+            loop_body_indent,
         )
 
         lines.insert(insert_at, join_line)
@@ -644,7 +712,9 @@ class PerformanceRecommender:
 
     @staticmethod
     def _find_loop_end_insertion_point(
-        lines: list[str], line_idx: int, loop_body_indent: int
+        lines: list[str],
+        line_idx: int,
+        loop_body_indent: int,
     ) -> int:
         for j in range(line_idx + 1, len(lines)):
             candidate = lines[j]

@@ -5,10 +5,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-from ..models.protocols import (
-    ConfigManagerProtocol,
-    LoggerProtocol,
-)
+from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
 
 
 class ReferenceFormat(Enum):
@@ -80,7 +77,7 @@ class ReferenceGenerator:
         self,
         config_manager: ConfigManagerProtocol,
         logger: LoggerProtocol,
-    ):
+    ) -> None:
         self.config_manager = config_manager
         self.logger = logger
 
@@ -122,16 +119,16 @@ class ReferenceGenerator:
     ) -> str:
         if output_format == ReferenceFormat.MARKDOWN:
             return self._render_markdown(reference)
-        elif output_format == ReferenceFormat.HTML:
+        if output_format == ReferenceFormat.HTML:
             return self._render_html(reference)
-        elif output_format == ReferenceFormat.JSON:
+        if output_format == ReferenceFormat.JSON:
             return self._render_json(reference)
-        elif output_format == ReferenceFormat.YAML:
+        if output_format == ReferenceFormat.YAML:
             return self._render_yaml(reference)
-        elif output_format == ReferenceFormat.RST:
+        if output_format == ReferenceFormat.RST:
             return self._render_rst(reference)
-        else:
-            raise ValueError(f"Unsupported format: {output_format}")
+        msg = f"Unsupported format: {output_format}"
+        raise ValueError(msg)
 
     async def _analyze_cli_module(self, module_path: str) -> dict[str, CommandInfo]:
         commands = {}
@@ -139,7 +136,8 @@ class ReferenceGenerator:
         try:
             module_file = Path(module_path)
             if not module_file.exists():
-                raise FileNotFoundError(f"CLI module not found: {module_path}")
+                msg = f"CLI module not found: {module_path}"
+                raise FileNotFoundError(msg)
 
             source_code = module_file.read_text()
 
@@ -148,7 +146,7 @@ class ReferenceGenerator:
             commands = self._extract_commands_from_ast(tree)
 
         except Exception as e:
-            self.logger.error(f"Failed to analyze CLI module: {e}")
+            self.logger.exception(f"Failed to analyze CLI module: {e}")
 
         return commands
 
@@ -159,7 +157,8 @@ class ReferenceGenerator:
         return commands
 
     def _create_command_visitor(
-        self, commands: dict[str, CommandInfo]
+        self,
+        commands: dict[str, CommandInfo],
     ) -> ast.NodeVisitor:
         class CommandVisitor(ast.NodeVisitor):
             def __init__(self, generator: t.Any) -> None:
@@ -172,7 +171,9 @@ class ReferenceGenerator:
         return CommandVisitor(self)
 
     def _process_function_node(
-        self, node: ast.FunctionDef, commands: dict[str, CommandInfo]
+        self,
+        node: ast.FunctionDef,
+        commands: dict[str, CommandInfo],
     ) -> None:
         for decorator in node.decorator_list:
             if self._is_command_decorator(decorator):
@@ -183,12 +184,13 @@ class ReferenceGenerator:
     def _is_command_decorator(self, decorator: ast.AST) -> bool:
         if isinstance(decorator, ast.Name):
             return decorator.id in ("command", "click_command")
-        elif isinstance(decorator, ast.Attribute):
+        if isinstance(decorator, ast.Attribute):
             return decorator.attr in ("command", "callback")
         return False
 
     def _extract_command_from_function(
-        self, node: ast.FunctionDef
+        self,
+        node: ast.FunctionDef,
     ) -> CommandInfo | None:
         try:
             command_name = node.name.replace("_", "-")
@@ -207,7 +209,8 @@ class ReferenceGenerator:
             return None
 
     def _extract_function_parameters(
-        self, node: ast.FunctionDef
+        self,
+        node: ast.FunctionDef,
     ) -> list[ParameterInfo]:
         parameters = []
         for arg in node.args.args:
@@ -227,7 +230,9 @@ class ReferenceGenerator:
         return None
 
     def _extract_parameter_info(
-        self, arg: ast.arg, func_node: ast.FunctionDef
+        self,
+        arg: ast.arg,
+        func_node: ast.FunctionDef,
     ) -> ParameterInfo:
         param_name = arg.arg.replace("_", "-")
         type_hint = ast.unparse(arg.annotation) if arg.annotation else "Any"
@@ -242,7 +247,9 @@ class ReferenceGenerator:
         )
 
     def _extract_default_value(
-        self, arg: ast.arg, func_node: ast.FunctionDef
+        self,
+        arg: ast.arg,
+        func_node: ast.FunctionDef,
     ) -> tuple[t.Any, bool]:
         defaults_count = len(func_node.args.defaults)
         args_count = len(func_node.args.args)
@@ -255,7 +262,10 @@ class ReferenceGenerator:
         return None, True
 
     def _extract_argument_default(
-        self, arg_index: int, defaults_start: int, func_node: ast.FunctionDef
+        self,
+        arg_index: int,
+        defaults_start: int,
+        func_node: ast.FunctionDef,
     ) -> tuple[t.Any, bool]:
         default_index = arg_index - defaults_start
         default_node = func_node.args.defaults[default_index]
@@ -264,7 +274,8 @@ class ReferenceGenerator:
         return None, True
 
     async def _enhance_with_examples(
-        self, commands: dict[str, CommandInfo]
+        self,
+        commands: dict[str, CommandInfo],
     ) -> dict[str, CommandInfo]:
         for command in commands.values():
             self._add_basic_example(command)
@@ -277,7 +288,7 @@ class ReferenceGenerator:
             {
                 "description": f"Basic {command.name} usage",
                 "command": basic_example,
-            }
+            },
         )
 
     def _add_parameter_examples(self, command: CommandInfo) -> None:
@@ -296,7 +307,7 @@ class ReferenceGenerator:
                 {
                     "description": f"Using {command.name} with parameters",
                     "command": enhanced_example,
-                }
+                },
             )
 
     def _format_parameter_example(self, param: ParameterInfo) -> str | None:
@@ -305,7 +316,8 @@ class ReferenceGenerator:
         return f"--{param.name} {param.default_value}"
 
     async def _enhance_with_workflows(
-        self, commands: dict[str, CommandInfo]
+        self,
+        commands: dict[str, CommandInfo],
     ) -> dict[str, CommandInfo]:
         workflow_patterns = self._get_workflow_patterns()
 
@@ -324,7 +336,9 @@ class ReferenceGenerator:
         }
 
     def _assign_command_workflows(
-        self, command: CommandInfo, workflow_patterns: dict[str, list[str]]
+        self,
+        command: CommandInfo,
+        workflow_patterns: dict[str, list[str]],
     ) -> None:
         for workflow, patterns in workflow_patterns.items():
             if any(pattern in command.name for pattern in patterns):
@@ -342,7 +356,7 @@ class ReferenceGenerator:
                 "purpose": "quality_assurance",
                 "automation_level": "high",
                 "ai_agent_compatible": True,
-            }
+            },
         )
         command.success_patterns.append("All tests passed")
         command.failure_patterns.append("Test failures detected")
@@ -353,13 +367,14 @@ class ReferenceGenerator:
                 "purpose": "code_quality",
                 "automation_level": "high",
                 "ai_agent_compatible": True,
-            }
+            },
         )
         command.success_patterns.append("No formatting issues")
         command.failure_patterns.append("Style violations found")
 
     def _categorize_commands(
-        self, commands: dict[str, CommandInfo]
+        self,
+        commands: dict[str, CommandInfo],
     ) -> dict[str, list[str]]:
         categories: dict[str, list[str]] = {}
         category_patterns = self._get_category_patterns()
@@ -381,7 +396,9 @@ class ReferenceGenerator:
         }
 
     def _determine_command_category(
-        self, command: CommandInfo, category_patterns: dict[str, list[str]]
+        self,
+        command: CommandInfo,
+        category_patterns: dict[str, list[str]],
     ) -> str:
         for category, patterns in category_patterns.items():
             if any(pattern in command.name for pattern in patterns):
@@ -389,14 +406,18 @@ class ReferenceGenerator:
         return "general"
 
     def _add_command_to_category(
-        self, categories: dict[str, list[str]], category: str, command_name: str
+        self,
+        categories: dict[str, list[str]],
+        category: str,
+        command_name: str,
     ) -> None:
         if category not in categories:
             categories[category] = []
         categories[category].append(command_name)
 
     def _generate_workflows(
-        self, commands: dict[str, CommandInfo]
+        self,
+        commands: dict[str, CommandInfo],
     ) -> dict[str, list[str]]:
         workflows = {
             "development_cycle": [
@@ -463,13 +484,18 @@ class ReferenceGenerator:
         category_lines = []
         for category, command_names in reference.categories.items():
             category_section = self._render_markdown_category(
-                category, reference.commands, command_names
+                category,
+                reference.commands,
+                command_names,
             )
             category_lines.extend(category_section)
         return category_lines
 
     def _render_markdown_category(
-        self, category: str, commands: dict[str, CommandInfo], command_names: list[str]
+        self,
+        category: str,
+        commands: dict[str, CommandInfo],
+        command_names: list[str],
     ) -> list[str]:
         category_lines = [
             f"## {category.title()}",
@@ -494,7 +520,7 @@ class ReferenceGenerator:
                 [
                     f"### {workflow_name.replace('_', ' ').title()}",
                     "",
-                ]
+                ],
             )
 
             for i, cmd in enumerate(command_sequence, 1):
@@ -522,14 +548,15 @@ class ReferenceGenerator:
 
         if command.related_commands:
             related_lines = self._render_command_related_markdown(
-                command.related_commands
+                command.related_commands,
             )
             lines.extend(related_lines)
 
         return lines
 
     def _render_command_parameters_markdown(
-        self, parameters: list[ParameterInfo]
+        self,
+        parameters: list[ParameterInfo],
     ) -> list[str]:
         param_lines = [
             "**Parameters:**",
@@ -553,7 +580,8 @@ class ReferenceGenerator:
         return f"- `--{param.name}` ({param.type_hint}){required_str}{default_str}: {param.description}"
 
     def _render_command_examples_markdown(
-        self, examples: list[dict[str, str]]
+        self,
+        examples: list[dict[str, str]],
     ) -> list[str]:
         example_lines = [
             "**Examples:**",
@@ -568,13 +596,14 @@ class ReferenceGenerator:
                     example["command"],
                     "```",
                     "",
-                ]
+                ],
             )
 
         return example_lines
 
     def _render_command_related_markdown(
-        self, related_commands: list[str]
+        self,
+        related_commands: list[str],
     ) -> list[str]:
         return [
             "**Related commands:** "
@@ -585,7 +614,7 @@ class ReferenceGenerator:
     def _render_html(self, reference: CommandReference) -> str:
         html_parts = [
             self._render_html_header(
-                reference.generated_at.strftime("%Y-%m-%d %H:%M:%S")
+                reference.generated_at.strftime("%Y-%m-%d %H:%M:%S"),
             ),
             self._render_html_commands(reference),
             "</body></html>",
@@ -614,20 +643,27 @@ class ReferenceGenerator:
         html_parts = []
         for category, command_names in reference.categories.items():
             category_html = self._render_html_category(
-                category, reference.commands, command_names
+                category,
+                reference.commands,
+                command_names,
             )
             html_parts.append(category_html)
         return "".join(html_parts)
 
     def _render_html_category(
-        self, category: str, commands: dict[str, CommandInfo], command_names: list[str]
+        self,
+        category: str,
+        commands: dict[str, CommandInfo],
+        command_names: list[str],
     ) -> str:
         html = f"<h2>{category.title()}</h2>"
         html += self._render_html_category_commands(commands, command_names)
         return html
 
     def _render_html_category_commands(
-        self, commands: dict[str, CommandInfo], command_names: list[str]
+        self,
+        commands: dict[str, CommandInfo],
+        command_names: list[str],
     ) -> str:
         html_parts = []
         for command_name in command_names:
@@ -685,7 +721,8 @@ class ReferenceGenerator:
         }
 
     def _serialize_parameters(
-        self, parameters: list[ParameterInfo]
+        self,
+        parameters: list[ParameterInfo],
     ) -> list[dict[str, t.Any]]:
         return [self._serialize_parameter(param) for param in parameters]
 
@@ -730,17 +767,19 @@ class ReferenceGenerator:
                     category.title(),
                     "-" * len(category),
                     "",
-                ]
+                ],
             )
 
             rst_lines.extend(
-                self._render_rst_category_commands(reference.commands, command_names)
+                self._render_rst_category_commands(reference.commands, command_names),
             )
 
         return rst_lines
 
     def _render_rst_category_commands(
-        self, commands: dict[str, CommandInfo], command_names: list[str]
+        self,
+        commands: dict[str, CommandInfo],
+        command_names: list[str],
     ) -> list[str]:
         command_lines = []
 
@@ -753,18 +792,19 @@ class ReferenceGenerator:
                     "",
                     command.description,
                     "",
-                ]
+                ],
             )
 
             if command.parameters:
                 command_lines.extend(
-                    self._render_rst_command_parameters(command.parameters)
+                    self._render_rst_command_parameters(command.parameters),
                 )
 
         return command_lines
 
     def _render_rst_command_parameters(
-        self, parameters: list[ParameterInfo]
+        self,
+        parameters: list[ParameterInfo],
     ) -> list[str]:
         param_lines = [
             "Parameters:",
@@ -773,7 +813,7 @@ class ReferenceGenerator:
 
         for param in parameters:
             param_lines.append(
-                f"* ``--{param.name}`` ({param.type_hint}): {param.description}"
+                f"* ``--{param.name}`` ({param.type_hint}): {param.description}",
             )
 
         param_lines.append("")

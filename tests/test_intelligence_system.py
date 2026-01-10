@@ -22,13 +22,13 @@ class TestAgentRegistry:
         await registry.initialize()
         return registry
 
-    async def test_registry_initialization(self, registry):
+    async def test_registry_initialization(self, registry) -> None:
         assert len(registry._agents) > 0
 
         sources = {agent.metadata.source for agent in registry._agents.values()}
         assert len(sources) >= 1
 
-    async def test_capability_mapping(self, registry):
+    async def test_capability_mapping(self, registry) -> None:
         arch_agents = registry.get_agents_by_capability(AgentCapability.ARCHITECTURE)
         assert len(arch_agents) >= 0
 
@@ -37,7 +37,7 @@ class TestAgentRegistry:
         assert "by_source" in stats
         assert "by_capability" in stats
 
-    async def test_agent_retrieval(self, registry):
+    async def test_agent_retrieval(self, registry) -> None:
         all_agents = registry.list_all_agents()
         assert len(all_agents) > 0
 
@@ -52,7 +52,7 @@ class TestAgentSelector:
         await registry.initialize()
         return AgentSelector(registry)
 
-    async def test_task_capability_analysis(self, selector):
+    async def test_task_capability_analysis(self, selector) -> None:
         arch_task = TaskDescription(
             description="Design a complex system architecture with multiple components",
             context=TaskContext.ARCHITECTURE,
@@ -61,7 +61,7 @@ class TestAgentSelector:
         capabilities = selector._analyze_task_capabilities(arch_task)
         assert AgentCapability.ARCHITECTURE in capabilities
 
-    async def test_agent_selection(self, selector):
+    async def test_agent_selection(self, selector) -> None:
         task = TaskDescription(
             description="Fix refurb violations in Python code",
             context=TaskContext.CODE_QUALITY,
@@ -76,7 +76,7 @@ class TestAgentSelector:
             scores = [c.final_score for c in candidates]
             assert scores == sorted(scores, reverse=True)
 
-    async def test_task_complexity_analysis(self, selector):
+    async def test_task_complexity_analysis(self, selector) -> None:
         simple_task = TaskDescription(description="Format Python code")
         complex_task = TaskDescription(
             description="Refactor complex architecture with multiple design patterns",
@@ -91,7 +91,7 @@ class TestAgentSelector:
 
 
 class TestIntelligentAgentSystem:
-    async def test_system_initialization(self):
+    async def test_system_initialization(self) -> None:
         system = await get_intelligent_agent_system()
         await system.initialize()
 
@@ -100,7 +100,7 @@ class TestIntelligentAgentSystem:
         assert system.orchestrator is not None
         assert system.learning_system is not None
 
-    async def test_smart_task_execution(self):
+    async def test_smart_task_execution(self) -> None:
         system = await get_intelligent_agent_system()
 
         with patch.object(system, "orchestrator") as mock_orchestrator:
@@ -128,7 +128,7 @@ class TestIntelligentAgentSystem:
                 assert result.result == "Test result"
                 assert result.agents_used == ["test - agent"]
 
-    async def test_crackerjack_issue_handling(self):
+    async def test_crackerjack_issue_handling(self) -> None:
         system = await get_intelligent_agent_system()
 
         issue = Issue(
@@ -164,7 +164,7 @@ class TestIntelligentAgentSystem:
             assert result.success is True
             assert result.confidence == 0.8
 
-    async def test_system_status(self):
+    async def test_system_status(self) -> None:
         system = await get_intelligent_agent_system()
 
         with patch.object(system, "registry") as mock_registry:
@@ -172,12 +172,12 @@ class TestIntelligentAgentSystem:
 
             with patch.object(system, "orchestrator") as mock_orchestrator:
                 mock_orchestrator.get_execution_stats.return_value = {
-                    "total_executions": 10
+                    "total_executions": 10,
                 }
 
                 with patch.object(system, "learning_system") as mock_learning:
                     mock_learning.get_learning_summary.return_value = {
-                        "status": "active"
+                        "status": "active",
                     }
 
                     system._initialized = True
@@ -190,7 +190,7 @@ class TestIntelligentAgentSystem:
 
 
 class TestIntegrationFunctions:
-    async def test_smart_fix_issue(self):
+    async def test_smart_fix_issue(self) -> None:
         from crackerjack.intelligence.integration import smart_fix_issue
 
         issue = Issue(
@@ -205,7 +205,7 @@ class TestIntegrationFunctions:
         )
 
         with patch(
-            "crackerjack.intelligence.integration.get_intelligent_agent_system"
+            "crackerjack.intelligence.integration.get_intelligent_agent_system",
         ) as mock_get_system:
             mock_system = AsyncMock()
             mock_system.handle_crackerjack_issue = AsyncMock()
@@ -215,11 +215,11 @@ class TestIntegrationFunctions:
 
             mock_system.handle_crackerjack_issue.assert_called_once_with(issue, context)
 
-    async def test_smart_execute_task(self):
+    async def test_smart_execute_task(self) -> None:
         from crackerjack.intelligence.integration import smart_execute_task
 
         with patch(
-            "crackerjack.intelligence.integration.get_intelligent_agent_system"
+            "crackerjack.intelligence.integration.get_intelligent_agent_system",
         ) as mock_get_system:
             mock_system = AsyncMock()
             mock_system.execute_smart_task = AsyncMock()

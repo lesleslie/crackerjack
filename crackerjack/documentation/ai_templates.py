@@ -5,11 +5,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
-from ..models.protocols import (
-    ConfigManagerProtocol,
-    LoggerProtocol,
-)
-from ..services.regex_patterns import SAFE_PATTERNS
+from crackerjack.models.protocols import ConfigManagerProtocol, LoggerProtocol
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 
 class TemplateType(Enum):
@@ -80,7 +77,7 @@ class AITemplateEngine:
         self,
         config_manager: ConfigManagerProtocol,
         logger: LoggerProtocol,
-    ):
+    ) -> None:
         self.config_manager = config_manager
         self.logger = logger
         self.templates: dict[str, Template] = {}
@@ -94,7 +91,8 @@ class AITemplateEngine:
         context: TemplateContext,
     ) -> str:
         if template_name not in self.templates:
-            raise ValueError(f"Template not found: {template_name}")
+            msg = f"Template not found: {template_name}"
+            raise ValueError(msg)
 
         template = self.templates[template_name]
 
@@ -106,9 +104,7 @@ class AITemplateEngine:
 
         content = self._render_sections(content, context)
 
-        content = self._post_process_content(content, context)
-
-        return content
+        return self._post_process_content(content, context)
 
     def register_template(self, template: Template) -> None:
         variables, sections = template.extract_placeholders()
@@ -216,7 +212,7 @@ class AITemplateEngine:
         parent = self.templates.get(template.parent_template)
         if not parent:
             self.logger.warning(
-                f"Parent template not found: {template.parent_template}"
+                f"Parent template not found: {template.parent_template}",
             )
             return template.content
 
@@ -227,7 +223,8 @@ class AITemplateEngine:
 
         for block_name, block_content in blocks:
             dynamic_pattern = SAFE_PATTERNS["replace_template_block"].pattern.replace(
-                "BLOCK_NAME", block_name
+                "BLOCK_NAME",
+                block_name,
             )
             parent_content = (
                 re.sub(  # REGEX OK: safe dynamic pattern from SAFE_PATTERNS
@@ -293,7 +290,8 @@ class AITemplateEngine:
         def replace_section(match: t.Any) -> str:
             section_name = match.group(1)
             return context.get_section(
-                section_name, f"<!-- Section {section_name} not found -->"
+                section_name,
+                f"<!-- Section {section_name} not found -->",
             )
 
         return section_pattern.sub(replace_section, content)
@@ -312,7 +310,9 @@ class AITemplateEngine:
         return content.strip()
 
     def _optimize_for_structured_data(
-        self, content: str, context: TemplateContext
+        self,
+        content: str,
+        context: TemplateContext,
     ) -> str:
         metadata = f"""<!-- AI-Optimized Documentation -->
 <!-- Generated: {context.generated_at.isoformat()} -->
@@ -323,7 +323,9 @@ class AITemplateEngine:
         return metadata + content
 
     def _optimize_for_decision_trees(
-        self, content: str, context: TemplateContext
+        self,
+        content: str,
+        context: TemplateContext,
     ) -> str:
         decision_markers = {
             "if": "🔄 **Decision Point**:",
@@ -335,13 +337,18 @@ class AITemplateEngine:
         for marker, prefix in decision_markers.items():
             pattern = rf"^(\s*)(.*{re.escape(marker)}.*)$"
             content = re.sub(  # REGEX OK: escaped marker pattern, safe dynamic
-                pattern, rf"\1{prefix} \2", content, flags=re.MULTILINE | re.IGNORECASE
+                pattern,
+                rf"\1{prefix} \2",
+                content,
+                flags=re.MULTILINE | re.IGNORECASE,
             )
 
         return content
 
     def _optimize_for_command_matrices(
-        self, content: str, context: TemplateContext
+        self,
+        content: str,
+        context: TemplateContext,
     ) -> str:
         def enhance_command_block(match: t.Any) -> str:
             command = match.group(1).strip()

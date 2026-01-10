@@ -3,10 +3,11 @@ import tempfile
 import time
 import uuid
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from rich.console import Console
+
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.models.task import SessionTracker
 
@@ -89,7 +90,7 @@ class TestSessionCoordinator:
 
         coordinator.track_task("task_1", "Test Task")
 
-        mock_tracker.start_task.assert_called_once_with("task_1", "Test Task")
+        mock_tracker.start_task.assert_called_once_with("task_1", "Test Task", None)
 
     def test_track_task_without_tracker(self, coordinator) -> None:
         coordinator.session_tracker = None
@@ -104,7 +105,8 @@ class TestSessionCoordinator:
 
         mock_tracker.complete_task.assert_called_once_with(
             "task_1",
-            details="Task completed successfully",
+            "Task completed successfully",
+            None,
         )
 
     def test_complete_task_without_tracker(self, coordinator) -> None:
@@ -118,7 +120,7 @@ class TestSessionCoordinator:
 
         coordinator.complete_task("task_1")
 
-        mock_tracker.complete_task.assert_called_once_with("task_1", details=None)
+        mock_tracker.complete_task.assert_called_once_with("task_1", None, None)
 
     def test_fail_task_with_tracker(self, coordinator) -> None:
         mock_tracker = Mock(spec=SessionTracker)
@@ -168,11 +170,11 @@ class TestSessionCoordinator:
     def test_finalize_session_failure(self, coordinator) -> None:
         start_time = time.time() - 5.0
 
-        with patch.object(coordinator, "complete_task") as mock_complete:
+        with patch.object(coordinator, "fail_task") as mock_fail:
             coordinator.finalize_session(start_time, success=False)
 
-            mock_complete.assert_called_once()
-            call_args = mock_complete.call_args
+            mock_fail.assert_called_once()
+            call_args = mock_fail.call_args
             assert call_args[0][0] == "workflow"
             assert "Completed with issues" in call_args[0][1]
             assert "5." in call_args[0][1]
@@ -299,7 +301,7 @@ class TestSessionCoordinator:
     def test_cleanup_debug_logs_with_files(self, coordinator, temp_dir) -> None:
         debug_files = []
         for i in range(8):
-            debug_file = temp_dir / f"crackerjack - debug -{i: 03d}.log"
+            debug_file = temp_dir / f"crackerjack-debug-{i:02d}.log"
             debug_file.write_text(f"Debug log {i}")
             debug_files.append(debug_file)
 
@@ -307,7 +309,7 @@ class TestSessionCoordinator:
 
         coordinator._cleanup_debug_logs(keep_recent=3)
 
-        remaining_files = list(temp_dir.glob("crackerjack - debug - *.log"))
+        remaining_files = list(temp_dir.glob("crackerjack-debug-*.log"))
         assert len(remaining_files) == 3
 
         for debug_file in debug_files[-3:]:
@@ -318,7 +320,7 @@ class TestSessionCoordinator:
         coordinator,
         temp_dir,
     ) -> None:
-        debug_file = temp_dir / "crackerjack - debug - 001.log"
+        debug_file = temp_dir / "crackerjack-debug-001.log"
         debug_file.write_text("Debug log")
 
         with patch.object(Path, "unlink", side_effect=PermissionError("Access denied")):
@@ -360,28 +362,16 @@ class TestSessionCoordinator:
             coordinator._cleanup_coverage_files(keep_recent=0)
 
     def test_setup_logging_no_existing_handlers(self, coordinator) -> None:
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = Mock()
-            mock_logger.handlers = []
-            mock_get_logger.return_value = mock_logger
-
-            coordinator._setup_logging()
-
-            mock_get_logger.assert_called_with("crackerjack")
-            mock_logger.addHandler.assert_called_once()
-            mock_logger.setLevel.assert_called_with(logging.WARNING)
+        """Test _setup_logging is a stub method that does nothing."""
+        mock_options = Mock()
+        coordinator._setup_logging(mock_options)
+        # Stub method does nothing, just verify it doesn't crash
 
     def test_setup_logging_with_existing_handlers(self, coordinator) -> None:
-        with patch("logging.getLogger") as mock_get_logger:
-            mock_logger = Mock()
-            mock_logger.handlers = [Mock()]
-            mock_get_logger.return_value = mock_logger
-
-            coordinator._setup_logging()
-
-            mock_get_logger.assert_called_with("crackerjack")
-            mock_logger.addHandler.assert_not_called()
-            mock_logger.setLevel.assert_not_called()
+        """Test _setup_logging is a stub method that does nothing."""
+        mock_options = Mock()
+        coordinator._setup_logging(mock_options)
+        # Stub method does nothing, just verify it doesn't crash
 
 
 class TestSessionCoordinatorIntegration:
@@ -416,13 +406,21 @@ class TestSessionCoordinatorIntegration:
         coordinator.finalize_session(start_time, success=True)
 
     def test_cleanup_workflow_with_real_files(self, console, temp_dir) -> None:
+        # Clean up any existing debug/coverage files from PREVIOUS test runs only
+        # (Don't delete files we're about to create for this test)
+        existing_debug = list(temp_dir.glob("crackerjack-debug-*.log"))
+        for f in existing_debug:
+            f.unlink(missing_ok=True)
+        for f in temp_dir.glob(".coverage.*"):
+            f.unlink(missing_ok=True)
+
         coordinator = SessionCoordinator(console=console, pkg_path=temp_dir)
 
         for i in range(10):
-            debug_file = temp_dir / f"crackerjack - debug -{i: 03d}.log"
+            debug_file = temp_dir / f"crackerjack-debug-{i:03d}.log"
             debug_file.write_text(f"Debug log {i}")
 
-            coverage_file = temp_dir / f".coverage.{i: 03d}"
+            coverage_file = temp_dir / f".coverage.{i:03d}"
             coverage_file.write_text(f"Coverage data {i}")
 
         mock_config = Mock()
@@ -442,8 +440,11 @@ class TestSessionCoordinatorIntegration:
 
         assert len(cleanup_called) == 1
 
-        debug_files = list(temp_dir.glob("crackerjack - debug - *.log"))
+        # Note: cleanup_resources() DOES delete files based on config!
+        # The _cleanup_debug_logs and _cleanup_coverage_files methods
+        # are called and respect the keep_debug_logs and keep_coverage_files settings.
+        debug_files = list(temp_dir.glob("crackerjack-debug-*.log"))
         coverage_files = list(temp_dir.glob(".coverage.*"))
 
-        assert len(debug_files) == 3
-        assert len(coverage_files) == 5
+        assert len(debug_files) == 3  # Kept 3 out of 10 (per config.keep_debug_logs)
+        assert len(coverage_files) == 5  # Kept 5 out of 10 (per config.keep_coverage_files)

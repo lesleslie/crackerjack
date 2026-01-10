@@ -9,22 +9,22 @@ from rich.console import Console
 from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 
 
-def test_async_hook_executor_initialization():
+def test_async_hook_executor_initialization() -> None:
     """Test that AsyncHookExecutor initializes with empty process tracking."""
     console = Console()
     executor = AsyncHookExecutor(
         console=console,
-        pkg_path=Path(".")
+        pkg_path=Path(),
     )
     assert len(executor._running_processes) == 0
 
 
-async def test_async_hook_executor_process_tracking():
+async def test_async_hook_executor_process_tracking() -> None:
     """Test that AsyncHookExecutor tracks running processes."""
     console = Console()
     executor = AsyncHookExecutor(
         console=console,
-        pkg_path=Path(".")
+        pkg_path=Path(),
     )
 
     # Create a simple subprocess to track
@@ -51,12 +51,12 @@ async def test_async_hook_executor_process_tracking():
     assert len(executor._running_processes) == 0
 
 
-async def test_async_hook_executor_cleanup():
+async def test_async_hook_executor_cleanup() -> None:
     """Test that AsyncHookExecutor cleanup terminates running processes."""
     console = Console()
     executor = AsyncHookExecutor(
         console=console,
-        pkg_path=Path(".")
+        pkg_path=Path(),
     )
 
     # Create a subprocess that will run for a bit
@@ -79,13 +79,13 @@ async def test_async_hook_executor_cleanup():
 
 if __name__ == "__main__":
     # Run the async tests
-    import pytest
     import sys
 
+    import pytest
+
     # For direct execution
-    async def run_tests():
+    async def run_tests() -> None:
         await test_async_hook_executor_process_tracking()
         await test_async_hook_executor_cleanup()
-        print("All async tests passed!")
 
     asyncio.run(run_tests())

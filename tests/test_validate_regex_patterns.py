@@ -71,7 +71,7 @@ def f(s: str) -> str:
 
 
 def test_main_returns_nonzero_and_prints_issues(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
 ) -> None:
     bad = write(
         tmp_path,
@@ -91,7 +91,7 @@ re.match(r"x", "x")
 
 
 def test_main_success_when_no_issues(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path, capsys: pytest.CaptureFixture[str],
 ) -> None:
     ok = write(
         tmp_path,

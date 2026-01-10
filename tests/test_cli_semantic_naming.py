@@ -9,7 +9,7 @@ from tests.base_test import BaseCrackerjackFeatureTest
 class TestCLISemanticNaming(BaseCrackerjackFeatureTest):
     """Test CLI semantic naming implementation."""
 
-    def test_semantic_field_mapping(self):
+    def test_semantic_field_mapping(self) -> None:
         """Test that all semantic fields are correctly mapped."""
         options = Options()
 
@@ -22,7 +22,7 @@ class TestCLISemanticNaming(BaseCrackerjackFeatureTest):
         assert hasattr(options, "fast")  # was: fast (no change)
         assert hasattr(options, "comp")  # was: comp (no change)
 
-    def test_semantic_field_defaults(self):
+    def test_semantic_field_defaults(self) -> None:
         """Test that semantic fields have correct default values."""
         options = Options()
 
@@ -34,14 +34,13 @@ class TestCLISemanticNaming(BaseCrackerjackFeatureTest):
         assert options.fast is False
         assert options.comp is False
 
-    def test_legacy_flag_deprecation_warnings(self):
+    def test_legacy_flag_deprecation_warnings(self) -> None:
         """Test that legacy flags produce appropriate deprecation warnings."""
         # Note: This test would need to be implemented based on how the deprecation
         # warnings are actually handled in the codebase
-        pass
 
     @pytest.mark.parametrize(
-        "semantic_command,expected_options",
+        ("semantic_command", "expected_options"),
         [
             (["--strip-code"], {"strip_code": True}),
             (["--ai-fix", "--run-tests"], {"ai_fix": True, "run_tests": True}),
@@ -49,16 +48,14 @@ class TestCLISemanticNaming(BaseCrackerjackFeatureTest):
             (["--auto-version"], {"auto_version": True}),
         ],
     )
-    def test_semantic_command_parsing(self, semantic_command, expected_options):
+    def test_semantic_command_parsing(self, semantic_command, expected_options) -> None:
         """Test that semantic commands parse correctly."""
         # This would require actual CLI parsing implementation
         # For now, we'll just test the options model
-        pass
 
-    def test_help_text_semantic_clarity(self):
+    def test_help_text_semantic_clarity(self) -> None:
         """Test that help text uses clear, semantic descriptions."""
         # This would require accessing the actual help text from CLI
-        pass
 
 
 class TestSemanticCLIWorkflowIntegration(BaseCrackerjackFeatureTest):
@@ -66,8 +63,8 @@ class TestSemanticCLIWorkflowIntegration(BaseCrackerjackFeatureTest):
 
     @pytest.mark.asyncio
     async def test_semantic_options_workflow_compatibility(
-        self, test_project_structure
-    ):
+        self, test_project_structure,
+    ) -> None:
         """Test that semantic options work with existing workflows."""
         # Test strip_code workflow
         Options(strip_code=True, run_tests=True)
@@ -78,10 +75,9 @@ class TestSemanticCLIWorkflowIntegration(BaseCrackerjackFeatureTest):
         #
         # # Verify strip_code operation was executed
         # assert any("strip" in step.description.lower() for step in result.steps)
-        pass
 
     @pytest.mark.asyncio
-    async def test_ai_fix_semantic_integration(self, test_project_structure):
+    async def test_ai_fix_semantic_integration(self, test_project_structure) -> None:
         """Test AI fix with semantic naming."""
         Options(ai_fix=True, run_tests=True)
         # orchestrator = WorkflowOrchestrator(options, test_project_structure)
@@ -90,9 +86,8 @@ class TestSemanticCLIWorkflowIntegration(BaseCrackerjackFeatureTest):
         #
         # # Verify AI agent was invoked
         # assert any("ai" in step.description.lower() for step in result.steps)
-        pass
 
-    def test_command_construction_with_semantic_options(self):
+    def test_command_construction_with_semantic_options(self) -> None:
         """Test that internal commands use semantic option names."""
         Options(strip_code=True, ai_fix=True)
         # command = build_internal_command(options)
@@ -104,4 +99,3 @@ class TestSemanticCLIWorkflowIntegration(BaseCrackerjackFeatureTest):
         # # Should not contain legacy flags
         # assert "--clean" not in command
         # assert "--ai-agent" not in command
-        pass

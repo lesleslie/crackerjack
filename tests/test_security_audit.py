@@ -9,7 +9,7 @@ from crackerjack.security.audit import SecurityAuditor
 class MockHookResult:
     """Mock hook result for testing."""
 
-    def __init__(self, name: str, status: str, output: str = ""):
+    def __init__(self, name: str, status: str, output: str = "") -> None:
         self.name = name
         self.status = status
         self.output = output
@@ -19,7 +19,7 @@ class MockHookResult:
 class TestSecurityAuditor:
     """Test security auditor functionality."""
 
-    def test_critical_security_failure_blocks_publishing(self):
+    def test_critical_security_failure_blocks_publishing(self) -> None:
         """Test that critical security failures block publishing."""
         auditor = SecurityAuditor()
 
@@ -38,7 +38,7 @@ class TestSecurityAuditor:
         assert len(audit_report.critical_failures) == 1
         assert audit_report.critical_failures[0].hook_name == "gitleaks"
 
-    def test_all_critical_pass_allows_publishing(self):
+    def test_all_critical_pass_allows_publishing(self) -> None:
         """Test that passing critical checks allows publishing."""
         auditor = SecurityAuditor()
 
@@ -56,7 +56,7 @@ class TestSecurityAuditor:
         assert audit_report.allows_publishing
         assert len(audit_report.critical_failures) == 0
 
-    def test_non_critical_failures_allow_publishing(self):
+    def test_non_critical_failures_allow_publishing(self) -> None:
         """Test that non-critical failures don't block publishing."""
         auditor = SecurityAuditor()
 
@@ -76,7 +76,7 @@ class TestSecurityAuditor:
         assert audit_report.allows_publishing
         assert len(audit_report.medium_failures) > 0  # vulture, ruff-format
 
-    def test_security_level_classification(self):
+    def test_security_level_classification(self) -> None:
         """Test that hooks are classified to correct security levels."""
         auditor = SecurityAuditor()
 
@@ -100,7 +100,7 @@ class TestSecurityAuditor:
         assert auditor._get_hook_security_level("ruff-format") == SecurityLevel.LOW
         assert auditor._get_hook_security_level("unknown-hook") == SecurityLevel.LOW
 
-    def test_security_warnings_generation(self):
+    def test_security_warnings_generation(self) -> None:
         """Test that appropriate security warnings are generated."""
         auditor = SecurityAuditor()
 
@@ -118,7 +118,7 @@ class TestSecurityAuditor:
         assert "CRITICAL" in critical_warning
         assert "2" in critical_warning  # 2 critical failures
 
-    def test_security_recommendations(self):
+    def test_security_recommendations(self) -> None:
         """Test that security recommendations are generated."""
         auditor = SecurityAuditor()
 

@@ -29,7 +29,13 @@ class LSPAwareHookExecutor(HookExecutor):
         git_service: t.Any | None = None,
     ) -> None:
         super().__init__(
-            console, pkg_path, verbose, quiet, debug, use_incremental, git_service
+            console,
+            pkg_path,
+            verbose,
+            quiet,
+            debug,
+            use_incremental,
+            git_service,
         )
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None
@@ -66,17 +72,19 @@ class LSPAwareHookExecutor(HookExecutor):
             server_info = self.lsp_client.get_server_info()
             if server_info:
                 self.console.print(
-                    f"🔍 LSP server available (PID: {server_info['pid']}), using optimized execution"
+                    f"🔍 LSP server available (PID: {server_info['pid']}), using optimized execution",
                 )
 
         return lsp_available
 
     def _execute_single_hook_with_strategies(
-        self, hook: HookDefinition, lsp_available: bool
+        self,
+        hook: HookDefinition,
+        lsp_available: bool,
     ) -> HookResult:
         if self._should_use_lsp_for_hook(hook, lsp_available):
             return self._execute_lsp_hook(hook)
-        elif self._should_use_tool_proxy(hook):
+        if self._should_use_tool_proxy(hook):
             return self._execute_hook_with_proxy(hook)
 
         return self.execute_single_hook(hook)
@@ -100,7 +108,9 @@ class LSPAwareHookExecutor(HookExecutor):
                     callback(self._completed_hooks, total)  # type: ignore[attr-defined]
 
     def _should_use_lsp_for_hook(
-        self, hook: HookDefinition, lsp_available: bool
+        self,
+        hook: HookDefinition,
+        lsp_available: bool,
     ) -> bool:
         return (
             lsp_available
@@ -117,15 +127,19 @@ class LSPAwareHookExecutor(HookExecutor):
             return self._handle_lsp_execution_error(hook, start_time, e)
 
     def _perform_lsp_execution(
-        self, hook: HookDefinition, start_time: float
+        self,
+        hook: HookDefinition,
+        start_time: float,
     ) -> HookResult:
         if not self.quiet:
             self.console.print(
-                f"🚀 Using LSP-optimized execution for {hook.name}", style="cyan"
+                f"🚀 Using LSP-optimized execution for {hook.name}",
+                style="cyan",
             )
 
         diagnostics, summary = self.lsp_client.check_project_with_feedback(
-            self.pkg_path, show_progress=not self.quiet
+            self.pkg_path,
+            show_progress=not self.quiet,
         )
 
         duration = time.time() - start_time
@@ -135,7 +149,11 @@ class LSPAwareHookExecutor(HookExecutor):
         self._display_lsp_results(hook, has_errors, output, summary)
 
         return self._create_lsp_hook_result(
-            hook, duration, has_errors, output, diagnostics
+            hook,
+            duration,
+            has_errors,
+            output,
+            diagnostics,
         )
 
     def _create_lsp_hook_result(
@@ -166,18 +184,24 @@ class LSPAwareHookExecutor(HookExecutor):
         return output + perf_info
 
     def _display_lsp_results(
-        self, hook: HookDefinition, has_errors: bool, output: str, summary: str
+        self,
+        hook: HookDefinition,
+        has_errors: bool,
+        output: str,
+        summary: str,
     ) -> None:
-        if self.verbose or has_errors:
-            if not self.quiet:
-                self.console.print(f"🔍 {hook.name} (LSP):", style="bold blue")
-                if has_errors:
-                    self.console.print(output)
-                else:
-                    self.console.print(summary, style="green")
+        if (self.verbose or has_errors) and not self.quiet:
+            self.console.print(f"🔍 {hook.name} (LSP):", style="bold blue")
+            if has_errors:
+                self.console.print(output)
+            else:
+                self.console.print(summary, style="green")
 
     def _handle_lsp_execution_error(
-        self, hook: HookDefinition, start_time: float, error: Exception
+        self,
+        hook: HookDefinition,
+        start_time: float,
+        error: Exception,
     ) -> HookResult:
         time.time() - start_time
         error_msg = f"LSP execution failed: {error}"
@@ -204,11 +228,14 @@ class LSPAwareHookExecutor(HookExecutor):
             return self._handle_proxy_execution_error(hook, start_time, e)
 
     def _perform_proxy_execution(
-        self, hook: HookDefinition, start_time: float
+        self,
+        hook: HookDefinition,
+        start_time: float,
     ) -> HookResult:
         if not self.quiet:
             self.console.print(
-                f"🛡️ Using resilient execution for {hook.name}", style="blue"
+                f"🛡️ Using resilient execution for {hook.name}",
+                style="blue",
             )
 
         tool_name, args = self._parse_hook_entry(hook)
@@ -242,7 +269,10 @@ class LSPAwareHookExecutor(HookExecutor):
         )
 
     def _handle_proxy_execution_error(
-        self, hook: HookDefinition, start_time: float, error: Exception
+        self,
+        hook: HookDefinition,
+        start_time: float,
+        error: Exception,
     ) -> HookResult:
         time.time() - start_time
         error_msg = f"Tool proxy execution failed: {error}"
@@ -258,7 +288,8 @@ class LSPAwareHookExecutor(HookExecutor):
         entry_parts = entry_str.split()
 
         if len(entry_parts) < 3:
-            raise ValueError(f"Invalid hook entry format: {entry_str}")
+            msg = f"Invalid hook entry format: {entry_str}"
+            raise ValueError(msg)
 
         if entry_parts[0] == "uv" and entry_parts[1] == "run":
             tool_name = entry_parts[2]
@@ -270,7 +301,10 @@ class LSPAwareHookExecutor(HookExecutor):
         return tool_name, args
 
     def _format_proxy_output(
-        self, tool_name: str, tool_status: dict[str, t.Any], duration: float
+        self,
+        tool_name: str,
+        tool_status: dict[str, t.Any],
+        duration: float,
     ) -> str:
         status_info = []
 

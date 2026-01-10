@@ -17,7 +17,7 @@ def preserve_signature[F: t.Callable[..., t.Any]](
         wrapped = wraps(func)(wrapper)
 
         wrapped.__wrapped__ = func  # type: ignore[attr-defined]
-        return t.cast(F, wrapped)
+        return t.cast("F", wrapped)
 
     return decorator
 

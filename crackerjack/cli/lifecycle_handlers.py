@@ -42,7 +42,7 @@ def stop_handler(pid: int) -> None:
             return
 
     console.print(
-        f"[red]Process {pid} did not stop gracefully, sending SIGKILL...[/red]"
+        f"[red]Process {pid} did not stop gracefully, sending SIGKILL...[/red]",
     )
     try:
         os.kill(pid, signal.SIGKILL)
@@ -76,4 +76,4 @@ def health_probe_handler() -> MCPRuntimeHealthSnapshot:
     )
 
 
-__all__ = ["start_handler", "stop_handler", "health_probe_handler"]
+__all__ = ["health_probe_handler", "start_handler", "stop_handler"]

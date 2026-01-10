@@ -1,4 +1,4 @@
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
 
 PATTERNS: dict[str, ValidatedPattern] = {
     "detect_tempfile_usage": ValidatedPattern(

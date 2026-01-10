@@ -127,15 +127,15 @@ class QualityBaselineRepository:
 
     async def upsert(self, data: dict[str, Any]) -> QualityBaselineRecord:
         result = await self.query.for_model(
-            QualityBaselineRecord
+            QualityBaselineRecord,
         ).simple.create_or_update(data, "git_hash")
-        return t.cast(QualityBaselineRecord, result)
+        return t.cast("QualityBaselineRecord", result)
 
     async def get_by_git_hash(self, git_hash: str) -> QualityBaselineRecord | None:
         result = await self.query.for_model(QualityBaselineRecord).simple.find(
-            git_hash=git_hash
+            git_hash=git_hash,
         )
-        return t.cast(QualityBaselineRecord | None, result)
+        return t.cast("QualityBaselineRecord | None", result)
 
     async def list_recent(self, limit: int = 10) -> list[QualityBaselineRecord]:
         result = (
@@ -144,13 +144,13 @@ class QualityBaselineRepository:
             .limit(limit)
             .all()
         )
-        return t.cast(list[QualityBaselineRecord], result)
+        return t.cast("list[QualityBaselineRecord]", result)
 
     async def delete_for_git_hash(self, git_hash: str) -> bool:
         result = await self.query.for_model(QualityBaselineRecord).simple.delete(
-            git_hash=git_hash
+            git_hash=git_hash,
         )
-        return t.cast(bool, result)
+        return t.cast("bool", result)
 
 
 class HealthMetricsRepository:
@@ -164,15 +164,15 @@ class HealthMetricsRepository:
     ) -> ProjectHealthRecord:
         data = {"project_name": project_name} | data
         result = await self.query.for_model(
-            ProjectHealthRecord
+            ProjectHealthRecord,
         ).simple.create_or_update(data, "project_name")
-        return t.cast(ProjectHealthRecord, result)
+        return t.cast("ProjectHealthRecord", result)
 
     async def get(self, project_name: str) -> ProjectHealthRecord | None:
         result = await self.query.for_model(ProjectHealthRecord).simple.find(
-            project_name=project_name
+            project_name=project_name,
         )
-        return t.cast(ProjectHealthRecord | None, result)
+        return t.cast("ProjectHealthRecord | None", result)
 
 
 class DependencyMonitorRepository:
@@ -185,12 +185,12 @@ class DependencyMonitorRepository:
         cache_data: dict[str, Any],
     ) -> DependencyMonitorCacheRecord:
         result = await self.query.for_model(
-            DependencyMonitorCacheRecord
+            DependencyMonitorCacheRecord,
         ).simple.create_or_update(cache_data, "project_root")
-        return t.cast(DependencyMonitorCacheRecord, result)
+        return t.cast("DependencyMonitorCacheRecord", result)
 
     async def get(self, project_root: str) -> DependencyMonitorCacheRecord | None:
         result = await self.query.for_model(DependencyMonitorCacheRecord).simple.find(
-            project_root=project_root
+            project_root=project_root,
         )
-        return t.cast(DependencyMonitorCacheRecord | None, result)
+        return t.cast("DependencyMonitorCacheRecord | None", result)

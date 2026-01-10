@@ -17,6 +17,7 @@ def run_pytest_test(test_path, timeout=30):
         ]
         result = subprocess.run(
             cmd,
+            check=False,
             capture_output=True,
             text=True,
             timeout=timeout,
@@ -46,39 +47,19 @@ def check_test_files():
         success, stdout, stderr = run_pytest_test(test_file)
         results[test_file] = {"success": success, "stdout": stdout, "stderr": stderr}
 
-        if success:
-            print(f"✅ {test_file}: PASSED")
-        else:
-            print(f"❌ {test_file}: FAILED")
-            if stderr:
-                print(f" Error: {stderr[:200]}...")
+        if success or stderr:
+            pass
 
     return results
 
 
-def main():
-    print("🔍 Crackerjack Test Suite Verification")
-    print("=" * 50)
-
+def main() -> bool:
     results = check_test_files()
 
     passed = sum(1 for result in results.values() if result["success"])
     total = len(results)
 
-    print("\n" + "=" * 50)
-    print(f"📊 SUMMARY: {passed}/{total} test files passed")
-
-    if passed == total:
-        print("🎉 All tested files are passing!")
-        print("\n📝 RECOMMENDATION:")
-        print("- The major pytest errors have been fixed")
-        print("- Core functionality is working correctly")
-        print("- Consider running the full test suite with: pytest --tb=short -q")
-        print("- Some tests may still be skipped due to integration dependencies")
-        return True
-    else:
-        print("⚠️ Some tests are still failing")
-        return False
+    return passed == total
 
 
 if __name__ == "__main__":

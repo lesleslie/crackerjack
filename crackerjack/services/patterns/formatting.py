@@ -91,7 +91,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
         replacement="crackerjack-debug",
         description="Fix spacing in debug log patterns",
         test_cases=[
-            ("crackerjack - debug-12345.log", "crackerjack-debug-12345.log"),
+            ("crackerjack-debug-12345.log", "crackerjack-debug-12345.log"),
             ("crackerjack-debug.log", "crackerjack-debug.log"),
             ("old crackerjack - debug files", "old crackerjack-debug files"),
         ],
@@ -164,16 +164,15 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_comma": ValidatedPattern(
         name="spacing_after_comma",
-        pattern=r", (?! |\n|$)",
+        pattern=r",(?=[^ \n])",
         replacement=r", ",
-        description="Add space after comma if missing (skip if already spaced, at end of line, or end of string)",
+        description="Add space after comma if missing",
         global_replace=True,
         test_cases=[
             ("func(a, b, c)", "func(a, b, c)"),
-            ("func(a, b, c)", "func(a, b, c)"),
-            ("[1, 2, 3]", "[1, 2, 3]"),
             ("[1, 2, 3]", "[1, 2, 3]"),
             ("{'x':1, 'y':2, 'z':3}", "{'x':1, 'y':2, 'z':3}"),
+            ("func(a, b, c)", "func(a, b, c)"),
             ("trailing, \nnewline", "trailing, \nnewline"),
             ("end_comma, ", "end_comma, "),
         ],

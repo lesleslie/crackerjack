@@ -78,7 +78,8 @@ class RuffAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name, self.settings.mode]
 
@@ -134,7 +135,8 @@ class RuffAdapter(BaseToolAdapter):
         result: ToolExecutionResult,
     ) -> list[ToolIssue]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         issues: list[ToolIssue] = []
 
@@ -144,12 +146,11 @@ class RuffAdapter(BaseToolAdapter):
             else:
                 issues = self._parse_check_text(result.raw_output)
 
-        elif self.settings.mode == "format":
-            if result.exit_code != 0:
-                issues = self._parse_format_output(
-                    result.raw_output,
-                    result.files_processed,
-                )
+        elif self.settings.mode == "format" and result.exit_code != 0:
+            issues = self._parse_format_output(
+                result.raw_output,
+                result.files_processed,
+            )
 
         return issues
 
@@ -221,7 +222,8 @@ class RuffAdapter(BaseToolAdapter):
             return None
 
     def _extract_check_code_and_message(
-        self, message_part: str
+        self,
+        message_part: str,
     ) -> tuple[str | None, str]:
         if " " not in message_part:
             return None, message_part
@@ -296,10 +298,7 @@ class RuffAdapter(BaseToolAdapter):
         from crackerjack.models.qa_config import QACheckConfig
 
         is_format_mode = False
-        if self.settings:
-            is_format_mode = self.settings.mode == "format"
-        else:
-            is_format_mode = False
+        is_format_mode = self.settings.mode == "format" if self.settings else False
 
         return QACheckConfig(
             check_id=MODULE_ID,

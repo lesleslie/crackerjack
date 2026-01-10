@@ -88,7 +88,7 @@ class CommitMessageGenerator:
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Error generating commit message: {e}"
+                f"[yellow]⚠️[/yellow] Error generating commit message: {e}",
             )
             return "chore: update files"
 
@@ -115,7 +115,9 @@ class CommitMessageGenerator:
                 for pattern in patterns:
                     compiled_pattern = (
                         CompiledPatternCache.get_compiled_pattern_with_flags(
-                            f"commit_{commit_type}_{pattern}", pattern, re.IGNORECASE
+                            f"commit_{commit_type}_{pattern}",
+                            pattern,
+                            re.IGNORECASE,
                         )
                     )
                     if compiled_pattern.search(file_str):
@@ -147,36 +149,54 @@ class CommitMessageGenerator:
         ]
 
     def _is_fix_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "fix" in patterns
 
     def _is_feat_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "feat" in patterns
 
     def _is_test_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "test" in patterns or any(
             ".py" in f and "test" in f.lower() for f in files
         )
 
     def _is_docs_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "docs" in patterns or any(
             ext in file_types for ext in (".md", ".rst", ".txt")
         )
 
     def _is_style_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "style" in patterns or len(files) > 5
 
     def _is_refactor_commit(
-        self, patterns: set[t.Any], files: list[t.Any], file_types: set[t.Any]
+        self,
+        patterns: set[t.Any],
+        files: list[t.Any],
+        file_types: set[t.Any],
     ) -> bool:
         return "refactor" in patterns
 
@@ -213,12 +233,11 @@ class CommitMessageGenerator:
 
             if "test" in file_name.lower():
                 return f"update {file_name} test"
-            elif file_path.suffix in (".md", ".rst", ".txt"):
+            if file_path.suffix in (".md", ".rst", ".txt"):
                 return f"update {file_name} documentation"
-            elif "config" in file_name.lower():
+            if "config" in file_name.lower():
                 return f"update {file_name} configuration"
-            else:
-                return f"update {file_name}"
+            return f"update {file_name}"
 
         if total_files <= 3:
             file_names = [Path(f).stem for f in files]
@@ -231,7 +250,10 @@ class CommitMessageGenerator:
         return f"update {total_files} files"
 
     def _build_conventional_header(
-        self, commit_type: str, scope: str | None, subject: str
+        self,
+        commit_type: str,
+        scope: str | None,
+        subject: str,
     ) -> str:
         if scope:
             return f"{commit_type}({scope}): {subject}"
@@ -281,6 +303,6 @@ class CommitMessageGenerator:
             return True
 
         self.console.print(
-            f"[cyan]📝[/cyan] Committing with message: {message.split(chr(10))[0]}"
+            f"[cyan]📝[/cyan] Committing with message: {message.split(chr(10))[0]}",
         )
         return self.git.commit(message)

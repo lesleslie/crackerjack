@@ -121,7 +121,7 @@ class AgentSelector:
 
         self.logger.debug(
             f"Selected {len(selected)} agents for task '{task.description[:50]}...': "
-            f"{[f'{s.agent.metadata.name}({s.final_score: .2f})' for s in selected]}"
+            f"{[f'{s.agent.metadata.name}({s.final_score: .2f})' for s in selected]}",
         )
 
         return selected
@@ -205,7 +205,7 @@ class AgentSelector:
             error_lower = error_type.lower()
             if "furb" in error_lower or "refurb" in error_lower:
                 capabilities.update(
-                    [AgentCapability.REFACTORING, AgentCapability.CODE_ANALYSIS]
+                    [AgentCapability.REFACTORING, AgentCapability.CODE_ANALYSIS],
                 )
             elif "test" in error_lower:
                 capabilities.add(AgentCapability.TESTING)
@@ -250,7 +250,11 @@ class AgentSelector:
         final_score = weighted_score * confidence_factor
 
         reasoning = self._generate_score_reasoning(
-            agent, base_score, context_score, priority_bonus, required_capabilities
+            agent,
+            base_score,
+            context_score,
+            priority_bonus,
+            required_capabilities,
         )
 
         return AgentScore(
@@ -264,7 +268,9 @@ class AgentSelector:
         )
 
     def _calculate_context_score(
-        self, agent: RegisteredAgent, task: TaskDescription
+        self,
+        agent: RegisteredAgent,
+        task: TaskDescription,
     ) -> float:
         score = 0.0
 
@@ -284,7 +290,9 @@ class AgentSelector:
         return 0.0
 
     def _score_description_matches(
-        self, agent: RegisteredAgent, task_text: str
+        self,
+        agent: RegisteredAgent,
+        task_text: str,
     ) -> float:
         if not agent.metadata.description:
             return 0.0
@@ -298,7 +306,9 @@ class AgentSelector:
         return 0.0
 
     def _score_keyword_matches(
-        self, agent: RegisteredAgent, task: TaskDescription
+        self,
+        agent: RegisteredAgent,
+        task: TaskDescription,
     ) -> float:
         if not task.keywords or not agent.metadata.tags:
             return 0.0
@@ -371,10 +381,11 @@ class AgentSelector:
 
         all_scores.sort(key=lambda s: s.final_score, reverse=True)
 
-        analysis = {
+        return {
             "required_capabilities": [cap.value for cap in required_capabilities],
             "complexity_level": self._assess_complexity(
-                required_capabilities, all_scores
+                required_capabilities,
+                all_scores,
             ),
             "candidate_count": len(all_scores),
             "top_agents": [
@@ -387,20 +398,21 @@ class AgentSelector:
                 for score in all_scores[:5]
             ],
             "recommendations": self._generate_recommendations(
-                required_capabilities, all_scores
+                required_capabilities,
+                all_scores,
             ),
         }
 
-        return analysis
-
     def _assess_complexity(
-        self, capabilities: set[AgentCapability], scores: list[AgentScore]
+        self,
+        capabilities: set[AgentCapability],
+        scores: list[AgentScore],
     ) -> str:
         if len(capabilities) >= 4:
             return "high"
-        elif len(capabilities) >= 2:
+        if len(capabilities) >= 2:
             return "medium"
-        elif not scores or scores[0].final_score < 0.3:
+        if not scores or scores[0].final_score < 0.3:
             return "high"
 
         return "low"
@@ -420,7 +432,7 @@ class AgentSelector:
 
         if top_score > 0.8:
             recommendations.append(
-                "Excellent agent match found-high confidence execution"
+                "Excellent agent match found-high confidence execution",
             )
         elif top_score > 0.6:
             recommendations.append("Good agent match-should handle task well")

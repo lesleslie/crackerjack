@@ -14,7 +14,7 @@ def get_file_size(file_path: Path) -> int:
         return 0
 
 
-def format_size(size_bytes: int | float) -> str:
+def format_size(size_bytes: float) -> str:
     size: float = float(size_bytes)
     for unit in ("B", "KB", "MB", "GB"):
         if size < 1024.0:
@@ -25,7 +25,7 @@ def format_size(size_bytes: int | float) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Check for large files in git repository"
+        description="Check for large files in git repository",
     )
     parser.add_argument(
         "files",
@@ -74,16 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     if large_files:
         print("Large files detected:", file=sys.stderr)  # noqa: T201
         for file_path, size in large_files:
-            print(
-                f" {file_path}: {format_size(size)} "
-                f"(exceeds {format_size(max_size_bytes)})",
-                file=sys.stderr,
-            )  # noqa: T201
-        print(
-            f"\n{len(large_files)} large file(s) found. "
-            f"Consider using Git LFS for large files.",
-            file=sys.stderr,
-        )  # noqa: T201
+            print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
         return 1
 
     print("All files are under size limit")  # noqa: T201

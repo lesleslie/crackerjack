@@ -90,7 +90,8 @@ class AsyncHookExecutor:
             )
 
             self.hook_lock_manager: HookLockManagerProtocol = t.cast(
-                HookLockManagerProtocol, default_manager
+                "HookLockManagerProtocol",
+                default_manager,
             )
         else:
             self.hook_lock_manager = hook_lock_manager
@@ -229,7 +230,7 @@ class AsyncHookExecutor:
                     results.append(error_result)
                     self._display_hook_result(error_result)
                 else:
-                    hook_result = t.cast(HookResult, task_result)
+                    hook_result = t.cast("HookResult", task_result)
                     results.append(hook_result)
                     self._display_hook_result(hook_result)
 
@@ -251,7 +252,8 @@ class AsyncHookExecutor:
                 await self._wait_for_process_termination(proc)
 
     async def _wait_for_process_termination(
-        self, proc: asyncio.subprocess.Process
+        self,
+        proc: asyncio.subprocess.Process,
     ) -> None:
         with suppress(TimeoutError, RuntimeError):
             await asyncio.wait_for(proc.wait(), timeout=0.1)
@@ -283,8 +285,7 @@ class AsyncHookExecutor:
         except RuntimeError as e:
             if "Event loop is closed" in str(e):
                 return
-            else:
-                raise
+            raise
 
     async def _execute_single_hook(
         self,
@@ -294,29 +295,31 @@ class AsyncHookExecutor:
         async with self._semaphore:
             if self.hook_lock_manager.requires_lock(hook.name):
                 self.logger.debug(
-                    f"Hook {hook.name} requires sequential execution lock"
+                    f"Hook {hook.name} requires sequential execution lock",
                 )
                 if not self.quiet:
                     self.console.print(
-                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
+                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]",
                     )
 
             if self.hook_lock_manager.requires_lock(hook.name):
                 self.logger.debug(
-                    f"Hook {hook.name} requires sequential execution lock"
+                    f"Hook {hook.name} requires sequential execution lock",
                 )
                 if not self.quiet:
                     self.console.print(
-                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]"
+                        f"[dim]🔒 {hook.name} (sequential execution)[/dim]",
                     )
 
                 async with self.hook_lock_manager.acquire_hook_lock(hook.name):
                     return await self._run_hook_subprocess(
-                        hook, command_override=command_override
+                        hook,
+                        command_override=command_override,
                     )
             else:
                 return await self._run_hook_subprocess(
-                    hook, command_override=command_override
+                    hook,
+                    command_override=command_override,
                 )
 
     async def _run_hook_subprocess(
@@ -337,7 +340,7 @@ class AsyncHookExecutor:
             timeout_val = getattr(hook, "timeout", self.timeout)
 
             self.logger.debug(
-                f"Starting hook execution: hook={hook.name}, command={' '.join(cmd)}, timeout={timeout_val}"
+                f"Starting hook execution: hook={hook.name}, command={' '.join(cmd)}, timeout={timeout_val}",
             )
 
             repo_root = self._get_repo_root()
@@ -351,7 +354,10 @@ class AsyncHookExecutor:
             self._running_processes.add(process)
 
             result = await self._execute_process_with_timeout(
-                process, hook, timeout_val, start_time
+                process,
+                hook,
+                timeout_val,
+                start_time,
             )
             if result is not None:
                 return result
@@ -383,11 +389,12 @@ class AsyncHookExecutor:
             asyncio.get_running_loop()
         except RuntimeError:
             return asyncio.run(
-                self._execute_single_hook(hook, command_override=command_override)
+                self._execute_single_hook(hook, command_override=command_override),
             )
 
+        msg = "Use await _execute_single_hook within an active event loop."
         raise RuntimeError(
-            "Use await _execute_single_hook within an active event loop."
+            msg,
         )
 
     def _get_repo_root(self) -> Path:
@@ -413,7 +420,10 @@ class AsyncHookExecutor:
             return None
         except TimeoutError:
             return await self._handle_process_timeout(
-                process, hook, timeout_val, start_time
+                process,
+                hook,
+                timeout_val,
+                start_time,
             )
 
     async def _handle_process_timeout(
@@ -554,8 +564,7 @@ class AsyncHookExecutor:
                 error_message="Event loop closed during hook execution",
                 is_timeout=False,
             )
-        else:
-            raise
+        raise
 
     def _handle_general_error(
         self,
@@ -652,7 +661,7 @@ class AsyncHookExecutor:
                 if len(match) == 2:
                     issue_count, file_count = int(match[0]), int(match[1])
                     return file_count if issue_count > 0 else 0
-                elif len(match) == 1 and "no issues" not in output.lower():
+                if len(match) == 1 and "no issues" not in output.lower():
                     continue
             elif "no issues" in output.lower():
                 return 0
@@ -672,7 +681,8 @@ class AsyncHookExecutor:
                     line_num = result.get("start", {}).get("line", "?")
                     rule_id = result.get("check_id", "unknown-rule")
                     message = result.get("extra", {}).get(
-                        "message", "Security issue detected"
+                        "message",
+                        "Security issue detected",
                     )
                     issues.append(f"{path}:{line_num} - {rule_id}: {message}")
 
@@ -691,7 +701,10 @@ class AsyncHookExecutor:
         return issues
 
     def _parse_hook_output(
-        self, returncode: int, output: str, hook_name: str = ""
+        self,
+        returncode: int,
+        output: str,
+        hook_name: str = "",
     ) -> dict[str, t.Any]:
         result = self._initialize_parse_result(returncode, output)
 
@@ -702,7 +715,8 @@ class AsyncHookExecutor:
 
         if hook_name == "check-added-large-files":
             result["files_processed"] = self._parse_large_files_output(
-                output, returncode
+                output,
+                returncode,
             )
             return result
 
@@ -710,7 +724,9 @@ class AsyncHookExecutor:
         return result
 
     def _initialize_parse_result(
-        self, returncode: int, output: str
+        self,
+        returncode: int,
+        output: str,
     ) -> dict[str, t.Any]:
         return {
             "hook_id": None,
@@ -801,7 +817,7 @@ class AsyncHookExecutor:
         status_color = "green" if result.status == "passed" else "red"
 
         self.console.print(
-            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]"
+            f"{result.name}{dots}[{status_color}]{status_text}[/{status_color}]",
         )
 
         if result.status != "passed" and result.issues_found:
@@ -840,7 +856,7 @@ class AsyncHookExecutor:
 
         updated_results: list[HookResult] = []
         for i, (prev_result, new_result) in enumerate(
-            zip(results, retry_results, strict=False)
+            zip(results, retry_results, strict=False),
         ):
             if isinstance(new_result, Exception):
                 hook = strategy.hooks[i]

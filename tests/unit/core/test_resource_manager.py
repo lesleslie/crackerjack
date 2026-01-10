@@ -35,7 +35,7 @@ from crackerjack.core.resource_manager import (
 class TestResourceManagerInitialization:
     """Test ResourceManager initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         manager = ResourceManager()
 
@@ -43,7 +43,7 @@ class TestResourceManagerInitialization:
         assert manager._cleanup_callbacks == []
         assert manager._closed is False
 
-    def test_initialization_with_logger(self):
+    def test_initialization_with_logger(self) -> None:
         """Test initialization with custom logger."""
         mock_logger = Mock()
 
@@ -56,7 +56,7 @@ class TestResourceManagerInitialization:
 class TestResourceManagerRegistration:
     """Test resource registration."""
 
-    def test_register_resource(self):
+    def test_register_resource(self) -> None:
         """Test registering a resource."""
         manager = ResourceManager()
         resource = Mock()
@@ -66,7 +66,7 @@ class TestResourceManagerRegistration:
 
         assert resource in manager._resources
 
-    def test_register_resource_when_closed(self):
+    def test_register_resource_when_closed(self) -> None:
         """Test registering resource when manager is closed."""
         manager = ResourceManager()
         manager._closed = True
@@ -80,11 +80,11 @@ class TestResourceManagerRegistration:
             # Should cleanup immediately
             mock_create_task.assert_called_once()
 
-    def test_register_cleanup_callback(self):
+    def test_register_cleanup_callback(self) -> None:
         """Test registering cleanup callback."""
         manager = ResourceManager()
 
-        async def cleanup_callback():
+        async def cleanup_callback() -> None:
             pass
 
         manager.register_cleanup_callback(cleanup_callback)
@@ -92,14 +92,14 @@ class TestResourceManagerRegistration:
         assert cleanup_callback in manager._cleanup_callbacks
 
     @pytest.mark.asyncio
-    async def test_register_cleanup_callback_when_closed(self):
+    async def test_register_cleanup_callback_when_closed(self) -> None:
         """Test registering callback when manager is closed."""
         manager = ResourceManager()
         manager._closed = True
 
         callback_executed = False
 
-        async def cleanup_callback():
+        async def cleanup_callback() -> None:
             nonlocal callback_executed
             callback_executed = True
 
@@ -115,7 +115,7 @@ class TestResourceManagerCleanup:
     """Test resource cleanup."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_all_resources(self):
+    async def test_cleanup_all_resources(self) -> None:
         """Test cleanup all resources."""
         manager = ResourceManager()
 
@@ -134,18 +134,18 @@ class TestResourceManagerCleanup:
         assert manager._closed is True
 
     @pytest.mark.asyncio
-    async def test_cleanup_all_callbacks(self):
+    async def test_cleanup_all_callbacks(self) -> None:
         """Test cleanup all callbacks."""
         manager = ResourceManager()
 
         callback1_executed = False
         callback2_executed = False
 
-        async def callback1():
+        async def callback1() -> None:
             nonlocal callback1_executed
             callback1_executed = True
 
-        async def callback2():
+        async def callback2() -> None:
             nonlocal callback2_executed
             callback2_executed = True
 
@@ -158,7 +158,7 @@ class TestResourceManagerCleanup:
         assert callback2_executed is True
 
     @pytest.mark.asyncio
-    async def test_cleanup_handles_errors(self):
+    async def test_cleanup_handles_errors(self) -> None:
         """Test cleanup handles resource errors gracefully."""
         manager = ResourceManager()
 
@@ -178,7 +178,7 @@ class TestResourceManagerCleanup:
         resource2.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_already_closed(self):
+    async def test_cleanup_already_closed(self) -> None:
         """Test cleanup when already closed."""
         manager = ResourceManager()
         manager._closed = True
@@ -187,7 +187,7 @@ class TestResourceManagerCleanup:
         await manager.cleanup_all()
 
     @pytest.mark.asyncio
-    async def test_cleanup_clears_resources(self):
+    async def test_cleanup_clears_resources(self) -> None:
         """Test cleanup clears resource lists."""
         manager = ResourceManager()
 
@@ -206,7 +206,7 @@ class TestResourceManagerContextManager:
     """Test ResourceManager as context manager."""
 
     @pytest.mark.asyncio
-    async def test_async_context_manager(self):
+    async def test_async_context_manager(self) -> None:
         """Test ResourceManager as async context manager."""
         async with ResourceManager() as manager:
             resource = Mock()
@@ -217,7 +217,7 @@ class TestResourceManagerContextManager:
         resource.cleanup.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_async_context_manager_with_exception(self):
+    async def test_async_context_manager_with_exception(self) -> None:
         """Test context manager cleanup on exception."""
         resource = Mock()
         resource.cleanup = AsyncMock()
@@ -225,7 +225,8 @@ class TestResourceManagerContextManager:
         try:
             async with ResourceManager() as manager:
                 manager.register_resource(resource)
-                raise RuntimeError("Test error")
+                msg = "Test error"
+                raise RuntimeError(msg)
         except RuntimeError:
             pass
 
@@ -237,26 +238,26 @@ class TestResourceManagerContextManager:
 class TestManagedTemporaryFile:
     """Test ManagedTemporaryFile."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         temp_file = ManagedTemporaryFile()
 
         assert temp_file.path.exists()
         assert temp_file._closed is False
 
-    def test_initialization_with_suffix(self):
+    def test_initialization_with_suffix(self) -> None:
         """Test initialization with custom suffix."""
         temp_file = ManagedTemporaryFile(suffix=".txt")
 
         assert str(temp_file.path).endswith(".txt")
 
-    def test_initialization_with_prefix(self):
+    def test_initialization_with_prefix(self) -> None:
         """Test initialization with custom prefix."""
         temp_file = ManagedTemporaryFile(prefix="test-")
 
         assert "test-" in temp_file.path.name
 
-    def test_initialization_with_manager(self):
+    def test_initialization_with_manager(self) -> None:
         """Test initialization with resource manager."""
         manager = ResourceManager()
 
@@ -265,7 +266,7 @@ class TestManagedTemporaryFile:
         assert temp_file in manager._resources
 
     @pytest.mark.asyncio
-    async def test_cleanup_removes_file(self):
+    async def test_cleanup_removes_file(self) -> None:
         """Test cleanup removes temporary file."""
         temp_file = ManagedTemporaryFile()
         file_path = temp_file.path
@@ -275,7 +276,7 @@ class TestManagedTemporaryFile:
         assert not file_path.exists()
         assert temp_file._closed is True
 
-    def test_write_text(self):
+    def test_write_text(self) -> None:
         """Test writing text to temporary file."""
         temp_file = ManagedTemporaryFile()
 
@@ -283,7 +284,7 @@ class TestManagedTemporaryFile:
 
         assert temp_file.read_text() == "test content"
 
-    def test_write_text_when_closed_raises_error(self):
+    def test_write_text_when_closed_raises_error(self) -> None:
         """Test writing to closed file raises error."""
         temp_file = ManagedTemporaryFile()
         temp_file._closed = True
@@ -291,7 +292,7 @@ class TestManagedTemporaryFile:
         with pytest.raises(RuntimeError, match="Cannot write to closed"):
             temp_file.write_text("content")
 
-    def test_read_text(self):
+    def test_read_text(self) -> None:
         """Test reading text from temporary file."""
         temp_file = ManagedTemporaryFile()
         temp_file.write_text("test content")
@@ -305,7 +306,7 @@ class TestManagedTemporaryFile:
 class TestManagedTemporaryDirectory:
     """Test ManagedTemporaryDirectory."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         temp_dir = ManagedTemporaryDirectory()
 
@@ -313,20 +314,20 @@ class TestManagedTemporaryDirectory:
         assert temp_dir.path.is_dir()
         assert temp_dir._closed is False
 
-    def test_initialization_with_suffix(self):
+    def test_initialization_with_suffix(self) -> None:
         """Test initialization with custom suffix."""
         temp_dir = ManagedTemporaryDirectory(suffix="-test")
 
         assert temp_dir.path.name.endswith("-test")
 
-    def test_initialization_with_prefix(self):
+    def test_initialization_with_prefix(self) -> None:
         """Test initialization with custom prefix."""
         temp_dir = ManagedTemporaryDirectory(prefix="test-")
 
         assert "test-" in temp_dir.path.name
 
     @pytest.mark.asyncio
-    async def test_cleanup_removes_directory(self):
+    async def test_cleanup_removes_directory(self) -> None:
         """Test cleanup removes temporary directory."""
         temp_dir = ManagedTemporaryDirectory()
         dir_path = temp_dir.path
@@ -346,7 +347,7 @@ class TestManagedProcess:
     """Test ManagedProcess."""
 
     @pytest.mark.asyncio
-    async def test_initialization(self):
+    async def test_initialization(self) -> None:
         """Test initialization with process."""
         mock_process = Mock()
         mock_process.returncode = None
@@ -357,7 +358,7 @@ class TestManagedProcess:
         assert managed.timeout == 30.0
 
     @pytest.mark.asyncio
-    async def test_initialization_custom_timeout(self):
+    async def test_initialization_custom_timeout(self) -> None:
         """Test initialization with custom timeout."""
         mock_process = Mock()
         mock_process.returncode = None
@@ -367,7 +368,7 @@ class TestManagedProcess:
         assert managed.timeout == 60.0
 
     @pytest.mark.asyncio
-    async def test_cleanup_terminates_process(self):
+    async def test_cleanup_terminates_process(self) -> None:
         """Test cleanup terminates process."""
         mock_process = Mock()
         mock_process.returncode = None
@@ -382,7 +383,7 @@ class TestManagedProcess:
         mock_process.wait.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_kills_process_on_timeout(self):
+    async def test_cleanup_kills_process_on_timeout(self) -> None:
         """Test cleanup kills process if terminate times out."""
         mock_process = Mock()
         mock_process.returncode = None
@@ -398,7 +399,7 @@ class TestManagedProcess:
         mock_process.kill.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_skips_already_finished_process(self):
+    async def test_cleanup_skips_already_finished_process(self) -> None:
         """Test cleanup skips already finished process."""
         mock_process = Mock()
         mock_process.returncode = 0  # Already finished
@@ -414,10 +415,10 @@ class TestManagedTask:
     """Test ManagedTask."""
 
     @pytest.mark.asyncio
-    async def test_initialization(self):
+    async def test_initialization(self) -> None:
         """Test initialization with task."""
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -430,10 +431,10 @@ class TestManagedTask:
         task.cancel()
 
     @pytest.mark.asyncio
-    async def test_initialization_custom_timeout(self):
+    async def test_initialization_custom_timeout(self) -> None:
         """Test initialization with custom timeout."""
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -445,10 +446,10 @@ class TestManagedTask:
         task.cancel()
 
     @pytest.mark.asyncio
-    async def test_cleanup_cancels_task(self):
+    async def test_cleanup_cancels_task(self) -> None:
         """Test cleanup cancels task."""
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -460,10 +461,10 @@ class TestManagedTask:
         assert task.cancelled()
 
     @pytest.mark.asyncio
-    async def test_cleanup_skips_done_task(self):
+    async def test_cleanup_skips_done_task(self) -> None:
         """Test cleanup skips already done task."""
 
-        async def dummy_task():
+        async def dummy_task() -> str:
             return "done"
 
         task = asyncio.create_task(dummy_task())
@@ -479,7 +480,7 @@ class TestManagedTask:
 class TestManagedFileHandle:
     """Test ManagedFileHandle."""
 
-    def test_initialization(self, tmp_path):
+    def test_initialization(self, tmp_path) -> None:
         """Test initialization with file handle."""
         file_path = tmp_path / "test.txt"
         file_handle = file_path.open("w")
@@ -491,7 +492,7 @@ class TestManagedFileHandle:
         file_handle.close()
 
     @pytest.mark.asyncio
-    async def test_cleanup_closes_handle(self, tmp_path):
+    async def test_cleanup_closes_handle(self, tmp_path) -> None:
         """Test cleanup closes file handle."""
         file_path = tmp_path / "test.txt"
         file_handle = file_path.open("w")
@@ -504,7 +505,7 @@ class TestManagedFileHandle:
         assert managed._closed is True
 
     @pytest.mark.asyncio
-    async def test_cleanup_skips_closed_handle(self, tmp_path):
+    async def test_cleanup_skips_closed_handle(self, tmp_path) -> None:
         """Test cleanup skips already closed handle."""
         file_path = tmp_path / "test.txt"
         file_handle = file_path.open("w")
@@ -520,13 +521,13 @@ class TestManagedFileHandle:
 class TestResourceContext:
     """Test ResourceContext."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test initialization."""
         context = ResourceContext()
 
         assert isinstance(context.resource_manager, ResourceManager)
 
-    def test_managed_temp_file(self):
+    def test_managed_temp_file(self) -> None:
         """Test creating managed temp file."""
         context = ResourceContext()
 
@@ -535,7 +536,7 @@ class TestResourceContext:
         assert isinstance(temp_file, ManagedTemporaryFile)
         assert temp_file in context.resource_manager._resources
 
-    def test_managed_temp_dir(self):
+    def test_managed_temp_dir(self) -> None:
         """Test creating managed temp directory."""
         context = ResourceContext()
 
@@ -545,7 +546,7 @@ class TestResourceContext:
         assert temp_dir in context.resource_manager._resources
 
     @pytest.mark.asyncio
-    async def test_managed_process(self):
+    async def test_managed_process(self) -> None:
         """Test creating managed process."""
         context = ResourceContext()
         mock_process = Mock()
@@ -557,11 +558,11 @@ class TestResourceContext:
         assert managed_proc.timeout == 60.0
 
     @pytest.mark.asyncio
-    async def test_managed_task(self):
+    async def test_managed_task(self) -> None:
         """Test creating managed task."""
         context = ResourceContext()
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -573,7 +574,7 @@ class TestResourceContext:
 
         task.cancel()
 
-    def test_managed_file(self, tmp_path):
+    def test_managed_file(self, tmp_path) -> None:
         """Test creating managed file handle."""
         context = ResourceContext()
         file_path = tmp_path / "test.txt"
@@ -586,7 +587,7 @@ class TestResourceContext:
         file_handle.close()
 
     @pytest.mark.asyncio
-    async def test_context_manager(self):
+    async def test_context_manager(self) -> None:
         """Test ResourceContext as context manager."""
         temp_file = None
 
@@ -604,7 +605,7 @@ class TestContextManagers:
     """Test context manager functions."""
 
     @pytest.mark.asyncio
-    async def test_with_resource_cleanup(self):
+    async def test_with_resource_cleanup(self) -> None:
         """Test with_resource_cleanup context manager."""
         async with with_resource_cleanup() as context:
             temp_file = context.managed_temp_file()
@@ -615,7 +616,7 @@ class TestContextManagers:
         assert not file_path.exists()
 
     @pytest.mark.asyncio
-    async def test_with_temp_file(self):
+    async def test_with_temp_file(self) -> None:
         """Test with_temp_file context manager."""
         async with with_temp_file(suffix=".txt", prefix="test-") as temp_file:
             assert temp_file.path.exists()
@@ -626,7 +627,7 @@ class TestContextManagers:
         assert not file_path.exists()
 
     @pytest.mark.asyncio
-    async def test_with_temp_dir(self):
+    async def test_with_temp_dir(self) -> None:
         """Test with_temp_dir context manager."""
         async with with_temp_dir(suffix="-test", prefix="test-") as temp_dir:
             assert temp_dir.path.exists()
@@ -637,7 +638,7 @@ class TestContextManagers:
         assert not dir_path.exists()
 
     @pytest.mark.asyncio
-    async def test_with_managed_process(self):
+    async def test_with_managed_process(self) -> None:
         """Test with_managed_process context manager."""
         mock_process = Mock()
         mock_process.returncode = None
@@ -655,7 +656,7 @@ class TestContextManagers:
 class TestResourceLeakDetector:
     """Test ResourceLeakDetector."""
 
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test initialization."""
         detector = ResourceLeakDetector()
 
@@ -664,7 +665,7 @@ class TestResourceLeakDetector:
         assert detector.active_tasks == set()
         assert detector._start_time > 0
 
-    def test_track_file(self):
+    def test_track_file(self) -> None:
         """Test tracking file."""
         detector = ResourceLeakDetector()
 
@@ -672,7 +673,7 @@ class TestResourceLeakDetector:
 
         assert "/path/to/file.txt" in detector.open_files
 
-    def test_untrack_file(self):
+    def test_untrack_file(self) -> None:
         """Test untracking file."""
         detector = ResourceLeakDetector()
         detector.track_file("/path/to/file.txt")
@@ -681,7 +682,7 @@ class TestResourceLeakDetector:
 
         assert "/path/to/file.txt" not in detector.open_files
 
-    def test_track_process(self):
+    def test_track_process(self) -> None:
         """Test tracking process."""
         detector = ResourceLeakDetector()
 
@@ -689,7 +690,7 @@ class TestResourceLeakDetector:
 
         assert 12345 in detector.active_processes
 
-    def test_untrack_process(self):
+    def test_untrack_process(self) -> None:
         """Test untracking process."""
         detector = ResourceLeakDetector()
         detector.track_process(12345)
@@ -699,11 +700,11 @@ class TestResourceLeakDetector:
         assert 12345 not in detector.active_processes
 
     @pytest.mark.asyncio
-    async def test_track_task(self):
+    async def test_track_task(self) -> None:
         """Test tracking task."""
         detector = ResourceLeakDetector()
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -715,11 +716,11 @@ class TestResourceLeakDetector:
         await task
 
     @pytest.mark.asyncio
-    async def test_untrack_task(self):
+    async def test_untrack_task(self) -> None:
         """Test untracking task."""
         detector = ResourceLeakDetector()
 
-        async def dummy_task():
+        async def dummy_task() -> None:
             await asyncio.sleep(0.01)
 
         task = asyncio.create_task(dummy_task())
@@ -731,7 +732,7 @@ class TestResourceLeakDetector:
 
         await task
 
-    def test_get_leak_report_empty(self):
+    def test_get_leak_report_empty(self) -> None:
         """Test leak report with no leaks."""
         detector = ResourceLeakDetector()
 
@@ -742,7 +743,7 @@ class TestResourceLeakDetector:
         assert report["total_tracked_tasks"] == 0
         assert "duration_seconds" in report
 
-    def test_get_leak_report_with_leaks(self):
+    def test_get_leak_report_with_leaks(self) -> None:
         """Test leak report with tracked resources."""
         detector = ResourceLeakDetector()
         detector.track_file("/path/to/file.txt")
@@ -755,20 +756,20 @@ class TestResourceLeakDetector:
         assert "/path/to/file.txt" in report["open_files"]
         assert 12345 in report["active_processes"]
 
-    def test_has_potential_leaks_false(self):
+    def test_has_potential_leaks_false(self) -> None:
         """Test has_potential_leaks with no leaks."""
         detector = ResourceLeakDetector()
 
         assert detector.has_potential_leaks() is False
 
-    def test_has_potential_leaks_true_files(self):
+    def test_has_potential_leaks_true_files(self) -> None:
         """Test has_potential_leaks with open files."""
         detector = ResourceLeakDetector()
         detector.track_file("/path/to/file.txt")
 
         assert detector.has_potential_leaks() is True
 
-    def test_has_potential_leaks_true_processes(self):
+    def test_has_potential_leaks_true_processes(self) -> None:
         """Test has_potential_leaks with active processes."""
         detector = ResourceLeakDetector()
         detector.track_process(12345)
@@ -780,11 +781,11 @@ class TestResourceLeakDetector:
 class TestLeakDetectionGlobalFunctions:
     """Test global leak detection functions."""
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up global state after each test."""
         disable_leak_detection()
 
-    def test_enable_leak_detection(self):
+    def test_enable_leak_detection(self) -> None:
         """Test enabling leak detection."""
         detector = enable_leak_detection()
 
@@ -792,11 +793,11 @@ class TestLeakDetectionGlobalFunctions:
         assert isinstance(detector, ResourceLeakDetector)
         assert get_leak_detector() == detector
 
-    def test_get_leak_detector_when_disabled(self):
+    def test_get_leak_detector_when_disabled(self) -> None:
         """Test getting leak detector when disabled."""
         assert get_leak_detector() is None
 
-    def test_disable_leak_detection_returns_report(self):
+    def test_disable_leak_detection_returns_report(self) -> None:
         """Test disabling leak detection returns report."""
         enable_leak_detection()
         detector = get_leak_detector()
@@ -808,7 +809,7 @@ class TestLeakDetectionGlobalFunctions:
         assert "total_tracked_files" in report
         assert report["total_tracked_files"] == 1
 
-    def test_disable_leak_detection_when_not_enabled(self):
+    def test_disable_leak_detection_when_not_enabled(self) -> None:
         """Test disabling when not enabled."""
         report = disable_leak_detection()
 
@@ -820,7 +821,7 @@ class TestGlobalResourceManagement:
     """Test global resource management."""
 
     @pytest.mark.asyncio
-    async def test_register_global_resource_manager(self):
+    async def test_register_global_resource_manager(self) -> None:
         """Test registering global resource manager."""
         manager = ResourceManager()
 
@@ -829,7 +830,7 @@ class TestGlobalResourceManagement:
         # Manager should be registered (hard to test weak references directly)
 
     @pytest.mark.asyncio
-    async def test_cleanup_all_global_resources(self):
+    async def test_cleanup_all_global_resources(self) -> None:
         """Test cleaning up all global resources."""
         manager1 = ResourceManager()
         manager2 = ResourceManager()

@@ -40,7 +40,8 @@ class ResourceManagerProtocol(t.Protocol):
     def register_resource(self, resource: AsyncCleanupProtocol) -> None: ...
 
     def register_cleanup_callback(
-        self, callback: t.Callable[[], t.Awaitable[None]]
+        self,
+        callback: t.Callable[[], t.Awaitable[None]],
     ) -> None: ...
 
     async def cleanup_all(self) -> None: ...
@@ -127,7 +128,8 @@ class AbstractManagedResource(ABC):
             import logging
 
             logging.getLogger(__name__).warning(
-                f"Error during cleanup of {self.__class__.__name__}", exc_info=True
+                f"Error during cleanup of {self.__class__.__name__}",
+                exc_info=True,
             )
 
     def is_initialized(self) -> bool:

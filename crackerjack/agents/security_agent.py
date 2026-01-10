@@ -1,6 +1,7 @@
 from pathlib import Path
 
-from ..services.regex_patterns import SAFE_PATTERNS
+from crackerjack.services.regex_patterns import SAFE_PATTERNS
+
 from .base import (
     AgentContext,
     FixResult,
@@ -319,7 +320,9 @@ class SecurityAgent(SubAgent):
         return {"fixes": fixes, "files": files}
 
     async def _fix_regex_patterns_project_wide(
-        self, fixes: list[str], files: list[str]
+        self,
+        fixes: list[str],
+        files: list[str],
     ) -> None:
         try:
             python_files = self._get_python_files_for_security_scan()
@@ -338,13 +341,19 @@ class SecurityAgent(SubAgent):
         return any(part in str(file_path) for part in skip_patterns)
 
     async def _process_python_files_for_regex_fixes(
-        self, python_files: list[Path], fixes: list[str], files: list[str]
+        self,
+        python_files: list[Path],
+        fixes: list[str],
+        files: list[str],
     ) -> None:
         for file_path in python_files:
             await self._process_single_file_for_regex_fixes(file_path, fixes, files)
 
     async def _process_single_file_for_regex_fixes(
-        self, file_path: Path, fixes: list[str], files: list[str]
+        self,
+        file_path: Path,
+        fixes: list[str],
+        files: list[str],
     ) -> None:
         content = self.context.get_file_content(file_path)
         if not content:
@@ -360,7 +369,11 @@ class SecurityAgent(SubAgent):
         return content != original_content
 
     async def _save_regex_fixes_to_file(
-        self, file_path: Path, content: str, fixes: list[str], files: list[str]
+        self,
+        file_path: Path,
+        content: str,
+        fixes: list[str],
+        files: list[str],
     ) -> None:
         if self.context.write_file_content(file_path, content):
             fixes.append(f"Fixed unsafe regex patterns in {file_path}")
@@ -373,8 +386,7 @@ class SecurityAgent(SubAgent):
         )
 
         try:
-            fixed_content = replace_unsafe_regex_with_safe_patterns(content)
-            return fixed_content
+            return replace_unsafe_regex_with_safe_patterns(content)
         except Exception as e:
             self.log(f"Error applying regex fixes: {e}", "ERROR")
             return content
@@ -438,13 +450,13 @@ class SecurityAgent(SubAgent):
 
         if SAFE_PATTERNS["detect_hardcoded_temp_paths_basic"].test(new_content):
             new_content = SAFE_PATTERNS["replace_hardcoded_temp_paths"].apply(
-                new_content
+                new_content,
             )
             new_content = SAFE_PATTERNS["replace_hardcoded_temp_strings"].apply(
-                new_content
+                new_content,
             )
             new_content = SAFE_PATTERNS["replace_hardcoded_temp_single_quotes"].apply(
-                new_content
+                new_content,
             )
             new_content = SAFE_PATTERNS["replace_test_path_patterns"].apply(new_content)
             lines = new_content.split("\n")
@@ -539,7 +551,7 @@ class SecurityAgent(SubAgent):
 
     def _replace_hardcoded_secret_with_env_var(self, line: str) -> str:
         var_name_result = SAFE_PATTERNS["extract_variable_name_from_assignment"].apply(
-            line
+            line,
         )
         if var_name_result != line:
             var_name = var_name_result
@@ -656,7 +668,7 @@ class SecurityAgent(SubAgent):
             return {"fixes": fixes, "files": files}
 
         fixes.append(
-            f"Documented unsafe pickle usage in {issue.file_path} - manual review required"
+            f"Documented unsafe pickle usage in {issue.file_path} - manual review required",
         )
 
         if "pickle.load" in content:
@@ -668,11 +680,11 @@ class SecurityAgent(SubAgent):
                     )
                     if self.context.write_file_content(file_path, "\n".join(lines)):
                         fixes.append(
-                            f"Added security warning for pickle usage in {issue.file_path}"
+                            f"Added security warning for pickle usage in {issue.file_path}",
                         )
                         files.append(str(file_path))
                         self.log(
-                            f"Added security warning for pickle in {issue.file_path}"
+                            f"Added security warning for pickle in {issue.file_path}",
                         )
                     break
 

@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import time
 import typing as t
 import uuid
@@ -9,7 +10,8 @@ from .progress_tools import _update_progress
 
 
 async def execute_crackerjack_workflow(
-    args: str, kwargs: dict[str, t.Any]
+    args: str,
+    kwargs: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     job_id = str(uuid.uuid4())[:8]
 
@@ -95,7 +97,11 @@ async def _execute_crackerjack_sync(
         return setup_result
 
     orchestrator_result = await _setup_orchestrator(
-        job_id, args, kwargs, setup_result["working_dir"], context
+        job_id,
+        args,
+        kwargs,
+        setup_result["working_dir"],
+        context,
     )
     if orchestrator_result.get("status") == "failed":
         return orchestrator_result
@@ -171,7 +177,9 @@ async def _setup_orchestrator(
     try:
         if use_advanced:
             orchestrator = await _create_advanced_orchestrator(
-                working_dir, kwargs, context
+                working_dir,
+                kwargs,
+                context,
             )
         else:
             orchestrator = _create_standard_orchestrator(working_dir, kwargs)
@@ -191,7 +199,9 @@ async def _setup_orchestrator(
 
 
 async def _create_advanced_orchestrator(
-    working_dir: t.Any, kwargs: dict[str, t.Any], context: t.Any
+    working_dir: t.Any,
+    kwargs: dict[str, t.Any],
+    context: t.Any,
 ) -> t.Any:
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
@@ -199,7 +209,8 @@ async def _create_advanced_orchestrator(
 
 
 def _create_standard_orchestrator(
-    working_dir: t.Any, kwargs: dict[str, t.Any]
+    working_dir: t.Any,
+    kwargs: dict[str, t.Any],
 ) -> t.Any:
     from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
@@ -255,10 +266,14 @@ async def _run_workflow_iterations(
     keep_alive_task = asyncio.create_task(_keep_alive_heartbeat(job_id, context))
 
     try:
-        result = await _execute_iterations_loop(
-            job_id, orchestrator, options, kwargs, max_iterations, context
+        return await _execute_iterations_loop(
+            job_id,
+            orchestrator,
+            options,
+            kwargs,
+            max_iterations,
+            context,
         )
-        return result
     finally:
         await _cleanup_keep_alive_task(keep_alive_task)
 
@@ -276,12 +291,20 @@ async def _execute_iterations_loop(
 
         try:
             success = await _execute_single_iteration(
-                job_id, orchestrator, options, iteration, context
+                job_id,
+                orchestrator,
+                options,
+                iteration,
+                context,
             )
 
             if success:
                 return await _handle_iteration_success(
-                    job_id, iteration, orchestrator, kwargs, context
+                    job_id,
+                    iteration,
+                    orchestrator,
+                    kwargs,
+                    context,
                 )
 
             if iteration < max_iterations - 1:
@@ -294,7 +317,10 @@ async def _execute_iterations_loop(
 
 
 def _update_iteration_progress(
-    job_id: str, iteration: int, max_iterations: int, context: t.Any
+    job_id: str,
+    iteration: int,
+    max_iterations: int,
+    context: t.Any,
 ) -> None:
     _update_progress(
         job_id,
@@ -318,7 +344,9 @@ async def _handle_iteration_success(
     coverage_result = None
     if kwargs.get("boost_coverage", False):
         coverage_result = await _attempt_coverage_improvement(
-            job_id, orchestrator, context
+            job_id,
+            orchestrator,
+            context,
         )
     return _create_success_result(job_id, iteration + 1, context, coverage_result)
 
@@ -326,10 +354,8 @@ async def _handle_iteration_success(
 async def _cleanup_keep_alive_task(keep_alive_task: asyncio.Task[t.Any]) -> None:
     if not keep_alive_task.cancelled():
         keep_alive_task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await keep_alive_task
-        except asyncio.CancelledError:
-            pass
 
 
 async def _keep_alive_heartbeat(job_id: str, context: t.Any) -> None:
@@ -420,8 +446,9 @@ async def _execute_single_iteration(
         _validate_awaitable_result(result, method_name, orchestrator)
         return await result
     except Exception as e:
+        msg = f"Error in _execute_single_iteration (iteration {iteration}): {e}"
         raise RuntimeError(
-            f"Error in _execute_single_iteration (iteration {iteration}): {e}"
+            msg,
         ) from e
 
 
@@ -438,34 +465,47 @@ def _detect_orchestrator_method(orchestrator: t.Any) -> str:
             return method_name
 
     available_methods = [m for m in dir(orchestrator) if not m.startswith("_")]
-    raise ValueError(
+    msg = (
         f"Orchestrator {type(orchestrator).__name__} has no recognized workflow execution method. "
         f"Available methods: {available_methods}"
+    )
+    raise ValueError(
+        msg,
     )
 
 
 def _invoke_orchestrator_method(
-    orchestrator: t.Any, method_name: str, options: t.Any
+    orchestrator: t.Any,
+    method_name: str,
+    options: t.Any,
 ) -> t.Any:
     method = getattr(orchestrator, method_name)
     result = method(options)
 
     if result is None:
-        raise ValueError(
+        msg = (
             f"Method {method_name} returned None instead of expected result. "
             f"Orchestrator type: {type(orchestrator).__name__}"
+        )
+        raise ValueError(
+            msg,
         )
 
     return result
 
 
 def _validate_awaitable_result(
-    result: t.Any, method_name: str, orchestrator: t.Any
+    result: t.Any,
+    method_name: str,
+    orchestrator: t.Any,
 ) -> None:
     if not hasattr(result, "__await__"):
-        raise ValueError(
+        msg = (
             f"Method {method_name} returned non-awaitable object: {type(result).__name__}. "
             f"Orchestrator: {type(orchestrator).__name__}"
+        )
+        raise ValueError(
+            msg,
         )
 
 
@@ -506,7 +546,10 @@ async def _handle_iteration_retry(job_id: str, iteration: int, context: t.Any) -
 
 
 async def _handle_iteration_error(
-    job_id: str, iteration: int, error: Exception, context: t.Any
+    job_id: str,
+    iteration: int,
+    error: Exception,
+    context: t.Any,
 ) -> dict[str, t.Any]:
     _update_progress(
         job_id,
@@ -529,7 +572,9 @@ async def _handle_iteration_error(
 
 
 async def _attempt_coverage_improvement(
-    job_id: str, orchestrator: t.Any, context: t.Any
+    job_id: str,
+    orchestrator: t.Any,
+    context: t.Any,
 ) -> dict[str, t.Any]:
     try:
         _update_progress(
@@ -589,7 +634,7 @@ async def _attempt_coverage_improvement(
         )
 
         improvement_result = await coverage_orchestrator.execute_coverage_improvement(
-            agent_context
+            agent_context,
         )
 
         if improvement_result["status"] == "completed":
@@ -638,7 +683,9 @@ async def _attempt_coverage_improvement(
 
 
 def _create_failure_result(
-    job_id: str, max_iterations: int, context: t.Any
+    job_id: str,
+    max_iterations: int,
+    context: t.Any,
 ) -> dict[str, t.Any]:
     return {
         "job_id": job_id,

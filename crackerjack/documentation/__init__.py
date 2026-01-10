@@ -13,17 +13,17 @@ from .reference_generator import (
 )
 
 __all__ = [
-    "DualOutputGenerator",
-    "DocumentationResult",
     "AITemplateEngine",
-    "TemplateContext",
-    "Template",
-    "TemplateType",
-    "ReferenceGenerator",
-    "CommandReference",
     "CommandInfo",
-    "ParameterInfo",
+    "CommandReference",
+    "DocumentationResult",
+    "DualOutputGenerator",
+    "MkDocsConfig",
     "MkDocsIntegrationService",
     "MkDocsSiteBuilder",
-    "MkDocsConfig",
+    "ParameterInfo",
+    "ReferenceGenerator",
+    "Template",
+    "TemplateContext",
+    "TemplateType",
 ]

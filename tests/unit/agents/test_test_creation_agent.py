@@ -24,13 +24,13 @@ class TestTestCreationAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test TestCreationAgent initializes correctly."""
         agent = TestCreationAgent(context)
 
         assert agent.context == context
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports test-related issue types."""
         agent = TestCreationAgent(context)
 
@@ -54,7 +54,7 @@ class TestTestCreationAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_can_handle_coverage_below_threshold(self, agent):
+    async def test_can_handle_coverage_below_threshold(self, agent) -> None:
         """Test perfect confidence for coverage below threshold."""
         issue = Issue(
             id="test-001",
@@ -67,7 +67,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.95
 
-    async def test_can_handle_missing_tests(self, agent):
+    async def test_can_handle_missing_tests(self, agent) -> None:
         """Test perfect confidence for missing tests."""
         issue = Issue(
             id="test-002",
@@ -80,7 +80,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.95
 
-    async def test_can_handle_generic_coverage(self, agent):
+    async def test_can_handle_generic_coverage(self, agent) -> None:
         """Test high confidence for generic coverage issues."""
         issue = Issue(
             id="test-003",
@@ -93,7 +93,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_test_organization_redundant(self, agent):
+    async def test_can_handle_test_organization_redundant(self, agent) -> None:
         """Test confidence for test organization issues."""
         issue = Issue(
             id="test-004",
@@ -106,7 +106,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_test_organization_generic(self, agent):
+    async def test_can_handle_test_organization_generic(self, agent) -> None:
         """Test default test organization confidence."""
         issue = Issue(
             id="test-005",
@@ -119,7 +119,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.7
 
-    async def test_can_handle_untested_functions(self, agent):
+    async def test_can_handle_untested_functions(self, agent) -> None:
         """Test confidence for untested function messages."""
         issue = Issue(
             id="test-006",
@@ -132,7 +132,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.85
 
-    async def test_can_handle_unsupported_type(self, agent):
+    async def test_can_handle_unsupported_type(self, agent) -> None:
         """Test zero confidence for unsupported types."""
         issue = Issue(
             id="test-007",
@@ -145,7 +145,7 @@ class TestTestCreationAgentCanHandle:
 
         assert confidence == 0.0
 
-    async def test_can_handle_file_path_indicators(self, agent, tmp_path):
+    async def test_can_handle_file_path_indicators(self, agent, tmp_path) -> None:
         """Test confidence based on file path indicators."""
         test_file = tmp_path / "crackerjack" / "managers" / "test_manager.py"
         test_file.parent.mkdir(parents=True, exist_ok=True)
@@ -176,7 +176,7 @@ class TestTestCreationAgentAnalyzeAndFix:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_analyze_and_fix_success(self, agent):
+    async def test_analyze_and_fix_success(self, agent) -> None:
         """Test successful test creation."""
         issue = Issue(
             id="test-001",
@@ -196,7 +196,7 @@ class TestTestCreationAgentAnalyzeAndFix:
             assert len(result.fixes_applied) == 1
             assert len(result.files_modified) == 1
 
-    async def test_analyze_and_fix_error_handling(self, agent):
+    async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
         issue = Issue(
             id="test-002",
@@ -228,7 +228,7 @@ class TestTestCreationAgentCoverageAnalysis:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_analyze_coverage_with_json(self, agent, tmp_path):
+    async def test_analyze_coverage_with_json(self, agent, tmp_path) -> None:
         """Test coverage analysis with existing coverage.json."""
         coverage_json = {
             "totals": {
@@ -238,10 +238,10 @@ class TestTestCreationAgentCoverageAnalysis:
             },
             "files": {
                 str(tmp_path / "module1.py"): {
-                    "summary": {"percent_covered": 50}
+                    "summary": {"percent_covered": 50},
                 },
                 str(tmp_path / "module2.py"): {
-                    "summary": {"percent_covered": 75}
+                    "summary": {"percent_covered": 75},
                 },
             },
         }
@@ -257,7 +257,7 @@ class TestTestCreationAgentCoverageAnalysis:
         assert result["current_coverage"] == 0.655
         assert len(result["uncovered_modules"]) > 0
 
-    async def test_analyze_coverage_no_existing_data(self, agent):
+    async def test_analyze_coverage_no_existing_data(self, agent) -> None:
         """Test coverage analysis with no existing data."""
         with patch.object(agent, "_run_coverage_command", return_value=(1, "", "Error")):
             result = await agent._analyze_coverage()
@@ -265,7 +265,7 @@ class TestTestCreationAgentCoverageAnalysis:
             assert result["below_threshold"] is True
             assert result["current_coverage"] == 0.0
 
-    async def test_parse_coverage_json(self, agent, tmp_path):
+    async def test_parse_coverage_json(self, agent, tmp_path) -> None:
         """Test parsing coverage JSON data."""
         coverage_json = {
             "totals": {
@@ -275,8 +275,8 @@ class TestTestCreationAgentCoverageAnalysis:
             },
             "files": {
                 str(tmp_path / "low_coverage.py"): {
-                    "summary": {"percent_covered": 60}
-                }
+                    "summary": {"percent_covered": 60},
+                },
             },
         }
 
@@ -286,7 +286,7 @@ class TestTestCreationAgentCoverageAnalysis:
         assert result["current_coverage"] == 0.75
         assert result["missing_lines"] == 125
 
-    async def test_estimate_current_coverage(self, agent, tmp_path):
+    async def test_estimate_current_coverage(self, agent, tmp_path) -> None:
         """Test coverage estimation from file counts."""
         source_dir = tmp_path / "crackerjack"
         source_dir.mkdir()
@@ -314,7 +314,7 @@ class TestTestCreationAgentModuleDiscovery:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_find_uncovered_modules_enhanced(self, agent, tmp_path):
+    async def test_find_uncovered_modules_enhanced(self, agent, tmp_path) -> None:
         """Test finding uncovered modules with priority scoring."""
         package_dir = tmp_path / "crackerjack" / "services"
         package_dir.mkdir(parents=True)
@@ -338,7 +338,7 @@ class ConfigManager:
             assert all("priority_score" in m for m in uncovered)
             assert all("function_count" in m for m in uncovered)
 
-    async def test_analyze_module_priority(self, agent, tmp_path):
+    async def test_analyze_module_priority(self, agent, tmp_path) -> None:
         """Test module priority scoring."""
         module_file = tmp_path / "crackerjack" / "managers" / "hook_manager.py"
         module_file.parent.mkdir(parents=True)
@@ -361,7 +361,7 @@ class HookManager:
         assert priority_info["public_function_count"] == 1
         assert priority_info["category"] == "manager"
 
-    def test_categorize_module(self, agent):
+    def test_categorize_module(self, agent) -> None:
         """Test module categorization."""
         assert agent._categorize_module("crackerjack/managers/test.py") == "manager"
         assert agent._categorize_module("crackerjack/services/test.py") == "service"
@@ -382,7 +382,7 @@ class TestTestCreationAgentFunctionDiscovery:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_extract_functions_from_file(self, agent, tmp_path):
+    async def test_extract_functions_from_file(self, agent, tmp_path) -> None:
         """Test extracting functions from Python file."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -410,7 +410,7 @@ def test_something():
         assert "_private_function" not in function_names
         assert "test_something" not in function_names
 
-    async def test_extract_classes_from_file(self, agent, tmp_path):
+    async def test_extract_classes_from_file(self, agent, tmp_path) -> None:
         """Test extracting classes from Python file."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -434,7 +434,7 @@ class _PrivateClass:
         assert "method2" in classes[0]["methods"]
         assert "_private_method" not in classes[0]["methods"]
 
-    async def test_analyze_function_testability(self, agent, tmp_path):
+    async def test_analyze_function_testability(self, agent, tmp_path) -> None:
         """Test function testability analysis."""
         func_info = {
             "name": "process_data",
@@ -451,7 +451,7 @@ class _PrivateClass:
         assert result["complexity"] == "complex"
         assert result["test_strategy"] == "async"
 
-    async def test_find_untested_functions_in_file(self, agent, tmp_path):
+    async def test_find_untested_functions_in_file(self, agent, tmp_path) -> None:
         """Test finding untested functions in a file."""
         test_file = tmp_path / "module.py"
         test_file.write_text("""
@@ -462,7 +462,7 @@ def untested_function(): pass
         agent.context.get_file_content = Mock(return_value=test_file.read_text())
 
         with patch.object(
-            agent, "_function_has_test", side_effect=[True, False]
+            agent, "_function_has_test", side_effect=[True, False],
         ):
             untested = await agent._find_untested_functions_in_file(test_file)
 
@@ -480,7 +480,7 @@ class TestTestCreationAgentHelpers:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    def test_has_corresponding_test(self, agent, tmp_path):
+    def test_has_corresponding_test(self, agent, tmp_path) -> None:
         """Test checking for corresponding test files."""
         tests_dir = tmp_path / "tests"
         tests_dir.mkdir()
@@ -491,30 +491,30 @@ class TestTestCreationAgentHelpers:
         # Should find test file
         assert agent._has_corresponding_test(module_path) is True
 
-    def test_has_corresponding_test_not_found(self, agent, tmp_path):
+    def test_has_corresponding_test_not_found(self, agent, tmp_path) -> None:
         """Test when no corresponding test exists."""
         module_path = str(tmp_path / "crackerjack" / "no_test_module.py")
 
         assert agent._has_corresponding_test(module_path) is False
 
-    def test_should_skip_module_for_coverage(self, agent, tmp_path):
+    def test_should_skip_module_for_coverage(self, agent, tmp_path) -> None:
         """Test module skipping logic."""
         assert agent._should_skip_module_for_coverage(tmp_path / "test_module.py") is True
         assert agent._should_skip_module_for_coverage(tmp_path / "__init__.py") is True
         assert agent._should_skip_module_for_coverage(tmp_path / "module.py") is False
 
-    def test_should_skip_file_for_testing(self, agent, tmp_path):
+    def test_should_skip_file_for_testing(self, agent, tmp_path) -> None:
         """Test file skipping for testing."""
         assert agent._should_skip_file_for_testing(tmp_path / "test_module.py") is True
         assert agent._should_skip_file_for_testing(tmp_path / "module.py") is False
 
-    def test_calculate_confidence_no_fixes(self, agent):
+    def test_calculate_confidence_no_fixes(self, agent) -> None:
         """Test confidence calculation with no fixes."""
         confidence = agent._calculate_confidence(False, [], [])
 
         assert confidence == 0.0
 
-    def test_calculate_confidence_with_fixes(self, agent):
+    def test_calculate_confidence_with_fixes(self, agent) -> None:
         """Test confidence calculation with various fix types."""
         fixes = [
             "Created test file for module",
@@ -528,14 +528,14 @@ class TestTestCreationAgentHelpers:
         assert confidence > 0.5
         assert confidence <= 0.95
 
-    def test_generate_recommendations_success(self, agent):
+    def test_generate_recommendations_success(self, agent) -> None:
         """Test generating recommendations on success."""
         recommendations = agent._generate_recommendations(True)
 
         assert "Generated comprehensive test suite" in recommendations[0]
         assert any("pytest" in r for r in recommendations)
 
-    def test_generate_recommendations_failure(self, agent):
+    def test_generate_recommendations_failure(self, agent) -> None:
         """Test generating recommendations on failure."""
         recommendations = agent._generate_recommendations(False)
 
@@ -553,7 +553,7 @@ class TestTestCreationAgentTestGeneration:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_generate_test_file_path(self, agent, tmp_path):
+    async def test_generate_test_file_path(self, agent, tmp_path) -> None:
         """Test generating test file path."""
         source_file = tmp_path / "crackerjack" / "services" / "config.py"
         source_file.parent.mkdir(parents=True)
@@ -563,7 +563,7 @@ class TestTestCreationAgentTestGeneration:
         assert test_path.name == "test_config.py"
         assert "tests" in str(test_path)
 
-    def test_get_module_import_path(self, agent, tmp_path):
+    def test_get_module_import_path(self, agent, tmp_path) -> None:
         """Test getting module import path."""
         module_file = tmp_path / "crackerjack" / "services" / "config.py"
 
@@ -571,7 +571,7 @@ class TestTestCreationAgentTestGeneration:
 
         assert import_path == "crackerjack.services.config"
 
-    def test_generate_smart_default_args(self, agent):
+    def test_generate_smart_default_args(self, agent) -> None:
         """Test generating smart default arguments."""
         # Path argument
         assert 'Path("test_file.txt")' in agent._generate_smart_default_args(["file_path"])
@@ -585,20 +585,20 @@ class TestTestCreationAgentTestGeneration:
         # Boolean argument
         assert "True" in agent._generate_smart_default_args(["is_enabled"])
 
-    def test_generate_invalid_args(self, agent):
+    def test_generate_invalid_args(self, agent) -> None:
         """Test generating invalid arguments for error testing."""
         args = agent._generate_invalid_args(["arg1", "arg2", "arg3"])
 
         assert args == "None, None, None"
 
-    def test_generate_edge_case_args_empty(self, agent):
+    def test_generate_edge_case_args_empty(self, agent) -> None:
         """Test generating empty edge case arguments."""
         args = agent._generate_edge_case_args(["name", "data", "config"], "empty")
 
         assert '""' in args
         assert "[]" in args or "{}" in args
 
-    def test_generate_edge_case_args_boundary(self, agent):
+    def test_generate_edge_case_args_boundary(self, agent) -> None:
         """Test generating boundary edge case arguments."""
         args = agent._generate_edge_case_args(["count", "name"], "boundary")
 
@@ -617,7 +617,7 @@ class TestTestCreationAgentCoverageGaps:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_identify_coverage_gaps(self, agent, tmp_path):
+    async def test_identify_coverage_gaps(self, agent, tmp_path) -> None:
         """Test identifying coverage gaps."""
         package_dir = tmp_path / "crackerjack"
         package_dir.mkdir()
@@ -637,7 +637,7 @@ class TestTestCreationAgentCoverageGaps:
 
             assert isinstance(gaps, list)
 
-    async def test_analyze_existing_test_coverage_no_test(self, agent, tmp_path):
+    async def test_analyze_existing_test_coverage_no_test(self, agent, tmp_path) -> None:
         """Test analyzing coverage when no test file exists."""
         module_file = tmp_path / "crackerjack" / "module.py"
         module_file.parent.mkdir(parents=True)
@@ -652,7 +652,7 @@ class TestTestCreationAgentCoverageGaps:
             assert coverage_info["has_gaps"] is True
             assert "basic" in coverage_info["missing_test_types"]
 
-    async def test_analyze_existing_test_coverage_with_test(self, agent, tmp_path):
+    async def test_analyze_existing_test_coverage_with_test(self, agent, tmp_path) -> None:
         """Test analyzing coverage with existing test file."""
         module_file = tmp_path / "crackerjack" / "module.py"
         test_file = tmp_path / "tests" / "test_module.py"
@@ -672,7 +672,7 @@ def test_parametrized(x): pass
             assert "error_handling" in coverage_info["missing_test_types"]
             assert coverage_info["coverage_score"] > 0
 
-    def test_calculate_improvement_potential(self, agent):
+    def test_calculate_improvement_potential(self, agent) -> None:
         """Test calculating improvement potential."""
         # High potential
         potential = agent._calculate_improvement_potential(10, 20)
@@ -699,7 +699,7 @@ class TestTestCreationAgentASTOperations:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    def test_parse_function_nodes(self, agent):
+    def test_parse_function_nodes(self, agent) -> None:
         """Test parsing function nodes from AST."""
         code = """
 def regular_function(arg1, arg2):
@@ -720,7 +720,7 @@ def _private_function():
         assert any(f["name"] == "async_function" for f in functions)
         assert any(f["is_async"] for f in functions)
 
-    def test_is_valid_function_node(self, agent):
+    def test_is_valid_function_node(self, agent) -> None:
         """Test function node validation."""
         # Valid public function
         code = "def public_func(): pass"
@@ -740,7 +740,7 @@ def _private_function():
         func_node = tree.body[0]
         assert agent._is_valid_function_node(func_node) is False
 
-    def test_create_function_info(self, agent):
+    def test_create_function_info(self, agent) -> None:
         """Test creating function info from AST node."""
         code = """
 async def process_data(input_data, config):
@@ -757,7 +757,7 @@ async def process_data(input_data, config):
         assert func_info["is_async"] is True
         assert func_info["docstring"] == "Process data with config."
 
-    def test_get_function_signature(self, agent):
+    def test_get_function_signature(self, agent) -> None:
         """Test getting function signature."""
         code = "async def process(data, options): pass"
         tree = ast.parse(code)
@@ -781,7 +781,7 @@ class TestTestCreationAgentIntegration:
         context = AgentContext(project_path=tmp_path)
         return TestCreationAgent(context)
 
-    async def test_full_test_creation_workflow(self, agent, tmp_path):
+    async def test_full_test_creation_workflow(self, agent, tmp_path) -> None:
         """Test complete test creation workflow."""
         # Create source module
         module_file = tmp_path / "crackerjack" / "services" / "config.py"
@@ -816,7 +816,7 @@ def save_config(path, data):
                 # Should attempt test creation
                 assert isinstance(result, FixResult)
 
-    def test_comprehensive_pattern_detection(self, agent):
+    def test_comprehensive_pattern_detection(self, agent) -> None:
         """Test comprehensive pattern detection methods."""
         # Test all pattern detection methods
         assert agent._is_path_arg("file_path") is True

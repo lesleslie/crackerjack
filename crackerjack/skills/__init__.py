@@ -6,9 +6,9 @@ from .registration import register_all_skills
 __all__ = [
     "AgentSkill",
     "AgentSkillRegistry",
-    "MCPSkill",
-    "MCPSkillRegistry",
     "HybridSkill",
     "HybridSkillRegistry",
+    "MCPSkill",
+    "MCPSkillRegistry",
     "register_all_skills",
 ]

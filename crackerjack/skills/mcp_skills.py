@@ -51,7 +51,7 @@ class MCPSkill:
                 description=tool_description,
                 required_params=required_params or [],
                 optional_params=optional_params or [],
-            )
+            ),
         )
 
     def to_dict(self) -> dict[str, t.Any]:

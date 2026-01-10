@@ -56,7 +56,8 @@ class RealTimeTypingFeedback:
             self.console.print(f"✅ {rel_path} - No issues", style="green dim")
         else:
             self.console.print(
-                f"❌ {rel_path} - {error_count} error(s)", style="red dim"
+                f"❌ {rel_path} - {error_count} error(s)",
+                style="red dim",
             )
 
     def on_progress(self, current: int, total: int) -> None:
@@ -92,8 +93,8 @@ class JSONRPCClient:
                         "relatedInformation": True,
                         "codeDescriptionSupport": True,
                         "dataSupport": True,
-                    }
-                }
+                    },
+                },
             },
         }
         return await self.lsp_service.send_lsp_request("initialize", params)
@@ -107,7 +108,7 @@ class JSONRPCClient:
                 "languageId": "python",
                 "version": 1,
                 "text": content,
-            }
+            },
         }
         return await self.lsp_service.send_lsp_request("textDocument/didOpen", params)
 
@@ -115,7 +116,7 @@ class JSONRPCClient:
         params = {
             "textDocument": {
                 "uri": f"file://{file_path}",
-            }
+            },
         }
         return await self.lsp_service.send_lsp_request("textDocument/didClose", params)
 
@@ -175,7 +176,9 @@ class LSPClient:
                     style="yellow",
                 )
             return self._check_files_with_feedback(
-                file_paths, progress_callback, show_progress
+                file_paths,
+                progress_callback,
+                show_progress,
             )
 
         return self._check_files_via_lsp(file_paths, progress_callback, show_progress)
@@ -190,7 +193,9 @@ class LSPClient:
 
         if show_progress and total_files > 1:
             return self._check_files_with_progress_display(
-                file_paths, progress_callback, total_files
+                file_paths,
+                progress_callback,
+                total_files,
             )
         return self._check_files_simple_feedback(file_paths, progress_callback)
 
@@ -208,7 +213,7 @@ class LSPClient:
 
             for file_path in file_paths:
                 diagnostics.update(
-                    self._process_single_file_with_zuban(file_path, progress_callback)
+                    self._process_single_file_with_zuban(file_path, progress_callback),
                 )
                 progress.update(task, advance=1)
 
@@ -223,7 +228,7 @@ class LSPClient:
 
         for file_path in file_paths:
             diagnostics.update(
-                self._process_single_file_with_zuban(file_path, progress_callback)
+                self._process_single_file_with_zuban(file_path, progress_callback),
             )
 
         return diagnostics
@@ -264,15 +269,19 @@ class LSPClient:
             except RuntimeError:
                 return asyncio.run(
                     self._async_check_files_via_lsp(
-                        file_paths, progress_callback, show_progress
-                    )
+                        file_paths,
+                        progress_callback,
+                        show_progress,
+                    ),
                 )
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️ LSP communication failed: {e}, falling back to direct calls[/yellow]"
+                f"[yellow]⚠️ LSP communication failed: {e}, falling back to direct calls[/yellow]",
             )
             return self._check_files_with_feedback(
-                file_paths, progress_callback, show_progress
+                file_paths,
+                progress_callback,
+                show_progress,
             )
 
     def _run_async_lsp_check(
@@ -283,8 +292,10 @@ class LSPClient:
     ) -> dict[str, list[dict[str, t.Any]]]:
         return asyncio.run(
             self._async_check_files_via_lsp(
-                file_paths, progress_callback, show_progress
-            )
+                file_paths,
+                progress_callback,
+                show_progress,
+            ),
         )
 
     async def _async_check_files_via_lsp(
@@ -295,32 +306,35 @@ class LSPClient:
     ) -> dict[str, list[dict[str, t.Any]]]:
         if not await self._validate_lsp_prerequisites():
             return self._check_files_with_feedback(
-                file_paths, progress_callback, show_progress
+                file_paths,
+                progress_callback,
+                show_progress,
             )
 
         try:
             await self._initialize_lsp_workspace(file_paths)
 
             return await self._process_files_via_lsp(
-                file_paths, progress_callback, show_progress
+                file_paths,
+                progress_callback,
+                show_progress,
             )
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️ LSP protocol error: {e}, falling back to direct calls[/yellow]"
+                f"[yellow]⚠️ LSP protocol error: {e}, falling back to direct calls[/yellow]",
             )
             return self._check_files_with_feedback(
-                file_paths, progress_callback, show_progress
+                file_paths,
+                progress_callback,
+                show_progress,
             )
 
     async def _validate_lsp_prerequisites(self) -> bool:
         if not await self._ensure_lsp_service():
             return False
 
-        if not self._jsonrpc_client:
-            return False
-
-        return True
+        return self._jsonrpc_client
 
     async def _initialize_lsp_workspace(self, file_paths: list[str]) -> None:
         assert self._jsonrpc_client is not None, "LSP client must be initialized"
@@ -339,7 +353,9 @@ class LSPClient:
 
         if show_progress and total_files > 1:
             return await self._process_files_with_progress(
-                file_paths, progress_callback, total_files
+                file_paths,
+                progress_callback,
+                total_files,
             )
         return await self._process_files_simple(file_paths, progress_callback)
 
@@ -358,8 +374,9 @@ class LSPClient:
             for file_path in file_paths:
                 diagnostics.update(
                     await self._process_single_file_with_callback(
-                        file_path, progress_callback
-                    )
+                        file_path,
+                        progress_callback,
+                    ),
                 )
                 progress.update(task, advance=1)
 
@@ -375,8 +392,9 @@ class LSPClient:
         for file_path in file_paths:
             diagnostics.update(
                 await self._process_single_file_with_callback(
-                    file_path, progress_callback
-                )
+                    file_path,
+                    progress_callback,
+                ),
             )
 
         return diagnostics
@@ -433,6 +451,7 @@ class LSPClient:
     def _execute_zuban_check(self, file_path: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
             ["zuban", "check", file_path],
+            check=False,
             capture_output=True,
             text=True,
             timeout=30,
@@ -486,7 +505,7 @@ class LSPClient:
                 for diag in file_diagnostics:
                     severity_icon = "🔴" if diag["severity"] == "error" else "🟡"
                     lines.append(
-                        f" {severity_icon} Line {diag['line']}:{diag['column']} - {diag['message']}"
+                        f" {severity_icon} Line {diag['line']}:{diag['column']} - {diag['message']}",
                     )
 
         return "\n".join(lines)
@@ -510,7 +529,9 @@ class LSPClient:
         return python_files
 
     def check_project_with_feedback(
-        self, project_path: Path, show_progress: bool = True
+        self,
+        project_path: Path,
+        show_progress: bool = True,
     ) -> tuple[dict[str, list[dict[str, t.Any]]], str]:
         python_files = self.get_project_files(project_path)
         if not python_files:
@@ -519,7 +540,8 @@ class LSPClient:
         feedback = RealTimeTypingFeedback()
 
         self.console.print(
-            f"🔍 Starting type check of {len(python_files)} files...", style="bold blue"
+            f"🔍 Starting type check of {len(python_files)} files...",
+            style="bold blue",
         )
 
         diagnostics = self.check_files(

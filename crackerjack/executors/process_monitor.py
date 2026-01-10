@@ -93,7 +93,7 @@ class ProcessMonitor:
 
         if elapsed > timeout:
             logger.warning(
-                f"{hook_name}: Timeout of {timeout}s exceeded (elapsed: {elapsed:.1f}s)"
+                f"{hook_name}: Timeout of {timeout}s exceeded (elapsed: {elapsed:.1f}s)",
             )
             return True
 
@@ -115,14 +115,17 @@ class ProcessMonitor:
         self._log_metrics(hook_name, metrics)
 
         return self._check_cpu_activity(
-            hook_name, metrics, consecutive_zero_cpu, on_stall
+            hook_name,
+            metrics,
+            consecutive_zero_cpu,
+            on_stall,
         )
 
     def _log_metrics(self, hook_name: str, metrics: ProcessMetrics) -> None:
         logger.debug(
             f"{hook_name}: CPU={metrics.cpu_percent:.1f}%, "
             f"MEM={metrics.memory_mb:.1f}MB, "
-            f"elapsed={metrics.elapsed_seconds:.1f}s"
+            f"elapsed={metrics.elapsed_seconds:.1f}s",
         )
 
     def _check_cpu_activity(
@@ -135,7 +138,10 @@ class ProcessMonitor:
         if metrics.cpu_percent < self.cpu_threshold:
             consecutive_zero_cpu += 1
             return self._handle_potential_stall(
-                hook_name, metrics, consecutive_zero_cpu, on_stall
+                hook_name,
+                metrics,
+                consecutive_zero_cpu,
+                on_stall,
             )
 
         return 0

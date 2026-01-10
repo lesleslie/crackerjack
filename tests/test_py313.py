@@ -1,13 +1,24 @@
-import pytest
 from pathlib import Path
-from crackerjack.py313 import process_command_output, analyze_hook_result, categorize_file, \
-    CommandResult, HookResult, HookStatus, process_hook_results, clean_python_code, \
-    ModernConfigManager, EnhancedCommandRunner
 from typing import Any
+
+import pytest
+
+from crackerjack.py313 import (
+    CommandResult,
+    EnhancedCommandRunner,
+    HookResult,
+    HookStatus,
+    ModernConfigManager,
+    analyze_hook_result,
+    categorize_file,
+    clean_python_code,
+    process_command_output,
+    process_hook_results,
+)
 
 
 @pytest.mark.unit
-def test_process_command_output_success_case():
+def test_process_command_output_success_case() -> None:
     """Test process_command_output with a successful command result."""
     mock_result = CommandResult(
         success=True,
@@ -15,7 +26,7 @@ def test_process_command_output_success_case():
         stdout="success output",
         stderr="",
         command=["echo", "hello"],
-        duration_ms=10.0
+        duration_ms=10.0,
     )
 
     success, message = process_command_output(mock_result)
@@ -25,7 +36,7 @@ def test_process_command_output_success_case():
 
 
 @pytest.mark.unit
-def test_process_command_output_failure_case():
+def test_process_command_output_failure_case() -> None:
     """Test process_command_output with a failed command result."""
     mock_result = CommandResult(
         success=False,
@@ -33,7 +44,7 @@ def test_process_command_output_failure_case():
         stdout="some output",
         stderr="error occurred",
         command=["ls", "nonexistent"],
-        duration_ms=15.0
+        duration_ms=15.0,
     )
 
     success, message = process_command_output(mock_result)
@@ -43,7 +54,7 @@ def test_process_command_output_failure_case():
 
 
 @pytest.mark.unit
-def test_process_command_output_with_non_zero_exit():
+def test_process_command_output_with_non_zero_exit() -> None:
     """Test process_command_output when stdout has content but exit code is non-zero."""
     mock_result = CommandResult(
         success=False,
@@ -51,7 +62,7 @@ def test_process_command_output_with_non_zero_exit():
         stdout="partial output",
         stderr="error details",
         command=["invalid", "command"],
-        duration_ms=20.0
+        duration_ms=20.0,
     )
 
     success, message = process_command_output(mock_result)
@@ -61,37 +72,37 @@ def test_process_command_output_with_non_zero_exit():
 
 
 @pytest.mark.unit
-def test_analyze_hook_result_success():
+def test_analyze_hook_result_success() -> None:
     """Test analyze_hook_result with a successful hook result."""
     hook_result = HookResult(
         status=HookStatus.SUCCESS,
         hook_id="test_hook",
         output="hook executed successfully",
-        files=[]
+        files=[],
     )
 
     result_str = analyze_hook_result(hook_result)
 
-    assert "✅ Hook test_hook passed successfully" == result_str
+    assert result_str == "✅ Hook test_hook passed successfully"
 
 
 @pytest.mark.unit
-def test_analyze_hook_result_failure():
+def test_analyze_hook_result_failure() -> None:
     """Test analyze_hook_result with a failed hook result."""
     hook_result = HookResult(
         status=HookStatus.FAILURE,
         hook_id="test_hook",
         output="error in hook execution",
-        files=[]
+        files=[],
     )
 
     result_str = analyze_hook_result(hook_result)
 
-    assert "🔧 Hook test_hook failed with fixable issues" == result_str or "❌ Hook test_hook failed" == result_str
+    assert result_str in {"🔧 Hook test_hook failed with fixable issues", "❌ Hook test_hook failed"}
 
 
 @pytest.mark.unit
-def test_categorize_file_python_source():
+def test_categorize_file_python_source() -> None:
     """Test categorize_file with a Python source file."""
     file_path = Path("test.py")
 
@@ -101,7 +112,7 @@ def test_categorize_file_python_source():
 
 
 @pytest.mark.unit
-def test_categorize_file_configuration():
+def test_categorize_file_configuration() -> None:
     """Test categorize_file with a configuration file."""
     file_path = Path(".gitignore")  # Using .gitignore since it matches the pattern
 
@@ -111,7 +122,7 @@ def test_categorize_file_configuration():
 
 
 @pytest.mark.unit
-def test_categorize_file_documentation():
+def test_categorize_file_documentation() -> None:
     """Test categorize_file with a documentation file."""
     file_path = Path("README.md")
 
@@ -121,7 +132,7 @@ def test_categorize_file_documentation():
 
 
 @pytest.mark.unit
-def test_categorize_file_unknown_extension():
+def test_categorize_file_unknown_extension() -> None:
     """Test categorize_file with an unknown file extension."""
     file_path = Path("unknown.xyz")
 
@@ -131,21 +142,21 @@ def test_categorize_file_unknown_extension():
 
 
 @pytest.mark.unit
-def test_process_hook_results_with_success_handler():
+def test_process_hook_results_with_success_handler() -> None:
     """Test process_hook_results with successful hook results."""
     hook_results = [
         HookResult(
             status=HookStatus.SUCCESS,
             hook_id="hook1",
             output="success",
-            files=[]
+            files=[],
         ),
     ]
 
-    def success_handler(result):
+    def success_handler(result) -> str:
         return f"Success: {result['hook_id']}"
 
-    def failure_handler(result):
+    def failure_handler(result) -> str:
         return f"Failure: {result['hook_id']}"
 
     processed = process_hook_results(hook_results, success_handler, failure_handler)
@@ -156,21 +167,21 @@ def test_process_hook_results_with_success_handler():
 
 
 @pytest.mark.unit
-def test_process_hook_results_with_failure_handler():
+def test_process_hook_results_with_failure_handler() -> None:
     """Test process_hook_results with failing hook results."""
     hook_results = [
         HookResult(
             status=HookStatus.FAILURE,
             hook_id="hook2",
             output="error",
-            files=[]
+            files=[],
         ),
     ]
 
-    def success_handler(result):
+    def success_handler(result) -> str:
         return f"Success: {result['hook_id']}"
 
-    def failure_handler(result):
+    def failure_handler(result) -> str:
         return f"Failure: {result['hook_id']}"
 
     processed = process_hook_results(hook_results, success_handler, failure_handler)
@@ -180,7 +191,7 @@ def test_process_hook_results_with_failure_handler():
 
 
 @pytest.mark.unit
-def test_clean_python_code_removes_comments():
+def test_clean_python_code_removes_comments() -> None:
     """Test clean_python_code removes comments and unnecessary lines."""
     code_with_comments = '''import os
 
@@ -203,9 +214,9 @@ def test_function():
 
 
 @pytest.mark.unit
-def test_clean_python_code_preserves_complex_code():
+def test_clean_python_code_preserves_complex_code() -> None:
     """Test clean_python_code preserves code structure."""
-    code = '''import sys
+    code = """import sys
 import os
 
 def function1(x, y=10):
@@ -217,7 +228,7 @@ def function1(x, y=10):
 class MyClass:
     def method(self):
         return "hello"
-'''
+"""
 
     cleaned = clean_python_code(code)
     # Should preserve imports, functions, classes
@@ -228,7 +239,7 @@ class MyClass:
 
 
 @pytest.mark.unit
-def test_modern_config_manager_load():
+def test_modern_config_manager_load() -> None:
     """Test ModernConfigManager load method."""
     config_path = Path("/tmp/test_config.toml")
     manager = ModernConfigManager(config_path)
@@ -240,7 +251,7 @@ def test_modern_config_manager_load():
 
 
 @pytest.mark.unit
-def test_modern_config_manager_update():
+def test_modern_config_manager_update() -> None:
     """Test ModernConfigManager update method."""
     config_path = Path("/tmp/test_config.toml")
     manager = ModernConfigManager(config_path)
@@ -252,7 +263,7 @@ def test_modern_config_manager_update():
 
 
 @pytest.mark.unit
-def test_modern_config_manager_save():
+def test_modern_config_manager_save() -> None:
     """Test ModernConfigManager save method."""
     config_path = Path("/tmp/test_config.toml")
     manager = ModernConfigManager(config_path)
@@ -264,15 +275,15 @@ def test_modern_config_manager_save():
 
 
 @pytest.mark.unit
-def test_enhanced_command_runner_initialization():
+def test_enhanced_command_runner_initialization() -> None:
     """Test EnhancedCommandRunner initialization."""
-    runner = EnhancedCommandRunner(working_dir=Path("."))
+    runner = EnhancedCommandRunner(working_dir=Path())
 
-    assert runner.working_dir == Path(".")
+    assert runner.working_dir == Path()
 
 
 @pytest.mark.unit
-def test_categorize_file_path():
+def test_categorize_file_path() -> None:
     """Test categorize_file with various file types."""
     # Test Python source file
     assert categorize_file(Path("src/file.py")) == "Python Source File"

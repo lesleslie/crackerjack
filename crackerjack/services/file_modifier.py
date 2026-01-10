@@ -35,7 +35,7 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         self,
         backup_dir: Path | None = None,
         max_file_size: int = 10_485_760,
-    ):
+    ) -> None:
         self._backup_dir = backup_dir or Path(".backups")
         self._max_file_size = max_file_size
         self._ensure_backup_dir()
@@ -125,7 +125,9 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return self._atomic_write_fix(path, fixed_content, diff, backup_path, file_path)
 
     def _validate_fix_inputs(
-        self, path: Path, fixed_content: str
+        self,
+        path: Path,
+        fixed_content: str,
     ) -> dict[str, str | bool | None]:
         validation_result = self._validate_file_path(path)
         if not validation_result["valid"]:
@@ -175,7 +177,11 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         }
 
     def _handle_backup(
-        self, path: Path, original_content: str, create_backup: bool, diff: str
+        self,
+        path: Path,
+        original_content: str,
+        create_backup: bool,
+        diff: str,
     ) -> dict[str, str | bool | Path | None]:
         if not create_backup:
             return {"success": True, "backup_path": None}

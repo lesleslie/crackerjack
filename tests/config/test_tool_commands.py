@@ -18,17 +18,17 @@ TOOL_COMMANDS = _build_tool_commands("crackerjack")
 class TestToolCommandsRegistry:
     """Test the tool commands registry data structure."""
 
-    def test_registry_exists(self):
+    def test_registry_exists(self) -> None:
         """Test that TOOL_COMMANDS registry exists and is a dict."""
         assert isinstance(TOOL_COMMANDS, dict)
         assert len(TOOL_COMMANDS) > 0
 
-    def test_registry_has_expected_count(self):
+    def test_registry_has_expected_count(self) -> None:
         """Test that registry contains expected number of tools."""
         # Current registry: 3 custom + 9 native + 15 third-party = 27 tools
         assert len(TOOL_COMMANDS) == 27
 
-    def test_all_commands_are_lists(self):
+    def test_all_commands_are_lists(self) -> None:
         """Test that all commands are lists of strings."""
         for hook_name, command in TOOL_COMMANDS.items():
             assert isinstance(command, list), f"{hook_name} command is not a list"
@@ -37,14 +37,14 @@ class TestToolCommandsRegistry:
                 isinstance(arg, str) for arg in command
             ), f"{hook_name} command contains non-string arguments"
 
-    def test_all_commands_use_uv(self):
+    def test_all_commands_use_uv(self) -> None:
         """Test that all commands start with 'uv' or 'uvx' for dependency management."""
         for hook_name, command in TOOL_COMMANDS.items():
             assert (
                 command[0] in ("uv", "uvx")
             ), f"{hook_name} does not start with 'uv' or 'uvx': {command}"
 
-    def test_custom_tools_present(self):
+    def test_custom_tools_present(self) -> None:
         """Test that custom crackerjack tools are in registry."""
         expected_custom = [
             "validate-regex-patterns",
@@ -54,7 +54,7 @@ class TestToolCommandsRegistry:
         for tool in expected_custom:
             assert tool in TOOL_COMMANDS, f"Custom tool {tool} missing from registry"
 
-    def test_native_tools_present(self):
+    def test_native_tools_present(self) -> None:
         """Test that native Phase 8+ implementations are in registry."""
         expected_native = [
             "trailing-whitespace",
@@ -72,7 +72,7 @@ class TestToolCommandsRegistry:
                 tool in TOOL_COMMANDS
             ), f"Native tool {tool} missing from registry"
 
-    def test_third_party_tools_present(self):
+    def test_third_party_tools_present(self) -> None:
         """Test that third-party tools are in registry."""
         expected_third_party = [
             "uv-lock",
@@ -100,7 +100,7 @@ class TestToolCommandsRegistry:
 class TestGetToolCommand:
     """Test the get_tool_command() function."""
 
-    def test_get_known_tool_command(self):
+    def test_get_known_tool_command(self) -> None:
         """Test retrieving command for a known tool."""
         command = get_tool_command("ruff-check")
         assert isinstance(command, list)
@@ -108,7 +108,7 @@ class TestGetToolCommand:
         assert "ruff" in command
         assert "check" in command
 
-    def test_get_native_tool_command(self):
+    def test_get_native_tool_command(self) -> None:
         """Test retrieving command for a native tool."""
         command = get_tool_command("trailing-whitespace")
         assert isinstance(command, list)
@@ -116,7 +116,7 @@ class TestGetToolCommand:
         assert "-m" in command
         assert "crackerjack.tools.trailing_whitespace" in command
 
-    def test_get_unknown_tool_raises_error(self):
+    def test_get_unknown_tool_raises_error(self) -> None:
         """Test that unknown tool names raise KeyError."""
         with pytest.raises(KeyError) as exc_info:
             get_tool_command("nonexistent-tool")
@@ -124,7 +124,7 @@ class TestGetToolCommand:
         assert "Unknown hook name" in str(exc_info.value)
         assert "nonexistent-tool" in str(exc_info.value)
 
-    def test_returns_copy_not_reference(self):
+    def test_returns_copy_not_reference(self) -> None:
         """Test that get_tool_command returns a copy to prevent mutation."""
         command1 = get_tool_command("ruff-check")
         command2 = get_tool_command("ruff-check")
@@ -136,14 +136,14 @@ class TestGetToolCommand:
         assert "--extra-flag" not in command2
         assert len(command2) < len(command1)
 
-    def test_all_registered_tools_retrievable(self):
+    def test_all_registered_tools_retrievable(self) -> None:
         """Test that all tools in registry can be retrieved without error."""
         for hook_name in TOOL_COMMANDS:
             command = get_tool_command(hook_name)
             assert isinstance(command, list)
             assert len(command) > 0
 
-    def test_retrieved_commands_match_registry(self):
+    def test_retrieved_commands_match_registry(self) -> None:
         """Test that retrieved commands match registry entries."""
         for hook_name in TOOL_COMMANDS:
             command = get_tool_command(hook_name)
@@ -154,12 +154,12 @@ class TestGetToolCommand:
 class TestListAvailableTools:
     """Test the list_available_tools() function."""
 
-    def test_returns_list(self):
+    def test_returns_list(self) -> None:
         """Test that function returns a list."""
         tools = list_available_tools()
         assert isinstance(tools, list)
 
-    def test_returns_all_tools(self):
+    def test_returns_all_tools(self) -> None:
         """Test that all registry tools are returned."""
         tools = list_available_tools()
         assert len(tools) == len(TOOL_COMMANDS)
@@ -167,17 +167,17 @@ class TestListAvailableTools:
         for hook_name in TOOL_COMMANDS:
             assert hook_name in tools
 
-    def test_returns_sorted_list(self):
+    def test_returns_sorted_list(self) -> None:
         """Test that tools are returned in sorted order."""
         tools = list_available_tools()
         assert tools == sorted(tools)
 
-    def test_no_duplicates(self):
+    def test_no_duplicates(self) -> None:
         """Test that returned list has no duplicates."""
         tools = list_available_tools()
         assert len(tools) == len(set(tools))
 
-    def test_all_strings(self):
+    def test_all_strings(self) -> None:
         """Test that all returned items are strings."""
         tools = list_available_tools()
         assert all(isinstance(tool, str) for tool in tools)
@@ -186,7 +186,7 @@ class TestListAvailableTools:
 class TestIsNativeTool:
     """Test the is_native_tool() function."""
 
-    def test_native_tools_identified(self):
+    def test_native_tools_identified(self) -> None:
         """Test that native tools are correctly identified."""
         native_tools = [
             "trailing-whitespace",
@@ -199,7 +199,7 @@ class TestIsNativeTool:
         for tool in native_tools:
             assert is_native_tool(tool), f"{tool} should be identified as native"
 
-    def test_third_party_tools_not_native(self):
+    def test_third_party_tools_not_native(self) -> None:
         """Test that third-party tools are not identified as native."""
         third_party_tools = [
             "ruff-check",
@@ -212,7 +212,7 @@ class TestIsNativeTool:
         for tool in third_party_tools:
             assert not is_native_tool(tool), f"{tool} should not be identified as native"
 
-    def test_custom_tools_not_native(self):
+    def test_custom_tools_not_native(self) -> None:
         """Test that custom tools are not identified as native (not in tools package)."""
         # validate-regex-patterns is in tools but categorized differently
         custom_tools = ["skylos", "zuban"]
@@ -220,16 +220,16 @@ class TestIsNativeTool:
         for tool in custom_tools:
             assert not is_native_tool(tool), f"{tool} should not be identified as native"
 
-    def test_validate_regex_patterns_is_native(self):
+    def test_validate_regex_patterns_is_native(self) -> None:
         """Test that validate-regex-patterns is correctly identified as native."""
         # This tool is in crackerjack.tools package
         assert is_native_tool("validate-regex-patterns")
 
-    def test_unknown_tool_returns_false(self):
+    def test_unknown_tool_returns_false(self) -> None:
         """Test that unknown tools return False."""
         assert not is_native_tool("nonexistent-tool")
 
-    def test_all_tools_have_consistent_classification(self):
+    def test_all_tools_have_consistent_classification(self) -> None:
         """Test that all tools can be classified without errors."""
         for hook_name in TOOL_COMMANDS:
             result = is_native_tool(hook_name)
@@ -239,7 +239,7 @@ class TestIsNativeTool:
 class TestCommandStructureValidation:
     """Test that commands have valid structure for execution."""
 
-    def test_uv_run_pattern_for_python_tools(self):
+    def test_uv_run_pattern_for_python_tools(self) -> None:
         """Test that Python tools use 'uv run python -m' pattern."""
         python_tools = [
             "trailing-whitespace",
@@ -259,7 +259,7 @@ class TestCommandStructureValidation:
             # Command[4] should be the module name
             assert "crackerjack" in command[4]
 
-    def test_uv_run_pattern_for_rust_tools(self):
+    def test_uv_run_pattern_for_rust_tools(self) -> None:
         """Test that Rust tools use 'uv run <tool>' pattern."""
         rust_tools = ["skylos", "zuban", "gitleaks"]
 
@@ -269,7 +269,7 @@ class TestCommandStructureValidation:
             assert command[1] == "run"
             # Command[2] should be the tool binary name
 
-    def test_config_paths_for_tools_with_configs(self):
+    def test_config_paths_for_tools_with_configs(self) -> None:
         """Test that tools with config files include config paths."""
         # Zuban has --config-file mypy.ini
         zuban_cmd = get_tool_command("zuban")
@@ -281,7 +281,7 @@ class TestCommandStructureValidation:
         # Updated: Bandit uses different config approach
         assert len(bandit_cmd) > 0  # Basic sanity check that command exists
 
-    def test_target_directories_specified(self):
+    def test_target_directories_specified(self) -> None:
         """Test that tools include target directories where needed."""
         # Test uses Path.cwd() for package detection, which will detect "crackerjack"
         # when running from crackerjack project root
@@ -301,7 +301,7 @@ class TestCommandStructureValidation:
         # Should have a package name as last argument
         assert "crackerjack" in refurb_cmd
 
-    def test_special_flags_for_specific_tools(self):
+    def test_special_flags_for_specific_tools(self) -> None:
         """Test that tools with special flags have them configured."""
         # Gitleaks has protect and -v flags
         gitleaks_cmd = get_tool_command("gitleaks")
@@ -326,7 +326,7 @@ class TestCommandStructureValidation:
 class TestIntegrationWithHooks:
     """Test integration points with hooks configuration."""
 
-    def test_all_fast_hooks_have_commands(self):
+    def test_all_fast_hooks_have_commands(self) -> None:
         """Test that all fast hooks have registry entries."""
         # These are the typical fast hooks from Phase 8
         fast_hooks = [
@@ -342,7 +342,7 @@ class TestIntegrationWithHooks:
             command = get_tool_command(hook)
             assert len(command) > 0
 
-    def test_all_comprehensive_hooks_have_commands(self):
+    def test_all_comprehensive_hooks_have_commands(self) -> None:
         """Test that all comprehensive hooks have registry entries."""
         # These are the typical comprehensive hooks
         comprehensive_hooks = [
@@ -360,7 +360,7 @@ class TestIntegrationWithHooks:
             command = get_tool_command(hook)
             assert len(command) > 0
 
-    def test_no_shell_metacharacters_in_commands(self):
+    def test_no_shell_metacharacters_in_commands(self) -> None:
         """Test that commands don't contain shell metacharacters."""
         shell_metacharacters = ["|", "&", ";", ">", "<", "`", "$", "(", ")"]
 
@@ -371,7 +371,7 @@ class TestIntegrationWithHooks:
                         char not in arg
                     ), f"{hook_name} command contains shell metacharacter '{char}'"
 
-    def test_commands_are_executable_format(self):
+    def test_commands_are_executable_format(self) -> None:
         """Test that commands are in format suitable for subprocess.run()."""
         for hook_name in TOOL_COMMANDS:
             command = get_tool_command(hook_name)
@@ -393,7 +393,7 @@ class TestIntegrationWithHooks:
 class TestRegistryConsistency:
     """Test consistency and completeness of the registry."""
 
-    def test_no_duplicate_commands(self):
+    def test_no_duplicate_commands(self) -> None:
         """Test that no two hooks have identical commands."""
         seen_commands = {}
         for hook_name, command in TOOL_COMMANDS.items():
@@ -401,11 +401,11 @@ class TestRegistryConsistency:
             if cmd_tuple in seen_commands:
                 pytest.fail(
                     f"Duplicate command found: {hook_name} and {seen_commands[cmd_tuple]} "
-                    f"have the same command: {command}"
+                    f"have the same command: {command}",
                 )
             seen_commands[cmd_tuple] = hook_name
 
-    def test_hook_names_are_kebab_case(self):
+    def test_hook_names_are_kebab_case(self) -> None:
         """Test that all hook names follow kebab-case convention."""
         for hook_name in TOOL_COMMANDS:
             # Should not contain underscores or uppercase
@@ -419,7 +419,7 @@ class TestRegistryConsistency:
                 "-" in hook_name or hook_name.isalnum()
             ), f"{hook_name} has unexpected format"
 
-    def test_module_names_match_hook_names(self):
+    def test_module_names_match_hook_names(self) -> None:
         """Test that native tool module names match hook names."""
         native_tools = {
             "trailing-whitespace": "trailing_whitespace",
@@ -436,7 +436,7 @@ class TestRegistryConsistency:
                 module_path in command
             ), f"{hook_name} should reference {module_path}"
 
-    def test_all_tools_documented_in_phase_8(self):
+    def test_all_tools_documented_in_phase_8(self) -> None:
         """Test that tool count matches current implementation."""
         # Current registry has:
         # - 3 custom tools (validate-regex-patterns, skylos, zuban)

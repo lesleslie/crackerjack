@@ -5,13 +5,13 @@ from unittest.mock import Mock
 
 import pytest
 
-from crackerjack.data.models import QualityBaselineRecord, ProjectHealthRecord
+from crackerjack.data.models import ProjectHealthRecord, QualityBaselineRecord
 
 
 class TestQualityBaselineRecord:
     """Tests for QualityBaselineRecord model."""
 
-    def test_quality_baseline_record_initialization(self):
+    def test_quality_baseline_record_initialization(self) -> None:
         """Test QualityBaselineRecord initialization."""
         record = QualityBaselineRecord(
             git_hash="abc123def456",
@@ -38,7 +38,7 @@ class TestQualityBaselineRecord:
         assert record.quality_score == 88
         assert isinstance(record.recorded_at, datetime)
 
-    def test_quality_baseline_record_default_values(self):
+    def test_quality_baseline_record_default_values(self) -> None:
         """Test QualityBaselineRecord with default values."""
         record = QualityBaselineRecord(git_hash="test123")
 
@@ -53,7 +53,7 @@ class TestQualityBaselineRecord:
         assert record.quality_score == 0
         assert record.extra_metadata is None
 
-    def test_quality_baseline_record_update_from_dict(self):
+    def test_quality_baseline_record_update_from_dict(self) -> None:
         """Test QualityBaselineRecord update_from_dict method."""
         record = QualityBaselineRecord(git_hash="test123")
 
@@ -62,7 +62,7 @@ class TestQualityBaselineRecord:
             "test_count": 100,
             "test_pass_rate": 98.7,
             "quality_score": 95,
-            "extra_metadata": {"ci_build": "#123"}
+            "extra_metadata": {"ci_build": "#123"},
         }
 
         record.update_from_dict(update_data)
@@ -73,14 +73,14 @@ class TestQualityBaselineRecord:
         assert record.quality_score == 95
         assert record.extra_metadata == {"ci_build": "#123"}
 
-    def test_quality_baseline_record_update_ignores_invalid_keys(self):
+    def test_quality_baseline_record_update_ignores_invalid_keys(self) -> None:
         """Test that update_from_dict ignores invalid keys."""
         record = QualityBaselineRecord(git_hash="test123")
 
         update_data = {
             "coverage_percent": 75.0,
             "invalid_key": "should_be_ignored",
-            "another_invalid": 123
+            "another_invalid": 123,
         }
 
         record.update_from_dict(update_data)
@@ -89,11 +89,11 @@ class TestQualityBaselineRecord:
         assert not hasattr(record, "invalid_key")
         assert not hasattr(record, "another_invalid")
 
-    def test_quality_baseline_record_table_name(self):
+    def test_quality_baseline_record_table_name(self) -> None:
         """Test QualityBaselineRecord table name."""
         assert QualityBaselineRecord.__tablename__ == "quality_baselines"
 
-    def test_quality_baseline_record_field_types(self):
+    def test_quality_baseline_record_field_types(self) -> None:
         """Test QualityBaselineRecord field types."""
         record = QualityBaselineRecord(git_hash="test123")
 
@@ -111,7 +111,7 @@ class TestQualityBaselineRecord:
         assert isinstance(record.linting_issues, int)
         assert isinstance(record.quality_score, int)
 
-    def test_quality_baseline_record_equality(self):
+    def test_quality_baseline_record_equality(self) -> None:
         """Test QualityBaselineRecord equality comparison."""
         record1 = QualityBaselineRecord(git_hash="test123", coverage_percent=80.0)
         record2 = QualityBaselineRecord(git_hash="test123", coverage_percent=80.0)
@@ -120,7 +120,7 @@ class TestQualityBaselineRecord:
         assert record1.git_hash == record2.git_hash
         assert record1.coverage_percent == record2.coverage_percent
 
-    def test_quality_baseline_record_string_representation(self):
+    def test_quality_baseline_record_string_representation(self) -> None:
         """Test QualityBaselineRecord string representation."""
         record = QualityBaselineRecord(git_hash="test123", coverage_percent=75.5)
 
@@ -128,25 +128,25 @@ class TestQualityBaselineRecord:
         assert str(record) is not None
         assert len(str(record)) > 0
 
-    def test_quality_baseline_record_with_extra_metadata(self):
+    def test_quality_baseline_record_with_extra_metadata(self) -> None:
         """Test QualityBaselineRecord with extra metadata."""
         metadata = {
             "ci_system": "github_actions",
             "build_number": 42,
-            "environment": "production"
+            "environment": "production",
         }
 
         record = QualityBaselineRecord(
             git_hash="test123",
             coverage_percent=85.0,
-            extra_metadata=metadata
+            extra_metadata=metadata,
         )
 
         assert record.extra_metadata == metadata
         assert record.extra_metadata["ci_system"] == "github_actions"
         assert record.extra_metadata["build_number"] == 42
 
-    def test_quality_baseline_record_inheritance(self):
+    def test_quality_baseline_record_inheritance(self) -> None:
         """Test QualityBaselineRecord inherits from SQLModel."""
         from sqlmodel import SQLModel
 
@@ -157,7 +157,7 @@ class TestQualityBaselineRecord:
 class TestProjectHealthRecord:
     """Tests for ProjectHealthRecord model."""
 
-    def test_project_health_record_initialization(self):
+    def test_project_health_record_initialization(self) -> None:
         """Test ProjectHealthRecord initialization."""
         record = ProjectHealthRecord(
             project_name="test_project",
@@ -166,7 +166,7 @@ class TestProjectHealthRecord:
             issue_count=15,
             warning_count=8,
             error_count=3,
-            maintenance_score=90
+            maintenance_score=90,
         )
 
         assert record.project_name == "test_project"
@@ -177,7 +177,7 @@ class TestProjectHealthRecord:
         assert record.error_count == 3
         assert record.maintenance_score == 90
 
-    def test_project_health_record_default_values(self):
+    def test_project_health_record_default_values(self) -> None:
         """Test ProjectHealthRecord with default values."""
         record = ProjectHealthRecord(project_name="test")
 
@@ -188,18 +188,18 @@ class TestProjectHealthRecord:
         assert record.maintenance_score == 0
         assert isinstance(record.last_updated, datetime)
 
-    def test_project_health_record_table_name(self):
+    def test_project_health_record_table_name(self) -> None:
         """Test ProjectHealthRecord table name."""
         assert ProjectHealthRecord.__tablename__ == "project_health"
 
-    def test_project_health_record_inheritance(self):
+    def test_project_health_record_inheritance(self) -> None:
         """Test ProjectHealthRecord inherits from SQLModel."""
         from sqlmodel import SQLModel
 
         record = ProjectHealthRecord(project_name="test")
         assert isinstance(record, SQLModel)
 
-    def test_project_health_record_field_types(self):
+    def test_project_health_record_field_types(self) -> None:
         """Test ProjectHealthRecord field types."""
         record = ProjectHealthRecord(project_name="test")
 
@@ -216,30 +216,33 @@ class TestProjectHealthRecord:
 class TestDataModelsIntegration:
     """Integration tests for data models."""
 
-    def test_models_can_be_imported(self):
+    def test_models_can_be_imported(self) -> None:
         """Test that all data models can be imported."""
         try:
-            from crackerjack.data.models import QualityBaselineRecord, ProjectHealthRecord
+            from crackerjack.data.models import (
+                ProjectHealthRecord,
+                QualityBaselineRecord,
+            )
             assert QualityBaselineRecord is not None
             assert ProjectHealthRecord is not None
         except ImportError as e:
             pytest.fail(f"Failed to import data models: {e}")
 
-    def test_models_have_required_attributes(self):
+    def test_models_have_required_attributes(self) -> None:
         """Test that models have required SQLAlchemy attributes."""
         from sqlmodel import SQLModel
 
         # Test QualityBaselineRecord
-        assert hasattr(QualityBaselineRecord, '__tablename__')
-        assert hasattr(QualityBaselineRecord, 'id')
-        assert hasattr(QualityBaselineRecord, 'git_hash')
+        assert hasattr(QualityBaselineRecord, "__tablename__")
+        assert hasattr(QualityBaselineRecord, "id")
+        assert hasattr(QualityBaselineRecord, "git_hash")
 
         # Test ProjectHealthRecord
-        assert hasattr(ProjectHealthRecord, '__tablename__')
-        assert hasattr(ProjectHealthRecord, 'id')
-        assert hasattr(ProjectHealthRecord, 'project_name')
+        assert hasattr(ProjectHealthRecord, "__tablename__")
+        assert hasattr(ProjectHealthRecord, "id")
+        assert hasattr(ProjectHealthRecord, "project_name")
 
-    def test_models_are_sqlmodel_instances(self):
+    def test_models_are_sqlmodel_instances(self) -> None:
         """Test that models are proper SQLModel instances."""
         from sqlmodel import SQLModel
 
@@ -249,21 +252,21 @@ class TestDataModelsIntegration:
         assert isinstance(record1, SQLModel)
         assert isinstance(record2, SQLModel)
 
-    def test_models_can_be_serialized(self):
+    def test_models_can_be_serialized(self) -> None:
         """Test that models can be converted to dictionaries."""
         record = QualityBaselineRecord(
             git_hash="test123",
             coverage_percent=80.0,
-            test_count=50
+            test_count=50,
         )
 
         # Should be able to access attributes
         data = {
-            'git_hash': record.git_hash,
-            'coverage_percent': record.coverage_percent,
-            'test_count': record.test_count
+            "git_hash": record.git_hash,
+            "coverage_percent": record.coverage_percent,
+            "test_count": record.test_count,
         }
 
-        assert data['git_hash'] == "test123"
-        assert data['coverage_percent'] == 80.0
-        assert data['test_count'] == 50
+        assert data["git_hash"] == "test123"
+        assert data["coverage_percent"] == 80.0
+        assert data["test_count"] == 50

@@ -15,7 +15,9 @@ def has_trailing_whitespace(line: str) -> bool:
 
 def fix_trailing_whitespace(file_path: Path) -> bool:
     try:
-        content = file_path.read_text(encoding="utf-8")
+        binary_content = file_path.read_bytes()
+
+        content = binary_content.decode("utf-8")
         lines = content.splitlines(keepends=True)
 
         modified = False
@@ -24,22 +26,24 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
             if has_trailing_whitespace(line):
                 line_body = line.rstrip("\r\n")
                 stripped = line_body.rstrip()
+
                 if line.endswith("\r\n"):
-                    stripped += "\r\n"
+                    new_lines.append(stripped + "\r\n")
                 elif line.endswith("\n"):
-                    stripped += "\n"
-                new_lines.append(stripped)
+                    new_lines.append(stripped + "\n")
+                else:
+                    new_lines.append(stripped)
                 modified = True
             else:
                 new_lines.append(line)
 
         if modified:
-            file_path.write_text("".join(new_lines), encoding="utf-8")
+            file_path.write_text("".join(new_lines), encoding="utf-8", newline="")
             print(f"Fixed trailing whitespace: {file_path}")  # noqa: T201
 
         return modified
 
-    except UnicodeDecodeError:
+    except (UnicodeDecodeError, PermissionError, OSError):
         return False
     except Exception as e:
         print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
@@ -49,7 +53,7 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
 def _collect_files_to_check(args: argparse.Namespace) -> list[Path]:
     if not args.files:
         files = get_files_by_extension(
-            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
+            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"],
         )
         if not files:
             files = list(Path.cwd().rglob("*.py"))
@@ -80,7 +84,7 @@ def _process_files_in_fix_mode(files: list[Path]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Remove trailing whitespace from files"
+        description="Remove trailing whitespace from files",
     )
     parser.add_argument(
         "files",

@@ -93,7 +93,9 @@ class SessionState:
 
 class StateManager:
     def __init__(
-        self, state_dir: Path | None = None, batched_saver: t.Any | None = None
+        self,
+        state_dir: Path | None = None,
+        batched_saver: t.Any | None = None,
     ) -> None:
         self._lock = asyncio.Lock()
         self.state_dir = state_dir or Path.home() / ".cache" / "crackerjack-mcp"

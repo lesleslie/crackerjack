@@ -1,7 +1,7 @@
 import ast
 import typing as t
 
-from ...base import AgentContext
+from crackerjack.agents.base import AgentContext
 
 
 class ComplexityAnalyzer:
@@ -19,7 +19,8 @@ class ComplexityAnalyzer:
             def __init__(
                 self,
                 calc_complexity: t.Callable[
-                    [ast.FunctionDef | ast.AsyncFunctionDef], int
+                    [ast.FunctionDef | ast.AsyncFunctionDef],
+                    int,
                 ],
             ) -> None:
                 self.calc_complexity = calc_complexity
@@ -66,7 +67,8 @@ class ComplexityAnalyzer:
         return calculator.complexity
 
     def extract_code_functions_for_semantic_analysis(
-        self, content: str
+        self,
+        content: str,
     ) -> list[dict[str, t.Any]]:
         functions: list[dict[str, t.Any]] = []
         lines = content.split("\n")
@@ -82,11 +84,20 @@ class ComplexityAnalyzer:
 
             if self._is_function_definition(stripped):
                 current_function = self._handle_function_definition(
-                    functions, current_function, stripped, indent, i
+                    functions,
+                    current_function,
+                    stripped,
+                    indent,
+                    i,
                 )
             elif current_function:
                 current_function = self._handle_function_body_line(
-                    functions, current_function, line, stripped, indent, i
+                    functions,
+                    current_function,
+                    line,
+                    stripped,
+                    indent,
+                    i,
                 )
 
         if current_function:
@@ -100,7 +111,9 @@ class ComplexityAnalyzer:
 
     @staticmethod
     def _should_skip_line(
-        stripped: str, current_function: dict[str, t.Any] | None, line: str
+        stripped: str,
+        current_function: dict[str, t.Any] | None,
+        line: str,
     ) -> bool:
         if not stripped or stripped.startswith("#"):
             if current_function:
@@ -149,17 +162,18 @@ class ComplexityAnalyzer:
         if self._is_line_inside_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
-        else:
-            current_function["end_line"] = line_index
-            current_function["estimated_complexity"] = (
-                self._estimate_function_complexity(current_function["body"])
-            )
-            functions.append(current_function)
-            return None
+        current_function["end_line"] = line_index
+        current_function["estimated_complexity"] = self._estimate_function_complexity(
+            current_function["body"]
+        )
+        functions.append(current_function)
+        return None
 
     @staticmethod
     def _is_line_inside_function(
-        current_function: dict[str, t.Any], indent: int, stripped: str
+        current_function: dict[str, t.Any],
+        indent: int,
+        stripped: str,
     ) -> bool:
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]

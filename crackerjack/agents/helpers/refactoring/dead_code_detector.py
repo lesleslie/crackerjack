@@ -1,7 +1,7 @@
 import ast
 import typing as t
 
-from ...base import AgentContext
+from crackerjack.agents.base import AgentContext
 
 
 class DeadCodeDetector:
@@ -69,7 +69,8 @@ class DeadCodeDetector:
 
     @staticmethod
     def _process_unused_classes(
-        analysis: dict[str, t.Any], analyzer_result: dict[str, t.Any]
+        analysis: dict[str, t.Any],
+        analyzer_result: dict[str, t.Any],
     ) -> None:
         if "unused_classes" not in analyzer_result:
             return
@@ -86,7 +87,9 @@ class DeadCodeDetector:
 
     @staticmethod
     def _detect_unreachable_code(
-        analysis: dict[str, t.Any], tree: ast.AST, content: str
+        analysis: dict[str, t.Any],
+        tree: ast.AST,
+        content: str,
     ) -> None:
         class UnreachableCodeDetector(ast.NodeVisitor):
             def __init__(self) -> None:
@@ -101,7 +104,8 @@ class DeadCodeDetector:
                 self.generic_visit(node)
 
             def _check_unreachable_in_function(
-                self, node: ast.FunctionDef | ast.AsyncFunctionDef
+                self,
+                node: ast.FunctionDef | ast.AsyncFunctionDef,
             ) -> None:
                 for i, stmt in enumerate(node.body):
                     if isinstance(stmt, ast.Return | ast.Raise):
@@ -112,7 +116,7 @@ class DeadCodeDetector:
                                     "type": "unreachable_after_return",
                                     "line": next_stmt.lineno,
                                     "function": node.name,
-                                }
+                                },
                             )
 
         detector = UnreachableCodeDetector()
@@ -121,12 +125,14 @@ class DeadCodeDetector:
         analysis["unreachable_code"] = detector.unreachable_blocks
         for block in detector.unreachable_blocks:
             analysis["removable_items"].append(
-                f"unreachable code after line {block['line']} in {block['function']}"
+                f"unreachable code after line {block['line']} in {block['function']}",
             )
 
     @staticmethod
     def _detect_redundant_code(
-        analysis: dict[str, t.Any], tree: ast.AST, content: str
+        analysis: dict[str, t.Any],
+        tree: ast.AST,
+        content: str,
     ) -> None:
         lines = content.split("\n")
 
@@ -136,7 +142,7 @@ class DeadCodeDetector:
                 line_hash = hash(line.strip())
                 if line_hash in line_hashes:
                     analysis["removable_items"].append(
-                        f"potential duplicate code at line {i + 1}"
+                        f"potential duplicate code at line {i + 1}",
                     )
                 line_hashes[line_hash] = i
 
@@ -147,7 +153,7 @@ class DeadCodeDetector:
             def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
                 if len(node.body) == 1 and isinstance(node.body[0], ast.Pass):
                     self.redundant_items.append(
-                        {"type": "empty_except", "line": node.lineno}
+                        {"type": "empty_except", "line": node.lineno},
                     )
                 self.generic_visit(node)
 
@@ -155,11 +161,11 @@ class DeadCodeDetector:
                 if isinstance(node.test, ast.Constant):
                     if node.test.value is True:
                         self.redundant_items.append(
-                            {"type": "if_true", "line": node.lineno}
+                            {"type": "if_true", "line": node.lineno},
                         )
                     elif node.test.value is False:
                         self.redundant_items.append(
-                            {"type": "if_false", "line": node.lineno}
+                            {"type": "if_false", "line": node.lineno},
                         )
                 self.generic_visit(node)
 
@@ -168,11 +174,13 @@ class DeadCodeDetector:
 
         for item in detector.redundant_items:
             analysis["removable_items"].append(
-                f"redundant {item['type']} at line {item['line']}"
+                f"redundant {item['type']} at line {item['line']}",
             )
 
     def find_lines_to_remove(
-        self, lines: list[str], analysis: dict[str, t.Any]
+        self,
+        lines: list[str],
+        analysis: dict[str, t.Any],
     ) -> set[int]:
         lines_to_remove: set[int] = set()
 
@@ -189,7 +197,7 @@ class DeadCodeDetector:
     def _should_remove_import_line(line: str, unused_import: dict[str, str]) -> bool:
         if unused_import["type"] == "import":
             return f"import {unused_import['name']}" in line
-        elif unused_import["type"] == "from_import":
+        if unused_import["type"] == "from_import":
             return (
                 "from " in line
                 and unused_import["name"] in line
@@ -199,7 +207,8 @@ class DeadCodeDetector:
 
     @staticmethod
     def _find_unreachable_lines(
-        lines: list[str], analysis: dict[str, t.Any]
+        lines: list[str],
+        analysis: dict[str, t.Any],
     ) -> set[int]:
         lines_to_remove: set[int] = set()
 

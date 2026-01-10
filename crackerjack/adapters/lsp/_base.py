@@ -106,7 +106,10 @@ class BaseRustToolAdapter(ABC):
         tool_name = self.get_tool_name()
         try:
             result = subprocess.run(
-                ["which", tool_name], capture_output=True, text=True, check=False
+                ["which", tool_name],
+                capture_output=True,
+                text=True,
+                check=False,
             )
             return result.returncode == 0
         except (subprocess.SubprocessError, FileNotFoundError):
@@ -140,12 +143,14 @@ class BaseRustToolAdapter(ABC):
     def _parse_json_output_safe(self, output: str) -> dict[str, t.Any] | None:
         try:
             json_result = json.loads(output)
-            return t.cast(dict[str, t.Any] | None, json_result)
+            return t.cast("dict[str, t.Any] | None", json_result)
         except json.JSONDecodeError:
             return None
 
     def _create_error_result(
-        self, error_message: str, raw_output: str = ""
+        self,
+        error_message: str,
+        raw_output: str = "",
     ) -> ToolResult:
         return ToolResult(
             success=False,

@@ -19,7 +19,7 @@ class BenchmarkResult(NamedTuple):
 
 
 class CodeCleanerBenchmark:
-    def __init__(self, console: Console | None = None):
+    def __init__(self, console: Console | None = None) -> None:
         self.console = console or Console()
         self.cleaner = CodeCleaner(console=self.console)
 
@@ -36,7 +36,7 @@ class CodeCleanerBenchmark:
         total_size = sum(f.stat().st_size for f in files_to_process)
 
         self.console.print(
-            f"[blue]Benchmarking {len(files_to_process)} files ({total_size:, } bytes)[/blue]"
+            f"[blue]Benchmarking {len(files_to_process)} files ({total_size:, } bytes)[/blue]",
         )
 
         start_time = time.perf_counter()
@@ -50,10 +50,10 @@ class CodeCleanerBenchmark:
         bytes_per_second = total_size / duration if duration > 0 else 0
 
         self.console.print(
-            f"[green]✅ Processed {successful_files}/{len(files_to_process)} files in {duration:.2f}s[/green]"
+            f"[green]✅ Processed {successful_files}/{len(files_to_process)} files in {duration:.2f}s[/green]",
         )
         self.console.print(
-            f"[cyan]Performance: {files_per_second:.1f} files/s, {bytes_per_second:, .0f} bytes/s[/cyan]"
+            f"[cyan]Performance: {files_per_second:.1f} files/s, {bytes_per_second:, .0f} bytes/s[/cyan]",
         )
 
         return BenchmarkResult(
@@ -71,7 +71,7 @@ class CodeCleanerBenchmark:
 
         file_size = file_path.stat().st_size
         self.console.print(
-            f"[blue]Benchmarking large file: {file_path} ({file_size:, } bytes)[/blue]"
+            f"[blue]Benchmarking large file: {file_path} ({file_size:, } bytes)[/blue]",
         )
 
         start_time = time.perf_counter()
@@ -84,7 +84,7 @@ class CodeCleanerBenchmark:
         status = "✅" if result.success else "❌"
         self.console.print(f"[green]{status} Processed in {duration:.2f}s[/green]")
         self.console.print(
-            f"[cyan]Performance: {bytes_per_second:, .0f} bytes/s[/cyan]"
+            f"[cyan]Performance: {bytes_per_second:, .0f} bytes/s[/cyan]",
         )
 
         return BenchmarkResult(
@@ -97,10 +97,12 @@ class CodeCleanerBenchmark:
         )
 
     def benchmark_string_operations(
-        self, sample_code: str, iterations: int = 1000
+        self,
+        sample_code: str,
+        iterations: int = 1000,
     ) -> BenchmarkResult:
         self.console.print(
-            f"[blue]Benchmarking string operations ({iterations} iterations)[/blue]"
+            f"[blue]Benchmarking string operations ({iterations} iterations)[/blue]",
         )
 
         total_size = len(sample_code.encode("utf-8")) * iterations
@@ -118,10 +120,10 @@ class CodeCleanerBenchmark:
         bytes_per_second = total_size / duration if duration > 0 else 0
 
         self.console.print(
-            f"[green]✅ Completed {iterations * 4} operations in {duration:.2f}s[/green]"
+            f"[green]✅ Completed {iterations * 4} operations in {duration:.2f}s[/green]",
         )
         self.console.print(
-            f"[cyan]Performance: {operations_per_second:.1f} operations/s, {bytes_per_second:, .0f} bytes/s[/cyan]"
+            f"[cyan]Performance: {operations_per_second:.1f} operations/s, {bytes_per_second:, .0f} bytes/s[/cyan]",
         )
 
         return BenchmarkResult(
@@ -134,7 +136,7 @@ class CodeCleanerBenchmark:
         )
 
 
-def main():
+def main() -> None:
     console = Console()
     benchmark = CodeCleanerBenchmark(console)
 

@@ -37,7 +37,10 @@ async def clean_temp_files(
 
     for directory in directories:
         batch_files, batch_size = _process_directory(
-            directory, patterns, cutoff, dry_run
+            directory,
+            patterns,
+            cutoff,
+            dry_run,
         )
         cleaned_files.extend(batch_files)
         total_size += batch_size
@@ -49,7 +52,10 @@ async def clean_temp_files(
 
 
 def _process_directory(
-    directory: Path, patterns: list[str], cutoff: t.Any, dry_run: bool
+    directory: Path,
+    patterns: list[str],
+    cutoff: t.Any,
+    dry_run: bool,
 ) -> tuple[list[str], int]:
     if not directory.exists():
         return [], 0
@@ -66,7 +72,9 @@ def _process_directory(
 
 
 def _process_file_for_cleanup(
-    file: Path, cutoff: t.Any, dry_run: bool
+    file: Path,
+    cutoff: t.Any,
+    dry_run: bool,
 ) -> tuple[list[str], int]:
     file_info = _check_file_eligibility(file, cutoff)
     if not file_info:
@@ -86,7 +94,10 @@ def _process_file_for_cleanup(
 
 
 def _process_pattern(
-    directory: Path, pattern: str, cutoff: t.Any, dry_run: bool
+    directory: Path,
+    pattern: str,
+    cutoff: t.Any,
+    dry_run: bool,
 ) -> tuple[list[str], int]:
     cleaned_files = []
     total_size = 0
@@ -128,9 +139,9 @@ def _register_clean_tool(mcp_app: t.Any) -> None:
                 patterns.extend(
                     [
                         "crackerjack-*.log",
-                        "crackerjack - task - error-*.log",
+                        "crackerjack-task-error-*.log",
                         ".coverage.*",
-                    ]
+                    ],
                 )
             if clean_config["scope"] in ("progress", "all"):
                 patterns.append("*.json")
@@ -178,7 +189,9 @@ def _clean_temp_files(cutoff_time: float, dry_run: bool) -> tuple[list[str], int
 
 
 def _clean_progress_files(
-    context: t.Any, cutoff_time: float, dry_run: bool
+    context: t.Any,
+    cutoff_time: float,
+    dry_run: bool,
 ) -> tuple[list[str], int]:
     cleaned: list[str] = []
     total_size = 0
@@ -210,7 +223,8 @@ def _parse_clean_configuration(args: str, kwargs: str) -> dict[str, t.Any]:
 
 
 def _execute_cleanup_operations(
-    context: t.Any, clean_config: dict[str, t.Any]
+    context: t.Any,
+    clean_config: dict[str, t.Any],
 ) -> dict[str, t.Any]:
     from datetime import datetime, timedelta
 
@@ -227,7 +241,9 @@ def _execute_cleanup_operations(
 
     if clean_config["scope"] in ("progress", "all"):
         progress_files, progress_size = _clean_progress_files(
-            context, cutoff_time, clean_config["dry_run"]
+            context,
+            cutoff_time,
+            clean_config["dry_run"],
         )
         all_cleaned_files.extend(progress_files)
         total_size += progress_size
@@ -239,7 +255,8 @@ def _execute_cleanup_operations(
 
 
 def _create_cleanup_response(
-    clean_config: dict[str, t.Any], cleanup_results: dict[str, t.Any]
+    clean_config: dict[str, t.Any],
+    cleanup_results: dict[str, t.Any],
 ) -> str:
     all_cleaned_files = cleanup_results["all_cleaned_files"]
 
@@ -269,7 +286,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
         if not context:
             return _create_error_response("Server context not available")
 
-        extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
+        _extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
         if parse_error:
             return _create_error_response(parse_error)
 
@@ -288,7 +305,7 @@ def _register_config_tool(mcp_app: t.Any) -> None:
                 result = {"status": "valid"}
             else:
                 return _create_error_response(
-                    f"Invalid action '{action}'. Valid actions: list, get <key>, validate"
+                    f"Invalid action '{action}'. Valid actions: list, get <key>, validate",
                 )
 
             return json.dumps(result, indent=2, default=str)
@@ -298,7 +315,8 @@ def _register_config_tool(mcp_app: t.Any) -> None:
 
 
 async def analyze_project(
-    scope: str = "all", report_format: str = "summary"
+    scope: str = "all",
+    report_format: str = "summary",
 ) -> dict[str, t.Any]:
     return {
         "scope": scope,
@@ -324,7 +342,8 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
         try:
             analysis_results = await analyze_project(
-                scope=scope, report_format=report_format
+                scope=scope,
+                report_format=report_format,
             )
 
             return json.dumps(

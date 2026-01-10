@@ -48,7 +48,7 @@ class IncrementalExecutor:
         cache_dir: Path | None = None,
         ttl_seconds: int = 86400,
         profiler: ToolProfiler | None = None,
-    ):
+    ) -> None:
         self.cache_dir = cache_dir or Path.cwd() / ".crackerjack" / "cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.ttl_seconds = ttl_seconds
@@ -129,7 +129,7 @@ class IncrementalExecutor:
                     "error_message": entry.error_message,
                 }
                 for entry in self._cache.values()
-            ]
+            ],
         }
 
         with suppress(OSError):

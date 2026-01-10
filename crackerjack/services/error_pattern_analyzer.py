@@ -86,7 +86,7 @@ class HeatMapData:
 
 
 class ErrorPatternAnalyzer:
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         self.project_root = Path(project_root)
         self.error_patterns: list[ErrorPattern] = []
 
@@ -113,7 +113,9 @@ class ErrorPatternAnalyzer:
         return errors
 
     def _process_error_data(
-        self, errors: list[dict[str, t.Any]], min_occurrences: int
+        self,
+        errors: list[dict[str, t.Any]],
+        min_occurrences: int,
     ) -> list[ErrorPattern]:
         pattern_groups = self._group_similar_errors(errors)
         return self._create_error_patterns(pattern_groups, min_occurrences)
@@ -127,7 +129,7 @@ class ErrorPatternAnalyzer:
             return defaultdict(float)
 
         file_error_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
-            _make_float_defaultdict
+            _make_float_defaultdict,
         )
         max_value = 0.0
 
@@ -145,8 +147,8 @@ class ErrorPatternAnalyzer:
             {
                 error_type
                 for file_errors in file_error_counts.values()
-                for error_type in file_errors.keys()
-            }
+                for error_type in file_errors
+            },
         )
 
         for file_path in files:
@@ -169,7 +171,7 @@ class ErrorPatternAnalyzer:
                                 "severity": severity,
                             },
                             severity=severity,
-                        )
+                        ),
                     )
 
         return HeatMapData(
@@ -184,13 +186,17 @@ class ErrorPatternAnalyzer:
 
     def generate_temporal_heatmap(self, time_buckets: int = 24) -> HeatMapData:
         time_labels, time_buckets_data, bucket_size = self._create_time_buckets(
-            time_buckets
+            time_buckets,
         )
         temporal_counts, max_value = self._count_errors_by_time(
-            time_labels, time_buckets_data, bucket_size
+            time_labels,
+            time_buckets_data,
+            bucket_size,
         )
         cells, error_types = self._create_temporal_heatmap_cells(
-            time_labels, temporal_counts, max_value
+            time_labels,
+            temporal_counts,
+            max_value,
         )
 
         return HeatMapData(
@@ -204,7 +210,8 @@ class ErrorPatternAnalyzer:
         )
 
     def _create_time_buckets(
-        self, time_buckets: int
+        self,
+        time_buckets: int,
     ) -> tuple[list[str], list[datetime], timedelta]:
         now = datetime.now()
         bucket_size = timedelta(hours=24 // time_buckets)
@@ -228,13 +235,15 @@ class ErrorPatternAnalyzer:
             return defaultdict(float)
 
         temporal_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
-            _make_float_defaultdict_temporal
+            _make_float_defaultdict_temporal,
         )
         max_value = 0.0
 
         for pattern in self.error_patterns:
             bucket_idx = self._find_time_bucket(
-                pattern.last_seen, time_buckets_data, bucket_size
+                pattern.last_seen,
+                time_buckets_data,
+                bucket_size,
             )
             if bucket_idx is not None:
                 bucket_label = time_labels[bucket_idx]
@@ -265,8 +274,8 @@ class ErrorPatternAnalyzer:
             {
                 error_type
                 for time_errors in temporal_counts.values()
-                for error_type in time_errors.keys()
-            }
+                for error_type in time_errors
+            },
         )
 
         cells = []
@@ -275,14 +284,21 @@ class ErrorPatternAnalyzer:
                 count = float(temporal_counts[time_label].get(error_type, 0))
                 if count > 0:
                     cell = self._create_temporal_cell(
-                        time_label, error_type, count, max_value
+                        time_label,
+                        error_type,
+                        count,
+                        max_value,
                     )
                     cells.append(cell)
 
         return cells, error_types
 
     def _create_temporal_cell(
-        self, time_label: str, error_type: str, count: float, max_value: float
+        self,
+        time_label: str,
+        error_type: str,
+        count: float,
+        max_value: float,
     ) -> HeatMapCell:
         intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
@@ -304,7 +320,8 @@ class ErrorPatternAnalyzer:
     def generate_function_error_heatmap(self) -> HeatMapData:
         function_error_counts, max_value = self._count_errors_by_function()
         cells, functions, error_types = self._create_function_heatmap_cells(
-            function_error_counts, max_value
+            function_error_counts,
+            max_value,
         )
 
         return HeatMapData(
@@ -324,7 +341,7 @@ class ErrorPatternAnalyzer:
             return defaultdict(float)
 
         function_error_counts: defaultdict[str, defaultdict[str, float]] = defaultdict(
-            _make_float_defaultdict_function
+            _make_float_defaultdict_function,
         )
         max_value = 0.0
 
@@ -337,7 +354,8 @@ class ErrorPatternAnalyzer:
 
                 function_error_counts[function_id][error_type] += count
                 max_value = max(
-                    max_value, function_error_counts[function_id][error_type]
+                    max_value,
+                    function_error_counts[function_id][error_type],
                 )
 
         return function_error_counts, max_value
@@ -352,8 +370,8 @@ class ErrorPatternAnalyzer:
             {
                 error_type
                 for func_errors in function_error_counts.values()
-                for error_type in func_errors.keys()
-            }
+                for error_type in func_errors
+            },
         )
 
         cells = []
@@ -362,14 +380,21 @@ class ErrorPatternAnalyzer:
                 count = float(function_error_counts[function_id].get(error_type, 0))
                 if count > 0:
                     cell = self._create_function_cell(
-                        function_id, error_type, count, max_value
+                        function_id,
+                        error_type,
+                        count,
+                        max_value,
                     )
                     cells.append(cell)
 
         return cells, functions, error_types
 
     def _create_function_cell(
-        self, function_id: str, error_type: str, count: float, max_value: float
+        self,
+        function_id: str,
+        error_type: str,
+        count: float,
+        max_value: float,
     ) -> HeatMapCell:
         intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
@@ -411,7 +436,7 @@ class ErrorPatternAnalyzer:
                         "line": 15,
                         "timestamp": datetime.now() - timedelta(days=5),
                     },
-                ]
+                ],
             )
 
         return errors
@@ -445,7 +470,7 @@ class ErrorPatternAnalyzer:
                     "line": 89,
                     "timestamp": datetime.now() - timedelta(days=3),
                 },
-            ]
+            ],
         )
 
         return errors
@@ -471,7 +496,7 @@ class ErrorPatternAnalyzer:
                     "line": None,
                     "timestamp": datetime.now() - timedelta(days=4),
                 },
-            ]
+            ],
         )
 
         return errors
@@ -501,13 +526,14 @@ class ErrorPatternAnalyzer:
                             "line": 124,
                             "timestamp": datetime.now() - timedelta(hours=18),
                         },
-                    ]
+                    ],
                 )
 
         return errors
 
     def _group_similar_errors(
-        self, errors: list[dict[str, t.Any]]
+        self,
+        errors: list[dict[str, t.Any]],
     ) -> dict[str, list[dict[str, t.Any]]]:
         groups = defaultdict(list)
 
@@ -521,7 +547,9 @@ class ErrorPatternAnalyzer:
         return dict[str, t.Any](groups)
 
     def _create_error_patterns(
-        self, groups: dict[str, list[dict[str, t.Any]]], min_occurrences: int
+        self,
+        groups: dict[str, list[dict[str, t.Any]]],
+        min_occurrences: int,
     ) -> list[ErrorPattern]:
         patterns = []
 
@@ -607,7 +635,8 @@ class ErrorPatternAnalyzer:
 
 
 def analyze_error_patterns(
-    project_root: str | Path, days: int = 30
+    project_root: str | Path,
+    days: int = 30,
 ) -> list[ErrorPattern]:
     analyzer = ErrorPatternAnalyzer(Path(project_root))
     return analyzer.analyze_error_patterns(days=days)

@@ -183,7 +183,8 @@ class AsyncPerformanceMonitor:
         with self._lock:
             for operation, metrics in self.metrics.items():
                 thresholds = self.performance_thresholds.get(
-                    operation, self.performance_thresholds["default"]
+                    operation,
+                    self.performance_thresholds["default"],
                 )
 
                 if metrics.success_rate < thresholds["min_success_rate"]:
@@ -196,7 +197,7 @@ class AsyncPerformanceMonitor:
                             "severity": "critical"
                             if metrics.success_rate < 50
                             else "warning",
-                        }
+                        },
                     )
 
                 avg_time = metrics.recent_average_time
@@ -208,7 +209,7 @@ class AsyncPerformanceMonitor:
                             "current_value": avg_time,
                             "threshold": thresholds["critical_time"],
                             "severity": "critical",
-                        }
+                        },
                     )
                 elif avg_time > thresholds["warning_time"]:
                     alerts.append(
@@ -218,7 +219,7 @@ class AsyncPerformanceMonitor:
                             "current_value": avg_time,
                             "threshold": thresholds["warning_time"],
                             "severity": "warning",
-                        }
+                        },
                     )
 
         return alerts
@@ -328,7 +329,7 @@ class AsyncPerformanceMonitor:
                 severity_emoji = "🔴" if alert["severity"] == "critical" else "🟡"
                 console.print(
                     f"{severity_emoji} {alert['operation']}: {alert['type']} "
-                    f"{alert['current_value']: .1f} (threshold: {alert['threshold']: .1f})"
+                    f"{alert['current_value']: .1f} (threshold: {alert['threshold']: .1f})",
                 )
 
         recent_timeouts = self.get_recent_timeout_events(5)
@@ -337,7 +338,7 @@ class AsyncPerformanceMonitor:
             for timeout in recent_timeouts:
                 console.print(
                     f" • {timeout.operation}: {timeout.actual_duration: .1f}s "
-                    f"(expected: {timeout.expected_timeout: .1f}s)"
+                    f"(expected: {timeout.expected_timeout: .1f}s)",
                 )
 
 

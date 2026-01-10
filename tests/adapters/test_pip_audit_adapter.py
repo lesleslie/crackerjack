@@ -34,7 +34,7 @@ class TestPipAuditAdapter:
             adapter = PipAuditAdapter(settings=settings)
             await adapter.init()
 
-            files = [Path(".")]
+            files = [Path()]
             command = adapter.build_command(files)
 
             # Basic command structure
@@ -74,7 +74,7 @@ class TestPipAuditAdapter:
             adapter = PipAuditAdapter(settings=settings)
             await adapter.init()
 
-            files = [Path(".")]
+            files = [Path()]
             command = adapter.build_command(files)
 
             assert "--vulnerability-service" in command
@@ -103,11 +103,11 @@ class TestPipAuditAdapter:
                                     "description": "Security vulnerability in requests",
                                     "fix_versions": ["2.31.0", "2.32.0"],
                                     "aliases": ["CVE-2023-12345", "GHSA-abcd-1234"],
-                                }
+                                },
                             ],
-                        }
-                    ]
-                }
+                        },
+                    ],
+                },
             )
 
             result = ToolExecutionResult(
@@ -239,7 +239,7 @@ class TestPipAuditAdapter:
                     {"name": "requests", "version": "2.25.0", "vulns": [{"id": "1"}]},
                     {"name": "urllib3", "version": "1.0.0", "vulns": [{"id": "2"}]},
                     {"name": "safe-pkg", "version": "1.0.0", "vulns": []},
-                ]
+                ],
             }
 
             count = adapter._count_affected_packages(data)

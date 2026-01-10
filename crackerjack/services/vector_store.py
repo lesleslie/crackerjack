@@ -7,9 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
 
-from crackerjack.services.ai.embeddings import EmbeddingService
-
-from ..models.semantic_models import (
+from crackerjack.models.semantic_models import (
     EmbeddingVector,
     IndexingProgress,
     IndexStats,
@@ -17,6 +15,7 @@ from ..models.semantic_models import (
     SearchResult,
     SemanticConfig,
 )
+from crackerjack.services.ai.embeddings import EmbeddingService
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,9 @@ class VectorStore:
         self._temp_db: tempfile._TemporaryFileWrapper[bytes] | None = None
         if db_path is None:
             self._temp_db = tempfile.NamedTemporaryFile(
-                suffix=".db", delete=False, prefix="crackerjack_vectors_"
+                suffix=".db",
+                delete=False,
+                prefix="crackerjack_vectors_",
             )
             self.db_path = Path(self._temp_db.name)
         else:
@@ -89,7 +90,7 @@ class VectorStore:
         except Exception as e:
             if conn:
                 conn.rollback()
-            logger.error(f"Database error: {e}")
+            logger.exception(f"Database error: {e}")
             raise
         finally:
             if conn:
@@ -113,19 +114,22 @@ class VectorStore:
                 return []
 
             embeddings = self._create_embedding_vectors(
-                file_path, current_hash, chunk_data, progress_callback
+                file_path,
+                current_hash,
+                chunk_data,
+                progress_callback,
             )
 
             self._store_embeddings(embeddings)
             self._update_file_tracking(file_path, current_hash, len(embeddings))
 
             logger.info(
-                f"Successfully indexed {len(embeddings)} chunks from {file_path}"
+                f"Successfully indexed {len(embeddings)} chunks from {file_path}",
             )
             return embeddings
 
         except Exception as e:
-            logger.error(f"Failed to index file {file_path}: {e}")
+            logger.exception(f"Failed to index file {file_path}: {e}")
             raise
 
     def _prepare_file_for_indexing(self, file_path: Path) -> str | None:
@@ -139,7 +143,9 @@ class VectorStore:
         return current_hash
 
     def _process_file_content(
-        self, file_path: Path, current_hash: str
+        self,
+        file_path: Path,
+        current_hash: str,
     ) -> dict[str, t.Any]:
         content = file_path.read_text(encoding="utf-8")
         chunks = self.embedding_service.chunk_text(content)
@@ -158,7 +164,7 @@ class VectorStore:
                     "chunk_id": chunk_id,
                     "start_line": start_line,
                     "end_line": end_line,
-                }
+                },
             )
 
         return {
@@ -178,12 +184,12 @@ class VectorStore:
         chunk_metadata = chunk_data["chunk_metadata"]
 
         embedding_vectors = self.embedding_service.generate_embeddings_batch(
-            chunk_texts
+            chunk_texts,
         )
 
         embeddings = []
         for i, (embedding_vector, metadata) in enumerate(
-            zip(embedding_vectors, chunk_metadata)
+            zip(embedding_vectors, chunk_metadata, strict=False),
         ):
             if not embedding_vector:
                 continue
@@ -215,27 +221,32 @@ class VectorStore:
 
     def _validate_file_for_indexing(self, file_path: Path) -> None:
         if not file_path.exists():
-            raise OSError(f"File does not exist: {file_path}")
+            msg = f"File does not exist: {file_path}"
+            raise OSError(msg)
 
         if not file_path.is_file():
-            raise ValueError(f"Path is not a file: {file_path}")
+            msg = f"Path is not a file: {file_path}"
+            raise ValueError(msg)
 
         file_size_mb = file_path.stat().st_size / (1024 * 1024)
         if file_size_mb > self.config.max_file_size_mb:
+            msg = f"File too large: {file_size_mb:.1f}MB > {self.config.max_file_size_mb}MB"
             raise ValueError(
-                f"File too large: {file_size_mb:.1f}MB > {self.config.max_file_size_mb}MB"
+                msg,
             )
 
         if (
             self.config.included_extensions
             and file_path.suffix not in self.config.included_extensions
         ):
-            raise ValueError(f"File extension not included: {file_path.suffix}")
+            msg = f"File extension not included: {file_path.suffix}"
+            raise ValueError(msg)
 
         file_str = str(file_path)
         for pattern in self.config.excluded_patterns:
             if self._matches_pattern(file_str, pattern):
-                raise ValueError(f"File matches exclusion pattern: {pattern}")
+                msg = f"File matches exclusion pattern: {pattern}"
+                raise ValueError(msg)
 
     def _matches_pattern(self, file_path: str, pattern: str) -> bool:
         import fnmatch
@@ -317,7 +328,10 @@ class VectorStore:
             conn.commit()
 
     def _update_file_tracking(
-        self, file_path: Path, file_hash: str, chunk_count: int
+        self,
+        file_path: Path,
+        file_hash: str,
+        chunk_count: int,
     ) -> None:
         with self._get_connection() as conn:
             conn.execute(
@@ -334,18 +348,21 @@ class VectorStore:
         query_embedding = self.embedding_service.generate_embedding(query.query)
 
         embeddings_data: list[dict[str, t.Any]] = self._get_all_embeddings(
-            query.file_types
+            query.file_types,
         )
 
         if not embeddings_data:
             return []
 
         similarities = self.embedding_service.calculate_similarities_batch(
-            query_embedding, [data["embedding"] for data in embeddings_data]
+            query_embedding,
+            [data["embedding"] for data in embeddings_data],
         )
 
         results = []
-        for i, (data, similarity) in enumerate(zip(embeddings_data, similarities)):
+        for _i, (data, similarity) in enumerate(
+            zip(embeddings_data, similarities, strict=False)
+        ):
             if similarity >= query.min_similarity:
                 context_lines = []
                 if query.include_context:
@@ -372,7 +389,8 @@ class VectorStore:
         return results[: query.max_results]
 
     def _get_all_embeddings(
-        self, file_types: list[str] | None = None
+        self,
+        file_types: list[str] | None = None,
     ) -> list[dict[str, t.Any]]:
         embeddings_data = []
 
@@ -407,7 +425,11 @@ class VectorStore:
         return embeddings_data
 
     def _get_context_lines(
-        self, file_path: Path, start_line: int, end_line: int, context_count: int
+        self,
+        file_path: Path,
+        start_line: int,
+        end_line: int,
+        context_count: int,
     ) -> list[str]:
         try:
             if not file_path.exists():
@@ -430,7 +452,7 @@ class VectorStore:
             total_chunks = cursor.fetchone()["total_chunks"]
 
             cursor = conn.execute(
-                "SELECT COUNT(DISTINCT file_path) as total_files FROM embeddings"
+                "SELECT COUNT(DISTINCT file_path) as total_files FROM embeddings",
             )
             total_files = cursor.fetchone()["total_files"]
 
@@ -442,7 +464,7 @@ class VectorStore:
             file_types = {row["file_type"]: row["count"] for row in cursor.fetchall()}
 
             cursor = conn.execute(
-                "SELECT MAX(created_at) as last_updated FROM embeddings"
+                "SELECT MAX(created_at) as last_updated FROM embeddings",
             )
             last_updated_str = cursor.fetchone()["last_updated"]
             last_updated = (
@@ -452,7 +474,7 @@ class VectorStore:
             )
 
             cursor = conn.execute(
-                "SELECT AVG(LENGTH(content)) as avg_size FROM embeddings"
+                "SELECT AVG(LENGTH(content)) as avg_size FROM embeddings",
             )
             avg_chunk_size = cursor.fetchone()["avg_size"] or 0.0
 
@@ -480,11 +502,13 @@ class VectorStore:
                 return False
 
             conn.execute(
-                "DELETE FROM embeddings WHERE file_path = ?", (str(file_path),)
+                "DELETE FROM embeddings WHERE file_path = ?",
+                (str(file_path),),
             )
 
             conn.execute(
-                "DELETE FROM file_tracking WHERE file_path = ?", (str(file_path),)
+                "DELETE FROM file_tracking WHERE file_path = ?",
+                (str(file_path),),
             )
 
             conn.commit()

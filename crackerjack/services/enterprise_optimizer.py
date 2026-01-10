@@ -84,7 +84,9 @@ class ScalingMetrics:
 
 
 class ConnectionPool:
-    def __init__(self, max_connections: int = 1000, cleanup_interval: int = 300):
+    def __init__(
+        self, max_connections: int = 1000, cleanup_interval: int = 300
+    ) -> None:
         self.max_connections = max_connections
         self.cleanup_interval = cleanup_interval
         self.connections: dict[str, t.Any] = {}
@@ -154,7 +156,7 @@ class ConnectionPool:
                     conn
                     for conn, stats in self.connection_stats.items()
                     if current_time - stats["last_activity"] < 300
-                ]
+                ],
             )
 
             return {
@@ -164,7 +166,10 @@ class ConnectionPool:
                 "utilization_percent": (len(self.connections) / self.max_connections)
                 * 100,
                 "average_message_count": statistics.mean(
-                    [stats["message_count"] for stats in self.connection_stats.values()]
+                    [
+                        stats["message_count"]
+                        for stats in self.connection_stats.values()
+                    ],
                 )
                 if self.connection_stats
                 else 0,
@@ -172,7 +177,7 @@ class ConnectionPool:
 
 
 class DataCompactionManager:
-    def __init__(self, storage_dir: Path, max_storage_gb: float = 10.0):
+    def __init__(self, storage_dir: Path, max_storage_gb: float = 10.0) -> None:
         self.storage_dir = Path(storage_dir)
         self.max_storage_bytes = max_storage_gb * 1024**3
         self.compaction_rules = self._load_compaction_rules()
@@ -242,7 +247,9 @@ class DataCompactionManager:
         return datetime.now() - timedelta(days=rules["retention_days"])
 
     def _process_data_directory(
-        self, data_type: str, cutoff_date: datetime
+        self,
+        data_type: str,
+        cutoff_date: datetime,
     ) -> dict[str, int | float]:
         compacted_records = 0
         freed_space_mb: float = 0.0
@@ -268,7 +275,10 @@ class DataCompactionManager:
         return file_mtime < cutoff_date
 
     def _build_compaction_result(
-        self, data_type: str, rules: dict[str, t.Any], stats: dict[str, t.Any]
+        self,
+        data_type: str,
+        rules: dict[str, t.Any],
+        stats: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         return {
             "status": "success",
@@ -289,7 +299,7 @@ class DataCompactionManager:
         type_sizes = {}
 
         if self.storage_dir.exists():
-            for data_type in self.compaction_rules.keys():
+            for data_type in self.compaction_rules:
                 type_size = self._calculate_data_type_size(data_type)
                 type_sizes[data_type] = type_size
                 total_size += type_size
@@ -308,7 +318,9 @@ class DataCompactionManager:
         return type_size
 
     def _build_storage_usage_report(
-        self, total_size: int, type_sizes: dict[str, int]
+        self,
+        total_size: int,
+        type_sizes: dict[str, int],
     ) -> dict[str, t.Any]:
         return {
             "total_size_gb": round(total_size / (1024**3), 3),
@@ -325,7 +337,7 @@ class DataCompactionManager:
 
 
 class EnterpriseOptimizer:
-    def __init__(self, config_dir: Path, storage_dir: Path):
+    def __init__(self, config_dir: Path, storage_dir: Path) -> None:
         self.config_dir = Path(config_dir)
         self.storage_dir = Path(storage_dir)
 
@@ -401,7 +413,7 @@ class EnterpriseOptimizer:
             return metrics
 
         except Exception as e:
-            logger.error(f"Failed to collect resource metrics: {e}")
+            logger.exception(f"Failed to collect resource metrics: {e}")
             return ResourceMetrics(
                 cpu_percent=0.0,
                 memory_percent=0.0,
@@ -441,7 +453,8 @@ class EnterpriseOptimizer:
                 recent_metrics[-1].memory_percent - recent_metrics[-5].memory_percent
             ) / 5
             projected_load = min(
-                1.0, current_load + max(cpu_trend, memory_trend) / 100.0
+                1.0,
+                current_load + max(cpu_trend, memory_trend) / 100.0,
             )
         else:
             projected_load = current_load
@@ -464,7 +477,7 @@ class EnterpriseOptimizer:
 
         cpu_variance = statistics.variance([m.cpu_percent for m in recent_metrics])
         memory_variance = statistics.variance(
-            [m.memory_percent for m in recent_metrics]
+            [m.memory_percent for m in recent_metrics],
         )
         confidence_score = max(0.0, 1.0 - (cpu_variance + memory_variance) / 2000.0)
 
@@ -499,7 +512,8 @@ class EnterpriseOptimizer:
         return recommendations
 
     def _generate_cpu_recommendations(
-        self, metrics: ResourceMetrics
+        self,
+        metrics: ResourceMetrics,
     ) -> list[OptimizationRecommendation]:
         recommendations: list[OptimizationRecommendation] = []
 
@@ -515,13 +529,14 @@ class EnterpriseOptimizer:
                     estimated_improvement="20-40% response time improvement",
                     resource_cost="Medium - additional compute resources",
                     risk_level="low",
-                )
+                ),
             )
 
         return recommendations
 
     def _generate_memory_recommendations(
-        self, metrics: ResourceMetrics
+        self,
+        metrics: ResourceMetrics,
     ) -> list[OptimizationRecommendation]:
         recommendations: list[OptimizationRecommendation] = []
 
@@ -537,13 +552,14 @@ class EnterpriseOptimizer:
                     estimated_improvement="Prevents system crashes",
                     resource_cost="High - memory upgrade or optimization effort",
                     risk_level="high",
-                )
+                ),
             )
 
         return recommendations
 
     def _generate_storage_recommendations(
-        self, storage_usage: dict[str, t.Any]
+        self,
+        storage_usage: dict[str, t.Any],
     ) -> list[OptimizationRecommendation]:
         recommendations: list[OptimizationRecommendation] = []
 
@@ -559,7 +575,7 @@ class EnterpriseOptimizer:
                     estimated_improvement="Frees 30-50% storage space",
                     resource_cost="Low - automated compaction process",
                     risk_level="low",
-                )
+                ),
             )
 
         return recommendations
@@ -580,13 +596,14 @@ class EnterpriseOptimizer:
                     estimated_improvement="Supports 2-3x more concurrent clients",
                     resource_cost="Low - configuration change",
                     risk_level="low",
-                )
+                ),
             )
 
         return recommendations
 
     def _generate_scaling_recommendations(
-        self, scaling_metrics: ScalingMetrics
+        self,
+        scaling_metrics: ScalingMetrics,
     ) -> list[OptimizationRecommendation]:
         recommendations: list[OptimizationRecommendation] = []
 
@@ -602,7 +619,7 @@ class EnterpriseOptimizer:
                     estimated_improvement="Improved reliability and response times",
                     resource_cost="Medium - additional infrastructure",
                     risk_level="medium",
-                )
+                ),
             )
 
         return recommendations
@@ -623,13 +640,15 @@ class EnterpriseOptimizer:
         return self.resource_history[-1] if self.resource_history else None
 
     def _apply_all_optimizations(
-        self, metrics: ResourceMetrics, strategy: str
+        self,
+        metrics: ResourceMetrics,
+        strategy: str,
     ) -> list[str]:
         optimizations_applied = []
 
         optimizations_applied.extend(self._apply_memory_optimizations(metrics))
         optimizations_applied.extend(
-            self._apply_performance_optimizations(metrics, strategy)
+            self._apply_performance_optimizations(metrics, strategy),
         )
         optimizations_applied.extend(self._apply_storage_optimizations())
 
@@ -641,21 +660,24 @@ class EnterpriseOptimizer:
         if metrics.memory_percent > 70:
             if self.connection_pool.max_connections > 500:
                 self.connection_pool.max_connections = int(
-                    self.connection_pool.max_connections * 0.8
+                    self.connection_pool.max_connections * 0.8,
                 )
                 optimizations.append("Reduced connection pool size")
 
         return optimizations
 
     def _apply_performance_optimizations(
-        self, metrics: ResourceMetrics, strategy: str
+        self,
+        metrics: ResourceMetrics,
+        strategy: str,
     ) -> list[str]:
         optimizations = []
 
         if metrics.cpu_percent > 60 and strategy in ("performance", "balanced"):
             if self.performance_profile.analysis_frequency_minutes > 2:
                 self.performance_profile.analysis_frequency_minutes = max(
-                    1, self.performance_profile.analysis_frequency_minutes - 1
+                    1,
+                    self.performance_profile.analysis_frequency_minutes - 1,
                 )
                 optimizations.append("Increased analysis frequency")
 
@@ -674,7 +696,9 @@ class EnterpriseOptimizer:
         return optimizations
 
     def _build_optimization_result(
-        self, strategy: str, optimizations_applied: list[str]
+        self,
+        strategy: str,
+        optimizations_applied: list[str],
     ) -> dict[str, t.Any]:
         return {
             "status": "success",
@@ -712,7 +736,7 @@ class EnterpriseOptimizer:
             }
 
         except Exception as e:
-            logger.error(f"Optimization cycle failed: {e}")
+            logger.exception(f"Optimization cycle failed: {e}")
             return {
                 "status": "error",
                 "message": str(e),

@@ -31,7 +31,7 @@ class StatusSecurityManager:
         rate_limit_per_minute: int = 60,
         max_resource_usage_mb: int = 100,
         allowed_paths: set[str] | None = None,
-    ):
+    ) -> None:
         self.max_concurrent_requests = max_concurrent_requests
         self.rate_limit_per_minute = rate_limit_per_minute
         self.max_resource_usage_mb = max_resource_usage_mb
@@ -61,8 +61,9 @@ class StatusSecurityManager:
                     client_id=client_id,
                     operation=operation,
                 )
+                msg = f"Too many concurrent requests: {self._concurrent_requests}"
                 raise ResourceLimitExceededError(
-                    f"Too many concurrent requests: {self._concurrent_requests}"
+                    msg,
                 )
 
             self._check_rate_limit(client_id, operation)
@@ -86,8 +87,9 @@ class StatusSecurityManager:
                 client_id=client_id,
                 operation=operation,
             )
+            msg = f"Rate limit exceeded: {len(client_requests)} requests in last minute"
             raise RateLimitExceededError(
-                f"Rate limit exceeded: {len(client_requests)} requests in last minute"
+                msg,
             )
 
         client_requests.append(current_time)
@@ -109,7 +111,8 @@ class StatusSecurityManager:
                         operation=operation,
                         additional_data={"suspicious_value": value},
                     )
-                    raise AccessDeniedError(f"Invalid path in parameter: {key}")
+                    msg = f"Invalid path in parameter: {key}"
+                    raise AccessDeniedError(msg)
 
         if "path" in request_data or "file_path" in request_data:
             path_value = request_data.get("path") or request_data.get("file_path")
@@ -135,7 +138,10 @@ class StatusSecurityManager:
         return any(pattern in value_lower for pattern in traversal_patterns)
 
     def _validate_file_path(
-        self, client_id: str, operation: str, file_path: str
+        self,
+        client_id: str,
+        operation: str,
+        file_path: str,
     ) -> None:
         try:
             path = Path(file_path).resolve()
@@ -155,7 +161,8 @@ class StatusSecurityManager:
                         operation=operation,
                         additional_data={"requested_path": str(path)},
                     )
-                    raise AccessDeniedError(f"Access denied to path: {file_path}")
+                    msg = f"Access denied to path: {file_path}"
+                    raise AccessDeniedError(msg)
 
         except (OSError, ValueError) as e:
             self.security_logger.log_security_event(
@@ -165,7 +172,8 @@ class StatusSecurityManager:
                 client_id=client_id,
                 operation=operation,
             )
-            raise AccessDeniedError(f"Invalid file path: {file_path}")
+            msg = f"Invalid file path: {file_path}"
+            raise AccessDeniedError(msg)
 
     async def acquire_request_lock(
         self,
@@ -202,12 +210,16 @@ class StatusSecurityManager:
             operation=operation,
         )
 
+        msg = f"Unable to acquire request lock within {timeout}s"
         raise ResourceLimitExceededError(
-            f"Unable to acquire request lock within {timeout}s"
+            msg,
         )
 
     def _release_request_lock(
-        self, request_id: str, client_id: str, operation: str
+        self,
+        request_id: str,
+        client_id: str,
+        operation: str,
     ) -> None:
         with self._lock:
             if request_id in self._active_requests:
@@ -233,7 +245,7 @@ class StatusSecurityManager:
                         req_time
                         for req_time in client_requests
                         if current_time - req_time < 60
-                    ]
+                    ],
                 )
 
             return {
@@ -256,7 +268,7 @@ class RequestLock:
         request_id: str,
         client_id: str,
         operation: str,
-    ):
+    ) -> None:
         self.security_manager = security_manager
         self.request_id = request_id
         self.client_id = client_id

@@ -70,14 +70,16 @@ class UtilityCheckSettings(QABaseSettings):
             try:
                 CompiledPatternCache.get_compiled_pattern(v)
             except ValueError as e:
-                raise ValueError(f"Invalid regex pattern: {e}")
+                msg = f"Invalid regex pattern: {e}"
+                raise ValueError(msg)
         return v
 
     @field_validator("parser_type")
     @classmethod
     def validate_parser_type(cls, v: str | None) -> str | None:
         if v is not None and v not in ("yaml", "toml", "json"):
-            raise ValueError(f"Unsupported parser type: {v}")
+            msg = f"Unsupported parser type: {v}"
+            raise ValueError(msg)
         return v
 
 
@@ -122,7 +124,8 @@ class UtilityCheckAdapter(QAAdapterBase):
             await self.init()
 
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         start_time = asyncio.get_event_loop().time()
 
@@ -144,7 +147,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         elif check_type == UtilityCheckType.DEPENDENCY_LOCK:
             result = await self._check_dependency_lock(target_files, start_time)
         else:
-            raise ValueError(f"Unsupported check type: {check_type}")
+            msg = f"Unsupported check type: {check_type}"
+            raise ValueError(msg)
 
         return result
 
@@ -232,7 +236,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 files_checked=files,
                 execution_time_ms=elapsed_ms,
             )
-        elif issues_fixed == issues_found:
+        if issues_fixed == issues_found:
             return QAResult(
                 check_id=MODULE_ID,
                 check_name=self.adapter_name,
@@ -264,7 +268,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         start_time: float,
     ) -> QAResult:
         if not self.settings or not self.settings.pattern:
-            raise ValueError("Pattern not configured")
+            msg = "Pattern not configured"
+            raise ValueError(msg)
 
         pattern = CompiledPatternCache.get_compiled_pattern(self.settings.pattern)
         issues_found = 0
@@ -300,7 +305,11 @@ class UtilityCheckAdapter(QAAdapterBase):
         elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
 
         return self._create_pattern_result(
-            files, issues_found, issues_fixed, files_modified, elapsed_ms
+            files,
+            issues_found,
+            issues_fixed,
+            files_modified,
+            elapsed_ms,
         )
 
     async def _check_eof_newline(
@@ -348,7 +357,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                 files_checked=files,
                 execution_time_ms=elapsed_ms,
             )
-        elif issues_fixed == issues_found:
+        if issues_fixed == issues_found:
             return QAResult(
                 check_id=MODULE_ID,
                 check_name=self.adapter_name,
@@ -378,7 +387,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         start_time: float,
     ) -> QAResult:
         if not self.settings or not self.settings.parser_type:
-            raise ValueError("Parser type not configured")
+            msg = "Parser type not configured"
+            raise ValueError(msg)
 
         parser_type = self.settings.parser_type
         issues_found = 0
@@ -444,7 +454,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         start_time: float,
     ) -> QAResult:
         if not self.settings or self.settings.max_size_bytes is None:
-            raise ValueError("Max size not configured")
+            msg = "Max size not configured"
+            raise ValueError(msg)
 
         max_size = self.settings.max_size_bytes
         issues_found = 0
@@ -458,7 +469,7 @@ class UtilityCheckAdapter(QAAdapterBase):
                     size_mb = file_size / (1024 * 1024)
                     max_mb = max_size / (1024 * 1024)
                     large_files.append(
-                        f"{file_path} ({size_mb:.2f} MB > {max_mb:.2f} MB)"
+                        f"{file_path} ({size_mb:.2f} MB > {max_mb:.2f} MB)",
                     )
             except Exception as e:
                 logger.warning(
@@ -505,7 +516,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         start_time: float,
     ) -> QAResult:
         if not self.settings or not self.settings.lock_command:
-            raise ValueError("Lock command not configured")
+            msg = "Lock command not configured"
+            raise ValueError(msg)
 
         try:
             result = subprocess.run(
@@ -528,18 +540,17 @@ class UtilityCheckAdapter(QAAdapterBase):
                     files_checked=files,
                     execution_time_ms=elapsed_ms,
                 )
-            else:
-                return QAResult(
-                    check_id=MODULE_ID,
-                    check_name=self.adapter_name,
-                    check_type=QACheckType.FORMAT,
-                    status=QAResultStatus.FAILURE,
-                    message="Dependency lock file is out of sync",
-                    details=result.stderr or result.stdout,
-                    files_checked=files,
-                    issues_found=1,
-                    execution_time_ms=elapsed_ms,
-                )
+            return QAResult(
+                check_id=MODULE_ID,
+                check_name=self.adapter_name,
+                check_type=QACheckType.FORMAT,
+                status=QAResultStatus.FAILURE,
+                message="Dependency lock file is out of sync",
+                details=result.stderr or result.stdout,
+                files_checked=files,
+                issues_found=1,
+                execution_time_ms=elapsed_ms,
+            )
 
         except subprocess.TimeoutExpired:
             elapsed_ms = (asyncio.get_event_loop().time() - start_time) * 1000
@@ -594,7 +605,8 @@ class UtilityCheckAdapter(QAAdapterBase):
         )
 
     def _get_config_for_check_type(
-        self, check_type: UtilityCheckType
+        self,
+        check_type: UtilityCheckType,
     ) -> tuple[list[str], str, bool]:
         if check_type == UtilityCheckType.TEXT_PATTERN:
             return (
@@ -618,7 +630,7 @@ class UtilityCheckAdapter(QAAdapterBase):
 
         if self.settings and self.settings.check_type:
             file_patterns, stage, is_formatter = self._get_config_for_check_type(
-                self.settings.check_type
+                self.settings.check_type,
             )
         else:
             file_patterns = ["**/*.py", "**/*.yaml", "**/*.toml", "**/*.json"]

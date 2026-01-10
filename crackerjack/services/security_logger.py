@@ -117,7 +117,7 @@ class SecurityEvent(BaseModel):
 
 
 class SecurityLogger:
-    def __init__(self, logger_name: str = "crackerjack.security"):
+    def __init__(self, logger_name: str = "crackerjack.security") -> None:
         self.logger = logging.getLogger(logger_name)
         self._setup_security_logger()
 
@@ -138,7 +138,7 @@ class SecurityLogger:
                 console_handler.setLevel(logging.CRITICAL + 10)
 
             formatter = logging.Formatter(
-                "%(asctime)s - SECURITY - %(levelname)s - %(message)s"
+                "%(asctime)s - SECURITY - %(levelname)s - %(message)s",
             )
             console_handler.setFormatter(formatter)
             self.logger.addHandler(console_handler)
@@ -166,7 +166,9 @@ class SecurityLogger:
 
         log_level = self._get_logging_level(level)
         self.logger.log(
-            log_level, json.dumps(event.to_dict()), extra={"security_event": True}
+            log_level,
+            json.dumps(event.to_dict()),
+            extra={"security_event": True},
         )
 
     def _get_logging_level(self, level: SecurityEventLevel) -> int:
@@ -197,7 +199,11 @@ class SecurityLogger:
         )
 
     def log_file_size_exceeded(
-        self, file_path: Path | str, file_size: int, max_size: int, **kwargs: t.Any
+        self,
+        file_path: Path | str,
+        file_size: int,
+        max_size: int,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.FILE_SIZE_EXCEEDED,
@@ -210,7 +216,10 @@ class SecurityLogger:
         )
 
     def log_dangerous_path_detected(
-        self, path: Path | str, dangerous_component: str, **kwargs: t.Any
+        self,
+        path: Path | str,
+        dangerous_component: str,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.DANGEROUS_PATH_DETECTED,
@@ -222,7 +231,10 @@ class SecurityLogger:
         )
 
     def log_backup_created(
-        self, original_path: Path | str, backup_path: Path | str, **kwargs: t.Any
+        self,
+        original_path: Path | str,
+        backup_path: Path | str,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.BACKUP_CREATED,
@@ -234,7 +246,10 @@ class SecurityLogger:
         )
 
     def log_file_cleaned(
-        self, file_path: Path | str, steps_completed: list[str], **kwargs: t.Any
+        self,
+        file_path: Path | str,
+        steps_completed: list[str],
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.FILE_CLEANED,
@@ -246,7 +261,11 @@ class SecurityLogger:
         )
 
     def log_atomic_operation(
-        self, operation: str, file_path: Path | str, success: bool, **kwargs: t.Any
+        self,
+        operation: str,
+        file_path: Path | str,
+        success: bool,
+        **kwargs: t.Any,
     ) -> None:
         level = SecurityEventLevel.LOW if success else SecurityEventLevel.MEDIUM
         status = "successful" if success else "failed"
@@ -262,7 +281,11 @@ class SecurityLogger:
         )
 
     def log_validation_failed(
-        self, validation_type: str, file_path: Path | str, reason: str, **kwargs: t.Any
+        self,
+        validation_type: str,
+        file_path: Path | str,
+        reason: str,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.VALIDATION_FAILED,
@@ -275,7 +298,10 @@ class SecurityLogger:
         )
 
     def log_temp_file_created(
-        self, temp_path: Path | str, purpose: str, **kwargs: t.Any
+        self,
+        temp_path: Path | str,
+        purpose: str,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.TEMP_FILE_CREATED,
@@ -287,7 +313,11 @@ class SecurityLogger:
         )
 
     def log_rate_limit_exceeded(
-        self, limit_type: str, current_count: int, max_allowed: int, **kwargs: t.Any
+        self,
+        limit_type: str,
+        current_count: int,
+        max_allowed: int,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.RATE_LIMIT_EXCEEDED,
@@ -371,7 +401,11 @@ class SecurityLogger:
         )
 
     def log_subprocess_failure(
-        self, command: list[str], exit_code: int, error_output: str, **kwargs: t.Any
+        self,
+        command: list[str],
+        exit_code: int,
+        error_output: str,
+        **kwargs: t.Any,
     ) -> None:
         self.log_security_event(
             SecurityEventType.SUBPROCESS_FAILURE,

@@ -38,7 +38,8 @@ class _PhaseTask:
         if inspect.isawaitable(result):
             result = await result
         if result is False:
-            raise RuntimeError(f"workflow-task-failed: {self._name}")
+            msg = f"workflow-task-failed: {self._name}"
+            raise RuntimeError(msg)
         return result
 
 
@@ -87,7 +88,8 @@ def build_oneiric_runtime() -> OneiricWorkflowRuntime:
 
 
 def _build_secrets_hook(
-    oneiric_settings: OneiricSettings, lifecycle: LifecycleManager
+    oneiric_settings: OneiricSettings,
+    lifecycle: LifecycleManager,
 ) -> t.Any:
     from oneiric.core.config import SecretsHook
 
@@ -112,23 +114,29 @@ def _register_tasks(
 ) -> None:
     task_factories = {
         "configuration": lambda: _PhaseTask(
-            "configuration", lambda: phases.run_configuration_phase(options)
+            "configuration",
+            lambda: phases.run_configuration_phase(options),
         ),
         "cleaning": lambda: _PhaseTask(
-            "cleaning", lambda: phases.run_cleaning_phase(options)
+            "cleaning",
+            lambda: phases.run_cleaning_phase(options),
         ),
         "fast_hooks": lambda: _PhaseTask(
-            "fast_hooks", lambda: phases.run_fast_hooks_only(options)
+            "fast_hooks",
+            lambda: phases.run_fast_hooks_only(options),
         ),
         "tests": lambda: _PhaseTask("tests", lambda: phases.run_testing_phase(options)),
         "comprehensive_hooks": lambda: _PhaseTask(
-            "comprehensive_hooks", lambda: phases.run_comprehensive_hooks_only(options)
+            "comprehensive_hooks",
+            lambda: phases.run_comprehensive_hooks_only(options),
         ),
         "publishing": lambda: _PhaseTask(
-            "publishing", lambda: phases.run_publishing_phase(options)
+            "publishing",
+            lambda: phases.run_publishing_phase(options),
         ),
         "commit": lambda: _PhaseTask(
-            "commit", lambda: phases.run_commit_phase(options)
+            "commit",
+            lambda: phases.run_commit_phase(options),
         ),
     }
 
@@ -140,7 +148,7 @@ def _register_tasks(
                 provider="crackerjack",
                 factory=factory,
                 metadata={"package": "crackerjack"},
-            )
+            ),
         )
 
 
@@ -153,7 +161,7 @@ def _register_workflow(runtime: OneiricWorkflowRuntime, options: t.Any) -> None:
             provider="crackerjack",
             factory=object,
             metadata={"dag": {"nodes": dag_nodes}},
-        )
+        ),
     )
 
 
@@ -191,7 +199,7 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
 
 def _should_clean(options: t.Any) -> bool:
     return bool(
-        getattr(options, "strip_code", False) or getattr(options, "clean", False)
+        getattr(options, "strip_code", False) or getattr(options, "clean", False),
     )
 
 
@@ -202,9 +210,7 @@ def _should_run_tests(options: t.Any) -> bool:
 def _should_run_fast_hooks(options: t.Any) -> bool:
     if getattr(options, "skip_hooks", False):
         return False
-    if getattr(options, "comp", False):
-        return False
-    return True
+    return not getattr(options, "comp", False)
 
 
 def _should_run_comprehensive_hooks(options: t.Any) -> bool:
@@ -212,6 +218,4 @@ def _should_run_comprehensive_hooks(options: t.Any) -> bool:
         return False
     if getattr(options, "fast", False):
         return False
-    if getattr(options, "fast_iteration", False):
-        return False
-    return True
+    return not getattr(options, "fast_iteration", False)

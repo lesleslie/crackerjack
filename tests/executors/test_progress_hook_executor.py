@@ -7,7 +7,12 @@ from unittest.mock import Mock, patch
 import pytest
 from rich.console import Console
 
-from crackerjack.config.hooks import HookDefinition, HookStage, HookStrategy, RetryPolicy
+from crackerjack.config.hooks import (
+    HookDefinition,
+    HookStage,
+    HookStrategy,
+    RetryPolicy,
+)
 from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
 from crackerjack.models.task import HookResult
 
@@ -15,7 +20,7 @@ from crackerjack.models.task import HookResult
 class TestProgressHookExecutorInit:
     """Test ProgressHookExecutor initialization."""
 
-    def test_init_with_progress_enabled(self, tmp_path):
+    def test_init_with_progress_enabled(self, tmp_path) -> None:
         """Test initialization with progress bars enabled."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -28,7 +33,7 @@ class TestProgressHookExecutorInit:
         assert executor.console == console
         assert executor.pkg_path == tmp_path
 
-    def test_init_with_progress_disabled(self, tmp_path):
+    def test_init_with_progress_disabled(self, tmp_path) -> None:
         """Test initialization with progress bars disabled."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -39,7 +44,7 @@ class TestProgressHookExecutorInit:
 
         assert executor.show_progress is False
 
-    def test_init_quiet_mode_disables_progress(self, tmp_path):
+    def test_init_quiet_mode_disables_progress(self, tmp_path) -> None:
         """Test that quiet mode automatically disables progress bars."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -52,7 +57,7 @@ class TestProgressHookExecutorInit:
         # Should be disabled due to quiet mode
         assert executor.show_progress is False
 
-    def test_init_with_verbose(self, tmp_path):
+    def test_init_with_verbose(self, tmp_path) -> None:
         """Test initialization with verbose mode."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -69,7 +74,7 @@ class TestProgressHookExecutorInit:
 class TestProgressBarCreation:
     """Test progress bar creation and configuration."""
 
-    def test_create_progress_bar(self, tmp_path):
+    def test_create_progress_bar(self, tmp_path) -> None:
         """Test creating configured progress bar."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -85,7 +90,7 @@ class TestProgressBarCreation:
         # Verify progress bar has expected columns
         assert len(progress.columns) == 7  # Spinner, Text, Bar, TaskProgress, MofN, TimeElapsed, TimeRemaining
 
-    def test_progress_bar_configuration(self, tmp_path):
+    def test_progress_bar_configuration(self, tmp_path) -> None:
         """Test that progress bar has proper configuration."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -108,7 +113,7 @@ class TestProgressBarCreation:
 class TestSequentialExecutionWithProgress:
     """Test sequential hook execution with progress bars."""
 
-    def test_execute_sequential_with_progress(self, tmp_path):
+    def test_execute_sequential_with_progress(self, tmp_path) -> None:
         """Test sequential execution updates progress bar."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -164,7 +169,7 @@ class TestSequentialExecutionWithProgress:
             assert len(result.results) == 2
             assert mock_execute.call_count == 2
 
-    def test_sequential_execution_shows_current_hook(self, tmp_path):
+    def test_sequential_execution_shows_current_hook(self, tmp_path) -> None:
         """Test that progress bar shows current hook name."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -206,7 +211,7 @@ class TestSequentialExecutionWithProgress:
 class TestParallelExecutionWithProgress:
     """Test parallel hook execution with progress bars."""
 
-    def test_execute_parallel_with_progress(self, tmp_path):
+    def test_execute_parallel_with_progress(self, tmp_path) -> None:
         """Test parallel execution updates progress bar."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -278,7 +283,7 @@ class TestParallelExecutionWithProgress:
             assert len(result.results) == 3
             assert mock_execute.call_count == 3
 
-    def test_parallel_formatting_hooks_run_first(self, tmp_path):
+    def test_parallel_formatting_hooks_run_first(self, tmp_path) -> None:
         """Test that formatting hooks run sequentially before analysis hooks."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -340,7 +345,7 @@ class TestParallelExecutionWithProgress:
 class TestProgressFallback:
     """Test fallback to base executor when progress disabled."""
 
-    def test_fallback_when_progress_disabled(self, tmp_path):
+    def test_fallback_when_progress_disabled(self, tmp_path) -> None:
         """Test that executor falls back to base implementation without progress."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -378,7 +383,7 @@ class TestProgressFallback:
             assert result.success is True
             mock_execute.assert_called_once()
 
-    def test_fallback_in_quiet_mode(self, tmp_path):
+    def test_fallback_in_quiet_mode(self, tmp_path) -> None:
         """Test that quiet mode disables progress and uses base executor."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -421,7 +426,7 @@ class TestProgressFallback:
 class TestRetryWithProgress:
     """Test retry behavior with progress indicators."""
 
-    def test_retry_shows_message(self, tmp_path):
+    def test_retry_shows_message(self, tmp_path) -> None:
         """Test that retry shows appropriate message."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -473,7 +478,7 @@ class TestRetryWithProgress:
 class TestErrorHandlingWithProgress:
     """Test error handling during progress execution."""
 
-    def test_parallel_execution_handles_errors(self, tmp_path):
+    def test_parallel_execution_handles_errors(self, tmp_path) -> None:
         """Test that parallel execution handles hook failures gracefully."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -505,7 +510,8 @@ class TestErrorHandlingWithProgress:
 
         def mock_execute(hook):
             if hook.name == "hook1":
-                raise ValueError("Test error")
+                msg = "Test error"
+                raise ValueError(msg)
             return HookResult(
                 id=hook.name,
                 name=hook.name,
@@ -529,7 +535,7 @@ class TestErrorHandlingWithProgress:
 class TestDisplayHookResultOverride:
     """Test that individual hook display is suppressed with progress bars."""
 
-    def test_display_hook_result_suppressed_with_progress(self, tmp_path):
+    def test_display_hook_result_suppressed_with_progress(self, tmp_path) -> None:
         """Test that individual hook results are not displayed when progress enabled."""
         console = Console()
         executor = ProgressHookExecutor(
@@ -552,7 +558,7 @@ class TestDisplayHookResultOverride:
             executor._display_hook_result(result)
             mock_print.assert_not_called()
 
-    def test_display_hook_result_shown_without_progress(self, tmp_path):
+    def test_display_hook_result_shown_without_progress(self, tmp_path) -> None:
         """Test that individual hook results are shown when progress disabled."""
         console = Console()
         executor = ProgressHookExecutor(

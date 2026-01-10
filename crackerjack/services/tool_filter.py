@@ -37,7 +37,7 @@ class ToolFilter:
         self,
         config: FilterConfig,
         executor: IncrementalExecutor | None = None,
-    ):
+    ) -> None:
         self.config = config
         self.executor = executor
 
@@ -128,7 +128,8 @@ class ToolFilter:
         for pattern in patterns:
             for file in files:
                 if fnmatch.fnmatch(file.name, pattern) or fnmatch.fnmatch(
-                    str(file), pattern
+                    str(file),
+                    pattern,
                 ):
                     matching_files.add(file)
 
@@ -197,7 +198,7 @@ class ToolFilter:
                     f"- Tools Skipped: {len(tool_result.skipped_tools)}",
                     f"- Effectiveness: {tool_result.filter_effectiveness:.1f}%",
                     "",
-                ]
+                ],
             )
 
             if tool_result.filtered_tools:
@@ -215,7 +216,7 @@ class ToolFilter:
                     f"- Files Skipped: {len(file_result.skipped_files)}",
                     f"- Effectiveness: {file_result.filter_effectiveness:.1f}%",
                     "",
-                ]
+                ],
             )
 
         return "\n".join(lines)

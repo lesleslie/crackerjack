@@ -16,11 +16,13 @@ from crackerjack.models.protocols import (
     CoverageRatchetProtocol,
     OptionsProtocol,
 )
-from crackerjack.models.test_models import TestFailure
 from crackerjack.services.lsp_client import LSPClient
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
+
+if t.TYPE_CHECKING:
+    from crackerjack.models.test_models import TestFailure
 
 ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 root_path = Path.cwd()
@@ -138,7 +140,7 @@ class TestManager:
         self.coverage_ratchet_enabled = enabled
         if enabled:
             self.console.print(
-                "[cyan]📊[/cyan] Coverage ratchet enabled-targeting 100 % coverage"
+                "[cyan]📊[/cyan] Coverage ratchet enabled-targeting 100 % coverage",
             )
         else:
             self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
@@ -156,21 +158,20 @@ class TestManager:
 
 
             workers = self.command_builder.get_optimal_workers(
-                options, print_info=False
+                options, print_info=False,
             )
 
             if result.returncode == 0:
                 return self._handle_test_success(
-                    result.stdout, duration, options, workers
+                    result.stdout, duration, options, workers,
                 )
-            else:
-                return self._handle_test_failure(
-                    result.stderr if result else "",
-                    result.stdout if result else "",
-                    duration,
-                    options,
-                    workers,
-                )
+            return self._handle_test_failure(
+                result.stderr if result else "",
+                result.stdout if result else "",
+                duration,
+                options,
+                workers,
+            )
 
         except Exception as e:
             return self._handle_test_error(start_time, e)
@@ -203,11 +204,11 @@ class TestManager:
         try:
             with Live(spinner, console=self.console, transient=True):
                 result = subprocess.run(
-                    cmd, cwd=self.pkg_path, capture_output=True, text=True
+                    cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
                 )
         except Exception:
             result = subprocess.run(
-                cmd, cwd=self.pkg_path, capture_output=True, text=True
+                cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
             )
 
         if result.returncode != 0:
@@ -285,7 +286,7 @@ class TestManager:
             return None
 
     def _handle_no_ratchet_status(
-        self, direct_coverage: float | None
+        self, direct_coverage: float | None,
     ) -> dict[str, t.Any]:
         if direct_coverage is not None:
             return {
@@ -302,7 +303,7 @@ class TestManager:
         }
 
     def _get_final_coverage(
-        self, ratchet_coverage: float, direct_coverage: float | None
+        self, ratchet_coverage: float, direct_coverage: float | None,
     ) -> float:
         return direct_coverage if direct_coverage is not None else ratchet_coverage
 
@@ -367,7 +368,7 @@ class TestManager:
         return False
 
     def _execute_test_workflow(
-        self, options: OptionsProtocol
+        self, options: OptionsProtocol,
     ) -> subprocess.CompletedProcess[str]:
         self._print_test_start_message(options)
 
@@ -375,7 +376,7 @@ class TestManager:
 
         if self._progress_callback:
             return self.executor.execute_with_ai_progress(
-                cmd, self._progress_callback, self._get_timeout(options)
+                cmd, self._progress_callback, self._get_timeout(options),
             )
         return self.executor.execute_with_progress(cmd, self._get_timeout(options))
 
@@ -384,7 +385,7 @@ class TestManager:
         timeout = self.command_builder.get_test_timeout(options)
 
         self.console.print(
-            f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)"
+            f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)",
         )
 
     def _handle_test_success(
@@ -433,9 +434,9 @@ class TestManager:
                 self._last_test_failures = failure_lines
                 self._render_banner("Key Test Failures", line_style="red")
 
-                for failure in failure_lines:
+                for _failure in failure_lines:
 
-                    print(f"• {failure}")
+                    pass
             else:
                 self._last_test_failures = []
         else:
@@ -445,20 +446,20 @@ class TestManager:
             self.console.print(border_line)
 
             self.console.print(
-                " [yellow]This may indicate a timeout or critical error[/yellow]"
+                " [yellow]This may indicate a timeout or critical error[/yellow]",
             )
             self.console.print(
-                f" [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]"
+                f" [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]",
             )
 
             timeout = self.command_builder.get_test_timeout(options)
             timeout_threshold = timeout * 0.9
             if duration > timeout_threshold:
                 self.console.print(
-                    f" [yellow]⚠️ Execution time ({duration:.1f}s) was very close to timeout ({timeout}s), may have timed out[/yellow]"
+                    f" [yellow]⚠️ Execution time ({duration:.1f}s) was very close to timeout ({timeout}s), may have timed out[/yellow]",
                 )
             self.console.print(
-                " [red]Workflow failed: Test workflow execution failed[/red]"
+                " [red]Workflow failed: Test workflow execution failed[/red]",
             )
             self.console.print(border_line)
             self._last_test_failures = []
@@ -473,12 +474,12 @@ class TestManager:
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         duration = time.time() - start_time
         self.console.print(
-            f"[red]💥[/red] Test execution error after {duration: .1f}s: {error}"
+            f"[red]💥[/red] Test execution error after {duration: .1f}s: {error}",
         )
         return False
 
     def _parse_test_statistics(
-        self, output: str, *, already_clean: bool = False
+        self, output: str, *, already_clean: bool = False,
     ) -> dict[str, t.Any]:
         clean_output = output if already_clean else self._strip_ansi_codes(output)
         stats = {
@@ -498,7 +499,7 @@ class TestManager:
             summary_match = self._extract_pytest_summary(clean_output)
             if summary_match:
                 summary_text, duration = self._parse_summary_match(
-                    summary_match, clean_output
+                    summary_match, clean_output,
                 )
                 stats["duration"] = duration
 
@@ -530,7 +531,7 @@ class TestManager:
         return None
 
     def _parse_summary_match(
-        self, match: re.Match[str], output: str
+        self, match: re.Match[str], output: str,
     ) -> tuple[str, float]:
         if len(match.groups()) >= 2:
             summary_text = match.group(1)
@@ -564,7 +565,7 @@ class TestManager:
                 stats["errors"],
                 stats["xfailed"],
                 stats["xpassed"],
-            ]
+            ],
         )
 
 
@@ -588,7 +589,7 @@ class TestManager:
 
             line_upper = line.upper()
             if line_upper.startswith(
-                ("FAILED", "ERROR", "XPASS", "XFAIL", "SKIPPED", "PASSED")
+                ("FAILED", "ERROR", "XPASS", "XFAIL", "SKIPPED", "PASSED"),
             ):
                 continue
 
@@ -605,7 +606,7 @@ class TestManager:
                 stats["errors"],
                 stats.get("xfailed", 0),
                 stats.get("xpassed", 0),
-            ]
+            ],
         )
 
         if stats["total"] == 0:
@@ -641,7 +642,7 @@ class TestManager:
                 stats.get("xpassed", 0) > 0,
                 stats.get("duration", 0.0) > 0.0,
                 stats.get("coverage") is not None,
-            ]
+            ],
         )
 
     def _render_test_results_panel(
@@ -759,11 +760,11 @@ class TestManager:
         return None
 
     def _handle_coverage_extraction_result(
-        self, current_coverage: float | None
+        self, current_coverage: float | None,
     ) -> float | None:
         if current_coverage is not None:
             self.console.print(
-                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]"
+                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]",
             )
         return current_coverage
 
@@ -772,7 +773,7 @@ class TestManager:
             current_coverage = self.coverage_ratchet.get_baseline_coverage()
             if current_coverage is not None and current_coverage > 0:
                 self.console.print(
-                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]"
+                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]",
                 )
                 return current_coverage
             return None
@@ -784,11 +785,11 @@ class TestManager:
         coverage_json_path = self.pkg_path / "coverage.json"
         if current_coverage is None and coverage_json_path.exists():
             self.console.print(
-                "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists"
+                "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists",
             )
 
     def _get_fallback_coverage(
-        self, ratchet_result: dict[str, t.Any], current_coverage: float | None
+        self, ratchet_result: dict[str, t.Any], current_coverage: float | None,
     ) -> float | None:
 
         if current_coverage is None and ratchet_result:
@@ -797,7 +798,7 @@ class TestManager:
                 current_coverage = ratchet_result["current_coverage"]
                 if current_coverage is not None and current_coverage > 0:
                     self.console.print(
-                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]"
+                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]",
                     )
 
 
@@ -816,11 +817,11 @@ class TestManager:
 
             if not coverage_json_path.exists():
                 self.console.print(
-                    "[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run"
+                    "[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run",
                 )
             if not ratchet_path.exists():
                 self.console.print(
-                    "[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing..."
+                    "[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing...",
                 )
 
 
@@ -829,25 +830,25 @@ class TestManager:
 
 
             current_coverage = self._get_fallback_coverage(
-                ratchet_result, current_coverage
+                ratchet_result, current_coverage,
             )
 
 
             if current_coverage is not None and current_coverage >= 0:
                 if self._coverage_badge_service.should_update_badge(current_coverage):
                     self._coverage_badge_service.update_readme_coverage_badge(
-                        current_coverage
+                        current_coverage,
                     )
                     self.console.print(
-                        f"[green]✅[/green] Badge updated to {current_coverage:.2f}%"
+                        f"[green]✅[/green] Badge updated to {current_coverage:.2f}%",
                     )
                 else:
                     self.console.print(
-                        f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]"
+                        f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]",
                     )
             else:
                 self.console.print(
-                    "[yellow]⚠️[/yellow] No valid coverage data found for badge update"
+                    "[yellow]⚠️[/yellow] No valid coverage data found for badge update",
                 )
 
         except Exception as e:
@@ -859,17 +860,16 @@ class TestManager:
             if ratchet_result.get("improved", False):
                 self._handle_coverage_improvement(ratchet_result)
             return True
+        if "message" in ratchet_result:
+            self.console.print(f"[red]📉[/red] {ratchet_result['message']}")
         else:
-            if "message" in ratchet_result:
-                self.console.print(f"[red]📉[/red] {ratchet_result['message']}")
-            else:
-                current = ratchet_result.get("current_coverage", 0)
-                previous = ratchet_result.get("previous_coverage", 0)
-                self.console.print(
-                    f"[red]📉[/red] Coverage regression: "
-                    f"{current: .2f}% < {previous: .2f}%"
-                )
-            return False
+            current = ratchet_result.get("current_coverage", 0)
+            previous = ratchet_result.get("previous_coverage", 0)
+            self.console.print(
+                f"[red]📉[/red] Coverage regression: "
+                f"{current: .2f}% < {previous: .2f}%",
+            )
+        return False
 
     def _handle_coverage_improvement(self, ratchet_result: dict[str, t.Any]) -> None:
         improvement = ratchet_result.get("improvement", 0)
@@ -877,43 +877,24 @@ class TestManager:
 
         self.console.print(
             f"[green]📈[/green] Coverage improved by {improvement: .2f}% "
-            f"to {current: .2f}%"
+            f"to {current: .2f}%",
         )
 
     def _extract_failure_lines(self, output: str) -> list[str]:
-        """Extract failed test names from pytest output.
-
-        Attempts to extract test names from the short test summary section,
-        falling back to scanning for FAILED lines and test paths.
-
-        Args:
-            output: Full pytest output string
-
-        Returns:
-            List of failed test names (max 10)
-        """
         import re
 
         lines = output.split("\n")
 
-        # Try extracting from short test summary
+
         failures = self._extract_from_short_summary(lines)
 
-        # Fallback: scan for test paths if no failures found
+
         if not failures:
             failures = self._extract_from_test_paths(lines)
 
         return failures[:10]
 
     def _extract_from_short_summary(self, lines: list[str]) -> list[str]:
-        """Extract failed test names from pytest short test summary section.
-
-        Args:
-            lines: Split output lines
-
-        Returns:
-            List of test names that failed
-        """
         import re
 
         failures = []
@@ -935,22 +916,14 @@ class TestManager:
         return failures
 
     def _parse_summary_failed_line(self, line: str) -> str | None:
-        """Parse a single FAILED line from short summary.
-
-        Args:
-            line: Line containing FAILED marker
-
-        Returns:
-            Extracted test name or None
-        """
         import re
 
-        # Try format: "FAILED test_path - error"
+
         match = re.search(r"FAILED\s+(.+?)\s+-", line)
         if match:
             return match.group(1).strip()
 
-        # Try format: "FAILED test_path"
+
         if "FAILED" in line:
             parts = line.split("FAILED", 1)
             if len(parts) > 1:
@@ -960,14 +933,6 @@ class TestManager:
         return None
 
     def _extract_from_test_paths(self, lines: list[str]) -> list[str]:
-        """Extract test names from lines containing :: and FAILED markers.
-
-        Args:
-            lines: Split output lines
-
-        Returns:
-            List of test names (max 10)
-        """
         failures = []
 
         for line in lines:
@@ -980,20 +945,12 @@ class TestManager:
         return failures
 
     def _try_extract_test_name(self, line: str) -> str | None:
-        """Try to extract test name from a line containing :: and FAILED.
-
-        Args:
-            line: Output line to parse
-
-        Returns:
-            Extracted test name or None
-        """
         import re
 
         if not ("::" in line and "FAILED" in line.upper()):
             return None
 
-        test_match = re.search(r'([a-zA-Z_/]+::.*?)(?:\s+|$)', line)
+        test_match = re.search(r"([a-zA-Z_/]+::.*?)(?:\s+|$)", line)
         if test_match:
             return test_match.group(1).strip()
 
@@ -1012,7 +969,7 @@ class TestManager:
         lines = output.split("\n")
         for line in lines:
             current_type, current_section = self._process_line_for_section(
-                line, current_type, current_section, sections
+                line, current_type, current_section, sections,
             )
 
 
@@ -1030,19 +987,18 @@ class TestManager:
     ) -> tuple[str, list[str]]:
         if self._is_summary_boundary(line):
             return self._handle_section_transition(
-                line, current_type, current_section, sections, "summary"
+                line, current_type, current_section, sections, "summary",
             )
-        elif self._is_failure_start(line):
+        if self._is_failure_start(line):
             return self._handle_failure_section(
-                line, current_type, current_section, sections
+                line, current_type, current_section, sections,
             )
-        elif self._is_footer_start(line):
+        if self._is_footer_start(line):
             return self._handle_section_transition(
-                line, current_type, current_section, sections, "footer"
+                line, current_type, current_section, sections, "footer",
             )
-        else:
-            current_section.append(line)
-            return current_type, current_section
+        current_section.append(line)
+        return current_type, current_section
 
     def _is_summary_boundary(self, line: str) -> bool:
         return "short test summary" in line.lower()
@@ -1110,7 +1066,7 @@ class TestManager:
             return False
 
     def _render_structured_failures_with_summary(
-        self, clean_output: str, failures: list["TestFailure"], options: OptionsProtocol
+        self, clean_output: str, failures: list["TestFailure"], options: OptionsProtocol,
     ) -> None:
 
         failed_tests = [f for f in failures if f.status == "FAILED"]
@@ -1133,14 +1089,14 @@ class TestManager:
 
     def _render_parsing_error_message(self, error: Exception) -> None:
         self.console.print(
-            f"[dim yellow]⚠️ Structured parsing failed: {error}[/dim yellow]"
+            f"[dim yellow]⚠️ Structured parsing failed: {error}[/dim yellow]",
         )
         self.console.print(
-            "[dim yellow]Falling back to standard formatting...[/dim yellow]\n"
+            "[dim yellow]Falling back to standard formatting...[/dim yellow]\n",
         )
 
     def _render_fallback_sections(
-        self, clean_output: str, options: OptionsProtocol
+        self, clean_output: str, options: OptionsProtocol,
     ) -> None:
         from rich.panel import Panel
 
@@ -1190,7 +1146,7 @@ class TestManager:
         self.console.print(panel)
 
     def _parse_failure_header(
-        self, line: str, current_failure: "TestFailure | None"
+        self, line: str, current_failure: "TestFailure | None",
     ) -> tuple["TestFailure | None", bool]:
         import re
 
@@ -1227,7 +1183,7 @@ class TestManager:
         return current_failure, False
 
     def _parse_location_and_assertion(
-        self, line: str, current_failure: "TestFailure", in_traceback: bool
+        self, line: str, current_failure: "TestFailure", in_traceback: bool,
     ) -> bool:
         import re
 
@@ -1254,24 +1210,20 @@ class TestManager:
     def _parse_captured_section_header(self, line: str) -> tuple[bool, str | None]:
         if "captured stdout" in line.lower():
             return True, "stdout"
-        elif "captured stderr" in line.lower():
+        if "captured stderr" in line.lower():
             return True, "stderr"
         return False, None
 
     def _parse_traceback_line(
-        self, line: str, lines: list[str], i: int, current_failure: "TestFailure"
+        self, line: str, lines: list[str], i: int, current_failure: "TestFailure",
     ) -> bool:
         if line.startswith((" ", "\t", "E ")):
             current_failure.traceback.append(line)
             return True
-        elif line.strip().startswith(("=", "FAILED")) or (
-            i < len(lines) - 1 and "FAILED" in lines[i + 1]
-        ):
-            return False
-        return True
+        return not (line.strip().startswith(("=", "FAILED")) or (i < len(lines) - 1 and "FAILED" in lines[i + 1]))
 
     def _parse_captured_output(
-        self, line: str, capture_type: str | None, current_failure: "TestFailure"
+        self, line: str, capture_type: str | None, current_failure: "TestFailure",
     ) -> bool:
         if line.strip().startswith(("=", "_")):
             return False
@@ -1289,9 +1241,8 @@ class TestManager:
         return True
 
     def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
-        from crackerjack.models.test_models import TestFailure
 
-        failures: list["TestFailure"] = []
+        failures: list[TestFailure] = []
         lines = output.split("\n")
 
         current_failure = None
@@ -1301,7 +1252,7 @@ class TestManager:
 
         for i, line in enumerate(lines):
             result = self._parse_failure_line(
-                line, lines, i, current_failure, in_traceback, in_captured, capture_type
+                line, lines, i, current_failure, in_traceback, in_captured, capture_type,
             )
 
 
@@ -1334,42 +1285,25 @@ class TestManager:
         return failures
 
     def _enrich_failures_from_short_summary(
-        self, failures: list["TestFailure"], output: str
+        self, failures: list["TestFailure"], output: str,
     ) -> None:
-        """Enrich test failures with data from pytest short summary section.
-
-        Parses the pytest short test summary to extract error messages and
-        determine proper failure status (ERROR vs FAILED) for each test.
-
-        Args:
-            failures: List of TestFailure objects to enrich
-            output: Full pytest output string containing short summary
-        """
         from crackerjack.models.test_models import TestFailure
 
         summary_failures = self._parse_short_summary(output)
 
-        # Case 1: No failures parsed yet, create from summary
+
         if not failures and summary_failures:
             self._create_failures_from_summary(failures, summary_failures)
             return
 
-        # Case 2: Enrich existing failures with summary data
+
         if summary_failures:
             self._enrich_existing_failures(failures, summary_failures)
 
-        # Case 3: Match unnamed failures to summary entries
+
         self._match_unnamed_failures(failures, summary_failures)
 
     def _parse_short_summary(self, output: str) -> list[dict[str, str]]:
-        """Parse pytest short test summary section from output.
-
-        Args:
-            output: Full pytest output string
-
-        Returns:
-            List of dicts with 'test_path' and 'error_message' keys
-        """
         import re
 
         lines = output.split("\n")
@@ -1392,43 +1326,27 @@ class TestManager:
         return summary_failures
 
     def _parse_summary_failure_line(self, line: str) -> dict[str, str] | None:
-        """Parse a single failure line from short summary.
-
-        Args:
-            line: Single line from short test summary
-
-        Returns:
-            Dict with 'test_path' and 'error_message' or None
-        """
         import re
 
-        # Try format: "FAILED test_path - error message"
+
         match = re.match(r"^FAILED\s+(.+?)\s+-\s+(.+)$", line)
         if match:
             test_path, error_message = match.groups()
-            error_message = re.sub(r'\.\.\.$', '', error_message).strip()
+            error_message = re.sub(r"\.\.\.$", "", error_message).strip()
             return {"test_path": test_path, "error_message": error_message}
 
-        # Try format: "FAILED test_path -"
+
         match2 = re.search(r"FAILED\s+(.+?)\s+-", line)
         if match2:
             test_path = match2.group(1)
             return {
                 "test_path": test_path,
-                "error_message": "Error: see full output above"
+                "error_message": "Error: see full output above",
             }
 
         return None
 
     def _determine_failure_status(self, error_message: str) -> str:
-        """Determine if error represents ERROR or FAILED status.
-
-        Args:
-            error_message: Error message from test failure
-
-        Returns:
-            "ERROR" for exceptions, "FAILED" for assertion failures
-        """
         error_types = (
             "TypeError",
             "KeyError",
@@ -1454,12 +1372,6 @@ class TestManager:
         failures: list["TestFailure"],
         summary_failures: list[dict[str, str]],
     ) -> None:
-        """Create TestFailure objects from summary when no failures exist.
-
-        Args:
-            failures: List to append new TestFailure objects to
-            summary_failures: Parsed summary data
-        """
         from crackerjack.models.test_models import TestFailure
 
         for summary_failure in summary_failures:
@@ -1472,7 +1384,7 @@ class TestManager:
                     status=status,
                     location=summary_failure["test_path"],
                     assertion=error_message,
-                )
+                ),
             )
 
     def _enrich_existing_failures(
@@ -1480,22 +1392,16 @@ class TestManager:
         failures: list["TestFailure"],
         summary_failures: list[dict[str, str]],
     ) -> None:
-        """Enrich existing failure objects with summary data.
-
-        Args:
-            failures: List of existing TestFailure objects
-            summary_failures: Parsed summary data to enrich with
-        """
         for summary_failure in summary_failures:
             test_path = summary_failure["test_path"]
             error_message = summary_failure["error_message"]
             status = self._determine_failure_status(error_message)
 
-            # Try to match by test name
+
             if self._try_enrich_named_failure(failures, test_path, error_message, status):
                 continue
 
-            # Try to enrich unnamed failure
+
             self._try_enrich_unnamed_failure(failures, test_path, error_message, status)
 
     def _try_enrich_named_failure(
@@ -1505,17 +1411,6 @@ class TestManager:
         error_message: str,
         status: str,
     ) -> bool:
-        """Try to enrich a named failure with summary data.
-
-        Args:
-            failures: List of TestFailure objects
-            test_path: Test identifier
-            error_message: Error message from summary
-            status: Determined status (ERROR or FAILED)
-
-        Returns:
-            True if failure was matched and enriched
-        """
         for failure in failures:
             if failure.test_name == test_path:
                 if not failure.assertion:
@@ -1531,17 +1426,6 @@ class TestManager:
         error_message: str,
         status: str,
     ) -> bool:
-        """Try to enrich an unnamed failure with summary data.
-
-        Args:
-            failures: List of TestFailure objects
-            test_path: Test identifier to assign
-            error_message: Error message from summary
-            status: Determined status (ERROR or FAILED)
-
-        Returns:
-            True if failure was matched and enriched
-        """
         unnamed_values = ("", "unknown", "N/A")
 
         for failure in failures:
@@ -1558,12 +1442,6 @@ class TestManager:
         failures: list["TestFailure"],
         summary_failures: list[dict[str, str]],
     ) -> None:
-        """Match unnamed failures to summary entries by position.
-
-        Args:
-            failures: List of TestFailure objects
-            summary_failures: Parsed summary data
-        """
         unnamed_values = ("", "unknown", "N/A")
         unnamed_failures = [
             f for f in failures
@@ -1669,22 +1547,18 @@ class TestManager:
 
         for failure in failures:
 
-            print(f"• {failure.test_name}")
 
             if failure.location and failure.location != failure.test_name:
-                print(f" → {failure.location}")
-            print(f" Status: {failure.status}")
+                pass
             if failure.short_summary:
-                print(f" {failure.short_summary}")
+                pass
             elif failure.assertion:
                 first_line = failure.assertion.split("\n")[0]
-                print(f" {first_line}")
-            print()
 
     def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
         lines = []
 
-        for i, failure in enumerate(failures, 1):
+        for _i, failure in enumerate(failures, 1):
 
             lines.append(f"[bold cyan]• {failure.test_name}[/bold cyan]")
             if failure.location and failure.location != failure.test_name:
@@ -1706,7 +1580,7 @@ class TestManager:
         return "\n".join(lines)
 
     def _group_failures_by_file(
-        self, failures: list["TestFailure"]
+        self, failures: list["TestFailure"],
     ) -> dict[str, list["TestFailure"]]:
         failures_by_file: dict[str, list[TestFailure]] = {}
         for failure in failures:
@@ -1717,14 +1591,14 @@ class TestManager:
         return failures_by_file
 
     def _render_file_failure_header(
-        self, file_path: str, file_failures: list["TestFailure"]
+        self, file_path: str, file_failures: list["TestFailure"],
     ) -> None:
         self.console.print(
-            f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n"
+            f"\n[bold red]📁 {file_path}[/bold red] ({len(file_failures)} failure(s))\n",
         )
 
     def _render_single_failure_panel(
-        self, failure: "TestFailure", index: int, total: int
+        self, failure: "TestFailure", index: int, total: int,
     ) -> None:
         from rich.console import Group
         from rich.panel import Panel
@@ -1762,7 +1636,7 @@ class TestManager:
 
         table.add_row("Test", f"[yellow]{failure.test_name}[/yellow]")
         table.add_row(
-            "Location", f"[blue underline]{failure.location}[/blue underline]"
+            "Location", f"[blue underline]{failure.location}[/blue underline]",
         )
         table.add_row("Status", f"[red bold]{failure.status}[/red bold]")
 
@@ -1777,7 +1651,7 @@ class TestManager:
         return table
 
     def _build_failure_components(
-        self, failure: "TestFailure", table: "Table"
+        self, failure: "TestFailure", table: "Table",
     ) -> list[t.Any]:
         from rich.syntax import Syntax
 
@@ -1849,7 +1723,7 @@ class TestManager:
                 return True
 
 
-            diagnostics, summary = lsp_client.check_project_with_feedback(
+            diagnostics, _summary = lsp_client.check_project_with_feedback(
                 self.pkg_path,
                 show_progress=False,
             )
@@ -1859,7 +1733,7 @@ class TestManager:
 
             if has_errors:
                 self.console.print(
-                    "[yellow]⚠️ LSP detected type errors before running tests[/yellow]"
+                    "[yellow]⚠️ LSP detected type errors before running tests[/yellow]",
                 )
 
                 error_count = sum(len(diags) for diags in diagnostics.values())
@@ -1877,7 +1751,7 @@ class TestManager:
 
         if enable:
             self.console.print(
-                "[cyan]🔍 LSP diagnostics enabled for faster test feedback[/cyan]"
+                "[cyan]🔍 LSP diagnostics enabled for faster test feedback[/cyan]",
             )
 
 TestManagementImpl = TestManager

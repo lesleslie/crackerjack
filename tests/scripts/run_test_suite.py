@@ -200,7 +200,6 @@ class TestRunner:
 
     def print_test_summary(self) -> None:
         """Print a summary of test results."""
-        pass
 
 
 def main():
@@ -210,7 +209,7 @@ def main():
     )
 
     parser.add_argument(
-        "- - fast", action="store_true", help="Run fast unit tests only"
+        "- - fast", action="store_true", help="Run fast unit tests only",
     )
     parser.add_argument(
         "- - comprehensive",
@@ -240,7 +239,7 @@ def main():
     parser.add_argument("- - tests", nargs="+", help="Run specific test paths")
 
     parser.add_argument(
-        "- - verbose", "- v", action="store_true", help="Verbose output"
+        "- - verbose", "- v", action="store_true", help="Verbose output",
     )
     parser.add_argument(
         "- - target",

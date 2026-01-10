@@ -22,7 +22,7 @@ class TestPerformanceAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test PerformanceAgent initializes correctly."""
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             agent = PerformanceAgent(context)
@@ -32,7 +32,7 @@ class TestPerformanceAgentInitialization:
             assert agent.performance_metrics == {}
             assert "nested_loops_optimized" in agent.optimization_stats
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports performance issues."""
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             agent = PerformanceAgent(context)
@@ -55,7 +55,7 @@ class TestPerformanceAgentCanHandle:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    async def test_can_handle_nested_loop(self, agent):
+    async def test_can_handle_nested_loop(self, agent) -> None:
         """Test high confidence for nested loop issues."""
         issue = Issue(
             id="perf-001",
@@ -68,7 +68,7 @@ class TestPerformanceAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_string_concatenation(self, agent):
+    async def test_can_handle_string_concatenation(self, agent) -> None:
         """Test high confidence for string concatenation issues."""
         issue = Issue(
             id="perf-002",
@@ -82,7 +82,7 @@ class TestPerformanceAgentCanHandle:
         # Agent confidence updated from 0.9 to 0.85
         assert confidence == 0.85
 
-    async def test_can_handle_generic_performance(self, agent):
+    async def test_can_handle_generic_performance(self, agent) -> None:
         """Test moderate confidence for generic performance issues."""
         issue = Issue(
             id="perf-003",
@@ -95,7 +95,7 @@ class TestPerformanceAgentCanHandle:
 
         assert confidence == 0.85
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="fmt-001",
@@ -121,7 +121,7 @@ class TestPerformanceAgentAnalyzeAndFix:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    async def test_analyze_and_fix_no_file_path(self, agent):
+    async def test_analyze_and_fix_no_file_path(self, agent) -> None:
         """Test analyze_and_fix when no file path provided."""
         issue = Issue(
             id="perf-001",
@@ -136,7 +136,7 @@ class TestPerformanceAgentAnalyzeAndFix:
         assert result.success is False
         assert "No file path" in result.remaining_issues[0]
 
-    async def test_analyze_and_fix_file_not_exists(self, agent, tmp_path):
+    async def test_analyze_and_fix_file_not_exists(self, agent, tmp_path) -> None:
         """Test analyze_and_fix when file doesn't exist."""
         issue = Issue(
             id="perf-001",
@@ -151,7 +151,7 @@ class TestPerformanceAgentAnalyzeAndFix:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    async def test_analyze_and_fix_with_optimizations(self, agent, tmp_path):
+    async def test_analyze_and_fix_with_optimizations(self, agent, tmp_path) -> None:
         """Test analyze_and_fix with detected performance issues."""
         test_file = tmp_path / "slow.py"
         test_file.write_text("""
@@ -177,7 +177,7 @@ for i in range(n):
             # Performance metrics should be tracked
             assert str(test_file) in agent.performance_metrics
 
-    async def test_analyze_and_fix_error_handling(self, agent, tmp_path):
+    async def test_analyze_and_fix_error_handling(self, agent, tmp_path) -> None:
         """Test error handling in analyze_and_fix."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -208,7 +208,7 @@ class TestPerformanceAgentValidation:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    def test_validate_performance_issue_no_path(self, agent):
+    def test_validate_performance_issue_no_path(self, agent) -> None:
         """Test validating issue without file path."""
         issue = Issue(
             id="perf-001",
@@ -223,7 +223,7 @@ class TestPerformanceAgentValidation:
         assert result is not None
         assert result.success is False
 
-    def test_validate_performance_issue_file_not_exists(self, agent, tmp_path):
+    def test_validate_performance_issue_file_not_exists(self, agent, tmp_path) -> None:
         """Test validating issue with non-existent file."""
         issue = Issue(
             id="perf-001",
@@ -239,7 +239,7 @@ class TestPerformanceAgentValidation:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    def test_validate_performance_issue_valid(self, agent, tmp_path):
+    def test_validate_performance_issue_valid(self, agent, tmp_path) -> None:
         """Test validating issue with valid file."""
         test_file = tmp_path / "valid.py"
         test_file.write_text("def foo(): pass")
@@ -268,7 +268,7 @@ class TestPerformanceAgentResultCreation:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    def test_create_no_optimization_result(self, agent):
+    def test_create_no_optimization_result(self, agent) -> None:
         """Test creating result when no optimizations could be applied."""
         result = agent._create_no_optimization_result()
 
@@ -291,7 +291,7 @@ class TestPerformanceAgentProcessing:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    async def test_process_performance_optimization_no_issues(self, agent, tmp_path):
+    async def test_process_performance_optimization_no_issues(self, agent, tmp_path) -> None:
         """Test processing when no issues found."""
         test_file = tmp_path / "clean.py"
         test_file.write_text("def foo():\n    return sum(range(10))\n")
@@ -306,7 +306,7 @@ class TestPerformanceAgentProcessing:
                 assert result.confidence == 0.7
                 assert "No performance issues" in result.recommendations[0]
 
-    async def test_process_performance_optimization_cannot_read(self, agent, tmp_path):
+    async def test_process_performance_optimization_cannot_read(self, agent, tmp_path) -> None:
         """Test processing when file cannot be read."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -318,7 +318,7 @@ class TestPerformanceAgentProcessing:
         assert result.success is False
         assert "Could not read" in result.remaining_issues[0]
 
-    async def test_apply_and_save_optimizations_success(self, agent, tmp_path):
+    async def test_apply_and_save_optimizations_success(self, agent, tmp_path) -> None:
         """Test successfully applying and saving optimizations."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -330,14 +330,14 @@ class TestPerformanceAgentProcessing:
                 agent.context.write_file_content = Mock(return_value=True)
 
                 result = await agent._apply_and_save_optimizations(
-                    test_file, content, issues
+                    test_file, content, issues,
                 )
 
                 assert result.success is True
                 assert result.confidence == 0.8
                 assert len(result.fixes_applied) > 0
 
-    async def test_apply_and_save_optimizations_no_changes(self, agent, tmp_path):
+    async def test_apply_and_save_optimizations_no_changes(self, agent, tmp_path) -> None:
         """Test when optimizations produce no changes."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -345,13 +345,13 @@ class TestPerformanceAgentProcessing:
 
         with patch.object(agent, "_apply_performance_optimizations", return_value=content):
             result = await agent._apply_and_save_optimizations(
-                test_file, content, issues
+                test_file, content, issues,
             )
 
             assert result.success is False
             assert result.confidence == 0.6
 
-    async def test_apply_and_save_optimizations_write_failure(self, agent, tmp_path):
+    async def test_apply_and_save_optimizations_write_failure(self, agent, tmp_path) -> None:
         """Test when writing optimized content fails."""
         test_file = tmp_path / "test.py"
         content = "original content"
@@ -361,7 +361,7 @@ class TestPerformanceAgentProcessing:
             agent.context.write_file_content = Mock(return_value=False)
 
             result = await agent._apply_and_save_optimizations(
-                test_file, content, issues
+                test_file, content, issues,
             )
 
             assert result.success is False
@@ -379,7 +379,7 @@ class TestPerformanceAgentMetrics:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    def test_optimization_stats_initialization(self, agent):
+    def test_optimization_stats_initialization(self, agent) -> None:
         """Test optimization stats are initialized correctly."""
         assert agent.optimization_stats["nested_loops_optimized"] == 0
         assert agent.optimization_stats["list_ops_optimized"] == 0
@@ -387,7 +387,7 @@ class TestPerformanceAgentMetrics:
         assert agent.optimization_stats["repeated_ops_cached"] == 0
         assert agent.optimization_stats["comprehensions_applied"] == 0
 
-    def test_performance_metrics_empty(self, agent):
+    def test_performance_metrics_empty(self, agent) -> None:
         """Test performance metrics start empty."""
         assert agent.performance_metrics == {}
 
@@ -408,7 +408,7 @@ class TestPerformanceAgentSemanticDetection:
             agent.semantic_enhancer = mock_enhancer
             return agent
 
-    async def test_detect_semantic_performance_issues_with_matches(self, agent, tmp_path):
+    async def test_detect_semantic_performance_issues_with_matches(self, agent, tmp_path) -> None:
         """Test detecting semantic performance issues."""
         content = """
 def process_items(items):
@@ -424,7 +424,7 @@ def process_items(items):
         mock_insight.related_patterns = ["pattern1", "pattern2"]
 
         agent.semantic_enhancer.find_performance_bottlenecks = AsyncMock(
-            return_value=mock_insight
+            return_value=mock_insight,
         )
 
         # Most agents will have a method like this even if not shown in first 200 lines
@@ -445,7 +445,7 @@ class TestPerformanceAgentIntegration:
         with patch("crackerjack.agents.performance_agent.create_semantic_enhancer"):
             return PerformanceAgent(context)
 
-    def test_agent_state_persistence(self, agent):
+    def test_agent_state_persistence(self, agent) -> None:
         """Test that agent maintains state across operations."""
         # Initial state
         assert agent.performance_metrics == {}

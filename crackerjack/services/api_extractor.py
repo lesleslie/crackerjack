@@ -4,8 +4,9 @@ import re
 import typing as t
 from pathlib import Path
 
-from ..core.console import CrackerjackConsole
-from ..models.protocols import APIExtractorProtocol
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import APIExtractorProtocol
+
 from .regex_patterns import SAFE_PATTERNS
 
 
@@ -87,16 +88,14 @@ class PythonDocstringParser:
 
     def _extract_raises(self, docstring: str) -> list[str]:
         raises_pattern = re.compile(  # REGEX OK: exception extraction
-            r"(?:Raises?|Raise):\s*(.+?)(?=\n\n|\n\w+:|\Z)", re.MULTILINE | re.DOTALL
+            r"(?:Raises?|Raise):\s*(.+?)(?=\n\n|\n\w+:|\Z)",
+            re.MULTILINE | re.DOTALL,
         )
         match = raises_pattern.search(docstring)
         if match:
             raises_text = match.group(1).strip()
 
-            raises_list = [
-                line.strip() for line in raises_text.split("\n") if line.strip()
-            ]
-            return raises_list
+            return [line.strip() for line in raises_text.split("\n") if line.strip()]
         return []
 
 
@@ -126,7 +125,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse {file_path}: {e}[/yellow]"
+                    f"[yellow]Warning: Could not parse {file_path}: {e}[/yellow]",
                 )
                 continue
 
@@ -170,7 +169,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse service {file_path}: {e}[/yellow]"
+                    f"[yellow]Warning: Could not parse service {file_path}: {e}[/yellow]",
                 )
                 continue
 
@@ -192,7 +191,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse CLI file {file_path}: {e}[/yellow]"
+                    f"[yellow]Warning: Could not parse CLI file {file_path}: {e}[/yellow]",
                 )
                 continue
 
@@ -221,26 +220,32 @@ class APIExtractorImpl(APIExtractorProtocol):
 
             except Exception as e:
                 self.console.print(
-                    f"[yellow]Warning: Could not parse MCP file {file_path}: {e}[/yellow]"
+                    f"[yellow]Warning: Could not parse MCP file {file_path}: {e}[/yellow]",
                 )
                 continue
 
         return {"mcp_tools": mcp_tools}
 
     def _extract_module_info(
-        self, tree: ast.AST, file_path: Path, source_code: str
+        self,
+        tree: ast.AST,
+        file_path: Path,
+        source_code: str,
     ) -> dict[str, t.Any]:
         module_info = self._create_base_module_info(tree, file_path)
         self._populate_module_components(module_info, tree, source_code)
         return module_info
 
     def _create_base_module_info(
-        self, tree: ast.AST, file_path: Path
+        self,
+        tree: ast.AST,
+        file_path: Path,
     ) -> dict[str, t.Any]:
         docstring = (
             ast.get_docstring(tree)
             if isinstance(
-                tree, ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef
+                tree,
+                ast.Module | ast.ClassDef | ast.FunctionDef | ast.AsyncFunctionDef,
             )
             else None
         )
@@ -253,13 +258,19 @@ class APIExtractorImpl(APIExtractorProtocol):
         }
 
     def _populate_module_components(
-        self, module_info: dict[str, t.Any], tree: ast.AST, source_code: str
+        self,
+        module_info: dict[str, t.Any],
+        tree: ast.AST,
+        source_code: str,
     ) -> None:
         for node in ast.walk(tree):
             self._process_ast_node(module_info, node, source_code)
 
     def _process_ast_node(
-        self, module_info: dict[str, t.Any], node: ast.AST, source_code: str
+        self,
+        module_info: dict[str, t.Any],
+        node: ast.AST,
+        source_code: str,
     ) -> None:
         if isinstance(node, ast.ClassDef):
             class_info = self._extract_class_info(node, source_code)
@@ -272,7 +283,9 @@ class APIExtractorImpl(APIExtractorProtocol):
             module_info["imports"].append(import_info)
 
     def _extract_class_info(
-        self, node: ast.ClassDef, source_code: str
+        self,
+        node: ast.ClassDef,
+        source_code: str,
     ) -> dict[str, t.Any]:
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
@@ -283,7 +296,9 @@ class APIExtractorImpl(APIExtractorProtocol):
         return class_info
 
     def _build_base_class_info(
-        self, node: ast.ClassDef, parsed_doc: dict[str, t.Any]
+        self,
+        node: ast.ClassDef,
+        parsed_doc: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         return {
             "name": node.name,
@@ -295,7 +310,10 @@ class APIExtractorImpl(APIExtractorProtocol):
         }
 
     def _extract_class_methods(
-        self, class_info: dict[str, t.Any], node: ast.ClassDef, source_code: str
+        self,
+        class_info: dict[str, t.Any],
+        node: ast.ClassDef,
+        source_code: str,
     ) -> None:
         for item in node.body:
             if isinstance(item, ast.FunctionDef):
@@ -307,12 +325,14 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _determine_method_visibility(self, method_name: str) -> str:
         if method_name.startswith("_") and not method_name.startswith("__"):
             return "protected"
-        elif method_name.startswith("__"):
+        if method_name.startswith("__"):
             return "private"
         return "public"
 
     def _extract_function_info(
-        self, node: ast.FunctionDef, source_code: str
+        self,
+        node: ast.FunctionDef,
+        source_code: str,
     ) -> dict[str, t.Any]:
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
@@ -328,7 +348,7 @@ class APIExtractorImpl(APIExtractorProtocol):
 
         return_annotation = self._get_annotation_string(node.returns)
 
-        func_info = {
+        return {
             "name": node.name,
             "docstring": parsed_doc,
             "parameters": parameters,
@@ -339,10 +359,10 @@ class APIExtractorImpl(APIExtractorProtocol):
             ],
         }
 
-        return func_info
-
     def _extract_protocol_info(
-        self, node: ast.ClassDef, source_code: str
+        self,
+        node: ast.ClassDef,
+        source_code: str,
     ) -> dict[str, t.Any]:
         docstring = ast.get_docstring(node)
         parsed_doc = self.docstring_parser.parse_docstring(docstring)
@@ -367,7 +387,10 @@ class APIExtractorImpl(APIExtractorProtocol):
         return protocol_info
 
     def _extract_service_info(
-        self, tree: ast.AST, file_path: Path, source_code: str
+        self,
+        tree: ast.AST,
+        file_path: Path,
+        source_code: str,
     ) -> dict[str, t.Any] | None:
         service_info = self._create_service_info_structure(file_path)
         self._populate_service_classes(service_info, tree, source_code)
@@ -382,31 +405,42 @@ class APIExtractorImpl(APIExtractorProtocol):
         }
 
     def _populate_service_classes(
-        self, service_info: dict[str, t.Any], tree: ast.AST, source_code: str
+        self,
+        service_info: dict[str, t.Any],
+        tree: ast.AST,
+        source_code: str,
     ) -> None:
         for node in ast.walk(tree):
             if isinstance(node, ast.ClassDef):
                 self._process_service_class(service_info, node, source_code)
 
     def _process_service_class(
-        self, service_info: dict[str, t.Any], node: ast.ClassDef, source_code: str
+        self,
+        service_info: dict[str, t.Any],
+        node: ast.ClassDef,
+        source_code: str,
     ) -> None:
         class_info = self._extract_class_info(node, source_code)
         self._extract_implemented_protocols(service_info, node)
         self._add_class_to_service_info(service_info, class_info)
 
     def _extract_implemented_protocols(
-        self, service_info: dict[str, t.Any], node: ast.ClassDef
+        self,
+        service_info: dict[str, t.Any],
+        node: ast.ClassDef,
     ) -> None:
         for base in node.bases:
             base_name = self._get_node_name(base)
             if "Protocol" in base_name and isinstance(
-                service_info["protocols_implemented"], list
+                service_info["protocols_implemented"],
+                list,
             ):
                 service_info["protocols_implemented"].append(base_name)
 
     def _add_class_to_service_info(
-        self, service_info: dict[str, t.Any], class_info: dict[str, t.Any]
+        self,
+        service_info: dict[str, t.Any],
+        class_info: dict[str, t.Any],
     ) -> None:
         if isinstance(service_info["classes"], list):
             service_info["classes"].append(class_info)
@@ -421,7 +455,9 @@ class APIExtractorImpl(APIExtractorProtocol):
         return cli_info
 
     def _extract_class_cli_options(
-        self, class_node: ast.ClassDef, cli_info: dict[str, t.Any]
+        self,
+        class_node: ast.ClassDef,
+        cli_info: dict[str, t.Any],
     ) -> None:
         for item in class_node.body:
             if self._is_cli_field(item) and isinstance(item, ast.AnnAssign):
@@ -444,7 +480,9 @@ class APIExtractorImpl(APIExtractorProtocol):
         }
 
     def _extract_mcp_python_tools(
-        self, tree: ast.AST, source_code: str
+        self,
+        tree: ast.AST,
+        source_code: str,
     ) -> dict[str, t.Any] | None:
         tools = []
 
@@ -484,9 +522,9 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _get_node_name(self, node: ast.AST) -> str:
         if isinstance(node, ast.Name):
             return node.id
-        elif isinstance(node, ast.Attribute):
+        if isinstance(node, ast.Attribute):
             return f"{self._get_node_name(node.value)}.{node.attr}"
-        elif isinstance(node, ast.Constant):
+        if isinstance(node, ast.Constant):
             return str(node.value)
         return ""
 
@@ -502,15 +540,15 @@ class APIExtractorImpl(APIExtractorProtocol):
     def _process_annotation_node(self, annotation: ast.AST) -> str:
         if isinstance(annotation, ast.Name):
             return annotation.id
-        elif isinstance(annotation, ast.Attribute):
+        if isinstance(annotation, ast.Attribute):
             return self._process_attribute_annotation(annotation)
-        elif isinstance(annotation, ast.Subscript):
+        if isinstance(annotation, ast.Subscript):
             return self._process_subscript_annotation(annotation)
-        elif isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
+        if isinstance(annotation, ast.BinOp) and isinstance(annotation.op, ast.BitOr):
             return self._process_union_annotation(annotation)
-        elif isinstance(annotation, ast.Constant):
+        if isinstance(annotation, ast.Constant):
             return str(annotation.value)
-        elif isinstance(annotation, ast.Tuple):
+        if isinstance(annotation, ast.Tuple):
             return self._process_tuple_annotation(annotation)
         return self._get_fallback_annotation(annotation)
 
@@ -535,7 +573,8 @@ class APIExtractorImpl(APIExtractorProtocol):
         return ast.unparse(annotation) if hasattr(ast, "unparse") else "Any"
 
     def _extract_import_info(
-        self, node: ast.Import | ast.ImportFrom
+        self,
+        node: ast.Import | ast.ImportFrom,
     ) -> dict[str, t.Any]:
         if isinstance(node, ast.Import):
             return {

@@ -41,19 +41,18 @@ def is_local_link(url: str) -> bool:
 
     external_schemes = {"http", "https", "mailto", "ftp", "ftps", "ssh", "git"}
 
-    if parsed.scheme and parsed.scheme.lower() in external_schemes:
-        return False
-
-    return True
+    return not (parsed.scheme and parsed.scheme.lower() in external_schemes)
 
 
 def validate_local_link(
-    link_url: str, source_file: Path, repo_root: Path
+    link_url: str,
+    source_file: Path,
+    repo_root: Path,
 ) -> tuple[bool, str]:
     link_url = unquote(link_url)
 
     if "#" in link_url:
-        path_part, anchor = link_url.split("#", 1)
+        path_part, _anchor = link_url.split("#", 1)
     else:
         path_part = link_url
 
@@ -106,7 +105,6 @@ def main(argv: list[str] | None = None) -> int:
         files = md_files + markdown_files
 
     if not files:
-        print("No markdown files to check")
         return 0
 
     total_broken = 0
@@ -120,23 +118,17 @@ def main(argv: list[str] | None = None) -> int:
             files_with_issues.append((file_path, broken_links))
 
     if total_broken == 0:
-        print(f"✓ All local links valid in {len(files)} markdown files")
         return 0
 
-    print(f"\n✗ Found {total_broken} broken local links:\n")
-
     for file_path, broken_links in files_with_issues:
-        rel_path = (
+        (
             file_path.relative_to(repo_root)
             if file_path.is_relative_to(repo_root)
             else file_path
         )
-        print(f"{rel_path}:")
 
-        for link_url, line_num, error_msg in broken_links:
-            print(f" Line {line_num}: [{link_url}] - {error_msg}")
-
-        print()
+        for _link_url, _line_num, _error_msg in broken_links:
+            pass
 
     return 1
 

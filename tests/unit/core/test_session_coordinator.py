@@ -10,14 +10,14 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from crackerjack.core.session_coordinator import SessionCoordinator, SessionController
+from crackerjack.core.session_coordinator import SessionController, SessionCoordinator
 
 
 @pytest.mark.unit
 class TestSessionCoordinatorInitialization:
     """Test SessionCoordinator initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         coordinator = SessionCoordinator()
 
@@ -30,7 +30,7 @@ class TestSessionCoordinatorInitialization:
         assert coordinator.lock_files == set()
         assert coordinator.current_task is None
 
-    def test_initialization_with_console(self):
+    def test_initialization_with_console(self) -> None:
         """Test initialization with provided console."""
         mock_console = Mock()
 
@@ -38,13 +38,13 @@ class TestSessionCoordinatorInitialization:
 
         assert coordinator.console == mock_console
 
-    def test_initialization_with_pkg_path(self, tmp_path):
+    def test_initialization_with_pkg_path(self, tmp_path) -> None:
         """Test initialization with provided pkg_path."""
         coordinator = SessionCoordinator(pkg_path=tmp_path)
 
         assert coordinator.pkg_path == tmp_path
 
-    def test_initialization_with_web_job_id(self):
+    def test_initialization_with_web_job_id(self) -> None:
         """Test initialization with web job ID."""
         job_id = "test-job-123"
         coordinator = SessionCoordinator(web_job_id=job_id)
@@ -52,7 +52,7 @@ class TestSessionCoordinatorInitialization:
         assert coordinator.web_job_id == job_id
         assert coordinator.session_id == job_id
 
-    def test_initialization_session_id_generated(self):
+    def test_initialization_session_id_generated(self) -> None:
         """Test session ID is generated when no web_job_id."""
         coordinator = SessionCoordinator()
 
@@ -77,7 +77,7 @@ class TestSessionCoordinatorSessionTracking:
         options.__dict__ = {"verbose": True, "ai_agent": False, "track_progress": True}
         return options
 
-    def test_initialize_session_tracking(self, coordinator, mock_options):
+    def test_initialize_session_tracking(self, coordinator, mock_options) -> None:
         """Test initializing session tracking."""
         coordinator.initialize_session_tracking(mock_options)
 
@@ -86,7 +86,7 @@ class TestSessionCoordinatorSessionTracking:
         assert "options" in coordinator.session_tracker.metadata
         assert "pkg_path" in coordinator.session_tracker.metadata
 
-    def test_start_session(self, coordinator):
+    def test_start_session(self, coordinator) -> None:
         """Test starting a session task."""
         coordinator.start_session("test_task")
 
@@ -94,7 +94,7 @@ class TestSessionCoordinatorSessionTracking:
         assert coordinator.session_tracker is not None
         assert coordinator.session_tracker.metadata["current_session"] == "test_task"
 
-    def test_start_session_lazy_initialization(self, coordinator):
+    def test_start_session_lazy_initialization(self, coordinator) -> None:
         """Test session tracker is lazily initialized."""
         assert coordinator.session_tracker is None
 
@@ -102,7 +102,7 @@ class TestSessionCoordinatorSessionTracking:
 
         assert coordinator.session_tracker is not None
 
-    def test_end_session(self, coordinator):
+    def test_end_session(self, coordinator) -> None:
         """Test ending a session."""
         coordinator.start_session("test_task")
 
@@ -123,7 +123,7 @@ class TestSessionCoordinatorTaskTracking:
         mock_console = Mock()
         return SessionCoordinator(console=mock_console)
 
-    def test_track_task(self, coordinator):
+    def test_track_task(self, coordinator) -> None:
         """Test tracking a task."""
         task_id = coordinator.track_task("task1", "Test Task", "Details")
 
@@ -131,7 +131,7 @@ class TestSessionCoordinatorTaskTracking:
         assert coordinator.session_tracker is not None
         assert "task1" in coordinator.tasks
 
-    def test_track_task_lazy_initialization(self, coordinator):
+    def test_track_task_lazy_initialization(self, coordinator) -> None:
         """Test task tracking initializes session tracker."""
         assert coordinator.session_tracker is None
 
@@ -139,7 +139,7 @@ class TestSessionCoordinatorTaskTracking:
 
         assert coordinator.session_tracker is not None
 
-    def test_complete_task(self, coordinator):
+    def test_complete_task(self, coordinator) -> None:
         """Test completing a task."""
         coordinator.track_task("task1", "Test Task")
 
@@ -148,14 +148,14 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "completed"
 
-    def test_complete_task_without_session_tracker(self, coordinator):
+    def test_complete_task_without_session_tracker(self, coordinator) -> None:
         """Test completing task when session tracker is None."""
         coordinator.session_tracker = None
 
         # Should not raise error
         coordinator.complete_task("task1", "Done")
 
-    def test_fail_task(self, coordinator):
+    def test_fail_task(self, coordinator) -> None:
         """Test failing a task."""
         coordinator.track_task("task1", "Test Task")
 
@@ -164,14 +164,14 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "failed"
 
-    def test_fail_task_without_session_tracker(self, coordinator):
+    def test_fail_task_without_session_tracker(self, coordinator) -> None:
         """Test failing task when session tracker is None."""
         coordinator.session_tracker = None
 
         # Should not raise error
         coordinator.fail_task("task1", "Error")
 
-    def test_update_task_completed(self, coordinator):
+    def test_update_task_completed(self, coordinator) -> None:
         """Test updating task to completed status."""
         coordinator.track_task("task1", "Test Task")
 
@@ -180,7 +180,7 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "completed"
 
-    def test_update_task_failed(self, coordinator):
+    def test_update_task_failed(self, coordinator) -> None:
         """Test updating task to failed status."""
         coordinator.track_task("task1", "Test Task")
 
@@ -189,7 +189,7 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "failed"
 
-    def test_update_task_in_progress(self, coordinator):
+    def test_update_task_in_progress(self, coordinator) -> None:
         """Test updating task to in_progress status."""
         coordinator.track_task("task1", "Test Task")
 
@@ -198,13 +198,13 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "in_progress"
 
-    def test_update_task_in_progress_creates_task(self, coordinator):
+    def test_update_task_in_progress_creates_task(self, coordinator) -> None:
         """Test updating non-existent task to in_progress creates it."""
         coordinator.update_task("new_task", "in_progress", details="Creating")
 
         assert "new_task" in coordinator.tasks
 
-    def test_update_task_arbitrary_status(self, coordinator):
+    def test_update_task_arbitrary_status(self, coordinator) -> None:
         """Test updating task with arbitrary status."""
         coordinator.track_task("task1", "Test Task")
 
@@ -213,7 +213,7 @@ class TestSessionCoordinatorTaskTracking:
         task = coordinator.tasks["task1"]
         assert task.status == "custom_status"
 
-    def test_update_task_lazy_initialization(self, coordinator):
+    def test_update_task_lazy_initialization(self, coordinator) -> None:
         """Test update_task initializes session tracker."""
         assert coordinator.session_tracker is None
 
@@ -232,7 +232,7 @@ class TestSessionCoordinatorCleanup:
         mock_console = Mock()
         return SessionCoordinator(console=mock_console)
 
-    def test_register_cleanup(self, coordinator):
+    def test_register_cleanup(self, coordinator) -> None:
         """Test registering cleanup handler."""
         handler = Mock()
 
@@ -240,7 +240,7 @@ class TestSessionCoordinatorCleanup:
 
         assert handler in coordinator.cleanup_handlers
 
-    def test_cleanup_resources_executes_handlers(self, coordinator):
+    def test_cleanup_resources_executes_handlers(self, coordinator) -> None:
         """Test cleanup executes all handlers."""
         handler1 = Mock()
         handler2 = Mock()
@@ -253,7 +253,7 @@ class TestSessionCoordinatorCleanup:
         handler1.assert_called_once()
         handler2.assert_called_once()
 
-    def test_cleanup_resources_handles_errors(self, coordinator):
+    def test_cleanup_resources_handles_errors(self, coordinator) -> None:
         """Test cleanup handles handler errors gracefully."""
         failing_handler = Mock(side_effect=Exception("Handler error"))
         successful_handler = Mock()
@@ -267,7 +267,7 @@ class TestSessionCoordinatorCleanup:
         # Successful handler should still be called
         successful_handler.assert_called_once()
 
-    def test_track_lock_file(self, coordinator, tmp_path):
+    def test_track_lock_file(self, coordinator, tmp_path) -> None:
         """Test tracking lock files."""
         lock_file = tmp_path / "test.lock"
 
@@ -275,7 +275,7 @@ class TestSessionCoordinatorCleanup:
 
         assert lock_file in coordinator.lock_files
 
-    def test_cleanup_removes_lock_files(self, coordinator, tmp_path):
+    def test_cleanup_removes_lock_files(self, coordinator, tmp_path) -> None:
         """Test cleanup removes tracked lock files."""
         lock_file = tmp_path / "test.lock"
         lock_file.write_text("lock")
@@ -286,7 +286,7 @@ class TestSessionCoordinatorCleanup:
         assert not lock_file.exists()
         assert lock_file not in coordinator.lock_files
 
-    def test_cleanup_handles_missing_lock_files(self, coordinator, tmp_path):
+    def test_cleanup_handles_missing_lock_files(self, coordinator, tmp_path) -> None:
         """Test cleanup handles non-existent lock files."""
         lock_file = tmp_path / "nonexistent.lock"
 
@@ -297,13 +297,14 @@ class TestSessionCoordinatorCleanup:
 
         assert lock_file not in coordinator.lock_files
 
-    def test_set_cleanup_config(self, coordinator):
+    def test_set_cleanup_config(self, coordinator) -> None:
         """Test setting cleanup configuration."""
         config = {"preserve_files": True, "verbose": False}
 
         coordinator.set_cleanup_config(config)
 
-        assert coordinator.cleanup_config == config
+        # Implementation sets _cleanup_config (private attribute)
+        assert coordinator._cleanup_config == config
 
 
 @pytest.mark.unit
@@ -316,7 +317,7 @@ class TestSessionCoordinatorFinalization:
         mock_console = Mock()
         return SessionCoordinator(console=mock_console)
 
-    def test_finalize_session_success(self, coordinator):
+    def test_finalize_session_success(self, coordinator) -> None:
         """Test finalizing successful session."""
         coordinator.start_session("test_task")
         start_time = time.time()
@@ -327,7 +328,7 @@ class TestSessionCoordinatorFinalization:
         assert coordinator.session_tracker.metadata["success"] is True
         assert coordinator.current_task is None
 
-    def test_finalize_session_failure(self, coordinator):
+    def test_finalize_session_failure(self, coordinator) -> None:
         """Test finalizing failed session."""
         coordinator.start_session("test_task")
         start_time = time.time()
@@ -336,7 +337,7 @@ class TestSessionCoordinatorFinalization:
 
         assert coordinator.session_tracker.metadata["success"] is False
 
-    def test_finalize_session_without_tracker(self, coordinator):
+    def test_finalize_session_without_tracker(self, coordinator) -> None:
         """Test finalizing session without tracker."""
         coordinator.session_tracker = None
         start_time = time.time()
@@ -355,7 +356,7 @@ class TestSessionCoordinatorSummary:
         mock_console = Mock()
         return SessionCoordinator(console=mock_console)
 
-    def test_get_session_summary_with_tracker(self, coordinator):
+    def test_get_session_summary_with_tracker(self, coordinator) -> None:
         """Test getting session summary with tracker."""
         coordinator.start_session("test_task")
         coordinator.track_task("task1", "Task 1")
@@ -363,30 +364,37 @@ class TestSessionCoordinatorSummary:
 
         summary = coordinator.get_session_summary()
 
-        # get_session_summary returns task counts, not full session data
+        # get_session_summary returns full session summary from SessionTracker.get_summary()
         assert summary is not None
-        assert "total" in summary
-        assert summary["total"] == 1
+        assert "session_id" in summary
+        assert summary["session_id"] == coordinator.session_id
+        assert "tasks_count" in summary
+        assert summary["tasks_count"] == 1
+        assert "completed" in summary
         assert summary["completed"] == 1
+        assert "failed" in summary
         assert summary["failed"] == 0
+        assert "total_tasks" in summary
+        assert summary["total_tasks"] == 1
 
-    def test_get_session_summary_without_tracker(self, coordinator):
+    def test_get_session_summary_without_tracker(self, coordinator) -> None:
         """Test getting session summary without tracker."""
         coordinator.session_tracker = None
 
         summary = coordinator.get_session_summary()
 
-        # Returns None when no tracker or no tasks
-        assert summary is None
+        # Returns {"tasks_count": 0} when no tracker
+        assert summary is not None
+        assert summary == {"tasks_count": 0}
 
-    def test_get_summary_alias(self, coordinator):
+    def test_get_summary_alias(self, coordinator) -> None:
         """Test get_summary returns full session data (not an alias)."""
         coordinator.start_session("test")
 
-        # get_session_summary returns task counts only (or None)
-        task_counts = coordinator.get_session_summary()
+        # get_session_summary returns full session summary (with task counts)
+        session_summary = coordinator.get_session_summary()
 
-        # get_summary returns full session data
+        # get_summary returns different full session data structure
         full_summary = coordinator.get_summary()
 
         # Verify get_summary has session_id and other metadata
@@ -396,23 +404,24 @@ class TestSessionCoordinatorSummary:
         assert "tasks" in full_summary
         assert "metadata" in full_summary
 
-        # Verify get_session_summary has different structure (if not None)
-        if task_counts is not None:
-            assert "total" in task_counts
-            assert "completed" in task_counts
-            assert "failed" in task_counts
+        # Verify get_session_summary returns SessionTracker.get_summary() format
+        assert "session_id" in session_summary
+        assert "tasks_count" in session_summary
+        assert "completed" in session_summary
+        assert "failed" in session_summary
 
-    def test_get_session_summary_backward_compatible(self, coordinator):
+    def test_get_session_summary_backward_compatible(self, coordinator) -> None:
         """Test session summary returns task counts (simplified format)."""
         coordinator.start_session("test")
         coordinator.track_task("task1", "Task 1")
 
         summary = coordinator.get_session_summary()
 
-        # Returns simplified task count format
+        # Returns full SessionTracker.get_summary() format with task counts
         assert summary is not None
-        assert "total" in summary  # Equivalent to tasks_count
-        assert summary["total"] >= 1
+        assert "tasks_count" in summary
+        assert summary["tasks_count"] >= 1
+        assert "total_tasks" in summary
 
 
 @pytest.mark.unit
@@ -426,13 +435,13 @@ class TestSessionController:
         pipeline.session = Mock(spec=SessionCoordinator)
         return pipeline
 
-    def test_initialization(self, mock_pipeline):
+    def test_initialization(self, mock_pipeline) -> None:
         """Test SessionController initialization."""
         controller = SessionController(mock_pipeline)
 
         assert controller._pipeline == mock_pipeline
 
-    def test_initialize(self, mock_pipeline):
+    def test_initialize(self, mock_pipeline) -> None:
         """Test initializing session."""
         controller = SessionController(mock_pipeline)
         options = Mock()
@@ -441,7 +450,7 @@ class TestSessionController:
 
         # Should call all initialization methods
         mock_pipeline.session.initialize_session_tracking.assert_called_once_with(
-            options
+            options,
         )
         mock_pipeline._configure_session_cleanup.assert_called_once_with(options)
         mock_pipeline._initialize_zuban_lsp.assert_called_once_with(options)
@@ -460,7 +469,7 @@ class TestSessionCoordinatorIntegration:
         mock_console = Mock()
         return SessionCoordinator(console=mock_console, pkg_path=tmp_path)
 
-    def test_complete_session_lifecycle(self, coordinator):
+    def test_complete_session_lifecycle(self, coordinator) -> None:
         """Test complete session lifecycle."""
         # Start session
         coordinator.start_session("main_workflow")
@@ -476,17 +485,18 @@ class TestSessionCoordinatorIntegration:
         # End session
         coordinator.end_session(success=False)
 
-        # Get summary (returns task counts, not full session data)
+        # Get summary (returns full SessionTracker.get_summary() format)
         summary = coordinator.get_session_summary()
 
-        # Verify task counts
+        # Verify task counts in summary
         assert summary is not None
-        assert summary["total"] == 2
+        assert summary["tasks_count"] == 2
+        assert summary["total_tasks"] == 2
         assert summary["completed"] == 1
         assert summary["failed"] == 1
         assert len(coordinator.tasks) == 2
 
-    def test_cleanup_with_handlers_and_locks(self, coordinator, tmp_path):
+    def test_cleanup_with_handlers_and_locks(self, coordinator, tmp_path) -> None:
         """Test cleanup with both handlers and lock files."""
         # Register handlers
         handler1 = Mock()
@@ -514,7 +524,7 @@ class TestSessionCoordinatorIntegration:
         assert not lock2.exists()
         assert len(coordinator.lock_files) == 0
 
-    def test_session_with_web_job_id(self):
+    def test_session_with_web_job_id(self) -> None:
         """Test session with web job ID."""
         mock_console = Mock()
         job_id = "web-job-456"
@@ -531,12 +541,13 @@ class TestSessionCoordinatorIntegration:
         full_summary = coordinator.get_summary()
         assert full_summary["session_id"] == job_id
 
-        # get_session_summary returns task counts (no session_id field)
-        task_counts = coordinator.get_session_summary()
-        assert task_counts is not None
-        assert "total" in task_counts
+        # get_session_summary returns full SessionTracker.get_summary() format
+        session_summary = coordinator.get_session_summary()
+        assert session_summary is not None
+        assert session_summary["session_id"] == job_id
+        assert "tasks_count" in session_summary
 
-    def test_multiple_task_updates(self, coordinator):
+    def test_multiple_task_updates(self, coordinator) -> None:
         """Test multiple updates to same task."""
         coordinator.track_task("task1", "Task 1")
 

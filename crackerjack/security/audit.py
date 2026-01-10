@@ -53,7 +53,9 @@ class SecurityAuditor:
     }
 
     def audit_hook_results(
-        self, fast_results: list[t.Any], comprehensive_results: list[t.Any]
+        self,
+        fast_results: list[t.Any],
+        comprehensive_results: list[t.Any],
     ) -> SecurityAuditReport:
         all_results = fast_results + comprehensive_results
 
@@ -77,11 +79,15 @@ class SecurityAuditor:
         allows_publishing = len(critical_failures) == 0
 
         security_warnings = self._generate_security_warnings(
-            critical_failures, high_failures, medium_failures
+            critical_failures,
+            high_failures,
+            medium_failures,
         )
 
         recommendations = self._generate_security_recommendations(
-            critical_failures, high_failures, medium_failures
+            critical_failures,
+            high_failures,
+            medium_failures,
         )
 
         return SecurityAuditReport(
@@ -102,7 +108,9 @@ class SecurityAuditor:
             "timeout",
         )
         error_message = getattr(result, "output", None) or getattr(
-            result, "error", None
+            result,
+            "error",
+            None,
         )
 
         security_level = self._get_hook_security_level(hook_name)
@@ -120,9 +128,9 @@ class SecurityAuditor:
 
         if hook_name_lower in (name.lower() for name in self.CRITICAL_HOOKS):
             return SecurityLevel.CRITICAL
-        elif hook_name_lower in (name.lower() for name in self.HIGH_SECURITY_HOOKS):
+        if hook_name_lower in (name.lower() for name in self.HIGH_SECURITY_HOOKS):
             return SecurityLevel.HIGH
-        elif hook_name_lower in ("ruff-check", "vulture", "refurb", "complexipy"):
+        if hook_name_lower in ("ruff-check", "vulture", "refurb", "complexipy"):
             return SecurityLevel.MEDIUM
         return SecurityLevel.LOW
 
@@ -136,17 +144,18 @@ class SecurityAuditor:
 
         if critical:
             warnings.append(
-                f"🔒 CRITICAL: {len(critical)} security-critical checks failed - publishing BLOCKED"
+                f"🔒 CRITICAL: {len(critical)} security-critical checks failed - publishing BLOCKED",
             )
             for failure in critical:
                 reason = self.CRITICAL_HOOKS.get(
-                    failure.hook_name.lower(), "Security-critical check"
+                    failure.hook_name.lower(),
+                    "Security-critical check",
                 )
                 warnings.append(f" • {failure.hook_name}: {reason}")
 
         if high:
             warnings.append(
-                f"⚠️ HIGH: {len(high)} high-security checks failed - review recommended"
+                f"⚠️ HIGH: {len(high)} high-security checks failed - review recommended",
             )
 
         if medium:
@@ -164,34 +173,34 @@ class SecurityAuditor:
 
         if critical:
             recommendations.append(
-                "🔧 Fix all CRITICAL security issues before publishing"
+                "🔧 Fix all CRITICAL security issues before publishing",
             )
 
             critical_names = [f.hook_name.lower() for f in critical]
 
             if "bandit" in critical_names:
                 recommendations.append(
-                    " • Review bandit security findings - may indicate vulnerabilities"
+                    " • Review bandit security findings - may indicate vulnerabilities",
                 )
             if "pyright" in critical_names:
                 recommendations.append(
-                    " • Fix type errors - type safety prevents runtime security holes"
+                    " • Fix type errors - type safety prevents runtime security holes",
                 )
             if "gitleaks" in critical_names:
                 recommendations.append(
-                    " • Remove secrets/credentials from code - use environment variables"
+                    " • Remove secrets/credentials from code - use environment variables",
                 )
 
         if high:
             recommendations.append(
-                "🔍 Review HIGH-security findings before production deployment"
+                "🔍 Review HIGH-security findings before production deployment",
             )
 
         if not critical and not high:
             recommendations.append("✅ Security posture is acceptable for publishing")
 
         recommendations.append(
-            "📖 Follow OWASP Secure Coding Practices for comprehensive security"
+            "📖 Follow OWASP Secure Coding Practices for comprehensive security",
         )
 
         return recommendations

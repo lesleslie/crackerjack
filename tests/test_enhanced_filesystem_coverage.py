@@ -9,7 +9,7 @@ from crackerjack.services.enhanced_filesystem import (
 
 
 class TestFileCache:
-    def test_cache_initialization(self):
+    def test_cache_initialization(self) -> None:
         cache = FileCache()
         assert cache is not None
         assert hasattr(cache, "max_size")
@@ -17,45 +17,45 @@ class TestFileCache:
         assert hasattr(cache, "_cache")
         assert hasattr(cache, "_access_times")
 
-    def test_cache_with_custom_params(self):
+    def test_cache_with_custom_params(self) -> None:
         cache = FileCache(max_size=500, default_ttl=120.0)
         assert cache.max_size == 500
         assert cache.default_ttl == 120.0
 
-    def test_cache_default_values(self):
+    def test_cache_default_values(self) -> None:
         cache = FileCache()
         assert cache.max_size == 1000
         assert cache.default_ttl == 300.0
         assert isinstance(cache._cache, dict)
         assert isinstance(cache._access_times, dict)
 
-    def test_cache_put_basic(self):
+    def test_cache_put_basic(self) -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
 
         assert "test_key" in cache._cache
         assert "test_key" in cache._access_times
 
-    def test_cache_get_basic(self):
+    def test_cache_get_basic(self) -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
 
         result = cache.get("test_key")
         assert result == "test_value"
 
-    def test_cache_get_nonexistent(self):
+    def test_cache_get_nonexistent(self) -> None:
         cache = FileCache()
         result = cache.get("nonexistent")
         assert result is None
 
-    def test_cache_contains(self):
+    def test_cache_contains(self) -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
 
         assert cache.get("test_key") is not None
         assert cache.get("nonexistent") is None
 
-    def test_cache_clear(self):
+    def test_cache_clear(self) -> None:
         cache = FileCache()
         cache.put("test_key", "test_value")
         cache.clear()
@@ -63,7 +63,7 @@ class TestFileCache:
         assert len(cache._cache) == 0
         assert len(cache._access_times) == 0
 
-    def test_cache_size(self):
+    def test_cache_size(self) -> None:
         cache = FileCache()
         assert cache.get_stats()["entries"] == 0
 
@@ -75,30 +75,30 @@ class TestFileCache:
 
 
 class TestEnhancedFileSystemService:
-    def test_filesystem_initialization(self):
+    def test_filesystem_initialization(self) -> None:
         fs = EnhancedFileSystemService()
         assert fs is not None
         assert hasattr(fs, "cache")
 
-    def test_filesystem_with_cache_size(self):
+    def test_filesystem_with_cache_size(self) -> None:
         fs = EnhancedFileSystemService(cache_size=500)
         assert fs.cache is not None
         assert fs.cache.max_size == 500
 
-    def test_filesystem_default_cache(self):
+    def test_filesystem_default_cache(self) -> None:
         fs = EnhancedFileSystemService()
         assert fs.cache is not None
         assert isinstance(fs.cache, FileCache)
 
     @pytest.mark.asyncio
-    async def test_filesystem_async_context(self):
+    async def test_filesystem_async_context(self) -> None:
         async def create_filesystem():
             return EnhancedFileSystemService()
 
         fs = await create_filesystem()
         assert fs is not None
 
-    def test_filesystem_has_required_methods(self):
+    def test_filesystem_has_required_methods(self) -> None:
         fs = EnhancedFileSystemService()
 
         expected_attrs = ["cache"]
@@ -107,7 +107,7 @@ class TestEnhancedFileSystemService:
             assert hasattr(fs, attr), f"Missing attribute: {attr}"
 
     @pytest.mark.asyncio
-    async def test_filesystem_async_operations_basic(self):
+    async def test_filesystem_async_operations_basic(self) -> None:
         fs = EnhancedFileSystemService()
 
         assert fs.cache is not None
@@ -115,7 +115,7 @@ class TestEnhancedFileSystemService:
         result = fs.cache.get("async_test")
         assert result == "value"
 
-    def test_filesystem_cache_integration(self):
+    def test_filesystem_cache_integration(self) -> None:
         fs = EnhancedFileSystemService()
 
         assert fs.cache.get_stats()["entries"] == 0
@@ -123,7 +123,7 @@ class TestEnhancedFileSystemService:
         assert fs.cache.get_stats()["entries"] == 1
         assert fs.cache.get("integration_test") is not None
 
-    def test_multiple_filesystem_instances(self):
+    def test_multiple_filesystem_instances(self) -> None:
         fs1 = EnhancedFileSystemService()
         fs2 = EnhancedFileSystemService()
 
@@ -140,15 +140,15 @@ class TestEnhancedFileSystemService:
 
 
 class TestEnhancedFileSystemServiceEdgeCases:
-    def test_filesystem_with_zero_cache_size(self):
+    def test_filesystem_with_zero_cache_size(self) -> None:
         fs = EnhancedFileSystemService(cache_size=0)
         assert fs.cache.max_size == 0
 
-    def test_filesystem_with_large_cache_size(self):
+    def test_filesystem_with_large_cache_size(self) -> None:
         fs = EnhancedFileSystemService(cache_size=10000)
         assert fs.cache.max_size == 10000
 
-    def test_cache_with_special_characters(self):
+    def test_cache_with_special_characters(self) -> None:
         cache = FileCache()
         special_key = "key - with - special@chars#"
         cache.put(special_key, "special_value")
@@ -156,14 +156,14 @@ class TestEnhancedFileSystemServiceEdgeCases:
         assert cache.get(special_key) is not None
         assert cache.get(special_key) == "special_value"
 
-    def test_cache_with_empty_value(self):
+    def test_cache_with_empty_value(self) -> None:
         cache = FileCache()
         cache.put("empty_key", "")
 
         assert cache.get("empty_key") == ""
         assert "empty_key" in cache._cache
 
-    def test_cache_overwrite_value(self):
+    def test_cache_overwrite_value(self) -> None:
         cache = FileCache()
         cache.put("overwrite_key", "original")
         cache.put("overwrite_key", "updated")
@@ -172,10 +172,10 @@ class TestEnhancedFileSystemServiceEdgeCases:
         assert result == "updated"
 
     @pytest.mark.asyncio
-    async def test_concurrent_cache_operations(self):
+    async def test_concurrent_cache_operations(self) -> None:
         cache = FileCache()
 
-        async def put_operation(key: str, value: str):
+        async def put_operation(key: str, value: str) -> None:
             cache.put(key, value)
 
         async def get_operation(key: str):
@@ -190,7 +190,7 @@ class TestEnhancedFileSystemServiceEdgeCases:
         assert cache.get_stats()["entries"] == 3
 
         results = await asyncio.gather(
-            get_operation("key1"), get_operation("key2"), get_operation("key3")
+            get_operation("key1"), get_operation("key2"), get_operation("key3"),
         )
 
         assert results == ["value1", "value2", "value3"]

@@ -85,7 +85,7 @@ def _load_mcp_config(project_path: Path) -> dict[str, t.Any]:
         }
     except Exception as e:
         console.print(
-            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]"
+            f"[yellow]Warning: Failed to load MCP config from pyproject.toml: {e}[/yellow]",
         )
         return {
             "http_port": 8676,
@@ -301,7 +301,9 @@ def _print_server_info(
 
 
 def _run_mcp_server(
-    mcp_app: t.Any, mcp_config: dict[str, t.Any], http_mode: bool
+    mcp_app: t.Any,
+    mcp_config: dict[str, t.Any],
+    http_mode: bool,
 ) -> None:
     console.print("[yellow]MCP app created, about to run...[/ yellow]")
 
@@ -370,7 +372,9 @@ def main(
 
     try:
         project_path, mcp_config = _initialize_project_and_config(
-            project_path_arg, http_port, http_mode
+            project_path_arg,
+            http_port,
+            http_mode,
         )
 
         _setup_server_context(project_path)
@@ -386,7 +390,7 @@ def main(
             console.print("[green]✅ Skill system initialized[/ green]")
         except Exception as e:
             console.print(
-                f"[yellow]⚠️ Skill system initialization failed: {e}[/ yellow]"
+                f"[yellow]⚠️ Skill system initialization failed: {e}[/ yellow]",
             )
 
         _show_server_startup_info(project_path, mcp_config, http_mode)

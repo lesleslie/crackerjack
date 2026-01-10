@@ -48,7 +48,7 @@ class CapacityForecast:
 
 
 class MovingAveragePredictor:
-    def __init__(self, window_size: int = 10):
+    def __init__(self, window_size: int = 10) -> None:
         self.window_size = window_size
 
     def predict(self, values: list[float], periods: int = 1) -> list[float]:
@@ -92,7 +92,7 @@ class LinearTrendPredictor:
 
 
 class SeasonalPredictor:
-    def __init__(self, season_length: int = 24):
+    def __init__(self, season_length: int = 24) -> None:
         self.season_length = season_length
 
     def predict(self, values: list[float], periods: int = 1) -> list[float]:
@@ -112,11 +112,11 @@ class SeasonalPredictor:
 
 
 class PredictiveAnalyticsEngine:
-    def __init__(self, history_limit: int = 1000):
+    def __init__(self, history_limit: int = 1000) -> None:
         self.history_limit = history_limit
 
         self.metric_history: dict[str, deque[tuple[datetime, float]]] = defaultdict(
-            lambda: deque[tuple[datetime, float]](maxlen=history_limit)
+            lambda: deque[tuple[datetime, float]](maxlen=history_limit),
         )
 
         self.predictors: dict[str, PredictorProtocol] = {
@@ -180,7 +180,8 @@ class PredictiveAnalyticsEngine:
 
         predicted_values = predictor.predict(values, periods=24)
         confidence_intervals = self._calculate_confidence_intervals(
-            values, predicted_values
+            values,
+            predicted_values,
         )
 
         self.trend_analyses[metric_type] = TrendAnalysis(
@@ -235,7 +236,9 @@ class PredictiveAnalyticsEngine:
         return direction, trend_strength
 
     def _calculate_confidence_intervals(
-        self, historical: list[float], predictions: list[float]
+        self,
+        historical: list[float],
+        predictions: list[float],
     ) -> list[tuple[float, float]]:
         if len(historical) < 2:
             return [(pred, pred) for pred in predictions]
@@ -266,20 +269,21 @@ class PredictiveAnalyticsEngine:
 
         if predictor_name is None:
             config = self.metric_configs.get(metric_type, {})
-            predictor_name = t.cast(str, config.get("predictor", "moving_average"))
+            predictor_name = t.cast("str", config.get("predictor", "moving_average"))
 
         predictor = self.predictors[predictor_name]
         predicted_values = predictor.predict(values, periods_ahead)
 
         confidence_intervals = self._calculate_confidence_intervals(
-            values, predicted_values
+            values,
+            predicted_values,
         )
 
         accuracy = self._calculate_model_accuracy(metric_type, predictor_name)
 
         predictions = []
         for i, (pred_value, conf_interval) in enumerate(
-            zip(predicted_values, confidence_intervals)
+            zip(predicted_values, confidence_intervals, strict=False),
         ):
             prediction_time = last_timestamp + timedelta(hours=i + 1)
 
@@ -316,7 +320,8 @@ class PredictiveAnalyticsEngine:
         predictions = predictor.predict(train_data, periods=len(validation_data))
 
         mae = statistics.mean(
-            abs(pred - actual) for pred, actual in zip(predictions, validation_data)
+            abs(pred - actual)
+            for pred, actual in zip(predictions, validation_data, strict=False)
         )
 
         if mae == 0:
@@ -328,7 +333,10 @@ class PredictiveAnalyticsEngine:
         return max(0.1, min(1.0, 1.0 - relative_error))
 
     def analyze_capacity_requirements(
-        self, resource_type: str, current_usage: float, threshold: float = 0.8
+        self,
+        resource_type: str,
+        current_usage: float,
+        threshold: float = 0.8,
     ) -> CapacityForecast:
         if resource_type not in self.metric_history:
             return CapacityForecast(
@@ -354,7 +362,10 @@ class PredictiveAnalyticsEngine:
                 break
 
         recommendations = self._generate_capacity_recommendations(
-            resource_type, current_usage, threshold, estimated_exhaustion
+            resource_type,
+            current_usage,
+            threshold,
+            estimated_exhaustion,
         )
 
         avg_accuracy = statistics.mean(pred.model_accuracy for pred in predictions)
@@ -387,15 +398,15 @@ class PredictiveAnalyticsEngine:
                     (
                         f"URGENT: {resource_type} capacity will be exceeded in {days_until} days",
                         "Consider immediate scaling or optimization",
-                    )
+                    ),
                 )
             elif days_until < 30:
                 recommendations.append(
-                    f"Plan capacity increase for {resource_type} within {days_until} days"
+                    f"Plan capacity increase for {resource_type} within {days_until} days",
                 )
             else:
                 recommendations.append(
-                    f"Monitor {resource_type} usage, capacity limit expected in {days_until} days"
+                    f"Monitor {resource_type} usage, capacity limit expected in {days_until} days",
                 )
 
         if utilization > 0.7:
@@ -403,7 +414,7 @@ class PredictiveAnalyticsEngine:
                 (
                     f"High {resource_type} utilization ({utilization:.1%})",
                     "Consider proactive scaling",
-                )
+                ),
             )
 
         if not recommendations:

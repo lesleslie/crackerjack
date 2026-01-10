@@ -13,16 +13,17 @@ class ConfigService:
         path = Path(path)
 
         if not path.exists():
-            raise FileNotFoundError(f"Configuration file does not exist: {path}")
+            msg = f"Configuration file does not exist: {path}"
+            raise FileNotFoundError(msg)
 
         if path.suffix.lower() == ".json":
             return ConfigService._load_json(path)
-        elif path.suffix.lower() in (".yml", ".yaml"):
+        if path.suffix.lower() in (".yml", ".yaml"):
             return ConfigService._load_yaml(path)
-        elif path.suffix.lower() == ".toml":
+        if path.suffix.lower() == ".toml":
             return ConfigService._load_toml(path)
-        else:
-            raise ValueError(f"Unsupported config format: {path.suffix}")
+        msg = f"Unsupported config format: {path.suffix}"
+        raise ValueError(msg)
 
     @staticmethod
     async def load_config_async(path: str | Path) -> dict[str, Any]:
@@ -31,19 +32,20 @@ class ConfigService:
         path = Path(path)
 
         if not path.exists():
-            raise FileNotFoundError(f"Configuration file does not exist: {path}")
+            msg = f"Configuration file does not exist: {path}"
+            raise FileNotFoundError(msg)
 
         if path.suffix.lower() == ".json":
             content = await FileIOService.read_text_file(path)
             return json.loads(content)
-        elif path.suffix.lower() in (".yml", ".yaml"):
+        if path.suffix.lower() in (".yml", ".yaml"):
             content = await FileIOService.read_text_file(path)
             return yaml.safe_load(content)
-        elif path.suffix.lower() == ".toml":
+        if path.suffix.lower() == ".toml":
             content = await FileIOService.read_text_file(path)
             return _load_toml_from_text(content)
-        else:
-            raise ValueError(f"Unsupported config format: {path.suffix}")
+        msg = f"Unsupported config format: {path.suffix}"
+        raise ValueError(msg)
 
     @staticmethod
     def _load_json(path: Path) -> dict[str, Any]:
@@ -62,7 +64,8 @@ class ConfigService:
 
     @staticmethod
     def validate_config(
-        config: dict[str, Any], model_class: type[BaseModel]
+        config: dict[str, Any],
+        model_class: type[BaseModel],
     ) -> BaseModel:
         try:
             return model_class.model_validate(config)
@@ -72,7 +75,9 @@ class ConfigService:
 
     @staticmethod
     def save_config(
-        config: dict[str, Any], path: str | Path, format: str | None = None
+        config: dict[str, Any],
+        path: str | Path,
+        format: str | None = None,
     ) -> None:
         path = Path(path)
         format = format or path.suffix.lower().lstrip(".")
@@ -86,7 +91,8 @@ class ConfigService:
         elif format == "toml":
             ConfigService._save_toml(config, path)
         else:
-            raise ValueError(f"Unsupported config format: {format}")
+            msg = f"Unsupported config format: {format}"
+            raise ValueError(msg)
 
     @staticmethod
     def _save_json(config: dict[str, Any], path: Path) -> None:
@@ -105,7 +111,8 @@ class ConfigService:
 
     @staticmethod
     def merge_configs(
-        base_config: dict[str, Any], override_config: dict[str, Any]
+        base_config: dict[str, Any],
+        override_config: dict[str, Any],
     ) -> dict[str, Any]:
         result = base_config.copy()
 
@@ -181,12 +188,14 @@ def _emit_scalar_values(scalars: list[tuple[str, Any]], lines: list[str]) -> Non
 
 
 def _emit_nested_tables(
-    tables: list[tuple[str, dict[str, Any]]], prefix: list[str], lines: list[str]
+    tables: list[tuple[str, dict[str, Any]]],
+    prefix: list[str],
+    lines: list[str],
 ) -> None:
     for key, value in tables:
         if lines and lines[-1] != "":
             lines.append("")
-        emit_table(value, prefix + [key], lines)
+        emit_table(value, [*prefix, key], lines)
 
 
 def _format_toml_value(value: Any) -> str:
@@ -199,4 +208,5 @@ def _format_toml_value(value: Any) -> str:
         return f'"{escaped}"'
     if isinstance(value, list):
         return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
-    raise ValueError(f"Unsupported TOML value: {value!r}")
+    msg = f"Unsupported TOML value: {value!r}"
+    raise ValueError(msg)

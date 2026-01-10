@@ -1,6 +1,6 @@
 import re
 
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
 
 PATTERNS: dict[str, ValidatedPattern] = {
     "list_append_inefficiency_pattern": ValidatedPattern(

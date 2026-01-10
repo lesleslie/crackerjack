@@ -1,4 +1,4 @@
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
 
 PATTERNS = {
     "bandit_confidence": ValidatedPattern(

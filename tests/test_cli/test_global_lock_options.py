@@ -20,7 +20,7 @@ from crackerjack.executors.hook_lock_manager import HookLockManager
 class TestGlobalLockCLIOptions:
     """Test CLI option definitions for global lock functionality."""
 
-    def test_global_lock_cli_options_exist(self):
+    def test_global_lock_cli_options_exist(self) -> None:
         """Test that all global lock CLI options are defined."""
         expected_options = [
             "disable_global_locks",
@@ -33,7 +33,7 @@ class TestGlobalLockCLIOptions:
             assert option_name in CLI_OPTIONS
             assert isinstance(CLI_OPTIONS[option_name], typer.models.OptionInfo)
 
-    def test_disable_global_locks_option_definition(self):
+    def test_disable_global_locks_option_definition(self) -> None:
         """Test disable_global_locks CLI option definition."""
         option = CLI_OPTIONS["disable_global_locks"]
 
@@ -42,7 +42,7 @@ class TestGlobalLockCLIOptions:
         assert "--disable-global-locks" in option.param_decls
         assert "Disable global locking" in option.help
 
-    def test_global_lock_timeout_option_definition(self):
+    def test_global_lock_timeout_option_definition(self) -> None:
         """Test global_lock_timeout CLI option definition."""
         option = CLI_OPTIONS["global_lock_timeout"]
 
@@ -51,7 +51,7 @@ class TestGlobalLockCLIOptions:
         assert "--global-lock-timeout" in option.param_decls
         assert "timeout in seconds" in option.help
 
-    def test_global_lock_cleanup_option_definition(self):
+    def test_global_lock_cleanup_option_definition(self) -> None:
         """Test global_lock_cleanup CLI option definition."""
         option = CLI_OPTIONS["global_lock_cleanup"]
 
@@ -61,11 +61,13 @@ class TestGlobalLockCLIOptions:
         param_decl = option.param_decls[0]
         assert (
             "--cleanup-stale-locks" in param_decl
-            and "--no-cleanup-stale-locks" in param_decl
+        )
+        assert (
+            "--no-cleanup-stale-locks" in param_decl
         )
         assert "Clean up stale global lock files" in option.help
 
-    def test_global_lock_dir_option_definition(self):
+    def test_global_lock_dir_option_definition(self) -> None:
         """Test global_lock_dir CLI option definition."""
         option = CLI_OPTIONS["global_lock_dir"]
 
@@ -78,7 +80,7 @@ class TestGlobalLockCLIOptions:
 class TestOptionsObjectCreation:
     """Test Options object creation with global lock fields."""
 
-    def test_options_default_values(self):
+    def test_options_default_values(self) -> None:
         """Test Options object default values for global lock fields."""
         options = Options()
 
@@ -87,7 +89,7 @@ class TestOptionsObjectCreation:
         assert options.global_lock_cleanup is True
         assert options.global_lock_dir is None
 
-    def test_options_with_custom_values(self):
+    def test_options_with_custom_values(self) -> None:
         """Test Options object with custom global lock values."""
         options = Options(
             disable_global_locks=True,
@@ -101,7 +103,7 @@ class TestOptionsObjectCreation:
         assert options.global_lock_cleanup is False
         assert options.global_lock_dir == "/custom/lock/path"
 
-    def test_create_options_function_with_global_locks(self):
+    def test_create_options_function_with_global_locks(self) -> None:
         """Test create_options function includes global lock parameters."""
         options = create_options(
             commit=False,
@@ -174,7 +176,7 @@ class TestOptionsObjectCreation:
         assert options.global_lock_cleanup is False
         assert options.global_lock_dir == "/test/locks"
 
-    def test_create_options_function_with_defaults(self):
+    def test_create_options_function_with_defaults(self) -> None:
         """Test create_options function with default global lock values."""
         options = create_options(
             commit=False,
@@ -252,7 +254,7 @@ class TestOptionsObjectCreation:
 class TestConfigurationFlow:
     """Test configuration flow from CLI options to lock manager."""
 
-    def test_cli_to_global_lock_config_flow(self, tmp_path):
+    def test_cli_to_global_lock_config_flow(self, tmp_path) -> None:
         """Test CLI options → GlobalLockConfig flow."""
         # Create CLI options
         options = Options(
@@ -270,7 +272,7 @@ class TestConfigurationFlow:
         assert config.lock_directory == tmp_path / "cli_test_locks"
         assert config.lock_directory.exists()
 
-    def test_cli_to_lock_manager_configuration_flow(self, tmp_path):
+    def test_cli_to_lock_manager_configuration_flow(self, tmp_path) -> None:
         """Test full CLI → Options → GlobalLockConfig → HookLockManager flow."""
         # Start with CLI options
         cli_options = Options(
@@ -292,7 +294,7 @@ class TestConfigurationFlow:
         )
         assert lock_manager._global_config.lock_directory.exists()
 
-    def test_disabled_global_locks_configuration_flow(self):
+    def test_disabled_global_locks_configuration_flow(self) -> None:
         """Test configuration flow when global locks are disabled via CLI."""
         cli_options = Options(
             disable_global_locks=True,
@@ -312,13 +314,13 @@ class TestConfigurationFlow:
 
         assert lock_manager.is_global_lock_enabled() is False
 
-    def test_custom_timeout_configuration_flow(self):
+    def test_custom_timeout_configuration_flow(self) -> None:
         """Test custom timeout configuration through CLI."""
         custom_timeouts = [60, 120, 300, 900, 1800]  # Various timeout values
 
         for timeout in custom_timeouts:
             cli_options = Options(
-                disable_global_locks=False, global_lock_timeout=timeout
+                disable_global_locks=False, global_lock_timeout=timeout,
             )
 
             config = GlobalLockConfig.from_options(cli_options)
@@ -328,7 +330,7 @@ class TestConfigurationFlow:
             lock_manager.configure_from_options(cli_options)
             assert lock_manager._global_config.timeout_seconds == float(timeout)
 
-    def test_custom_directory_configuration_flow(self, tmp_path):
+    def test_custom_directory_configuration_flow(self, tmp_path) -> None:
         """Test custom directory configuration through CLI."""
         custom_dirs = [
             tmp_path / "custom1",
@@ -338,7 +340,7 @@ class TestConfigurationFlow:
 
         for custom_dir in custom_dirs:
             cli_options = Options(
-                disable_global_locks=False, global_lock_dir=str(custom_dir)
+                disable_global_locks=False, global_lock_dir=str(custom_dir),
             )
 
             config = GlobalLockConfig.from_options(cli_options)
@@ -354,7 +356,7 @@ class TestConfigurationFlow:
 class TestCLIArgumentValidation:
     """Test CLI argument validation for global lock options."""
 
-    def test_global_lock_timeout_validation(self):
+    def test_global_lock_timeout_validation(self) -> None:
         """Test validation of global lock timeout values."""
         # Test valid timeout values
         valid_timeouts = [1, 60, 300, 600, 900, 3600]
@@ -363,7 +365,7 @@ class TestCLIArgumentValidation:
             options = Options(global_lock_timeout=timeout)
             assert options.global_lock_timeout == timeout
 
-    def test_global_lock_timeout_edge_cases(self):
+    def test_global_lock_timeout_edge_cases(self) -> None:
         """Test edge cases for global lock timeout."""
         # Test zero timeout (might be valid for immediate failure)
         options = Options(global_lock_timeout=0)
@@ -374,7 +376,7 @@ class TestCLIArgumentValidation:
         options = Options(global_lock_timeout=large_timeout)
         assert options.global_lock_timeout == large_timeout
 
-    def test_global_lock_directory_validation(self, tmp_path):
+    def test_global_lock_directory_validation(self, tmp_path) -> None:
         """Test validation of global lock directory paths."""
         # Test various path formats
         test_paths = [
@@ -393,7 +395,7 @@ class TestCLIArgumentValidation:
             config = GlobalLockConfig.from_options(options)
             assert str(config.lock_directory) == path_str
 
-    def test_boolean_option_validation(self):
+    def test_boolean_option_validation(self) -> None:
         """Test boolean options validation for global lock settings."""
         # Test all combinations of boolean settings
         boolean_combinations = [
@@ -405,13 +407,13 @@ class TestCLIArgumentValidation:
 
         for disable_locks, cleanup in boolean_combinations:
             options = Options(
-                disable_global_locks=disable_locks, global_lock_cleanup=cleanup
+                disable_global_locks=disable_locks, global_lock_cleanup=cleanup,
             )
 
             assert options.disable_global_locks == disable_locks
             assert options.global_lock_cleanup == cleanup
 
-    def test_none_values_handling(self):
+    def test_none_values_handling(self) -> None:
         """Test handling of None values for optional CLI arguments."""
         options = Options(global_lock_dir=None)
         assert options.global_lock_dir is None
@@ -425,7 +427,7 @@ class TestCLIArgumentValidation:
 class TestCLIIntegrationScenarios:
     """Test real-world CLI integration scenarios."""
 
-    def test_default_cli_scenario(self):
+    def test_default_cli_scenario(self) -> None:
         """Test default CLI scenario (no global lock arguments provided)."""
         # Simulate default CLI invocation
         options = Options()  # All defaults
@@ -442,7 +444,7 @@ class TestCLIIntegrationScenarios:
         assert config.timeout_seconds == 1800.0
         assert config.lock_directory == Path.home() / ".crackerjack" / "locks"
 
-    def test_performance_focused_cli_scenario(self):
+    def test_performance_focused_cli_scenario(self) -> None:
         """Test performance-focused CLI scenario (global locks disabled)."""
         options = Options(
             disable_global_locks=True,  # Disable for maximum performance
@@ -456,7 +458,7 @@ class TestCLIIntegrationScenarios:
         lock_manager.configure_from_options(options)
         assert lock_manager.is_global_lock_enabled() is False
 
-    def test_safety_focused_cli_scenario(self, tmp_path):
+    def test_safety_focused_cli_scenario(self, tmp_path) -> None:
         """Test safety-focused CLI scenario (strict locking, short timeouts)."""
         options = Options(
             disable_global_locks=False,  # Keep global locks enabled
@@ -475,7 +477,7 @@ class TestCLIIntegrationScenarios:
         assert lock_manager.is_global_lock_enabled() is True
         assert lock_manager._global_config.timeout_seconds == 60.0
 
-    def test_development_cli_scenario(self, tmp_path):
+    def test_development_cli_scenario(self, tmp_path) -> None:
         """Test development CLI scenario (custom directory, longer timeout)."""
         dev_lock_dir = tmp_path / "dev_locks"
 
@@ -492,7 +494,7 @@ class TestCLIIntegrationScenarios:
         assert config.lock_directory == dev_lock_dir
         assert dev_lock_dir.exists()
 
-    def test_ci_cd_cli_scenario(self, tmp_path):
+    def test_ci_cd_cli_scenario(self, tmp_path) -> None:
         """Test CI/CD CLI scenario (strict settings, custom directory)."""
         ci_lock_dir = tmp_path / "ci_locks"
 
@@ -517,7 +519,7 @@ class TestCLIIntegrationScenarios:
 class TestCLIOptionCompletion:
     """Test CLI option completeness and consistency."""
 
-    def test_options_model_has_all_cli_fields(self):
+    def test_options_model_has_all_cli_fields(self) -> None:
         """Test that Options model has all necessary fields for CLI integration."""
         # Check that Options model includes all global lock fields
         options_instance = Options()
@@ -532,7 +534,7 @@ class TestCLIOptionCompletion:
         for field in required_global_lock_fields:
             assert hasattr(options_instance, field)
 
-    def test_cli_options_dict_completeness(self):
+    def test_cli_options_dict_completeness(self) -> None:
         """Test that CLI_OPTIONS dictionary includes all global lock options."""
         expected_cli_options = [
             "disable_global_locks",
@@ -552,7 +554,7 @@ class TestCLIOptionCompletion:
             assert option_def.help is not None
             assert len(option_def.help) > 0
 
-    def test_create_options_function_signature(self):
+    def test_create_options_function_signature(self) -> None:
         """Test that create_options function has all global lock parameters."""
         import inspect
 
@@ -570,7 +572,7 @@ class TestCLIOptionCompletion:
         for param_name in required_global_lock_params:
             assert param_name in param_names
 
-    def test_options_model_protocol_compliance(self):
+    def test_options_model_protocol_compliance(self) -> None:
         """Test that Options model is compatible with OptionsProtocol."""
         from crackerjack.models.protocols import OptionsProtocol
 
@@ -602,7 +604,7 @@ class TestCLIOptionCompletion:
 class TestCLIErrorHandling:
     """Test CLI error handling for global lock options."""
 
-    def test_invalid_timeout_handling(self):
+    def test_invalid_timeout_handling(self) -> None:
         """Test handling of invalid timeout values in Options model."""
         # Negative timeout - Pydantic should accept it (validation may be elsewhere)
         options = Options(global_lock_timeout=-1)
@@ -612,7 +614,7 @@ class TestCLIErrorHandling:
         options = Options(global_lock_timeout=999999)
         assert options.global_lock_timeout == 999999
 
-    def test_invalid_directory_path_handling(self):
+    def test_invalid_directory_path_handling(self) -> None:
         """Test handling of invalid directory paths."""
         # Invalid path characters (depends on OS)
         potentially_invalid_paths = [
@@ -629,7 +631,7 @@ class TestCLIErrorHandling:
             # GlobalLockConfig might handle or raise errors
             # (Testing the actual behavior without making assumptions)
 
-    def test_none_and_empty_value_handling(self):
+    def test_none_and_empty_value_handling(self) -> None:
         """Test handling of None and empty values."""
         # None values should be handled gracefully
         options = Options(global_lock_dir=None)
@@ -639,7 +641,7 @@ class TestCLIErrorHandling:
         config = GlobalLockConfig.from_options(options)
         assert config.lock_directory == Path.home() / ".crackerjack" / "locks"
 
-    def test_type_consistency(self):
+    def test_type_consistency(self) -> None:
         """Test type consistency between CLI options and Options model."""
         # Test that CLI defaults match Options model defaults
         options_defaults = Options()
@@ -671,7 +673,7 @@ class TestCLIErrorHandling:
 class TestCLIMockingSupport:
     """Test CLI mocking capabilities for testing."""
 
-    def test_options_object_mocking(self):
+    def test_options_object_mocking(self) -> None:
         """Test that Options objects can be properly mocked for testing."""
         # Create mock options
         mock_options = unittest.mock.Mock(spec=Options)
@@ -687,7 +689,7 @@ class TestCLIMockingSupport:
         assert hasattr(mock_options, "global_lock_cleanup")
         assert hasattr(mock_options, "global_lock_dir")
 
-    def test_partial_options_mocking(self):
+    def test_partial_options_mocking(self) -> None:
         """Test mocking only specific global lock options."""
         # Create real options and override specific fields
         base_options = Options()
@@ -700,7 +702,7 @@ class TestCLIMockingSupport:
                 assert base_options.global_lock_cleanup is True
                 assert base_options.global_lock_dir is None
 
-    def test_cli_options_testability(self):
+    def test_cli_options_testability(self) -> None:
         """Test that CLI options support testing scenarios."""
         # Test creating options with various combinations for testing
         test_scenarios = [

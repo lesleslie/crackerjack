@@ -58,7 +58,7 @@ class StatusAuthenticator:
         secret_key: str | None = None,
         default_access_level: AccessLevel = AccessLevel.PUBLIC,
         enable_local_only: bool = True,
-    ):
+    ) -> None:
         self.secret_key = secret_key or self._generate_secret_key()
         self.default_access_level = default_access_level
         self.enable_local_only = enable_local_only
@@ -157,16 +157,15 @@ class StatusAuthenticator:
                 token = auth_header[7:]
                 return self._validate_jwt_token(token, operation)
 
-            elif auth_header.startswith("ApiKey "):
+            if auth_header.startswith("ApiKey "):
                 api_key = auth_header[7:]
                 return self._validate_api_key(api_key, operation)
 
-            elif auth_header.startswith("HMAC-SHA256 "):
+            if auth_header.startswith("HMAC-SHA256 "):
                 signature_data = auth_header[12:]
                 return self._validate_hmac_signature(signature_data, operation)
 
-            else:
-                return self._validate_api_key(auth_header, operation)
+            return self._validate_api_key(auth_header, operation)
 
         except Exception as e:
             self.security_logger.log_security_event(
@@ -175,7 +174,8 @@ class StatusAuthenticator:
                 message=f"Authentication parsing failed: {e}",
                 operation=operation,
             )
-            raise AuthenticationError(f"Invalid authentication format: {e}")
+            msg = f"Invalid authentication format: {e}"
+            raise AuthenticationError(msg)
 
     def _validate_api_key(self, api_key: str, operation: str) -> AuthCredentials:
         if api_key in self._api_keys:
@@ -189,7 +189,8 @@ class StatusAuthenticator:
                     client_id=credentials.client_id,
                     operation=operation,
                 )
-                raise ExpiredCredentialsError("API key expired")
+                msg = "API key expired"
+                raise ExpiredCredentialsError(msg)
 
             return credentials
 
@@ -199,16 +200,18 @@ class StatusAuthenticator:
             message="Invalid API key",
             operation=operation,
             additional_data={
-                "api_key_prefix": api_key[:8] if len(api_key) > 8 else api_key
+                "api_key_prefix": api_key[:8] if len(api_key) > 8 else api_key,
             },
         )
-        raise AuthenticationError("Invalid API key")
+        msg = "Invalid API key"
+        raise AuthenticationError(msg)
 
     def _validate_jwt_token(self, token: str, operation: str) -> AuthCredentials:
         try:
             parts = token.split(".")
             if len(parts) != 3:
-                raise AuthenticationError("Invalid JWT format")
+                msg = "Invalid JWT format"
+                raise AuthenticationError(msg)
 
             import base64
 
@@ -222,21 +225,23 @@ class StatusAuthenticator:
                         self.secret_key.encode(),
                         f"{parts[0]}.{parts[1]}".encode(),
                         hashlib.sha256,
-                    ).digest()
+                    ).digest(),
                 )
                 .decode()
                 .rstrip("=")
             )
 
             if not hmac.compare_digest(signature, expected_signature):
-                raise AuthenticationError("Invalid JWT signature")
+                msg = "Invalid JWT signature"
+                raise AuthenticationError(msg)
 
             if "exp" in payload and time.time() > payload["exp"]:
-                raise ExpiredCredentialsError("JWT token expired")
+                msg = "JWT token expired"
+                raise ExpiredCredentialsError(msg)
 
             client_id = payload.get("sub", "jwt_user")
             access_level = AccessLevel(
-                payload.get("access_level", AccessLevel.PUBLIC.value)
+                payload.get("access_level", AccessLevel.PUBLIC.value),
             )
             allowed_operations = payload.get("operations")
 
@@ -257,22 +262,27 @@ class StatusAuthenticator:
                 message=f"JWT validation failed: {e}",
                 operation=operation,
             )
-            raise AuthenticationError(f"Invalid JWT token: {e}")
+            msg = f"Invalid JWT token: {e}"
+            raise AuthenticationError(msg)
 
     def _validate_hmac_signature(
-        self, signature_data: str, operation: str
+        self,
+        signature_data: str,
+        operation: str,
     ) -> AuthCredentials:
         try:
             parts = signature_data.split(": ")
             if len(parts) != 3:
-                raise AuthenticationError("Invalid HMAC signature format")
+                msg = "Invalid HMAC signature format"
+                raise AuthenticationError(msg)
 
             client_id, timestamp_str, signature = parts
             timestamp = float(timestamp_str)
 
             current_time = time.time()
             if abs(current_time - timestamp) > 300:
-                raise ExpiredCredentialsError("HMAC signature timestamp too old")
+                msg = "HMAC signature timestamp too old"
+                raise ExpiredCredentialsError(msg)
 
             message = f"{client_id}: {operation}: {timestamp_str}"
             expected_signature = hmac.new(
@@ -282,7 +292,8 @@ class StatusAuthenticator:
             ).hexdigest()
 
             if not hmac.compare_digest(signature, expected_signature):
-                raise AuthenticationError("Invalid HMAC signature")
+                msg = "Invalid HMAC signature"
+                raise AuthenticationError(msg)
 
             return AuthCredentials(
                 client_id=client_id,
@@ -297,10 +308,13 @@ class StatusAuthenticator:
                 message=f"HMAC validation failed: {e}",
                 operation=operation,
             )
-            raise AuthenticationError(f"Invalid HMAC signature: {e}")
+            msg = f"Invalid HMAC signature: {e}"
+            raise AuthenticationError(msg)
 
     def _validate_credentials(
-        self, credentials: AuthCredentials, operation: str
+        self,
+        credentials: AuthCredentials,
+        operation: str,
     ) -> None:
         if credentials.is_expired:
             self.security_logger.log_security_event(
@@ -310,10 +324,13 @@ class StatusAuthenticator:
                 client_id=credentials.client_id,
                 operation=operation,
             )
-            raise ExpiredCredentialsError("Credentials expired")
+            msg = "Credentials expired"
+            raise ExpiredCredentialsError(msg)
 
     def _check_operation_access(
-        self, credentials: AuthCredentials, operation: str
+        self,
+        credentials: AuthCredentials,
+        operation: str,
     ) -> None:
         if not credentials.has_operation_access(operation):
             self.security_logger.log_security_event(
@@ -325,15 +342,17 @@ class StatusAuthenticator:
                 additional_data={
                     "access_level": credentials.access_level.value,
                     "allowed_operations": list[t.Any](
-                        credentials.allowed_operations or []
+                        credentials.allowed_operations or [],
                     ),
                 },
             )
-            raise AccessDeniedError(f"Operation not allowed: {operation}")
+            msg = f"Operation not allowed: {operation}"
+            raise AccessDeniedError(msg)
 
         required_level = self._operation_requirements.get(operation, AccessLevel.PUBLIC)
         if not self._has_sufficient_access_level(
-            credentials.access_level, required_level
+            credentials.access_level,
+            required_level,
         ):
             self.security_logger.log_security_event(
                 event_type=SecurityEventType.INSUFFICIENT_PRIVILEGES,
@@ -346,7 +365,8 @@ class StatusAuthenticator:
                     "required_level": required_level.value,
                 },
             )
-            raise AccessDeniedError(f"Insufficient access level for {operation}")
+            msg = f"Insufficient access level for {operation}"
+            raise AccessDeniedError(msg)
 
     def _has_sufficient_access_level(
         self,
@@ -456,5 +476,7 @@ async def authenticate_status_request(
     operation: str = "unknown",
 ) -> AuthCredentials:
     return get_status_authenticator().authenticate_request(
-        auth_header, client_ip, operation
+        auth_header,
+        client_ip,
+        operation,
     )

@@ -47,7 +47,8 @@ class BanditAdapter(BaseToolAdapter):
     def __init__(self, settings: BanditSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "BanditAdapter initialized", extra={"has_settings": settings is not None}
+            "BanditAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -85,7 +86,8 @@ class BanditAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -207,7 +209,7 @@ class BanditAdapter(BaseToolAdapter):
             extra={
                 "total_issues": len(issues),
                 "files_with_issues": len(
-                    {str(i.file_path) for i in issues if i.file_path}
+                    {str(i.file_path) for i in issues if i.file_path},
                 ),
             },
         )

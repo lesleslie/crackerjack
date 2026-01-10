@@ -1,12 +1,12 @@
-"""
-Tests for Agent Skills System (Option 1)
+"""Tests for Agent Skills System (Option 1).
 
 Tests the AgentSkill, AgentSkillRegistry, and related functionality.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, Mock
+
+import pytest
 
 from crackerjack.agents.base import (
     AgentContext,
@@ -22,7 +22,6 @@ from crackerjack.skills.agent_skills import (
     SkillExecutionResult,
     SkillMetadata,
 )
-
 
 # Fixtures
 
@@ -75,12 +74,12 @@ def mock_agent() -> SubAgent:
             fixes_applied=["Simplified complex function"],
             recommendations=["Consider breaking into smaller functions"],
             files_modified=["test.py"],
-        )
+        ),
     )
 
     # Mock get_supported_types
     agent.get_supported_types = Mock(
-        return_value={IssueType.COMPLEXITY, IssueType.DEAD_CODE}
+        return_value={IssueType.COMPLEXITY, IssueType.DEAD_CODE},
     )
 
     return agent
@@ -326,7 +325,7 @@ def test_agent_skill_registry_get_by_type(
     mock_agent.can_handle = AsyncMock(return_value=0.9)
     mock_agent.analyze_and_fix = AsyncMock()
     mock_agent.get_supported_types = Mock(
-        return_value={IssueType.COMPLEXITY}
+        return_value={IssueType.COMPLEXITY},
     )
 
     registry.register_agent(
@@ -360,7 +359,7 @@ async def test_agent_skill_registry_find_best_skill(
     high_conf_agent.can_handle = AsyncMock(return_value=0.95)
     high_conf_agent.analyze_and_fix = AsyncMock()
     high_conf_agent.get_supported_types = Mock(
-        return_value={IssueType.COMPLEXITY}
+        return_value={IssueType.COMPLEXITY},
     )
 
     low_conf_agent = MagicMock(spec=SubAgent)
@@ -368,7 +367,7 @@ async def test_agent_skill_registry_find_best_skill(
     low_conf_agent.can_handle = AsyncMock(return_value=0.6)
     low_conf_agent.analyze_and_fix = AsyncMock()
     low_conf_agent.get_supported_types = Mock(
-        return_value={IssueType.COMPLEXITY}
+        return_value={IssueType.COMPLEXITY},
     )
 
     # Register high confidence agent using lambda for factory

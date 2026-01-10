@@ -22,13 +22,13 @@ class TestDocumentationAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test DocumentationAgent initializes correctly."""
         agent = DocumentationAgent(context)
 
         assert agent.context == context
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports documentation issues."""
         agent = DocumentationAgent(context)
 
@@ -49,7 +49,7 @@ class TestDocumentationAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return DocumentationAgent(context)
 
-    async def test_can_handle_documentation_issue(self, agent):
+    async def test_can_handle_documentation_issue(self, agent) -> None:
         """Test confidence for documentation issues."""
         issue = Issue(
             id="doc-001",
@@ -62,7 +62,7 @@ class TestDocumentationAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="fmt-001",
@@ -87,7 +87,7 @@ class TestDocumentationAgentAnalyzeAndFix:
         context = AgentContext(project_path=tmp_path)
         return DocumentationAgent(context)
 
-    async def test_analyze_and_fix_changelog(self, agent):
+    async def test_analyze_and_fix_changelog(self, agent) -> None:
         """Test analyzing changelog issues."""
         issue = Issue(
             id="doc-001",
@@ -104,7 +104,7 @@ class TestDocumentationAgentAnalyzeAndFix:
             mock_update.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_analyze_and_fix_consistency(self, agent):
+    async def test_analyze_and_fix_consistency(self, agent) -> None:
         """Test analyzing consistency issues."""
         issue = Issue(
             id="doc-002",
@@ -121,7 +121,7 @@ class TestDocumentationAgentAnalyzeAndFix:
             mock_fix.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_analyze_and_fix_api_docs(self, agent):
+    async def test_analyze_and_fix_api_docs(self, agent) -> None:
         """Test analyzing API documentation issues."""
         issue = Issue(
             id="doc-003",
@@ -138,7 +138,7 @@ class TestDocumentationAgentAnalyzeAndFix:
             mock_api.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_analyze_and_fix_readme(self, agent):
+    async def test_analyze_and_fix_readme(self, agent) -> None:
         """Test analyzing README issues."""
         issue = Issue(
             id="doc-004",
@@ -154,7 +154,7 @@ class TestDocumentationAgentAnalyzeAndFix:
 
             mock_api.assert_called_once_with(issue)
 
-    async def test_analyze_and_fix_general(self, agent):
+    async def test_analyze_and_fix_general(self, agent) -> None:
         """Test analyzing general documentation issues."""
         issue = Issue(
             id="doc-005",
@@ -170,7 +170,7 @@ class TestDocumentationAgentAnalyzeAndFix:
 
             mock_general.assert_called_once_with(issue)
 
-    async def test_analyze_and_fix_error_handling(self, agent):
+    async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
         issue = Issue(
             id="doc-006",
@@ -201,7 +201,7 @@ class TestDocumentationAgentChangelog:
         os.chdir(tmp_path)
         return DocumentationAgent(context)
 
-    async def test_update_changelog_no_changes(self, agent):
+    async def test_update_changelog_no_changes(self, agent) -> None:
         """Test updating changelog when no recent changes."""
         issue = Issue(
             id="doc-001",
@@ -217,7 +217,7 @@ class TestDocumentationAgentChangelog:
             assert result.confidence == 0.7
             assert "No recent changes" in result.recommendations[0]
 
-    async def test_update_changelog_with_changes(self, agent, tmp_path):
+    async def test_update_changelog_with_changes(self, agent, tmp_path) -> None:
         """Test updating changelog with recent changes."""
         issue = Issue(
             id="doc-001",
@@ -246,7 +246,7 @@ class TestDocumentationAgentChangelog:
                     assert result.confidence == 0.9
                     assert "CHANGELOG.md" in result.files_modified[0]
 
-    async def test_update_changelog_create_new(self, agent):
+    async def test_update_changelog_create_new(self, agent) -> None:
         """Test creating new changelog when it doesn't exist."""
         issue = Issue(
             id="doc-001",
@@ -266,7 +266,7 @@ class TestDocumentationAgentChangelog:
 
                     assert result.success is True
 
-    async def test_update_changelog_read_failure(self, agent, tmp_path):
+    async def test_update_changelog_read_failure(self, agent, tmp_path) -> None:
         """Test handling changelog read failure."""
         issue = Issue(
             id="doc-001",
@@ -288,7 +288,7 @@ class TestDocumentationAgentChangelog:
             assert result.success is False
             assert "Failed to read" in result.remaining_issues[0]
 
-    async def test_update_changelog_write_failure(self, agent):
+    async def test_update_changelog_write_failure(self, agent) -> None:
         """Test handling changelog write failure."""
         issue = Issue(
             id="doc-001",
@@ -323,7 +323,7 @@ class TestDocumentationAgentConsistency:
         os.chdir(tmp_path)
         return DocumentationAgent(context)
 
-    async def test_fix_documentation_consistency_with_issues(self, agent, tmp_path):
+    async def test_fix_documentation_consistency_with_issues(self, agent, tmp_path) -> None:
         """Test fixing consistency issues."""
         issue = Issue(
             id="doc-001",
@@ -336,7 +336,7 @@ class TestDocumentationAgentConsistency:
         readme_path.write_text("We have 10 specialized agents")
 
         agent_count_issues = [
-            (readme_path, "10", "12")
+            (readme_path, "10", "12"),
         ]
 
         with patch.object(agent, "_check_agent_count_consistency", return_value=agent_count_issues):
@@ -350,7 +350,7 @@ class TestDocumentationAgentConsistency:
                 assert result.confidence == 0.85
                 assert len(result.files_modified) > 0
 
-    async def test_fix_documentation_consistency_already_consistent(self, agent):
+    async def test_fix_documentation_consistency_already_consistent(self, agent) -> None:
         """Test when documentation is already consistent."""
         issue = Issue(
             id="doc-001",
@@ -366,7 +366,7 @@ class TestDocumentationAgentConsistency:
             assert result.confidence == 0.8
             assert "already consistent" in result.recommendations[0]
 
-    async def test_fix_documentation_consistency_write_failure(self, agent, tmp_path):
+    async def test_fix_documentation_consistency_write_failure(self, agent, tmp_path) -> None:
         """Test when writing updated content fails."""
         issue = Issue(
             id="doc-001",
@@ -400,7 +400,7 @@ class TestDocumentationAgentAPIDocumentation:
         context = AgentContext(project_path=tmp_path)
         return DocumentationAgent(context)
 
-    async def test_update_api_documentation_no_changes(self, agent):
+    async def test_update_api_documentation_no_changes(self, agent) -> None:
         """Test updating API docs when no changes detected."""
         issue = Issue(
             id="doc-001",
@@ -429,7 +429,7 @@ class TestDocumentationAgentHelpers:
         os.chdir(tmp_path)
         return DocumentationAgent(context)
 
-    def test_get_recent_changes(self, agent):
+    def test_get_recent_changes(self, agent) -> None:
         """Test getting recent changes from git."""
         # This method typically calls git commands
         if hasattr(agent, "_get_recent_changes"):
@@ -437,7 +437,7 @@ class TestDocumentationAgentHelpers:
                 mock_run.return_value = Mock(
                     returncode=0,
                     stdout="feat: new feature\nfix: bug fix\n",
-                    stderr=""
+                    stderr="",
                 )
 
                 changes = agent._get_recent_changes()
@@ -445,7 +445,7 @@ class TestDocumentationAgentHelpers:
                 # Should return some form of change list
                 assert isinstance(changes, list)
 
-    def test_generate_changelog_entry(self, agent):
+    def test_generate_changelog_entry(self, agent) -> None:
         """Test generating changelog entry from changes."""
         if hasattr(agent, "_generate_changelog_entry"):
             changes = [
@@ -459,7 +459,7 @@ class TestDocumentationAgentHelpers:
             assert isinstance(entry, str)
             assert len(entry) > 0
 
-    def test_insert_changelog_entry(self, agent):
+    def test_insert_changelog_entry(self, agent) -> None:
         """Test inserting entry into existing changelog."""
         if hasattr(agent, "_insert_changelog_entry"):
             existing = "# Changelog\n\n## [1.0.0] - 2024-01-01\n"
@@ -471,7 +471,7 @@ class TestDocumentationAgentHelpers:
             assert isinstance(result, str)
             assert new_entry in result or existing in result
 
-    def test_create_initial_changelog(self, agent):
+    def test_create_initial_changelog(self, agent) -> None:
         """Test creating initial changelog."""
         if hasattr(agent, "_create_initial_changelog"):
             entry = "## [1.0.0] - 2024-01-01\n- Initial release\n"
@@ -482,7 +482,7 @@ class TestDocumentationAgentHelpers:
             assert isinstance(result, str)
             assert "Changelog" in result or "CHANGELOG" in result or len(result) > 0
 
-    def test_check_agent_count_consistency(self, agent, tmp_path):
+    def test_check_agent_count_consistency(self, agent, tmp_path) -> None:
         """Test checking agent count consistency."""
         if hasattr(agent, "_check_agent_count_consistency"):
             readme = tmp_path / "README.md"
@@ -493,7 +493,7 @@ class TestDocumentationAgentHelpers:
             # Should detect inconsistencies
             assert isinstance(issues, list)
 
-    def test_fix_agent_count_references(self, agent):
+    def test_fix_agent_count_references(self, agent) -> None:
         """Test fixing agent count references."""
         if hasattr(agent, "_fix_agent_count_references"):
             content = "We have 10 specialized agents"
@@ -501,13 +501,13 @@ class TestDocumentationAgentHelpers:
             expected_count = "12"
 
             result = agent._fix_agent_count_references(
-                content, current_count, expected_count
+                content, current_count, expected_count,
             )
 
             # Should update count
             assert isinstance(result, str)
 
-    def test_detect_api_changes(self, agent):
+    def test_detect_api_changes(self, agent) -> None:
         """Test detecting API changes."""
         if hasattr(agent, "_detect_api_changes"):
             changes = agent._detect_api_changes()
@@ -528,7 +528,7 @@ class TestDocumentationAgentIntegration:
         os.chdir(tmp_path)
         return DocumentationAgent(context)
 
-    def test_multiple_documentation_files(self, agent, tmp_path):
+    def test_multiple_documentation_files(self, agent, tmp_path) -> None:
         """Test handling multiple documentation files."""
         # Create multiple doc files
         (tmp_path / "README.md").write_text("# Project")

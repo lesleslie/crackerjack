@@ -1,4 +1,5 @@
-from ..core import ValidatedPattern
+from crackerjack.services.patterns.core import ValidatedPattern
+
 from .code_injection import PATTERNS as CODE_INJECTION_PATTERNS
 from .credentials import PATTERNS as CREDENTIAL_PATTERNS
 from .path_traversal import PATTERNS as PATH_TRAVERSAL_PATTERNS

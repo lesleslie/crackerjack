@@ -30,27 +30,34 @@ class VersionChecker:
         results = {}
         for tool_name, version_getter in self.tools_to_check.items():
             results[tool_name] = await self._check_single_tool(
-                tool_name, version_getter
+                tool_name,
+                version_getter,
             )
         return results
 
     async def _check_single_tool(
-        self, tool_name: str, version_getter: t.Callable[[], str | None]
+        self,
+        tool_name: str,
+        version_getter: t.Callable[[], str | None],
     ) -> VersionInfo:
         try:
             current_version = version_getter()
             if current_version:
                 latest_version = await self._fetch_latest_version(tool_name)
                 return self._create_installed_version_info(
-                    tool_name, current_version, latest_version
+                    tool_name,
+                    current_version,
+                    latest_version,
                 )
-            else:
-                return self._create_missing_tool_info(tool_name)
+            return self._create_missing_tool_info(tool_name)
         except Exception as e:
             return self._create_error_version_info(tool_name, e)
 
     def _create_installed_version_info(
-        self, tool_name: str, current_version: str, latest_version: str | None
+        self,
+        tool_name: str,
+        current_version: str,
+        latest_version: str | None,
     ) -> VersionInfo:
         update_available = (
             latest_version is not None
@@ -60,7 +67,7 @@ class VersionChecker:
         if update_available:
             self.console.print(
                 f"[yellow]🔄 {tool_name} update available: "
-                f"{current_version} → {latest_version}[/ yellow]"
+                f"{current_version} → {latest_version}[/ yellow]",
             )
 
         return VersionInfo(
@@ -79,7 +86,9 @@ class VersionChecker:
         )
 
     def _create_error_version_info(
-        self, tool_name: str, error: Exception
+        self,
+        tool_name: str,
+        error: Exception,
     ) -> VersionInfo:
         self.console.print(f"[red]❌ Error checking {tool_name}: {error}[/ red]")
         return VersionInfo(
@@ -142,17 +151,22 @@ class VersionChecker:
             latest_parts, latest_len = self._parse_version_parts(latest)
 
             normalized_current, normalized_latest = self._normalize_version_parts(
-                current_parts, latest_parts
+                current_parts,
+                latest_parts,
             )
 
             numeric_result = self._compare_numeric_parts(
-                normalized_current, normalized_latest
+                normalized_current,
+                normalized_latest,
             )
             if numeric_result != 0:
                 return numeric_result
 
             return self._handle_length_differences(
-                current_len, latest_len, normalized_current, normalized_latest
+                current_len,
+                latest_len,
+                normalized_current,
+                normalized_latest,
             )
 
         except (ValueError, AttributeError):
@@ -163,7 +177,9 @@ class VersionChecker:
         return parts, len(parts)
 
     def _normalize_version_parts(
-        self, current_parts: list[int], latest_parts: list[int]
+        self,
+        current_parts: list[int],
+        latest_parts: list[int],
     ) -> tuple[list[int], list[int]]:
         max_len = max(len(current_parts), len(latest_parts))
         current_normalized = current_parts + [0] * (max_len - len(current_parts))
@@ -171,9 +187,11 @@ class VersionChecker:
         return current_normalized, latest_normalized
 
     def _compare_numeric_parts(
-        self, current_parts: list[int], latest_parts: list[int]
+        self,
+        current_parts: list[int],
+        latest_parts: list[int],
     ) -> int:
-        for current_part, latest_part in zip(current_parts, latest_parts):
+        for current_part, latest_part in zip(current_parts, latest_parts, strict=False):
             if current_part < latest_part:
                 return -1
             if current_part > latest_part:
@@ -192,12 +210,17 @@ class VersionChecker:
 
         if current_len < latest_len:
             return self._compare_when_current_shorter(
-                current_len, latest_len, latest_parts
+                current_len,
+                latest_len,
+                latest_parts,
             )
         return self._compare_when_latest_shorter(latest_len, current_len, current_parts)
 
     def _compare_when_current_shorter(
-        self, current_len: int, latest_len: int, latest_parts: list[int]
+        self,
+        current_len: int,
+        latest_len: int,
+        latest_parts: list[int],
     ) -> int:
         extra_parts = latest_parts[current_len:]
         if any(part != 0 for part in extra_parts):
@@ -206,7 +229,10 @@ class VersionChecker:
         return -1 if current_len > 1 else 0
 
     def _compare_when_latest_shorter(
-        self, latest_len: int, current_len: int, current_parts: list[int]
+        self,
+        latest_len: int,
+        current_len: int,
+        current_parts: list[int],
     ) -> int:
         extra_parts = current_parts[latest_len:]
         if any(part != 0 for part in extra_parts):

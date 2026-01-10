@@ -285,7 +285,7 @@ class TestPluginIntegration:
         assert plugin_manager.registry is not None
 
         with patch.object(
-            plugin_manager.discovery, "auto_discover_and_load"
+            plugin_manager.discovery, "auto_discover_and_load",
         ) as mock_discover:
             mock_discover.return_value = {}
             plugins = plugin_manager.discovery.auto_discover_and_load(project_path)

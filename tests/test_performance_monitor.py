@@ -1,10 +1,12 @@
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
+
 from crackerjack.core.performance_monitor import (
+    AsyncPerformanceMonitor,
     get_performance_monitor,
     reset_performance_monitor,
-    AsyncPerformanceMonitor
 )
 
 
@@ -12,11 +14,11 @@ from crackerjack.core.performance_monitor import (
 class TestPerformanceMonitor:
     """Unit tests for AsyncPerformanceMonitor and related functions."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Reset performance monitor before each test to ensure clean state."""
         reset_performance_monitor()
 
-    def test_get_performance_monitor_returns_instance(self):
+    def test_get_performance_monitor_returns_instance(self) -> None:
         """Test that get_performance_monitor returns a performance monitor instance."""
         monitor = get_performance_monitor()
 
@@ -24,7 +26,7 @@ class TestPerformanceMonitor:
         # Verify singleton behavior - subsequent calls return the same instance
         assert monitor is get_performance_monitor()
 
-    def test_reset_performance_monitor_creates_new_instance(self):
+    def test_reset_performance_monitor_creates_new_instance(self) -> None:
         """Test that reset_performance_monitor creates a fresh monitor instance."""
         initial_monitor = get_performance_monitor()
 
@@ -35,7 +37,7 @@ class TestPerformanceMonitor:
         assert isinstance(new_monitor, AsyncPerformanceMonitor)
         assert new_monitor is not initial_monitor
 
-    def test_record_operation_success_updates_metrics(self):
+    def test_record_operation_success_updates_metrics(self) -> None:
         """Test that recording operation success updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -53,7 +55,7 @@ class TestPerformanceMonitor:
         assert metrics.failed_calls == 0
         assert metrics.timeout_calls == 0
 
-    def test_record_operation_failure_updates_metrics(self):
+    def test_record_operation_failure_updates_metrics(self) -> None:
         """Test that recording operation failure updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -71,7 +73,7 @@ class TestPerformanceMonitor:
         assert metrics.failed_calls == 1
         assert metrics.timeout_calls == 0
 
-    def test_record_operation_timeout_updates_metrics(self):
+    def test_record_operation_timeout_updates_metrics(self) -> None:
         """Test that recording operation timeout updates metrics correctly."""
         monitor = get_performance_monitor()
 
@@ -94,7 +96,7 @@ class TestPerformanceMonitor:
         assert len(timeout_events) == 1
         assert timeout_events[0].operation == "test_operation"
 
-    def test_get_all_metrics_returns_correct_data(self):
+    def test_get_all_metrics_returns_correct_data(self) -> None:
         """Test that get_all_metrics returns all recorded metrics."""
         monitor = get_performance_monitor()
 
@@ -113,7 +115,7 @@ class TestPerformanceMonitor:
         assert all_metrics["test_op1"].successful_calls == 1
         assert all_metrics["test_op2"].failed_calls == 1
 
-    def test_get_summary_stats_returns_correct_data(self):
+    def test_get_summary_stats_returns_correct_data(self) -> None:
         """Test that get_summary_stats returns correct summary data."""
         monitor = get_performance_monitor()
 
@@ -132,7 +134,7 @@ class TestPerformanceMonitor:
         assert summary["total_failures"] == 1
         assert summary["unique_operations"] == 2
 
-    def test_export_metrics_json_creates_file(self):
+    def test_export_metrics_json_creates_file(self) -> None:
         """Test that export_metrics_json creates a JSON file with metrics."""
         monitor = get_performance_monitor()
 
@@ -141,7 +143,7 @@ class TestPerformanceMonitor:
         monitor.record_operation_success("test_op", start_time)
 
         # Export to temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp_file:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp_file:
             temp_path = Path(tmp_file.name)
 
         try:
@@ -183,7 +185,7 @@ class TestPerformanceMonitor:
             if temp_path.exists():
                 temp_path.unlink()
 
-    def test_success_rate_calculation(self):
+    def test_success_rate_calculation(self) -> None:
         """Test that success rate is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -202,7 +204,7 @@ class TestPerformanceMonitor:
         # Success rate should be 2 successful out of 3 total = 66.67%
         assert abs(metrics.success_rate - 66.67) < 0.5  # Allow for small floating point differences
 
-    def test_average_time_calculation(self):
+    def test_average_time_calculation(self) -> None:
         """Test that average time is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -216,7 +218,7 @@ class TestPerformanceMonitor:
         assert metrics is not None
         assert isinstance(metrics.average_time, float)
 
-    def test_recent_average_time_calculation(self):
+    def test_recent_average_time_calculation(self) -> None:
         """Test that recent average time is calculated correctly."""
         monitor = get_performance_monitor()
 
@@ -229,7 +231,7 @@ class TestPerformanceMonitor:
         assert metrics is not None
         assert isinstance(metrics.recent_average_time, float)
 
-    def test_record_circuit_breaker_event(self):
+    def test_record_circuit_breaker_event(self) -> None:
         """Test that circuit breaker events are recorded properly."""
         monitor = get_performance_monitor()
 
@@ -240,7 +242,7 @@ class TestPerformanceMonitor:
         summary = monitor.get_summary_stats()
         assert summary["circuit_breaker_trips"] == 1
 
-    def test_get_performance_alerts(self):
+    def test_get_performance_alerts(self) -> None:
         """Test that performance alerts are generated correctly."""
         monitor = get_performance_monitor()
 
@@ -250,7 +252,7 @@ class TestPerformanceMonitor:
         # Let's at least check it returns a list
         assert isinstance(alerts, list)
 
-    def test_get_recent_timeout_events(self):
+    def test_get_recent_timeout_events(self) -> None:
         """Test that recent timeout events are returned correctly."""
         monitor = get_performance_monitor()
 
@@ -269,5 +271,5 @@ class TestPerformanceMonitor:
 
 
 # Reset monitor after tests to avoid affecting other tests
-def teardown_module():
+def teardown_module() -> None:
     reset_performance_monitor()

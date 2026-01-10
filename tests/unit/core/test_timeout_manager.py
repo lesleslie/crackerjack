@@ -5,7 +5,9 @@ and async timeout management.
 """
 
 import asyncio
+import contextlib
 import time
+from typing import Never
 from unittest.mock import Mock, patch
 
 import pytest
@@ -28,7 +30,7 @@ from crackerjack.core.timeout_manager import (
 class TestTimeoutStrategyEnum:
     """Test TimeoutStrategy enum."""
 
-    def test_timeout_strategy_values(self):
+    def test_timeout_strategy_values(self) -> None:
         """Test TimeoutStrategy enum values."""
         assert TimeoutStrategy.FAIL_FAST.value == "fail_fast"
         assert TimeoutStrategy.RETRY_WITH_BACKOFF.value == "retry_with_backoff"
@@ -40,7 +42,7 @@ class TestTimeoutStrategyEnum:
 class TestCircuitBreakerStateEnum:
     """Test CircuitBreakerState enum."""
 
-    def test_circuit_breaker_state_values(self):
+    def test_circuit_breaker_state_values(self) -> None:
         """Test CircuitBreakerState enum values."""
         assert CircuitBreakerState.CLOSED.value == "closed"
         assert CircuitBreakerState.OPEN.value == "open"
@@ -51,7 +53,7 @@ class TestCircuitBreakerStateEnum:
 class TestTimeoutConfig:
     """Test TimeoutConfig dataclass."""
 
-    def test_default_config(self):
+    def test_default_config(self) -> None:
         """Test default configuration."""
         config = TimeoutConfig()
 
@@ -64,7 +66,7 @@ class TestTimeoutConfig:
         assert config.recovery_timeout == 60.0
         assert config.half_open_max_calls == 3
 
-    def test_operation_timeouts_defaults(self):
+    def test_operation_timeouts_defaults(self) -> None:
         """Test default operation timeouts."""
         config = TimeoutConfig()
 
@@ -78,7 +80,7 @@ class TestTimeoutConfig:
         assert config.operation_timeouts["workflow_iteration"] == 900.0
         assert config.operation_timeouts["complete_workflow"] == 3600.0
 
-    def test_custom_config(self):
+    def test_custom_config(self) -> None:
         """Test custom configuration."""
         config = TimeoutConfig(
             default_timeout=60.0,
@@ -92,7 +94,7 @@ class TestTimeoutConfig:
         assert config.base_retry_delay == 2.0
         assert config.failure_threshold == 10
 
-    def test_custom_operation_timeouts(self):
+    def test_custom_operation_timeouts(self) -> None:
         """Test custom operation timeouts."""
         custom_timeouts = {"custom_operation": 120.0}
         config = TimeoutConfig(operation_timeouts=custom_timeouts)
@@ -104,7 +106,7 @@ class TestTimeoutConfig:
 class TestCircuitBreakerStateData:
     """Test CircuitBreakerStateData dataclass."""
 
-    def test_default_state_data(self):
+    def test_default_state_data(self) -> None:
         """Test default circuit breaker state."""
         state = CircuitBreakerStateData()
 
@@ -113,7 +115,7 @@ class TestCircuitBreakerStateData:
         assert state.last_failure_time == 0.0
         assert state.half_open_calls == 0
 
-    def test_custom_state_data(self):
+    def test_custom_state_data(self) -> None:
         """Test custom circuit breaker state."""
         state = CircuitBreakerStateData(
             state=CircuitBreakerState.OPEN,
@@ -132,7 +134,7 @@ class TestCircuitBreakerStateData:
 class TestTimeoutError:
     """Test TimeoutError exception."""
 
-    def test_timeout_error_message(self):
+    def test_timeout_error_message(self) -> None:
         """Test timeout error message formatting."""
         error = TimeoutError("test_op", 30.0, 35.5)
 
@@ -142,7 +144,7 @@ class TestTimeoutError:
         assert "test_op" in str(error)
         assert "30" in str(error)
 
-    def test_timeout_error_without_elapsed(self):
+    def test_timeout_error_without_elapsed(self) -> None:
         """Test timeout error without elapsed time."""
         error = TimeoutError("test_op", 30.0)
 
@@ -155,7 +157,7 @@ class TestTimeoutError:
 class TestAsyncTimeoutManagerInitialization:
     """Test AsyncTimeoutManager initialization."""
 
-    def test_initialization_default(self):
+    def test_initialization_default(self) -> None:
         """Test default initialization."""
         manager = AsyncTimeoutManager()
 
@@ -163,7 +165,7 @@ class TestAsyncTimeoutManagerInitialization:
         assert manager.circuit_breakers == {}
         assert manager.operation_stats == {}
 
-    def test_initialization_with_config(self):
+    def test_initialization_with_config(self) -> None:
         """Test initialization with custom config."""
         config = TimeoutConfig(default_timeout=60.0)
         manager = AsyncTimeoutManager(config)
@@ -171,7 +173,7 @@ class TestAsyncTimeoutManagerInitialization:
         assert manager.config == config
         assert manager.config.default_timeout == 60.0
 
-    def test_get_timeout_custom_operation(self):
+    def test_get_timeout_custom_operation(self) -> None:
         """Test getting timeout for custom operation."""
         config = TimeoutConfig()
         manager = AsyncTimeoutManager(config)
@@ -180,7 +182,7 @@ class TestAsyncTimeoutManagerInitialization:
 
         assert timeout == 60.0
 
-    def test_get_timeout_unknown_operation(self):
+    def test_get_timeout_unknown_operation(self) -> None:
         """Test getting timeout for unknown operation."""
         manager = AsyncTimeoutManager()
 
@@ -193,7 +195,7 @@ class TestAsyncTimeoutManagerInitialization:
 class TestAsyncTimeoutManagerPerformanceMonitor:
     """Test performance monitor integration."""
 
-    def test_performance_monitor_lazy_loading(self):
+    def test_performance_monitor_lazy_loading(self) -> None:
         """Test performance monitor is lazily loaded."""
         manager = AsyncTimeoutManager()
 
@@ -202,7 +204,7 @@ class TestAsyncTimeoutManagerPerformanceMonitor:
 
         assert monitor is not None
 
-    def test_performance_monitor_fallback_to_dummy(self):
+    def test_performance_monitor_fallback_to_dummy(self) -> None:
         """Test fallback to dummy monitor when import fails."""
         manager = AsyncTimeoutManager()
 
@@ -225,7 +227,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
     """Test timeout context manager."""
 
     @pytest.mark.asyncio
-    async def test_timeout_context_success(self):
+    async def test_timeout_context_success(self) -> None:
         """Test timeout context with successful operation."""
         manager = AsyncTimeoutManager()
 
@@ -235,7 +237,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
         # Should complete without error
 
     @pytest.mark.asyncio
-    async def test_timeout_context_timeout(self):
+    async def test_timeout_context_timeout(self) -> None:
         """Test timeout context with timeout."""
         manager = AsyncTimeoutManager()
 
@@ -246,7 +248,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
         assert exc_info.value.operation == "test_op"
 
     @pytest.mark.asyncio
-    async def test_timeout_context_uses_config_timeout(self):
+    async def test_timeout_context_uses_config_timeout(self) -> None:
         """Test timeout context uses configured timeout."""
         config = TimeoutConfig(operation_timeouts={"custom_op": 0.05})
         manager = AsyncTimeoutManager(config)
@@ -256,7 +258,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
                 await asyncio.sleep(0.1)
 
     @pytest.mark.asyncio
-    async def test_timeout_context_caps_excessive_timeout(self):
+    async def test_timeout_context_caps_excessive_timeout(self) -> None:
         """Test timeout context caps excessive timeout."""
         manager = AsyncTimeoutManager()
 
@@ -269,7 +271,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
             assert "Capping excessive timeout" in mock_logger.warning.call_args[0][0]
 
     @pytest.mark.asyncio
-    async def test_timeout_context_graceful_degradation(self):
+    async def test_timeout_context_graceful_degradation(self) -> None:
         """Test timeout context with graceful degradation."""
         manager = AsyncTimeoutManager()
 
@@ -277,7 +279,7 @@ class TestAsyncTimeoutManagerTimeoutContext:
         # The context manager should exit without raising an exception
         # The operation will be interrupted, but no exception should propagate
         async with manager.timeout_context(
-            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
+            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         ):
             await asyncio.sleep(0.1)
 
@@ -287,11 +289,11 @@ class TestAsyncTimeoutManagerWithTimeout:
     """Test with_timeout method."""
 
     @pytest.mark.asyncio
-    async def test_with_timeout_success(self):
+    async def test_with_timeout_success(self) -> None:
         """Test with_timeout with successful operation."""
         manager = AsyncTimeoutManager()
 
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -300,11 +302,11 @@ class TestAsyncTimeoutManagerWithTimeout:
         assert result == "success"
 
     @pytest.mark.asyncio
-    async def test_with_timeout_timeout(self):
+    async def test_with_timeout_timeout(self) -> None:
         """Test with_timeout with timeout."""
         manager = AsyncTimeoutManager()
 
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -312,11 +314,11 @@ class TestAsyncTimeoutManagerWithTimeout:
             await manager.with_timeout("test_op", operation(), timeout=0.1)
 
     @pytest.mark.asyncio
-    async def test_with_timeout_graceful_degradation(self):
+    async def test_with_timeout_graceful_degradation(self) -> None:
         """Test with_timeout with graceful degradation."""
         manager = AsyncTimeoutManager()
 
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -330,24 +332,22 @@ class TestAsyncTimeoutManagerWithTimeout:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_with_timeout_circuit_breaker_open(self):
+    async def test_with_timeout_circuit_breaker_open(self) -> None:
         """Test with_timeout when circuit breaker is open."""
         config = TimeoutConfig(failure_threshold=1)
         manager = AsyncTimeoutManager(config)
 
         # First fail to open circuit breaker
-        async def failing_operation():
+        async def failing_operation() -> None:
             await asyncio.sleep(0.1)
 
-        try:
+        with contextlib.suppress(TimeoutError):
             await manager.with_timeout(
                 "test_op",
                 failing_operation(),
                 timeout=0.1,
                 strategy=TimeoutStrategy.CIRCUIT_BREAKER,
             )
-        except TimeoutError:
-            pass
 
         # Second call should fail immediately due to open circuit
         with pytest.raises(TimeoutError):
@@ -363,7 +363,7 @@ class TestAsyncTimeoutManagerWithTimeout:
 class TestAsyncTimeoutManagerCircuitBreaker:
     """Test circuit breaker functionality."""
 
-    def test_check_circuit_breaker_new_operation(self):
+    def test_check_circuit_breaker_new_operation(self) -> None:
         """Test circuit breaker check for new operation."""
         manager = AsyncTimeoutManager()
 
@@ -373,36 +373,36 @@ class TestAsyncTimeoutManagerCircuitBreaker:
         assert "new_op" in manager.circuit_breakers
         assert manager.circuit_breakers["new_op"].state == CircuitBreakerState.CLOSED
 
-    def test_check_circuit_breaker_closed_state(self):
+    def test_check_circuit_breaker_closed_state(self) -> None:
         """Test circuit breaker check when closed."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.CLOSED
+            state=CircuitBreakerState.CLOSED,
         )
 
         result = manager._check_circuit_breaker("test_op")
 
         assert result is True
 
-    def test_check_circuit_breaker_open_state(self):
+    def test_check_circuit_breaker_open_state(self) -> None:
         """Test circuit breaker check when open."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.OPEN, last_failure_time=time.time()
+            state=CircuitBreakerState.OPEN, last_failure_time=time.time(),
         )
 
         result = manager._check_circuit_breaker("test_op")
 
         assert result is False
 
-    def test_check_circuit_breaker_open_to_half_open(self):
+    def test_check_circuit_breaker_open_to_half_open(self) -> None:
         """Test circuit breaker transitions from open to half-open."""
         config = TimeoutConfig(recovery_timeout=0.1)
         manager = AsyncTimeoutManager(config)
 
         # Set circuit breaker to open with old failure time
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.OPEN, last_failure_time=time.time() - 1.0
+            state=CircuitBreakerState.OPEN, last_failure_time=time.time() - 1.0,
         )
 
         result = manager._check_circuit_breaker("test_op")
@@ -411,11 +411,11 @@ class TestAsyncTimeoutManagerCircuitBreaker:
         assert manager.circuit_breakers["test_op"].state == CircuitBreakerState.HALF_OPEN
         assert manager.circuit_breakers["test_op"].half_open_calls == 0
 
-    def test_check_circuit_breaker_half_open_under_limit(self):
+    def test_check_circuit_breaker_half_open_under_limit(self) -> None:
         """Test circuit breaker check when half-open under call limit."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.HALF_OPEN, half_open_calls=1
+            state=CircuitBreakerState.HALF_OPEN, half_open_calls=1,
         )
 
         result = manager._check_circuit_breaker("test_op")
@@ -423,34 +423,34 @@ class TestAsyncTimeoutManagerCircuitBreaker:
         assert result is True
         assert manager.circuit_breakers["test_op"].half_open_calls == 2
 
-    def test_check_circuit_breaker_half_open_at_limit(self):
+    def test_check_circuit_breaker_half_open_at_limit(self) -> None:
         """Test circuit breaker check when half-open at call limit."""
         config = TimeoutConfig(half_open_max_calls=3)
         manager = AsyncTimeoutManager(config)
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.HALF_OPEN, half_open_calls=3
+            state=CircuitBreakerState.HALF_OPEN, half_open_calls=3,
         )
 
         result = manager._check_circuit_breaker("test_op")
 
         assert result is False
 
-    def test_update_circuit_breaker_success_closed(self):
+    def test_update_circuit_breaker_success_closed(self) -> None:
         """Test updating circuit breaker on success when closed."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.CLOSED, failure_count=2
+            state=CircuitBreakerState.CLOSED, failure_count=2,
         )
 
         manager._update_circuit_breaker("test_op", success=True)
 
         assert manager.circuit_breakers["test_op"].failure_count == 1
 
-    def test_update_circuit_breaker_success_half_open(self):
+    def test_update_circuit_breaker_success_half_open(self) -> None:
         """Test updating circuit breaker on success when half-open."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.HALF_OPEN, failure_count=3
+            state=CircuitBreakerState.HALF_OPEN, failure_count=3,
         )
 
         manager._update_circuit_breaker("test_op", success=True)
@@ -458,11 +458,11 @@ class TestAsyncTimeoutManagerCircuitBreaker:
         assert manager.circuit_breakers["test_op"].state == CircuitBreakerState.CLOSED
         assert manager.circuit_breakers["test_op"].failure_count == 0
 
-    def test_update_circuit_breaker_failure(self):
+    def test_update_circuit_breaker_failure(self) -> None:
         """Test updating circuit breaker on failure."""
         manager = AsyncTimeoutManager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.CLOSED, failure_count=0
+            state=CircuitBreakerState.CLOSED, failure_count=0,
         )
 
         manager._update_circuit_breaker("test_op", success=False)
@@ -470,12 +470,12 @@ class TestAsyncTimeoutManagerCircuitBreaker:
         assert manager.circuit_breakers["test_op"].failure_count == 1
         assert manager.circuit_breakers["test_op"].last_failure_time > 0
 
-    def test_update_circuit_breaker_opens_on_threshold(self):
+    def test_update_circuit_breaker_opens_on_threshold(self) -> None:
         """Test circuit breaker opens when threshold reached."""
         config = TimeoutConfig(failure_threshold=3)
         manager = AsyncTimeoutManager(config)
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.CLOSED, failure_count=2
+            state=CircuitBreakerState.CLOSED, failure_count=2,
         )
 
         manager._update_circuit_breaker("test_op", success=False)
@@ -488,7 +488,7 @@ class TestAsyncTimeoutManagerCircuitBreaker:
 class TestAsyncTimeoutManagerStats:
     """Test statistics tracking."""
 
-    def test_record_success(self):
+    def test_record_success(self) -> None:
         """Test recording successful operation."""
         manager = AsyncTimeoutManager()
 
@@ -497,7 +497,7 @@ class TestAsyncTimeoutManagerStats:
         assert "test_op" in manager.operation_stats
         assert 1.5 in manager.operation_stats["test_op"]
 
-    def test_record_success_limits_history(self):
+    def test_record_success_limits_history(self) -> None:
         """Test success recording limits history to 100 entries."""
         manager = AsyncTimeoutManager()
 
@@ -510,7 +510,7 @@ class TestAsyncTimeoutManagerStats:
         assert 0.0 not in manager.operation_stats["test_op"]
         assert 149.0 in manager.operation_stats["test_op"]
 
-    def test_record_failure(self):
+    def test_record_failure(self) -> None:
         """Test recording failed operation."""
         manager = AsyncTimeoutManager()
 
@@ -520,7 +520,7 @@ class TestAsyncTimeoutManagerStats:
             mock_logger.warning.assert_called_once()
             assert "test_op" in mock_logger.warning.call_args[0][0]
 
-    def test_get_stats_no_data(self):
+    def test_get_stats_no_data(self) -> None:
         """Test getting stats for operation with no data."""
         manager = AsyncTimeoutManager()
 
@@ -532,7 +532,7 @@ class TestAsyncTimeoutManagerStats:
         assert stats["max_time"] == 0.0
         assert stats["success_rate"] == 0.0
 
-    def test_get_stats_with_data(self):
+    def test_get_stats_with_data(self) -> None:
         """Test getting stats for operation with data."""
         manager = AsyncTimeoutManager()
 
@@ -554,11 +554,11 @@ class TestTimeoutAsyncDecorator:
     """Test timeout_async decorator."""
 
     @pytest.mark.asyncio
-    async def test_decorator_success(self):
+    async def test_decorator_success(self) -> None:
         """Test decorator with successful operation."""
 
         @timeout_async("test_op", timeout=1.0)
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -567,11 +567,11 @@ class TestTimeoutAsyncDecorator:
         assert result == "success"
 
     @pytest.mark.asyncio
-    async def test_decorator_timeout(self):
+    async def test_decorator_timeout(self) -> None:
         """Test decorator with timeout."""
 
         @timeout_async("test_op", timeout=0.05)
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -579,13 +579,13 @@ class TestTimeoutAsyncDecorator:
             await operation()
 
     @pytest.mark.asyncio
-    async def test_decorator_with_strategy(self):
+    async def test_decorator_with_strategy(self) -> None:
         """Test decorator with timeout strategy."""
 
         @timeout_async(
-            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION
+            "test_op", timeout=0.05, strategy=TimeoutStrategy.GRACEFUL_DEGRADATION,
         )
-        async def operation():
+        async def operation() -> str:
             await asyncio.sleep(0.1)
             return "success"
 
@@ -598,7 +598,7 @@ class TestTimeoutAsyncDecorator:
 class TestGlobalTimeoutManager:
     """Test global timeout manager functions."""
 
-    def test_get_timeout_manager_singleton(self):
+    def test_get_timeout_manager_singleton(self) -> None:
         """Test get_timeout_manager returns singleton."""
         # Reset global state
         import crackerjack.core.timeout_manager as tm
@@ -610,7 +610,7 @@ class TestGlobalTimeoutManager:
 
         assert manager1 is manager2
 
-    def test_configure_timeouts(self):
+    def test_configure_timeouts(self) -> None:
         """Test configuring global timeout manager."""
         config = TimeoutConfig(default_timeout=60.0)
 
@@ -619,7 +619,7 @@ class TestGlobalTimeoutManager:
         manager = get_timeout_manager()
         assert manager.config.default_timeout == 60.0
 
-    def test_get_performance_report_structure(self):
+    def test_get_performance_report_structure(self) -> None:
         """Test performance report structure."""
         # Reset and configure
         import crackerjack.core.timeout_manager as tm
@@ -635,7 +635,7 @@ class TestGlobalTimeoutManager:
         assert "recent_timeouts" in report
         assert "circuit_breakers" in report
 
-    def test_get_performance_report_with_data(self):
+    def test_get_performance_report_with_data(self) -> None:
         """Test performance report with circuit breaker data."""
         import crackerjack.core.timeout_manager as tm
 
@@ -643,7 +643,7 @@ class TestGlobalTimeoutManager:
 
         manager = get_timeout_manager()
         manager.circuit_breakers["test_op"] = CircuitBreakerStateData(
-            state=CircuitBreakerState.OPEN, failure_count=5, last_failure_time=123.45
+            state=CircuitBreakerState.OPEN, failure_count=5, last_failure_time=123.45,
         )
 
         report = get_performance_report()
@@ -658,12 +658,12 @@ class TestAsyncTimeoutManagerRetry:
     """Test retry functionality."""
 
     @pytest.mark.asyncio
-    async def test_with_retry_success_first_attempt(self):
+    async def test_with_retry_success_first_attempt(self) -> None:
         """Test retry succeeds on first attempt."""
         manager = AsyncTimeoutManager()
         call_count = 0
 
-        async def operation():
+        async def operation() -> str:
             nonlocal call_count
             call_count += 1
             return "success"
@@ -674,16 +674,17 @@ class TestAsyncTimeoutManagerRetry:
         assert call_count == 1
 
     @pytest.mark.asyncio
-    async def test_with_retry_success_after_retries(self):
+    async def test_with_retry_success_after_retries(self) -> None:
         """Test retry succeeds after initial failures."""
         manager = AsyncTimeoutManager()
         call_count = 0
 
-        async def operation():
+        async def operation() -> str:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise TimeoutError("test_op", 1.0)
+                msg = "test_op"
+                raise TimeoutError(msg, 1.0)
             return "success"
 
         result = await manager._with_retry("test_op", operation, timeout=1.0)
@@ -692,34 +693,36 @@ class TestAsyncTimeoutManagerRetry:
         assert call_count == 3
 
     @pytest.mark.asyncio
-    async def test_with_retry_exhausts_retries(self):
+    async def test_with_retry_exhausts_retries(self) -> None:
         """Test retry exhausts all attempts."""
         config = TimeoutConfig(max_retries=2, base_retry_delay=0.01)
         manager = AsyncTimeoutManager(config)
 
-        async def operation():
-            raise TimeoutError("test_op", 1.0)
+        async def operation() -> Never:
+            msg = "test_op"
+            raise TimeoutError(msg, 1.0)
 
         with pytest.raises(TimeoutError):
             await manager._with_retry("test_op", operation, timeout=1.0)
 
     @pytest.mark.asyncio
-    async def test_with_retry_backoff(self):
+    async def test_with_retry_backoff(self) -> None:
         """Test retry uses exponential backoff."""
         config = TimeoutConfig(
-            max_retries=2, base_retry_delay=0.1, backoff_multiplier=2.0
+            max_retries=2, base_retry_delay=0.1, backoff_multiplier=2.0,
         )
         manager = AsyncTimeoutManager(config)
         delays = []
 
         original_sleep = asyncio.sleep
 
-        async def mock_sleep(delay):
+        async def mock_sleep(delay) -> None:
             delays.append(delay)
             await original_sleep(0.01)  # Sleep briefly for test
 
-        async def operation():
-            raise TimeoutError("test_op", 1.0)
+        async def operation() -> Never:
+            msg = "test_op"
+            raise TimeoutError(msg, 1.0)
 
         with patch("asyncio.sleep", side_effect=mock_sleep):
             with pytest.raises(TimeoutError):
@@ -736,17 +739,17 @@ class TestAsyncTimeoutManagerIntegration:
     """Test integration scenarios."""
 
     @pytest.mark.asyncio
-    async def test_complete_circuit_breaker_lifecycle(self):
+    async def test_complete_circuit_breaker_lifecycle(self) -> None:
         """Test complete circuit breaker lifecycle."""
         config = TimeoutConfig(
-            failure_threshold=2, recovery_timeout=0.1, half_open_max_calls=2
+            failure_threshold=2, recovery_timeout=0.1, half_open_max_calls=2,
         )
         manager = AsyncTimeoutManager(config)
 
-        async def failing_operation():
+        async def failing_operation() -> None:
             await asyncio.sleep(0.1)
 
-        async def successful_operation():
+        async def successful_operation() -> str:
             await asyncio.sleep(0.01)
             return "success"
 
@@ -761,15 +764,13 @@ class TestAsyncTimeoutManagerIntegration:
 
         # 2. Trigger failures to open circuit
         for _ in range(2):
-            try:
+            with contextlib.suppress(TimeoutError):
                 await manager.with_timeout(
                     "test_op",
                     failing_operation(),
                     timeout=0.01,
                     strategy=TimeoutStrategy.CIRCUIT_BREAKER,
                 )
-            except TimeoutError:
-                pass
 
         # 3. Circuit is now open - should fail immediately
         assert manager.circuit_breakers["test_op"].state == CircuitBreakerState.OPEN
@@ -790,15 +791,15 @@ class TestAsyncTimeoutManagerIntegration:
         assert manager.circuit_breakers["test_op"].state == CircuitBreakerState.CLOSED
 
     @pytest.mark.asyncio
-    async def test_multiple_operations_tracking(self):
+    async def test_multiple_operations_tracking(self) -> None:
         """Test tracking multiple operations."""
         manager = AsyncTimeoutManager()
 
-        async def op1():
+        async def op1() -> str:
             await asyncio.sleep(0.01)
             return "op1"
 
-        async def op2():
+        async def op2() -> str:
             await asyncio.sleep(0.02)
             return "op2"
 

@@ -132,7 +132,7 @@ class MCPServerConfig:
 
         if self.progress_dir:
             self.progress_dir = SecurePathValidator.validate_safe_path(
-                self.progress_dir
+                self.progress_dir,
             )
 
         if self.state_dir:
@@ -188,6 +188,7 @@ class MCPServerContext:
     def _is_git_repository(self, current_dir: Path) -> bool:
         git_check = subprocess.run(
             ["git", "rev-parse", "--is-inside-work-tree"],
+            check=False,
             capture_output=True,
             text=True,
             cwd=current_dir,
@@ -197,6 +198,7 @@ class MCPServerContext:
     def _get_git_root_directory(self, current_dir: Path) -> Path | None:
         git_root_result = subprocess.run(
             ["git", "rev-parse", "--show-toplevel"],
+            check=False,
             capture_output=True,
             text=True,
             cwd=current_dir,
@@ -213,28 +215,19 @@ class MCPServerContext:
         self._log_to_console(git_root)
 
     def _log_to_stderr(self, git_root: Path) -> None:
-        import sys
-
-        print(
-            f"📍 Crackerjack MCP: Git repository detected at {git_root}",
-            file=sys.stderr,
-        )
-        print(
-            f"💡 Tip: Auto-setup git working directory with: git_set_working_dir('{git_root}')",
-            file=sys.stderr,
-        )
+        pass
 
     def _log_to_console(self, git_root: Path) -> None:
         if self.console:
             self.console.print(f"🔧 Auto-detected git repository: {git_root}")
             self.console.print(
-                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'"
+                f"💡 Recommend: Use `mcp__git__git_set_working_dir` with path='{git_root}'",
             )
 
     def _handle_git_setup_failure(self, error: Exception) -> None:
         if self.console:
             self.console.print(
-                f"[dim]Git auto-setup failed (non-critical): {error}[/dim]"
+                f"[dim]Git auto-setup failed (non-critical): {error}[/dim]",
             )
 
     async def initialize(self) -> None:
@@ -318,7 +311,7 @@ class MCPServerContext:
         except Exception as e:
             if self.console:
                 self.console.print(
-                    f"[yellow]Warning: Resource cleanup error: {e}[/yellow]"
+                    f"[yellow]Warning: Resource cleanup error: {e}[/yellow]",
                 )
 
         self._initialized = False
@@ -360,7 +353,8 @@ class MCPServerContext:
             raise ValueError(msg)
 
         return SecurePathValidator.secure_path_join(
-            self.progress_dir, f"job-{job_id}.json"
+            self.progress_dir,
+            f"job-{job_id}.json",
         )
 
     async def schedule_state_save(

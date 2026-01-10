@@ -128,11 +128,16 @@ class HeatMapGenerator:
         file_paths = list[t.Any](self.error_data.keys())
         time_buckets = self._create_time_buckets(start_time, bucket_config)
         error_matrix = self._build_error_matrix(
-            start_time, now, time_buckets, bucket_config
+            start_time,
+            now,
+            time_buckets,
+            bucket_config,
         )
         cells = self._create_frequency_cells(file_paths, time_buckets, error_matrix)
         labels = self._create_frequency_labels(
-            file_paths, time_buckets, bucket_config["format"]
+            file_paths,
+            time_buckets,
+            bucket_config["format"],
         )
 
         return HeatMapData(
@@ -150,7 +155,9 @@ class HeatMapGenerator:
         )
 
     def _get_time_bucket_config(
-        self, time_window: timedelta, granularity: str
+        self,
+        time_window: timedelta,
+        granularity: str,
     ) -> dict[str, t.Any]:
         if granularity == "hourly":
             return {
@@ -158,7 +165,7 @@ class HeatMapGenerator:
                 "size": timedelta(hours=1),
                 "format": "%H:%M",
             }
-        elif granularity == "daily":
+        if granularity == "daily":
             return {
                 "count": time_window.days,
                 "size": timedelta(days=1),
@@ -172,7 +179,9 @@ class HeatMapGenerator:
         }
 
     def _create_time_buckets(
-        self, start_time: datetime, bucket_config: dict[str, t.Any]
+        self,
+        start_time: datetime,
+        bucket_config: dict[str, t.Any],
     ) -> list[datetime]:
         time_buckets = []
         current_time = start_time
@@ -191,7 +200,7 @@ class HeatMapGenerator:
         from collections import defaultdict
 
         error_matrix: dict[str, t.Any] = defaultdict(
-            lambda: defaultdict(int)  # type: ignore[call-overload]
+            lambda: defaultdict(int),  # type: ignore[call-overload]
         )
 
         for file_path, errors in self.error_data.items():
@@ -199,7 +208,10 @@ class HeatMapGenerator:
                 error_time = error["timestamp"]
                 if start_time <= error_time <= end_time:
                     bucket_index = self._find_time_bucket_index(
-                        error_time, start_time, time_buckets, bucket_config["size"]
+                        error_time,
+                        start_time,
+                        time_buckets,
+                        bucket_config["size"],
                     )
                     error_matrix[file_path][bucket_index] += 1
 
@@ -215,7 +227,7 @@ class HeatMapGenerator:
         return min(
             len(time_buckets) - 1,
             int(
-                (error_time - start_time).total_seconds() / bucket_size.total_seconds()
+                (error_time - start_time).total_seconds() / bucket_size.total_seconds(),
             ),
         )
 
@@ -250,7 +262,10 @@ class HeatMapGenerator:
         return cells
 
     def _create_frequency_labels(
-        self, file_paths: list[str], time_buckets: list[datetime], x_label_format: str
+        self,
+        file_paths: list[str],
+        time_buckets: list[datetime],
+        x_label_format: str,
     ) -> tuple[list[str], list[str]]:
         x_labels = [bucket.strftime(x_label_format) for bucket in time_buckets]
         y_labels = [Path(fp).name for fp in file_paths]
@@ -272,7 +287,8 @@ class HeatMapGenerator:
         dependency_graph = analyze_project_dependencies(project_root)
 
         file_complexity = self._extract_file_complexity_data(
-            dependency_graph, project_root
+            dependency_graph,
+            project_root,
         )
         cells = self._create_complexity_cells(file_complexity)
         x_labels, y_labels = self._create_complexity_labels(file_complexity, cells)
@@ -292,7 +308,9 @@ class HeatMapGenerator:
         )
 
     def _extract_file_complexity_data(
-        self, dependency_graph: DependencyGraph, project_root: Path
+        self,
+        dependency_graph: DependencyGraph,
+        project_root: Path,
     ) -> dict[str, t.Any]:
         file_complexity = defaultdict(list)
 
@@ -305,12 +323,13 @@ class HeatMapGenerator:
                         "complexity": node.complexity,
                         "type": node.type,
                         "line": node.line_number,
-                    }
+                    },
                 )
         return file_complexity
 
     def _create_complexity_cells(
-        self, file_complexity: dict[str, t.Any]
+        self,
+        file_complexity: dict[str, t.Any],
     ) -> list[HeatMapCell]:
         cells = []
         files = list[t.Any](file_complexity.keys())
@@ -327,7 +346,11 @@ class HeatMapGenerator:
         return cells
 
     def _create_complexity_cell(
-        self, x: int, y: int, func_data: dict[str, t.Any], file_path: str
+        self,
+        x: int,
+        y: int,
+        func_data: dict[str, t.Any],
+        file_path: str,
     ) -> HeatMapCell:
         complexity = func_data["complexity"]
         intensity = min(1.0, complexity / 15)
@@ -352,16 +375,18 @@ class HeatMapGenerator:
     def _get_complexity_level(self, complexity: int) -> str:
         if complexity <= 5:
             return "simple"
-        elif complexity <= 10:
+        if complexity <= 10:
             return "moderate"
-        elif complexity <= 15:
+        if complexity <= 15:
             return "complex"
-        elif complexity <= 20:
+        if complexity <= 20:
             return "very_complex"
         return "extremely_complex"
 
     def _create_complexity_labels(
-        self, file_complexity: dict[str, t.Any], cells: list[HeatMapCell]
+        self,
+        file_complexity: dict[str, t.Any],
+        cells: list[HeatMapCell],
     ) -> tuple[list[str], list[str]]:
         files = list[t.Any](file_complexity.keys())
         y_labels = [Path(fp).name for fp in files]
@@ -475,16 +500,17 @@ class HeatMapGenerator:
     def _determine_quality_level(self, quality_score: float) -> str:
         if quality_score >= 0.9:
             return "excellent"
-        elif quality_score >= 0.7:
+        if quality_score >= 0.7:
             return "good"
-        elif quality_score >= 0.5:
+        if quality_score >= 0.5:
             return "average"
-        elif quality_score >= 0.3:
+        if quality_score >= 0.3:
             return "poor"
         return "critical"
 
     def generate_test_failure_heatmap(
-        self, time_window: timedelta = timedelta(days=14)
+        self,
+        time_window: timedelta = timedelta(days=14),
     ) -> HeatMapData:
         test_errors = self._filter_test_errors(time_window)
         test_matrix = self._group_test_errors_by_matrix(test_errors)
@@ -492,10 +518,16 @@ class HeatMapGenerator:
         error_types = self._collect_error_types(test_matrix)
         max_failures = self._calculate_max_test_failures(test_matrix)
         cells = self._create_test_failure_cells(
-            test_matrix, test_files, error_types, max_failures
+            test_matrix,
+            test_files,
+            error_types,
+            max_failures,
         )
         metadata = self._build_test_failure_metadata(
-            time_window, max_failures, test_files, error_types
+            time_window,
+            max_failures,
+            test_files,
+            error_types,
         )
 
         return HeatMapData(
@@ -521,7 +553,8 @@ class HeatMapGenerator:
         return test_errors
 
     def _group_test_errors_by_matrix(
-        self, test_errors: list[dict[str, t.Any]]
+        self,
+        test_errors: list[dict[str, t.Any]],
     ) -> defaultdict[str, defaultdict[str, int]]:
         from collections import defaultdict as dd
 
@@ -529,7 +562,7 @@ class HeatMapGenerator:
             return dd(int)
 
         test_matrix: defaultdict[str, defaultdict[str, int]] = defaultdict(
-            make_inner_defaultdict
+            make_inner_defaultdict,
         )
 
         for error in test_errors:
@@ -540,7 +573,8 @@ class HeatMapGenerator:
         return test_matrix
 
     def _collect_error_types(
-        self, test_matrix: defaultdict[str, defaultdict[str, int]]
+        self,
+        test_matrix: defaultdict[str, defaultdict[str, int]],
     ) -> list[str]:
         all_error_types: set[str] = set()
         for error_types in test_matrix.values():
@@ -548,7 +582,8 @@ class HeatMapGenerator:
         return list[t.Any](all_error_types)
 
     def _calculate_max_test_failures(
-        self, test_matrix: defaultdict[str, defaultdict[str, int]]
+        self,
+        test_matrix: defaultdict[str, defaultdict[str, int]],
     ) -> int:
         return (
             max(
@@ -601,7 +636,10 @@ class HeatMapGenerator:
         }
 
     def export_heatmap_data(
-        self, heatmap: HeatMapData, output_path: str | Path, format_type: str = "json"
+        self,
+        heatmap: HeatMapData,
+        output_path: str | Path,
+        format_type: str = "json",
     ) -> None:
         if format_type.lower() == "json":
             with open(output_path, "w", encoding="utf-8") as f:
@@ -622,7 +660,7 @@ class HeatMapGenerator:
                             cell.value,
                             cell.label,
                             cell.color_intensity,
-                        ]
+                        ],
                     )
         else:
             msg = f"Unsupported format: {format_type}"

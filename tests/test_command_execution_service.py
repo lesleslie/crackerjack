@@ -3,20 +3,22 @@
 import asyncio
 import subprocess
 import tempfile
-import pytest
 from pathlib import Path
+
+import pytest
+
 from crackerjack.services.command_execution_service import CommandExecutionService
 
 
 class TestCommandExecutionService:
     """Test cases for CommandExecutionService functionality."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test fixtures before each test method."""
         self.service = CommandExecutionService(default_timeout=10)
 
     @pytest.mark.asyncio
-    async def test_run_command_success(self):
+    async def test_run_command_success(self) -> None:
         """Test successful command execution."""
         # Use a simple command that should always work
         result = await self.service.run_command(["echo", "hello"])
@@ -24,52 +26,52 @@ class TestCommandExecutionService:
         assert "hello" in result.stdout
 
     @pytest.mark.asyncio
-    async def test_run_command_with_string(self):
+    async def test_run_command_with_string(self) -> None:
         """Test command execution with string input."""
         result = await self.service.run_command("echo hello")
         assert result.returncode == 0
         assert "hello" in result.stdout
 
     @pytest.mark.asyncio
-    async def test_run_command_failure(self):
+    async def test_run_command_failure(self) -> None:
         """Test command execution that fails."""
         with pytest.raises(subprocess.CalledProcessError):
             await self.service.run_command(["python", "-c", "import sys; sys.exit(1)"])
 
     @pytest.mark.asyncio
-    async def test_run_command_timeout(self):
+    async def test_run_command_timeout(self) -> None:
         """Test command execution timeout."""
         with pytest.raises(subprocess.TimeoutExpired):
             await self.service.run_command(
                 ["sleep", "5"],  # This should take 5 seconds
-                timeout=1  # But we timeout after 1 second
+                timeout=1,  # But we timeout after 1 second
             )
 
-    def test_run_command_sync_success(self):
+    def test_run_command_sync_success(self) -> None:
         """Test successful synchronous command execution."""
         result = self.service.run_command_sync(["echo", "hello"])
         assert result.returncode == 0
         assert "hello" in result.stdout
 
-    def test_run_command_sync_failure(self):
+    def test_run_command_sync_failure(self) -> None:
         """Test synchronous command execution that fails."""
         with pytest.raises(subprocess.CalledProcessError):
             self.service.run_command_sync(["python", "-c", "import sys; sys.exit(1)"])
 
-    def test_run_command_sync_timeout(self):
+    def test_run_command_sync_timeout(self) -> None:
         """Test synchronous command execution timeout."""
         with pytest.raises(subprocess.TimeoutExpired):
             self.service.run_command_sync(
                 ["sleep", "5"],  # This should take 5 seconds
-                timeout=1  # But we timeout after 1 second
+                timeout=1,  # But we timeout after 1 second
             )
 
     @pytest.mark.asyncio
-    async def test_run_multiple_commands_sequential(self):
+    async def test_run_multiple_commands_sequential(self) -> None:
         """Test running multiple commands sequentially."""
         commands = [
             ["echo", "first"],
-            ["echo", "second"]
+            ["echo", "second"],
         ]
 
         results = await self.service.run_multiple_commands(commands, parallel=False)
@@ -79,11 +81,11 @@ class TestCommandExecutionService:
         assert "second" in results[1].stdout
 
     @pytest.mark.asyncio
-    async def test_run_multiple_commands_parallel(self):
+    async def test_run_multiple_commands_parallel(self) -> None:
         """Test running multiple commands in parallel."""
         commands = [
             ["echo", "first"],
-            ["echo", "second"]
+            ["echo", "second"],
         ]
 
         results = await self.service.run_multiple_commands(commands, parallel=True)
@@ -91,21 +93,21 @@ class TestCommandExecutionService:
         assert all(r.returncode == 0 for r in results)
 
     @pytest.mark.asyncio
-    async def test_command_exists_true(self):
+    async def test_command_exists_true(self) -> None:
         """Test that command_exists returns True for existing commands."""
         # 'echo' should exist on all systems
         exists = await self.service.command_exists("echo")
-        assert exists == True
+        assert exists
 
     @pytest.mark.asyncio
-    async def test_command_exists_false(self):
+    async def test_command_exists_false(self) -> None:
         """Test that command_exists returns False for non-existing commands."""
         # Use a command name that shouldn't exist
         exists = await self.service.command_exists("nonexistentcommand12345")
-        assert exists == False
+        assert not exists
 
     @pytest.mark.asyncio
-    async def test_run_command_with_retries_success(self):
+    async def test_run_command_with_retries_success(self) -> None:
         """Test command execution with retries (should succeed on second try)."""
         # Create a mock command that fails once then succeeds
         # We'll use a counter to track attempts
@@ -118,32 +120,31 @@ class TestCommandExecutionService:
                 # First attempt fails
                 result = subprocess.CompletedProcess(["echo"], 1, "", "error")
                 raise subprocess.CalledProcessError(1, ["echo"])
-            else:
-                # Second attempt succeeds
-                return subprocess.CompletedProcess(["echo"], 0, "hello", "")
+            # Second attempt succeeds
+            return subprocess.CompletedProcess(["echo"], 0, "hello", "")
 
         # Since we can't easily mock the actual command execution,
         # we'll just test that the retry mechanism works
         # by testing the success case with a command that should work
         result = await self.service.run_command_with_retries(
             ["echo", "hello"],
-            max_retries=2
+            max_retries=2,
         )
         assert result.returncode == 0
         assert "hello" in result.stdout
 
     @pytest.mark.asyncio
-    async def test_run_command_with_retries_failure(self):
+    async def test_run_command_with_retries_failure(self) -> None:
         """Test command execution with retries (should fail after all retries)."""
         # Use a command that always fails
         with pytest.raises(subprocess.CalledProcessError):
             await self.service.run_command_with_retries(
                 ["python", "-c", "import sys; sys.exit(1)"],
-                max_retries=2
+                max_retries=2,
             )
 
     @pytest.mark.asyncio
-    async def test_run_command_in_directory(self):
+    async def test_run_command_in_directory(self) -> None:
         """Test running command in a specific directory."""
         with tempfile.TemporaryDirectory() as tmp_dir:
             # Create a file in the temp directory
@@ -152,17 +153,14 @@ class TestCommandExecutionService:
 
             # Run 'ls' or 'dir' command in the temp directory
             import platform
-            if platform.system() == "Windows":
-                cmd = ["dir"]
-            else:
-                cmd = ["ls", "-1"]
+            cmd = ["dir"] if platform.system() == "Windows" else ["ls", "-1"]
 
             result = await self.service.run_command(cmd, cwd=tmp_dir)
             assert result.returncode == 0
             assert "test.txt" in result.stdout
 
     @pytest.mark.asyncio
-    async def test_run_command_with_environment(self):
+    async def test_run_command_with_environment(self) -> None:
         """Test running command with custom environment."""
         # Set a custom environment variable
         custom_env = {"TEST_VAR": "test_value"}

@@ -66,7 +66,7 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
                         drift_detected = True
                 except ConfigIntegrityError as e:
                     self.console.print(
-                        f"[red]❌ Error checking {file_path.name}: {e}[/ red]"
+                        f"[red]❌ Error checking {file_path.name}: {e}[/ red]",
                     )
                     drift_detected = True
 
@@ -98,20 +98,23 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
             return False
 
         except OSError as e:
+            msg = f"Failed to check file drift for {file_path.name}: {e}"
             raise ConfigIntegrityError(
-                f"Failed to check file drift for {file_path.name}: {e}"
+                msg,
             ) from e
 
     def _has_required_config_sections(self) -> bool:
         pyproject = self.project_path / "pyproject.toml"
         if not pyproject.exists():
-            raise ConfigIntegrityError("pyproject.toml not found.")
+            msg = "pyproject.toml not found."
+            raise ConfigIntegrityError(msg)
 
         try:
             with pyproject.open("rb") as f:
                 config = tomllib.load(f)
         except Exception as e:
-            raise ConfigIntegrityError(f"Error parsing pyproject.toml: {e}") from e
+            msg = f"Error parsing pyproject.toml: {e}"
+            raise ConfigIntegrityError(msg) from e
 
         required = ["tool.ruff", "tool.pyright", "tool.pytest.ini_options"]
 
@@ -121,8 +124,11 @@ class ConfigIntegrityService(ConfigIntegrityServiceProtocol, ServiceProtocol):
 
             for key in keys:
                 if key not in current:
-                    raise ConfigIntegrityError(
+                    msg = (
                         f"Missing required config section: {section} in pyproject.toml"
+                    )
+                    raise ConfigIntegrityError(
+                        msg,
                     )
                 current = current[key]
 

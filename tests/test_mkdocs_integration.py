@@ -80,7 +80,7 @@ def test_generate_site_basic(tmp_path: Path) -> None:
             docs_content=docs_content,
             config=config,
             output_dir=tmp_path,
-        )
+        ),
     )
 
     assert site.build_path is not None
@@ -102,7 +102,7 @@ def test_build_site_basic(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> No
             docs_content=docs_content,
             config=config,
             output_dir=tmp_path,
-        )
+        ),
     )
 
     class DummyResult:
@@ -134,7 +134,7 @@ def test_create_config_from_project_basic() -> None:
     assert config.repo_url == "https://example.com/repo"
 
 def test_build_documentation_site_basic(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     """Test basic functionality of build_documentation_site."""
     service = _build_service()
@@ -153,7 +153,7 @@ def test_build_documentation_site_basic(
             author="Tester",
             documentation_content=docs_content,
             output_dir=tmp_path,
-        )
+        ),
     )
 
     assert site is not None

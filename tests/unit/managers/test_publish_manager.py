@@ -31,7 +31,7 @@ class TestPublishManagerInitialization:
             "pkg_path": tmp_path,
         }
 
-    def test_initialization_with_dependencies(self, mock_dependencies):
+    def test_initialization_with_dependencies(self, mock_dependencies) -> None:
         """Test PublishManager initializes with injected dependencies."""
         manager = PublishManagerImpl(**mock_dependencies)
 
@@ -41,7 +41,7 @@ class TestPublishManagerInitialization:
         assert manager.security == mock_dependencies["security"]
         assert manager.dry_run is False
 
-    def test_initialization_with_dry_run(self, mock_dependencies):
+    def test_initialization_with_dry_run(self, mock_dependencies) -> None:
         """Test PublishManager initializes with dry run mode."""
         manager = PublishManagerImpl(**mock_dependencies, dry_run=True)
 
@@ -67,7 +67,7 @@ class TestPublishManagerVersionManagement:
             pkg_path=tmp_path,
         )
 
-    def test_get_current_version_success(self, manager, tmp_path):
+    def test_get_current_version_success(self, manager, tmp_path) -> None:
         """Test reading current version from pyproject.toml."""
         pyproject_content = '[project]\nversion = "1.2.3"\nname = "test-package"\n'
         manager.filesystem.read_file.return_value = pyproject_content
@@ -80,13 +80,13 @@ class TestPublishManagerVersionManagement:
 
         assert version == "1.2.3"
 
-    def test_get_current_version_file_not_exists(self, manager):
+    def test_get_current_version_file_not_exists(self, manager) -> None:
         """Test get_current_version when pyproject.toml doesn't exist."""
         version = manager._get_current_version()
 
         assert version is None
 
-    def test_get_current_version_invalid_format(self, manager, tmp_path):
+    def test_get_current_version_invalid_format(self, manager, tmp_path) -> None:
         """Test get_current_version with invalid TOML format."""
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_path.write_text("invalid toml [")
@@ -97,35 +97,35 @@ class TestPublishManagerVersionManagement:
 
         assert version is None
 
-    def test_calculate_next_version_patch(self, manager):
+    def test_calculate_next_version_patch(self, manager) -> None:
         """Test calculating next patch version."""
         next_version = manager._calculate_next_version("1.2.3", "patch")
 
         assert next_version == "1.2.4"
 
-    def test_calculate_next_version_minor(self, manager):
+    def test_calculate_next_version_minor(self, manager) -> None:
         """Test calculating next minor version."""
         next_version = manager._calculate_next_version("1.2.3", "minor")
 
         assert next_version == "1.3.0"
 
-    def test_calculate_next_version_major(self, manager):
+    def test_calculate_next_version_major(self, manager) -> None:
         """Test calculating next major version."""
         next_version = manager._calculate_next_version("1.2.3", "major")
 
         assert next_version == "2.0.0"
 
-    def test_calculate_next_version_invalid_format(self, manager):
+    def test_calculate_next_version_invalid_format(self, manager) -> None:
         """Test calculate_next_version with invalid version format."""
         with pytest.raises(ValueError, match="Invalid version format"):
             manager._calculate_next_version("1.2", "patch")
 
-    def test_calculate_next_version_invalid_bump_type(self, manager):
+    def test_calculate_next_version_invalid_bump_type(self, manager) -> None:
         """Test calculate_next_version with invalid bump type."""
         with pytest.raises(ValueError, match="Invalid bump type"):
             manager._calculate_next_version("1.2.3", "invalid")
 
-    def test_update_version_in_file_success(self, manager, tmp_path):
+    def test_update_version_in_file_success(self, manager, tmp_path) -> None:
         """Test updating version in pyproject.toml."""
         pyproject_path = tmp_path / "pyproject.toml"
         original_content = '[project]\nversion = "1.2.3"\n'
@@ -140,7 +140,7 @@ class TestPublishManagerVersionManagement:
         assert result is True
         manager.filesystem.write_file.assert_called_once()
 
-    def test_update_version_in_file_no_change(self, manager, tmp_path):
+    def test_update_version_in_file_no_change(self, manager, tmp_path) -> None:
         """Test update_version_in_file when pattern doesn't match."""
         pyproject_path = tmp_path / "pyproject.toml"
         content = '[project]\nname = "test"\n'
@@ -153,7 +153,7 @@ class TestPublishManagerVersionManagement:
 
         assert result is False
 
-    def test_update_version_in_file_dry_run(self, manager, tmp_path):
+    def test_update_version_in_file_dry_run(self, manager, tmp_path) -> None:
         """Test update_version_in_file in dry run mode."""
         manager.dry_run = True
         pyproject_path = tmp_path / "pyproject.toml"
@@ -170,7 +170,7 @@ class TestPublishManagerVersionManagement:
         # Should not write file in dry run mode
         manager.filesystem.write_file.assert_not_called()
 
-    def test_bump_version_patch(self, manager, tmp_path):
+    def test_bump_version_patch(self, manager, tmp_path) -> None:
         """Test bumping patch version."""
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_content = '[project]\nversion = "1.2.3"\n'
@@ -187,12 +187,12 @@ class TestPublishManagerVersionManagement:
 
                 assert new_version == "1.2.4"
 
-    def test_bump_version_no_current_version(self, manager):
+    def test_bump_version_no_current_version(self, manager) -> None:
         """Test bump_version when current version cannot be determined."""
         with pytest.raises(ValueError, match="Cannot determine current version"):
             manager.bump_version("patch")
 
-    def test_bump_version_auto_with_recommendation(self, manager, tmp_path):
+    def test_bump_version_auto_with_recommendation(self, manager, tmp_path) -> None:
         """Test bump_version in auto mode with AI recommendation."""
         pyproject_path = tmp_path / "pyproject.toml"
         pyproject_content = '[project]\nversion = "1.2.3"\n'
@@ -234,14 +234,14 @@ class TestPublishManagerAuthentication:
             pkg_path=tmp_path,
         )
 
-    def test_validate_auth_success_env_token(self, manager):
+    def test_validate_auth_success_env_token(self, manager) -> None:
         """Test successful authentication validation with environment token."""
         with patch.object(manager, "_check_env_token_auth", return_value="Environment variable"):
             result = manager.validate_auth()
 
             assert result is True
 
-    def test_validate_auth_success_keyring(self, manager):
+    def test_validate_auth_success_keyring(self, manager) -> None:
         """Test successful authentication validation with keyring."""
         with patch.object(manager, "_check_env_token_auth", return_value=None):
             with patch.object(manager, "_check_keyring_auth", return_value="Keyring storage"):
@@ -249,7 +249,7 @@ class TestPublishManagerAuthentication:
 
                 assert result is True
 
-    def test_validate_auth_failure(self, manager):
+    def test_validate_auth_failure(self, manager) -> None:
         """Test authentication validation failure."""
         with patch.object(manager, "_check_env_token_auth", return_value=None):
             with patch.object(manager, "_check_keyring_auth", return_value=None):
@@ -257,7 +257,7 @@ class TestPublishManagerAuthentication:
 
                 assert result is False
 
-    def test_check_env_token_auth_valid(self, manager):
+    def test_check_env_token_auth_valid(self, manager) -> None:
         """Test checking environment token with valid token."""
         with patch("os.getenv", return_value="pypi-test-token-1234567890"):
             manager.security.validate_token_format.return_value = True
@@ -267,7 +267,7 @@ class TestPublishManagerAuthentication:
 
             assert result == "Environment variable (UV_PUBLISH_TOKEN)"
 
-    def test_check_env_token_auth_invalid_format(self, manager):
+    def test_check_env_token_auth_invalid_format(self, manager) -> None:
         """Test checking environment token with invalid format."""
         with patch("os.getenv", return_value="invalid-token"):
             manager.security.validate_token_format.return_value = False
@@ -276,14 +276,14 @@ class TestPublishManagerAuthentication:
 
             assert result is None
 
-    def test_check_env_token_auth_not_set(self, manager):
+    def test_check_env_token_auth_not_set(self, manager) -> None:
         """Test checking environment token when not set."""
         with patch("os.getenv", return_value=None):
             result = manager._check_env_token_auth()
 
             assert result is None
 
-    def test_check_keyring_auth_success(self, manager):
+    def test_check_keyring_auth_success(self, manager) -> None:
         """Test checking keyring authentication successfully."""
         mock_result = subprocess.CompletedProcess(
             args=[],
@@ -299,7 +299,7 @@ class TestPublishManagerAuthentication:
 
             assert result == "Keyring storage"
 
-    def test_check_keyring_auth_invalid_token(self, manager):
+    def test_check_keyring_auth_invalid_token(self, manager) -> None:
         """Test checking keyring with invalid token format."""
         mock_result = subprocess.CompletedProcess(
             args=[],
@@ -315,7 +315,7 @@ class TestPublishManagerAuthentication:
 
             assert result is None
 
-    def test_check_keyring_auth_command_failure(self, manager):
+    def test_check_keyring_auth_command_failure(self, manager) -> None:
         """Test checking keyring when command fails."""
         mock_result = subprocess.CompletedProcess(
             args=[],
@@ -348,7 +348,7 @@ class TestPublishManagerBuildPackage:
             pkg_path=tmp_path,
         )
 
-    def test_build_package_success(self, manager, tmp_path):
+    def test_build_package_success(self, manager, tmp_path) -> None:
         """Test successful package build."""
         mock_result = subprocess.CompletedProcess(
             args=["uv", "build"],
@@ -367,7 +367,7 @@ class TestPublishManagerBuildPackage:
 
             assert result is True
 
-    def test_build_package_failure(self, manager):
+    def test_build_package_failure(self, manager) -> None:
         """Test package build failure."""
         mock_result = subprocess.CompletedProcess(
             args=["uv", "build"],
@@ -381,7 +381,7 @@ class TestPublishManagerBuildPackage:
 
             assert result is False
 
-    def test_build_package_dry_run(self, manager):
+    def test_build_package_dry_run(self, manager) -> None:
         """Test package build in dry run mode."""
         manager.dry_run = True
 
@@ -389,7 +389,7 @@ class TestPublishManagerBuildPackage:
 
         assert result is True
 
-    def test_clean_dist_directory(self, manager, tmp_path):
+    def test_clean_dist_directory(self, manager, tmp_path) -> None:
         """Test cleaning dist directory before build."""
         dist_dir = tmp_path / "dist"
         dist_dir.mkdir()
@@ -401,18 +401,18 @@ class TestPublishManagerBuildPackage:
         assert dist_dir.exists()
         assert list(dist_dir.iterdir()) == []
 
-    def test_clean_dist_directory_not_exists(self, manager):
+    def test_clean_dist_directory_not_exists(self, manager) -> None:
         """Test clean_dist_directory when directory doesn't exist."""
         # Should not raise an error
         manager._clean_dist_directory()
 
-    def test_format_file_size_kilobytes(self, manager):
+    def test_format_file_size_kilobytes(self, manager) -> None:
         """Test formatting file size in kilobytes."""
         size_str = manager._format_file_size(1024 * 50)  # 50KB
 
         assert "KB" in size_str
 
-    def test_format_file_size_megabytes(self, manager):
+    def test_format_file_size_megabytes(self, manager) -> None:
         """Test formatting file size in megabytes."""
         size_str = manager._format_file_size(1024 * 1024 * 5)  # 5MB
 
@@ -437,10 +437,10 @@ class TestPublishManagerPublishing:
             pkg_path=tmp_path,
         )
 
-    def test_publish_package_success(self, manager):
+    def test_publish_package_success(self, manager) -> None:
         """Test successful package publishing."""
         mock_build_result = subprocess.CompletedProcess(
-            args=["uv", "build"], returncode=0, stdout="Built", stderr=""
+            args=["uv", "build"], returncode=0, stdout="Built", stderr="",
         )
         mock_publish_result = subprocess.CompletedProcess(
             args=["uv", "publish"],
@@ -457,17 +457,17 @@ class TestPublishManagerPublishing:
 
                 assert result is True
 
-    def test_publish_package_auth_failure(self, manager):
+    def test_publish_package_auth_failure(self, manager) -> None:
         """Test publish_package when authentication fails."""
         with patch.object(manager, "validate_auth", return_value=False):
             result = manager.publish_package()
 
             assert result is False
 
-    def test_publish_package_build_failure(self, manager):
+    def test_publish_package_build_failure(self, manager) -> None:
         """Test publish_package when build fails."""
         mock_build_result = subprocess.CompletedProcess(
-            args=["uv", "build"], returncode=1, stdout="", stderr="Build failed"
+            args=["uv", "build"], returncode=1, stdout="", stderr="Build failed",
         )
 
         with patch.object(manager, "validate_auth", return_value=True):
@@ -476,10 +476,10 @@ class TestPublishManagerPublishing:
 
                 assert result is False
 
-    def test_publish_package_publish_failure(self, manager):
+    def test_publish_package_publish_failure(self, manager) -> None:
         """Test publish_package when publish command fails."""
         mock_build_result = subprocess.CompletedProcess(
-            args=["uv", "build"], returncode=0, stdout="Built", stderr=""
+            args=["uv", "build"], returncode=0, stdout="Built", stderr="",
         )
         mock_publish_result = subprocess.CompletedProcess(
             args=["uv", "publish"],
@@ -496,7 +496,7 @@ class TestPublishManagerPublishing:
 
                 assert result is False
 
-    def test_publish_package_dry_run(self, manager):
+    def test_publish_package_dry_run(self, manager) -> None:
         """Test publish_package in dry run mode."""
         manager.dry_run = True
 
@@ -505,7 +505,7 @@ class TestPublishManagerPublishing:
 
             assert result is True
 
-    def test_execute_publish_success_indicator(self, manager):
+    def test_execute_publish_success_indicator(self, manager) -> None:
         """Test publish succeeds based on success indicator in output."""
         # Non-zero return code but has success indicator
         mock_result = subprocess.CompletedProcess(
@@ -539,10 +539,10 @@ class TestPublishManagerGitTagging:
             pkg_path=tmp_path,
         )
 
-    def test_create_git_tag_local_success(self, manager):
+    def test_create_git_tag_local_success(self, manager) -> None:
         """Test creating local git tag successfully."""
         mock_result = subprocess.CompletedProcess(
-            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr=""
+            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr="",
         )
 
         with patch.object(manager, "_run_command", return_value=mock_result):
@@ -550,7 +550,7 @@ class TestPublishManagerGitTagging:
 
             assert result is True
 
-    def test_create_git_tag_local_failure(self, manager):
+    def test_create_git_tag_local_failure(self, manager) -> None:
         """Test creating local git tag failure."""
         mock_result = subprocess.CompletedProcess(
             args=["git", "tag", "v1.2.3"],
@@ -564,7 +564,7 @@ class TestPublishManagerGitTagging:
 
             assert result is False
 
-    def test_create_git_tag_local_dry_run(self, manager):
+    def test_create_git_tag_local_dry_run(self, manager) -> None:
         """Test creating local git tag in dry run mode."""
         manager.dry_run = True
 
@@ -572,10 +572,10 @@ class TestPublishManagerGitTagging:
 
         assert result is True
 
-    def test_create_git_tag_with_push_success(self, manager):
+    def test_create_git_tag_with_push_success(self, manager) -> None:
         """Test creating and pushing git tag successfully."""
         mock_tag_result = subprocess.CompletedProcess(
-            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr=""
+            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr="",
         )
         mock_push_result = subprocess.CompletedProcess(
             args=["git", "push", "origin", "v1.2.3"],
@@ -592,10 +592,10 @@ class TestPublishManagerGitTagging:
             assert result is True
             assert mock_run.call_count == 2
 
-    def test_create_git_tag_push_failure(self, manager):
+    def test_create_git_tag_push_failure(self, manager) -> None:
         """Test creating git tag when push fails."""
         mock_tag_result = subprocess.CompletedProcess(
-            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr=""
+            args=["git", "tag", "v1.2.3"], returncode=0, stdout="", stderr="",
         )
         mock_push_result = subprocess.CompletedProcess(
             args=["git", "push", "origin", "v1.2.3"],
@@ -632,7 +632,7 @@ class TestPublishManagerPackageInfo:
             pkg_path=tmp_path,
         )
 
-    def test_get_package_info_success(self, manager, tmp_path):
+    def test_get_package_info_success(self, manager, tmp_path) -> None:
         """Test getting package information successfully."""
         pyproject_content = """
 [project]
@@ -656,13 +656,13 @@ dependencies = ["requests>=2.28.0"]
         assert len(info["authors"]) > 0
         assert len(info["dependencies"]) > 0
 
-    def test_get_package_info_file_not_exists(self, manager):
+    def test_get_package_info_file_not_exists(self, manager) -> None:
         """Test get_package_info when pyproject.toml doesn't exist."""
         info = manager.get_package_info()
 
         assert info == {}
 
-    def test_get_package_name_success(self, manager, tmp_path):
+    def test_get_package_name_success(self, manager, tmp_path) -> None:
         """Test getting package name successfully."""
         pyproject_content = '[project]\nname = "test-package"\n'
         pyproject_path = tmp_path / "pyproject.toml"
@@ -673,7 +673,7 @@ dependencies = ["requests>=2.28.0"]
 
         assert name == "test-package"
 
-    def test_get_package_name_error(self, manager, tmp_path):
+    def test_get_package_name_error(self, manager, tmp_path) -> None:
         """Test get_package_name when reading fails."""
         manager.filesystem.read_file.side_effect = Exception("Read error")
 
@@ -703,11 +703,11 @@ class TestPublishManagerUtilities:
             pkg_path=tmp_path,
         )
 
-    def test_run_command_success(self, manager, tmp_path):
+    def test_run_command_success(self, manager, tmp_path) -> None:
         """Test running command successfully."""
         with patch("subprocess.run") as mock_run:
             mock_result = subprocess.CompletedProcess(
-                args=["echo", "test"], returncode=0, stdout="test", stderr=""
+                args=["echo", "test"], returncode=0, stdout="test", stderr="",
             )
             mock_run.return_value = mock_result
 
@@ -716,10 +716,10 @@ class TestPublishManagerUtilities:
             assert result.returncode == 0
             assert result.stdout == "test"
 
-    def test_run_command_masks_tokens(self, manager):
+    def test_run_command_masks_tokens(self, manager) -> None:
         """Test run_command masks tokens in output."""
         manager.security.mask_tokens.side_effect = lambda x: x.replace(
-            "secret123", "***"
+            "secret123", "***",
         )
 
         with patch("subprocess.run") as mock_run:
@@ -738,7 +738,7 @@ class TestPublishManagerUtilities:
             assert "***" in result.stdout
             assert "***" in result.stderr
 
-    def test_cleanup_old_releases_dry_run(self, manager):
+    def test_cleanup_old_releases_dry_run(self, manager) -> None:
         """Test cleanup_old_releases in dry run mode."""
         manager.dry_run = True
 
@@ -746,7 +746,7 @@ class TestPublishManagerUtilities:
 
         assert result is True
 
-    def test_cleanup_old_releases_no_package_name(self, manager, tmp_path):
+    def test_cleanup_old_releases_no_package_name(self, manager, tmp_path) -> None:
         """Test cleanup_old_releases when package name cannot be determined."""
         pyproject_content = "[project]\n"  # No name field
         pyproject_path = tmp_path / "pyproject.toml"
@@ -757,7 +757,7 @@ class TestPublishManagerUtilities:
 
         assert result is False
 
-    def test_update_changelog_for_version(self, manager):
+    def test_update_changelog_for_version(self, manager) -> None:
         """Test updating changelog for new version."""
         mock_changelog_gen = Mock()
         mock_changelog_gen.generate_changelog_from_commits.return_value = True
@@ -767,11 +767,11 @@ class TestPublishManagerUtilities:
 
         mock_changelog_gen.generate_changelog_from_commits.assert_called_once()
 
-    def test_update_changelog_for_version_failure(self, manager):
+    def test_update_changelog_for_version_failure(self, manager) -> None:
         """Test updating changelog when generation fails."""
         mock_changelog_gen = Mock()
         mock_changelog_gen.generate_changelog_from_commits.side_effect = Exception(
-            "Generation failed"
+            "Generation failed",
         )
         manager._changelog_generator = mock_changelog_gen
 

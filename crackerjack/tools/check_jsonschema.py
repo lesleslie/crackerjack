@@ -8,9 +8,6 @@ from pathlib import Path
 
 from ._git_utils import get_files_by_extension
 
-if t.TYPE_CHECKING:
-    pass
-
 
 def _check_filename_pattern_schema(json_file: Path) -> Path | None:
     schema_path = json_file.with_name(f"{json_file.stem}.schema.json")
@@ -91,7 +88,8 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
 
 
 def validate_json_against_schema(
-    json_file: Path, schema_path: Path
+    json_file: Path,
+    schema_path: Path,
 ) -> tuple[bool, str | None]:
     try:
         schema = load_schema(schema_path)
@@ -133,7 +131,7 @@ def validate_json_against_schema(
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Validate JSON files against JSON Schema definitions"
+        description="Validate JSON files against JSON Schema definitions",
     )
     parser.add_argument(
         "files",
@@ -166,18 +164,16 @@ def _process_file(file_path: Path, schema_path: Path | None, strict: bool) -> in
         if strict:
             print(f"✗ {file_path}: No schema found", file=sys.stderr)  # noqa: T201
             return 1
-        else:
-            print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
-            return 0
+        print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
+        return 0
 
     is_valid, error_msg = validate_json_against_schema(file_path, schema_path)
 
     if not is_valid:
         print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
         return 1
-    else:
-        print(f"✓ {file_path}: Valid against {schema_path.name}")  # noqa: T201
-        return 0
+    print(f"✓ {file_path}: Valid against {schema_path.name}")  # noqa: T201
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -198,9 +194,6 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr)  # noqa: T201
         return 1
 
-    print(
-        f"\nAll {len([f for f in files if find_schema_for_json(f)])} JSON file(s) passed schema validation"
-    )  # noqa: T201
     return 0
 
 

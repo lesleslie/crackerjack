@@ -7,8 +7,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from crackerjack.adapters.sast.pyscn import PyscnAdapter, PyscnSettings
 from crackerjack.adapters._tool_adapter_base import ToolExecutionResult, ToolIssue
+from crackerjack.adapters.sast.pyscn import PyscnAdapter, PyscnSettings
 
 
 class TestPyscnAdapter:
@@ -17,7 +17,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_initialization(self) -> None:
         """Test basic initialization of PyscnAdapter."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             adapter = PyscnAdapter()
             assert adapter.settings is None
 
@@ -30,7 +30,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_build_command_basic(self) -> None:
         """Test building a basic pyscn command."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             settings = PyscnSettings()
             adapter = PyscnAdapter(settings=settings)
             await adapter.init()
@@ -46,7 +46,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_build_command_with_options(self) -> None:
         """Test building a pyscn command with various options."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             settings = PyscnSettings(
                 max_complexity=20,
             )
@@ -66,7 +66,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_parse_json_output(self) -> None:
         """Test parsing output from pyscn (text format only)."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             adapter = PyscnAdapter()
             await adapter.init()
 
@@ -92,7 +92,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_parse_text_output(self) -> None:
         """Test parsing text output from pyscn."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             adapter = PyscnAdapter()
             await adapter.init()
 
@@ -111,7 +111,7 @@ class TestPyscnAdapter:
     @pytest.mark.asyncio
     async def test_parse_empty_output(self) -> None:
         """Test parsing empty output."""
-        with patch.object(PyscnAdapter, 'validate_tool_available', return_value=True):
+        with patch.object(PyscnAdapter, "validate_tool_available", return_value=True):
             adapter = PyscnAdapter()
             await adapter.init()
 

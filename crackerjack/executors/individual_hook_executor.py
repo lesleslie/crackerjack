@@ -129,7 +129,9 @@ class HookOutputParser:
         }
 
         parser_map.get(hook_name, self._parse_default_hook)(
-            output_lines, patterns, result
+            output_lines,
+            patterns,
+            result,
         )
 
         result["files_processed"] = list[t.Any](result["files_processed"])
@@ -340,7 +342,7 @@ class IndividualHookExecutor:
                 hook_lock_manager as default_manager,
             )
 
-            self.hook_lock_manager = t.cast(HookLockManagerProtocol, default_manager)
+            self.hook_lock_manager = t.cast("HookLockManagerProtocol", default_manager)
         else:
             self.hook_lock_manager = hook_lock_manager
 
@@ -466,7 +468,9 @@ class IndividualHookExecutor:
         try:
             async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore[attr-defined]
                 result = await self._run_command_with_streaming(
-                    cmd, hook.timeout, progress
+                    cmd,
+                    hook.timeout,
+                    progress,
                 )
 
                 parsed_output = self.parser.parse_hook_output(

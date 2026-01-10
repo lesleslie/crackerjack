@@ -146,7 +146,8 @@ class PluginManager:
                 self.console.print(f"[green]✅[/ green] Enabled plugin: {plugin_name}")
 
                 if plugin.plugin_type == PluginType.HOOK and isinstance(
-                    plugin, HookPluginBase
+                    plugin,
+                    HookPluginBase,
                 ):
                     self.hook_registry.register_hook_plugin(plugin)
 
@@ -184,7 +185,7 @@ class PluginManager:
 
             if success:
                 self.console.print(
-                    f"[yellow]⏹️[/ yellow] Disabled plugin: {plugin_name}"
+                    f"[yellow]⏹️[/ yellow] Disabled plugin: {plugin_name}",
                 )
             else:
                 self.console.print(

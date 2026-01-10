@@ -7,7 +7,7 @@ import time
 def test_terminal_restoration() -> None:
     try:
         result = subprocess.run(
-            ["stty", " - a"], check=False, capture_output=True, text=True
+            ["stty", " - a"], check=False, capture_output=True, text=True,
         )
         if result.returncode == 0:
             stty_output = result.stdout
@@ -39,7 +39,7 @@ def test_terminal_restoration() -> None:
 
     try:
         result = subprocess.run(
-            ["stty", " - a"], check=False, capture_output=True, text=True
+            ["stty", " - a"], check=False, capture_output=True, text=True,
         )
         if result.returncode == 0:
             pass

@@ -93,7 +93,7 @@ class GlobalLockConfig:
             stale_lock_hours=float(settings_dict["stale_lock_hours"]),
             lock_directory=Path(settings_dict["lock_directory"]),
             session_heartbeat_interval=float(
-                settings_dict["session_heartbeat_interval"]
+                settings_dict["session_heartbeat_interval"],
             ),
             max_retry_attempts=int(settings_dict["max_retry_attempts"]),
             retry_delay_seconds=float(settings_dict["retry_delay_seconds"]),

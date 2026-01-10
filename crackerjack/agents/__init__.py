@@ -14,6 +14,7 @@ __all__ = [
     "IssueType",
     "Priority",
     "SubAgent",
+    "agent_error_boundary",
     "architect_agent",
     "documentation_agent",
     "dry_agent",
@@ -27,7 +28,6 @@ __all__ = [
     "semantic_agent",
     "test_creation_agent",
     "test_specialist_agent",
-    "agent_error_boundary",
 ]
 
 

@@ -17,7 +17,7 @@ from crackerjack.tools.check_added_large_files import (
 class TestFileSizeDetection:
     """Test file size detection and formatting."""
 
-    def test_get_file_size_normal_file(self, tmp_path):
+    def test_get_file_size_normal_file(self, tmp_path) -> None:
         """Test getting size of normal file."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("hello world")
@@ -25,7 +25,7 @@ class TestFileSizeDetection:
         size = get_file_size(test_file)
         assert size == 11  # "hello world" is 11 bytes
 
-    def test_get_file_size_empty_file(self, tmp_path):
+    def test_get_file_size_empty_file(self, tmp_path) -> None:
         """Test getting size of empty file."""
         test_file = tmp_path / "empty.txt"
         test_file.write_text("")
@@ -33,14 +33,14 @@ class TestFileSizeDetection:
         size = get_file_size(test_file)
         assert size == 0
 
-    def test_get_file_size_missing_file(self, tmp_path):
+    def test_get_file_size_missing_file(self, tmp_path) -> None:
         """Test handling of missing file."""
         missing_file = tmp_path / "nonexistent.txt"
 
         size = get_file_size(missing_file)
         assert size == 0  # Returns 0 for missing files
 
-    def test_get_file_size_binary_file(self, tmp_path):
+    def test_get_file_size_binary_file(self, tmp_path) -> None:
         """Test getting size of binary file."""
         test_file = tmp_path / "test.bin"
         test_file.write_bytes(b"\x00" * 1000)
@@ -48,7 +48,7 @@ class TestFileSizeDetection:
         size = get_file_size(test_file)
         assert size == 1000
 
-    def test_get_file_size_large_file(self, tmp_path):
+    def test_get_file_size_large_file(self, tmp_path) -> None:
         """Test getting size of large file."""
         test_file = tmp_path / "large.txt"
         test_file.write_text("x" * 1_000_000)
@@ -56,30 +56,30 @@ class TestFileSizeDetection:
         size = get_file_size(test_file)
         assert size == 1_000_000
 
-    def test_format_size_bytes(self):
+    def test_format_size_bytes(self) -> None:
         """Test formatting size in bytes."""
         assert format_size(0) == "0.0 B"
         assert format_size(100) == "100.0 B"
         assert format_size(1023) == "1023.0 B"
 
-    def test_format_size_kilobytes(self):
+    def test_format_size_kilobytes(self) -> None:
         """Test formatting size in kilobytes."""
         assert format_size(1024) == "1.0 KB"
         assert format_size(5120) == "5.0 KB"
         assert format_size(1024 * 500) == "500.0 KB"
 
-    def test_format_size_megabytes(self):
+    def test_format_size_megabytes(self) -> None:
         """Test formatting size in megabytes."""
         assert format_size(1024 * 1024) == "1.0 MB"
         assert format_size(1024 * 1024 * 10) == "10.0 MB"
         assert format_size(1024 * 1024 * 100) == "100.0 MB"
 
-    def test_format_size_gigabytes(self):
+    def test_format_size_gigabytes(self) -> None:
         """Test formatting size in gigabytes."""
         assert format_size(1024 * 1024 * 1024) == "1.0 GB"
         assert format_size(1024 * 1024 * 1024 * 5) == "5.0 GB"
 
-    def test_format_size_terabytes(self):
+    def test_format_size_terabytes(self) -> None:
         """Test formatting size in terabytes."""
         assert format_size(1024 * 1024 * 1024 * 1024) == "1.0 TB"
         assert format_size(1024 * 1024 * 1024 * 1024 * 2) == "2.0 TB"
@@ -89,7 +89,7 @@ class TestGitIntegration:
     """Test git integration for file discovery."""
 
     @patch("subprocess.run")
-    def test_get_git_tracked_files_success(self, mock_run):
+    def test_get_git_tracked_files_success(self, mock_run) -> None:
         """Test getting tracked files from git."""
         mock_run.return_value = MagicMock(
             stdout="file1.py\nfile2.py\nfile3.txt\n",
@@ -111,7 +111,7 @@ class TestGitIntegration:
         )
 
     @patch("subprocess.run")
-    def test_get_git_tracked_files_empty_repo(self, mock_run):
+    def test_get_git_tracked_files_empty_repo(self, mock_run) -> None:
         """Test getting tracked files from empty git repo."""
         mock_run.return_value = MagicMock(
             stdout="",
@@ -123,7 +123,7 @@ class TestGitIntegration:
         assert len(files) == 0
 
     @patch("subprocess.run")
-    def test_get_git_tracked_files_not_git_repo(self, mock_run):
+    def test_get_git_tracked_files_not_git_repo(self, mock_run) -> None:
         """Test handling of non-git directory."""
         mock_run.side_effect = subprocess.CalledProcessError(128, ["git", "ls-files"])
 
@@ -132,7 +132,7 @@ class TestGitIntegration:
         assert len(files) == 0  # Returns empty list
 
     @patch("subprocess.run")
-    def test_get_git_tracked_files_git_not_installed(self, mock_run):
+    def test_get_git_tracked_files_git_not_installed(self, mock_run) -> None:
         """Test handling when git is not installed."""
         mock_run.side_effect = FileNotFoundError("git command not found")
 
@@ -141,7 +141,7 @@ class TestGitIntegration:
         assert len(files) == 0  # Returns empty list
 
     @patch("subprocess.run")
-    def test_get_git_tracked_files_with_subdirectories(self, mock_run):
+    def test_get_git_tracked_files_with_subdirectories(self, mock_run) -> None:
         """Test getting tracked files with subdirectories."""
         mock_run.return_value = MagicMock(
             stdout="src/main.py\ntests/test_main.py\ndocs/README.md\n",
@@ -159,7 +159,7 @@ class TestGitIntegration:
 class TestLargeFileDetection:
     """Test large file detection logic."""
 
-    def test_detects_file_above_threshold(self, tmp_path, monkeypatch):
+    def test_detects_file_above_threshold(self, tmp_path, monkeypatch) -> None:
         """Test detection of file above size threshold."""
         monkeypatch.chdir(tmp_path)
 
@@ -173,7 +173,7 @@ class TestLargeFileDetection:
 
         assert exit_code == 1  # Large file detected
 
-    def test_allows_file_below_threshold(self, tmp_path, monkeypatch):
+    def test_allows_file_below_threshold(self, tmp_path, monkeypatch) -> None:
         """Test file below threshold is allowed."""
         monkeypatch.chdir(tmp_path)
 
@@ -187,7 +187,7 @@ class TestLargeFileDetection:
 
         assert exit_code == 0  # No large files
 
-    def test_custom_threshold_flag(self, tmp_path, monkeypatch):
+    def test_custom_threshold_flag(self, tmp_path, monkeypatch) -> None:
         """Test --maxkb flag with custom threshold."""
         monkeypatch.chdir(tmp_path)
 
@@ -206,7 +206,7 @@ class TestLargeFileDetection:
             exit_code_pass = main(["--maxkb", "300"])
             assert exit_code_pass == 0
 
-    def test_multiple_files_mixed_sizes(self, tmp_path, monkeypatch):
+    def test_multiple_files_mixed_sizes(self, tmp_path, monkeypatch) -> None:
         """Test detection with multiple files of varying sizes."""
         monkeypatch.chdir(tmp_path)
 
@@ -224,7 +224,7 @@ class TestLargeFileDetection:
 
         assert exit_code == 1  # At least one large file
 
-    def test_enforce_all_flag(self, tmp_path, monkeypatch):
+    def test_enforce_all_flag(self, tmp_path, monkeypatch) -> None:
         """Test --enforce-all flag checks all files."""
         monkeypatch.chdir(tmp_path)
 
@@ -243,14 +243,14 @@ class TestLargeFileDetection:
 class TestCLI:
     """Test check_added_large_files CLI interface."""
 
-    def test_cli_help(self):
+    def test_cli_help(self) -> None:
         """Test --help displays correctly."""
         with pytest.raises(SystemExit) as exc_info:
             main(["--help"])
 
         assert exc_info.value.code == 0
 
-    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch):
+    def test_cli_no_args_default_behavior(self, tmp_path, monkeypatch) -> None:
         """Test CLI with no arguments uses current directory."""
         monkeypatch.chdir(tmp_path)
 
@@ -265,7 +265,7 @@ class TestCLI:
         # Should pass (both under 500KB default)
         assert exit_code == 0
 
-    def test_cli_with_file_arguments(self, tmp_path, monkeypatch):
+    def test_cli_with_file_arguments(self, tmp_path, monkeypatch) -> None:
         """Test CLI with explicit file arguments."""
         monkeypatch.chdir(tmp_path)
 
@@ -279,7 +279,7 @@ class TestCLI:
 
         assert exit_code == 0  # Both under default threshold
 
-    def test_cli_no_git_repo(self, tmp_path, monkeypatch, capsys):
+    def test_cli_no_git_repo(self, tmp_path, monkeypatch, capsys) -> None:
         """Test CLI with no git repository."""
         empty_dir = tmp_path / "empty"
         empty_dir.mkdir()
@@ -291,14 +291,14 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "No files to check" in captured.out
 
-    def test_cli_nonexistent_file(self, tmp_path):
+    def test_cli_nonexistent_file(self, tmp_path) -> None:
         """Test CLI with nonexistent file."""
         exit_code = main([str(tmp_path / "nonexistent.bin")])
 
         # Should handle gracefully (0 size = pass)
         assert exit_code == 0
 
-    def test_cli_mixed_valid_and_large(self, tmp_path, monkeypatch, capsys):
+    def test_cli_mixed_valid_and_large(self, tmp_path, monkeypatch, capsys) -> None:
         """Test CLI with mix of valid and large files."""
         monkeypatch.chdir(tmp_path)
 
@@ -316,7 +316,7 @@ class TestCLI:
         captured = capsys.readouterr()
         assert "large.bin" in captured.err  # Large file reported
 
-    def test_cli_maxkb_flag_parsing(self, tmp_path, monkeypatch):
+    def test_cli_maxkb_flag_parsing(self, tmp_path, monkeypatch) -> None:
         """Test --maxkb flag parsing."""
         monkeypatch.chdir(tmp_path)
 
@@ -331,7 +331,7 @@ class TestCLI:
             assert main(["--maxkb", "300"]) == 0  # Under 300KB
             assert main(["--maxkb", "250"]) == 0  # Exactly 250KB (not over)
 
-    def test_cli_enforce_all_flag_parsing(self, tmp_path, monkeypatch):
+    def test_cli_enforce_all_flag_parsing(self, tmp_path, monkeypatch) -> None:
         """Test --enforce-all flag parsing."""
         monkeypatch.chdir(tmp_path)
 
@@ -349,7 +349,7 @@ class TestCLI:
 class TestIntegration:
     """Integration tests with real-world scenarios."""
 
-    def test_real_python_project(self, tmp_path, monkeypatch):
+    def test_real_python_project(self, tmp_path, monkeypatch) -> None:
         """Test with typical Python project files."""
         monkeypatch.chdir(tmp_path)
 
@@ -370,7 +370,7 @@ class TestIntegration:
 
         assert exit_code == 0  # All normal-sized files
 
-    def test_real_with_accidentally_added_binary(self, tmp_path, monkeypatch):
+    def test_real_with_accidentally_added_binary(self, tmp_path, monkeypatch) -> None:
         """Test detection of accidentally added binary files."""
         monkeypatch.chdir(tmp_path)
 
@@ -384,7 +384,7 @@ class TestIntegration:
 
         assert exit_code == 1  # Large binary detected
 
-    def test_size_formatting_in_output(self, tmp_path, monkeypatch, capsys):
+    def test_size_formatting_in_output(self, tmp_path, monkeypatch, capsys) -> None:
         """Test that file sizes are formatted in output."""
         monkeypatch.chdir(tmp_path)
 
@@ -400,7 +400,7 @@ class TestIntegration:
         # Should show "1.0 MB" somewhere in output
         assert "MB" in captured.err or "MB" in captured.out
 
-    def test_git_tracked_files_excludes_untracked(self, tmp_path, monkeypatch):
+    def test_git_tracked_files_excludes_untracked(self, tmp_path, monkeypatch) -> None:
         """Test that only git-tracked files are checked."""
         monkeypatch.chdir(tmp_path)
 
@@ -415,7 +415,7 @@ class TestIntegration:
 
         assert exit_code == 0  # Only tracked file checked, which is small
 
-    def test_threshold_boundary_conditions(self, tmp_path, monkeypatch):
+    def test_threshold_boundary_conditions(self, tmp_path, monkeypatch) -> None:
         """Test files at exact threshold boundary."""
         monkeypatch.chdir(tmp_path)
 

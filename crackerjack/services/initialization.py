@@ -83,7 +83,7 @@ class InitializationService:
             name_result = validator.validate_project_name(project_name)
             if not name_result.valid:
                 results["errors"].append(
-                    f"Invalid project name: {name_result.error_message}"
+                    f"Invalid project name: {name_result.error_message}",
                 )
                 results["success"] = False
                 return results
@@ -284,7 +284,7 @@ class InitializationService:
             self.git_service.add_files([str(target_file)])
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}"
+                f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
             )
 
         self.console.print(f"[green]✅[/ green] Copied {file_name}")
@@ -547,7 +547,9 @@ python -m crackerjack - a patch
                 source_content = self._generate_project_claude_content(project_name)
             else:
                 source_content = self._read_and_process_content(
-                    source_file, True, project_name
+                    source_file,
+                    True,
+                    project_name,
                 )
 
             crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
@@ -565,20 +567,21 @@ python -m crackerjack - a patch
                 existing_content = target_file.read_text()
                 if crackerjack_start_marker in existing_content and not force:
                     self._skip_existing_file(
-                        f"{file_name} (crackerjack section)", results
+                        f"{file_name} (crackerjack section)",
+                        results,
                     )
                     return
 
             target_file.write_text(merged_content)
             t.cast("list[str]", results["files_copied"]).append(
-                f"{file_name} (appended)"
+                f"{file_name} (appended)",
             )
 
             try:
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}"
+                    f"[yellow]⚠️[/ yellow] Could not git add {file_name}: {e}",
                 )
 
             self.console.print(f"[green]✅[/ green] Appended to {file_name}")
@@ -622,7 +625,8 @@ python -m crackerjack - a patch
 
         try:
             merged_content = self.config_merge_service.smart_merge_gitignore(
-                gitignore_patterns, target_file
+                gitignore_patterns,
+                target_file,
             )
 
             target_file.write_text(merged_content)
@@ -632,7 +636,7 @@ python -m crackerjack - a patch
                 self.git_service.add_files([str(target_file)])
             except Exception as e:
                 self.console.print(
-                    f"[yellow]⚠️[/ yellow] Could not git add .gitignore: {e}"
+                    f"[yellow]⚠️[/ yellow] Could not git add .gitignore: {e}",
                 )
 
             self.console.print("[green]✅[/ green] Smart merged .gitignore")
@@ -680,13 +684,15 @@ python -m crackerjack - a patch
                 source_config = tomli.load(f)
 
             merged_config = self.config_merge_service.smart_merge_pyproject(
-                source_config, target_file, project_name
+                source_config,
+                target_file,
+                project_name,
             )
 
             self.config_merge_service.write_pyproject_config(merged_config, target_file)
 
             t.cast("list[str]", results["files_copied"]).append(
-                "pyproject.toml (merged)"
+                "pyproject.toml (merged)",
             )
 
             try:

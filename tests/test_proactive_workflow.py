@@ -58,7 +58,7 @@ class DummyOptions:
 
 
 def test_run_complete_workflow_with_planning_basic(
-    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path,
 ) -> None:
     """Test basic functionality of run_complete_workflow_with_planning."""
     pipeline = ProactiveWorkflowPipeline(project_path=tmp_path)

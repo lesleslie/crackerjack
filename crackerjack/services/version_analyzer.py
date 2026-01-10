@@ -33,19 +33,24 @@ class BreakingChangeAnalyzer:
     def __init__(self) -> None:
         self.breaking_patterns = [
             re.compile(
-                r"BREAKING\s*CHANGE[:\s]", re.IGNORECASE
+                r"BREAKING\s*CHANGE[:\s]",
+                re.IGNORECASE,
             ),  # REGEX OK: breaking change detection
             re.compile(
-                r"^[^:\n]*!:", re.MULTILINE
+                r"^[^:\n]*!:",
+                re.MULTILINE,
             ),  # REGEX OK: conventional commit breaking marker
             re.compile(
-                r"\bremove\s+\w+\s+(api|function|method|class)", re.IGNORECASE
+                r"\bremove\s+\w+\s+(api|function|method|class)",
+                re.IGNORECASE,
             ),  # REGEX OK: API removal detection
             re.compile(
-                r"\bdelete\s+\w+\s+(api|endpoint|interface)", re.IGNORECASE
+                r"\bdelete\s+\w+\s+(api|endpoint|interface)",
+                re.IGNORECASE,
             ),  # REGEX OK: API deletion detection
             re.compile(
-                r"\bchange\s+\w+\s+(signature|interface|api)", re.IGNORECASE
+                r"\bchange\s+\w+\s+(signature|interface|api)",
+                re.IGNORECASE,
             ),  # REGEX OK: API signature change
         ]
 
@@ -72,19 +77,24 @@ class FeatureAnalyzer:
     def __init__(self) -> None:
         self.feature_patterns = [
             re.compile(
-                r"^feat[(\[]", re.IGNORECASE
+                r"^feat[(\[]",
+                re.IGNORECASE,
             ),  # REGEX OK: conventional commit feat
             re.compile(
-                r"\badd\s+(new\s+)?\w+", re.IGNORECASE
+                r"\badd\s+(new\s+)?\w+",
+                re.IGNORECASE,
             ),  # REGEX OK: addition detection
             re.compile(
-                r"\bimplement\s+\w+", re.IGNORECASE
+                r"\bimplement\s+\w+",
+                re.IGNORECASE,
             ),  # REGEX OK: implementation detection
             re.compile(
-                r"\bintroduce\s+\w+", re.IGNORECASE
+                r"\bintroduce\s+\w+",
+                re.IGNORECASE,
             ),  # REGEX OK: introduction detection
             re.compile(
-                r"\bcreate\s+(new\s+)?\w+", re.IGNORECASE
+                r"\bcreate\s+(new\s+)?\w+",
+                re.IGNORECASE,
             ),  # REGEX OK: creation detection
         ]
 
@@ -162,7 +172,8 @@ class VersionAnalyzer:
         self.commit_analyzer = ConventionalCommitAnalyzer()
 
         self.changelog_generator = ChangelogGenerator(
-            console=self.console, git_service=self.git
+            console=self.console,
+            git_service=self.git,
         )
 
     def _get_current_version(self) -> str | None:
@@ -191,21 +202,21 @@ class VersionAnalyzer:
 
             if bump_type == VersionBumpType.MAJOR:
                 return f"{major + 1}.0.0"
-            elif bump_type == VersionBumpType.MINOR:
+            if bump_type == VersionBumpType.MINOR:
                 return f"{major}.{minor + 1}.0"
-            elif bump_type == VersionBumpType.PATCH:
+            if bump_type == VersionBumpType.PATCH:
                 return f"{major}.{minor}.{patch + 1}"
-            else:
-                from typing import assert_never
+            from typing import assert_never
 
-                assert_never(bump_type)
+            assert_never(bump_type)
 
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error calculating version: {e}")
             raise
 
     async def recommend_version_bump(
-        self, since_version: str | None = None
+        self,
+        since_version: str | None = None,
     ) -> VersionBumpRecommendation:
         current_version = self._get_current_version()
         if not current_version:
@@ -220,10 +231,11 @@ class VersionAnalyzer:
         return self._analyze_entries_and_recommend(current_version, all_entries)
 
     def _collect_changelog_entries(
-        self, since_version: str | None
+        self,
+        since_version: str | None,
     ) -> list[ChangelogEntry]:
         entries_by_type = self.changelog_generator.generate_changelog_entries(
-            since_version
+            since_version,
         )
         all_entries: list[ChangelogEntry] = []
         for entries in entries_by_type.values():
@@ -231,7 +243,8 @@ class VersionAnalyzer:
         return all_entries
 
     def _create_no_changes_recommendation(
-        self, current_version: str
+        self,
+        current_version: str,
     ) -> VersionBumpRecommendation:
         return VersionBumpRecommendation(
             bump_type=VersionBumpType.PATCH,
@@ -239,7 +252,8 @@ class VersionAnalyzer:
             reasoning=["No significant changes detected - patch bump recommended"],
             current_version=current_version,
             recommended_version=self._calculate_next_version(
-                current_version, VersionBumpType.PATCH
+                current_version,
+                VersionBumpType.PATCH,
             ),
             breaking_changes=[],
             new_features=[],
@@ -252,13 +266,15 @@ class VersionAnalyzer:
         )
 
     def _analyze_entries_and_recommend(
-        self, current_version: str, all_entries: list[ChangelogEntry]
+        self,
+        current_version: str,
+        all_entries: list[ChangelogEntry],
     ) -> VersionBumpRecommendation:
         has_breaking, breaking_changes, breaking_confidence = (
             self.breaking_analyzer.analyze(all_entries)
         )
         has_features, new_features, feature_confidence = self.feature_analyzer.analyze(
-            all_entries
+            all_entries,
         )
         commit_analysis = self.commit_analyzer.analyze(all_entries)
 
@@ -313,7 +329,7 @@ class VersionAnalyzer:
                     "MAJOR version bump required to maintain semantic versioning",
                 ],
             )
-        elif has_features:
+        if has_features:
             return (
                 VersionBumpType.MINOR,
                 feature_confidence,
@@ -322,7 +338,7 @@ class VersionAnalyzer:
                     "MINOR version bump recommended for backward-compatible functionality",
                 ],
             )
-        elif bug_fixes:
+        if bug_fixes:
             return (
                 VersionBumpType.PATCH,
                 0.9,
@@ -349,13 +365,13 @@ class VersionAnalyzer:
     def _display_summary(self, recommendation: VersionBumpRecommendation) -> None:
         self.console.print("\n[cyan]📊 Version Bump Analysis[/cyan]")
         self.console.print(
-            f"Current version: [bold]{recommendation.current_version}[/bold]"
+            f"Current version: [bold]{recommendation.current_version}[/bold]",
         )
         self.console.print(
-            f"Recommended version: [bold green]{recommendation.recommended_version}[/bold green]"
+            f"Recommended version: [bold green]{recommendation.recommended_version}[/bold green]",
         )
         self.console.print(
-            f"Bump type: [bold]{recommendation.bump_type.value.upper()}[/bold]"
+            f"Bump type: [bold]{recommendation.bump_type.value.upper()}[/bold]",
         )
         self.console.print(f"Confidence: [bold]{recommendation.confidence:.0%}[/bold]")
 
@@ -366,13 +382,19 @@ class VersionAnalyzer:
 
     def _display_changes(self, recommendation: VersionBumpRecommendation) -> None:
         self._display_change_list(
-            recommendation.breaking_changes, "[red]⚠️ Breaking Changes", "red"
+            recommendation.breaking_changes,
+            "[red]⚠️ Breaking Changes",
+            "red",
         )
         self._display_change_list(
-            recommendation.new_features, "[green]✨ New Features", "green"
+            recommendation.new_features,
+            "[green]✨ New Features",
+            "green",
         )
         self._display_change_list(
-            recommendation.bug_fixes, "[blue]🔧 Bug Fixes", "blue"
+            recommendation.bug_fixes,
+            "[blue]🔧 Bug Fixes",
+            "blue",
         )
 
     def _display_change_list(self, changes: list[str], title: str, color: str) -> None:
@@ -384,7 +406,8 @@ class VersionAnalyzer:
                 self.console.print(f" • ... and {len(changes) - 3} more")
 
     def _display_commit_analysis(
-        self, recommendation: VersionBumpRecommendation
+        self,
+        recommendation: VersionBumpRecommendation,
     ) -> None:
         analysis = recommendation.commit_analysis
         if analysis.get("type_counts"):

@@ -22,13 +22,13 @@ class TestFormattingAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test FormattingAgent initializes correctly."""
         agent = FormattingAgent(context)
 
         assert agent.context == context
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports formatting and import error issues."""
         agent = FormattingAgent(context)
 
@@ -49,7 +49,7 @@ class TestFormattingAgentCanHandle:
         context = AgentContext(project_path=tmp_path)
         return FormattingAgent(context)
 
-    async def test_can_handle_would_reformat(self, agent):
+    async def test_can_handle_would_reformat(self, agent) -> None:
         """Test perfect confidence for would reformat issues."""
         issue = Issue(
             id="fmt-001",
@@ -62,7 +62,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_trailing_whitespace(self, agent):
+    async def test_can_handle_trailing_whitespace(self, agent) -> None:
         """Test perfect confidence for trailing whitespace."""
         issue = Issue(
             id="fmt-002",
@@ -75,7 +75,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_ruff_keyword(self, agent):
+    async def test_can_handle_ruff_keyword(self, agent) -> None:
         """Test perfect confidence for ruff-related issues."""
         issue = Issue(
             id="fmt-003",
@@ -88,7 +88,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_import_sorting(self, agent):
+    async def test_can_handle_import_sorting(self, agent) -> None:
         """Test perfect confidence for import sorting."""
         issue = Issue(
             id="fmt-004",
@@ -101,7 +101,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 1.0
 
-    async def test_can_handle_whitespace_generic(self, agent):
+    async def test_can_handle_whitespace_generic(self, agent) -> None:
         """Test high confidence for generic whitespace issues."""
         issue = Issue(
             id="fmt-005",
@@ -114,7 +114,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_indent_issue(self, agent):
+    async def test_can_handle_indent_issue(self, agent) -> None:
         """Test high confidence for indentation issues."""
         issue = Issue(
             id="fmt-006",
@@ -127,7 +127,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_line_length(self, agent):
+    async def test_can_handle_line_length(self, agent) -> None:
         """Test high confidence for line length issues."""
         issue = Issue(
             id="fmt-007",
@@ -140,7 +140,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_generic_formatting(self, agent):
+    async def test_can_handle_generic_formatting(self, agent) -> None:
         """Test moderate confidence for generic formatting issues."""
         issue = Issue(
             id="fmt-008",
@@ -153,7 +153,7 @@ class TestFormattingAgentCanHandle:
 
         assert confidence == 0.6
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="sec-001",
@@ -178,7 +178,7 @@ class TestFormattingAgentAnalyzeAndFix:
         context = AgentContext(project_path=tmp_path)
         return FormattingAgent(context)
 
-    async def test_analyze_and_fix_success(self, agent):
+    async def test_analyze_and_fix_success(self, agent) -> None:
         """Test successful formatting fix application."""
         issue = Issue(
             id="fmt-001",
@@ -196,7 +196,7 @@ class TestFormattingAgentAnalyzeAndFix:
                     assert result.confidence == 0.9
                     assert len(result.fixes_applied) > 0
 
-    async def test_analyze_and_fix_no_fixes(self, agent):
+    async def test_analyze_and_fix_no_fixes(self, agent) -> None:
         """Test when no fixes can be applied."""
         issue = Issue(
             id="fmt-002",
@@ -214,7 +214,7 @@ class TestFormattingAgentAnalyzeAndFix:
                     assert result.confidence == 0.3
                     assert len(result.recommendations) > 0
 
-    async def test_analyze_and_fix_with_file_path(self, agent, tmp_path):
+    async def test_analyze_and_fix_with_file_path(self, agent, tmp_path) -> None:
         """Test analyze_and_fix with specific file path."""
         test_file = tmp_path / "test.py"
         test_file.write_text("def foo(): pass")
@@ -236,7 +236,7 @@ class TestFormattingAgentAnalyzeAndFix:
                         assert result.success is True
                         assert str(test_file) in result.files_modified
 
-    async def test_analyze_and_fix_error_handling(self, agent):
+    async def test_analyze_and_fix_error_handling(self, agent) -> None:
         """Test error handling in analyze_and_fix."""
         issue = Issue(
             id="fmt-004",
@@ -266,7 +266,7 @@ class TestFormattingAgentRuffFixes:
         agent.run_command = AsyncMock()
         return agent
 
-    async def test_apply_ruff_fixes_success(self, agent):
+    async def test_apply_ruff_fixes_success(self, agent) -> None:
         """Test successful ruff formatting application."""
         agent.run_command.side_effect = [
             (0, "", ""),  # ruff format success
@@ -279,7 +279,7 @@ class TestFormattingAgentRuffFixes:
         assert "ruff code formatting" in fixes[0]
         assert "ruff linting fixes" in fixes[1]
 
-    async def test_apply_ruff_fixes_format_failure(self, agent):
+    async def test_apply_ruff_fixes_format_failure(self, agent) -> None:
         """Test when ruff format fails."""
         agent.run_command.side_effect = [
             (1, "", "Format error"),  # ruff format failure
@@ -292,7 +292,7 @@ class TestFormattingAgentRuffFixes:
         assert len(fixes) == 1
         assert "linting" in fixes[0]
 
-    async def test_apply_ruff_fixes_check_failure(self, agent):
+    async def test_apply_ruff_fixes_check_failure(self, agent) -> None:
         """Test when ruff check --fix fails."""
         agent.run_command.side_effect = [
             (0, "", ""),  # ruff format success
@@ -319,7 +319,7 @@ class TestFormattingAgentWhitespaceFixes:
         agent.run_command = AsyncMock()
         return agent
 
-    async def test_apply_whitespace_fixes_success(self, agent):
+    async def test_apply_whitespace_fixes_success(self, agent) -> None:
         """Test successful whitespace fixes."""
         agent.run_command.side_effect = [
             (0, "", ""),  # trailing whitespace fixer success
@@ -332,7 +332,7 @@ class TestFormattingAgentWhitespaceFixes:
         assert "trailing whitespace" in fixes[0]
         assert "end-of-file" in fixes[1]
 
-    async def test_apply_whitespace_fixes_partial_success(self, agent):
+    async def test_apply_whitespace_fixes_partial_success(self, agent) -> None:
         """Test when only some whitespace fixes succeed."""
         agent.run_command.side_effect = [
             (0, "", ""),  # trailing whitespace fixer success
@@ -344,7 +344,7 @@ class TestFormattingAgentWhitespaceFixes:
         assert len(fixes) == 1
         assert "trailing whitespace" in fixes[0]
 
-    async def test_apply_whitespace_fixes_all_fail(self, agent):
+    async def test_apply_whitespace_fixes_all_fail(self, agent) -> None:
         """Test when all whitespace fixes fail."""
         agent.run_command.side_effect = [
             (1, "", ""),  # trailing whitespace fixer failure
@@ -369,7 +369,7 @@ class TestFormattingAgentImportFixes:
         agent.run_command = AsyncMock()
         return agent
 
-    async def test_apply_import_fixes_success(self, agent):
+    async def test_apply_import_fixes_success(self, agent) -> None:
         """Test successful import fixes."""
         agent.run_command.return_value = (0, "", "")
 
@@ -378,7 +378,7 @@ class TestFormattingAgentImportFixes:
         assert len(fixes) == 1
         assert "import" in fixes[0].lower()
 
-    async def test_apply_import_fixes_failure(self, agent):
+    async def test_apply_import_fixes_failure(self, agent) -> None:
         """Test when import fixes fail."""
         agent.run_command.return_value = (1, "", "Import error")
 
@@ -398,7 +398,7 @@ class TestFormattingAgentFileSpecificFixes:
         context = AgentContext(project_path=tmp_path)
         return FormattingAgent(context)
 
-    async def test_fix_specific_file_success(self, agent, tmp_path):
+    async def test_fix_specific_file_success(self, agent, tmp_path) -> None:
         """Test successful file-specific fixes."""
         test_file = tmp_path / "test.py"
         test_file.write_text("def foo():\n    pass")
@@ -419,7 +419,7 @@ class TestFormattingAgentFileSpecificFixes:
             assert len(fixes) > 0
             assert str(test_file) in fixes[0]
 
-    async def test_fix_specific_file_no_changes(self, agent, tmp_path):
+    async def test_fix_specific_file_no_changes(self, agent, tmp_path) -> None:
         """Test when no changes are needed."""
         test_file = tmp_path / "test.py"
         test_file.write_text("def foo():\n    pass\n")
@@ -439,7 +439,7 @@ class TestFormattingAgentFileSpecificFixes:
 
             assert len(fixes) == 0
 
-    async def test_fix_specific_file_not_exists(self, agent, tmp_path):
+    async def test_fix_specific_file_not_exists(self, agent, tmp_path) -> None:
         """Test fixing file that doesn't exist."""
         test_file = tmp_path / "missing.py"
 
@@ -456,7 +456,7 @@ class TestFormattingAgentFileSpecificFixes:
 
         assert len(fixes) == 0
 
-    async def test_fix_specific_file_error_handling(self, agent, tmp_path):
+    async def test_fix_specific_file_error_handling(self, agent, tmp_path) -> None:
         """Test error handling in file-specific fixes."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -486,7 +486,7 @@ class TestFormattingAgentContentFormatting:
         context = AgentContext(project_path=tmp_path)
         return FormattingAgent(context)
 
-    def test_apply_content_formatting(self, agent):
+    def test_apply_content_formatting(self, agent) -> None:
         """Test applying content formatting."""
         content = "def foo():\n    pass"
 
@@ -498,7 +498,7 @@ class TestFormattingAgentContentFormatting:
             # Should add newline at end
             assert result.endswith("\n")
 
-    def test_apply_content_formatting_already_has_newline(self, agent):
+    def test_apply_content_formatting_already_has_newline(self, agent) -> None:
         """Test formatting content that already has trailing newline."""
         content = "def foo():\n    pass\n"
 
@@ -509,7 +509,7 @@ class TestFormattingAgentContentFormatting:
 
             assert result == content
 
-    def test_convert_tabs_to_spaces(self, agent):
+    def test_convert_tabs_to_spaces(self, agent) -> None:
         """Test converting tabs to spaces."""
         content = "def foo():\n\treturn True\n"
 
@@ -518,7 +518,7 @@ class TestFormattingAgentContentFormatting:
         assert "\t" not in result
         assert "    return True" in result
 
-    def test_convert_tabs_to_spaces_no_tabs(self, agent):
+    def test_convert_tabs_to_spaces_no_tabs(self, agent) -> None:
         """Test converting when no tabs present."""
         content = "def foo():\n    return True\n"
 
@@ -526,7 +526,7 @@ class TestFormattingAgentContentFormatting:
 
         assert result == content
 
-    def test_validate_and_get_file_content_success(self, agent, tmp_path):
+    def test_validate_and_get_file_content_success(self, agent, tmp_path) -> None:
         """Test successfully validating and getting file content."""
         test_file = tmp_path / "test.py"
         test_file.write_text("content")
@@ -537,7 +537,7 @@ class TestFormattingAgentContentFormatting:
 
         assert result == "content"
 
-    def test_validate_and_get_file_content_not_exists(self, agent, tmp_path):
+    def test_validate_and_get_file_content_not_exists(self, agent, tmp_path) -> None:
         """Test validating non-existent file."""
         test_file = tmp_path / "missing.py"
 
@@ -545,7 +545,7 @@ class TestFormattingAgentContentFormatting:
 
         assert result is None
 
-    def test_validate_and_get_file_content_empty(self, agent, tmp_path):
+    def test_validate_and_get_file_content_empty(self, agent, tmp_path) -> None:
         """Test validating file with empty content."""
         test_file = tmp_path / "empty.py"
         test_file.write_text("")
@@ -567,7 +567,7 @@ class TestFormattingAgentIntegration:
         context = AgentContext(project_path=tmp_path)
         return FormattingAgent(context)
 
-    def test_multiple_formatting_operations(self, agent):
+    def test_multiple_formatting_operations(self, agent) -> None:
         """Test applying multiple formatting operations."""
         content = "\tdef foo():\n\t\treturn True  "  # Tab indent + trailing space
 
@@ -581,7 +581,7 @@ class TestFormattingAgentIntegration:
             assert result.endswith("\n")
             # Trailing spaces should be handled by apply_formatting_fixes
 
-    def test_empty_content_handling(self, agent):
+    def test_empty_content_handling(self, agent) -> None:
         """Test handling empty content."""
         content = ""
 

@@ -25,17 +25,17 @@ class TestSecurityServiceTokenMasking:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_mask_tokens_empty_string(self, service):
+    def test_mask_tokens_empty_string(self, service) -> None:
         """Test masking empty string returns empty string."""
         result = service.mask_tokens("")
         assert result == ""
 
-    def test_mask_tokens_none(self, service):
+    def test_mask_tokens_none(self, service) -> None:
         """Test masking None returns None."""
         result = service.mask_tokens(None)
         assert result is None
 
-    def test_mask_tokens_with_pypi_token(self, service):
+    def test_mask_tokens_with_pypi_token(self, service) -> None:
         """Test PyPI token is masked in text."""
         text = "UV_PUBLISH_TOKEN=pypi-1234567890abcdef"
         result = service.mask_tokens(text)
@@ -44,7 +44,7 @@ class TestSecurityServiceTokenMasking:
         assert "pypi-1234567890abcdef" not in result
         assert "UV_PUBLISH_TOKEN" in result
 
-    def test_mask_tokens_with_github_token(self, service):
+    def test_mask_tokens_with_github_token(self, service) -> None:
         """Test GitHub token is masked in text."""
         text = "GITHUB_TOKEN=ghp_1234567890abcdefghij"
         result = service.mask_tokens(text)
@@ -53,13 +53,13 @@ class TestSecurityServiceTokenMasking:
         assert "ghp_1234567890abcdefghij" not in result
         assert "GITHUB_TOKEN" in result
 
-    def test_mask_tokens_preserves_non_sensitive_content(self, service):
+    def test_mask_tokens_preserves_non_sensitive_content(self, service) -> None:
         """Test non-sensitive content is preserved."""
         text = "This is a normal string with no secrets"
         result = service.mask_tokens(text)
         assert result == text
 
-    def test_mask_command_output(self, service):
+    def test_mask_command_output(self, service) -> None:
         """Test command output masking for stdout and stderr."""
         stdout = "Success: token=abc123secret"
         stderr = "Error: API_KEY=xyz789secret"
@@ -70,7 +70,7 @@ class TestSecurityServiceTokenMasking:
         assert isinstance(masked_stdout, str)
         assert isinstance(masked_stderr, str)
 
-    def test_mask_tokens_with_env_var(self, service, monkeypatch):
+    def test_mask_tokens_with_env_var(self, service, monkeypatch) -> None:
         """Test masking of environment variable values in text."""
         # Set a sensitive environment variable
         long_token = "a" * 20
@@ -85,7 +85,7 @@ class TestSecurityServiceTokenMasking:
         assert "aaaa" in result
         assert "..." in result
 
-    def test_mask_tokens_short_env_var(self, service, monkeypatch):
+    def test_mask_tokens_short_env_var(self, service, monkeypatch) -> None:
         """Test masking of short environment variable values."""
         short_token = "abc"  # Too short to be masked with partial reveal
         monkeypatch.setenv("PASSWORD", short_token)
@@ -108,7 +108,7 @@ class TestSecurityServiceTokenFiles:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_create_secure_token_file_success(self, service):
+    def test_create_secure_token_file_success(self, service) -> None:
         """Test successful creation of secure token file."""
         token = "test-token-12345678"
 
@@ -136,7 +136,7 @@ class TestSecurityServiceTokenFiles:
             # Cleanup
             service.cleanup_token_file(token_file)
 
-    def test_create_secure_token_file_custom_prefix(self, service):
+    def test_create_secure_token_file_custom_prefix(self, service) -> None:
         """Test token file creation with custom prefix."""
         token = "test-token-12345678"
         prefix = "custom_prefix"
@@ -148,21 +148,21 @@ class TestSecurityServiceTokenFiles:
         finally:
             service.cleanup_token_file(token_file)
 
-    def test_create_secure_token_file_empty_token(self, service):
+    def test_create_secure_token_file_empty_token(self, service) -> None:
         """Test creation fails with empty token."""
         with pytest.raises(SecurityError) as exc_info:
             service.create_secure_token_file("")
 
         assert "Invalid token provided" in str(exc_info.value)
 
-    def test_create_secure_token_file_short_token(self, service):
+    def test_create_secure_token_file_short_token(self, service) -> None:
         """Test creation fails with token shorter than 8 characters."""
         with pytest.raises(SecurityError) as exc_info:
             service.create_secure_token_file("short")
 
         assert "Token appears too short" in str(exc_info.value)
 
-    def test_cleanup_token_file_success(self, service):
+    def test_cleanup_token_file_success(self, service) -> None:
         """Test secure cleanup of token file."""
         token = "test-token-12345678"
         token_file = service.create_secure_token_file(token)
@@ -174,19 +174,19 @@ class TestSecurityServiceTokenFiles:
 
         assert not token_file.exists()
 
-    def test_cleanup_token_file_nonexistent(self, service):
+    def test_cleanup_token_file_nonexistent(self, service) -> None:
         """Test cleanup of non-existent file does not raise error."""
         nonexistent = Path("/tmp/nonexistent_token_file.token")
 
         # Should not raise any exception
         service.cleanup_token_file(nonexistent)
 
-    def test_cleanup_token_file_none(self, service):
+    def test_cleanup_token_file_none(self, service) -> None:
         """Test cleanup with None path does not raise error."""
         # Should not raise any exception
         service.cleanup_token_file(None)
 
-    def test_cleanup_token_file_overwrites_before_delete(self, service):
+    def test_cleanup_token_file_overwrites_before_delete(self, service) -> None:
         """Test cleanup overwrites file content before deletion."""
         token = "secret-token-12345678"
         token_file = service.create_secure_token_file(token)
@@ -211,7 +211,7 @@ class TestSecurityServiceEnvironment:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_get_masked_env_summary(self, service, monkeypatch):
+    def test_get_masked_env_summary(self, service, monkeypatch) -> None:
         """Test environment variable summary with masking."""
         # Set up test environment
         monkeypatch.setenv("UV_PUBLISH_TOKEN", "secret123456")
@@ -229,7 +229,7 @@ class TestSecurityServiceEnvironment:
             assert "PATH" in summary
             assert summary["PATH"] == os.environ["PATH"]
 
-    def test_get_masked_env_summary_empty_sensitive_var(self, service, monkeypatch):
+    def test_get_masked_env_summary_empty_sensitive_var(self, service, monkeypatch) -> None:
         """Test masking of empty sensitive environment variables."""
         monkeypatch.setenv("API_KEY", "")
 
@@ -238,7 +238,7 @@ class TestSecurityServiceEnvironment:
         if "API_KEY" in summary:
             assert summary["API_KEY"] == "(empty)"
 
-    def test_create_secure_command_env_removes_dangerous_vars(self, service):
+    def test_create_secure_command_env_removes_dangerous_vars(self, service) -> None:
         """Test dangerous environment variables are removed."""
         base_env = {
             "PATH": "/usr/bin",
@@ -257,17 +257,17 @@ class TestSecurityServiceEnvironment:
         assert secure_env["PATH"] == "/usr/bin"
         assert secure_env["HOME"] == "/home/user"
 
-    def test_create_secure_command_env_with_additional_vars(self, service):
+    def test_create_secure_command_env_with_additional_vars(self, service) -> None:
         """Test adding additional variables to secure environment."""
         additional = {"CUSTOM_VAR": "value123"}
 
         secure_env = service.create_secure_command_env(
-            additional_vars=additional
+            additional_vars=additional,
         )
 
         assert secure_env["CUSTOM_VAR"] == "value123"
 
-    def test_create_secure_command_env_defaults_to_os_environ(self, service):
+    def test_create_secure_command_env_defaults_to_os_environ(self, service) -> None:
         """Test default environment is os.environ."""
         secure_env = service.create_secure_command_env()
 
@@ -276,7 +276,7 @@ class TestSecurityServiceEnvironment:
         assert "LD_PRELOAD" not in secure_env
         assert "DYLD_INSERT_LIBRARIES" not in secure_env
 
-    def test_create_secure_command_env_all_dangerous_vars_removed(self, service):
+    def test_create_secure_command_env_all_dangerous_vars_removed(self, service) -> None:
         """Test all dangerous library injection variables are removed."""
         base_env = {
             "LD_PRELOAD": "malicious",
@@ -306,25 +306,25 @@ class TestSecurityServiceValidation:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_validate_token_format_empty(self, service):
+    def test_validate_token_format_empty(self, service) -> None:
         """Test validation fails for empty token."""
         assert service.validate_token_format("") is False
 
-    def test_validate_token_format_too_short(self, service):
+    def test_validate_token_format_too_short(self, service) -> None:
         """Test validation fails for tokens shorter than 8 characters."""
         assert service.validate_token_format("short") is False
 
-    def test_validate_token_format_generic_valid(self, service):
+    def test_validate_token_format_generic_valid(self, service) -> None:
         """Test validation passes for valid generic token."""
         token = "a" * 16
         assert service.validate_token_format(token) is True
 
-    def test_validate_token_format_pypi_valid(self, service):
+    def test_validate_token_format_pypi_valid(self, service) -> None:
         """Test validation of valid PyPI token."""
         token = "pypi-" + "a" * 16
         assert service.validate_token_format(token, token_type="pypi") is True
 
-    def test_validate_token_format_pypi_invalid(self, service):
+    def test_validate_token_format_pypi_invalid(self, service) -> None:
         """Test validation fails for invalid PyPI token."""
         # Missing 'pypi-' prefix
         assert service.validate_token_format("abc123456789", token_type="pypi") is False
@@ -332,12 +332,12 @@ class TestSecurityServiceValidation:
         # Too short
         assert service.validate_token_format("pypi-short", token_type="pypi") is False
 
-    def test_validate_token_format_github_valid(self, service):
+    def test_validate_token_format_github_valid(self, service) -> None:
         """Test validation of valid GitHub token."""
         token = "ghp_" + "a" * 36  # GitHub tokens are exactly 40 chars
         assert service.validate_token_format(token, token_type="github") is True
 
-    def test_validate_token_format_github_invalid(self, service):
+    def test_validate_token_format_github_invalid(self, service) -> None:
         """Test validation fails for invalid GitHub token."""
         # Wrong prefix
         assert service.validate_token_format("abc" + "a" * 37, token_type="github") is False
@@ -345,23 +345,23 @@ class TestSecurityServiceValidation:
         # Wrong length
         assert service.validate_token_format("ghp_" + "a" * 30, token_type="github") is False
 
-    def test_validate_token_format_whitespace_only(self, service):
+    def test_validate_token_format_whitespace_only(self, service) -> None:
         """Test validation fails for whitespace-only token."""
         token = " " * 20
         assert service.validate_token_format(token) is False
 
-    def test_validate_file_safety_normal_file(self, service, tmp_path):
+    def test_validate_file_safety_normal_file(self, service, tmp_path) -> None:
         """Test validation of normal file."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
 
         assert service.validate_file_safety(test_file) is True
 
-    def test_validate_file_safety_nonexistent(self, service):
+    def test_validate_file_safety_nonexistent(self, service) -> None:
         """Test validation fails for non-existent file."""
         assert service.validate_file_safety("/nonexistent/file.txt") is False
 
-    def test_validate_file_safety_symlink(self, service, tmp_path):
+    def test_validate_file_safety_symlink(self, service, tmp_path) -> None:
         """Test validation fails for symlink."""
         target = tmp_path / "target.txt"
         target.write_text("content")
@@ -372,14 +372,14 @@ class TestSecurityServiceValidation:
         # Symlinks should be rejected for security
         assert service.validate_file_safety(symlink) is False
 
-    def test_validate_file_safety_with_string_path(self, service, tmp_path):
+    def test_validate_file_safety_with_string_path(self, service, tmp_path) -> None:
         """Test validation works with string path."""
         test_file = tmp_path / "test.txt"
         test_file.write_text("content")
 
         assert service.validate_file_safety(str(test_file)) is True
 
-    def test_check_hardcoded_secrets_api_key(self, service):
+    def test_check_hardcoded_secrets_api_key(self, service) -> None:
         """Test detection of hardcoded API keys."""
         code = 'api_key = "TEST_API_KEY_1234567890abcdefghij"'
 
@@ -388,7 +388,7 @@ class TestSecurityServiceValidation:
         assert len(secrets) > 0
         assert any(s["type"] == "api_key" for s in secrets)
 
-    def test_check_hardcoded_secrets_password(self, service):
+    def test_check_hardcoded_secrets_password(self, service) -> None:
         """Test detection of hardcoded passwords."""
         code = 'password = "SuperSecret123"'
 
@@ -397,7 +397,7 @@ class TestSecurityServiceValidation:
         assert len(secrets) > 0
         assert any(s["type"] == "password" for s in secrets)
 
-    def test_check_hardcoded_secrets_token(self, service):
+    def test_check_hardcoded_secrets_token(self, service) -> None:
         """Test detection of hardcoded tokens."""
         code = 'token = "ghp_1234567890abcdefghij"'
 
@@ -406,7 +406,7 @@ class TestSecurityServiceValidation:
         assert len(secrets) > 0
         assert any(s["type"] == "token" for s in secrets)
 
-    def test_check_hardcoded_secrets_line_numbers(self, service):
+    def test_check_hardcoded_secrets_line_numbers(self, service) -> None:
         """Test line numbers are reported correctly."""
         code = """line 1
 line 2
@@ -419,7 +419,7 @@ line 4"""
         # Should report line 3
         assert any(s["line"] == 3 for s in secrets)
 
-    def test_check_hardcoded_secrets_masked_values(self, service):
+    def test_check_hardcoded_secrets_masked_values(self, service) -> None:
         """Test detected secrets are masked in results."""
         code = 'api_key = "TEST_API_KEY_1234567890abcdefghij"'
 
@@ -431,7 +431,7 @@ line 4"""
         assert "..." in secret_value
         assert len(secret_value) < 20  # Should be truncated
 
-    def test_check_hardcoded_secrets_no_secrets(self, service):
+    def test_check_hardcoded_secrets_no_secrets(self, service) -> None:
         """Test no false positives for clean code."""
         code = """
 def calculate_total(items):
@@ -442,17 +442,17 @@ def calculate_total(items):
 
         assert len(secrets) == 0
 
-    def test_is_safe_subprocess_call_empty(self, service):
+    def test_is_safe_subprocess_call_empty(self, service) -> None:
         """Test empty command is not safe."""
         assert service.is_safe_subprocess_call([]) is False
 
-    def test_is_safe_subprocess_call_safe_command(self, service):
+    def test_is_safe_subprocess_call_safe_command(self, service) -> None:
         """Test safe command is allowed."""
         assert service.is_safe_subprocess_call(["ls", "-la"]) is True
         assert service.is_safe_subprocess_call(["python", "-m", "pytest"]) is True
         assert service.is_safe_subprocess_call(["git", "status"]) is True
 
-    def test_is_safe_subprocess_call_dangerous_commands(self, service):
+    def test_is_safe_subprocess_call_dangerous_commands(self, service) -> None:
         """Test dangerous commands are blocked."""
         dangerous = [
             ["rm", "-rf", "/"],
@@ -466,7 +466,7 @@ def calculate_total(items):
         for cmd in dangerous:
             assert service.is_safe_subprocess_call(cmd) is False
 
-    def test_is_safe_subprocess_call_with_path(self, service):
+    def test_is_safe_subprocess_call_with_path(self, service) -> None:
         """Test command with full path is evaluated correctly."""
         # Safe command with path should be allowed
         assert service.is_safe_subprocess_call(["/usr/bin/python", "script.py"]) is True
@@ -485,13 +485,13 @@ class TestSecurityServiceConstants:
         """Create SecurityService instance."""
         return SecurityService()
 
-    def test_token_pattern_names_defined(self, service):
+    def test_token_pattern_names_defined(self, service) -> None:
         """Test token pattern names are properly defined."""
         assert len(service.TOKEN_PATTERN_NAMES) > 0
         assert "mask_pypi_token" in service.TOKEN_PATTERN_NAMES
         assert "mask_github_token" in service.TOKEN_PATTERN_NAMES
 
-    def test_sensitive_env_vars_defined(self, service):
+    def test_sensitive_env_vars_defined(self, service) -> None:
         """Test sensitive environment variable list is defined."""
         assert len(service.SENSITIVE_ENV_VARS) > 0
         assert "UV_PUBLISH_TOKEN" in service.SENSITIVE_ENV_VARS

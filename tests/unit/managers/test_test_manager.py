@@ -29,7 +29,7 @@ class TestTestManagerInitialization:
             "lsp_client": None,
         }
 
-    def test_initialization_with_dependencies(self, mock_dependencies, tmp_path):
+    def test_initialization_with_dependencies(self, mock_dependencies, tmp_path) -> None:
         """Test TestManager initializes with injected dependencies."""
         with patch("crackerjack.managers.test_manager.root_path", tmp_path):
             with patch("crackerjack.managers.test_manager.TestExecutor"):
@@ -40,7 +40,7 @@ class TestTestManagerInitialization:
                 assert manager.command_builder == mock_dependencies["command_builder"]
                 assert manager.pkg_path == tmp_path
 
-    def test_initialization_sets_defaults(self, mock_dependencies, tmp_path):
+    def test_initialization_sets_defaults(self, mock_dependencies, tmp_path) -> None:
         """Test TestManager sets default values."""
         with patch("crackerjack.managers.test_manager.root_path", tmp_path):
             with patch("crackerjack.managers.test_manager.TestExecutor"):
@@ -51,7 +51,7 @@ class TestTestManagerInitialization:
                 assert manager.coverage_ratchet_enabled is True
                 assert manager.use_lsp_diagnostics is True
 
-    def test_initialization_creates_executor(self, mock_dependencies, tmp_path):
+    def test_initialization_creates_executor(self, mock_dependencies, tmp_path) -> None:
         """Test TestManager creates TestExecutor."""
         with patch("crackerjack.managers.test_manager.root_path", tmp_path):
             with patch("crackerjack.managers.test_manager.TestExecutor") as mock_executor:
@@ -77,7 +77,7 @@ class TestTestManagerConfiguration:
                     command_builder=Mock(),
                 )
 
-    def test_set_progress_callback(self, manager):
+    def test_set_progress_callback(self, manager) -> None:
         """Test setting progress callback."""
         callback = Mock()
 
@@ -85,7 +85,7 @@ class TestTestManagerConfiguration:
 
         assert manager._progress_callback == callback
 
-    def test_set_progress_callback_none(self, manager):
+    def test_set_progress_callback_none(self, manager) -> None:
         """Test clearing progress callback."""
         manager._progress_callback = Mock()
 
@@ -93,14 +93,14 @@ class TestTestManagerConfiguration:
 
         assert manager._progress_callback is None
 
-    def test_set_coverage_ratchet_enabled(self, manager):
+    def test_set_coverage_ratchet_enabled(self, manager) -> None:
         """Test enabling coverage ratchet."""
         manager.set_coverage_ratchet_enabled(True)
 
         assert manager.coverage_ratchet_enabled is True
         manager.console.print.assert_called()
 
-    def test_set_coverage_ratchet_disabled(self, manager):
+    def test_set_coverage_ratchet_disabled(self, manager) -> None:
         """Test disabling coverage ratchet."""
         manager.set_coverage_ratchet_enabled(False)
 
@@ -120,15 +120,14 @@ class TestTestManagerTestExecution:
                 mock_executor = Mock()
                 mock_executor_cls.return_value = mock_executor
 
-                manager = TestManager(
+                return TestManager(
                     console=Mock(),
                     coverage_ratchet=Mock(),
                     coverage_badge=Mock(),
                     command_builder=Mock(),
                 )
-                return manager
 
-    def test_run_tests_early_return_when_disabled(self, manager):
+    def test_run_tests_early_return_when_disabled(self, manager) -> None:
         """Test run_tests returns early when tests disabled."""
         options = Mock()
         # Use new nested config structure: options.test instead of options.run_tests
@@ -141,7 +140,7 @@ class TestTestManagerTestExecution:
         # Should not execute tests
         manager.executor.execute_with_progress.assert_not_called()
 
-    def test_run_tests_success(self, manager):
+    def test_run_tests_success(self, manager) -> None:
         """Test successful test execution."""
         options = Mock()
         options.run_tests = True
@@ -161,7 +160,7 @@ class TestTestManagerTestExecution:
 
             assert result is True
 
-    def test_run_tests_failure(self, manager):
+    def test_run_tests_failure(self, manager) -> None:
         """Test handling test execution failure."""
         options = Mock()
         options.run_tests = True
@@ -181,7 +180,7 @@ class TestTestManagerTestExecution:
 
             assert result is False
 
-    def test_run_tests_exception_handling(self, manager):
+    def test_run_tests_exception_handling(self, manager) -> None:
         """Test run_tests handles exceptions."""
         options = Mock()
         options.run_tests = True
@@ -193,7 +192,7 @@ class TestTestManagerTestExecution:
 
             assert result is False
 
-    def test_run_specific_tests_success(self, manager):
+    def test_run_specific_tests_success(self, manager) -> None:
         """Test running specific tests successfully."""
         test_pattern = "tests/test_module.py::test_function"
 
@@ -208,7 +207,7 @@ class TestTestManagerTestExecution:
         assert result is True
         manager.console.print.assert_called()
 
-    def test_run_specific_tests_failure(self, manager):
+    def test_run_specific_tests_failure(self, manager) -> None:
         """Test running specific tests with failures."""
         test_pattern = "tests/test_module.py"
 
@@ -239,7 +238,7 @@ class TestTestManagerValidation:
                     command_builder=Mock(),
                 )
 
-    def test_validate_test_environment_no_tests(self, manager):
+    def test_validate_test_environment_no_tests(self, manager) -> None:
         """Test validation fails when no tests found."""
         with patch.object(manager, "has_tests", return_value=False):
             result = manager.validate_test_environment()
@@ -247,7 +246,7 @@ class TestTestManagerValidation:
             assert result is False
             manager.console.print.assert_called()
 
-    def test_validate_test_environment_success(self, manager):
+    def test_validate_test_environment_success(self, manager) -> None:
         """Test successful environment validation."""
         with patch.object(manager, "has_tests", return_value=True):
             manager.command_builder.build_validation_command.return_value = ["pytest", "--collect-only"]
@@ -261,7 +260,7 @@ class TestTestManagerValidation:
 
                 assert result is True
 
-    def test_validate_test_environment_failure(self, manager):
+    def test_validate_test_environment_failure(self, manager) -> None:
         """Test validation handles failures."""
         with patch.object(manager, "has_tests", return_value=True):
             manager.command_builder.build_validation_command.return_value = ["pytest", "--collect-only"]
@@ -295,7 +294,7 @@ class TestTestManagerCoverage:
                 manager.pkg_path = tmp_path
                 return manager
 
-    def test_get_coverage_ratchet_status(self, manager):
+    def test_get_coverage_ratchet_status(self, manager) -> None:
         """Test getting coverage ratchet status."""
         expected_status = {"status": "active", "coverage": 85.5}
         manager.coverage_ratchet.get_status_report.return_value = expected_status
@@ -304,7 +303,7 @@ class TestTestManagerCoverage:
 
         assert result == expected_status
 
-    def test_get_coverage_report_success(self, manager):
+    def test_get_coverage_report_success(self, manager) -> None:
         """Test getting coverage report."""
         expected_report = "Coverage: 85.5%"
         manager.coverage_ratchet.get_coverage_report.return_value = expected_report
@@ -313,7 +312,7 @@ class TestTestManagerCoverage:
 
         assert result == expected_report
 
-    def test_get_coverage_report_exception(self, manager):
+    def test_get_coverage_report_exception(self, manager) -> None:
         """Test get_coverage_report handles exceptions."""
         manager.coverage_ratchet.get_coverage_report.side_effect = Exception("Error")
 
@@ -321,14 +320,14 @@ class TestTestManagerCoverage:
 
         assert result is None
 
-    def test_get_coverage_from_file_success(self, manager, tmp_path):
+    def test_get_coverage_from_file_success(self, manager, tmp_path) -> None:
         """Test extracting coverage from coverage.json."""
         coverage_data = {
             "totals": {
                 "percent_covered": 85.5,
                 "num_statements": 1000,
                 "covered_lines": 855,
-            }
+            },
         }
 
         coverage_json = tmp_path / "coverage.json"
@@ -338,13 +337,13 @@ class TestTestManagerCoverage:
 
         assert result == 85.5
 
-    def test_get_coverage_from_file_not_exists(self, manager):
+    def test_get_coverage_from_file_not_exists(self, manager) -> None:
         """Test get_coverage_from_file when file doesn't exist."""
         result = manager._get_coverage_from_file()
 
         assert result is None
 
-    def test_get_coverage_from_file_invalid_json(self, manager, tmp_path):
+    def test_get_coverage_from_file_invalid_json(self, manager, tmp_path) -> None:
         """Test get_coverage_from_file with invalid JSON."""
         coverage_json = tmp_path / "coverage.json"
         coverage_json.write_text("invalid json {")
@@ -353,7 +352,7 @@ class TestTestManagerCoverage:
 
         assert result is None
 
-    def test_get_coverage_from_file_alternative_format(self, manager, tmp_path):
+    def test_get_coverage_from_file_alternative_format(self, manager, tmp_path) -> None:
         """Test extracting coverage from alternative format."""
         coverage_data = {
             "percent_covered": 90.0,
@@ -366,7 +365,7 @@ class TestTestManagerCoverage:
 
         assert result == 90.0
 
-    def test_get_coverage_from_files_section(self, manager, tmp_path):
+    def test_get_coverage_from_files_section(self, manager, tmp_path) -> None:
         """Test calculating coverage from files section."""
         coverage_data = {
             "files": {
@@ -374,15 +373,15 @@ class TestTestManagerCoverage:
                     "summary": {
                         "num_statements": 100,
                         "covered_lines": 80,
-                    }
+                    },
                 },
                 "file2.py": {
                     "summary": {
                         "num_statements": 200,
                         "covered_lines": 160,
-                    }
+                    },
                 },
-            }
+            },
         }
 
         coverage_json = tmp_path / "coverage.json"
@@ -393,7 +392,7 @@ class TestTestManagerCoverage:
         # (80 + 160) / (100 + 200) * 100 = 80.0
         assert result == 80.0
 
-    def test_get_coverage_with_ratchet_data(self, manager):
+    def test_get_coverage_with_ratchet_data(self, manager) -> None:
         """Test get_coverage using ratchet data."""
         manager.coverage_ratchet.get_status_report.return_value = {
             "status": "active",
@@ -405,10 +404,10 @@ class TestTestManagerCoverage:
 
             assert "current_coverage" in result or "coverage_percent" in result
 
-    def test_get_coverage_with_direct_data(self, manager):
+    def test_get_coverage_with_direct_data(self, manager) -> None:
         """Test get_coverage using direct file data when ratchet not initialized."""
         manager.coverage_ratchet.get_status_report.return_value = {
-            "status": "not_initialized"
+            "status": "not_initialized",
         }
 
         with patch.object(manager, "_get_coverage_from_file", return_value=88.0):
@@ -417,10 +416,10 @@ class TestTestManagerCoverage:
             assert result["coverage_percent"] == 88.0
             assert result["source"] == "coverage.json"
 
-    def test_get_coverage_not_initialized_no_direct(self, manager):
+    def test_get_coverage_not_initialized_no_direct(self, manager) -> None:
         """Test get_coverage when ratchet not initialized and no direct data."""
         manager.coverage_ratchet.get_status_report.return_value = {
-            "status": "not_initialized"
+            "status": "not_initialized",
         }
 
         with patch.object(manager, "_get_coverage_from_file", return_value=None):
@@ -446,7 +445,7 @@ class TestTestManagerStats:
                     command_builder=Mock(),
                 )
 
-    def test_get_test_stats(self, manager):
+    def test_get_test_stats(self, manager) -> None:
         """Test getting test statistics."""
         manager._last_test_failures = ["test1", "test2", "test3"]
 
@@ -457,7 +456,7 @@ class TestTestManagerStats:
             assert stats["coverage_ratchet_enabled"] is True
             assert stats["last_failures_count"] == 3
 
-    def test_get_test_failures(self, manager):
+    def test_get_test_failures(self, manager) -> None:
         """Test getting test failures."""
         failures = ["test_a failed", "test_b failed"]
         manager._last_test_failures = failures.copy()
@@ -468,7 +467,7 @@ class TestTestManagerStats:
         # Should return a copy, not the original list
         assert result is not manager._last_test_failures
 
-    def test_get_test_command(self, manager):
+    def test_get_test_command(self, manager) -> None:
         """Test getting test command."""
         options = Mock()
         expected_cmd = ["pytest", "-v", "--cov"]
@@ -496,7 +495,7 @@ class TestTestManagerHelpers:
                     command_builder=Mock(),
                 )
 
-    def test_handle_no_ratchet_status_with_coverage(self, manager):
+    def test_handle_no_ratchet_status_with_coverage(self, manager) -> None:
         """Test handling no ratchet status when coverage available."""
         result = manager._handle_no_ratchet_status(85.5)
 
@@ -504,20 +503,20 @@ class TestTestManagerHelpers:
         assert result["coverage_percent"] == 85.5
         assert result["source"] == "coverage.json"
 
-    def test_handle_no_ratchet_status_without_coverage(self, manager):
+    def test_handle_no_ratchet_status_without_coverage(self, manager) -> None:
         """Test handling no ratchet status when coverage not available."""
         result = manager._handle_no_ratchet_status(None)
 
         assert result["status"] == "not_initialized"
         assert result["coverage_percent"] == 0.0
 
-    def test_get_final_coverage_prefers_direct(self, manager):
+    def test_get_final_coverage_prefers_direct(self, manager) -> None:
         """Test final coverage prefers direct coverage."""
         result = manager._get_final_coverage(80.0, 85.5)
 
         assert result == 85.5
 
-    def test_get_final_coverage_uses_ratchet_fallback(self, manager):
+    def test_get_final_coverage_uses_ratchet_fallback(self, manager) -> None:
         """Test final coverage uses ratchet when no direct coverage."""
         result = manager._get_final_coverage(80.0, None)
 

@@ -22,7 +22,7 @@ from crackerjack.models.qa_results import QACheckType, QAResult
 class TestUtilityCheckAdapterConfiguration:
     """Test UtilityCheckAdapter configuration and initialization."""
 
-    def test_adapter_with_text_pattern_settings(self):
+    def test_adapter_with_text_pattern_settings(self) -> None:
         """Test adapter with TEXT_PATTERN check type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -35,7 +35,7 @@ class TestUtilityCheckAdapterConfiguration:
         assert adapter.settings.check_type == UtilityCheckType.TEXT_PATTERN
         assert adapter.settings.pattern == r"\\s+$"
 
-    def test_adapter_with_eof_newline_settings(self):
+    def test_adapter_with_eof_newline_settings(self) -> None:
         """Test adapter with EOF_NEWLINE check type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.EOF_NEWLINE,
@@ -47,7 +47,7 @@ class TestUtilityCheckAdapterConfiguration:
         assert adapter.settings.check_type == UtilityCheckType.EOF_NEWLINE
         assert adapter.settings.auto_fix is True
 
-    def test_adapter_with_syntax_validation_settings(self):
+    def test_adapter_with_syntax_validation_settings(self) -> None:
         """Test adapter with SYNTAX_VALIDATION check type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.SYNTAX_VALIDATION,
@@ -59,7 +59,7 @@ class TestUtilityCheckAdapterConfiguration:
         assert adapter.settings.check_type == UtilityCheckType.SYNTAX_VALIDATION
         assert adapter.settings.parser_type == "yaml"
 
-    def test_adapter_with_size_check_settings(self):
+    def test_adapter_with_size_check_settings(self) -> None:
         """Test adapter with SIZE_CHECK check type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.SIZE_CHECK,
@@ -71,7 +71,7 @@ class TestUtilityCheckAdapterConfiguration:
         assert adapter.settings.check_type == UtilityCheckType.SIZE_CHECK
         assert adapter.settings.max_size_bytes == 1024000
 
-    def test_adapter_with_dependency_lock_settings(self):
+    def test_adapter_with_dependency_lock_settings(self) -> None:
         """Test adapter with DEPENDENCY_LOCK check type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.DEPENDENCY_LOCK,
@@ -87,7 +87,7 @@ class TestUtilityCheckAdapterConfiguration:
 class TestUtilityCheckAdapterProperties:
     """Test adapter properties and attributes."""
 
-    def test_adapter_name(self):
+    def test_adapter_name(self) -> None:
         """Test adapter_name property."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -98,7 +98,7 @@ class TestUtilityCheckAdapterProperties:
         assert isinstance(adapter.adapter_name, str)
         assert len(adapter.adapter_name) > 0
 
-    def test_module_id(self):
+    def test_module_id(self) -> None:
         """Test module_id property returns UUID."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -108,7 +108,7 @@ class TestUtilityCheckAdapterProperties:
 
         assert isinstance(adapter.module_id, UUID)
 
-    def test_check_type_property(self):
+    def test_check_type_property(self) -> None:
         """Test _get_check_type returns correct type."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -124,7 +124,7 @@ class TestUtilityCheckAdapterProperties:
 class TestUtilityCheckDefaultConfigs:
     """Test default configuration generation."""
 
-    def test_get_default_config_text_pattern(self):
+    def test_get_default_config_text_pattern(self) -> None:
         """Test default config for TEXT_PATTERN check."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -140,7 +140,7 @@ class TestUtilityCheckDefaultConfigs:
         assert isinstance(config.file_patterns, list)
         assert config.stage in ["fast", "comprehensive"]
 
-    def test_get_default_config_eof_newline(self):
+    def test_get_default_config_eof_newline(self) -> None:
         """Test default config for EOF_NEWLINE check."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.EOF_NEWLINE,
@@ -153,7 +153,7 @@ class TestUtilityCheckDefaultConfigs:
         assert config.is_formatter is True  # Can modify files
         assert config.parallel_safe is True
 
-    def test_get_default_config_size_check(self):
+    def test_get_default_config_size_check(self) -> None:
         """Test default config for SIZE_CHECK."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.SIZE_CHECK,
@@ -170,7 +170,7 @@ class TestUtilityCheckDefaultConfigs:
 class TestUtilityCheckTypes:
     """Test UtilityCheckType enum."""
 
-    def test_all_check_types_defined(self):
+    def test_all_check_types_defined(self) -> None:
         """Test all expected check types are defined."""
         expected_types = [
             "TEXT_PATTERN",
@@ -185,7 +185,7 @@ class TestUtilityCheckTypes:
                 f"Missing check type: {type_name}"
             )
 
-    def test_check_type_values(self):
+    def test_check_type_values(self) -> None:
         """Test check type enum values."""
         assert UtilityCheckType.TEXT_PATTERN == "text_pattern"
         assert UtilityCheckType.EOF_NEWLINE == "eof_newline"
@@ -197,12 +197,12 @@ class TestUtilityCheckTypes:
 class TestUtilityCheckSettingsValidation:
     """Test settings validation and defaults."""
 
-    def test_settings_requires_check_type(self):
+    def test_settings_requires_check_type(self) -> None:
         """Test settings requires check_type field."""
         with pytest.raises(Exception):  # Pydantic validation error
             UtilityCheckSettings()  # Missing required check_type
 
-    def test_settings_optional_fields_have_defaults(self):
+    def test_settings_optional_fields_have_defaults(self) -> None:
         """Test optional fields have None defaults."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -214,7 +214,7 @@ class TestUtilityCheckSettingsValidation:
         assert settings.auto_fix is False  # Boolean has False default
         assert settings.lock_command is None
 
-    def test_settings_with_all_fields(self):
+    def test_settings_with_all_fields(self) -> None:
         """Test settings with all fields populated."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -236,7 +236,7 @@ class TestUtilityCheckSettingsValidation:
 class TestUtilityCheckFilePatterns:
     """Test file pattern matching for different check types."""
 
-    def test_text_pattern_file_patterns(self):
+    def test_text_pattern_file_patterns(self) -> None:
         """Test TEXT_PATTERN applies to all text files."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -250,7 +250,7 @@ class TestUtilityCheckFilePatterns:
         assert isinstance(config.file_patterns, list)
         assert len(config.file_patterns) > 0
 
-    def test_syntax_validation_file_patterns(self):
+    def test_syntax_validation_file_patterns(self) -> None:
         """Test SYNTAX_VALIDATION has parser-specific patterns."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.SYNTAX_VALIDATION,
@@ -267,7 +267,7 @@ class TestUtilityCheckFilePatterns:
 class TestUtilityCheckExcludePatterns:
     """Test exclude patterns for utility checks."""
 
-    def test_default_exclude_patterns(self):
+    def test_default_exclude_patterns(self) -> None:
         """Test default exclude patterns are set."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -284,7 +284,7 @@ class TestUtilityCheckExcludePatterns:
         common_excludes = [".git", ".venv", "node_modules", "__pycache__"]
         patterns = " ".join(config.exclude_patterns)
 
-        for exclude in common_excludes:
+        for _exclude in common_excludes:
             # At least some common excludes should be present
             pass  # Cannot assert exact patterns without implementation details
 
@@ -292,7 +292,7 @@ class TestUtilityCheckExcludePatterns:
 class TestUtilityCheckTimeout:
     """Test timeout configuration."""
 
-    def test_default_timeout_reasonable(self):
+    def test_default_timeout_reasonable(self) -> None:
         """Test default timeout is reasonable for utility checks."""
         settings = UtilityCheckSettings(
             check_type=UtilityCheckType.TEXT_PATTERN,
@@ -310,7 +310,7 @@ class TestUtilityCheckTimeout:
 class TestUtilityCheckStageAssignment:
     """Test stage assignment for different check types."""
 
-    def test_fast_checks_in_fast_stage(self):
+    def test_fast_checks_in_fast_stage(self) -> None:
         """Test fast checks are assigned to fast stage."""
         # TEXT_PATTERN, EOF_NEWLINE should be in fast stage
         fast_types = [
@@ -329,7 +329,7 @@ class TestUtilityCheckStageAssignment:
             # Should be in fast stage (or at least have a stage)
             assert config.stage in ["fast", "comprehensive"]
 
-    def test_comprehensive_checks_in_comp_stage(self):
+    def test_comprehensive_checks_in_comp_stage(self) -> None:
         """Test comprehensive checks may be in comprehensive stage."""
         # SYNTAX_VALIDATION might be in comprehensive stage
         settings = UtilityCheckSettings(

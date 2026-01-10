@@ -65,7 +65,7 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         },
     }
 
-    def __init__(self, project_root: Path | None = None):
+    def __init__(self, project_root: Path | None = None) -> None:
         self.project_root = project_root or Path.cwd()
         self.security_logger = get_security_logger()
 
@@ -130,18 +130,23 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         )
 
     def _prepare_data_for_sanitization(
-        self, status_data: dict[str, t.Any]
+        self,
+        status_data: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         return self._deep_copy_dict(status_data)  # type: ignore[no-any-return]
 
     def _apply_all_sanitization_steps(
-        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+        self,
+        data: dict[str, t.Any],
+        verbosity: StatusVerbosity,
     ) -> dict[str, t.Any]:
         data = self._apply_verbosity_filter(data, verbosity)
         return self._sanitize_sensitive_data(data, verbosity)
 
     def _add_security_metadata(
-        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+        self,
+        data: dict[str, t.Any],
+        verbosity: StatusVerbosity,
     ) -> dict[str, t.Any]:
         data["_security"] = {
             "sanitized": True,
@@ -151,7 +156,9 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         return data
 
     def _apply_verbosity_filter(
-        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+        self,
+        data: dict[str, t.Any],
+        verbosity: StatusVerbosity,
     ) -> dict[str, t.Any]:
         if verbosity == StatusVerbosity.MINIMAL:
             remove_keys = self.SENSITIVE_KEYS["remove_minimal"]
@@ -171,7 +178,9 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         return data
 
     def _sanitize_sensitive_data(
-        self, data: dict[str, t.Any], verbosity: StatusVerbosity
+        self,
+        data: dict[str, t.Any],
+        verbosity: StatusVerbosity,
     ) -> dict[str, t.Any]:
         return self._sanitize_recursive(data, verbosity)  # type: ignore[no-any-return]
 
@@ -188,15 +197,16 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
                     sanitized[sanitized_key] = self._mask_sensitive_value(str(value))
                 else:
                     sanitized[sanitized_key] = self._sanitize_recursive(
-                        value, verbosity
+                        value,
+                        verbosity,
                     )
 
             return sanitized
 
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return [self._sanitize_recursive(item, verbosity) for item in obj]
 
-        elif isinstance(obj, str):
+        if isinstance(obj, str):
             return self._sanitize_string(obj, verbosity)
 
         return obj
@@ -208,14 +218,18 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         return self._apply_string_sanitization_pipeline(text, verbosity)
 
     def _apply_string_sanitization_pipeline(
-        self, text: str, verbosity: StatusVerbosity
+        self,
+        text: str,
+        verbosity: StatusVerbosity,
     ) -> str:
         sanitized = self._sanitize_internal_urls(text)
         sanitized = self._sanitize_paths(sanitized)
         return self._apply_secret_masking_if_needed(sanitized, verbosity)
 
     def _apply_secret_masking_if_needed(
-        self, text: str, verbosity: StatusVerbosity
+        self,
+        text: str,
+        verbosity: StatusVerbosity,
     ) -> str:
         if verbosity == StatusVerbosity.MINIMAL:
             return self._mask_potential_secrets(text)
@@ -262,7 +276,10 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         return text
 
     def _convert_to_relative_or_redact(
-        self, text: str, match: str, abs_path: Path
+        self,
+        text: str,
+        match: str,
+        abs_path: Path,
     ) -> str:
         try:
             rel_path = abs_path.relative_to(self.project_root)
@@ -334,14 +351,14 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
     def _mask_sensitive_value(self, value: str) -> str:
         if len(value) <= 4:
             return "***"
-        elif len(value) <= 8:
+        if len(value) <= 8:
             return value[0] + "*" * (len(value) - 1)
         return value[:2] + "*" * (len(value) - 4) + value[-2:]
 
     def _deep_copy_dict(self, obj: t.Any) -> t.Any:
         if isinstance(obj, dict):
             return {key: self._deep_copy_dict(value) for key, value in obj.items()}
-        elif isinstance(obj, list):
+        if isinstance(obj, list):
             return [self._deep_copy_dict(item) for item in obj]
         return obj
 
@@ -360,7 +377,10 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
             return self._create_minimal_error_response(error_type)
 
         return self._create_detailed_error_response(
-            error_message, error_type, verbosity, include_details
+            error_message,
+            error_type,
+            verbosity,
+            include_details,
         )
 
     def _create_minimal_error_response(self, error_type: str) -> dict[str, t.Any]:
@@ -403,7 +423,9 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         return response
 
     def _should_include_error_details(
-        self, include_details: bool, verbosity: StatusVerbosity
+        self,
+        include_details: bool,
+        verbosity: StatusVerbosity,
     ) -> bool:
         return include_details and verbosity in (
             StatusVerbosity.DETAILED,
@@ -446,5 +468,7 @@ def format_secure_status(
     user_context: str | None = None,
 ) -> dict[str, t.Any]:
     return get_secure_status_formatter(project_root).format_status(
-        status_data, verbosity, user_context
+        status_data,
+        verbosity,
+        user_context,
     )

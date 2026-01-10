@@ -16,8 +16,10 @@ from crackerjack.decorators import (
 from crackerjack.errors import (
     FileError,
     NetworkError,
-    TimeoutError as CrackerjackTimeoutError,
     ValidationError,
+)
+from crackerjack.errors import (
+    TimeoutError as CrackerjackTimeoutError,
 )
 
 
@@ -48,7 +50,8 @@ class TestRetryDecorator:
             nonlocal call_count
             call_count += 1
             if call_count < 3:
-                raise NetworkError("Temporary failure")
+                msg = "Temporary failure"
+                raise NetworkError(msg)
             return "success"
 
         result = flaky_operation()
@@ -61,7 +64,8 @@ class TestRetryDecorator:
 
         @retry(max_attempts=3, backoff=0.01)
         def always_fails() -> str:
-            raise NetworkError("Permanent failure")
+            msg = "Permanent failure"
+            raise NetworkError(msg)
 
         with pytest.raises(NetworkError):
             always_fails()
@@ -71,7 +75,8 @@ class TestRetryDecorator:
 
         @retry(max_attempts=3, exceptions=[NetworkError])
         def wrong_error() -> str:
-            raise FileError("File error")
+            msg = "File error"
+            raise FileError(msg)
 
         # Should not retry FileError, only NetworkError
         with pytest.raises(FileError):
@@ -87,7 +92,8 @@ class TestRetryDecorator:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise NetworkError("Temporary")
+                msg = "Temporary"
+                raise NetworkError(msg)
             return "success"
 
         result = await async_flaky()
@@ -146,7 +152,8 @@ class TestHandleErrors:
 
         @handle_errors(fallback={})
         def failing_operation() -> dict:
-            raise FileError("File not found")
+            msg = "File not found"
+            raise FileError(msg)
 
         result = failing_operation()
         assert result == {}
@@ -156,7 +163,8 @@ class TestHandleErrors:
 
         @handle_errors(fallback=lambda: {"default": True})
         def failing_operation() -> dict:
-            raise FileError("File not found")
+            msg = "File not found"
+            raise FileError(msg)
 
         result = failing_operation()
         assert result == {"default": True}
@@ -166,7 +174,8 @@ class TestHandleErrors:
 
         @handle_errors(suppress=True)
         def failing_operation() -> str:
-            raise ValueError("Some error")
+            msg = "Some error"
+            raise ValueError(msg)
 
         result = failing_operation()
         assert result is None
@@ -179,7 +188,8 @@ class TestHandleErrors:
             transform_to=FileError,
         )
         def failing_operation() -> str:
-            raise ValueError("Original error")
+            msg = "Original error"
+            raise ValueError(msg)
 
         with pytest.raises(FileError) as exc_info:
             failing_operation()
@@ -192,7 +202,8 @@ class TestHandleErrors:
 
         @handle_errors(fallback="fallback")
         async def async_failing() -> str:
-            raise ValueError("Error")
+            msg = "Error"
+            raise ValueError(msg)
 
         result = await async_failing()
         assert result == "fallback"
@@ -206,7 +217,8 @@ class TestGracefulDegradation:
 
         @graceful_degradation(fallback_value=[], warn=False)
         def failing_operation() -> list:
-            raise RuntimeError("Failed")
+            msg = "Failed"
+            raise RuntimeError(msg)
 
         result = failing_operation()
         assert result == []
@@ -227,7 +239,8 @@ class TestGracefulDegradation:
 
         @graceful_degradation(fallback_value=0, warn=False)
         async def async_failing() -> int:
-            raise ValueError("Error")
+            msg = "Error"
+            raise ValueError(msg)
 
         result = await async_failing()
         assert result == 0
@@ -241,7 +254,8 @@ class TestLogErrors:
 
         @log_errors()
         def failing_operation() -> str:
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError):
             failing_operation()
@@ -252,7 +266,8 @@ class TestLogErrors:
 
         @log_errors()
         async def async_failing() -> str:
-            raise ValueError("Test error")
+            msg = "Test error"
+            raise ValueError(msg)
 
         with pytest.raises(ValueError):
             await async_failing()
@@ -293,7 +308,7 @@ class TestValidateArgs:
                 "email": [
                     lambda e: "@" in e,
                     lambda e: len(e) > 5,
-                ]
+                ],
             },
         )
         def register_user(email: str) -> bool:
@@ -352,7 +367,8 @@ class TestDecoratorComposition:
             nonlocal call_count
             call_count += 1
             if call_count < 2:
-                raise NetworkError("Temporary")
+                msg = "Temporary"
+                raise NetworkError(msg)
             await asyncio.sleep(0.1)
             return "success"
 
@@ -387,7 +403,8 @@ class TestDecoratorComposition:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                raise NetworkError("First attempt fails")
+                msg = "First attempt fails"
+                raise NetworkError(msg)
             return "success"
 
         result = await complex_operation()

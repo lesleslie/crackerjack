@@ -59,11 +59,11 @@ class FixResult:
             confidence=max(self.confidence, other.confidence),
             fixes_applied=self.fixes_applied + other.fixes_applied,
             remaining_issues=list[t.Any](
-                set[t.Any](self.remaining_issues + other.remaining_issues)
+                set[t.Any](self.remaining_issues + other.remaining_issues),
             ),
             recommendations=self.recommendations + other.recommendations,
             files_modified=list[t.Any](
-                set[t.Any](self.files_modified + other.files_modified)
+                set[t.Any](self.files_modified + other.files_modified),
             ),
         )
 

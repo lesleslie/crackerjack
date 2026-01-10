@@ -88,10 +88,13 @@ class PatternCache:
             self.logger.debug(f"Saved {len(self._patterns)} patterns to cache")
 
         except Exception as e:
-            self.logger.error(f"Failed to save pattern cache: {e}")
+            self.logger.exception(f"Failed to save pattern cache: {e}")
 
     def cache_successful_pattern(
-        self, issue: Issue, plan: dict[str, t.Any], result: FixResult
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
+        result: FixResult,
     ) -> str:
         self._load_patterns()
 
@@ -139,7 +142,8 @@ class PatternCache:
         ]
 
         matching_patterns.sort(
-            key=lambda p: (p.success_rate, p.confidence), reverse=True
+            key=lambda p: (p.success_rate, p.confidence),
+            reverse=True,
         )
 
         return matching_patterns
@@ -164,7 +168,7 @@ class PatternCache:
 
         self._save_patterns()
         self.logger.debug(
-            f"Used pattern {pattern_id} (usage count: {pattern.usage_count})"
+            f"Used pattern {pattern_id} (usage count: {pattern.usage_count})",
         )
 
         return True
@@ -187,7 +191,7 @@ class PatternCache:
 
         self._save_patterns()
         self.logger.debug(
-            f"Updated pattern {pattern_id} success rate: {pattern.success_rate: .2f}"
+            f"Updated pattern {pattern_id} success rate: {pattern.success_rate: .2f}",
         )
 
     def get_pattern_statistics(self) -> dict[str, t.Any]:
@@ -219,7 +223,9 @@ class PatternCache:
 
     def _get_most_used_patterns(self, limit: int = 5) -> list[dict[str, t.Any]]:
         patterns = sorted(
-            self._patterns.values(), key=lambda p: p.usage_count, reverse=True
+            self._patterns.values(),
+            key=lambda p: p.usage_count,
+            reverse=True,
         )[:limit]
 
         return [
@@ -235,7 +241,9 @@ class PatternCache:
         ]
 
     def cleanup_old_patterns(
-        self, max_age_days: int = 30, min_usage_count: int = 2
+        self,
+        max_age_days: int = 30,
+        min_usage_count: int = 2,
     ) -> int:
         self._load_patterns()
 
@@ -286,12 +294,12 @@ class PatternCache:
                 json.dump(data, f, indent=2)
 
             self.logger.info(
-                f"Exported {len(self._patterns)} patterns to {export_path}"
+                f"Exported {len(self._patterns)} patterns to {export_path}",
             )
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to export patterns: {e}")
+            self.logger.exception(f"Failed to export patterns: {e}")
             return False
 
     def import_patterns(self, import_path: Path, merge: bool = True) -> bool:
@@ -324,11 +332,11 @@ class PatternCache:
             if imported_count > 0:
                 self._save_patterns()
                 self.logger.info(
-                    f"Imported {imported_count} patterns from {import_path}"
+                    f"Imported {imported_count} patterns from {import_path}",
                 )
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Failed to import patterns: {e}")
+            self.logger.exception(f"Failed to import patterns: {e}")
             return False

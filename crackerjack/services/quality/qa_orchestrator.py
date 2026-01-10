@@ -8,12 +8,11 @@ from pathlib import Path
 
 import yaml
 
-from crackerjack.models.protocols import QAAdapterProtocol
 from crackerjack.models.qa_config import QACheckConfig, QAOrchestratorConfig
 from crackerjack.models.qa_results import QAResult, QAResultStatus
 
 if t.TYPE_CHECKING:
-    pass
+    from crackerjack.models.protocols import QAAdapterProtocol
 
 
 class QAOrchestrator:
@@ -42,7 +41,8 @@ class QAOrchestrator:
         elif stage == "comprehensive":
             checks = self.config.comprehensive_checks
         else:
-            raise ValueError(f"Invalid stage: {stage}")
+            msg = f"Invalid stage: {stage}"
+            raise ValueError(msg)
 
         checks = [c for c in checks if c.enabled]
 
@@ -52,9 +52,7 @@ class QAOrchestrator:
         if self.config.run_formatters_first:
             checks.sort(key=lambda c: (not c.is_formatter, c.check_name))
 
-        results = await self._execute_checks(checks, files)
-
-        return results
+        return await self._execute_checks(checks, files)
 
     async def run_all_checks(
         self,
@@ -63,7 +61,8 @@ class QAOrchestrator:
         fast_results = await self.run_checks(stage="fast", files=files)
 
         comprehensive_results = await self.run_checks(
-            stage="comprehensive", files=files
+            stage="comprehensive",
+            files=files,
         )
 
         all_results = fast_results + comprehensive_results
@@ -93,7 +92,8 @@ class QAOrchestrator:
         return tasks
 
     async def _handle_fail_fast(
-        self, tasks: list[t.Coroutine[t.Any, t.Any, QAResult]]
+        self,
+        tasks: list[t.Coroutine[t.Any, t.Any, QAResult]],
     ) -> list[QAResult] | None:
         if not self.config.fail_fast or not tasks:
             return None
@@ -103,7 +103,8 @@ class QAOrchestrator:
         ]
 
         done, pending = await asyncio.wait(
-            task_list[-1:], return_when=asyncio.FIRST_COMPLETED
+            task_list[-1:],
+            return_when=asyncio.FIRST_COMPLETED,
         )
         result = done.pop().result()
         if not result.is_success:
@@ -232,7 +233,8 @@ class QAOrchestrator:
         project_root: Path | None = None,
     ) -> QAOrchestrator:
         if not config_path.exists():
-            raise FileNotFoundError(f"Config file not found: {config_path}")
+            msg = f"Config file not found: {config_path}"
+            raise FileNotFoundError(msg)
 
         with config_path.open() as f:
             config_data = yaml.safe_load(f)
@@ -250,9 +252,7 @@ class QAOrchestrator:
             verbose=config_data.get("verbose", False),
         )
 
-        orchestrator = cls(config)
-
-        return orchestrator
+        return cls(config)
 
     async def health_check(self) -> dict[str, t.Any]:
         adapter_health = {}

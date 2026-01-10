@@ -7,10 +7,10 @@ from .dead_code_detector import (
 )
 
 __all__ = [
+    "CodeTransformer",
     "ComplexityAnalyzer",
     "ComplexityCalculator",
-    "CodeTransformer",
     "DeadCodeDetector",
-    "UsageDataCollector",
     "EnhancedUsageAnalyzer",
+    "UsageDataCollector",
 ]

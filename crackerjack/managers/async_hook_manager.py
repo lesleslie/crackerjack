@@ -68,7 +68,7 @@ class AsyncHookManager:
 
     async def install_hooks_async(self) -> bool:
         self.console.print(
-            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
+            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation",
         )
         return True
 
@@ -77,7 +77,7 @@ class AsyncHookManager:
 
     async def update_hooks_async(self) -> bool:
         self.console.print(
-            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
+            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution",
         )
         return True
 
@@ -86,7 +86,8 @@ class AsyncHookManager:
 
     @staticmethod
     def get_hook_summary(
-        results: list[HookResult], elapsed_time: float | None = None
+        results: list[HookResult],
+        elapsed_time: float | None = None,
     ) -> dict[str, t.Any]:
         if not results:
             return {

@@ -13,7 +13,7 @@ from crackerjack.services.secure_path_utils import (
 class TestSecurePathValidator:
     """Test secure path validation functionality."""
 
-    def test_validate_safe_path_basic(self):
+    def test_validate_safe_path_basic(self) -> None:
         """Test basic path validation."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -25,32 +25,32 @@ class TestSecurePathValidator:
             assert validated.exists()
             assert validated.is_absolute()
 
-    def test_validate_safe_path_traversal_attack(self):
+    def test_validate_safe_path_traversal_attack(self) -> None:
         """Test that path traversal attacks are blocked."""
         with tempfile.TemporaryDirectory() as temp_dir:
             Path(temp_dir)
 
             # Directory traversal should be blocked
             with pytest.raises(
-                ExecutionError, match="Directory traversal pattern detected"
+                ExecutionError, match="Directory traversal pattern detected",
             ):
                 SecurePathValidator.validate_safe_path("../../../etc/passwd")
 
-    def test_validate_safe_path_null_byte_attack(self):
+    def test_validate_safe_path_null_byte_attack(self) -> None:
         """Test that null byte attacks are blocked."""
         with pytest.raises(ExecutionError, match="Null byte pattern detected"):
             SecurePathValidator.validate_safe_path("/test/file%00.txt")
 
-    def test_validate_safe_path_encoded_traversal(self):
+    def test_validate_safe_path_encoded_traversal(self) -> None:
         """Test that URL encoded traversal attacks are blocked."""
         with pytest.raises(
-            ExecutionError, match="Directory traversal pattern detected"
+            ExecutionError, match="Directory traversal pattern detected",
         ):
             SecurePathValidator.validate_safe_path(
-                "/test/%2e%2e%2f%2e%2e%2f/etc/passwd"
+                "/test/%2e%2e%2f%2e%2e%2f/etc/passwd",
             )
 
-    def test_is_within_directory(self):
+    def test_is_within_directory(self) -> None:
         """Test directory containment validation."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -65,17 +65,17 @@ class TestSecurePathValidator:
             with tempfile.TemporaryDirectory() as other_dir:
                 other_path = Path(other_dir)
                 assert not SecurePathValidator.is_within_directory(
-                    test_file, other_path
+                    test_file, other_path,
                 )
 
-    def test_secure_path_join(self):
+    def test_secure_path_join(self) -> None:
         """Test secure path joining."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
 
             # Valid join should work
             result = SecurePathValidator.secure_path_join(
-                temp_path, "subdir", "file.txt"
+                temp_path, "subdir", "file.txt",
             )
             expected = temp_path / "subdir" / "file.txt"
 
@@ -84,13 +84,13 @@ class TestSecurePathValidator:
 
             # Directory traversal in join should be blocked
             with pytest.raises(
-                ExecutionError, match="Directory traversal pattern detected"
+                ExecutionError, match="Directory traversal pattern detected",
             ):
                 SecurePathValidator.secure_path_join(
-                    temp_path, "../outside", "file.txt"
+                    temp_path, "../outside", "file.txt",
                 )
 
-    def test_dangerous_components_detection(self):
+    def test_dangerous_components_detection(self) -> None:
         """Test detection of dangerous path components."""
         with pytest.raises(ExecutionError, match="Dangerous path component detected"):
             SecurePathValidator.validate_safe_path("/test/CON/file.txt")
@@ -98,10 +98,10 @@ class TestSecurePathValidator:
         with pytest.raises(ExecutionError, match="Dangerous path component detected"):
             SecurePathValidator.validate_safe_path("/test/NUL/file.txt")
 
-    def test_create_secure_temp_file(self):
+    def test_create_secure_temp_file(self) -> None:
         """Test secure temporary file creation."""
         temp_file = SecurePathValidator.create_secure_temp_file(
-            suffix=".test", prefix="secure_test_", purpose="unit_testing"
+            suffix=".test", prefix="secure_test_", purpose="unit_testing",
         )
 
         try:
@@ -123,7 +123,7 @@ class TestSecurePathValidator:
 class TestAtomicFileOperations:
     """Test atomic file operations with security."""
 
-    def test_atomic_write(self):
+    def test_atomic_write(self) -> None:
         """Test atomic file writing."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -137,7 +137,7 @@ class TestAtomicFileOperations:
             assert test_file.exists()
             assert test_file.read_text() == test_content
 
-    def test_atomic_backup_and_write(self):
+    def test_atomic_backup_and_write(self) -> None:
         """Test atomic backup and write operation."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -150,7 +150,7 @@ class TestAtomicFileOperations:
 
             # Backup and write new content
             backup_path = AtomicFileOperations.atomic_backup_and_write(
-                test_file, new_content, temp_path
+                test_file, new_content, temp_path,
             )
 
             # Original file should have new content
@@ -160,7 +160,7 @@ class TestAtomicFileOperations:
             assert backup_path.exists()
             assert backup_path.read_text() == original_content
 
-    def test_atomic_operations_path_validation(self):
+    def test_atomic_operations_path_validation(self) -> None:
         """Test that atomic operations validate paths securely."""
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
@@ -168,7 +168,7 @@ class TestAtomicFileOperations:
             # Directory traversal should be blocked
             with pytest.raises(ExecutionError):
                 AtomicFileOperations.atomic_write(
-                    "../../../etc/passwd", "malicious content", temp_path
+                    "../../../etc/passwd", "malicious content", temp_path,
                 )
 
 

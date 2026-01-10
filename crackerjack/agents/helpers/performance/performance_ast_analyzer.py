@@ -1,7 +1,7 @@
 import ast
 import typing as t
 
-from ...base import AgentContext
+from crackerjack.agents.base import AgentContext
 
 
 class PerformanceASTAnalyzer:
@@ -9,7 +9,8 @@ class PerformanceASTAnalyzer:
         self.context = context
 
     def extract_performance_critical_functions(
-        self, content: str
+        self,
+        content: str,
     ) -> list[dict[str, t.Any]]:
         functions: list[dict[str, t.Any]] = []
         lines = content.split("\n")
@@ -27,11 +28,20 @@ class PerformanceASTAnalyzer:
 
             if self._is_function_definition(stripped):
                 current_function = self._handle_function_definition(
-                    current_function, functions, stripped, indent, i
+                    current_function,
+                    functions,
+                    stripped,
+                    indent,
+                    i,
                 )
             elif current_function:
                 current_function = self._handle_function_body_line(
-                    current_function, functions, line, stripped, indent, i
+                    current_function,
+                    functions,
+                    line,
+                    stripped,
+                    indent,
+                    i,
                 )
 
         self._handle_last_function(current_function, functions, len(lines))
@@ -77,14 +87,15 @@ class PerformanceASTAnalyzer:
         if self._is_still_in_function(current_function, indent, stripped):
             current_function["body"] += line + "\n"
             return current_function
-        else:
-            if self._is_performance_critical(current_function):
-                self._finalize_function(current_function, functions, line_number)
-            return None
+        if self._is_performance_critical(current_function):
+            self._finalize_function(current_function, functions, line_number)
+        return None
 
     @staticmethod
     def _is_still_in_function(
-        current_function: dict[str, t.Any], indent: int, stripped: str
+        current_function: dict[str, t.Any],
+        indent: int,
+        stripped: str,
     ) -> bool:
         return indent > current_function["indent_level"] or (
             indent == current_function["indent_level"]
@@ -169,7 +180,9 @@ class PerformanceASTAnalyzer:
         return complexity
 
     def analyze_performance_patterns(
-        self, semantic_insight: t.Any, current_func: dict[str, t.Any]
+        self,
+        semantic_insight: t.Any,
+        current_func: dict[str, t.Any],
     ) -> dict[str, t.Any]:
         analysis: dict[str, t.Any] = {
             "issues_found": False,
@@ -180,7 +193,7 @@ class PerformanceASTAnalyzer:
         if semantic_insight.high_confidence_matches > 0:
             analysis["issues_found"] = True
             analysis["pattern_insights"].append(
-                f"Found {semantic_insight.high_confidence_matches} highly similar implementations"
+                f"Found {semantic_insight.high_confidence_matches} highly similar implementations",
             )
 
             performance_concerns = []
@@ -197,7 +210,7 @@ class PerformanceASTAnalyzer:
                     f"may benefit from the same optimization approach"
                 )
                 analysis["pattern_insights"].append(
-                    f"Similar performance patterns found in: {', '.join(list(set(performance_concerns))[:3])}"
+                    f"Similar performance patterns found in: {', '.join(list(set(performance_concerns))[:3])}",
                 )
 
         return analysis
@@ -236,7 +249,7 @@ class PerformanceASTAnalyzer:
 
         if collector.function_lengths:
             metrics["average_function_length"] = sum(collector.function_lengths) / len(
-                collector.function_lengths
+                collector.function_lengths,
             )
 
         return metrics

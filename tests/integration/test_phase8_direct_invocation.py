@@ -29,7 +29,7 @@ def _require_perf_env() -> None:
 class TestDirectInvocationExecution:
     """Test actual execution of hooks with direct invocation."""
 
-    def test_native_tool_executes_successfully(self, tmp_path):
+    def test_native_tool_executes_successfully(self, tmp_path) -> None:
         """Test that a native tool executes successfully."""
         # Create a test file
         test_file = tmp_path / "test.py"
@@ -45,7 +45,7 @@ class TestDirectInvocationExecution:
         # Execute the command on the test file
         result = subprocess.run(
             [*command, str(test_file)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             cwd=tmp_path,
         )
@@ -54,7 +54,7 @@ class TestDirectInvocationExecution:
         # Exit code can be 0 (fixed) or 1 (found issues)
         assert result.returncode in (0, 1)
 
-    def test_rust_tool_executes_successfully(self, tmp_path, monkeypatch):
+    def test_rust_tool_executes_successfully(self, tmp_path, monkeypatch) -> None:
         """Test that a Rust tool (skylos) command can be generated."""
         # Note: We only test command generation, not execution
         # since skylos requires a valid Python project structure
@@ -70,7 +70,7 @@ class TestDirectInvocationExecution:
         assert command[1] == "run"
         assert "skylos" in command
 
-    def test_third_party_tool_executes_successfully(self, tmp_path):
+    def test_third_party_tool_executes_successfully(self, tmp_path) -> None:
         """Test that a third-party tool (ruff) executes successfully."""
         # Create a test Python file with an issue
         test_file = tmp_path / "test.py"
@@ -86,7 +86,7 @@ class TestDirectInvocationExecution:
         # Execute ruff format
         result = subprocess.run(
             [*command, str(test_file)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             cwd=tmp_path,
             timeout=10,
@@ -96,7 +96,7 @@ class TestDirectInvocationExecution:
         # Allow success (0), "found issues" (1), and error (2) codes
         assert result.returncode in (0, 1, 2)
 
-    def test_command_uses_uv_isolation(self):
+    def test_command_uses_uv_isolation(self) -> None:
         """Test that all direct commands use uv for dependency isolation."""
         hook = HookDefinition(
             name="ruff-check",
@@ -129,7 +129,7 @@ class TestFastHooksIntegration:
             # mdformat is disabled in current FAST_HOOKS; enable when available
         ],
     )
-    def test_fast_hook_can_execute(self, hook_name):
+    def test_fast_hook_can_execute(self, hook_name) -> None:
         """Test that each fast hook can generate an executable command."""
         hook = next(h for h in FAST_HOOKS if h.name == hook_name)
 
@@ -140,12 +140,12 @@ class TestFastHooksIntegration:
         assert len(command) > 0
         assert command[0] == "uv"
 
-    def test_all_fast_hooks_have_direct_mode(self):
+    def test_all_fast_hooks_have_direct_mode(self) -> None:
         """Test that all fast hooks use direct invocation mode."""
         for hook in FAST_HOOKS:
             assert hook.get_command()[0] == "uv"
 
-    def test_fast_hooks_count(self):
+    def test_fast_hooks_count(self) -> None:
         """Test that we have expected number of fast hooks."""
         assert len(FAST_HOOKS) == 15  # Updated from 10 to 15 with new hooks
 
@@ -164,7 +164,7 @@ class TestComprehensiveHooksIntegration:
             "complexipy",
         ],
     )
-    def test_comprehensive_hook_can_execute(self, hook_name):
+    def test_comprehensive_hook_can_execute(self, hook_name) -> None:
         """Test that each comprehensive hook can generate an executable command."""
         hook = next(h for h in COMPREHENSIVE_HOOKS if h.name == hook_name)
 
@@ -175,14 +175,14 @@ class TestComprehensiveHooksIntegration:
         assert len(command) > 0
         assert command[0] == "uv"
 
-    def test_all_comprehensive_hooks_have_direct_mode(self):
+    def test_all_comprehensive_hooks_have_direct_mode(self) -> None:
         """Test that all comprehensive hooks use direct invocation mode."""
         for hook in COMPREHENSIVE_HOOKS:
             command = hook.get_command()
             assert command[0] in ("uv", "uvx")
             assert "pre-commit" not in " ".join(command)
 
-    def test_comprehensive_hooks_count(self):
+    def test_comprehensive_hooks_count(self) -> None:
         """Test that we have expected number of comprehensive hooks."""
         assert len(COMPREHENSIVE_HOOKS) == 11  # Updated from 7 to 11 with new comprehensive hooks
 
@@ -190,7 +190,7 @@ class TestComprehensiveHooksIntegration:
 class TestHookExecutionPerformance:
     """Test performance characteristics of direct invocation."""
 
-    def test_command_generation_is_fast(self):
+    def test_command_generation_is_fast(self) -> None:
         """Test that getting commands is fast (< 1ms per hook)."""
         _require_perf_env()
         start_time = time.perf_counter()
@@ -205,7 +205,7 @@ class TestHookExecutionPerformance:
         # (100 iterations * 18 hooks = 1800 commands)
         assert duration < 0.25, f"Command generation took {duration:.3f}s (too slow)"
 
-    def test_direct_invocation_has_minimal_overhead(self):
+    def test_direct_invocation_has_minimal_overhead(self) -> None:
         """Test that direct invocation adds minimal overhead."""
         _require_perf_env()
         hook = HookDefinition(
@@ -229,7 +229,7 @@ class TestHookExecutionPerformance:
 class TestHookFailureHandling:
     """Test graceful handling of hook execution failures."""
 
-    def test_hook_failure_returns_nonzero_exit_code(self, tmp_path):
+    def test_hook_failure_returns_nonzero_exit_code(self, tmp_path) -> None:
         """Test that hook failures are detected via exit code."""
         # Create invalid YAML file
         invalid_yaml = tmp_path / "invalid.yaml"
@@ -245,7 +245,7 @@ class TestHookFailureHandling:
         # Execute on invalid YAML
         result = subprocess.run(
             [*command, str(invalid_yaml)],
-            capture_output=True,
+            check=False, capture_output=True,
             text=True,
             cwd=tmp_path,
             timeout=20,
@@ -254,7 +254,7 @@ class TestHookFailureHandling:
         # Should fail with nonzero exit code
         assert result.returncode != 0
 
-    def test_hook_timeout_can_be_enforced(self, tmp_path):
+    def test_hook_timeout_can_be_enforced(self, tmp_path) -> None:
         """Test that hook timeout attribute exists and can be configured."""
         hook = HookDefinition(
             name="ruff-check",
@@ -269,7 +269,7 @@ class TestHookFailureHandling:
         command = hook.get_command()
         assert command[0] == "uv"
 
-    def test_invalid_tool_raises(self):
+    def test_invalid_tool_raises(self) -> None:
         """Test that invalid tools raise instead of falling back."""
         hook = HookDefinition(
             name="nonexistent-tool-12345",
@@ -283,7 +283,7 @@ class TestHookFailureHandling:
 class TestEndToEndWorkflow:
     """Test complete end-to-end hook execution workflows."""
 
-    def test_can_execute_formatting_hook_chain(self, tmp_path):
+    def test_can_execute_formatting_hook_chain(self, tmp_path) -> None:
         """Test executing multiple formatting hooks in sequence."""
         # Create test file with multiple issues
         test_file = tmp_path / "test.py"
@@ -315,7 +315,7 @@ class TestEndToEndWorkflow:
             else:
                 result = subprocess.run(
                     [*command, str(test_file)],
-                    capture_output=True,
+                    check=False, capture_output=True,
                     text=True,
                     cwd=tmp_path,
                     timeout=20,
@@ -327,7 +327,7 @@ class TestEndToEndWorkflow:
         # At least one hook should have made changes or found issues
         assert any(rc in (0, 1) for _, rc in results)
 
-    def test_native_tools_dont_require_pre_commit(self, tmp_path, monkeypatch):
+    def test_native_tools_dont_require_pre_commit(self, tmp_path, monkeypatch) -> None:
         """Test that native tools work without pre-commit installed."""
         monkeypatch.chdir(tmp_path)
 
@@ -355,7 +355,7 @@ class TestEndToEndWorkflow:
 class TestToolRegistryIntegration:
     """Test integration between tool registry and hook execution."""
 
-    def test_all_registered_tools_have_valid_commands(self):
+    def test_all_registered_tools_have_valid_commands(self) -> None:
         """Test that all 18 registered tools have valid, executable commands."""
         from crackerjack.config.tool_commands import list_available_tools
 
@@ -378,7 +378,7 @@ class TestToolRegistryIntegration:
 
             assert len(command) >= 2, f"{tool_name} command too short: {command}"
 
-    def test_registry_commands_match_hook_commands(self):
+    def test_registry_commands_match_hook_commands(self) -> None:
         """Test that registry commands match what hooks generate."""
         for hook in FAST_HOOKS + COMPREHENSIVE_HOOKS:
             # Get command from hook
@@ -394,7 +394,7 @@ class TestToolRegistryIntegration:
 class TestDirectInvocationBenefits:
     """Test the benefits of Phase 8 direct invocation."""
 
-    def test_direct_mode_avoids_precommit_wrapper(self):
+    def test_direct_mode_avoids_precommit_wrapper(self) -> None:
         """Test that direct mode does not route through pre-commit."""
         hook = HookDefinition(
             name="ruff-format",
@@ -406,7 +406,7 @@ class TestDirectInvocationBenefits:
         assert command[0] == "uv"
         assert "pre-commit" not in " ".join(command)
 
-    def test_direct_mode_uses_uv_dependency_isolation(self):
+    def test_direct_mode_uses_uv_dependency_isolation(self) -> None:
         """Test that all direct commands use uv for consistent environments."""
         for hook in FAST_HOOKS + COMPREHENSIVE_HOOKS:
             command = hook.get_command()
@@ -414,7 +414,7 @@ class TestDirectInvocationBenefits:
             # All should use uv for dependency isolation (either uv or uvx)
             assert command[0] in ("uv", "uvx"), f"{hook.name} doesn't use uv or uvx"
 
-    def test_native_tools_have_no_external_dependencies(self):
+    def test_native_tools_have_no_external_dependencies(self) -> None:
         """Test that native tools are self-contained Python modules."""
         native_tools = [
             "trailing-whitespace",

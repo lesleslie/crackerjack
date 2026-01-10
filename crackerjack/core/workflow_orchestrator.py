@@ -40,7 +40,8 @@ class WorkflowPipeline:
         self.logger = logger or logging.getLogger(__name__)
 
         self.session = session or SessionCoordinator(
-            console=self.console, pkg_path=self.pkg_path
+            console=self.console,
+            pkg_path=self.pkg_path,
         )
         self.phases = phases or PhaseCoordinator(
             console=self.console,
@@ -61,10 +62,11 @@ class WorkflowPipeline:
 
         try:
             result = await runtime.workflow_bridge.execute_dag(
-                "crackerjack", context={"pkg_path": str(self.pkg_path)}
+                "crackerjack",
+                context={"pkg_path": str(self.pkg_path)},
             )
         except Exception as exc:
-            self.logger.error("Workflow failed: %s", exc, extra={"error": str(exc)})
+            self.logger.exception("Workflow failed: %s", exc, extra={"error": str(exc)})
             self.session.finalize_session(self.session.start_time, success=False)
             return False
 
@@ -108,15 +110,13 @@ class WorkflowPipeline:
             conn.commit()
             conn.close()
             self.logger.debug(
-                "Cleared Oneiric checkpoint cache for crackerjack workflow"
+                "Cleared Oneiric checkpoint cache for crackerjack workflow",
             )
         except Exception as e:
             self.logger.warning(f"Failed to clear Oneiric cache: {e}")
 
     def _run_fast_hooks_phase(self, options: t.Any) -> bool:
-        if not self.phases.run_fast_hooks_only(options):
-            return False
-        return True
+        return self.phases.run_fast_hooks_only(options)
 
     def _configure_session_cleanup(self, options: t.Any) -> None:
         pass

@@ -7,7 +7,8 @@ from pathlib import Path
 
 from pydantic import BaseModel, ConfigDict
 
-from ..errors import ErrorCode, ExecutionError
+from crackerjack.errors import ErrorCode, ExecutionError
+
 from .secure_path_utils import AtomicFileOperations, SecurePathValidator
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
@@ -60,7 +61,8 @@ class PackageBackupService(BaseModel):
         base_directory: Path | None = None,
     ) -> BackupMetadata:
         validated_pkg_dir = SecurePathValidator.validate_file_path(
-            package_directory, base_directory
+            package_directory,
+            base_directory,
         )
 
         if not validated_pkg_dir.is_dir():
@@ -85,7 +87,8 @@ class PackageBackupService(BaseModel):
             python_files = list[t.Any](validated_pkg_dir.rglob("*.py"))
 
             files_to_backup = self._filter_package_files(
-                python_files, validated_pkg_dir
+                python_files,
+                validated_pkg_dir,
             )
 
             if not files_to_backup:
@@ -112,7 +115,7 @@ class PackageBackupService(BaseModel):
 
             self.logger.info(
                 f"Package backup completed successfully: {backup_id} "
-                f"({backup_metadata.total_files} files, {backup_metadata.total_size} bytes)"
+                f"({backup_metadata.total_files} files, {backup_metadata.total_size} bytes)",
             )
 
             self.security_logger.log_backup_created(
@@ -167,7 +170,7 @@ class PackageBackupService(BaseModel):
         temp_restore_dir = None
         try:
             temp_restore_dir = self._create_temp_restore_directory(
-                backup_metadata.backup_id
+                backup_metadata.backup_id,
             )
 
             self._stage_backup_files(backup_metadata, temp_restore_dir)
@@ -175,7 +178,7 @@ class PackageBackupService(BaseModel):
             self._commit_restoration(backup_metadata, temp_restore_dir, base_directory)
 
             self.logger.info(
-                f"Backup restoration completed successfully: {backup_metadata.backup_id}"
+                f"Backup restoration completed successfully: {backup_metadata.backup_id}",
             )
 
             self.security_logger.log_security_event(
@@ -346,7 +349,8 @@ class PackageBackupService(BaseModel):
         return hashlib.sha256(combined.encode(), usedforsecurity=False).hexdigest()
 
     def _validate_backup(
-        self, backup_metadata: BackupMetadata
+        self,
+        backup_metadata: BackupMetadata,
     ) -> BackupValidationResult:
         missing_files: list[Path] = []
         corrupted_files: list[Path] = []
@@ -379,14 +383,15 @@ class PackageBackupService(BaseModel):
             try:
                 content = backup_file_path.read_bytes()
                 actual_checksum = hashlib.sha256(
-                    content, usedforsecurity=False
+                    content,
+                    usedforsecurity=False,
                 ).hexdigest()
 
                 if actual_checksum != expected_checksum:
                     corrupted_files.append(backup_file_path)
                     validation_errors.append(
                         f"Corrupted backup file: {relative_path_str} "
-                        f"(expected: {expected_checksum}, actual: {actual_checksum})"
+                        f"(expected: {expected_checksum}, actual: {actual_checksum})",
                     )
                     continue
 
@@ -397,7 +402,7 @@ class PackageBackupService(BaseModel):
 
         if not validation_errors:
             recalculated_checksum = self._calculate_backup_checksum(
-                backup_metadata.file_checksums
+                backup_metadata.file_checksums,
             )
             if recalculated_checksum != backup_metadata.checksum:
                 validation_errors.append("Overall backup checksum mismatch")
@@ -409,7 +414,7 @@ class PackageBackupService(BaseModel):
         else:
             self.logger.warning(
                 f"Backup validation failed: {backup_metadata.backup_id}, "
-                f"errors: {len(validation_errors)}"
+                f"errors: {len(validation_errors)}",
             )
 
         return BackupValidationResult(
@@ -427,7 +432,7 @@ class PackageBackupService(BaseModel):
     ) -> None:
         backup_dir = backup_metadata.backup_directory
 
-        for relative_path_str in backup_metadata.file_checksums.keys():
+        for relative_path_str in backup_metadata.file_checksums:
             backup_file_path = backup_dir / relative_path_str
             staging_file_path = temp_restore_dir / relative_path_str
 
@@ -443,7 +448,7 @@ class PackageBackupService(BaseModel):
     ) -> None:
         package_dir = backup_metadata.package_directory
 
-        for relative_path_str in backup_metadata.file_checksums.keys():
+        for relative_path_str in backup_metadata.file_checksums:
             staging_file_path = temp_restore_dir / relative_path_str
             final_file_path = package_dir / relative_path_str
 

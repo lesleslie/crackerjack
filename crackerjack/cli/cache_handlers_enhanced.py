@@ -39,7 +39,7 @@ class CacheOptimizationSuggestion:
 
 
 class EnhancedCacheHandlers:
-    def __init__(self, cache: CrackerjackCache | None = None):
+    def __init__(self, cache: CrackerjackCache | None = None) -> None:
         self.cache = cache or CrackerjackCache()
 
     def handle_clear_cache(self, console: Console, selective: bool = False) -> None:
@@ -67,7 +67,8 @@ class EnhancedCacheHandlers:
             total_size_freed = 0.0
             for cache_type, count in cleanup_results.items():
                 size_freed = pre_clear_stats.get(cache_type, {}).get(
-                    "total_size_mb", 0.0
+                    "total_size_mb",
+                    0.0,
                 )
                 total_size_freed += size_freed
 
@@ -97,10 +98,10 @@ class EnhancedCacheHandlers:
             console.print()
             console.print(table)
             console.print(
-                f"\\n✅ Successfully cleared {total_cleared} cache entries ({total_size_freed:.2f} MB freed)"
+                f"\\n✅ Successfully cleared {total_cleared} cache entries ({total_size_freed:.2f} MB freed)",
             )
             console.print(
-                "💡 Tip: Run --cache-warm after major operations to rebuild critical caches"
+                "💡 Tip: Run --cache-warm after major operations to rebuild critical caches",
             )
 
         except Exception as e:
@@ -140,7 +141,9 @@ class EnhancedCacheHandlers:
             console.print(f"\\n❌ Error retrieving cache stats: {e}", style="bold red")
 
     def handle_cache_warm(
-        self, console: Console, target_operations: list[str] | None = None
+        self,
+        console: Console,
+        target_operations: list[str] | None = None,
     ) -> None:
         console.print("🔥 Starting cache warming process...")
 
@@ -156,7 +159,8 @@ class EnhancedCacheHandlers:
 
         with Progress() as progress:
             warm_task = progress.add_task(
-                "[green]Warming caches...", total=total_operations
+                "[green]Warming caches...",
+                total=total_operations,
             )
 
             for operation in target_operations:
@@ -192,12 +196,14 @@ class EnhancedCacheHandlers:
 
         with Progress() as progress:
             optimize_task = progress.add_task(
-                "[blue]Optimizing caches...", total=len(suggestions)
+                "[blue]Optimizing caches...",
+                total=len(suggestions),
             )
 
             for suggestion in suggestions:
                 progress.update(
-                    optimize_task, description=f"[blue]{suggestion.description[:30]}..."
+                    optimize_task,
+                    description=f"[blue]{suggestion.description[:30]}...",
                 )
 
                 try:
@@ -208,12 +214,13 @@ class EnhancedCacheHandlers:
 
                 except Exception as e:
                     console.print(
-                        f"⚠️ Failed to apply optimization: {e}", style="yellow"
+                        f"⚠️ Failed to apply optimization: {e}",
+                        style="yellow",
                     )
                     progress.advance(optimize_task)
 
         console.print(
-            f"\\n✅ Applied {optimizations_applied}/{len(suggestions)} optimizations"
+            f"\\n✅ Applied {optimizations_applied}/{len(suggestions)} optimizations",
         )
 
         if optimizations_applied > 0:
@@ -231,7 +238,7 @@ class EnhancedCacheHandlers:
             size_mb = cache_stats.get("total_size_mb", 0.0)
             entries = cache_stats.get("total_entries", 0)
             console.print(
-                f" {i}. {cache_name.replace('_', ' ').title()} ({entries} entries, {size_mb:.2f} MB)"
+                f" {i}. {cache_name.replace('_', ' ').title()} ({entries} entries, {size_mb:.2f} MB)",
             )
             choices.append(cache_name)
 
@@ -240,7 +247,7 @@ class EnhancedCacheHandlers:
 
         try:
             selection = input(
-                "\\nEnter your choice (comma-separated for multiple): "
+                "\\nEnter your choice (comma-separated for multiple): ",
             ).strip()
 
             if selection == "0":
@@ -433,7 +440,7 @@ class EnhancedCacheHandlers:
 
         if analytics.cache_size_mb > 100:
             insights.append(
-                f"💾 Large cache size ({analytics.cache_size_mb:.1f}MB) - consider cleanup"
+                f"💾 Large cache size ({analytics.cache_size_mb:.1f}MB) - consider cleanup",
             )
 
         if analytics.cache_efficiency_score < 50:
@@ -451,7 +458,8 @@ class EnhancedCacheHandlers:
         )
 
     def _generate_optimization_suggestions(
-        self, analytics: CacheAnalytics
+        self,
+        analytics: CacheAnalytics,
     ) -> list[CacheOptimizationSuggestion]:
         suggestions = []
 
@@ -463,7 +471,7 @@ class EnhancedCacheHandlers:
                     description="Low hit rate detected - warm frequently used caches",
                     estimated_benefit="30-50% performance improvement",
                     action_required="Run --cache-warm",
-                )
+                ),
             )
 
         if analytics.cache_size_mb > 100:
@@ -474,7 +482,7 @@ class EnhancedCacheHandlers:
                     description="Large cache size - implement smart eviction",
                     estimated_benefit="Reduced memory usage",
                     action_required="Configure TTL and LRU policies",
-                )
+                ),
             )
 
         if analytics.cache_efficiency_score < 70:
@@ -485,13 +493,14 @@ class EnhancedCacheHandlers:
                     description="Optimize cache TTL settings for better efficiency",
                     estimated_benefit="Improved hit rates and freshness",
                     action_required="Analyze access patterns and adjust TTL",
-                )
+                ),
             )
 
         return suggestions
 
     def _create_suggestions_panel(
-        self, suggestions: list[CacheOptimizationSuggestion]
+        self,
+        suggestions: list[CacheOptimizationSuggestion],
     ) -> Panel:
         if not suggestions:
             return Panel(
@@ -501,7 +510,7 @@ class EnhancedCacheHandlers:
             )
 
         suggestion_lines = []
-        for i, suggestion in enumerate(suggestions, 1):
+        for _i, suggestion in enumerate(suggestions, 1):
             priority_emoji = (
                 "🔴"
                 if suggestion.priority == "high"
@@ -512,7 +521,7 @@ class EnhancedCacheHandlers:
             suggestion_lines.append(
                 f"{priority_emoji} {suggestion.description}\\n"
                 f" 💡 {suggestion.estimated_benefit}\\n"
-                f" ⚡ {suggestion.action_required}"
+                f" ⚡ {suggestion.action_required}",
             )
 
         suggestions_text = "\\n\\n".join(suggestion_lines)
@@ -563,7 +572,8 @@ class EnhancedCacheHandlers:
         pass
 
     def _apply_optimization_suggestion(
-        self, suggestion: CacheOptimizationSuggestion
+        self,
+        suggestion: CacheOptimizationSuggestion,
     ) -> bool:
         return True
 

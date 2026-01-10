@@ -1,16 +1,17 @@
 """Test configuration for new Crackerjack features."""
 
-from pathlib import Path
-from typing import Any, Generator
-from logging import Logger
-from unittest.mock import MagicMock
 import tempfile
+from collections.abc import Generator
+from logging import Logger
+from pathlib import Path
+from typing import Any
+from unittest.mock import MagicMock
 
 import pytest
 from rich.console import Console
 
 
-def pytest_configure(config):
+def pytest_configure(config) -> None:
     config.addinivalue_line("markers", "performance: mark test as a performance test")
     config.addinivalue_line("markers", "integration: mark test as an integration test")
 
@@ -91,7 +92,7 @@ def mock_logger() -> MagicMock:
 
 
 @pytest.fixture
-def temp_pkg_path() -> Generator[Path, None, None]:
+def temp_pkg_path() -> Generator[Path]:
     """Temporary package path for testing."""
     with tempfile.TemporaryDirectory() as temp_dir:
         yield Path(temp_dir)
@@ -158,7 +159,7 @@ def publish_manager_di_context(
     mock_security_service: MagicMock,
     mock_regex_patterns: MagicMock,
     temp_pkg_path: Path,
-) -> Generator[tuple[dict[type, Any], Path], None, None]:
+) -> Generator[tuple[dict[type, Any], Path]]:
     """Set up DI context for PublishManagerImpl testing.
 
     Sets up all required dependencies and yields the injection map
@@ -194,7 +195,7 @@ def publish_manager_di_context(
         Path: temp_pkg_path,
     }
 
-    yield injection_map, temp_pkg_path
+    return injection_map, temp_pkg_path
 
 
 # Ensure an asyncio event loop exists for tests that use asyncio.Future() directly
@@ -337,7 +338,7 @@ def workflow_orchestrator_di_context(
     mock_git_operation_cache: MagicMock,
     mock_filesystem_cache: MagicMock,
     temp_pkg_path: Path,
-) -> Generator[tuple[dict[type, Any], Path], None, None]:
+) -> Generator[tuple[dict[type, Any], Path]]:
     """Set up DI context for WorkflowOrchestrator testing.
 
     Registers all dependencies required by WorkflowOrchestrator and its
@@ -352,6 +353,11 @@ def workflow_orchestrator_di_context(
             # Now can create WorkflowOrchestrator(pkg_path=pkg_path)
             orchestrator = WorkflowOrchestrator(pkg_path=pkg_path)
     """
+    from crackerjack.services.monitoring.performance_cache import (
+        FileSystemCache,
+        GitOperationCache,
+    )
+
     from crackerjack.models.protocols import (
         ChangelogGeneratorProtocol,
         ConfigIntegrityServiceProtocol,
@@ -376,10 +382,6 @@ def workflow_orchestrator_di_context(
     from crackerjack.services.parallel_executor import (
         AsyncCommandExecutor,
         ParallelHookExecutor,
-    )
-    from crackerjack.services.monitoring.performance_cache import (
-        FileSystemCache,
-        GitOperationCache,
     )
 
     injection_map = {
@@ -411,4 +413,4 @@ def workflow_orchestrator_di_context(
         Path: temp_pkg_path,
     }
 
-    yield injection_map, temp_pkg_path
+    return injection_map, temp_pkg_path

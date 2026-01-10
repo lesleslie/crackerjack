@@ -10,7 +10,8 @@ from enum import Enum
 from rich.panel import Panel
 from rich.table import Table
 
-from ..services.security_logger import get_security_logger
+from crackerjack.services.security_logger import get_security_logger
+
 from .console import CrackerjackConsole
 from .timeout_manager import TimeoutStrategy, get_timeout_manager
 
@@ -132,14 +133,10 @@ class ServiceWatchdog:
 
         if self.monitor_task and not self.monitor_task.done():
             self.monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self.monitor_task
-            except asyncio.CancelledError:
-                pass
 
-        stop_tasks = [
-            self.stop_service(service_id) for service_id in self.services.keys()
-        ]
+        stop_tasks = [self.stop_service(service_id) for service_id in self.services]
         if stop_tasks:
             await asyncio.gather(*stop_tasks, return_exceptions=True)
 
@@ -165,7 +162,9 @@ class ServiceWatchdog:
         return service.state not in (ServiceState.RUNNING, ServiceState.STARTING)
 
     async def _execute_service_startup(
-        self, service_id: str, service: ServiceStatus
+        self,
+        service_id: str,
+        service: ServiceStatus,
     ) -> bool:
         async with self.timeout_manager.timeout_context(
             f"start_service_{service_id}",
@@ -224,7 +223,9 @@ class ServiceWatchdog:
         return True
 
     async def _finalize_successful_startup(
-        self, service: ServiceStatus, service_id: str
+        self,
+        service: ServiceStatus,
+        service_id: str,
     ) -> None:
         service.state = ServiceState.RUNNING
         service.consecutive_failures = 0
@@ -234,7 +235,10 @@ class ServiceWatchdog:
         logger.info(f"Started service {service_id}")
 
     async def _handle_service_start_failure(
-        self, service: ServiceStatus, service_id: str, error: Exception
+        self,
+        service: ServiceStatus,
+        service_id: str,
+        error: Exception,
     ) -> bool:
         service.state = ServiceState.FAILED
         service.last_error = str(error)
@@ -244,7 +248,7 @@ class ServiceWatchdog:
             asyncio.create_task(self._terminate_process(service))
 
         await self.console.aprint(
-            f"[red]❌ Failed to start {service.config.name}: {error}[/red]"
+            f"[red]❌ Failed to start {service.config.name}: {error}[/red]",
         )
         logger.error(f"Failed to start service {service_id}: {error}")
         return False
@@ -273,7 +277,7 @@ class ServiceWatchdog:
                 service.process = None
 
                 await self.console.aprint(
-                    f"[yellow]⏹️ Stopped {service.config.name}[/yellow]"
+                    f"[yellow]⏹️ Stopped {service.config.name}[/yellow]",
                 )
                 logger.info(f"Stopped service {service_id}")
                 return True
@@ -283,9 +287,9 @@ class ServiceWatchdog:
             service.last_error = str(e)
 
             await self.console.aprint(
-                f"[red]❌ Failed to stop {service.config.name}: {e}[/red]"
+                f"[red]❌ Failed to stop {service.config.name}: {e}[/red]",
             )
-            logger.error(f"Failed to stop service {service_id}: {e}")
+            logger.exception(f"Failed to stop service {service_id}: {e}")
             return False
 
     async def _monitor_services(self) -> None:
@@ -303,16 +307,20 @@ class ServiceWatchdog:
                         try:
                             await self._check_service_health(service_id, service)
                         except Exception as e:
-                            logger.error(f"Error checking service {service_id}: {e}")
+                            logger.exception(
+                                f"Error checking service {service_id}: {e}"
+                            )
 
                 await asyncio.sleep(10)
 
             except Exception as e:
-                logger.error(f"Monitor services error: {e}")
+                logger.exception(f"Monitor services error: {e}")
                 await asyncio.sleep(30)
 
     async def _check_service_health(
-        self, service_id: str, service: ServiceStatus
+        self,
+        service_id: str,
+        service: ServiceStatus,
     ) -> None:
         if service.state == ServiceState.RUNNING:
             if service.process and service.process.poll() is not None:
@@ -323,7 +331,7 @@ class ServiceWatchdog:
                 service.consecutive_failures += 1
 
                 await self.console.aprint(
-                    f"[red]💀 {service.config.name} process died[/red]"
+                    f"[red]💀 {service.config.name} process died[/red]",
                 )
                 return
 
@@ -334,14 +342,16 @@ class ServiceWatchdog:
         try:
             import aiohttp
 
-            async with self.timeout_manager.timeout_context(
-                "health_check",
-                timeout=service.config.health_check_timeout,
-                strategy=TimeoutStrategy.FAIL_FAST,
+            async with (
+                self.timeout_manager.timeout_context(
+                    "health_check",
+                    timeout=service.config.health_check_timeout,
+                    strategy=TimeoutStrategy.FAIL_FAST,
+                ),
+                aiohttp.ClientSession() as session,
             ):
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(service.config.health_check_url) as response:
-                        return response.status == 200
+                async with session.get(service.config.health_check_url) as response:
+                    return response.status == 200
 
         except Exception:
             return False
@@ -355,12 +365,14 @@ class ServiceWatchdog:
 
             try:
                 await asyncio.wait_for(
-                    self._wait_for_process_exit(service.process), timeout=5.0
+                    self._wait_for_process_exit(service.process),
+                    timeout=5.0,
                 )
             except TimeoutError:
                 service.process.kill()
                 await asyncio.wait_for(
-                    self._wait_for_process_exit(service.process), timeout=2.0
+                    self._wait_for_process_exit(service.process),
+                    timeout=2.0,
                 )
 
         except Exception as e:
@@ -410,7 +422,7 @@ class ServiceWatchdog:
 
         table = self._create_status_table()
         await self.console.aprint(
-            Panel(table, title="Service Status", border_style="blue")
+            Panel(table, title="Service Status", border_style="blue"),
         )
 
     async def _print_report_header(self) -> None:
@@ -448,9 +460,9 @@ class ServiceWatchdog:
     def _format_uptime(self, uptime: float) -> str:
         if uptime > 3600:
             return f"{uptime / 3600: .1f}h"
-        elif uptime > 60:
+        if uptime > 60:
             return f"{uptime / 60: .1f}m"
-        elif uptime > 0:
+        if uptime > 0:
             return f"{uptime: .0f}s"
         return "-"
 

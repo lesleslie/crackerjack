@@ -1,16 +1,19 @@
 from __future__ import annotations
 
 import asyncio
-import logging
 import typing as t
-from pathlib import Path
 
-from rich.console import Console
-
-from crackerjack.core.phase_coordinator import PhaseCoordinator
-from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.core.timeout_manager import AsyncTimeoutManager
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
+
+if t.TYPE_CHECKING:
+    import logging
+    from pathlib import Path
+
+    from rich.console import Console
+
+    from crackerjack.core.phase_coordinator import PhaseCoordinator
+    from crackerjack.core.session_coordinator import SessionCoordinator
 
 
 class AsyncWorkflowPipeline:

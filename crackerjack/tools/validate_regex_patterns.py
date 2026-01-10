@@ -42,7 +42,9 @@ ALLOWED_PATTERNS = {
 }
 
 FORBIDDEN_REPLACEMENT_PATTERNS = [
-    r"\\g<[^>]*\\s+[^>]*>",
+    r"\\g\s+<\s*\d+\s*>",
+    r"\\g<\s+\d+>",
+    r"\\g<\d+\s+>",
 ]
 
 
@@ -84,7 +86,7 @@ class RegexVisitor(ast.NodeVisitor):
                         node.lineno,
                         f"Raw regex usage detected: {func_name}(). "
                         f"Use validated patterns from crackerjack.services.regex_patterns instead.",
-                    )
+                    ),
                 )
 
         self.generic_visit(node)
@@ -92,7 +94,7 @@ class RegexVisitor(ast.NodeVisitor):
     def _get_function_name(self, func_node: ast.AST) -> str:
         if isinstance(func_node, ast.Name):
             return func_node.id
-        elif isinstance(func_node, ast.Attribute):
+        if isinstance(func_node, ast.Attribute):
             if isinstance(func_node.value, ast.Name):
                 return f"{func_node.value.id}.{func_node.attr}"
             return func_node.attr
@@ -101,14 +103,12 @@ class RegexVisitor(ast.NodeVisitor):
     def _check_replacement_syntax(self, replacement: str, line_no: int) -> None:
         for pattern in FORBIDDEN_REPLACEMENT_PATTERNS:
             if re.search(pattern, replacement):
-                normalized = re.sub(r"\s+", "", replacement)
                 self.issues.append(
                     (
                         line_no,
-                        "CRITICAL: Bad replacement syntax detected: "
-                        f"'{replacement}'. Use '{normalized}' (no spaces in \\g<...>). "
-                        "Use \\g<1> not \\g<1>",
-                    )
+                        f"CRITICAL: Bad replacement syntax detected: '{replacement}'. "
+                        f"Use \\g<1> not \\g<1>",
+                    ),
                 )
 
     def _is_exempted_line(self, line_no: int) -> bool:
@@ -145,7 +145,7 @@ def validate_file(file_path: Path) -> list[tuple[int, str]]:
 
 def main(file_paths: list[str]) -> int:
     if not file_paths:
-        print("✅ No Python files to validate")
+        print("All regex patterns validated successfully")
         return 0
 
     exit_code = 0
@@ -163,22 +163,14 @@ def main(file_paths: list[str]) -> int:
 
         if issues:
             exit_code = 1
-            print(f"\n❌ {file_path}: ")
+            print(f"REGEX VALIDATION FAILED in {file_path}")
             for line_no, message in issues:
                 print(f" Line {line_no}: {message}")
 
     if exit_code == 0:
-        print("✅ All regex patterns validated successfully!")
+        print("All regex patterns validated successfully")
     else:
-        print("\n" + "=" * 70)
         print("REGEX VALIDATION FAILED")
-        print("=" * 70)
-        print("To fix these issues: ")
-        print("1. Use patterns from crackerjack.services.regex_patterns")
-        print("2. Add new patterns to SAFE_PATTERNS with comprehensive tests")
-        print("3. Use '# REGEX OK: reason' comment for legitimate exceptions")
-        print("4. Fix \\g<1> replacement syntax (no spaces)")
-        print("=" * 70)
 
     return exit_code
 

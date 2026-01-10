@@ -10,13 +10,16 @@ class EmbeddingVector(BaseModel):
     chunk_id: str = Field(..., description="Unique identifier for this chunk")
     content: str = Field(..., description="The text content that was embedded")
     embedding: list[float] = Field(
-        ..., description="The numerical vector representation"
+        ...,
+        description="The numerical vector representation",
     )
     created_at: datetime = Field(
-        default_factory=datetime.now, description="Creation timestamp"
+        default_factory=datetime.now,
+        description="Creation timestamp",
     )
     file_hash: str = Field(
-        ..., description="Hash of the source file for change detection"
+        ...,
+        description="Hash of the source file for change detection",
     )
     start_line: int = Field(..., description="Starting line number in the source file")
     end_line: int = Field(..., description="Ending line number in the source file")
@@ -38,13 +41,17 @@ class SearchResult(BaseModel):
     chunk_id: str = Field(..., description="Identifier of the matching chunk")
     content: str = Field(..., description="The matching text content")
     similarity_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Similarity score (0-1)"
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Similarity score (0-1)",
     )
     start_line: int = Field(..., description="Starting line number")
     end_line: int = Field(..., description="Ending line number")
     file_type: str = Field(..., description="File type identifier")
     context_lines: list[str] = Field(
-        default_factory=list, description="Surrounding context lines"
+        default_factory=list,
+        description="Surrounding context lines",
     )
 
     @field_serializer("file_path")
@@ -58,7 +65,8 @@ class IndexStats(BaseModel):
     index_size_mb: float = Field(..., description="Index size in megabytes")
     last_updated: datetime = Field(..., description="Last index update timestamp")
     file_types: dict[str, int] = Field(
-        default_factory=dict, description="Count by file type"
+        default_factory=dict,
+        description="Count by file type",
     )
     embedding_model: str = Field(..., description="Name of the embedding model used")
     avg_chunk_size: float = Field(..., description="Average chunk size in characters")
@@ -71,19 +79,30 @@ class IndexStats(BaseModel):
 class SearchQuery(BaseModel):
     query: str = Field(..., min_length=1, description="The search query text")
     max_results: int = Field(
-        default=10, ge=1, le=100, description="Maximum number of results"
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of results",
     )
     min_similarity: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="Minimum similarity threshold"
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity threshold",
     )
     file_types: list[str] = Field(
-        default_factory=list, description="Filter by file types"
+        default_factory=list,
+        description="Filter by file types",
     )
     include_context: bool = Field(
-        default=True, description="Include surrounding context lines"
+        default=True,
+        description="Include surrounding context lines",
     )
     context_lines: int = Field(
-        default=3, ge=0, le=10, description="Number of context lines"
+        default=3,
+        ge=0,
+        le=10,
+        description="Number of context lines",
     )
 
     model_config = ConfigDict(validate_assignment=True)
@@ -96,7 +115,8 @@ class IndexingProgress(BaseModel):
     chunks_created: int = Field(..., ge=0, description="Number of chunks created")
     elapsed_time: float = Field(..., ge=0.0, description="Elapsed time in seconds")
     estimated_remaining: float | None = Field(
-        default=None, description="Estimated remaining time in seconds"
+        default=None,
+        description="Estimated remaining time in seconds",
     )
 
     @property
@@ -112,25 +132,44 @@ class IndexingProgress(BaseModel):
 
 class SemanticConfig(BaseModel):
     embedding_model: str = Field(
-        default="all-MiniLM-L6-v2", description="Sentence transformer model name"
+        default="all-MiniLM-L6-v2",
+        description="Sentence transformer model name",
     )
     chunk_size: int = Field(
-        default=500, ge=100, le=2000, description="Maximum characters per chunk"
+        default=500,
+        ge=100,
+        le=2000,
+        description="Maximum characters per chunk",
     )
     chunk_overlap: int = Field(
-        default=50, ge=0, le=500, description="Overlap between chunks"
+        default=50,
+        ge=0,
+        le=500,
+        description="Overlap between chunks",
     )
     max_search_results: int = Field(
-        default=10, ge=1, le=100, description="Maximum number of search results"
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum number of search results",
     )
     similarity_threshold: float = Field(
-        default=0.7, ge=0.0, le=1.0, description="Minimum similarity threshold"
+        default=0.7,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity threshold",
     )
     embedding_dimension: int = Field(
-        default=384, ge=128, le=1024, description="Embedding vector dimension"
+        default=384,
+        ge=128,
+        le=1024,
+        description="Embedding vector dimension",
     )
     max_file_size_mb: int = Field(
-        default=10, ge=1, le=100, description="Maximum file size to process"
+        default=10,
+        ge=1,
+        le=100,
+        description="Maximum file size to process",
     )
     excluded_patterns: list[str] = Field(
         default_factory=lambda: [
@@ -167,7 +206,10 @@ class SemanticConfig(BaseModel):
     )
     cache_embeddings: bool = Field(default=True, description="Cache embeddings to disk")
     cache_ttl_hours: int = Field(
-        default=24, ge=1, le=168, description="Cache time-to-live in hours"
+        default=24,
+        ge=1,
+        le=168,
+        description="Cache time-to-live in hours",
     )
 
     model_config = ConfigDict(validate_assignment=True)
@@ -176,13 +218,16 @@ class SemanticConfig(BaseModel):
 class FileChangeEvent(BaseModel):
     file_path: Path = Field(..., description="Path to the changed file")
     event_type: t.Literal["created", "modified", "deleted"] = Field(
-        ..., description="Type of change"
+        ...,
+        description="Type of change",
     )
     timestamp: datetime = Field(
-        default_factory=datetime.now, description="When the change occurred"
+        default_factory=datetime.now,
+        description="When the change occurred",
     )
     file_hash: str | None = Field(
-        default=None, description="New file hash if available"
+        default=None,
+        description="New file hash if available",
     )
 
     @field_serializer("file_path")
@@ -197,16 +242,22 @@ class FileChangeEvent(BaseModel):
 class SemanticContext(BaseModel):
     query: str = Field(..., description="The query that generated this context")
     related_files: list[SearchResult] = Field(
-        ..., description="Semantically related files"
+        ...,
+        description="Semantically related files",
     )
     patterns: list[str] = Field(
-        default_factory=list, description="Identified code patterns"
+        default_factory=list,
+        description="Identified code patterns",
     )
     suggestions: list[str] = Field(
-        default_factory=list, description="AI-generated suggestions"
+        default_factory=list,
+        description="AI-generated suggestions",
     )
     confidence: float = Field(
-        ..., ge=0.0, le=1.0, description="Confidence in the context relevance"
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Confidence in the context relevance",
     )
 
 
@@ -216,16 +267,16 @@ FilePathSet = set[Path]
 ChunkMapping = dict[str, EmbeddingVector]
 
 __all__ = [
-    "EmbeddingVector",
-    "SearchResult",
-    "IndexStats",
-    "SearchQuery",
-    "IndexingProgress",
-    "SemanticConfig",
-    "FileChangeEvent",
-    "SemanticContext",
-    "EmbeddingMatrix",
-    "SimilarityMatrix",
-    "FilePathSet",
     "ChunkMapping",
+    "EmbeddingMatrix",
+    "EmbeddingVector",
+    "FileChangeEvent",
+    "FilePathSet",
+    "IndexStats",
+    "IndexingProgress",
+    "SearchQuery",
+    "SearchResult",
+    "SemanticConfig",
+    "SemanticContext",
+    "SimilarityMatrix",
 ]

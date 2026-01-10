@@ -9,8 +9,8 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.config.settings import CrackerjackSettings
+from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.models.task import HookResult
 
 
@@ -25,7 +25,7 @@ class TestHookManagerInitialization:
         with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
             yield mock_console
 
-    def test_initialization_with_defaults(self, mock_dependencies, tmp_path):
+    def test_initialization_with_defaults(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with default settings."""
         with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
             manager = HookManagerImpl(pkg_path=tmp_path)
@@ -37,7 +37,7 @@ class TestHookManagerInitialization:
             assert manager._config_path is None
             mock_executor.assert_called_once()
 
-    def test_initialization_with_lsp_optimization(self, mock_dependencies, tmp_path):
+    def test_initialization_with_lsp_optimization(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with LSP optimization."""
         with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor") as mock_lsp_exec:
             manager = HookManagerImpl(
@@ -48,7 +48,7 @@ class TestHookManagerInitialization:
             assert manager.lsp_optimization_enabled is True
             mock_lsp_exec.assert_called_once()
 
-    def test_initialization_with_incremental_mode(self, mock_dependencies, tmp_path):
+    def test_initialization_with_incremental_mode(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with incremental execution."""
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.GitService") as mock_git:
@@ -60,7 +60,7 @@ class TestHookManagerInitialization:
                 # GitService should be instantiated for incremental mode
                 mock_git.assert_called_once()
 
-    def test_initialization_with_verbose_and_debug(self, mock_dependencies, tmp_path):
+    def test_initialization_with_verbose_and_debug(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager initializes with verbose and debug flags."""
         with patch("crackerjack.managers.hook_manager.HookExecutor") as mock_executor:
             manager = HookManagerImpl(
@@ -75,7 +75,7 @@ class TestHookManagerInitialization:
             assert call_args[0][2] is True  # verbose
             assert call_args[1]["debug"] is True
 
-    def test_initialization_loads_orchestration_config(self, mock_dependencies, tmp_path):
+    def test_initialization_loads_orchestration_config(self, mock_dependencies, tmp_path) -> None:
         """Test HookManager loads orchestration configuration."""
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             settings = CrackerjackSettings()
@@ -98,7 +98,7 @@ class TestHookManagerConfiguration:
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
-    def test_set_config_path(self, manager, tmp_path):
+    def test_set_config_path(self, manager, tmp_path) -> None:
         """Test setting configuration path."""
         config_path = tmp_path / ".crackerjack.yaml"
 
@@ -106,7 +106,7 @@ class TestHookManagerConfiguration:
 
         assert manager._config_path == config_path
 
-    def test_configure_lsp_optimization_enable(self, manager):
+    def test_configure_lsp_optimization_enable(self, manager) -> None:
         """Test enabling LSP optimization."""
         manager.console = Mock()
         manager.lsp_optimization_enabled = False
@@ -117,7 +117,7 @@ class TestHookManagerConfiguration:
             assert manager.lsp_optimization_enabled is True
             mock_lsp.assert_called_once()
 
-    def test_configure_lsp_optimization_disable(self, manager):
+    def test_configure_lsp_optimization_disable(self, manager) -> None:
         """Test disabling LSP optimization."""
         manager.console = Mock()
         manager.lsp_optimization_enabled = True
@@ -128,7 +128,7 @@ class TestHookManagerConfiguration:
             assert manager.lsp_optimization_enabled is False
             mock_exec.assert_called_once()
 
-    def test_configure_lsp_optimization_already_enabled(self, manager):
+    def test_configure_lsp_optimization_already_enabled(self, manager) -> None:
         """Test configure LSP optimization when already in correct state."""
         manager.lsp_optimization_enabled = True
 
@@ -138,7 +138,7 @@ class TestHookManagerConfiguration:
             # Should not recreate executor
             mock_lsp.assert_not_called()
 
-    def test_configure_tool_proxy_enable(self, manager):
+    def test_configure_tool_proxy_enable(self, manager) -> None:
         """Test enabling tool proxy."""
         manager.console = Mock()
         manager.tool_proxy_enabled = False
@@ -146,14 +146,16 @@ class TestHookManagerConfiguration:
 
         with patch("crackerjack.managers.hook_manager.LSPAwareHookExecutor"):
             # Set executor to LSP-aware to trigger recreation
-            from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
+            from crackerjack.executors.lsp_aware_hook_executor import (
+                LSPAwareHookExecutor,
+            )
             manager.executor = Mock(spec=LSPAwareHookExecutor)
 
             manager.configure_tool_proxy(True)
 
             assert manager.tool_proxy_enabled is True
 
-    def test_configure_tool_proxy_already_enabled(self, manager):
+    def test_configure_tool_proxy_already_enabled(self, manager) -> None:
         """Test configure tool proxy when already enabled."""
         manager.tool_proxy_enabled = True
 
@@ -183,7 +185,7 @@ class TestHookManagerExecution:
                 manager.orchestration_enabled = False  # Use legacy path for simplicity
                 return manager
 
-    def test_run_fast_hooks_success(self, manager):
+    def test_run_fast_hooks_success(self, manager) -> None:
         """Test successful fast hooks execution."""
         expected_results = [
             HookResult(name="ruff", status="passed", duration=1.0),
@@ -203,7 +205,7 @@ class TestHookManagerExecution:
         assert results == expected_results
         manager.config_loader.load_strategy.assert_called_once_with("fast")
 
-    def test_run_comprehensive_hooks_success(self, manager):
+    def test_run_comprehensive_hooks_success(self, manager) -> None:
         """Test successful comprehensive hooks execution."""
         expected_results = [
             HookResult(name="pyright", status="passed", duration=5.0),
@@ -223,7 +225,7 @@ class TestHookManagerExecution:
         assert results == expected_results
         manager.config_loader.load_strategy.assert_called_once_with("comprehensive")
 
-    def test_run_hooks_sequential(self, manager):
+    def test_run_hooks_sequential(self, manager) -> None:
         """Test sequential hook execution."""
         fast_results = [HookResult(name="ruff", status="passed", duration=1.0)]
         comp_results = [HookResult(name="pyright", status="passed", duration=5.0)]
@@ -249,7 +251,7 @@ class TestHookManagerExecution:
         assert results[0] == fast_results[0]
         assert results[1] == comp_results[0]
 
-    def test_run_fast_hooks_with_config_path(self, manager, tmp_path):
+    def test_run_fast_hooks_with_config_path(self, manager, tmp_path) -> None:
         """Test fast hooks execution with config path set."""
         config_path = tmp_path / ".crackerjack.yaml"
         manager.set_config_path(config_path)
@@ -283,7 +285,7 @@ class TestHookManagerInformation:
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
                 return HookManagerImpl(pkg_path=tmp_path)
 
-    def test_get_execution_info_basic(self, manager):
+    def test_get_execution_info_basic(self, manager) -> None:
         """Test getting basic execution information."""
         manager.lsp_optimization_enabled = False
         manager.tool_proxy_enabled = True
@@ -296,7 +298,7 @@ class TestHookManagerInformation:
         assert info["orchestration_enabled"] is False
         assert "executor_type" in info
 
-    def test_get_execution_info_with_orchestration(self, manager):
+    def test_get_execution_info_with_orchestration(self, manager) -> None:
         """Test getting execution info with orchestration enabled."""
         manager.orchestration_enabled = True
         manager.orchestration_mode = "oneiric"
@@ -311,7 +313,7 @@ class TestHookManagerInformation:
         assert info["caching_enabled"] is True
         assert info["cache_backend"] == "memory"
 
-    def test_get_hook_ids(self, manager):
+    def test_get_hook_ids(self, manager) -> None:
         """Test getting hook IDs."""
         mock_hook1 = Mock()
         mock_hook1.name = "ruff"
@@ -331,7 +333,7 @@ class TestHookManagerInformation:
 
         assert hook_ids == ["ruff", "black", "pyright"]
 
-    def test_get_hook_count_fast(self, manager):
+    def test_get_hook_count_fast(self, manager) -> None:
         """Test getting hook count for fast suite."""
         mock_strategy = Mock()
         mock_strategy.hooks = [Mock(), Mock(), Mock()]
@@ -343,7 +345,7 @@ class TestHookManagerInformation:
         assert count == 3
         manager.config_loader.load_strategy.assert_called_once_with("fast")
 
-    def test_get_hook_count_comprehensive(self, manager):
+    def test_get_hook_count_comprehensive(self, manager) -> None:
         """Test getting hook count for comprehensive suite."""
         mock_strategy = Mock()
         mock_strategy.hooks = [Mock(), Mock(), Mock(), Mock(), Mock()]
@@ -355,7 +357,7 @@ class TestHookManagerInformation:
         assert count == 5
         manager.config_loader.load_strategy.assert_called_once_with("comprehensive")
 
-    def test_get_hook_summary_success(self):
+    def test_get_hook_summary_success(self) -> None:
         """Test getting hook summary with successful results."""
         results = [
             HookResult(name="ruff", status="passed", duration=1.0),
@@ -372,7 +374,7 @@ class TestHookManagerInformation:
         assert summary["total_duration"] == 6.5
         assert summary["success_rate"] == 100.0
 
-    def test_get_hook_summary_with_failures(self):
+    def test_get_hook_summary_with_failures(self) -> None:
         """Test getting hook summary with failures."""
         results = [
             HookResult(name="ruff", status="passed", duration=1.0),
@@ -388,7 +390,7 @@ class TestHookManagerInformation:
         assert summary["errors"] == 0
         assert summary["success_rate"] == pytest.approx(66.67, rel=0.01)
 
-    def test_get_hook_summary_with_errors(self):
+    def test_get_hook_summary_with_errors(self) -> None:
         """Test getting hook summary with errors."""
         results = [
             HookResult(name="ruff", status="passed", duration=1.0),
@@ -404,7 +406,7 @@ class TestHookManagerInformation:
         assert summary["errors"] == 2
         assert summary["success_rate"] == pytest.approx(33.33, rel=0.01)
 
-    def test_get_hook_summary_empty_results(self):
+    def test_get_hook_summary_empty_results(self) -> None:
         """Test getting hook summary with empty results."""
         summary = HookManagerImpl.get_hook_summary([])
 
@@ -415,7 +417,7 @@ class TestHookManagerInformation:
         assert summary["total_duration"] == 0
         assert summary["success_rate"] == 0
 
-    def test_get_hook_summary_with_elapsed_time(self):
+    def test_get_hook_summary_with_elapsed_time(self) -> None:
         """Test getting hook summary with wall-clock elapsed time."""
         results = [
             HookResult(name="ruff", status="passed", duration=1.0),
@@ -441,20 +443,20 @@ class TestHookManagerDeprecatedMethods:
                 manager.console = Mock()
                 return manager
 
-    def test_validate_hooks_config(self):
+    def test_validate_hooks_config(self) -> None:
         """Test validate_hooks_config always returns True."""
         result = HookManagerImpl.validate_hooks_config()
 
         assert result is True
 
-    def test_install_hooks(self, manager):
+    def test_install_hooks(self, manager) -> None:
         """Test install_hooks returns True with info message."""
         result = manager.install_hooks()
 
         assert result is True
         manager.console.print.assert_called_once()
 
-    def test_update_hooks(self, manager):
+    def test_update_hooks(self, manager) -> None:
         """Test update_hooks returns True with info message."""
         result = manager.update_hooks()
 
@@ -474,7 +476,7 @@ class TestHookManagerOrchestrationConfig:
         settings.orchestration_mode = "oneiric"
         return settings
 
-    def test_load_config_from_explicit_param(self, tmp_path, mock_settings):
+    def test_load_config_from_explicit_param(self, tmp_path, mock_settings) -> None:
         """Test loading config from explicit parameter."""
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):
@@ -490,7 +492,7 @@ class TestHookManagerOrchestrationConfig:
 
                 assert manager._orchestration_config == explicit_config
 
-    def test_load_config_from_project_file(self, tmp_path, mock_settings):
+    def test_load_config_from_project_file(self, tmp_path, mock_settings) -> None:
         """Test loading config from project .crackerjack.yaml."""
         # Create project config file
         config_path = tmp_path / ".crackerjack.yaml"
@@ -508,7 +510,7 @@ class TestHookManagerOrchestrationConfig:
 
                     assert manager._orchestration_config == mock_loaded
 
-    def test_load_config_creates_default(self, tmp_path, mock_settings):
+    def test_load_config_creates_default(self, tmp_path, mock_settings) -> None:
         """Test creating default config when no project file exists."""
         with patch("crackerjack.managers.hook_manager.HookExecutor"):
             with patch("crackerjack.managers.hook_manager.HookConfigLoader"):

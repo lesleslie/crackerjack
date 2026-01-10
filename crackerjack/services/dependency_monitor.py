@@ -466,7 +466,7 @@ class DependencyMonitorService:
 
         response = requests.get(url, timeout=10, verify=True)
         response.raise_for_status()
-        return t.cast(dict[str, t.Any], response.json())
+        return t.cast("dict[str, t.Any]", response.json())
 
     def _validate_pypi_url(self, url: str) -> None:
         from urllib.parse import urlparse
@@ -539,7 +539,7 @@ class DependencyMonitorService:
         with suppress(Exception):
             if self.cache_file.exists():
                 content = self.filesystem.read_file(self.cache_file)
-                return t.cast(dict[str, t.Any], json.loads(content))
+                return t.cast("dict[str, t.Any]", json.loads(content))
         return {}
 
     def _save_update_cache(self, cache: dict[str, t.Any]) -> None:
@@ -551,7 +551,7 @@ class DependencyMonitorService:
         vulnerabilities: list[DependencyVulnerability],
     ) -> None:
         self.console.print(
-            "\n[bold red]🚨 Security Vulnerabilities Found ![/ bold red]"
+            "\n[bold red]🚨 Security Vulnerabilities Found ![/ bold red]",
         )
         self.console.print(
             "[red]Please update the following packages immediately: [/ red]\n",
@@ -560,7 +560,7 @@ class DependencyMonitorService:
         for vuln in vulnerabilities:
             self.console.print(f"[red]• {vuln.package} {vuln.installed_version}[/ red]")
             self.console.print(
-                f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/ dim]"
+                f" [dim]Vulnerability ID: {vuln.vulnerability_id}[/ dim]",
             )
             self.console.print(f" [dim]Severity: {vuln.severity.upper()}[/ dim]")
             if vuln.patched_version:

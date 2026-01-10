@@ -1,5 +1,6 @@
 import logging
 import subprocess
+from typing import Never
 
 import typer
 from rich.console import Console
@@ -20,22 +21,31 @@ logger = logging.getLogger(__name__)
 @app.command()
 def start(
     instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID for multi-instance support"
+        None,
+        "--instance-id",
+        help="Server instance ID for multi-instance support",
     ),
     verbose: bool = typer.Option(
-        False, "--verbose", "-v", help="Enable verbose logging"
+        False,
+        "--verbose",
+        "-v",
+        help="Enable verbose logging",
     ),
     http_mode: bool = typer.Option(
-        False, "--http", help="Start server in HTTP mode instead of STDIO"
+        False,
+        "--http",
+        help="Start server in HTTP mode instead of STDIO",
     ),
     http_port: int = typer.Option(
-        8676, "--http-port", help="HTTP port for the server (default: 8676)"
+        8676,
+        "--http-port",
+        help="HTTP port for the server (default: 8676)",
     ),
-):
+) -> None:
     if instance_id:
         # TODO(Phase 4): Implement instance_id support
         console.print(
-            "[yellow]Instance ID support not yet implemented (Phase 4)[/yellow]"
+            "[yellow]Instance ID support not yet implemented (Phase 4)[/yellow]",
         )
 
     if verbose:
@@ -56,9 +66,11 @@ def start(
 @app.command()
 def stop(
     instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to stop"
+        None,
+        "--instance-id",
+        help="Server instance ID to stop",
     ),
-):
+) -> Never:
     console.print("[yellow]Stop command not yet implemented (Phase 4)[/yellow]")
     console.print("[dim]Use Ctrl+C to stop the server for now[/dim]")
     raise typer.Exit(1)
@@ -67,9 +79,11 @@ def stop(
 @app.command()
 def restart(
     instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to restart"
+        None,
+        "--instance-id",
+        help="Server instance ID to restart",
     ),
-):
+) -> Never:
     console.print("[yellow]Restart command not yet implemented (Phase 4)[/yellow]")
     raise typer.Exit(1)
 
@@ -77,9 +91,11 @@ def restart(
 @app.command()
 def status(
     instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to check"
+        None,
+        "--instance-id",
+        help="Server instance ID to check",
     ),
-):
+) -> Never:
     console.print("[yellow]Status command not yet implemented (Phase 4)[/yellow]")
     console.print("[dim]TODO: Read from .oneiric_cache/runtime_health.json[/dim]")
     raise typer.Exit(1)
@@ -88,34 +104,44 @@ def status(
 @app.command()
 def health(
     probe: bool = typer.Option(
-        False, "--probe", help="Health probe for systemd/monitoring integration"
+        False,
+        "--probe",
+        help="Health probe for systemd/monitoring integration",
     ),
     instance_id: str | None = typer.Option(
-        None, "--instance-id", help="Server instance ID to check"
+        None,
+        "--instance-id",
+        help="Server instance ID to check",
     ),
-):
+) -> Never:
     if probe:
         console.print("[yellow]Health probe not yet implemented (Phase 4)[/yellow]")
         raise typer.Exit(1)
-    else:
-        console.print("[yellow]Health check not yet implemented (Phase 4)[/yellow]")
-        raise typer.Exit(1)
+    console.print("[yellow]Health check not yet implemented (Phase 4)[/yellow]")
+    raise typer.Exit(1)
 
 
 @app.command()
 def run_tests(
     workers: int = typer.Option(
-        0, "--workers", "-n", help="Test workers (0=auto-detect)"
+        0,
+        "--workers",
+        "-n",
+        help="Test workers (0=auto-detect)",
     ),
     timeout: int = typer.Option(300, "--timeout", help="Test timeout in seconds"),
     coverage: bool = typer.Option(
-        True, "--coverage/--no-coverage", help="Run with coverage tracking"
+        True,
+        "--coverage/--no-coverage",
+        help="Run with coverage tracking",
     ),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Verbose output"),
     benchmark: bool = typer.Option(
-        False, "--benchmark", help="Run performance benchmarks"
+        False,
+        "--benchmark",
+        help="Run performance benchmarks",
     ),
-):
+) -> Never:
     cmd = ["pytest"]
 
     if workers != 1:
@@ -133,12 +159,12 @@ def run_tests(
         cmd.append("--benchmark-only")
 
     console.print(f"[blue]Running: {' '.join(cmd)}[/blue]")
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd, check=False)
     raise typer.Exit(result.returncode)
 
 
 @app.command()
-def qa_health():
+def qa_health() -> Never:
     settings = load_settings(CrackerjackSettings)
     server = CrackerjackServer(settings)
     health = server.get_health_snapshot()
@@ -158,12 +184,11 @@ def qa_health():
     if qa_status.get("total", 0) == qa_status.get("healthy", 0):
         console.print("\n[green]✅ All adapters healthy[/green]")
         raise typer.Exit(0)
-    else:
-        console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
-        raise typer.Exit(1)
+    console.print("\n[yellow]⚠️ Some adapters unhealthy[/yellow]")
+    raise typer.Exit(1)
 
 
-def main():
+def main() -> None:
     app()
 
 

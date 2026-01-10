@@ -10,7 +10,7 @@ from tests.base_test import BaseCrackerjackFeatureTest
 class TestVersionBumpAnalyzer(BaseCrackerjackFeatureTest):
     """Test intelligent version bump analysis."""
 
-    def test_breaking_change_detection(self):
+    def test_breaking_change_detection(self) -> None:
         """Test detection of breaking changes requiring MAJOR version bump."""
         # analyzer = BreakingChangeAnalyzer()
         #
@@ -38,9 +38,8 @@ class TestVersionBumpAnalyzer(BaseCrackerjackFeatureTest):
         #     "signature change" in result.reason.lower()
         #     or "api" in result.reason.lower()
         # )
-        pass
 
-    def test_feature_addition_detection(self):
+    def test_feature_addition_detection(self) -> None:
         """Test detection of new features requiring MINOR version bump."""
         # analyzer = FeatureAnalyzer()
         #
@@ -61,9 +60,8 @@ class TestVersionBumpAnalyzer(BaseCrackerjackFeatureTest):
         # assert result.level == "minor"
         # assert result.confidence >= 0.8
         # assert "new features" in result.reason.lower()
-        pass
 
-    def test_conventional_commit_override(self):
+    def test_conventional_commit_override(self) -> None:
         """Test that BREAKING CHANGE in commits overrides analysis."""
         # analyzer = ConventionalCommitAnalyzer()
         #
@@ -81,10 +79,9 @@ class TestVersionBumpAnalyzer(BaseCrackerjackFeatureTest):
         #
         # assert result.level == "major"
         # assert result.confidence == 1.0  # Explicit breaking change marker
-        pass
 
     @pytest.mark.asyncio
-    async def test_version_analyzer_integration(self):
+    async def test_version_analyzer_integration(self) -> None:
         """Test complete version analyzer with multiple analyzers."""
         # version_analyzer = VersionAnalyzer()
         #
@@ -116,14 +113,13 @@ class TestVersionBumpAnalyzer(BaseCrackerjackFeatureTest):
         # assert recommendation.level == "minor"
         # assert recommendation.confidence >= 0.7
         # assert len(recommendation.reasons) > 0
-        pass
 
 
 class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
     """Test version bump interactive prompts."""
 
     @pytest.mark.asyncio
-    async def test_analysis_results_display(self, capsys):
+    async def test_analysis_results_display(self, capsys) -> None:
         """Test display of version bump analysis results."""
         # recommendation = VersionBumpRecommendation(
         #     level="minor",
@@ -145,11 +141,10 @@ class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
         # assert "MINOR" in captured.out
         # assert "85%" in captured.out
         # assert "New API endpoints" in captured.out
-        pass
 
     @patch("rich.prompt.Prompt.ask")
     @pytest.mark.asyncio
-    async def test_interactive_confirmation_accept(self, mock_prompt):
+    async def test_interactive_confirmation_accept(self, mock_prompt) -> None:
         """Test accepting version bump recommendation."""
         # mock_prompt.return_value = "yes"
         #
@@ -162,11 +157,10 @@ class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
         #
         # assert choice == "minor"
         # mock_prompt.assert_called_once()
-        pass
 
     @patch("rich.prompt.Prompt.ask")
     @pytest.mark.asyncio
-    async def test_interactive_confirmation_override(self, mock_prompt):
+    async def test_interactive_confirmation_override(self, mock_prompt) -> None:
         """Test overriding version bump recommendation."""
         # mock_prompt.return_value = "major"  # Override recommendation
         #
@@ -178,9 +172,8 @@ class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
         # choice = await publish_manager._confirm_version_bump(recommendation)
         #
         # assert choice == "major"
-        pass
 
-    def test_auto_accept_configuration(self, test_project_structure):
+    def test_auto_accept_configuration(self, test_project_structure) -> None:
         """Test auto-accept configuration via pyproject.toml."""
         # # Add auto-accept config to pyproject.toml
         # pyproject_path = test_project_structure / "pyproject.toml"
@@ -200,10 +193,9 @@ class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
         # )
         #
         # assert publish_manager.auto_accept_version is True
-        pass
 
     @pytest.mark.asyncio
-    async def test_cli_integration(self):
+    async def test_cli_integration(self) -> None:
         """Test CLI integration with version bump analyzer."""
         # # Test --auto-version flag functionality
         # options = Options(version_bump="auto", accept_version=True)
@@ -219,4 +211,3 @@ class TestVersionBumpPrompts(BaseCrackerjackFeatureTest):
         #     orchestrator = WorkflowOrchestrator(options, Path("."))
         #     # Test that auto version analysis is triggered
         #     # Implementation depends on workflow integration
-        pass

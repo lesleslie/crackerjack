@@ -24,16 +24,15 @@ def _load_single_config_file(config_file: Path) -> dict[str, t.Any]:
             if isinstance(loaded_data, dict):
                 logger.debug(f"Loaded configuration from {config_file}")
                 return loaded_data
-            else:
-                logger.warning(
-                    f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}"
-                )
-                return {}
+            logger.warning(
+                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
+            )
+            return {}
     except yaml.YAMLError as e:
-        logger.error(f"Failed to parse YAML from {config_file}: {e}")
+        logger.exception(f"Failed to parse YAML from {config_file}: {e}")
         return {}
     except OSError as e:
-        logger.error(f"Failed to read {config_file}: {e}")
+        logger.exception(f"Failed to read {config_file}: {e}")
         return {}
 
 
@@ -96,11 +95,11 @@ def _load_pyproject_toml(settings_dir: Path) -> dict[str, t.Any]:
 
         except ImportError:
             logger.warning(
-                "Neither tomllib nor tomli available for pyproject.toml parsing"
+                "Neither tomllib nor tomli available for pyproject.toml parsing",
             )
             return {}
     except Exception as e:
-        logger.error(f"Failed to parse pyproject.toml: {e}")
+        logger.exception(f"Failed to parse pyproject.toml: {e}")
         return {}
 
 
@@ -128,11 +127,11 @@ def load_settings[T: BaseSettings](
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}"
+            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
         )
 
     logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}"
+        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__}",
     )
 
     return settings_class(**relevant_data)
@@ -183,38 +182,40 @@ async def _load_single_yaml_file(config_file: Path) -> dict[str, t.Any] | None:
             if isinstance(loaded_data, dict):
                 logger.debug(f"Loaded configuration from {config_file}")
                 return loaded_data
-            else:
-                logger.warning(
-                    f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}"
-                )
-                return {}
+            logger.warning(
+                f"Invalid YAML format in {config_file}: expected dict, got {type(loaded_data).__name__}",
+            )
+            return {}
     except yaml.YAMLError as e:
-        logger.error(f"Failed to parse YAML from {config_file}: {e}")
+        logger.exception(f"Failed to parse YAML from {config_file}: {e}")
         return None
     except OSError as e:
-        logger.error(f"Failed to read {config_file}: {e}")
+        logger.exception(f"Failed to read {config_file}: {e}")
         return None
 
 
 def _filter_relevant_data[T: BaseSettings](
-    merged_data: dict[str, t.Any], settings_class: type[T]
+    merged_data: dict[str, t.Any],
+    settings_class: type[T],
 ) -> dict[str, t.Any]:
     return {k: v for k, v in merged_data.items() if k in settings_class.model_fields}
 
 
 def _log_filtered_fields(
-    merged_data: dict[str, t.Any], relevant_data: dict[str, t.Any]
+    merged_data: dict[str, t.Any],
+    relevant_data: dict[str, t.Any],
 ) -> None:
     excluded_fields = set(merged_data.keys()) - set(relevant_data.keys())
     if excluded_fields:
         logger.debug(
-            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}"
+            f"Ignored unknown configuration fields: {', '.join(sorted(excluded_fields))}",
         )
 
 
 def _log_load_info[T: BaseSettings](
-    settings_class: type[T], relevant_data: dict[str, t.Any]
+    settings_class: type[T],
+    relevant_data: dict[str, t.Any],
 ) -> None:
     logger.debug(
-        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)"
+        f"Loaded {len(relevant_data)} configuration values for {settings_class.__name__} (async)",
     )

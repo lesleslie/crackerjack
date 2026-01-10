@@ -11,7 +11,7 @@ def generate_documentation(doc_service: t.Any) -> bool:
     success = doc_service.generate_full_api_documentation()
     if success:
         console.print(
-            "✅ [bold green]Documentation generated successfully![/bold green]"
+            "✅ [bold green]Documentation generated successfully![/bold green]",
         )
         return True
     console.print("❌ [bold red]Documentation generation failed![/bold red]")
@@ -32,14 +32,16 @@ def validate_documentation_files(doc_service: t.Any) -> None:
                 console.print(f" - {file_path}: {issue['message']}")
         else:
             console.print(
-                "✅ [bold green]Documentation validation passed![/bold green]"
+                "✅ [bold green]Documentation validation passed![/bold green]",
             )
     else:
         console.print("⚠️ No documentation files found to validate")
 
 
 def handle_documentation_commands(
-    generate_docs: bool, validate_docs: bool, options: t.Any
+    generate_docs: bool,
+    validate_docs: bool,
+    options: t.Any,
 ) -> bool:
     if not (generate_docs or validate_docs):
         return True
@@ -49,9 +51,8 @@ def handle_documentation_commands(
     pkg_path = Path.cwd()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
-    if generate_docs:
-        if not generate_documentation(doc_service):
-            return False
+    if generate_docs and not generate_documentation(doc_service):
+        return False
 
     if validate_docs:
         validate_documentation_files(doc_service)
@@ -63,7 +64,7 @@ def handle_documentation_commands(
             options.all,
             options.publish,
             options.comp,
-        ]
+        ],
     )
 
 
@@ -141,7 +142,9 @@ def create_mkdocs_services() -> dict[str, t.Any]:
     logger_adapter = create_logger_adapter(logger)
 
     integration_service = MkDocsIntegrationService(
-        config_manager, filesystem, logger_adapter
+        config_manager,
+        filesystem,
+        logger_adapter,
     )
     builder = MkDocsSiteBuilder(integration_service)
 
@@ -161,7 +164,10 @@ def create_sample_docs_content() -> dict[str, str]:
 
 
 def build_mkdocs_site(
-    builder: t.Any, docs_content: dict[str, str], output_dir: Path, serve: bool
+    builder: t.Any,
+    docs_content: dict[str, str],
+    output_dir: Path,
+    serve: bool,
 ) -> None:
     import asyncio
 
@@ -173,22 +179,22 @@ def build_mkdocs_site(
             documentation_content=docs_content,
             output_dir=output_dir,
             serve=serve,
-        )
+        ),
     )
 
 
 def handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
     if site:
         console.print(
-            f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}"
+            f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}",
         )
         console.print(
-            f"[blue]📄[/blue] Generated {len(site.pages)} documentation pages"
+            f"[blue]📄[/blue] Generated {len(site.pages)} documentation pages",
         )
 
         if mkdocs_serve:
             console.print(
-                "[blue]🌐[/blue] MkDocs development server started at http://127.0.0.1:8000"
+                "[blue]🌐[/blue] MkDocs development server started at http://127.0.0.1:8000",
             )
             console.print("[yellow]Press Ctrl+C to stop the server[/yellow]")
     else:
@@ -213,7 +219,7 @@ def handle_mkdocs_integration(
         docs_content = create_sample_docs_content()
 
         console.print(
-            f"[blue]🏗️[/blue] Building documentation site with {mkdocs_theme} theme..."
+            f"[blue]🏗️[/blue] Building documentation site with {mkdocs_theme} theme...",
         )
 
         build_mkdocs_site(builder, docs_content, output_dir, mkdocs_serve)

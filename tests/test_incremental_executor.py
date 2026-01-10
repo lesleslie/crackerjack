@@ -18,7 +18,7 @@ from crackerjack.services.profiler import ProfileResult, ToolProfiler
 class TestFileHash:
     """Test FileHash dataclass."""
 
-    def test_file_hash_initialization(self):
+    def test_file_hash_initialization(self) -> None:
         """Test FileHash can be initialized."""
         file_hash = FileHash(
             path="/path/to/file.py",
@@ -36,7 +36,7 @@ class TestFileHash:
 class TestCacheEntry:
     """Test CacheEntry dataclass."""
 
-    def test_cache_entry_initialization(self):
+    def test_cache_entry_initialization(self) -> None:
         """Test CacheEntry can be initialized."""
         file_hash = FileHash(
             path="/path/to/file.py",
@@ -60,7 +60,7 @@ class TestCacheEntry:
         assert entry.success is True
         assert entry.error_message is None
 
-    def test_cache_entry_with_error(self):
+    def test_cache_entry_with_error(self) -> None:
         """Test CacheEntry can store error information."""
         file_hash = FileHash(
             path="/path/to/file.py",
@@ -85,7 +85,7 @@ class TestCacheEntry:
 class TestExecutionResult:
     """Test ExecutionResult dataclass and properties."""
 
-    def test_execution_result_initialization(self):
+    def test_execution_result_initialization(self) -> None:
         """Test ExecutionResult can be initialized."""
         result = ExecutionResult(
             tool_name="test-tool",
@@ -104,7 +104,7 @@ class TestExecutionResult:
         assert result.execution_time == 1.5
         assert result.results == {}
 
-    def test_cache_effective_property_true(self):
+    def test_cache_effective_property_true(self) -> None:
         """Test cache_effective returns True when hit rate >= 50%."""
         result = ExecutionResult(
             tool_name="test-tool",
@@ -117,7 +117,7 @@ class TestExecutionResult:
 
         assert result.cache_effective is True
 
-    def test_cache_effective_property_false(self):
+    def test_cache_effective_property_false(self) -> None:
         """Test cache_effective returns False when hit rate < 50%."""
         result = ExecutionResult(
             tool_name="test-tool",
@@ -146,7 +146,7 @@ class TestIncrementalExecutor:
         file.write_text("print('hello')")
         return file
 
-    def test_executor_initialization(self, tmp_path: Path):
+    def test_executor_initialization(self, tmp_path: Path) -> None:
         """Test IncrementalExecutor initializes correctly."""
         executor = IncrementalExecutor(cache_dir=tmp_path / "cache")
 
@@ -155,14 +155,14 @@ class TestIncrementalExecutor:
         assert executor.ttl_seconds == 86400  # 24 hours
         assert executor._cache == {}
 
-    def test_executor_default_cache_dir(self):
+    def test_executor_default_cache_dir(self) -> None:
         """Test IncrementalExecutor uses default cache_dir when not provided."""
         executor = IncrementalExecutor()
 
         expected_dir = Path.cwd() / ".crackerjack" / "cache"
         assert executor.cache_dir == expected_dir
 
-    def test_compute_file_hash(self, executor: IncrementalExecutor, test_file: Path):
+    def test_compute_file_hash(self, executor: IncrementalExecutor, test_file: Path) -> None:
         """Test _compute_file_hash generates correct hash."""
         file_hash = executor._compute_file_hash(test_file)
 
@@ -172,8 +172,8 @@ class TestIncrementalExecutor:
         assert file_hash.modified_time > 0
 
     def test_compute_file_hash_consistency(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test hash is consistent for unchanged file."""
         hash1 = executor._compute_file_hash(test_file)
         hash2 = executor._compute_file_hash(test_file)
@@ -181,8 +181,8 @@ class TestIncrementalExecutor:
         assert hash1.hash == hash2.hash
 
     def test_compute_file_hash_changes(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test hash changes when file content changes."""
         hash1 = executor._compute_file_hash(test_file)
 
@@ -194,8 +194,8 @@ class TestIncrementalExecutor:
         assert hash1.hash != hash2.hash
 
     def test_execute_incremental_first_run(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test execute_incremental on first run (no cache)."""
         call_count = 0
 
@@ -218,8 +218,8 @@ class TestIncrementalExecutor:
         assert call_count == 1
 
     def test_execute_incremental_cached_run(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test execute_incremental uses cache on second run."""
         call_count = 0
 
@@ -248,8 +248,8 @@ class TestIncrementalExecutor:
         assert call_count == 1  # Tool only called once (first run)
 
     def test_execute_incremental_force_rerun(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test execute_incremental with force_rerun skips cache."""
         call_count = 0
 
@@ -279,8 +279,8 @@ class TestIncrementalExecutor:
         assert call_count == 2  # Tool called both times
 
     def test_execute_incremental_profiler_integration(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test execute_incremental updates profiler cache stats."""
         profiler = ToolProfiler(cache_dir=executor.cache_dir)
         profiler.results["test-tool"] = ProfileResult(
@@ -313,8 +313,8 @@ class TestIncrementalExecutor:
         assert profiler.results["test-tool"].cache_hits == 1
 
     def test_get_changed_files(
-        self, executor: IncrementalExecutor, tmp_path: Path
-    ):
+        self, executor: IncrementalExecutor, tmp_path: Path,
+    ) -> None:
         """Test get_changed_files identifies changed files."""
         file1 = tmp_path / "file1.py"
         file2 = tmp_path / "file2.py"
@@ -338,8 +338,8 @@ class TestIncrementalExecutor:
         assert file1 not in changed
 
     def test_invalidate_file(
-        self, executor: IncrementalExecutor, test_file: Path
-    ):
+        self, executor: IncrementalExecutor, test_file: Path,
+    ) -> None:
         """Test invalidate_file removes cache entries."""
 
         def tool_func(file_path: Path) -> str:
@@ -359,8 +359,8 @@ class TestIncrementalExecutor:
         assert len(executor._cache) == 0
 
     def test_clear_cache_all(
-        self, executor: IncrementalExecutor, tmp_path: Path
-    ):
+        self, executor: IncrementalExecutor, tmp_path: Path,
+    ) -> None:
         """Test clear_cache removes all entries."""
         file1 = tmp_path / "file1.py"
         file2 = tmp_path / "file2.py"
@@ -389,8 +389,8 @@ class TestIncrementalExecutor:
         assert len(executor._cache) == 0
 
     def test_clear_cache_specific_tool(
-        self, executor: IncrementalExecutor, tmp_path: Path
-    ):
+        self, executor: IncrementalExecutor, tmp_path: Path,
+    ) -> None:
         """Test clear_cache removes only specific tool entries."""
         file1 = tmp_path / "file1.py"
         file2 = tmp_path / "file2.py"
@@ -418,7 +418,7 @@ class TestIncrementalExecutor:
         assert cleared == 1
         assert len(executor._cache) == 1
 
-    def test_cache_persistence(self, tmp_path: Path, test_file: Path):
+    def test_cache_persistence(self, tmp_path: Path, test_file: Path) -> None:
         """Test cache persists across executor instances."""
 
         def tool_func(file_path: Path) -> str:
@@ -442,7 +442,7 @@ class TestIncrementalExecutor:
 
         assert result.cache_hit_rate == 100.0
 
-    def test_cache_ttl_expiration(self, tmp_path: Path, test_file: Path):
+    def test_cache_ttl_expiration(self, tmp_path: Path, test_file: Path) -> None:
         """Test cache entries expire after TTL."""
 
         def tool_func(file_path: Path) -> str:
@@ -473,8 +473,8 @@ class TestIncrementalExecutor:
         assert len(executor2._cache) == 0
 
     def test_get_cache_stats(
-        self, executor: IncrementalExecutor, tmp_path: Path
-    ):
+        self, executor: IncrementalExecutor, tmp_path: Path,
+    ) -> None:
         """Test get_cache_stats returns correct statistics."""
         file1 = tmp_path / "file1.py"
         file2 = tmp_path / "file2.py"

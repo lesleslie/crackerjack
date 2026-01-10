@@ -257,13 +257,15 @@ class LogManager:
         for log_type, data in stats.items():
             count_raw = data["count"]
             count: int = (
-                int(count_raw) if isinstance(count_raw, str) else t.cast(int, count_raw)
+                int(count_raw)
+                if isinstance(count_raw, str)
+                else t.cast("int", count_raw)
             )
             size_raw = data["size_mb"]
             size: float = (
                 float(size_raw)
                 if isinstance(size_raw, str)
-                else t.cast(float, size_raw)
+                else t.cast("float", size_raw)
             )
 
             total_files += count

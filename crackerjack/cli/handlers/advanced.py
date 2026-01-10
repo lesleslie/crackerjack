@@ -56,7 +56,7 @@ def display_advanced_results(result: t.Any, advanced_report: str | None) -> None
         save_advanced_report(result, advanced_report)
     else:
         console.print(
-            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}"
+            f"[red]❌[/red] Advanced optimization failed: {result.get('message', 'Unknown error')}",
         )
 
 
@@ -69,14 +69,14 @@ def display_advanced_metrics(metrics: t.Any) -> None:
 def display_advanced_recommendations(recommendations: t.Any) -> None:
     if recommendations:
         console.print(
-            f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:"
+            f"\n[yellow]💡[/yellow] Found {len(recommendations)} optimization recommendations:",
         )
         for rec in recommendations[:3]:
             priority_color = {"high": "red", "medium": "yellow", "low": "blue"}[
                 rec["priority"]
             ]
             console.print(
-                f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}"
+                f" [{priority_color}]{rec['priority'].upper()}[/{priority_color}]: {rec['title']}",
             )
 
 

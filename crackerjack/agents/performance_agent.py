@@ -90,7 +90,7 @@ class PerformanceAgent(SubAgent):
 
             if result.success and result.fixes_applied:
                 stats_summary = self._generate_optimization_summary()
-                result.recommendations = result.recommendations + [stats_summary]
+                result.recommendations = [*result.recommendations, stats_summary]
 
             return result
         except Exception as e:
@@ -196,24 +196,32 @@ class PerformanceAgent(SubAgent):
         )
 
     async def _detect_performance_issues(
-        self, content: str, file_path: Path
+        self,
+        content: str,
+        file_path: Path,
     ) -> list[dict[str, t.Any]]:
         performance_issues = self._pattern_detector.detect_performance_issues(
-            content, file_path
+            content,
+            file_path,
         )
         semantic_issues = await self._detect_semantic_performance_issues(
-            content, file_path
+            content,
+            file_path,
         )
         performance_issues.extend(semantic_issues)
         return performance_issues
 
     def _apply_performance_optimizations(
-        self, content: str, issues: list[dict[str, t.Any]]
+        self,
+        content: str,
+        issues: list[dict[str, t.Any]],
     ) -> str:
         return self._recommender.apply_performance_optimizations(content, issues)
 
     async def _detect_semantic_performance_issues(
-        self, content: str, file_path: Path
+        self,
+        content: str,
+        file_path: Path,
     ) -> list[dict[str, t.Any]]:
         issues = []
 
@@ -233,7 +241,8 @@ class PerformanceAgent(SubAgent):
 
                     if insight.total_matches > 1:
                         analysis = self._ast_analyzer.analyze_performance_patterns(
-                            insight, func
+                            insight,
+                            func,
                         )
                         if analysis["issues_found"]:
                             issues.append(
@@ -245,7 +254,7 @@ class PerformanceAgent(SubAgent):
                                     "confidence_score": insight.high_confidence_matches
                                     / max(insight.total_matches, 1),
                                     "suggestion": analysis["optimization_suggestion"],
-                                }
+                                },
                             )
 
                             self.semantic_insights[func["name"]] = insight
@@ -277,7 +286,8 @@ class PerformanceAgent(SubAgent):
         )
 
     async def _generate_enhanced_recommendations(
-        self, issues: list[dict[str, t.Any]]
+        self,
+        issues: list[dict[str, t.Any]],
     ) -> list[str]:
         recommendations = ["Test performance improvements with benchmarks"]
         for issue in issues:
@@ -291,17 +301,20 @@ class PerformanceAgent(SubAgent):
         if semantic_issues:
             recommendations.append(
                 f"Semantic analysis found {len(semantic_issues)} similar performance patterns "
-                "across codebase - consider applying optimizations consistently"
+                "across codebase - consider applying optimizations consistently",
             )
 
             for issue in semantic_issues:
                 if "semantic_insight" in issue:
                     await self.semantic_enhancer.store_insight_to_session(
-                        issue["semantic_insight"], "PerformanceAgent"
+                        issue["semantic_insight"],
+                        "PerformanceAgent",
                     )
 
         recommendations = await get_session_enhanced_recommendations(
-            recommendations, "PerformanceAgent", self.context.project_path
+            recommendations,
+            "PerformanceAgent",
+            self.context.project_path,
         )
 
         for func_name, insight in self.semantic_insights.items():

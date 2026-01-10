@@ -3,11 +3,13 @@
 import tempfile
 from pathlib import Path
 
-from crackerjack.tools.check_json import validate_json_file, main as check_json_main
-from crackerjack.tools.format_json import format_json_file, main as format_json_main
+from crackerjack.tools.check_json import main as check_json_main
+from crackerjack.tools.check_json import validate_json_file
+from crackerjack.tools.format_json import format_json_file
+from crackerjack.tools.format_json import main as format_json_main
 
 
-def test_validate_json_file_valid():
+def test_validate_json_file_valid() -> None:
     """Test that validate_json_file returns True for valid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"name": "test", "value": 123}')
@@ -22,7 +24,7 @@ def test_validate_json_file_valid():
         file_path.unlink()
 
 
-def test_validate_json_file_invalid():
+def test_validate_json_file_invalid() -> None:
     """Test that validate_json_file returns False for invalid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"name": "test", "value": }')  # Invalid JSON
@@ -39,7 +41,7 @@ def test_validate_json_file_invalid():
         file_path.unlink()
 
 
-def test_format_json_file_valid():
+def test_format_json_file_valid() -> None:
     """Test that format_json_file formats JSON correctly."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"name":"test","value":123}')  # Unformatted JSON
@@ -48,7 +50,7 @@ def test_format_json_file_valid():
 
     try:
         # Read initial content to compare
-        with open(file_path, "r") as fr:
+        with open(file_path) as fr:
             initial_content = fr.read()
 
         # Format the file
@@ -57,7 +59,7 @@ def test_format_json_file_valid():
         assert error_msg is None
 
         # Check that it was formatted (has whitespace/indentation)
-        with open(file_path, "r") as fr:
+        with open(file_path) as fr:
             formatted_content = fr.read()
 
         # The formatted content should be different (more whitespace) but still valid
@@ -66,7 +68,7 @@ def test_format_json_file_valid():
         file_path.unlink()
 
 
-def test_format_json_file_invalid():
+def test_format_json_file_invalid() -> None:
     """Test that format_json_file returns False for invalid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"name": "test", "value": }')  # Invalid JSON
@@ -81,7 +83,7 @@ def test_format_json_file_invalid():
         file_path.unlink()
 
 
-def test_check_json_main_valid():
+def test_check_json_main_valid() -> None:
     """Test check-json main with valid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"valid": "json"}')
@@ -95,7 +97,7 @@ def test_check_json_main_valid():
         file_path.unlink()
 
 
-def test_check_json_main_invalid():
+def test_check_json_main_invalid() -> None:
     """Test check-json main with invalid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"invalid": json}')  # Invalid JSON
@@ -109,7 +111,7 @@ def test_check_json_main_invalid():
         file_path.unlink()
 
 
-def test_format_json_main_valid():
+def test_format_json_main_valid() -> None:
     """Test format-json main with valid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"formatted":"json"}')
@@ -123,7 +125,7 @@ def test_format_json_main_valid():
         file_path.unlink()
 
 
-def test_format_json_main_invalid():
+def test_format_json_main_invalid() -> None:
     """Test format-json main with invalid JSON."""
     with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
         f.write('{"invalid": json}')  # Invalid JSON

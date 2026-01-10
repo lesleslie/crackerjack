@@ -2,8 +2,9 @@ import typing as t
 from functools import wraps
 from pathlib import Path
 
-from ..errors import CrackerjackError
-from ..mcp.cache import ErrorCache, ErrorPattern
+from crackerjack.errors import CrackerjackError
+from crackerjack.mcp.cache import ErrorCache, ErrorPattern
+
 from .helpers import get_function_context, is_async_function
 
 
@@ -33,7 +34,11 @@ def _create_async_wrapper(
         try:
             result = await func(*args, **kwargs)
             await _handle_result_analysis(
-                result, error_cache, func, error_type, auto_analyze
+                result,
+                error_cache,
+                func,
+                error_type,
+                auto_analyze,
             )
             return result
         except CrackerjackError as e:
@@ -41,7 +46,11 @@ def _create_async_wrapper(
             raise
         except Exception as e:
             await _handle_generic_exception(
-                e, error_cache, func, error_type, auto_analyze
+                e,
+                error_cache,
+                func,
+                error_type,
+                auto_analyze,
             )
             raise
 
@@ -59,7 +68,11 @@ def _create_sync_wrapper(
         try:
             result = func(*args, **kwargs)
             _handle_result_analysis_sync(
-                result, error_cache, func, error_type, auto_analyze
+                result,
+                error_cache,
+                func,
+                error_type,
+                auto_analyze,
             )
             return result
         except CrackerjackError as e:
@@ -67,7 +80,11 @@ def _create_sync_wrapper(
             raise
         except Exception as e:
             _handle_generic_exception_sync(
-                e, error_cache, func, error_type, auto_analyze
+                e,
+                error_cache,
+                func,
+                error_type,
+                auto_analyze,
             )
             raise
 

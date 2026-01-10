@@ -3,11 +3,11 @@ from __future__ import annotations
 import typing as t
 from functools import wraps
 
-from rich.console import Console
-
 from crackerjack.agents.base import FixResult, Issue, SubAgent
 
 if t.TYPE_CHECKING:  # pragma: no cover - typing helpers
+    from rich.console import Console
+
     from crackerjack.agents.coordinator import AgentCoordinator
 
 

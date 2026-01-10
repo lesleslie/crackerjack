@@ -137,7 +137,7 @@ class ServiceWatchdog:
     ) -> bool:
         if service.process is None:
             return False
-        stdout, stderr = service.process.communicate()
+        _stdout, stderr = service.process.communicate()
         error_msg = f"Process died (exit: {exit_code})"
         if stderr and stderr.strip():
             error_msg += f"-{stderr.strip()[:50]}"
@@ -295,7 +295,7 @@ class ServiceWatchdog:
             service.process.kill()
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]"
+                f"[yellow]⚠️ Error terminating {service.name}: {e}[/ yellow]",
             )
 
     async def _wait_before_restart(self, service: ServiceConfig) -> None:
@@ -339,7 +339,7 @@ class ServiceWatchdog:
             table.add_row(service.name, status, health, restarts, error)
 
         self.console.print(
-            Panel(table, title="Crackerjack Service Watchdog", border_style="cyan")
+            Panel(table, title="Crackerjack Service Watchdog", border_style="cyan"),
         )
         self.console.print("\n[dim]Press Ctrl + C to stop monitoring[/ dim]")
 

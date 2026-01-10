@@ -42,7 +42,8 @@ class TyAdapter(BaseToolAdapter):
     def __init__(self, settings: TySettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "TyAdapter initialized", extra={"has_settings": settings is not None}
+            "TyAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -80,7 +81,8 @@ class TyAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -219,7 +221,10 @@ class TyAdapter(BaseToolAdapter):
         return "error"
 
     def _extract_message(
-        self, severity_and_message: str, message: str, severity: str
+        self,
+        severity_and_message: str,
+        message: str,
+        severity: str,
     ) -> str:
         if message:
             return message

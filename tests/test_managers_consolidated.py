@@ -1,13 +1,17 @@
 import subprocess
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 from rich.console import Console
+
 from crackerjack.managers.hook_manager import HookManagerImpl
 from crackerjack.managers.publish_manager import PublishManagerImpl
 from crackerjack.managers.test_command_builder import TestCommandBuilder
 from crackerjack.managers.test_manager import TestManagementImpl
-from crackerjack.models.protocols import CoverageRatchetProtocol, CoverageBadgeServiceProtocol
+from crackerjack.models.protocols import (
+    CoverageBadgeServiceProtocol,
+    CoverageRatchetProtocol,
+)
 
 
 # Module-level DI context setup
@@ -385,7 +389,7 @@ class TestTestManagementImpl:
         assert stats["coverage"] == 80.0
 
     def test_parse_test_statistics_with_ansi_codes(
-        self, temp_project
+        self, temp_project,
     ) -> None:
         """Ensure ANSI escape codes do not break parsing."""
         manager = create_test_manager_with_path(temp_project)
@@ -402,7 +406,7 @@ class TestTestManagementImpl:
         assert stats["duration"] == 0.42
 
     def test_parse_test_statistics_fallback_counts(
-        self, temp_project
+        self, temp_project,
     ) -> None:
         """Fallback counting should handle verbose lines without summaries."""
         manager = create_test_manager_with_path(temp_project)

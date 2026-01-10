@@ -47,13 +47,13 @@ class AnomalyDetector:
         baseline_window: int = 100,
         sensitivity: float = 2.0,
         min_samples: int = 10,
-    ):
+    ) -> None:
         self.baseline_window = baseline_window
         self.sensitivity = sensitivity
         self.min_samples = min_samples
 
         self.metric_history: dict[str, deque[MetricPoint]] = defaultdict(
-            lambda: deque[MetricPoint](maxlen=baseline_window)
+            lambda: deque[MetricPoint](maxlen=baseline_window),
         )
         self.baselines: dict[str, BaselineModel] = {}
         self.anomalies: list[AnomalyDetection] = []
@@ -158,7 +158,11 @@ class AnomalyDetector:
         confidence = self._calculate_confidence(point, baseline)
 
         description = self._generate_anomaly_description(
-            point, baseline, lower_bound, upper_bound, severity
+            point,
+            baseline,
+            lower_bound,
+            upper_bound,
+            severity,
         )
 
         return AnomalyDetection(
@@ -173,7 +177,9 @@ class AnomalyDetector:
         )
 
     def _get_seasonal_adjustment(
-        self, point: MetricPoint, baseline: BaselineModel
+        self,
+        point: MetricPoint,
+        baseline: BaselineModel,
     ) -> float:
         hour = point.timestamp.hour
         hour_pattern = baseline.seasonal_patterns.get(f"hour_{hour}")
@@ -211,17 +217,22 @@ class AnomalyDetector:
             float(str(critical_threshold)) if critical_threshold is not None else 0.0
         )
         return self._threshold_breached_in_direction(
-            point.value, threshold_float, str(direction)
+            point.value,
+            threshold_float,
+            str(direction),
         )
 
     def _threshold_breached_in_direction(
-        self, value: float, threshold: float, direction: str
+        self,
+        value: float,
+        threshold: float,
+        direction: str,
     ) -> bool:
         if direction == "up":
             return value > threshold
-        elif direction == "down":
+        if direction == "down":
             return value < threshold
-        elif direction == "both":
+        if direction == "both":
             return value > threshold or value < -threshold
         return False
 
@@ -238,14 +249,16 @@ class AnomalyDetector:
     def _severity_from_z_score(self, z_score: float) -> str:
         if z_score > 4:
             return "critical"
-        elif z_score > 3:
+        if z_score > 3:
             return "high"
-        elif z_score > 2:
+        if z_score > 2:
             return "medium"
         return "low"
 
     def _calculate_confidence(
-        self, point: MetricPoint, baseline: BaselineModel
+        self,
+        point: MetricPoint,
+        baseline: BaselineModel,
     ) -> float:
         sample_factor = min(baseline.sample_count / 50, 1.0)
 

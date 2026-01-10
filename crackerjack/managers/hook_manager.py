@@ -26,16 +26,15 @@ else:
 
 try:
     from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+        HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    HookOrchestratorAdapter = None  # type: ignore
     HookOrchestratorSettings = None  # type: ignore
     orchestration_available = False
 else:
     orchestration_available = HookOrchestratorSettings is not None
-
-if t.TYPE_CHECKING:
-    from crackerjack.orchestration.hook_orchestrator import HookOrchestratorAdapter
 
 
 class HookManagerImpl:
@@ -58,7 +57,7 @@ class HookManagerImpl:
         enable_tool_proxy: bool,
         use_incremental: bool,
         git_service: t.Any,
-    ):
+    ) -> None:
         if enable_lsp_optimization:
             self.executor = LSPAwareHookExecutor(
                 self.console,
@@ -70,24 +69,23 @@ class HookManagerImpl:
                 use_incremental=use_incremental,
                 git_service=git_service,
             )
+        elif not debug and not use_incremental and git_service is None:
+            self.executor = HookExecutor(  # type: ignore[assignment]
+                self.console,
+                pkg_path,
+                verbose,
+                quiet,
+            )
         else:
-            if not debug and not use_incremental and git_service is None:
-                self.executor = HookExecutor(  # type: ignore[assignment]
-                    self.console,
-                    pkg_path,
-                    verbose,
-                    quiet,
-                )
-            else:
-                self.executor = HookExecutor(  # type: ignore[assignment]
-                    self.console,
-                    pkg_path,
-                    verbose,
-                    quiet,
-                    debug=debug,
-                    use_incremental=use_incremental,
-                    git_service=git_service,
-                )
+            self.executor = HookExecutor(  # type: ignore[assignment]
+                self.console,
+                pkg_path,
+                verbose,
+                quiet,
+                debug=debug,
+                use_incremental=use_incremental,
+                git_service=git_service,
+            )
 
     def _load_from_project_config(
         self,
@@ -178,23 +176,29 @@ class HookManagerImpl:
         orchestration_mode: str | None,
         enable_caching: bool,
         cache_backend: str,
-    ):
+    ) -> None:
         if self._settings is None:
             self._settings = CrackerjackSettings()
 
         if orchestration_config:
             self._orchestration_config = orchestration_config
             self.orchestration_enabled = getattr(
-                orchestration_config, "enable_orchestration", False
+                orchestration_config,
+                "enable_orchestration",
+                False,
             )
             self.orchestration_mode = getattr(
-                orchestration_config, "orchestration_mode", "oneiric"
+                orchestration_config,
+                "orchestration_mode",
+                "oneiric",
             )
         else:
             config_path = pkg_path / ".crackerjack.yaml"
             if config_path.exists():
                 self._load_from_project_config(
-                    config_path, enable_orchestration, orchestration_mode
+                    config_path,
+                    enable_orchestration,
+                    orchestration_mode,
                 )
             else:
                 self._create_default_orchestration_config(
@@ -254,7 +258,7 @@ class HookManagerImpl:
             cache_backend,
         )
 
-        self._orchestrator: HookOrchestratorAdapter | None = None
+        self._orchestrator: t.Any = None
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
@@ -289,7 +293,9 @@ class HookManagerImpl:
             cache_backend=self._orchestration_config.cache_backend,
             max_parallel_hooks=self._orchestration_config.max_parallel_hooks,
             enable_adaptive_execution=getattr(
-                self._orchestration_config, "enable_adaptive_execution", True
+                self._orchestration_config,
+                "enable_adaptive_execution",
+                True,
             ),
         )
 
@@ -347,7 +353,8 @@ class HookManagerImpl:
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, self._run_fast_hooks_orchestrated()
+                        asyncio.run,
+                        self._run_fast_hooks_orchestrated(),
                     )
                     return future.result()
             except RuntimeError:
@@ -379,7 +386,8 @@ class HookManagerImpl:
 
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run, self._run_comprehensive_hooks_orchestrated()
+                        asyncio.run,
+                        self._run_comprehensive_hooks_orchestrated(),
                     )
                     return future.result()
             except RuntimeError:
@@ -411,7 +419,9 @@ class HookManagerImpl:
 
     def run_hooks(self) -> list[HookResult]:
         enable_parallelism = getattr(
-            self._orchestration_config, "enable_strategy_parallelism", True
+            self._orchestration_config,
+            "enable_strategy_parallelism",
+            True,
         )
         if self.orchestration_enabled and enable_parallelism:
             import asyncio
@@ -524,19 +534,20 @@ class HookManagerImpl:
 
     def install_hooks(self) -> bool:
         self.console.print(
-            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation"
+            "[yellow]ℹ️[/yellow] Hook installation not required with direct invocation",
         )
         return True
 
     def update_hooks(self) -> bool:
         self.console.print(
-            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution"
+            "[yellow]ℹ️[/yellow] Hook updates managed via UV dependency resolution",
         )
         return True
 
     @staticmethod
     def get_hook_summary(
-        results: list[HookResult], elapsed_time: float | None = None
+        results: list[HookResult],
+        elapsed_time: float | None = None,
     ) -> dict[str, t.Any]:
         if not results:
             return {

@@ -1,6 +1,7 @@
 """Tests for enhanced tool execution error (Phase 10.2.3)."""
 
 from pathlib import Path
+from typing import Never
 
 import pytest
 from rich.console import Console
@@ -11,7 +12,7 @@ from crackerjack.exceptions import ToolExecutionError
 class TestToolExecutionErrorInit:
     """Test ToolExecutionError initialization."""
 
-    def test_init_minimal(self):
+    def test_init_minimal(self) -> None:
         """Test initialization with minimal parameters."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -26,7 +27,7 @@ class TestToolExecutionErrorInit:
         assert error.cwd is None
         assert error.duration is None
 
-    def test_init_full(self, tmp_path):
+    def test_init_full(self, tmp_path) -> None:
         """Test initialization with all parameters."""
         command = ["uv", "run", "ruff", "check", "test.py"]
         error = ToolExecutionError(
@@ -47,7 +48,7 @@ class TestToolExecutionErrorInit:
         assert error.cwd == tmp_path
         assert error.duration == 2.5
 
-    def test_init_strips_whitespace(self):
+    def test_init_strips_whitespace(self) -> None:
         """Test that stdout/stderr are stripped of whitespace."""
         error = ToolExecutionError(
             tool="test",
@@ -59,7 +60,7 @@ class TestToolExecutionErrorInit:
         assert error.stdout == "output"
         assert error.stderr == "error"
 
-    def test_exception_message_without_duration(self):
+    def test_exception_message_without_duration(self) -> None:
         """Test exception message format without duration."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -68,7 +69,7 @@ class TestToolExecutionErrorInit:
 
         assert str(error) == "ToolExecutionError: ruff-check | Exit Code: 1"
 
-    def test_exception_message_with_duration(self):
+    def test_exception_message_with_duration(self) -> None:
         """Test exception message format with duration."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -85,7 +86,7 @@ class TestToolExecutionErrorInit:
 class TestRichFormatting:
     """Test rich panel formatting."""
 
-    def test_format_rich_basic(self):
+    def test_format_rich_basic(self) -> None:
         """Test basic rich formatting."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -100,7 +101,7 @@ class TestRichFormatting:
         assert "ruff-check" in panel.title
         assert panel.border_style == "red"
 
-    def test_format_rich_with_all_fields(self, tmp_path):
+    def test_format_rich_with_all_fields(self, tmp_path) -> None:
         """Test rich formatting with all fields populated."""
         error = ToolExecutionError(
             tool="zuban",
@@ -119,7 +120,7 @@ class TestRichFormatting:
         assert "zuban" in panel.title
         assert panel.border_style == "red"
 
-    def test_format_rich_truncates_long_output(self):
+    def test_format_rich_truncates_long_output(self) -> None:
         """Test that long output is truncated."""
         # Create 30 lines of output
         long_stderr = "\n".join([f"Error line {i}" for i in range(30)])
@@ -136,7 +137,7 @@ class TestRichFormatting:
         # Should truncate to last 20 lines
         assert panel is not None
 
-    def test_format_rich_truncates_long_command(self):
+    def test_format_rich_truncates_long_command(self) -> None:
         """Test that long commands are truncated."""
         long_command = ["uv", "run", "tool"] + ["arg"] * 50
 
@@ -151,7 +152,7 @@ class TestRichFormatting:
 
         assert panel is not None
 
-    def test_format_rich_shows_stdout_when_stderr_empty(self):
+    def test_format_rich_shows_stdout_when_stderr_empty(self) -> None:
         """Test that stdout is shown when stderr is empty."""
         error = ToolExecutionError(
             tool="test",
@@ -165,7 +166,7 @@ class TestRichFormatting:
 
         assert panel is not None
 
-    def test_format_rich_shows_message_when_no_output(self):
+    def test_format_rich_shows_message_when_no_output(self) -> None:
         """Test message shown when both stdout and stderr are empty."""
         error = ToolExecutionError(
             tool="test",
@@ -183,7 +184,7 @@ class TestRichFormatting:
 class TestActionableMessages:
     """Test actionable error message generation."""
 
-    def test_actionable_message_permission_denied(self):
+    def test_actionable_message_permission_denied(self) -> None:
         """Test actionable message for permission errors."""
         error = ToolExecutionError(
             tool="test",
@@ -197,7 +198,7 @@ class TestActionableMessages:
         assert "permission" in message.lower()
         assert "→" in message  # Has actionable suggestion
 
-    def test_actionable_message_command_not_found(self):
+    def test_actionable_message_command_not_found(self) -> None:
         """Test actionable message for missing command."""
         error = ToolExecutionError(
             tool="missing-tool",
@@ -210,7 +211,7 @@ class TestActionableMessages:
         assert "installed" in message.lower()
         assert "PATH" in message
 
-    def test_actionable_message_timeout(self):
+    def test_actionable_message_timeout(self) -> None:
         """Test actionable message for timeout."""
         error = ToolExecutionError(
             tool="slow-tool",
@@ -223,7 +224,7 @@ class TestActionableMessages:
         assert "timeout" in message.lower()
         assert "increasing" in message.lower()
 
-    def test_actionable_message_syntax_error(self):
+    def test_actionable_message_syntax_error(self) -> None:
         """Test actionable message for syntax errors."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -235,7 +236,7 @@ class TestActionableMessages:
 
         assert "syntax" in message.lower()
 
-    def test_actionable_message_import_error(self):
+    def test_actionable_message_import_error(self) -> None:
         """Test actionable message for import errors."""
         error = ToolExecutionError(
             tool="pytest",
@@ -247,7 +248,7 @@ class TestActionableMessages:
 
         assert "dependencies" in message.lower() or "uv sync" in message
 
-    def test_actionable_message_type_error(self):
+    def test_actionable_message_type_error(self) -> None:
         """Test actionable message for type errors."""
         error = ToolExecutionError(
             tool="zuban",
@@ -259,7 +260,7 @@ class TestActionableMessages:
 
         assert "type" in message.lower()
 
-    def test_actionable_message_generic(self):
+    def test_actionable_message_generic(self) -> None:
         """Test generic actionable message when no specific pattern matches."""
         error = ToolExecutionError(
             tool="custom-tool",
@@ -276,7 +277,7 @@ class TestActionableMessages:
 class TestOutputFormatting:
     """Test output formatting helpers."""
 
-    def test_format_output_empty_lines(self):
+    def test_format_output_empty_lines(self) -> None:
         """Test that empty lines are filtered out."""
         error = ToolExecutionError(
             tool="test",
@@ -290,7 +291,7 @@ class TestOutputFormatting:
         assert "Line 1" in formatted
         assert "Line 2" in formatted
 
-    def test_format_output_strips_ansi_codes(self):
+    def test_format_output_strips_ansi_codes(self) -> None:
         """Test that ANSI color codes are stripped."""
         error = ToolExecutionError(
             tool="test",
@@ -307,7 +308,7 @@ class TestOutputFormatting:
         assert "Red text" in formatted
         assert "Green bold" in formatted
 
-    def test_format_output_indents_lines(self):
+    def test_format_output_indents_lines(self) -> None:
         """Test that output lines are properly indented."""
         error = ToolExecutionError(
             tool="test",
@@ -325,7 +326,7 @@ class TestOutputFormatting:
 class TestStringRepresentations:
     """Test string representation methods."""
 
-    def test_str_representation(self):
+    def test_str_representation(self) -> None:
         """Test __str__ method."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -341,7 +342,7 @@ class TestStringRepresentations:
         assert "Duration: 2.50s" in str_repr
         assert "Stderr:" in str_repr
 
-    def test_repr_representation(self):
+    def test_repr_representation(self) -> None:
         """Test __repr__ method."""
         error = ToolExecutionError(
             tool="ruff-check",
@@ -356,7 +357,7 @@ class TestStringRepresentations:
         assert "exit_code=1" in repr_str
         assert "duration=2.5" in repr_str
 
-    def test_str_with_long_stderr(self):
+    def test_str_with_long_stderr(self) -> None:
         """Test __str__ truncates long stderr."""
         long_stderr = "x" * 300
 
@@ -376,13 +377,13 @@ class TestStringRepresentations:
 class TestExceptionInheritance:
     """Test exception behavior."""
 
-    def test_is_exception(self):
+    def test_is_exception(self) -> None:
         """Test that ToolExecutionError is an Exception."""
         error = ToolExecutionError(tool="test", exit_code=1)
 
         assert isinstance(error, Exception)
 
-    def test_can_be_raised_and_caught(self):
+    def test_can_be_raised_and_caught(self) -> Never:
         """Test that error can be raised and caught."""
         with pytest.raises(ToolExecutionError) as exc_info:
             raise ToolExecutionError(
@@ -394,7 +395,7 @@ class TestExceptionInheritance:
         assert exc_info.value.tool == "test"
         assert exc_info.value.exit_code == 1
 
-    def test_can_be_caught_as_exception(self):
+    def test_can_be_caught_as_exception(self) -> Never:
         """Test that error can be caught as generic Exception."""
         with pytest.raises(Exception) as exc_info:
             raise ToolExecutionError(tool="test", exit_code=1)

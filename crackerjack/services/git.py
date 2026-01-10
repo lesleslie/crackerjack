@@ -36,7 +36,9 @@ class FailedGitResult:
 
 class GitService(GitInterface):
     def __init__(
-        self, console: Console | Path | None = None, pkg_path: Path | None = None
+        self,
+        console: Console | Path | None = None,
+        pkg_path: Path | None = None,
     ) -> None:
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
@@ -46,7 +48,8 @@ class GitService(GitInterface):
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(
-        self, args: list[str]
+        self,
+        args: list[str],
     ) -> subprocess.CompletedProcess[str] | FailedGitResult:
         cmd = ["git", *args]
 
@@ -135,7 +138,7 @@ class GitService(GitInterface):
                 self.console.print("[green]✅[/ green] Staged all changes")
                 return True
             self.console.print(
-                f"[red]❌[/ red] Failed to stage changes: {result.stderr}"
+                f"[red]❌[/ red] Failed to stage changes: {result.stderr}",
             )
             return False
         except Exception as e:
@@ -156,7 +159,9 @@ class GitService(GitInterface):
             return False
 
     def _handle_commit_failure(
-        self, result: subprocess.CompletedProcess[str] | FailedGitResult, message: str
+        self,
+        result: subprocess.CompletedProcess[str] | FailedGitResult,
+        message: str,
     ) -> bool:
         if "files were modified by this hook" in result.stderr:
             return self._retry_commit_after_restage(message)
@@ -165,13 +170,13 @@ class GitService(GitInterface):
 
     def _retry_commit_after_restage(self, message: str) -> bool:
         self.console.print(
-            "[yellow]🔄[/yellow] Hooks modified files - attempting to re-stage and retry commit"
+            "[yellow]🔄[/yellow] Hooks modified files - attempting to re-stage and retry commit",
         )
 
         add_result = self._run_git_command(GIT_COMMANDS["add_updated"])
         if add_result.returncode != 0:
             self.console.print(
-                f"[red]❌[/ red] Failed to re-stage files: {add_result.stderr}"
+                f"[red]❌[/ red] Failed to re-stage files: {add_result.stderr}",
             )
             return False
 
@@ -179,23 +184,24 @@ class GitService(GitInterface):
         retry_result = self._run_git_command(cmd)
         if retry_result.returncode == 0:
             self.console.print(
-                f"[green]✅[/ green] Committed after re-staging: {message}"
+                f"[green]✅[/ green] Committed after re-staging: {message}",
             )
             return True
 
         self.console.print(
-            f"[red]❌[/ red] Commit failed on retry: {retry_result.stderr}"
+            f"[red]❌[/ red] Commit failed on retry: {retry_result.stderr}",
         )
         return False
 
     def _handle_hook_error(
-        self, result: subprocess.CompletedProcess[str] | FailedGitResult
+        self,
+        result: subprocess.CompletedProcess[str] | FailedGitResult,
     ) -> bool:
         if "pre-commit" in result.stderr or "hook" in result.stderr.lower():
             self.console.print("[red]❌[/ red] Commit blocked by hooks")
             if result.stderr.strip():
                 self.console.print(
-                    f"[yellow]Hook output: [/ yellow]\n{result.stderr.strip()}"
+                    f"[yellow]Hook output: [/ yellow]\n{result.stderr.strip()}",
                 )
         else:
             self.console.print(f"[red]❌[/ red] Commit failed: {result.stderr}")
@@ -251,7 +257,7 @@ class GitService(GitInterface):
     def _display_push_results(self, pushed_refs: list[str]) -> None:
         if pushed_refs:
             self.console.print(
-                f"[green]✅[/ green] Successfully pushed {len(pushed_refs)} ref(s) to remote: "
+                f"[green]✅[/ green] Successfully pushed {len(pushed_refs)} ref(s) to remote: ",
             )
             for ref in pushed_refs:
                 self.console.print(f" [dim]→ {ref}[/ dim]")
@@ -265,11 +271,11 @@ class GitService(GitInterface):
                 commit_count = int(result.stdout.strip())
                 if commit_count > 0:
                     self.console.print(
-                        f"[green]✅[/ green] Pushed {commit_count} commit(s) to remote"
+                        f"[green]✅[/ green] Pushed {commit_count} commit(s) to remote",
                     )
                 else:
                     self.console.print(
-                        "[green]✅[/ green] Pushed to remote (up to date)"
+                        "[green]✅[/ green] Pushed to remote (up to date)",
                     )
             else:
                 self.console.print("[green]✅[/ green] Successfully pushed to remote")
@@ -377,7 +383,7 @@ class GitService(GitInterface):
 
         except Exception as e:
             self.console.print(
-                f"[yellow]⚠️[/yellow] Error getting changed files by extension: {e}"
+                f"[yellow]⚠️[/yellow] Error getting changed files by extension: {e}",
             )
             return []
 
@@ -396,12 +402,11 @@ class GitService(GitInterface):
             result = self._run_git_command(["reset", "--hard", commit_hash])
             if result.returncode == 0:
                 self.console.print(
-                    f"[green]✅[/green] Repository reset to {commit_hash[:8]}"
+                    f"[green]✅[/green] Repository reset to {commit_hash[:8]}",
                 )
                 return True
-            else:
-                self.console.print(f"[red]❌[/red] Reset failed: {result.stderr}")
-                return False
+            self.console.print(f"[red]❌[/red] Reset failed: {result.stderr}")
+            return False
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error during reset: {e}")
             return False

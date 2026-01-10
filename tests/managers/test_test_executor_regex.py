@@ -6,6 +6,7 @@ to prevent bugs like the collection regex failure (2025-11-07).
 References:
     - Bug fix: crackerjack/managers/test_executor.py:194
     - Documentation: docs/progress-indicator-analysis.md
+
 """
 
 import re
@@ -16,7 +17,7 @@ import pytest
 class TestCollectionRegexPatterns:
     """Test regex patterns for pytest collection output parsing."""
 
-    def test_collection_completion_pattern_basic(self):
+    def test_collection_completion_pattern_basic(self) -> None:
         """Test basic collection completion pattern matches pytest output."""
         # This is the fixed pattern from test_executor.py:195
         pattern = r"(\d+)\s+(?:item|test)"
@@ -37,7 +38,7 @@ class TestCollectionRegexPatterns:
                 actual_count == expected_count
             ), f"Expected {expected_count}, got {actual_count}"
 
-    def test_collection_completion_pattern_with_timing(self):
+    def test_collection_completion_pattern_with_timing(self) -> None:
         """Test collection pattern matches output with timing information."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -53,7 +54,7 @@ class TestCollectionRegexPatterns:
             actual_count = int(match.group(1))
             assert actual_count == expected_count
 
-    def test_collection_completion_pattern_alternative_formats(self):
+    def test_collection_completion_pattern_alternative_formats(self) -> None:
         """Test collection pattern matches alternative pytest output formats."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -69,7 +70,7 @@ class TestCollectionRegexPatterns:
             actual_count = int(match.group(1))
             assert actual_count == expected_count
 
-    def test_collection_completion_pattern_plural_singular(self):
+    def test_collection_completion_pattern_plural_singular(self) -> None:
         """Test pattern handles both singular and plural forms."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -86,7 +87,7 @@ class TestCollectionRegexPatterns:
             actual_count = int(match.group(1))
             assert actual_count == expected_count
 
-    def test_collection_completion_pattern_no_false_positives(self):
+    def test_collection_completion_pattern_no_false_positives(self) -> None:
         """Test pattern doesn't match unrelated lines."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -106,7 +107,7 @@ class TestCollectionRegexPatterns:
             match = re.search(pattern, line)
             assert match is None, f"Pattern should NOT match '{line}', but got {match}"
 
-    def test_collection_completion_pattern_edge_cases(self):
+    def test_collection_completion_pattern_edge_cases(self) -> None:
         """Test pattern handles edge cases correctly."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -123,7 +124,7 @@ class TestCollectionRegexPatterns:
             actual_count = int(match.group(1))
             assert actual_count == expected_count
 
-    def test_broken_pattern_does_not_match(self):
+    def test_broken_pattern_does_not_match(self) -> None:
         """Verify the old broken pattern fails to match valid input.
 
         This test documents the bug that was fixed in 2025-11-07.
@@ -150,7 +151,7 @@ class TestCollectionRegexPatterns:
 class TestCollectionIntegration:
     """Integration tests simulating real pytest output parsing."""
 
-    def test_parse_real_pytest_collection_output(self):
+    def test_parse_real_pytest_collection_output(self) -> None:
         """Test parsing actual pytest collection output sequences."""
         from crackerjack.managers.test_progress import TestProgress
 
@@ -180,7 +181,7 @@ class TestCollectionIntegration:
         assert progress.is_collecting is False
         assert progress.collection_status == "Collection complete"
 
-    def test_collection_progress_updates(self):
+    def test_collection_progress_updates(self) -> None:
         """Test that collection progress updates correctly through lifecycle."""
         from crackerjack.managers.test_progress import TestProgress
 
@@ -211,7 +212,7 @@ class TestCollectionIntegration:
 class TestRegexSafety:
     """Tests to ensure regex patterns are safe and efficient."""
 
-    def test_pattern_does_not_cause_catastrophic_backtracking(self):
+    def test_pattern_does_not_cause_catastrophic_backtracking(self) -> None:
         """Ensure pattern doesn't have exponential time complexity."""
         import time
 
@@ -229,7 +230,7 @@ class TestRegexSafety:
         assert match is not None
         assert int(match.group(1)) == 123
 
-    def test_pattern_handles_malformed_input_safely(self):
+    def test_pattern_handles_malformed_input_safely(self) -> None:
         """Test pattern handles malformed/malicious input without crashing."""
         pattern = r"(\d+)\s+(?:item|test)"
 
@@ -251,7 +252,7 @@ class TestRegexSafety:
 
 
 @pytest.mark.parametrize(
-    "line,expected_count,should_match",
+    ("line", "expected_count", "should_match"),
     [
         # Valid collection patterns (should match)
         ("collected 1 item", 1, True),
@@ -265,7 +266,7 @@ class TestRegexSafety:
         ("tests/managers/test_test_executor_regex.py::TestCollectionPattern::test_collection_pattern_parametrized[=== 5000 tests collected ===-5000]", 5000, False),
     ],
 )
-def test_collection_pattern_parametrized(line: str, expected_count: int, should_match: bool):
+def test_collection_pattern_parametrized(line: str, expected_count: int, should_match: bool) -> None:
     """Parametrized test for collection pattern across various inputs."""
     # Updated regex matching the implementation
     pattern = r"(?:collected\s+)?(\d+)\s+(?:item|test)s?(?:\s+collected)?"

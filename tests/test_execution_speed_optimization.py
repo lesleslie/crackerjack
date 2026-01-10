@@ -12,8 +12,8 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
 
     @pytest.mark.asyncio
     async def test_parallel_agent_execution_performance(
-        self, performance_benchmark_context
-    ):
+        self, performance_benchmark_context,
+    ) -> None:
         """Test that parallel execution improves performance."""
         # issues = create_mock_issues(count=100, types=5)  # Mixed issue types
         #
@@ -36,9 +36,8 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
         # self.assert_performance_improvement(
         #     sequential_time, parallel_time, min_improvement=0.30
         # )
-        pass
 
-    def test_issue_caching_effectiveness(self):
+    def test_issue_caching_effectiveness(self) -> None:
         """Test that issue caching provides expected hit rates."""
         # coordinator = AgentCoordinator()
         #
@@ -64,9 +63,8 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
         #     # Verify cache hit rate
         #     cache_hit_rate = coordinator.get_cache_hit_rate()
         #     assert cache_hit_rate >= 0.90  # 90%+ hit rate for identical issues
-        pass
 
-    def test_smart_agent_selection_performance(self):
+    def test_smart_agent_selection_performance(self) -> None:
         """Test that smart agent selection reduces unnecessary checks."""
         # coordinator = AgentCoordinator()
         #
@@ -93,10 +91,9 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
         #     # Should use O(1) lookup for single-candidate issue types
         #     # and only check confidence for multiple candidates
         #     assert len(confidence_checks) <= len(issues)
-        pass
 
     @pytest.mark.asyncio
-    async def test_progressive_enhancement_early_exit(self):
+    async def test_progressive_enhancement_early_exit(self) -> None:
         """Test progressive enhancement with early exit optimization."""
         # coordinator = AgentCoordinator(progressive_enhancement=True)
         #
@@ -127,10 +124,9 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
         #
         #     # Should complete after quick fixes without processing complex issues
         #     assert result.processed_count == len(quick_fix_issues)
-        pass
 
     @pytest.mark.asyncio
-    async def test_parallel_hook_execution(self):
+    async def test_parallel_hook_execution(self) -> None:
         """Test parallel hook execution performance."""
         # hook_manager = HookManagerImpl()
         #
@@ -161,13 +157,12 @@ class TestExecutionSpeedOptimization(BaseCrackerjackFeatureTest):
         # self.assert_performance_improvement(
         #     sequential_time, parallel_time, min_improvement=0.25
         # )
-        pass
 
 
 class TestCachingSystem(BaseCrackerjackFeatureTest):
     """Test caching system effectiveness and correctness."""
 
-    def test_file_content_caching(self):
+    def test_file_content_caching(self) -> None:
         """Test file content caching across agents."""
         # context = AgentContext()
         # test_file = Path("/tmp/test_file.py")
@@ -184,9 +179,8 @@ class TestCachingSystem(BaseCrackerjackFeatureTest):
         #     assert mock_read.call_count == 1  # No additional file read
         #
         #     assert content1 == content2
-        pass
 
-    def test_cache_invalidation(self):
+    def test_cache_invalidation(self) -> None:
         """Test cache invalidation between iterations."""
         # context = AgentContext()
         # test_file = Path("/tmp/test_file.py")
@@ -209,9 +203,8 @@ class TestCachingSystem(BaseCrackerjackFeatureTest):
         #     assert content1 != content2
         #     assert content2 == "modified content"
         #     assert mock_read.call_count == 2
-        pass
 
-    def test_cache_memory_management(self):
+    def test_cache_memory_management(self) -> None:
         """Test cache doesn't grow unbounded."""
         # context = AgentContext(max_cache_size=5)
         #
@@ -223,9 +216,8 @@ class TestCachingSystem(BaseCrackerjackFeatureTest):
         #
         # # Cache should not exceed limit
         # assert len(context._file_cache) <= 5
-        pass
 
-    def test_cache_hit_rate_metrics(self):
+    def test_cache_hit_rate_metrics(self) -> None:
         """Test cache hit rate measurement."""
         # coordinator = AgentCoordinator()
         #
@@ -245,4 +237,3 @@ class TestCachingSystem(BaseCrackerjackFeatureTest):
         #
         # hit_rate = coordinator.get_cache_hit_rate()
         # assert 0.0 <= hit_rate <= 1.0
-        pass

@@ -44,7 +44,8 @@ class PipAuditAdapter(BaseToolAdapter):
     def __init__(self, settings: PipAuditSettings | None = None) -> None:
         super().__init__(settings=settings)
         logger.debug(
-            "PipAuditAdapter initialized", extra={"has_settings": settings is not None}
+            "PipAuditAdapter initialized",
+            extra={"has_settings": settings is not None},
         )
 
     async def init(self) -> None:
@@ -82,7 +83,8 @@ class PipAuditAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -195,7 +197,7 @@ class PipAuditAdapter(BaseToolAdapter):
                 dep.get("name")
                 for dep in data.get("dependencies", [])
                 if dep.get("vulns")
-            }
+            },
         )
 
     async def parse_output(

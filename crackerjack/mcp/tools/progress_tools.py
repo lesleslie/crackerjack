@@ -52,11 +52,11 @@ def _build_dict_format_progress(
         "iteration": progress_data.get("iteration", iteration),
         "max_iterations": progress_data.get("max_iterations", max_iterations),
         "overall_progress": _clamp_progress(
-            progress_data.get("overall_progress", overall_progress)
+            progress_data.get("overall_progress", overall_progress),
         ),
         "current_stage": progress_data.get("type", current_stage),
         "stage_progress": _clamp_progress(
-            progress_data.get("stage_progress", stage_progress)
+            progress_data.get("stage_progress", stage_progress),
         ),
         "message": progress_data.get("message", message),
         "timestamp": _get_timestamp(),
@@ -190,7 +190,8 @@ async def _execute_session_action(
 
 
 async def _handle_session_management(
-    action: str, checkpoint_name: str | None = None
+    action: str,
+    checkpoint_name: str | None = None,
 ) -> str:
     context = get_context()
     if not context:
@@ -202,7 +203,10 @@ async def _handle_session_management(
             return '{"error": "State manager not available"}'
 
         return await _execute_session_action(
-            state_manager, action, checkpoint_name, context
+            state_manager,
+            action,
+            checkpoint_name,
+            context,
         )
 
     except Exception as e:

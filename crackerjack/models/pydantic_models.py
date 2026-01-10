@@ -335,7 +335,7 @@ class WorkflowOptions(BaseModel):
             cleanup=CleanupConfig.from_settings(getattr(settings, "cleanup", {})),
             advanced=AdvancedConfig.from_settings(getattr(settings, "advanced", {})),
             mcp_server=MCPServerConfig.from_settings(
-                getattr(settings, "mcp_server", {})
+                getattr(settings, "mcp_server", {}),
             ),
             zuban_lsp=ZubanLSPConfig.from_settings(getattr(settings, "zuban_lsp", {})),
         )

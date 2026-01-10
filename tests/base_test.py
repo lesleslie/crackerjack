@@ -113,8 +113,8 @@ All notable changes to this project will be documented in this file.
         }
 
     def assert_performance_improvement(
-        self, baseline_time: float, optimized_time: float, min_improvement: float = 0.30
-    ):
+        self, baseline_time: float, optimized_time: float, min_improvement: float = 0.30,
+    ) -> None:
         """Assert that performance improvement meets minimum threshold."""
         improvement = (baseline_time - optimized_time) / baseline_time
         assert improvement >= min_improvement, (
@@ -122,7 +122,7 @@ All notable changes to this project will be documented in this file.
             f"(baseline: {baseline_time:.3f}s, optimized: {optimized_time:.3f}s)"
         )
 
-    def assert_no_regression(self, before_metrics: dict, after_metrics: dict):
+    def assert_no_regression(self, before_metrics: dict, after_metrics: dict) -> None:
         """Assert that new features don't regress existing functionality."""
         for metric_name, before_value in before_metrics.items():
             after_value = after_metrics.get(metric_name)
@@ -133,7 +133,7 @@ All notable changes to this project will be documented in this file.
 
 
 def create_mock_issues(
-    count: int, types: int = 5, complexity_distribution: str = "normal"
+    count: int, types: int = 5, complexity_distribution: str = "normal",
 ) -> list[Issue]:
     """Create realistic mock issues for testing."""
     import random
@@ -154,7 +154,7 @@ def create_mock_issues(
         # Vary complexity based on distribution
         if complexity_distribution == "realistic":
             confidence = random.triangular(
-                0.3, 0.95, 0.7
+                0.3, 0.95, 0.7,
             )  # Most issues medium confidence
         else:
             confidence = random.uniform(0.3, 0.95)
@@ -219,7 +219,7 @@ class PerformanceTestHelper:
         optimized_time: float,
         target_improvement: float,
         feature_name: str,
-    ):
+    ) -> None:
         """Assert performance improvement meets target."""
         actual_improvement = (baseline_time - optimized_time) / baseline_time
         assert actual_improvement >= target_improvement, (

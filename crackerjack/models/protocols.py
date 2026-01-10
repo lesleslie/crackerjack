@@ -145,7 +145,8 @@ class GitInterface(t.Protocol):
         def push_with_tags(self) -> bool: ...
 
         def get_commit_message_suggestions(
-            self, changed_files: list[str]
+            self,
+            changed_files: list[str],
         ) -> list[str]: ...
 
         def get_unpushed_commit_count(self) -> int: ...
@@ -166,7 +167,9 @@ class HookManager(t.Protocol):
     def set_config_path(self, path: str | t.Any) -> None: ...
 
     def get_hook_summary(
-        self, results: t.Any, elapsed_time: float | None = None
+        self,
+        results: t.Any,
+        elapsed_time: float | None = None,
     ) -> t.Any: ...
 
     if TYPE_CHECKING:
@@ -184,7 +187,9 @@ class SecurityAwareHookManager(HookManager, t.Protocol):
     def has_security_critical_failures(self, results: list[t.Any]) -> bool: ...
 
     def get_security_audit_report(
-        self, fast_results: list[t.Any], comprehensive_results: list[t.Any]
+        self,
+        fast_results: list[t.Any],
+        comprehensive_results: list[t.Any],
     ) -> dict[str, t.Any]: ...
 
 
@@ -371,11 +376,14 @@ class HookLockManagerProtocol(t.Protocol):
 @t.runtime_checkable
 class DocumentationServiceProtocol(ServiceProtocol, t.Protocol):
     def extract_api_documentation(
-        self, source_paths: list[Path]
+        self,
+        source_paths: list[Path],
     ) -> dict[str, t.Any]: ...
 
     def generate_documentation(
-        self, template_name: str, context: dict[str, t.Any]
+        self,
+        template_name: str,
+        context: dict[str, t.Any],
     ) -> str: ...
 
     def validate_documentation(self, doc_paths: list[Path]) -> list[dict[str, str]]: ...
@@ -392,7 +400,8 @@ class APIExtractorProtocol(t.Protocol):
     def extract_protocol_definitions(self, protocol_file: Path) -> dict[str, t.Any]: ...
 
     def extract_service_interfaces(
-        self, service_files: list[Path]
+        self,
+        service_files: list[Path],
     ) -> dict[str, t.Any]: ...
 
     def extract_cli_commands(self, cli_files: list[Path]) -> dict[str, t.Any]: ...
@@ -407,15 +416,20 @@ class DocumentationGeneratorProtocol(t.Protocol):
     def generate_user_guide(self, template_context: dict[str, t.Any]) -> str: ...
 
     def generate_changelog_update(
-        self, version: str, changes: dict[str, t.Any]
+        self,
+        version: str,
+        changes: dict[str, t.Any],
     ) -> str: ...
 
     def render_template(
-        self, template_path: Path, context: dict[str, t.Any]
+        self,
+        template_path: Path,
+        context: dict[str, t.Any],
     ) -> str: ...
 
     def generate_cross_references(
-        self, api_data: dict[str, t.Any]
+        self,
+        api_data: dict[str, t.Any],
     ) -> dict[str, list[str]]: ...
 
 
@@ -424,15 +438,20 @@ class DocumentationValidatorProtocol(t.Protocol):
     def validate_links(self, doc_content: str) -> list[dict[str, str]]: ...
 
     def check_documentation_freshness(
-        self, api_data: dict[str, t.Any], doc_paths: list[Path]
+        self,
+        api_data: dict[str, t.Any],
+        doc_paths: list[Path],
     ) -> dict[str, t.Any]: ...
 
     def validate_cross_references(
-        self, docs: dict[str, str]
+        self,
+        docs: dict[str, str],
     ) -> list[dict[str, str]]: ...
 
     def calculate_coverage_metrics(
-        self, api_data: dict[str, t.Any], existing_docs: dict[str, str]
+        self,
+        api_data: dict[str, t.Any],
+        existing_docs: dict[str, str],
     ) -> dict[str, float]: ...
 
 
@@ -600,11 +619,15 @@ class PerformanceMonitorProtocol(t.Protocol):
     def start_phase(self, workflow_id: str, phase_name: str) -> None: ...
 
     def end_phase(
-        self, workflow_id: str, phase_name: str, success: bool = True
+        self,
+        workflow_id: str,
+        phase_name: str,
+        success: bool = True,
     ) -> t.Any: ...
 
     def get_performance_summary(
-        self, last_n_workflows: int = 10
+        self,
+        last_n_workflows: int = 10,
     ) -> dict[str, t.Any]: ...
 
     def get_benchmark_trends(self) -> dict[str, dict[str, t.Any]]: ...
@@ -778,7 +801,8 @@ class LogManagementProtocol(ServiceProtocol, t.Protocol):
     def write_log(self, message: str, level: str = "INFO") -> None: ...
 
     def get_logs(
-        self, filter_criteria: dict[str, t.Any] | None = None
+        self,
+        filter_criteria: dict[str, t.Any] | None = None,
     ) -> list[dict[str, t.Any]]: ...
 
 
@@ -846,7 +870,9 @@ class SmartFileFilterProtocol(ServiceProtocol, t.Protocol):
     def get_all_modified_files(self) -> list[Path]: ...
 
     def filter_by_extensions(
-        self, files: list[Path], extensions: list[str]
+        self,
+        files: list[Path],
+        extensions: list[str],
     ) -> list[Path]: ...
 
     def get_python_files(self, files: list[Path]) -> list[Path]: ...
@@ -868,7 +894,8 @@ class SafeFileModifierProtocol(ServiceProtocol, t.Protocol):
 @t.runtime_checkable
 class VersionAnalyzerProtocol(t.Protocol):
     async def recommend_version_bump(
-        self, since_version: str | None = None
+        self,
+        since_version: str | None = None,
     ) -> t.Any: ...
 
 
@@ -886,7 +913,10 @@ class HealthMetricsServiceProtocol(ServiceProtocol, t.Protocol):
 @t.runtime_checkable
 class ChangelogGeneratorProtocol(t.Protocol):
     def generate_changelog_from_commits(
-        self, changelog_path: Path, version: str, since_version: str | None = None
+        self,
+        changelog_path: Path,
+        version: str,
+        since_version: str | None = None,
     ) -> bool: ...
 
 
@@ -917,7 +947,10 @@ class AgentTrackerProtocol(t.Protocol):
     def set_coordinator_status(self, status: str) -> None: ...
 
     def track_agent_processing(
-        self, agent_name: str, issue: t.Any, confidence: float
+        self,
+        agent_name: str,
+        issue: t.Any,
+        confidence: float,
     ) -> None: ...
 
     def track_agent_complete(self, agent_name: str, result: t.Any) -> None: ...
@@ -935,7 +968,9 @@ class AgentDebuggerProtocol(t.Protocol):
     ) -> None: ...
 
     def get_activity_log(
-        self, agent_name: str | None = None, limit: int = 100
+        self,
+        agent_name: str | None = None,
+        limit: int = 100,
     ) -> list[dict[str, t.Any]]: ...
 
     def enable_verbose_mode(self, enabled: bool = True) -> None: ...

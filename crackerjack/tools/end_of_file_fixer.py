@@ -42,7 +42,7 @@ def fix_end_of_file(file_path: Path) -> bool:
 def _collect_files_to_check(args: argparse.Namespace) -> list[Path]:
     if not args.files:
         files = get_files_by_extension(
-            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"]
+            [".py", ".md", ".txt", ".yaml", ".yml", ".toml", ".json"],
         )
         if not files:
             files = list(Path.cwd().rglob("*.py"))
@@ -80,7 +80,7 @@ def _process_files_in_fix_mode(files: list[Path]) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Ensure files end with exactly one newline"
+        description="Ensure files end with exactly one newline",
     )
     parser.add_argument(
         "files",

@@ -46,11 +46,13 @@ class ClaudeCodeBridge:
 
         if not self._ai_available:
             self.logger.warning(
-                "Claude AI adapter not available - AI-powered fixes disabled"
+                "Claude AI adapter not available - AI-powered fixes disabled",
             )
 
     def should_consult_external_agent(
-        self, issue: Issue, internal_confidence: float
+        self,
+        issue: Issue,
+        internal_confidence: float,
     ) -> bool:
         if internal_confidence >= EXTERNAL_CONSULTATION_THRESHOLD:
             return False
@@ -71,7 +73,10 @@ class ClaudeCodeBridge:
         return agent_file.exists()
 
     async def consult_external_agent(
-        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        agent_name: str,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         cache_key = (
             f"{agent_name}:{issue.type.value}:{issue.file_path}:{issue.line_number}"
@@ -86,7 +91,9 @@ class ClaudeCodeBridge:
             return {"status": "unavailable", "recommendations": []}
 
         consultation = await self._generate_agent_consultation(
-            issue, agent_name, context
+            issue,
+            agent_name,
+            context,
         )
 
         if consultation.get("status") == "success":
@@ -95,7 +102,10 @@ class ClaudeCodeBridge:
         return consultation
 
     async def _generate_agent_consultation(
-        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        agent_name: str,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         consultation: dict[str, t.Any] = {
             "status": "success",
@@ -109,7 +119,7 @@ class ClaudeCodeBridge:
 
         if agent_name == "crackerjack-architect":
             consultation.update(
-                await self._consult_crackerjack_architect(issue, context)
+                await self._consult_crackerjack_architect(issue, context),
             )
         elif agent_name == "python-pro":
             consultation.update(await self._consult_python_pro(issue, context))
@@ -117,19 +127,21 @@ class ClaudeCodeBridge:
             consultation.update(await self._consult_security_auditor(issue, context))
         elif agent_name == "refactoring-specialist":
             consultation.update(
-                await self._consult_refactoring_specialist(issue, context)
+                await self._consult_refactoring_specialist(issue, context),
             )
         elif agent_name == "crackerjack-test-specialist":
             consultation.update(await self._consult_test_specialist(issue, context))
         else:
             consultation.update(
-                await self._consult_generic_agent(issue, agent_name, context)
+                await self._consult_generic_agent(issue, agent_name, context),
             )
 
         return consultation
 
     async def _consult_crackerjack_architect(
-        self, issue: Issue, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -155,7 +167,9 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_python_pro(
-        self, issue: Issue, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -181,7 +195,9 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_security_auditor(
-        self, issue: Issue, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -207,7 +223,9 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_refactoring_specialist(
-        self, issue: Issue, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -233,7 +251,9 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_test_specialist(
-        self, issue: Issue, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -259,7 +279,10 @@ class ClaudeCodeBridge:
         }
 
     async def _consult_generic_agent(
-        self, issue: Issue, agent_name: str, context: dict[str, t.Any] | None = None
+        self,
+        issue: Issue,
+        agent_name: str,
+        context: dict[str, t.Any] | None = None,
     ) -> dict[str, t.Any]:
         return {
             "recommendations": [
@@ -273,13 +296,15 @@ class ClaudeCodeBridge:
 
     async def _ensure_ai_fixer(self) -> t.Any:
         if not self._ai_available:
+            msg = "Claude AI adapter not available - install optional AI dependencies"
             raise RuntimeError(
-                "Claude AI adapter not available - install optional AI dependencies"
+                msg,
             )
 
         if self.ai_fixer is None:
             if ClaudeCodeFixer is None:
-                raise RuntimeError("ClaudeCodeFixer import failed")
+                msg = "ClaudeCodeFixer import failed"
+                raise RuntimeError(msg)
 
             self.ai_fixer = ClaudeCodeFixer()
             await self.ai_fixer.init()
@@ -288,7 +313,8 @@ class ClaudeCodeBridge:
         return self.ai_fixer
 
     def _extract_ai_response_fields(
-        self, ai_result: dict[str, t.Any]
+        self,
+        ai_result: dict[str, t.Any],
     ) -> tuple[str, str, float, list[str], list[str]]:
         fixed_code = str(ai_result.get("fixed_code", ""))
         explanation = str(ai_result.get("explanation", "No explanation"))
@@ -299,15 +325,17 @@ class ClaudeCodeBridge:
         return fixed_code, explanation, confidence, changes_made, potential_side_effects
 
     async def _apply_fix_to_file(
-        self, file_path: str, fixed_code: str, dry_run: bool
+        self,
+        file_path: str,
+        fixed_code: str,
+        dry_run: bool,
     ) -> dict[str, t.Any]:
-        modify_result = await self.file_modifier.apply_fix(
+        return await self.file_modifier.apply_fix(
             file_path=file_path,
             fixed_content=fixed_code,
             dry_run=dry_run,
             create_backup=True,
         )
-        return modify_result
 
     def _handle_successful_ai_fix(
         self,
@@ -319,7 +347,7 @@ class ClaudeCodeBridge:
         fix_type: str,
     ) -> FixResult:
         self.logger.info(
-            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})"
+            f"Successfully applied AI fix to {file_path} (confidence: {confidence:.2f})",
         )
 
         return FixResult(
@@ -339,7 +367,10 @@ class ClaudeCodeBridge:
         )
 
     def _handle_dry_run_response(
-        self, confidence: float, changes_made: list[str], issue: Issue
+        self,
+        confidence: float,
+        changes_made: list[str],
+        issue: Issue,
     ) -> FixResult:
         return FixResult(
             success=True,
@@ -366,11 +397,14 @@ class ClaudeCodeBridge:
         )
 
     def _handle_low_confidence_response(
-        self, confidence: float, explanation: str, issue: Issue
+        self,
+        confidence: float,
+        explanation: str,
+        issue: Issue,
     ) -> FixResult:
         min_confidence = 0.7
         self.logger.warning(
-            f"AI confidence {confidence:.2f} below threshold {min_confidence}"
+            f"AI confidence {confidence:.2f} below threshold {min_confidence}",
         )
 
         return FixResult(
@@ -386,7 +420,9 @@ class ClaudeCodeBridge:
         )
 
     async def _validate_ai_result(
-        self, ai_result: dict[str, t.Any], issue: Issue
+        self,
+        ai_result: dict[str, t.Any],
+        issue: Issue,
     ) -> tuple[str, str, float, list[str], list[str]] | None:
         if not ai_result.get("success"):
             ai_result.get("error", "Unknown AI error")
@@ -464,7 +500,7 @@ class ClaudeCodeBridge:
             fix_type = issue.type.value
 
             self.logger.info(
-                f"Consulting Claude AI for {fix_type} issue in {file_path}"
+                f"Consulting Claude AI for {fix_type} issue in {file_path}",
             )
 
             ai_result = await fixer.fix_code_issue(
@@ -479,13 +515,14 @@ class ClaudeCodeBridge:
                 if not ai_result.get("success"):
                     error_msg = ai_result.get("error", "Unknown AI error")
                     return self._handle_error_response(error_msg, issue)
-                else:
-                    _, explanation, confidence, *_ = self._extract_ai_response_fields(
-                        ai_result
-                    )
-                    return self._handle_low_confidence_response(
-                        confidence, explanation, issue
-                    )
+                _, explanation, confidence, *_ = self._extract_ai_response_fields(
+                    ai_result,
+                )
+                return self._handle_low_confidence_response(
+                    confidence,
+                    explanation,
+                    issue,
+                )
 
             (
                 fixed_code,
@@ -506,8 +543,7 @@ class ClaudeCodeBridge:
                     issue,
                     dry_run,
                 )
-            else:
-                return self._handle_dry_run_response(confidence, changes_made, issue)
+            return self._handle_dry_run_response(confidence, changes_made, issue)
 
         except Exception as e:
             self.logger.exception(f"Unexpected error in consult_on_issue: {e}")
@@ -522,7 +558,9 @@ class ClaudeCodeBridge:
             )
 
     def create_enhanced_fix_result(
-        self, base_result: FixResult, consultations: list[dict[str, t.Any]]
+        self,
+        base_result: FixResult,
+        consultations: list[dict[str, t.Any]],
     ) -> FixResult:
         enhanced_result = FixResult(
             success=base_result.success,
@@ -540,7 +578,7 @@ class ClaudeCodeBridge:
                     [
                         f"[{agent_name}] {rec}"
                         for rec in consultation.get("recommendations", [])
-                    ]
+                    ],
                 )
 
                 external_confidence = consultation.get("confidence", 0.0)

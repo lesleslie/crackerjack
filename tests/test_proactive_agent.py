@@ -1,8 +1,10 @@
 """Tests for crackerjack.agents.proactive_agent."""
 
-import pytest
 from pathlib import Path
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType
 from crackerjack.agents.proactive_agent import ProactiveAgent
 
@@ -19,7 +21,7 @@ class TestProactiveagent:
     - Performance validation (where applicable)
     """
 
-    def test_module_imports_successfully(self):
+    def test_module_imports_successfully(self) -> None:
         """Test that the module can be imported without errors."""
         import crackerjack.agents.proactive_agent
         assert crackerjack.agents.proactive_agent is not None
@@ -35,19 +37,18 @@ class TestProactiveagent:
         except Exception:
             pytest.skip("Agent requires specific configuration")
 
-    def test_proactiveagent_instantiation(self, proactiveagent_instance):
+    def test_proactiveagent_instantiation(self, proactiveagent_instance) -> None:
         """Test successful instantiation of ProactiveAgent."""
         assert proactiveagent_instance is not None
         assert isinstance(proactiveagent_instance, ProactiveAgent)
 
-        assert hasattr(proactiveagent_instance, '__class__')
+        assert hasattr(proactiveagent_instance, "__class__")
         assert proactiveagent_instance.__class__.__name__ == "ProactiveAgent"
 
-    def test_proactiveagent_properties(self, proactiveagent_instance):
+    def test_proactiveagent_properties(self, proactiveagent_instance) -> None:
         """Test ProactiveAgent properties and attributes."""
-
-        assert hasattr(proactiveagent_instance, '__dict__') or \
-         hasattr(proactiveagent_instance, '__slots__')
+        assert hasattr(proactiveagent_instance, "__dict__") or \
+         hasattr(proactiveagent_instance, "__slots__")
 
         str_repr = str(proactiveagent_instance)
         assert len(str_repr) > 0

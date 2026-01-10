@@ -22,7 +22,7 @@ class TestRefactoringAgentInitialization:
         """Create agent context for testing."""
         return AgentContext(project_path=tmp_path)
 
-    def test_initialization(self, context):
+    def test_initialization(self, context) -> None:
         """Test RefactoringAgent initializes correctly."""
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             agent = RefactoringAgent(context)
@@ -30,7 +30,7 @@ class TestRefactoringAgentInitialization:
             assert agent.context == context
             assert agent.semantic_insights == {}
 
-    def test_get_supported_types(self, context):
+    def test_get_supported_types(self, context) -> None:
         """Test agent supports complexity and dead code issues."""
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             agent = RefactoringAgent(context)
@@ -53,7 +53,7 @@ class TestRefactoringAgentCanHandle:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    async def test_can_handle_complexity_with_markers(self, agent):
+    async def test_can_handle_complexity_with_markers(self, agent) -> None:
         """Test high confidence for complexity issues with markers."""
         issue = Issue(
             id="comp-001",
@@ -66,7 +66,7 @@ class TestRefactoringAgentCanHandle:
 
         assert confidence == 0.9
 
-    async def test_can_handle_complexity_without_markers(self, agent):
+    async def test_can_handle_complexity_without_markers(self, agent) -> None:
         """Test lower confidence for complexity without markers."""
         issue = Issue(
             id="comp-002",
@@ -79,7 +79,7 @@ class TestRefactoringAgentCanHandle:
 
         assert confidence == 0.85
 
-    async def test_can_handle_dead_code_with_markers(self, agent):
+    async def test_can_handle_dead_code_with_markers(self, agent) -> None:
         """Test handling dead code issues with markers."""
         issue = Issue(
             id="dead-001",
@@ -92,7 +92,7 @@ class TestRefactoringAgentCanHandle:
 
         assert confidence == 0.8
 
-    async def test_can_handle_dead_code_without_markers(self, agent):
+    async def test_can_handle_dead_code_without_markers(self, agent) -> None:
         """Test handling dead code without markers."""
         issue = Issue(
             id="dead-002",
@@ -105,7 +105,7 @@ class TestRefactoringAgentCanHandle:
 
         assert confidence == 0.75
 
-    async def test_cannot_handle_unsupported_type(self, agent):
+    async def test_cannot_handle_unsupported_type(self, agent) -> None:
         """Test agent cannot handle unsupported issue types."""
         issue = Issue(
             id="sec-001",
@@ -131,7 +131,7 @@ class TestRefactoringAgentComplexityReduction:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    async def test_analyze_and_fix_complexity_issue(self, agent, tmp_path):
+    async def test_analyze_and_fix_complexity_issue(self, agent, tmp_path) -> None:
         """Test analyzing and fixing complexity issue."""
         test_file = tmp_path / "complex.py"
         test_file.write_text("""
@@ -159,7 +159,7 @@ def complex_function():
             mock_reduce.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_analyze_and_fix_dead_code_issue(self, agent, tmp_path):
+    async def test_analyze_and_fix_dead_code_issue(self, agent, tmp_path) -> None:
         """Test analyzing and fixing dead code issue."""
         test_file = tmp_path / "dead.py"
         test_file.write_text("import unused_module\n\ndef main():\n    pass\n")
@@ -180,7 +180,7 @@ def complex_function():
             mock_remove.assert_called_once_with(issue)
             assert result.success is True
 
-    async def test_analyze_and_fix_unsupported_type(self, agent):
+    async def test_analyze_and_fix_unsupported_type(self, agent) -> None:
         """Test analyzing unsupported issue type."""
         issue = Issue(
             id="test-001",
@@ -195,7 +195,7 @@ def complex_function():
         assert result.confidence == 0.0
         assert "cannot handle" in result.remaining_issues[0].lower()
 
-    async def test_reduce_complexity_no_file_path(self, agent):
+    async def test_reduce_complexity_no_file_path(self, agent) -> None:
         """Test reduce_complexity when no file path provided."""
         issue = Issue(
             id="comp-001",
@@ -210,7 +210,7 @@ def complex_function():
         assert result.success is False
         assert "No file path" in result.remaining_issues[0]
 
-    async def test_reduce_complexity_file_not_exists(self, agent, tmp_path):
+    async def test_reduce_complexity_file_not_exists(self, agent, tmp_path) -> None:
         """Test reduce_complexity when file doesn't exist."""
         issue = Issue(
             id="comp-001",
@@ -225,7 +225,7 @@ def complex_function():
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    async def test_reduce_complexity_syntax_error(self, agent, tmp_path):
+    async def test_reduce_complexity_syntax_error(self, agent, tmp_path) -> None:
         """Test reduce_complexity handles syntax errors."""
         test_file = tmp_path / "invalid.py"
         test_file.write_text("def broken(\n")  # Invalid syntax
@@ -258,7 +258,7 @@ class TestRefactoringAgentDeadCodeRemoval:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    async def test_remove_dead_code_no_file_path(self, agent):
+    async def test_remove_dead_code_no_file_path(self, agent) -> None:
         """Test remove_dead_code when no file path provided."""
         issue = Issue(
             id="dead-001",
@@ -273,7 +273,7 @@ class TestRefactoringAgentDeadCodeRemoval:
         assert result.success is False
         assert "No file path" in result.remaining_issues[0]
 
-    async def test_remove_dead_code_file_not_exists(self, agent, tmp_path):
+    async def test_remove_dead_code_file_not_exists(self, agent, tmp_path) -> None:
         """Test remove_dead_code when file doesn't exist."""
         issue = Issue(
             id="dead-001",
@@ -288,7 +288,7 @@ class TestRefactoringAgentDeadCodeRemoval:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    async def test_remove_dead_code_syntax_error(self, agent, tmp_path):
+    async def test_remove_dead_code_syntax_error(self, agent, tmp_path) -> None:
         """Test remove_dead_code handles syntax errors."""
         test_file = tmp_path / "invalid.py"
         test_file.write_text("def broken(\n")
@@ -320,7 +320,7 @@ class TestRefactoringAgentComplexityDetection:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_has_complexity_markers_cognitive_complexity(self, agent):
+    def test_has_complexity_markers_cognitive_complexity(self, agent) -> None:
         """Test detecting cognitive complexity marker."""
         issue = Issue(
             id="comp-001",
@@ -333,7 +333,7 @@ class TestRefactoringAgentComplexityDetection:
 
         assert result is True
 
-    def test_has_complexity_markers_too_complex(self, agent):
+    def test_has_complexity_markers_too_complex(self, agent) -> None:
         """Test detecting too complex marker."""
         issue = Issue(
             id="comp-002",
@@ -346,7 +346,7 @@ class TestRefactoringAgentComplexityDetection:
 
         assert result is True
 
-    def test_has_complexity_markers_nested(self, agent):
+    def test_has_complexity_markers_nested(self, agent) -> None:
         """Test detecting nested code marker."""
         issue = Issue(
             id="comp-003",
@@ -359,7 +359,7 @@ class TestRefactoringAgentComplexityDetection:
 
         assert result is True
 
-    def test_has_complexity_markers_no_message(self, agent):
+    def test_has_complexity_markers_no_message(self, agent) -> None:
         """Test complexity markers with no message."""
         issue = Issue(
             id="comp-004",
@@ -372,7 +372,7 @@ class TestRefactoringAgentComplexityDetection:
 
         assert result is False
 
-    def test_has_complexity_markers_none_found(self, agent):
+    def test_has_complexity_markers_none_found(self, agent) -> None:
         """Test when no complexity markers found."""
         issue = Issue(
             id="comp-005",
@@ -397,7 +397,7 @@ class TestRefactoringAgentDeadCodeDetection:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_has_dead_code_markers_unused(self, agent):
+    def test_has_dead_code_markers_unused(self, agent) -> None:
         """Test detecting unused code marker."""
         issue = Issue(
             id="dead-001",
@@ -410,7 +410,7 @@ class TestRefactoringAgentDeadCodeDetection:
 
         assert result is True
 
-    def test_has_dead_code_markers_imported_unused(self, agent):
+    def test_has_dead_code_markers_imported_unused(self, agent) -> None:
         """Test detecting imported but unused marker."""
         issue = Issue(
             id="dead-002",
@@ -423,7 +423,7 @@ class TestRefactoringAgentDeadCodeDetection:
 
         assert result is True
 
-    def test_has_dead_code_markers_unreachable(self, agent):
+    def test_has_dead_code_markers_unreachable(self, agent) -> None:
         """Test detecting unreachable code marker."""
         issue = Issue(
             id="dead-003",
@@ -436,7 +436,7 @@ class TestRefactoringAgentDeadCodeDetection:
 
         assert result is True
 
-    def test_has_dead_code_markers_no_message(self, agent):
+    def test_has_dead_code_markers_no_message(self, agent) -> None:
         """Test dead code markers with no message."""
         issue = Issue(
             id="dead-004",
@@ -449,7 +449,7 @@ class TestRefactoringAgentDeadCodeDetection:
 
         assert result is False
 
-    def test_has_dead_code_markers_none_found(self, agent):
+    def test_has_dead_code_markers_none_found(self, agent) -> None:
         """Test when no dead code markers found."""
         issue = Issue(
             id="dead-005",
@@ -474,7 +474,7 @@ class TestRefactoringAgentComplexityCalculation:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_estimate_function_complexity_simple(self, agent):
+    def test_estimate_function_complexity_simple(self, agent) -> None:
         """Test estimating complexity for simple function."""
         function_body = """
     return x + y
@@ -484,7 +484,7 @@ class TestRefactoringAgentComplexityCalculation:
         # Base complexity is 1
         assert complexity >= 1
 
-    def test_estimate_function_complexity_with_conditionals(self, agent):
+    def test_estimate_function_complexity_with_conditionals(self, agent) -> None:
         """Test estimating complexity with conditionals."""
         function_body = """
     if x > 10:
@@ -499,7 +499,7 @@ class TestRefactoringAgentComplexityCalculation:
         # Base + 2 conditionals (if, elif)
         assert complexity >= 3
 
-    def test_estimate_function_complexity_with_loops(self, agent):
+    def test_estimate_function_complexity_with_loops(self, agent) -> None:
         """Test estimating complexity with loops."""
         function_body = """
     for item in items:
@@ -511,7 +511,7 @@ class TestRefactoringAgentComplexityCalculation:
         # Base + for + if
         assert complexity >= 3
 
-    def test_estimate_function_complexity_nested(self, agent):
+    def test_estimate_function_complexity_nested(self, agent) -> None:
         """Test estimating complexity with nested code."""
         function_body = """
     for item in items:
@@ -524,7 +524,7 @@ class TestRefactoringAgentComplexityCalculation:
         # Should detect nesting
         assert complexity >= 4
 
-    def test_estimate_function_complexity_empty(self, agent):
+    def test_estimate_function_complexity_empty(self, agent) -> None:
         """Test estimating complexity for empty function."""
         complexity = agent._estimate_function_complexity("")
 
@@ -542,26 +542,26 @@ class TestRefactoringAgentSemanticHelpers:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_is_semantic_function_definition(self, agent):
+    def test_is_semantic_function_definition(self, agent) -> None:
         """Test detecting function definitions."""
         assert agent._is_semantic_function_definition("def foo():") is True
         assert agent._is_semantic_function_definition("def bar(x, y):") is True
         assert agent._is_semantic_function_definition("async def baz():") is False
         assert agent._is_semantic_function_definition("    return x") is False
 
-    def test_should_skip_semantic_line_empty(self, agent):
+    def test_should_skip_semantic_line_empty(self, agent) -> None:
         """Test skipping empty lines in semantic analysis."""
         result = agent._should_skip_semantic_line("", None, "")
 
         assert result is True
 
-    def test_should_skip_semantic_line_comment(self, agent):
+    def test_should_skip_semantic_line_comment(self, agent) -> None:
         """Test skipping comment lines in semantic analysis."""
         result = agent._should_skip_semantic_line("# This is a comment", None, "# This is a comment")
 
         assert result is True
 
-    def test_should_skip_semantic_line_code(self, agent):
+    def test_should_skip_semantic_line_code(self, agent) -> None:
         """Test not skipping code lines."""
         result = agent._should_skip_semantic_line("return True", None, "    return True")
 
@@ -579,7 +579,7 @@ class TestRefactoringAgentImportRemoval:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_should_remove_import_line_simple_import(self, agent):
+    def test_should_remove_import_line_simple_import(self, agent) -> None:
         """Test identifying simple import to remove."""
         unused_import = {"type": "import", "name": "os"}
         line = "import os"
@@ -588,7 +588,7 @@ class TestRefactoringAgentImportRemoval:
 
         assert result is True
 
-    def test_should_remove_import_line_from_import(self, agent):
+    def test_should_remove_import_line_from_import(self, agent) -> None:
         """Test identifying from import to remove."""
         unused_import = {"type": "from_import", "name": "Path"}
         line = "from pathlib import Path"
@@ -597,7 +597,7 @@ class TestRefactoringAgentImportRemoval:
 
         assert result is True
 
-    def test_should_remove_import_line_no_match(self, agent):
+    def test_should_remove_import_line_no_match(self, agent) -> None:
         """Test not removing non-matching import."""
         unused_import = {"type": "import", "name": "os"}
         line = "import sys"
@@ -606,7 +606,7 @@ class TestRefactoringAgentImportRemoval:
 
         assert result is False
 
-    def test_should_remove_import_line_wrong_type(self, agent):
+    def test_should_remove_import_line_wrong_type(self, agent) -> None:
         """Test with unknown import type."""
         unused_import = {"type": "unknown", "name": "os"}
         line = "import os"
@@ -627,7 +627,7 @@ class TestRefactoringAgentPatternDetection:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_extract_nested_conditions_long_line(self, agent):
+    def test_extract_nested_conditions_long_line(self, agent) -> None:
         """Test extracting nested conditions from long lines."""
         content = """
 def check():
@@ -639,7 +639,7 @@ def check():
         # Should suggest extracting to helper method
         assert "_is_complex_condition" in result or result == content
 
-    def test_simplify_boolean_expressions_complex(self, agent):
+    def test_simplify_boolean_expressions_complex(self, agent) -> None:
         """Test simplifying complex boolean expressions."""
         content = """
 def validate():
@@ -651,7 +651,7 @@ def validate():
         # Should suggest extracting to validation method
         assert "_validate_complex_condition" in result or result == content
 
-    def test_is_empty_except_block(self, agent):
+    def test_is_empty_except_block(self, agent) -> None:
         """Test detecting empty except blocks."""
         lines = ["try:", "    do_something()", "except:", "    pass"]
 
@@ -659,7 +659,7 @@ def validate():
 
         assert result is True
 
-    def test_is_not_empty_except_block(self, agent):
+    def test_is_not_empty_except_block(self, agent) -> None:
         """Test not detecting non-empty except blocks."""
         lines = ["try:", "    do_something()", "except Exception as e:", "    handle(e)"]
 
@@ -679,7 +679,7 @@ class TestRefactoringAgentValidation:
         with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
             return RefactoringAgent(context)
 
-    def test_validate_complexity_issue_no_path(self, agent):
+    def test_validate_complexity_issue_no_path(self, agent) -> None:
         """Test validating complexity issue without path."""
         issue = Issue(
             id="comp-001",
@@ -694,7 +694,7 @@ class TestRefactoringAgentValidation:
         assert result is not None
         assert result.success is False
 
-    def test_validate_complexity_issue_file_not_exists(self, agent, tmp_path):
+    def test_validate_complexity_issue_file_not_exists(self, agent, tmp_path) -> None:
         """Test validating complexity issue with non-existent file."""
         issue = Issue(
             id="comp-001",
@@ -710,7 +710,7 @@ class TestRefactoringAgentValidation:
         assert result.success is False
         assert "not found" in result.remaining_issues[0]
 
-    def test_validate_complexity_issue_valid(self, agent, tmp_path):
+    def test_validate_complexity_issue_valid(self, agent, tmp_path) -> None:
         """Test validating complexity issue with valid file."""
         test_file = tmp_path / "valid.py"
         test_file.write_text("def foo(): pass")
@@ -727,7 +727,7 @@ class TestRefactoringAgentValidation:
 
         assert result is None  # Validation passed
 
-    def test_validate_dead_code_issue_no_path(self, agent):
+    def test_validate_dead_code_issue_no_path(self, agent) -> None:
         """Test validating dead code issue without path."""
         issue = Issue(
             id="dead-001",
@@ -742,7 +742,7 @@ class TestRefactoringAgentValidation:
         assert result is not None
         assert result.success is False
 
-    def test_validate_dead_code_issue_valid(self, agent, tmp_path):
+    def test_validate_dead_code_issue_valid(self, agent, tmp_path) -> None:
         """Test validating dead code issue with valid file."""
         test_file = tmp_path / "valid.py"
         test_file.write_text("import unused_module")

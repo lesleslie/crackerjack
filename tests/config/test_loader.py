@@ -8,7 +8,7 @@ def _make_settings_class():
     class FakeSettings:  # not subclassing to avoid dependency
         model_fields = {"debug": None, "max_workers": None}
 
-        def __init__(self, debug: bool = False, max_workers: int = 4):
+        def __init__(self, debug: bool = False, max_workers: int = 4) -> None:
             self.debug = debug
             self.max_workers = max_workers
 

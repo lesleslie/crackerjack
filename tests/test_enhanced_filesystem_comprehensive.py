@@ -128,7 +128,7 @@ class TestEnhancedFileSystemService:
         return EnhancedFileSystemService(cache_size=10, cache_ttl=1.0, batch_size=2)
 
     def test_enhanced_fs_initialization(
-        self, enhanced_fs: EnhancedFileSystemService
+        self, enhanced_fs: EnhancedFileSystemService,
     ) -> None:
         assert enhanced_fs.cache.max_size == 10
         assert enhanced_fs.cache.default_ttl == 1.0
@@ -151,7 +151,7 @@ class TestEnhancedFileSystemService:
             tmp_path.unlink(missing_ok=True)
 
     def test_write_file_operations(
-        self, enhanced_fs: EnhancedFileSystemService
+        self, enhanced_fs: EnhancedFileSystemService,
     ) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             file_path = Path(temp_dir) / "test_write.txt"
@@ -175,7 +175,7 @@ class TestEnhancedFileSystemService:
             tmp_path.unlink(missing_ok=True)
 
     def test_error_handling_in_operations(
-        self, enhanced_fs: EnhancedFileSystemService
+        self, enhanced_fs: EnhancedFileSystemService,
     ) -> None:
         fake_path = Path("/ fake / readonly / path / file.txt")
 
@@ -201,7 +201,7 @@ class TestEnhancedFileSystemService:
             tmp_path.unlink(missing_ok=True)
 
     def test_batch_operations_integration(
-        self, enhanced_fs: EnhancedFileSystemService
+        self, enhanced_fs: EnhancedFileSystemService,
     ) -> None:
         if enhanced_fs.batch_ops is not None:
             assert enhanced_fs.batch_ops.batch_size >= 1

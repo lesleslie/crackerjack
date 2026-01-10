@@ -65,7 +65,8 @@ class CodespellAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -91,7 +92,8 @@ class CodespellAdapter(BaseToolAdapter):
         return cmd
 
     def _parse_codespell_line(
-        self, line: str
+        self,
+        line: str,
     ) -> tuple[Path | None, int | None, str, str | None] | None:
         if ":" not in line or "==>" not in line:
             return None

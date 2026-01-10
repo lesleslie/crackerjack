@@ -112,11 +112,13 @@ def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
 
     async def _start() -> None:
         lsp_service = await create_zuban_lsp_service(
-            port=port, mode=mode, console=console
+            port=port,
+            mode=mode,
+            console=console,
         )
         if await lsp_service.start():
             console.print(
-                f"[bold green]✅ Zuban LSP server started on port {port} ({mode} mode)[/bold green]"
+                f"[bold green]✅ Zuban LSP server started on port {port} ({mode} mode)[/bold green]",
             )
         else:
             console.print("[bold red]❌ Failed to start Zuban LSP server[/bold red]")
@@ -135,7 +137,7 @@ def handle_stop_zuban_lsp() -> None:
 
     if stop_zuban_lsp():
         console.print(
-            "\n[bold green]✅ Zuban LSP server stopped successfully[/bold green]"
+            "\n[bold green]✅ Zuban LSP server stopped successfully[/bold green]",
         )
     else:
         console.print("\n[bold red]❌ Failed to stop Zuban LSP server[/bold red]")
@@ -147,7 +149,7 @@ def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
 
     if restart_zuban_lsp():
         console.print(
-            "\n[bold green]✅ Zuban LSP server restart completed[/bold green]"
+            "\n[bold green]✅ Zuban LSP server restart completed[/bold green]",
         )
     else:
         console.print("\n[bold red]❌ Zuban LSP server restart failed[/bold red]")
@@ -167,9 +169,12 @@ def handle_standard_mode(
     options: Options,
     job_id: str | None = None,
 ) -> None:
-    raise NotImplementedError(
+    msg = (
         "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
         "Will be reimplemented in Phase 3 (Oneiric integration)."
+    )
+    raise NotImplementedError(
+        msg,
     )
 
 
@@ -183,7 +188,10 @@ def handle_config_updates(options: Options) -> None:
         _handle_check_updates(config_service, pkg_path, console)
     elif options.apply_config_updates:
         _handle_apply_updates(
-            config_service, pkg_path, options.config_interactive, console
+            config_service,
+            pkg_path,
+            options.config_interactive,
+            console,
         )
     elif options.diff_config:
         _handle_diff_config(config_service, pkg_path, options.diff_config, console)
@@ -192,7 +200,9 @@ def handle_config_updates(options: Options) -> None:
 
 
 def _handle_check_updates(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Console
+    config_service: "ConfigTemplateService",
+    pkg_path: Path,
+    console: Console,
 ) -> None:
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
@@ -229,7 +239,11 @@ def _handle_apply_updates(
         return
 
     success_count = _apply_config_updates_batch(
-        config_service, configs_to_update, pkg_path, interactive, console
+        config_service,
+        configs_to_update,
+        pkg_path,
+        interactive,
+        console,
     )
     _report_update_results(success_count, len(configs_to_update), console)
 
@@ -247,7 +261,9 @@ def _handle_diff_config(
 
 
 def _handle_refresh_cache(
-    config_service: "ConfigTemplateService", pkg_path: Path, console: Console
+    config_service: "ConfigTemplateService",
+    pkg_path: Path,
+    console: Console,
 ) -> None:
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
@@ -255,13 +271,14 @@ def _handle_refresh_cache(
 
 
 def _display_available_updates(
-    updates: dict[str, "ConfigUpdateInfo"], console: Console
+    updates: dict[str, "ConfigUpdateInfo"],
+    console: Console,
 ) -> None:
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
         if update_info.needs_update:
             console.print(
-                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}"
+                f" • {config_type}: {update_info.current_version} → {update_info.latest_version}",
             )
 
 
@@ -288,13 +305,15 @@ def _apply_config_updates_batch(
 
 
 def _report_update_results(
-    success_count: int, total_count: int, console: Console
+    success_count: int,
+    total_count: int,
+    console: Console,
 ) -> None:
     if success_count == total_count:
         console.print(
-            f"[green]✅ Successfully updated {success_count} configurations[/green]"
+            f"[green]✅ Successfully updated {success_count} configurations[/green]",
         )
     else:
         console.print(
-            f"[yellow]⚠️ Updated {success_count}/{total_count} configurations[/yellow]"
+            f"[yellow]⚠️ Updated {success_count}/{total_count} configurations[/yellow]",
         )

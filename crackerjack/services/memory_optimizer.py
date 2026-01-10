@@ -40,7 +40,7 @@ class LazyLoader:
         logger: "LoggerProtocol",
         name: str = "unnamed",
         auto_dispose: bool = True,
-    ):
+    ) -> None:
         self._factory = factory
         self._name = name
         self._auto_dispose = auto_dispose
@@ -76,14 +76,15 @@ class LazyLoader:
                     MemoryOptimizer.get_instance().notify_lazy_load(self._name)
 
                 except Exception as e:
-                    self._logger.error(f"Failed to load {self._name}: {e}")
+                    self._logger.exception(f"Failed to load {self._name}: {e}")
                     raise
 
             self._access_count += 1
             self._last_access = time.time()
 
             if self._value is None:
-                raise RuntimeError(f"Lazy loader {self._name} has no value")
+                msg = f"Lazy loader {self._name} has no value"
+                raise RuntimeError(msg)
 
             return self._value
 
@@ -117,7 +118,7 @@ class ResourcePool:
         logger: "LoggerProtocol",
         max_size: int = 5,
         name: str = "unnamed",
-    ):
+    ) -> None:
         self._factory = factory
         self._max_size = max_size
         self._name = name
@@ -136,12 +137,11 @@ class ResourcePool:
                 self._reused_count += 1
                 self._logger.debug(f"Reused resource from {self._name} pool")
                 return resource
-            else:
-                resource = self._factory()
-                self._in_use.add(resource)
-                self._created_count += 1
-                self._logger.debug(f"Created new resource for {self._name} pool")
-                return resource
+            resource = self._factory()
+            self._in_use.add(resource)
+            self._created_count += 1
+            self._logger.debug(f"Created new resource for {self._name} pool")
+            return resource
 
     def release(self, resource: Any) -> None:
         with self._lock:
@@ -159,7 +159,7 @@ class ResourcePool:
                             self._logger.warning(f"Error closing resource: {e}")
 
                     self._logger.debug(
-                        f"Pool full, disposed resource from {self._name}"
+                        f"Pool full, disposed resource from {self._name}",
                     )
 
     def clear(self) -> None:
@@ -240,8 +240,7 @@ class MemoryProfiler:
             if tracemalloc.is_tracing():
                 current, _peak = tracemalloc.get_traced_memory()
                 return current / 1024 / 1024
-            else:
-                return sys.getsizeof(gc.get_objects()) / 1024 / 1024
+            return sys.getsizeof(gc.get_objects()) / 1024 / 1024
 
 
 class MemoryOptimizer:
@@ -333,7 +332,7 @@ class MemoryOptimizer:
 
         if memory_freed > 1.0:
             self._logger.info(
-                f"Memory cleanup freed {memory_freed: .2f} MB ({collected} objects)"
+                f"Memory cleanup freed {memory_freed: .2f} MB ({collected} objects)",
             )
 
     def _cleanup_lazy_objects(self) -> None:
@@ -390,7 +389,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
             memory_delta = after_memory - before_memory
             if memory_delta > 10.0:
                 optimizer._logger.warning(
-                    f"Function {func.__name__} increased memory by {memory_delta: .2f} MB"
+                    f"Function {func.__name__} increased memory by {memory_delta: .2f} MB",
                 )
 
             return result

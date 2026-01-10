@@ -7,10 +7,10 @@ from .performance_pattern_detector import (
 from .performance_recommender import OptimizationResult, PerformanceRecommender
 
 __all__ = [
-    "PerformancePatternDetector",
-    "PerformanceASTAnalyzer",
-    "PerformanceRecommender",
-    "OptimizationResult",
-    "NestedLoopAnalyzer",
     "ListOpAnalyzer",
+    "NestedLoopAnalyzer",
+    "OptimizationResult",
+    "PerformanceASTAnalyzer",
+    "PerformancePatternDetector",
+    "PerformanceRecommender",
 ]

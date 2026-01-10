@@ -18,17 +18,6 @@ def initialize_skills(
     _project_path = project_path
 
     try:
-        import crackerjack.agents.architect_agent  # noqa: F401
-        import crackerjack.agents.documentation_agent  # noqa: F401
-        import crackerjack.agents.dry_agent  # noqa: F401
-        import crackerjack.agents.formatting_agent  # noqa: F401
-        import crackerjack.agents.import_optimization_agent  # noqa: F401
-        import crackerjack.agents.performance_agent  # noqa: F401
-        import crackerjack.agents.refactoring_agent  # noqa: F401
-        import crackerjack.agents.security_agent  # noqa: F401
-        import crackerjack.agents.semantic_agent  # noqa: F401
-        import crackerjack.agents.test_creation_agent  # noqa: F401
-        import crackerjack.agents.test_specialist_agent  # noqa: F401
         from crackerjack.agents.base import AgentContext
         from crackerjack.skills import register_all_skills
 
@@ -44,8 +33,7 @@ def initialize_skills(
 
         return _skill_registries
 
-    except Exception as e:
-        print(f"Warning: Failed to initialize skills: {e}")
+    except Exception:
         return {}
 
 
@@ -79,9 +67,8 @@ def _register_list_skills(mcp_app: "FastMCP") -> None:
                     "agent_skills"
                 ].list_all_skills()
 
-        if skill_type in ("all", "mcp"):
-            if "mcp_skills" in _skill_registries:
-                result["mcp_skills"] = _skill_registries["mcp_skills"].list_all_skills()
+        if skill_type in ("all", "mcp") and "mcp_skills" in _skill_registries:
+            result["mcp_skills"] = _skill_registries["mcp_skills"].list_all_skills()
 
         if skill_type in ("all", "hybrid"):
             if "hybrid_skills" in _skill_registries:
@@ -121,10 +108,10 @@ def _format_skill_info(skill: t.Any, skill_type: str) -> dict[str, t.Any]:
     if skill_type == "agent":
         return skill.get_info()
 
-    elif skill_type == "mcp":
+    if skill_type == "mcp":
         return skill.to_dict()
 
-    elif skill_type == "hybrid":
+    if skill_type == "hybrid":
         info = skill.get_info()
 
         if hasattr(skill, "get_tool_mappings"):
@@ -168,11 +155,12 @@ def _search_agent_skills(query: str, search_in: str) -> list[dict[str, t.Any]]:
 
 
 def _matches_search_criteria(
-    metadata: dict[str, t.Any], query: str, search_in: str
+    metadata: dict[str, t.Any],
+    query: str,
+    search_in: str,
 ) -> bool:
-    if search_in in ("all", "names"):
-        if query.lower() in metadata["name"].lower():
-            return True
+    if search_in in ("all", "names") and query.lower() in metadata["name"].lower():
+        return True
 
     if search_in in ("all", "descriptions"):
         if query.lower() in metadata["description"].lower():
@@ -346,7 +334,6 @@ def _register_find_best_skill(mcp_app: "FastMCP") -> None:
                         m.to_dict() for m in best_skill.get_tool_mappings()
                     ]
                 return info
-            else:
-                return {"error": "No skill found for this issue type"}
+            return {"error": "No skill found for this issue type"}
         except Exception as e:
             return {"error": f"Failed to find best skill: {e}"}

@@ -57,7 +57,9 @@ class MdformatAdapter(BaseToolAdapter):
         return "mdformat"
 
     async def _get_target_files(
-        self, files: list[Path] | None, config: QACheckConfig | None
+        self,
+        files: list[Path] | None,
+        config: QACheckConfig | None,
     ) -> list[Path]:
         if files:
             return files
@@ -74,7 +76,8 @@ class MdformatAdapter(BaseToolAdapter):
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
-            raise RuntimeError("Settings not initialized")
+            msg = "Settings not initialized"
+            raise RuntimeError(msg)
 
         cmd = [self.tool_name]
 
@@ -85,16 +88,14 @@ class MdformatAdapter(BaseToolAdapter):
 
         wrap_mode = getattr(self.settings, "wrap_mode", None)
         if wrap_mode:
-            if wrap_mode in {"keep", "no"}:
+            if wrap_mode in {"keep", "no"} or (
+                isinstance(wrap_mode, str) and wrap_mode.isdigit()
+            ):
                 cmd.extend(["--wrap", wrap_mode])
-            elif isinstance(wrap_mode, str) and wrap_mode.isdigit():
-                cmd.extend(["--wrap", wrap_mode])
-            else:
-                if self.settings.line_length:
-                    cmd.extend(["--wrap", str(self.settings.line_length)])
-        else:
-            if self.settings.line_length:
+            elif self.settings.line_length:
                 cmd.extend(["--wrap", str(self.settings.line_length)])
+        elif self.settings.line_length:
+            cmd.extend(["--wrap", str(self.settings.line_length)])
 
         cmd.extend([str(f) for f in files])
 
@@ -144,7 +145,8 @@ class MdformatAdapter(BaseToolAdapter):
         return None
 
     def _create_issues_from_processed_files(
-        self, processed_files: list[Path]
+        self,
+        processed_files: list[Path],
     ) -> list[ToolIssue]:
         issues = []
         for file_path in processed_files:

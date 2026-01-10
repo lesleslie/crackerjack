@@ -32,7 +32,7 @@ class SubprocessSecurityConfig:
         max_timeout: float = 3600,
         enable_path_validation: bool = True,
         enable_command_logging: bool = True,
-    ):
+    ) -> None:
         self.max_command_length = max_command_length
         self.max_arg_length = max_arg_length
         self.max_env_var_length = max_env_var_length
@@ -77,7 +77,7 @@ class SubprocessSecurityConfig:
 
 
 class SecureSubprocessExecutor:
-    def __init__(self, config: SubprocessSecurityConfig | None = None):
+    def __init__(self, config: SubprocessSecurityConfig | None = None) -> None:
         if config is None:
             debug_enabled = os.environ.get("CRACKERJACK_DEBUG", "0") == "1"
             self.config = SubprocessSecurityConfig(enable_command_logging=debug_enabled)
@@ -189,7 +189,12 @@ class SecureSubprocessExecutor:
         execution_params = self._prepare_execution_params(command, cwd, env, timeout)
 
         result = self._execute_subprocess(
-            execution_params, input_data, capture_output, text, check, kwargs
+            execution_params,
+            input_data,
+            capture_output,
+            text,
+            check,
+            kwargs,
         )
 
         self._log_successful_execution(execution_params, result, start_time)
@@ -256,7 +261,10 @@ class SecureSubprocessExecutor:
             )
 
     def _handle_timeout_error(
-        self, command: list[str], timeout: float | None, start_time: float
+        self,
+        command: list[str],
+        timeout: float | None,
+        start_time: float,
     ) -> None:
         execution_time = time.time() - start_time
         self.security_logger.log_subprocess_timeout(
@@ -266,7 +274,9 @@ class SecureSubprocessExecutor:
         )
 
     def _handle_process_error(
-        self, command: list[str], error: subprocess.CalledProcessError
+        self,
+        command: list[str],
+        error: subprocess.CalledProcessError,
     ) -> None:
         self.security_logger.log_subprocess_failure(
             command=command,
@@ -295,22 +305,27 @@ class SecureSubprocessExecutor:
 
     def _validate_command_structure(self, command: list[str]) -> None:
         if not isinstance(command, list):
-            raise CommandValidationError("Command must be a list")
+            msg = "Command must be a list"
+            raise CommandValidationError(msg)
 
         if not all(isinstance(arg, str) for arg in command):
-            raise CommandValidationError("Command arguments must be strings")
+            msg = "Command arguments must be strings"
+            raise CommandValidationError(msg)
 
         if not command:
-            raise CommandValidationError("Command cannot be empty")
+            msg = "Command cannot be empty"
+            raise CommandValidationError(msg)
 
         total_length = sum(len(arg) for arg in command)
         if total_length > self.config.max_command_length:
+            msg = f"Command too long: {total_length} > {self.config.max_command_length}"
             raise CommandValidationError(
-                f"Command too long: {total_length} > {self.config.max_command_length}"
+                msg,
             )
 
     def _validate_command_arguments(
-        self, command: list[str]
+        self,
+        command: list[str],
     ) -> tuple[list[str], list[str]]:
         validated_command = []
         issues = []
@@ -318,7 +333,7 @@ class SecureSubprocessExecutor:
         for i, arg in enumerate(command):
             if len(arg) > self.config.max_arg_length:
                 issues.append(
-                    f"Argument {i} too long: {len(arg)} > {self.config.max_arg_length}"
+                    f"Argument {i} too long: {len(arg)} > {self.config.max_arg_length}",
                 )
                 continue
 
@@ -330,7 +345,11 @@ class SecureSubprocessExecutor:
         return validated_command, issues
 
     def _has_dangerous_patterns(
-        self, arg: str, index: int, issues: list[str], command: list[str]
+        self,
+        arg: str,
+        index: int,
+        issues: list[str],
+        command: list[str],
     ) -> bool:
         if self._is_allowed_git_pattern(arg):
             return False
@@ -347,7 +366,10 @@ class SecureSubprocessExecutor:
         return False
 
     def _check_dangerous_patterns_in_commit_message(
-        self, arg: str, index: int, issues: list[str]
+        self,
+        arg: str,
+        index: int,
+        issues: list[str],
     ) -> bool:
         safe_commit_patterns = [
             r"[;&|`$]",
@@ -364,18 +386,21 @@ class SecureSubprocessExecutor:
                 if pattern == r"\$\(.*\)" and not re.search(r"\$\(", arg):
                     continue
                 issues.append(
-                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
+                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}",
                 )
                 return True
         return False
 
     def _check_dangerous_patterns_in_other_contexts(
-        self, arg: str, index: int, issues: list[str]
+        self,
+        arg: str,
+        index: int,
+        issues: list[str],
     ) -> bool:
         for pattern in self.dangerous_patterns:
             if re.search(pattern, arg):
                 issues.append(
-                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}"
+                    f"Dangerous pattern '{pattern}' in argument {index}: {arg[:50]}",
                 )
                 return True
         return False
@@ -391,7 +416,9 @@ class SecureSubprocessExecutor:
         return False
 
     def _validate_executable_permissions(
-        self, validated_command: list[str], issues: list[str]
+        self,
+        validated_command: list[str],
+        issues: list[str],
     ) -> None:
         if not validated_command:
             return
@@ -422,8 +449,9 @@ class SecureSubprocessExecutor:
                 reason="Command validation failed",
                 dangerous_patterns=issues,
             )
+            msg = f"Command validation failed: {'; '.join(issues)}"
             raise CommandValidationError(
-                f"Command validation failed: {'; '.join(issues)}"
+                msg,
             )
 
     def _validate_cwd(self, cwd: Path | str | None) -> Path | None:
@@ -434,58 +462,65 @@ class SecureSubprocessExecutor:
             return Path(cwd) if isinstance(cwd, str) else cwd
 
         cwd_path = Path(cwd) if isinstance(cwd, str) else cwd
+        cwd_str = str(cwd)
 
-        try:
-            resolved_path = cwd_path.resolve()
-
-            original_path_obj = Path(cwd)
-            original_parts = original_path_obj.parts
-            if ".." in original_parts or any(
-                part.startswith("../") for part in original_parts
-            ):
-                safe_root = Path.cwd().parent.resolve()
-                try:
-                    resolved_path.relative_to(safe_root)
-                except ValueError:
-                    path_str = str(resolved_path)
-                    self.security_logger.log_path_traversal_attempt(
-                        attempted_path=path_str,
-                        base_directory=str(safe_root),
-                    )
-                    raise CommandValidationError(
-                        f"Dangerous working directory: {path_str}"
-                    )
-
-            path_str = str(resolved_path)
-
-            if path_str.startswith(
-                (
-                    "/etc",
-                    "/usr/bin",
-                    "/bin",
-                    "/sbin",
-                    "/private/etc",
-                    "/private/usr/bin",
-                    "/private/bin",
-                    "/private/sbin",
-                )
-            ):
+        dangerous_patterns = ["../", "..\\", "~/../", "/../", "\\..\\"]
+        for pattern in dangerous_patterns:
+            if pattern in cwd_str:
+                path_str = str(cwd_path.resolve())
                 self.security_logger.log_path_traversal_attempt(
                     attempted_path=path_str,
                     base_directory=None,
                 )
-                raise CommandValidationError(f"Dangerous working directory: {path_str}")
+                msg = f"Dangerous working directory: {path_str}"
+                raise CommandValidationError(msg)
 
+        dangerous_prefixes = (
+            "/etc",
+            "/usr/bin",
+            "/bin",
+            "/sbin",
+            "/boot",
+            "/sys",
+            "/proc",
+            "/dev",
+            "/root",
+            "/var/log",
+            "/private/etc",
+            "/private/usr/bin",
+            "/private/bin",
+            "/private/sbin",
+        )
+
+        cwd_str_lower = cwd_str.lower()
+        for prefix in dangerous_prefixes:
+            if (
+                cwd_str_lower == prefix
+                or cwd_str_lower.startswith(prefix + "/")
+                or cwd_str_lower.startswith(prefix + "\\")
+            ):
+                self.security_logger.log_path_traversal_attempt(
+                    attempted_path=cwd_str,
+                    base_directory=None,
+                )
+                msg = f"Dangerous working directory: {cwd_str}"
+                raise CommandValidationError(msg)
+
+        try:
+            resolved_path = cwd_path.resolve()
             return resolved_path
-
         except (OSError, ValueError) as e:
-            raise CommandValidationError(f"Invalid working directory '{cwd}': {e}")
+            msg = f"Invalid working directory '{cwd}': {e}"
+            raise CommandValidationError(msg)
 
     def _sanitize_environment(self, env: dict[str, str] | None) -> dict[str, str]:
+        inherited = False
         if env is None:
             env = os.environ.copy()
+            inherited = True
 
-        self._validate_environment_size(env)
+        if not inherited:
+            self._validate_environment_size(env)
 
         filtered_vars: list[str] = []
         sanitized_env = self._filter_environment_variables(env, filtered_vars)
@@ -504,12 +539,13 @@ class SecureSubprocessExecutor:
                 actual_count=len(env),
                 max_count=self.config.max_env_vars,
             )
-            raise EnvironmentValidationError(
-                f"Too many environment variables: {len(env)} > {self.config.max_env_vars}"
-            )
+            msg = f"Too many environment variables: {len(env)} > {self.config.max_env_vars}"
+            raise EnvironmentValidationError(msg)
 
     def _filter_environment_variables(
-        self, env: dict[str, str], filtered_vars: list[str]
+        self,
+        env: dict[str, str],
+        filtered_vars: list[str],
     ) -> dict[str, str]:
         sanitized_env = {}
 
@@ -528,7 +564,10 @@ class SecureSubprocessExecutor:
         return sanitized_env
 
     def _is_dangerous_environment_key(
-        self, key: str, value: str, filtered_vars: list[str]
+        self,
+        key: str,
+        value: str,
+        filtered_vars: list[str],
     ) -> bool:
         if key in self.dangerous_env_vars:
             filtered_vars.append(key)
@@ -541,7 +580,10 @@ class SecureSubprocessExecutor:
         return False
 
     def _is_environment_value_too_long(
-        self, key: str, value: str, filtered_vars: list[str]
+        self,
+        key: str,
+        value: str,
+        filtered_vars: list[str],
     ) -> bool:
         if len(value) > self.config.max_env_var_length:
             filtered_vars.append(key)
@@ -554,7 +596,10 @@ class SecureSubprocessExecutor:
         return False
 
     def _has_environment_injection(
-        self, key: str, value: str, filtered_vars: list[str]
+        self,
+        key: str,
+        value: str,
+        filtered_vars: list[str],
     ) -> bool:
         for pattern in self.dangerous_patterns[:3]:
             if re.search(pattern, value):
@@ -573,7 +618,10 @@ class SecureSubprocessExecutor:
                 sanitized_env[safe_var] = os.environ[safe_var]
 
     def _log_environment_sanitization(
-        self, original_count: int, sanitized_count: int, filtered_vars: list[str]
+        self,
+        original_count: int,
+        sanitized_count: int,
+        filtered_vars: list[str],
     ) -> None:
         if self.config.enable_command_logging:
             self.security_logger.log_subprocess_environment_sanitized(
@@ -587,7 +635,8 @@ class SecureSubprocessExecutor:
             return None
 
         if timeout <= 0:
-            raise CommandValidationError(f"Timeout must be positive: {timeout}")
+            msg = f"Timeout must be positive: {timeout}"
+            raise CommandValidationError(msg)
 
         if timeout > self.config.max_timeout:
             self.security_logger.log_security_event(
@@ -597,8 +646,9 @@ class SecureSubprocessExecutor:
                 requested_timeout=timeout,
                 max_timeout=self.config.max_timeout,
             )
+            msg = f"Timeout too large: {timeout} > {self.config.max_timeout}"
             raise CommandValidationError(
-                f"Timeout too large: {timeout} > {self.config.max_timeout}"
+                msg,
             )
 
         return timeout

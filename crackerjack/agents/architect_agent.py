@@ -49,13 +49,10 @@ class ArchitectAgent(ProactiveAgent):
         if issue.type == IssueType.COMPLEXITY:
             return True
 
-        if issue.type == IssueType.DRY_VIOLATION:
-            return True
-
-        return False
+        return issue.type == IssueType.DRY_VIOLATION
 
     async def _get_specialist_plan(self, issue: Issue) -> dict[str, t.Any]:
-        plan = {
+        return {
             "strategy": "external_specialist_guided",
             "specialist": "crackerjack-architect",
             "approach": self._get_specialist_approach(issue),
@@ -65,10 +62,8 @@ class ArchitectAgent(ProactiveAgent):
             "validation": self._get_validation_steps(issue),
         }
 
-        return plan
-
     async def _get_internal_plan(self, issue: Issue) -> dict[str, t.Any]:
-        plan = {
+        return {
             "strategy": "internal_pattern_based",
             "approach": self._get_internal_approach(issue),
             "patterns": self._get_cached_patterns_for_issue(issue),
@@ -77,16 +72,14 @@ class ArchitectAgent(ProactiveAgent):
             "validation": ["run_quality_checks"],
         }
 
-        return plan
-
     def _get_specialist_approach(self, issue: Issue) -> str:
         if issue.type == IssueType.COMPLEXITY:
             return "break_into_helper_methods"
-        elif issue.type == IssueType.DRY_VIOLATION:
+        if issue.type == IssueType.DRY_VIOLATION:
             return "extract_common_patterns"
-        elif issue.type == IssueType.PERFORMANCE:
+        if issue.type == IssueType.PERFORMANCE:
             return "optimize_algorithms"
-        elif issue.type == IssueType.SECURITY:
+        if issue.type == IssueType.SECURITY:
             return "apply_secure_patterns"
         return "apply_clean_code_principles"
 
@@ -135,7 +128,7 @@ class ArchitectAgent(ProactiveAgent):
         for pattern_key, pattern_data in cached.items():
             if pattern_key.startswith(issue.type.value):
                 matching_patterns.extend(
-                    pattern_data.get("plan", {}).get("patterns", [])
+                    pattern_data.get("plan", {}).get("patterns", []),
                 )
 
         return matching_patterns or ["default_pattern"]
@@ -149,12 +142,12 @@ class ArchitectAgent(ProactiveAgent):
                     "update_tests_for_extracted_methods",
                     "update_type_annotations",
                     "verify_imports",
-                ]
+                ],
             )
 
         if issue.type == IssueType.DRY_VIOLATION:
             dependencies.extend(
-                ["update_all_usage_sites", "ensure_backward_compatibility"]
+                ["update_all_usage_sites", "ensure_backward_compatibility"],
             )
 
         return dependencies
@@ -168,7 +161,7 @@ class ArchitectAgent(ProactiveAgent):
                     "breaking_existing_functionality",
                     "changing_method_signatures",
                     "test_failures",
-                ]
+                ],
             )
 
         if issue.type == IssueType.DRY_VIOLATION:
@@ -189,7 +182,9 @@ class ArchitectAgent(ProactiveAgent):
         return await self.analyze_and_fix_proactively(issue)
 
     async def _execute_with_plan(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         strategy = plan.get("strategy", "internal_pattern_based")
 
@@ -198,7 +193,9 @@ class ArchitectAgent(ProactiveAgent):
         return await self._execute_pattern_based_fix(issue, plan)
 
     async def _execute_specialist_guided_fix(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         return FixResult(
             success=True,
@@ -206,7 +203,7 @@ class ArchitectAgent(ProactiveAgent):
             fixes_applied=[
                 f"Applied {plan.get('approach', 'specialist')} approach",
                 f"Used patterns: {', '.join(plan.get('patterns', []))}",
-                "Followed crackerjack - architect guidance",
+                "Followed architect agent guidance",
             ],
             remaining_issues=[],
             recommendations=[
@@ -217,7 +214,9 @@ class ArchitectAgent(ProactiveAgent):
         )
 
     async def _execute_pattern_based_fix(
-        self, issue: Issue, plan: dict[str, t.Any]
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
     ) -> FixResult:
         patterns = plan.get("patterns", [])
         approach = plan.get("approach", "standard")

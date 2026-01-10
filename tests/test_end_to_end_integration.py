@@ -11,7 +11,7 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
     """Test complete integration of all new features."""
 
     @pytest.mark.asyncio
-    async def test_complete_workflow_with_all_features(self, test_project_structure):
+    async def test_complete_workflow_with_all_features(self, test_project_structure) -> None:
         """Test complete crackerjack workflow with all new features enabled."""
         # # Configure options with all new features
         # options = Options(
@@ -51,10 +51,9 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         #     # Verify new features were called
         #     mock_version_analyzer.return_value.analyze_version_bump.assert_called()
         #     mock_monitoring.return_value.record_metric.assert_called()
-        pass
 
     @pytest.mark.asyncio
-    async def test_semantic_cli_end_to_end(self, test_project_structure):
+    async def test_semantic_cli_end_to_end(self, test_project_structure) -> None:
         """Test semantic CLI integration in real workflow."""
         # # Test with semantic command names
         # command = [
@@ -76,10 +75,9 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         # assert result.options.ai_fix is True
         # assert result.options.version_bump == "auto"
         # assert result.options.run_tests is True
-        pass
 
     @pytest.mark.asyncio
-    async def test_intelligent_automation_integration(self, test_project_structure):
+    async def test_intelligent_automation_integration(self, test_project_structure) -> None:
         """Test intelligent commit and changelog automation."""
         # # Setup git repository with changes
         # git_service = GitService(test_project_structure)
@@ -104,12 +102,11 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         # changelog_path = test_project_structure / "CHANGELOG.md"
         # changelog_content = changelog_path.read_text()
         # assert "## [2.0.0]" in changelog_content
-        pass
 
     @pytest.mark.asyncio
     async def test_performance_optimization_integration(
-        self, performance_benchmark_context
-    ):
+        self, performance_benchmark_context,
+    ) -> None:
         """Test performance optimizations in real workflow."""
         # # Create realistic workload
         # large_codebase = performance_benchmark_context["large_codebase"]
@@ -151,10 +148,9 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         # # Verify cache effectiveness
         # cache_hit_rate = coordinator_optimized.get_cache_hit_rate()
         # assert cache_hit_rate >= 0.60  # Target: 60% hit rate
-        pass
 
     @pytest.mark.asyncio
-    async def test_monitoring_dashboard_integration(self, test_project_structure):
+    async def test_monitoring_dashboard_integration(self, test_project_structure) -> None:
         """Test monitoring dashboard integration with workflow."""
         # # Start monitoring system
         # monitoring_server = CrackerjackMonitoringServer()
@@ -199,9 +195,8 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         #
         # finally:
         #     await monitoring_server.stop()
-        pass
 
-    def test_documentation_generation_integration(self, test_project_structure):
+    def test_documentation_generation_integration(self, test_project_structure) -> None:
         """Test documentation generation integration."""
         # doc_system = AIOptimizedDocumentationSystem()
         #
@@ -223,10 +218,9 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         # ai_ref_content = (test_project_structure / "ai" / "AI-REFERENCE.md").read_text()
         # assert "| Use Case |" in ai_ref_content  # Table format for AI
         # assert "python -m crackerjack" in ai_ref_content  # Commands included
-        pass
 
     @pytest.mark.asyncio
-    async def test_regression_prevention(self, test_project_structure):
+    async def test_regression_prevention(self, test_project_structure) -> None:
         """Test that new features don't break existing functionality."""
         # # Baseline: Run workflow with original feature set
         # baseline_options = Options(
@@ -274,9 +268,8 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         # # Enhanced version should maintain or improve quality
         # assert enhanced_metrics["quality_score"] >= baseline_metrics["quality_score"]
         # assert enhanced_metrics["success"] == baseline_metrics["success"]
-        pass
 
-    def test_backward_compatibility(self, test_project_structure):
+    def test_backward_compatibility(self, test_project_structure) -> None:
         """Test backward compatibility of new features."""
         # # Test that existing workflows still work
         # legacy_workflow_configs = [
@@ -295,4 +288,3 @@ class TestEndToEndIntegration(BaseCrackerjackFeatureTest):
         #         # Test would execute workflow and verify success
         #         # Actual execution omitted for test performance
         #         assert True  # Placeholder for workflow execution test
-        pass

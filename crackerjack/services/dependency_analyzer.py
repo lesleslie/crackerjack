@@ -74,7 +74,7 @@ class DependencyGraph:
 
 
 class DependencyAnalyzer:
-    def __init__(self, project_root: Path):
+    def __init__(self, project_root: Path) -> None:
         self.project_root = Path(project_root)
         self.python_files: list[Path] = []
         self.dependency_graph = DependencyGraph()
@@ -97,7 +97,7 @@ class DependencyAnalyzer:
         logger.info(
             f"Dependency analysis complete: "
             f"{len(self.dependency_graph.nodes)} nodes, "
-            f"{len(self.dependency_graph.edges)} edges"
+            f"{len(self.dependency_graph.edges)} edges",
         )
 
         return self.dependency_graph
@@ -140,7 +140,7 @@ class DependencyAnalyzer:
         except SyntaxError as e:
             logger.warning(f"Syntax error in {file_path}: {e}")
         except Exception as e:
-            logger.error(f"Error analyzing {file_path}: {e}")
+            logger.exception(f"Error analyzing {file_path}: {e}")
 
     def _generate_clusters(self) -> None:
         clusters: dict[str, list[str]] = {}
@@ -213,7 +213,7 @@ class DependencyAnalyzer:
 
 
 class DependencyVisitor(ast.NodeVisitor):
-    def __init__(self, file_path: Path, project_root: Path):
+    def __init__(self, file_path: Path, project_root: Path) -> None:
         self.file_path = file_path
         self.project_root = project_root
         self.relative_path = file_path.relative_to(project_root)
@@ -376,7 +376,8 @@ class DependencyVisitor(ast.NodeVisitor):
             elif isinstance(child, ast.BoolOp):
                 complexity += len(child.values) - 1
             elif isinstance(
-                child, ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp
+                child,
+                ast.ListComp | ast.SetComp | ast.DictComp | ast.GeneratorExp,
             ):
                 complexity += 1
 
@@ -385,7 +386,7 @@ class DependencyVisitor(ast.NodeVisitor):
     def _get_decorator_name(self, decorator: ast.AST) -> str:
         if isinstance(decorator, ast.Name):
             return decorator.id
-        elif isinstance(decorator, ast.Attribute):
+        if isinstance(decorator, ast.Attribute):
             return f"{decorator.value.id}.{decorator.attr}"  # type: ignore
         return "unknown"
 

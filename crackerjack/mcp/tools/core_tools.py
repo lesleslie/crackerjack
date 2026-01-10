@@ -37,7 +37,9 @@ async def create_task_with_subagent(
             }
 
         subagent_result = validator.sanitizer.sanitize_string(
-            subagent_type, max_length=100, strict_alphanumeric=True
+            subagent_type,
+            max_length=100,
+            strict_alphanumeric=True,
         )
         if not subagent_result.valid:
             return {
@@ -50,7 +52,7 @@ async def create_task_with_subagent(
         sanitized_prompt = prompt_result.sanitized_value or prompt
         sanitized_subagent = subagent_result.sanitized_value
 
-        result = {
+        return {
             "success": True,
             "description": sanitized_description,
             "prompt": sanitized_prompt,
@@ -62,8 +64,6 @@ async def create_task_with_subagent(
             else "system",
         }
 
-        return result
-
     except Exception as e:
         return {
             "success": False,
@@ -74,7 +74,8 @@ async def create_task_with_subagent(
 
 
 async def _validate_stage_request(
-    context: MCPServerContext | None, rate_limiter: RateLimitMiddleware | None
+    context: MCPServerContext | None,
+    rate_limiter: RateLimitMiddleware | None,
 ) -> str | None:
     if not context:
         return '{"error": "Server context not available", "success": false}'
@@ -108,7 +109,9 @@ def _parse_stage_args(args: str, kwargs: str) -> tuple[str, dict[str, t.Any]] | 
 
 def _validate_stage_argument(validator: SecureInputValidator, args: str) -> str:
     stage_result = validator.sanitizer.sanitize_string(
-        args.strip(), max_length=50, strict_alphanumeric=True
+        args.strip(),
+        max_length=50,
+        strict_alphanumeric=True,
     )
     if not stage_result.valid:
         return f'{{"error": "Invalid stage argument: {stage_result.error_message}", "success": false}}'
@@ -123,7 +126,8 @@ def _validate_stage_argument(validator: SecureInputValidator, args: str) -> str:
 
 
 def _validate_kwargs_argument(
-    validator: SecureInputValidator, kwargs: str
+    validator: SecureInputValidator,
+    kwargs: str,
 ) -> dict[str, t.Any] | str:
     extra_kwargs: dict[str, t.Any] = {}
     if not kwargs.strip():
@@ -161,7 +165,9 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
 
 
 def _execute_stage(
-    orchestrator: "WorkflowOrchestrator", stage: str, settings: CrackerjackSettings
+    orchestrator: "WorkflowOrchestrator",
+    stage: str,
+    settings: CrackerjackSettings,
 ) -> bool:
     adapted_options = _adapt_settings_to_protocol(settings)
 
@@ -181,7 +187,7 @@ def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
 
 
 class _AdaptedOptions:
-    def __init__(self, settings: CrackerjackSettings):
+    def __init__(self, settings: CrackerjackSettings) -> None:
         self.settings = settings
 
     @property

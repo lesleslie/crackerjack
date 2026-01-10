@@ -33,7 +33,13 @@ class ProgressHookExecutor(HookExecutor):
         git_service: t.Any | None = None,
     ) -> None:
         super().__init__(
-            console, pkg_path, verbose, quiet, debug, use_incremental, git_service
+            console,
+            pkg_path,
+            verbose,
+            quiet,
+            debug,
+            use_incremental,
+            git_service,
         )
         self.show_progress = show_progress and not quiet
         self.debug = debug
@@ -54,11 +60,15 @@ class ProgressHookExecutor(HookExecutor):
 
             if strategy.parallel and len(strategy.hooks) > 1:
                 results = self._execute_parallel_with_progress(
-                    strategy, progress, main_task
+                    strategy,
+                    progress,
+                    main_task,
                 )
             else:
                 results = self._execute_sequential_with_progress(
-                    strategy, progress, main_task
+                    strategy,
+                    progress,
+                    main_task,
                 )
 
         if strategy.retry_policy != RetryPolicy.NONE:

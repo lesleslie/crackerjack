@@ -50,7 +50,10 @@ def handle_changelog_generation(
     console.print("📝 [bold blue]Generating changelog...[/bold blue]")
 
     version = determine_changelog_version(
-        services["git_service"], changelog_version, changelog_since, options
+        services["git_service"],
+        changelog_version,
+        changelog_since,
+        options,
     )
 
     success = services["generator"].generate_changelog_from_commits(
@@ -61,7 +64,7 @@ def handle_changelog_generation(
 
     if success:
         console.print(
-            f"✅ [bold green]Changelog updated for version {version}![/bold green]"
+            f"✅ [bold green]Changelog updated for version {version}![/bold green]",
         )
         return should_continue_after_changelog(options)
     console.print("❌ [bold red]Changelog generation failed![/bold red]")
@@ -82,11 +85,11 @@ def determine_changelog_version(
 
             version_analyzer = VersionAnalyzer(git_service)
             console.print(
-                "[cyan]🔍[/cyan] Analyzing version changes for intelligent changelog..."
+                "[cyan]🔍[/cyan] Analyzing version changes for intelligent changelog...",
             )
 
             recommendation = asyncio.run(
-                version_analyzer.recommend_version_bump(changelog_since)
+                version_analyzer.recommend_version_bump(changelog_since),
             )
             version = recommendation.recommended_version
             console.print(f"[green]✨[/green] Using AI-recommended version: {version}")
@@ -106,7 +109,7 @@ def should_continue_after_changelog(options: t.Any) -> bool:
             options.all,
             options.publish,
             options.comp,
-        ]
+        ],
     )
 
 
@@ -128,7 +131,11 @@ def handle_changelog_commands(
 
     if generate_changelog:
         return handle_changelog_generation(
-            services, changelog_path, changelog_version, changelog_since, options
+            services,
+            changelog_path,
+            changelog_version,
+            changelog_since,
+            options,
         )
 
     return should_continue_after_changelog(options)
@@ -156,7 +163,7 @@ def handle_version_analysis(
         import asyncio
 
         recommendation = asyncio.run(
-            version_analyzer.recommend_version_bump(version_since)
+            version_analyzer.recommend_version_bump(version_since),
         )
         version_analyzer.display_recommendation(recommendation)
 
@@ -165,7 +172,7 @@ def handle_version_analysis(
             default=True,
         ):
             console.print(
-                f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]"
+                f"[green]✅ Version bump accepted: {recommendation.current_version} → {recommendation.recommended_version}[/green]",
             )
 
         else:
@@ -181,12 +188,16 @@ def handle_version_analysis(
             options.all,
             options.publish,
             options.comp,
-        ]
+        ],
     )
 
 
 def setup_debug_and_verbose_flags(
-    ai_fix: bool, ai_debug: bool, debug: bool, verbose: bool, options: t.Any
+    ai_fix: bool,
+    ai_debug: bool,
+    debug: bool,
+    verbose: bool,
+    options: t.Any,
 ) -> tuple[bool, bool]:
     if ai_debug:
         ai_fix = True

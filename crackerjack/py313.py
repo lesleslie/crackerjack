@@ -7,7 +7,8 @@ from typing import Any, Self, TypedDict
 
 class CommandRunner[TReturn]:
     def run_command(self, cmd: list[str], **kwargs: Any) -> TReturn:
-        raise NotImplementedError("Subclasses must implement run_command")
+        msg = "Subclasses must implement run_command"
+        raise NotImplementedError(msg)
 
 
 class CommandResult(TypedDict):
@@ -111,7 +112,7 @@ def process_hook_results[T: HookResult, R](
     for result in results:
         if (
             hasattr(result, "__getitem__")
-            and typing.cast(dict[str, typing.Any], result).get("status")
+            and typing.cast("dict[str, typing.Any]", result).get("status")
             == HookStatus.SUCCESS
         ):
             processed_results.append(success_handler(result))

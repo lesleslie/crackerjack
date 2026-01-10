@@ -72,7 +72,7 @@ class TimeoutConfig:
             "network_operations": 15.0,
             "workflow_iteration": 900.0,
             "complete_workflow": 3600.0,
-        }
+        },
     )
 
     max_retries: int = 3
@@ -100,7 +100,7 @@ class TimeoutError(Exception):
         self.elapsed = elapsed
         super().__init__(
             f"Operation '{operation}' timed out after {timeout}s "
-            f"(elapsed: {elapsed: .1f}s)"
+            f"(elapsed: {elapsed: .1f}s)",
         )
 
 
@@ -114,7 +114,8 @@ class AsyncTimeoutManager:
 
     def get_timeout(self, operation: str) -> float:
         return self.config.operation_timeouts.get(
-            operation, self.config.default_timeout
+            operation,
+            self.config.default_timeout,
         )
 
     @property
@@ -145,7 +146,10 @@ class AsyncTimeoutManager:
     ) -> float | None:
         elapsed = time.time() - start_time
         self.performance_monitor.record_operation_timeout(
-            operation, start_time, timeout_value, error_msg
+            operation,
+            start_time,
+            timeout_value,
+            error_msg,
         )
         self._record_failure(operation, elapsed)
 
@@ -154,7 +158,7 @@ class AsyncTimeoutManager:
 
         if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
             logger.warning(
-                f"Operation {operation} {error_type} ({elapsed: .1f}s), continuing gracefully"
+                f"Operation {operation} {error_type} ({elapsed: .1f}s), continuing gracefully",
             )
             return elapsed
 
@@ -172,7 +176,8 @@ class AsyncTimeoutManager:
                     await asyncio.wait_for(asyncio.shield(task), timeout=timeout_value)
                     yield
                 except builtins.TimeoutError:
-                    raise TimeoutError("operation", timeout_value)
+                    msg = "operation"
+                    raise TimeoutError(msg, timeout_value)
             else:
                 yield
 
@@ -188,7 +193,12 @@ class AsyncTimeoutManager:
         error: TimeoutError,
     ) -> float | None:
         return self._handle_timeout_error(
-            operation, start_time, timeout_value, strategy, str(error), "timed out"
+            operation,
+            start_time,
+            timeout_value,
+            strategy,
+            str(error),
+            "timed out",
         )
 
     def _handle_asyncio_timeout_exception(
@@ -215,11 +225,19 @@ class AsyncTimeoutManager:
         strategy: TimeoutStrategy,
     ) -> float | None:
         return self._handle_timeout_error(
-            operation, start_time, timeout_value, strategy, "cancelled", "was cancelled"
+            operation,
+            start_time,
+            timeout_value,
+            strategy,
+            "cancelled",
+            "was cancelled",
         )
 
     def _handle_generic_exception(
-        self, operation: str, start_time: float, strategy: TimeoutStrategy
+        self,
+        operation: str,
+        start_time: float,
+        strategy: TimeoutStrategy,
     ) -> None:
         self.performance_monitor.record_operation_failure(operation, start_time)
         elapsed = time.time() - start_time
@@ -238,28 +256,42 @@ class AsyncTimeoutManager:
     ) -> tuple[bool, Exception | None]:
         if isinstance(error, TimeoutError):
             result = self._handle_custom_timeout_exception(
-                operation, start_time, timeout_value, strategy, error
+                operation,
+                start_time,
+                timeout_value,
+                strategy,
+                error,
             )
             should_yield = self._should_yield_on_graceful_degradation(result)
             return should_yield, (None if should_yield else error)
 
         if isinstance(error, builtins.TimeoutError):
             result = self._handle_asyncio_timeout_exception(
-                operation, start_time, timeout_value, strategy
+                operation,
+                start_time,
+                timeout_value,
+                strategy,
             )
             should_yield = self._should_yield_on_graceful_degradation(result)
             reraise_error = TimeoutError(
-                operation, timeout_value, time.time() - start_time
+                operation,
+                timeout_value,
+                time.time() - start_time,
             )
             return should_yield, (None if should_yield else reraise_error)
 
         if isinstance(error, asyncio.CancelledError):
             result = self._handle_cancelled_exception(
-                operation, start_time, timeout_value, strategy
+                operation,
+                start_time,
+                timeout_value,
+                strategy,
             )
             should_yield = self._should_yield_on_graceful_degradation(result)
             reraise_error = TimeoutError(
-                operation, timeout_value, time.time() - start_time
+                operation,
+                timeout_value,
+                time.time() - start_time,
             )
             return should_yield, (None if should_yield else reraise_error)
 
@@ -278,7 +310,7 @@ class AsyncTimeoutManager:
 
         if timeout_value > 7200.0:
             logger.warning(
-                f"Capping excessive timeout for {operation}: {timeout_value}s -> 7200s"
+                f"Capping excessive timeout for {operation}: {timeout_value}s -> 7200s",
             )
             timeout_value = 7200.0
 
@@ -288,8 +320,12 @@ class AsyncTimeoutManager:
             self._handle_operation_success(operation, start_time)
 
         except Exception as e:
-            should_yield, error = self._dispatch_exception_handler(
-                e, operation, start_time, timeout_value, strategy
+            _should_yield, error = self._dispatch_exception_handler(
+                e,
+                operation,
+                start_time,
+                timeout_value,
+                strategy,
             )
 
             if error:
@@ -324,7 +360,10 @@ class AsyncTimeoutManager:
         except builtins.TimeoutError as e:
             elapsed = time.time() - start_time
             self.performance_monitor.record_operation_timeout(
-                operation, start_time, timeout_value, str(e)
+                operation,
+                start_time,
+                timeout_value,
+                str(e),
             )
             self._record_failure(operation, elapsed)
 
@@ -333,7 +372,7 @@ class AsyncTimeoutManager:
 
             if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
                 logger.warning(
-                    f"Operation {operation} timed out ({elapsed: .1f}s), returning None"
+                    f"Operation {operation} timed out ({elapsed: .1f}s), returning None",
                 )
                 return None
 
@@ -370,17 +409,19 @@ class AsyncTimeoutManager:
 
                 logger.warning(
                     f"Attempt {attempt + 1}/{self.config.max_retries + 1} "
-                    f"failed for {operation}: {e}, retrying in {delay}s"
+                    f"failed for {operation}: {e}, retrying in {delay}s",
                 )
 
                 await asyncio.sleep(delay)
                 delay = min(
-                    delay * self.config.backoff_multiplier, self.config.max_retry_delay
+                    delay * self.config.backoff_multiplier,
+                    self.config.max_retry_delay,
                 )
 
         if last_exception is not None:
             raise last_exception
-        raise RuntimeError(f"No attempts made for operation: {operation}")
+        msg = f"No attempts made for operation: {operation}"
+        raise RuntimeError(msg)
 
     def _check_circuit_breaker(self, operation: str) -> bool:
         if operation not in self.circuit_breakers:
@@ -392,17 +433,16 @@ class AsyncTimeoutManager:
 
         if breaker.state == CircuitBreakerState.CLOSED:
             return True
-        elif breaker.state == CircuitBreakerState.OPEN:
+        if breaker.state == CircuitBreakerState.OPEN:
             if current_time - breaker.last_failure_time > self.config.recovery_timeout:
                 breaker.state = CircuitBreakerState.HALF_OPEN
                 breaker.half_open_calls = 0
                 return True
             return False
-        else:
-            if breaker.half_open_calls < self.config.half_open_max_calls:
-                breaker.half_open_calls += 1
-                return True
-            return False
+        if breaker.half_open_calls < self.config.half_open_max_calls:
+            breaker.half_open_calls += 1
+            return True
+        return False
 
     def _update_circuit_breaker(self, operation: str, success: bool) -> None:
         if operation not in self.circuit_breakers:
@@ -426,7 +466,8 @@ class AsyncTimeoutManager:
 
                 if previous_state != CircuitBreakerState.OPEN:
                     self.performance_monitor.record_circuit_breaker_event(
-                        operation, True
+                        operation,
+                        True,
                     )
 
     def _record_success(self, operation: str, elapsed: float) -> None:
@@ -445,7 +486,7 @@ class AsyncTimeoutManager:
     def _record_failure(self, operation: str, elapsed: float) -> None:
         logger.warning(
             f"Operation '{operation}' failed after {elapsed: .1f}s "
-            f"(timeout: {self.get_timeout(operation)}s)"
+            f"(timeout: {self.get_timeout(operation)}s)",
         )
 
     def get_stats(self, operation: str) -> dict[str, t.Any]:
@@ -468,7 +509,8 @@ class AsyncTimeoutManager:
             / (
                 len(stats)
                 + self.circuit_breakers.get(
-                    operation, CircuitBreakerStateData()
+                    operation,
+                    CircuitBreakerStateData(),
                 ).failure_count
             ),
         }
@@ -479,7 +521,8 @@ def timeout_async(
     timeout: float | None = None,
     strategy: TimeoutStrategy = TimeoutStrategy.FAIL_FAST,
 ) -> t.Callable[
-    [t.Callable[..., t.Awaitable[t.Any]]], t.Callable[..., t.Awaitable[t.Any]]
+    [t.Callable[..., t.Awaitable[t.Any]]],
+    t.Callable[..., t.Awaitable[t.Any]],
 ]:
     def decorator(
         func: t.Callable[..., t.Awaitable[t.Any]],
@@ -488,7 +531,10 @@ def timeout_async(
         async def wrapper(*args: t.Any, **kwargs: t.Any) -> t.Any:
             manager = AsyncTimeoutManager()
             return await manager.with_timeout(
-                operation, func(*args, **kwargs), timeout, strategy
+                operation,
+                func(*args, **kwargs),
+                timeout,
+                strategy,
             )
 
         return wrapper

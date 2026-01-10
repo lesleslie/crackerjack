@@ -1,5 +1,4 @@
-"""
-Comprehensive security hardening tests for subprocess execution.
+"""Comprehensive security hardening tests for subprocess execution.
 
 This module tests the security enhancements implemented to prevent
 injection attacks and ensure secure subprocess execution throughout Crackerjack.
@@ -27,7 +26,7 @@ from crackerjack.services.secure_subprocess import (
 class TestSecureSubprocessExecutor:
     """Test secure subprocess execution with comprehensive validation."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test environment."""
         self.config = SubprocessSecurityConfig(
             max_command_length=1000,
@@ -38,31 +37,31 @@ class TestSecureSubprocessExecutor:
         )
         self.executor = SecureSubprocessExecutor(self.config)
 
-    def test_validates_empty_command(self):
+    def test_validates_empty_command(self) -> None:
         """Test that empty commands are rejected."""
         with pytest.raises(CommandValidationError, match="Command cannot be empty"):
             self.executor._validate_command([])
 
-    def test_validates_non_list_command(self):
+    def test_validates_non_list_command(self) -> None:
         """Test that non-list commands are rejected."""
         with pytest.raises(CommandValidationError, match="Command must be a list"):
             self.executor._validate_command("echo test")
 
-    def test_validates_command_length_limit(self):
+    def test_validates_command_length_limit(self) -> None:
         """Test that overly long commands are rejected."""
         long_command = ["echo"] + ["x" * 200 for _ in range(10)]
 
         with pytest.raises(CommandValidationError, match="Command too long"):
             self.executor._validate_command(long_command)
 
-    def test_validates_argument_length_limit(self):
+    def test_validates_argument_length_limit(self) -> None:
         """Test that overly long arguments are rejected."""
         long_arg_command = ["echo", "x" * 500]
 
         with pytest.raises(CommandValidationError, match="Argument.*too long"):
             self.executor._validate_command(long_arg_command)
 
-    def test_blocks_dangerous_executables(self):
+    def test_blocks_dangerous_executables(self) -> None:
         """Test that dangerous executables are blocked."""
         dangerous_commands = [
             ["rm", "-rf", "/"],
@@ -74,7 +73,7 @@ class TestSecureSubprocessExecutor:
             with pytest.raises(CommandValidationError, match="blocked"):
                 self.executor._validate_command(cmd)
 
-    def test_detects_shell_injection_patterns(self):
+    def test_detects_shell_injection_patterns(self) -> None:
         """Test detection of shell injection patterns."""
         injection_commands = [
             ["echo", "test; rm -rf /"],
@@ -89,7 +88,7 @@ class TestSecureSubprocessExecutor:
             with pytest.raises(CommandValidationError, match="validation failed"):
                 self.executor._validate_command(cmd)
 
-    def test_validates_working_directory_path_traversal(self):
+    def test_validates_working_directory_path_traversal(self) -> None:
         """Test that path traversal in working directory is prevented."""
         dangerous_cwds = [
             "../../../etc",
@@ -102,7 +101,7 @@ class TestSecureSubprocessExecutor:
             with pytest.raises(CommandValidationError, match="working directory"):
                 self.executor._validate_cwd(cwd)
 
-    def test_sanitizes_dangerous_environment_variables(self):
+    def test_sanitizes_dangerous_environment_variables(self) -> None:
         """Test that dangerous environment variables are filtered."""
         dangerous_env = {
             "LD_PRELOAD": "/malicious/lib.so",
@@ -125,7 +124,7 @@ class TestSecureSubprocessExecutor:
         assert "SAFE_VAR" in sanitized
         assert sanitized["SAFE_VAR"] == "safe_value"
 
-    def test_validates_environment_variable_sizes(self):
+    def test_validates_environment_variable_sizes(self) -> None:
         """Test validation of environment variable sizes."""
         large_env = {
             "NORMAL_VAR": "normal_value",
@@ -138,7 +137,7 @@ class TestSecureSubprocessExecutor:
         assert "HUGE_VAR" not in sanitized
         assert "NORMAL_VAR" in sanitized
 
-    def test_validates_timeout_limits(self):
+    def test_validates_timeout_limits(self) -> None:
         """Test timeout validation."""
         # Negative timeout
         with pytest.raises(CommandValidationError, match="must be positive"):
@@ -153,7 +152,7 @@ class TestSecureSubprocessExecutor:
             self.executor._validate_timeout(self.config.max_timeout + 1)
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_successful_secure_execution(self, mock_run):
+    def test_successful_secure_execution(self, mock_run) -> None:
         """Test successful secure subprocess execution."""
         # Mock successful subprocess execution
         mock_result = Mock()
@@ -172,7 +171,7 @@ class TestSecureSubprocessExecutor:
         mock_run.assert_called_once()
 
     @patch("crackerjack.services.secure_subprocess.subprocess.run")
-    def test_subprocess_timeout_logging(self, mock_run):
+    def test_subprocess_timeout_logging(self, mock_run) -> None:
         """Test that subprocess timeouts are properly logged."""
         # Mock timeout exception
         mock_run.side_effect = subprocess.TimeoutExpired("cmd", 30)
@@ -183,7 +182,7 @@ class TestSecureSubprocessExecutor:
                 timeout=30,
             )
 
-    def test_environment_injection_detection(self):
+    def test_environment_injection_detection(self) -> None:
         """Test detection of injection patterns in environment variables."""
         malicious_env = {
             "NORMAL": "safe_value",
@@ -206,7 +205,7 @@ class TestSecureSubprocessExecutor:
 class TestSecurePathValidator:
     """Test secure path validation functionality."""
 
-    def test_detects_path_traversal_patterns(self):
+    def test_detects_path_traversal_patterns(self) -> None:
         """Test detection of various path traversal patterns."""
         traversal_paths = [
             "../../../etc/passwd",
@@ -221,7 +220,7 @@ class TestSecurePathValidator:
             with pytest.raises(Exception):  # Should raise ExecutionError
                 SecurePathValidator.validate_safe_path(path)
 
-    def test_detects_null_byte_patterns(self):
+    def test_detects_null_byte_patterns(self) -> None:
         """Test detection of null byte injection patterns."""
         null_byte_paths = [
             "file.txt%00.exe",
@@ -234,7 +233,7 @@ class TestSecurePathValidator:
             with pytest.raises(Exception):  # Should raise ExecutionError
                 SecurePathValidator.validate_safe_path(path)
 
-    def test_validates_path_within_base_directory(self):
+    def test_validates_path_within_base_directory(self) -> None:
         """Test validation that paths stay within base directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
             base_path = Path(temp_dir)
@@ -250,28 +249,30 @@ class TestSecurePathValidator:
             with pytest.raises(Exception):
                 SecurePathValidator.validate_safe_path(outside_path, base_path)
 
-    def test_secure_path_join_prevents_traversal(self):
+    def test_secure_path_join_prevents_traversal(self) -> None:
         """Test that secure path joining prevents traversal."""
         with tempfile.TemporaryDirectory() as temp_dir:
             base_path = Path(temp_dir)
 
             # Safe join should work
             result = SecurePathValidator.secure_path_join(
-                base_path, "subdir", "file.txt"
+                base_path, "subdir", "file.txt",
             )
-            assert result.parent.parent == base_path
+            # Compare resolved paths to handle macOS symlink resolution
+            # (/var/folders on macOS is symlinked to /private/var/folders)
+            assert result.parent.parent.resolve() == base_path.resolve()
 
             # Traversal attempts should fail
             with pytest.raises(Exception):
                 SecurePathValidator.secure_path_join(
-                    base_path, "../../../etc", "passwd"
+                    base_path, "../../../etc", "passwd",
                 )
 
 
 class TestSubprocessPathValidator:
     """Test subprocess-specific path validation."""
 
-    def test_validates_subprocess_working_directory(self):
+    def test_validates_subprocess_working_directory(self) -> None:
         """Test validation of subprocess working directories."""
         dangerous_dirs = [
             "/etc",
@@ -287,7 +288,7 @@ class TestSubprocessPathValidator:
             with pytest.raises(Exception):  # Should raise ExecutionError
                 SubprocessPathValidator.validate_subprocess_cwd(dir_path)
 
-    def test_validates_executable_paths(self):
+    def test_validates_executable_paths(self) -> None:
         """Test validation of executable paths."""
         dangerous_executables = [
             "/usr/bin/sudo",
@@ -301,7 +302,7 @@ class TestSubprocessPathValidator:
             with pytest.raises(Exception):  # Should raise ExecutionError
                 SubprocessPathValidator.validate_executable_path(exec_path)
 
-    def test_allows_safe_command_names(self):
+    def test_allows_safe_command_names(self) -> None:
         """Test that safe command names are allowed."""
         safe_commands = [
             "python",
@@ -321,7 +322,7 @@ class TestSubprocessPathValidator:
 class TestSecurityIntegration:
     """Test integration of security components."""
 
-    def test_secure_subprocess_function(self):
+    def test_secure_subprocess_function(self) -> None:
         """Test the convenience function for secure subprocess execution."""
         with patch("crackerjack.services.secure_subprocess.subprocess.run") as mock_run:
             mock_result = Mock()
@@ -335,10 +336,10 @@ class TestSecurityIntegration:
             assert result.stdout == "success"
             mock_run.assert_called_once()
 
-    def test_security_logging_integration(self):
+    def test_security_logging_integration(self) -> None:
         """Test that security events are properly logged."""
         with patch(
-            "crackerjack.services.secure_subprocess.get_security_logger"
+            "crackerjack.services.secure_subprocess.get_security_logger",
         ) as mock_logger_getter:
             mock_logger = Mock()
             mock_logger_getter.return_value = mock_logger
@@ -352,10 +353,10 @@ class TestSecurityIntegration:
             # Security logging should have been called
             mock_logger.log_dangerous_command_blocked.assert_called_once()
 
-    def test_environment_sanitization_logging(self):
+    def test_environment_sanitization_logging(self) -> None:
         """Test that environment sanitization is logged."""
         with patch(
-            "crackerjack.services.secure_subprocess.get_security_logger"
+            "crackerjack.services.secure_subprocess.get_security_logger",
         ) as mock_logger_getter:
             mock_logger = Mock()
             mock_logger_getter.return_value = mock_logger
@@ -378,7 +379,7 @@ class TestSecurityIntegration:
 class TestRegressionPrevention:
     """Test that security fixes don't break existing functionality."""
 
-    def test_normal_commands_still_work(self):
+    def test_normal_commands_still_work(self) -> None:
         """Test that normal, safe commands still execute properly."""
         safe_commands = [
             ["python", "--version"],
@@ -394,7 +395,7 @@ class TestRegressionPrevention:
             validated = executor._validate_command(cmd)
             assert validated == cmd
 
-    def test_safe_environments_pass_validation(self):
+    def test_safe_environments_pass_validation(self) -> None:
         """Test that normal environments pass validation."""
         safe_env = {
             "HOME": "/home/user",
@@ -412,7 +413,7 @@ class TestRegressionPrevention:
         for key, value in safe_env.items():
             assert sanitized[key] == value
 
-    def test_reasonable_timeouts_are_allowed(self):
+    def test_reasonable_timeouts_are_allowed(self) -> None:
         """Test that reasonable timeout values are accepted."""
         executor = SecureSubprocessExecutor()
 
@@ -428,7 +429,7 @@ class TestRegressionPrevention:
 class TestEndToEndSecurity:
     """End-to-end security testing."""
 
-    def test_prevents_command_injection_attack(self):
+    def test_prevents_command_injection_attack(self) -> None:
         """Test that command injection attacks are prevented."""
         malicious_commands = [
             ["echo", "test; cat /etc/passwd"],
@@ -440,7 +441,7 @@ class TestEndToEndSecurity:
             with pytest.raises(CommandValidationError):
                 execute_secure_subprocess(cmd)
 
-    def test_prevents_environment_variable_injection(self):
+    def test_prevents_environment_variable_injection(self) -> None:
         """Test that environment variable injection is prevented."""
         malicious_env = {
             "LD_PRELOAD": "/tmp/malicious.so",
@@ -460,7 +461,7 @@ class TestEndToEndSecurity:
             assert "DYLD_INSERT_LIBRARIES" not in called_env
             assert "BASH_ENV" not in called_env
 
-    def test_prevents_working_directory_escape(self):
+    def test_prevents_working_directory_escape(self) -> None:
         """Test that working directory escapes are prevented."""
         with tempfile.TemporaryDirectory():
             dangerous_dirs = [

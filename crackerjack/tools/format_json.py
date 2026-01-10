@@ -18,7 +18,10 @@ def format_json_file(file_path: Path) -> tuple[bool, str | None]:
         data = json.loads(content)
 
         formatted_content = json.dumps(
-            data, indent=2, ensure_ascii=False, sort_keys=True
+            data,
+            indent=2,
+            ensure_ascii=False,
+            sort_keys=True,
         )
 
         formatted_content += "\n"
@@ -36,7 +39,7 @@ def format_json_file(file_path: Path) -> tuple[bool, str | None]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Format JSON files to ensure consistent style"
+        description="Format JSON files to ensure consistent style",
     )
     parser.add_argument(
         "files",
@@ -67,11 +70,10 @@ def main(argv: list[str] | None = None) -> int:
         if not is_success:
             print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
             error_count += 1
+        elif error_msg:
+            print(f"→ {file_path}: {error_msg}")  # noqa: T201
         else:
-            if error_msg:
-                print(f"→ {file_path}: {error_msg}")  # noqa: T201
-            else:
-                print(f"✓ {file_path}: Formatted successfully")  # noqa: T201
+            print(f"✓ {file_path}: Formatted successfully")  # noqa: T201
 
     if error_count > 0:
         print(f"\n{error_count} JSON file(s) failed to format", file=sys.stderr)  # noqa: T201
