@@ -58,6 +58,8 @@ class InitializationService:
         self,
         target_path: Path | None = None,
         force: bool = False,
+        template: str | None = None,
+        interactive: bool = True,
     ) -> dict[str, t.Any]:
         if target_path is None:
             target_path = Path.cwd()
@@ -90,7 +92,22 @@ class InitializationService:
 
             sanitized_project_name = name_result.sanitized_value
 
+            pyproject_path = target_path / "pyproject.toml"
+            template_applied = False
+            if not pyproject_path.exists() or template or force:
+                self._apply_template(
+                    target_path,
+                    sanitized_project_name,
+                    template,
+                    interactive,
+                    force,
+                    results,
+                )
+                template_applied = True
+
             for file_name, merge_strategy in config_files.items():
+                if file_name == "pyproject.toml" and template_applied:
+                    continue
                 self._process_config_file(
                     file_name,
                     merge_strategy,
@@ -706,3 +723,45 @@ python -m crackerjack - a patch
 
         except Exception as e:
             self._handle_file_processing_error("pyproject.toml", e, results)
+
+    def _apply_template(
+        self,
+        target_path: Path,
+        package_name: str,
+        template_name: str | None,
+        interactive: bool,
+        force: bool,
+        results: dict[str, t.Any],
+    ) -> None:
+        try:
+            from .template_applicator import TemplateApplicator
+
+            applicator = TemplateApplicator(console=self.console)
+
+            self.console.print("\n[bold]Template Configuration[/bold]")
+
+            template_result = applicator.apply_template(
+                project_path=target_path,
+                template_name=template_name,
+                package_name=package_name,
+                interactive=interactive,
+                force=force,
+            )
+
+            if template_result["success"]:
+                template_used = template_result.get("template_used", "unknown")
+                t.cast("list[str]", results["files_copied"]).append(
+                    f"pyproject.toml ({template_used} template)",
+                )
+                for mod in template_result.get("modifications", []):
+                    self.console.print(f" [dim]{mod}[/dim]")
+            else:
+                for error in template_result.get("errors", []):
+                    t.cast("list[str]", results["errors"]).append(error)
+                    self.console.print(f"[yellow]⚠️[/ yellow] Template error: {error}")
+
+        except Exception as e:
+            error_msg = f"Template application failed: {e}"
+            t.cast("list[str]", results["errors"]).append(error_msg)
+            self.console.print(f"[yellow]⚠️[/ yellow] {error_msg}")
+            self.console.print("[dim]Continuing with standard initialization...[/dim]")

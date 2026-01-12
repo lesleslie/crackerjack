@@ -530,6 +530,7 @@ class TestManagersIntegration:
         assert publish_manager.pkg_path == temp_project
 
     @patch("subprocess.run")
+    @pytest.mark.slow
     def test_workflow_simulation(self, mock_run, console, temp_project) -> None:
         mock_run.return_value = Mock(returncode=0, stdout="Success", stderr="")
 

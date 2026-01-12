@@ -82,17 +82,6 @@ dependencies = [
     "bandit>=1.9.2",
 ]
 
-[dependency-groups]
-# Development dependencies
-# Install with: uv sync --group dev
-dev = [
-    "excalidraw-mcp>=0.34.0",
-    "zensical>=0.0.15",
-]
-session = [
-    "session-buddy>=0.10.7",
-]
-
 [project.license]
 text = "BSD-3-CLAUSE"
 
@@ -104,6 +93,16 @@ documentation = "https://github.com/lesleslie/crackerjack"
 homepage = "https://github.com/lesleslie/crackerjack"
 repository = "https://github.com/lesleslie/crackerjack"
 
+[dependency-groups]
+dev = [
+    "excalidraw-mcp>=0.34.0",
+    "zensical>=0.0.15",
+    "crackerjack",
+]
+session = [
+    "session-buddy>=0.10.7",
+]
+
 [tool.hatch.build.targets.wheel]
 include = [
     "crackerjack/**/*.py",
@@ -113,18 +112,11 @@ include = [
 [tool.ruff]
 target-version = "py313"
 line-length = 88
-fix = true
-unsafe-fixes = true
-show-fixes = true
-output-format = "full"
 exclude = [
     "tests/",
     "test_*.py",
     "*_test.py",
 ]
-
-[tool.ruff.format]
-docstring-code-format = true
 
 [tool.ruff.lint]
 extend-select = [
@@ -155,20 +147,13 @@ zuban_lsp_port = 8677
 zuban_lsp_timeout = 120.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
-
-# Quality tool timeout settings (in seconds)
-skylos_timeout = 600  # Dead code detection (10 minutes)
-refurb_timeout = 180  # Modern Python suggestions (3 minutes)
-
-# Test parallelization settings
-test_workers = 0  # 0 = auto-detect, 1 = sequential, >1 = explicit, <0 = fractional
-max_workers = 8  # Maximum parallel workers (safety limit)
-memory_per_worker_gb = 2.0  # Minimum memory per worker (prevents OOM)
+skylos_timeout = 600
+refurb_timeout = 180
+test_workers = 0
+max_workers = 8
+memory_per_worker_gb = 2.0
 
 [tool.codespell]
-# Note: Native wrapper (crackerjack.tools.codespell_wrapper) uses git ls-files
-# to discover files, automatically respecting .gitignore patterns.
-# No skip patterns needed.
 quiet-level = 3
 ignore-words-list = "crate,uptodate,nd,nin"
 ignore-words = ".codespell-ignore"
@@ -190,11 +175,6 @@ norecursedirs = [
     "__pycache__",
     "node_modules",
 ]
-# Test execution strategies by marker:
-# - Default (CI/pre-commit): pytest -m "not benchmark and not slow"
-# - Fast (unit only):        pytest -m "unit and not benchmark and not slow"
-# - Nightly (comprehensive): pytest -m "not benchmark"
-# - Weekly (performance):    pytest -m benchmark --benchmark-only
 markers = [
     "unit: marks test as a unit test",
     "benchmark: mark test as a benchmark (skipped by default, run with: pytest -m benchmark)",
@@ -215,18 +195,17 @@ markers = [
     "ai_generated: marks test as AI-generated test",
     "breakthrough: marks test as breakthrough frontier test",
 ]
-# pytest-benchmark configuration (CLI options, not ini_options)
-# Benchmark settings are passed via command line or kept in separate [tool.pytest.benchmark]
-# Removed to avoid "Unknown config option" warnings
 
 [tool.coverage.run]
-branch = true  # Enable branch coverage for more accurate metrics
+branch = true
 source = [
     "crackerjack",
 ]
 data_file = ".coverage"
 parallel = true
-concurrency = ["multiprocessing"]
+concurrency = [
+    "multiprocessing",
+]
 omit = [
     "*/tests/*",
     "*/site-packages/*",
@@ -254,46 +233,25 @@ exclude_also = [
 ignore_errors = false
 
 [tool.pyright]
-verboseOutput = true
 include = [
     "crackerjack",
 ]
 exclude = [
+    "tests/*",
     "scratch",
     ".venv",
-    "*/.venv",
-    "**/.venv",
     "build",
     "dist",
-    "tests/*",
-    "examples/*",
     "crackerjack/mcp/*",
     "crackerjack/plugins/*",
 ]
-extraPaths = [
-    ".venv/lib/python3.13/site-packages/",
-]
 typeCheckingMode = "strict"
-reportMissingTypeStubs = false
-reportOptionalMemberAccess = false
-reportOptionalCall = "warning"
-reportUnknownMemberType = false
-reportUnknownVariableType = false
-reportUnknownArgumentType = false
-reportInvalidTypeForm = "warning"
-reportUnknownLambdaType = false
-reportUnknownParameterType = false
-reportPrivateUsage = false
-reportUnnecessaryTypeIgnoreComment = "warning"
-reportUnnecessaryComparison = "warning"
-reportConstantRedefinition = "warning"
 pythonVersion = "3.13"
 
 [tool.uv]
 keyring-provider = "subprocess"
 publish-url = "https://upload.pypi.org/legacy/"
 check-url = "https://pypi.org/simple/"
-
 
 [tool.creosote]
 paths = [
@@ -356,8 +314,8 @@ enable_all = false
 quiet = true
 python_version = "3.13"
 ignore = [
-    "FURB184",  # Already applies to ALL files including tests
-    "FURB120",  # Already applies to ALL files including tests
+    "FURB184",
+    "FURB120",
 ]
 
 [tool.bandit]

@@ -200,7 +200,7 @@ class HeatMapGenerator:
         from collections import defaultdict
 
         error_matrix: dict[str, t.Any] = defaultdict(
-            lambda: defaultdict(int),  # type: ignore[call-overload]
+            lambda: defaultdict(int), # type: ignore[call-overload]
         )
 
         for file_path, errors in self.error_data.items():

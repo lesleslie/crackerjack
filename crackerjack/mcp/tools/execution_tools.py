@@ -15,7 +15,7 @@ def register_execution_tools(mcp_app: t.Any) -> None:
 
 
 def _register_execute_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def execute_crackerjack(args: str, kwargs: str) -> str:
         try:
             context = get_context()
@@ -101,7 +101,7 @@ def _handle_general_error(error: Exception) -> str:
 
 
 def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def smart_error_analysis(use_cache: bool = True) -> str:
         context = get_context()
 
@@ -119,14 +119,16 @@ def _register_smart_error_analysis_tool(mcp_app: t.Any) -> None:
 
 
 def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     def init_crackerjack(args: str = "", kwargs: str = "{}") -> str:
         try:
-            target_path, force, error = _parse_init_arguments(args, kwargs)
+            target_path, force, template, interactive, error = _parse_init_arguments(
+                args, kwargs
+            )
             if error:
                 return _create_init_error_response(error)
 
-            result = _execute_initialization(target_path, force)
+            result = _execute_initialization(target_path, force, template, interactive)
             return _create_init_success_response(result)
 
         except Exception as e:
@@ -134,7 +136,7 @@ def _register_init_crackerjack_tool(mcp_app: t.Any) -> None:
 
 
 def _register_agent_suggestions_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     def suggest_agents(
         task_description: str = "",
         project_type: str = "python",
@@ -186,25 +188,34 @@ def _parse_kwargs(kwargs: str) -> dict[str, t.Any]:
         return {"error": f"Invalid JSON in kwargs: {e}"}
 
 
-def _parse_init_arguments(args: str, kwargs: str) -> tuple[t.Any, bool, str | None]:
+def _parse_init_arguments(
+    args: str, kwargs: str
+) -> tuple[t.Any, bool, str | None, bool, str | None]:
     try:
         target_path = args.strip() or "."
         kwargs_dict: dict[str, t.Any] = json.loads(kwargs) if kwargs.strip() else {}
         force = kwargs_dict.get("force") or False
+        template = kwargs_dict.get("template")
+        interactive = kwargs_dict.get("interactive", True)
 
         from pathlib import Path
 
         path_obj = Path(target_path)
 
-        return path_obj, force, None
+        return path_obj, force, template, interactive, None
 
     except json.JSONDecodeError:
-        return None, False, "Invalid JSON in kwargs parameter"
+        return None, False, None, True, "Invalid JSON in kwargs parameter"
     except Exception as e:
-        return None, False, f"Invalid arguments: {e}"
+        return None, False, None, True, f"Invalid arguments: {e}"
 
 
-def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]:
+def _execute_initialization(
+    target_path: t.Any,
+    force: bool,
+    template: str | None = None,
+    interactive: bool = True,
+) -> dict[str, t.Any]:
     from rich.console import Console
 
     from crackerjack.services.filesystem import FileSystemService
@@ -213,13 +224,17 @@ def _execute_initialization(target_path: t.Any, force: bool) -> dict[str, t.Any]
 
     console = Console()
     filesystem = FileSystemService()
-    git_service = GitService(target_path)
+    git_service = GitService(console, target_path)
     return InitializationService(
         console,
         filesystem,
         git_service,
         target_path,
-    ).initialize_project_full(force=force)
+    ).initialize_project_full(
+        force=force,
+        template=template,
+        interactive=interactive,
+    )
 
 
 def _create_init_error_response(message: str) -> str:

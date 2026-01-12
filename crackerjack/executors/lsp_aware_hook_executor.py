@@ -13,7 +13,7 @@ from crackerjack.services.lsp_client import LSPClient
 try:
     from crackerjack.executors.tool_proxy import ToolProxy
 except ImportError:
-    ToolProxy = None  # type: ignore
+    ToolProxy = None # type: ignore
 
 
 class LSPAwareHookExecutor(HookExecutor):
@@ -93,19 +93,19 @@ class LSPAwareHookExecutor(HookExecutor):
         with suppress(Exception):
             callback = getattr(self, "_progress_start_callback", None)
             if callback:
-                self._started_hooks += 1  # type: ignore[attr-defined]
-                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
+                self._started_hooks += 1 # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks # type: ignore[attr-defined]
                 if total:
-                    callback(self._started_hooks, total)  # type: ignore[attr-defined]
+                    callback(self._started_hooks, total) # type: ignore[attr-defined]
 
     def _handle_progress_completion(self, total_hooks: int | None = None) -> None:
         with suppress(Exception):
             callback = getattr(self, "_progress_callback", None)
             if callback:
-                self._completed_hooks += 1  # type: ignore[attr-defined]
-                total = self._total_hooks or total_hooks  # type: ignore[attr-defined]
+                self._completed_hooks += 1 # type: ignore[attr-defined]
+                total = self._total_hooks or total_hooks # type: ignore[attr-defined]
                 if total:
-                    callback(self._completed_hooks, total)  # type: ignore[attr-defined]
+                    callback(self._completed_hooks, total) # type: ignore[attr-defined]
 
     def _should_use_lsp_for_hook(
         self,

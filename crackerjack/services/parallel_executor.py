@@ -55,7 +55,7 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
         # Type: LoggerProtocol (logging.Logger is compatible)
         self._logger: LoggerProtocol = logger or logging.getLogger(
             "crackerjack.parallel_executor",
-        )  # type: ignore[assignment]
+        ) # type: ignore[assignment]
         self._cache = cache
 
     def initialize(self) -> None:

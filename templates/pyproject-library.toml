@@ -1,0 +1,125 @@
+# Full-Featured Library Template
+# For: Libraries, frameworks, shared packages (oneiric, mcp-common, acb, fastblocks)
+# Features: Comprehensive testing, quality tools, type checking fallback
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+exclude = ["tests/", "test_*.py", "*_test.py"]
+
+[tool.ruff.lint]
+extend-select = ["C901", "F", "I", "UP"]
+ignore = ["E402", "F821"]
+fixable = ["ALL"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 15
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+timeout = 600
+testpaths = ["tests"]
+addopts = [
+    "--cov=<PACKAGE_NAME>",
+    "--cov-report=term-missing:skip-covered",
+    "--cov-report=html:htmlcov",
+    "--cov-report=json",
+    "--strict-markers",
+    "--strict-config",
+    "-ra",
+    "--tb=short",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "e2e: End-to-end tests",
+    "security: Security-focused tests",
+    "performance: Performance and load tests",
+    "slow: Slow tests (>2s)",
+    "benchmark: Benchmark tests (deferred)",
+    "smoke: Quick smoke tests",
+    "regression: Regression tests",
+    "api: API endpoint tests",
+]
+
+[tool.coverage.run]
+branch = true
+parallel = true  # CRITICAL for pytest-xdist
+concurrency = ["multiprocessing"]
+source = ["<PACKAGE_NAME>"]
+data_file = ".coverage"
+omit = [
+    "*/tests/*",
+    "*/__pycache__/*",
+    "*/__init__.py",
+    "*/_version.py",
+    "*/conftest.py",
+]
+
+[tool.coverage.report]
+exclude_also = [
+    "pragma: no cover",
+    "def __repr__",
+    "def __str__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "pass",
+    "raise ImportError",
+    "except ImportError",
+]
+
+[tool.pyright]
+include = ["<PACKAGE_NAME>"]
+exclude = [
+    "tests/*",
+    "scratch",
+    ".venv",
+    "build",
+    "dist",
+]
+typeCheckingMode = "strict"
+pythonVersion = "3.13"
+
+[tool.bandit]
+target = ["<PACKAGE_NAME>"]
+skips = ["B101", "B110", "B112", "B404", "B603", "B607"]
+exclude_dirs = ["tests/"]
+
+[tool.codespell]
+quiet-level = 3
+ignore-words-list = "crate,uptodate,nd,nin"
+
+[tool.creosote]
+paths = ["<PACKAGE_NAME>"]
+deps-file = "pyproject.toml"
+exclude-deps = [
+    "hatchling",
+    "pytest",
+    "pytest-asyncio",
+    "pytest-cov",
+    "pytest-mock",
+    "pytest-xdist",
+    "pytest-timeout",
+    "pytest-benchmark",
+    "ruff",
+    "pyright",
+    "bandit",
+    "creosote",
+    "codespell",
+    "refurb",
+    "complexipy",
+]
+
+[tool.refurb]
+enable_all = false
+quiet = true
+python_version = "3.13"
+
+[tool.complexipy]
+default_pattern = "**/*.py"
+exclude_patterns = [
+    "**/tests/**",
+    "**/test_*.py",
+]
+max_complexity = 15

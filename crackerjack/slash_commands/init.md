@@ -11,7 +11,11 @@ Initialize or update crackerjack configuration for a Python project.
 ```
 /crackerjack:init
 /crackerjack:init --force
+/crackerjack:init --template minimal
+/crackerjack:init --template library --force
 ```
+
+**New in 0.48.0**: Automatic template detection with AI-powered configuration!
 
 ## Description
 
@@ -19,14 +23,19 @@ This slash command initializes a new Python project with crackerjack's best prac
 
 ## What It Does
 
-1. **Checks Project State**: Verifies which configuration files exist
-1. **Smart Merge Configuration**:
-   - `pyproject.toml` - Intelligently merges tool configurations, preserves higher coverage requirements
+1. **AI Template Detection**: Analyzes your project and recommends optimal template (minimal/library/full)
+1. **Smart Template Application**:
+   - Auto-detects project type (MCP server, library, or AI system)
+   - Applies appropriate `pyproject.toml` template with 6+ quality tools
+   - Replaces placeholders (package name, MCP ports)
+   - Preserves existing configuration via smart merge
+1. **Configuration Files**:
+   - `pyproject.toml` - Template-based with intelligent merging, preserves higher coverage requirements
    - `CLAUDE.md` - Appends crackerjack guidelines without overwriting existing content
    - `RULES.md` - Copies only if missing, preserves existing coding standards
    - `.mcp.json` - Creates MCP configuration for Crackerjack server integration
    - `.gitignore` - Smart merges common Python ignore patterns
-1. **Preserves Project Identity**: Never overwrites existing project metadata, dependencies, or configurations
+1. **Preserves Project Identity**: Never overwrites existing project metadata, dependencies, or custom configurations
 
 ## New: Skill System Integration
 
@@ -75,8 +84,16 @@ The MCP server can detect when initialization is needed:
 ## Options
 
 - `--force`: Force reinitialization even if configuration exists
+- `--template <name>`: Override auto-detection with specific template
+  - `minimal`: For MCP servers, simple tools (~80 lines)
+  - `library`: For libraries, frameworks (~130 lines)
+  - `full`: For complex AI systems (~175 lines)
+  - Omit for automatic AI detection (recommended)
+- `--interactive false`: Disable confirmation prompts (auto-apply detected template)
 
-## Example
+## Examples
+
+### Example 1: Automatic Template Detection (Recommended)
 
 ```
 User: Set up this Python project with best practices
@@ -84,21 +101,85 @@ AI: I'll initialize crackerjack configuration for your project.
 
 /crackerjack:init
 
-[AI executes initialization and reports results]
+[AI analyzes project]
+
+Template Configuration
+✓ Auto-detected: minimal - Minimal MCP Server (basic quality tools, fast setup)
+
+Available templates:
+  1. minimal - Minimal MCP Server (basic quality tools, fast setup)
+  2. library - Full-Featured Library (comprehensive testing, quality tools)
+  3. full - Crackerjack-Level (AI agents, extended timeouts, full tooling)
+  4. Use auto-detected
+
+Select template (1-4) [4]:
+
+✓ Using template: minimal
+✅ Applied minimal template to /path/to/project/pyproject.toml
+  Smart merged with existing config
 
 The project has been initialized with:
-✅ pyproject.toml - Project configuration with crackerjack
-✅ CLAUDE.md - AI guidelines for Claude Code
+✅ pyproject.toml (minimal template) - 80 lines of optimized quality configuration
+✅ CLAUDE.md (appended) - AI guidelines for Claude Code
 ✅ RULES.md - Python coding standards
 ✅ .mcp.json - MCP server configuration
-✅ .gitignore - Python ignore patterns
-✅ Skill System - Access to 11 AI agent skills
+✅ .gitignore (merged) - Python ignore patterns
 
 Your project now has:
-- Quality checks (ruff, pytest, coverage, complexity)
-- AI-powered fixing with 12 specialized agents
-- Skill system for intelligent agent selection
-- MCP integration for tool access
+- Ruff formatting (line-length 88, minimal extend-select)
+- Pytest with parallel coverage support (3-4x faster tests)
+- Bandit security scanning
+- Creosote unused dependency detection
+- 4 standard test markers
+```
+
+### Example 2: Manual Template Override
+
+```
+User: Initialize this library project with comprehensive testing tools
+AI: I'll apply the library template with full quality tools.
+
+/crackerjack:init --template library
+
+✓ Using template: library
+✅ Applied library template to /path/to/project/pyproject.toml
+  Applied full template (new config)
+
+The project has been initialized with:
+✅ pyproject.toml (library template) - 130 lines of comprehensive quality configuration
+✅ CLAUDE.md (appended) - AI guidelines
+✅ RULES.md - Coding standards
+✅ .mcp.json - MCP server configuration
+✅ .gitignore (merged) - Python ignore patterns
+
+Your project now has:
+- All minimal template features
+- Pyright type checking fallback
+- Codespell typo detection
+- Refurb modernization suggestions
+- Complexipy complexity checking
+- 10 comprehensive test markers
+```
+
+### Example 3: Force Reinitialization
+
+```
+User: Update my project's configuration to the latest crackerjack standards
+AI: I'll force reinitialization to apply the latest standards.
+
+/crackerjack:init --force
+
+✓ Auto-detected: full - Crackerjack-Level (AI agents, extended timeouts, full tooling)
+✓ Using template: full
+✅ Applied full template to /path/to/project/pyproject.toml
+  Smart merged with existing config
+
+Updated configuration includes:
+- 16 extended test markers (AI-generated, chaos, mutation)
+- MCP server configuration (ports 8676, 8675)
+- AI agent timeout settings (skylos, refurb)
+- Test parallelization settings (auto-detect workers)
+- Mdformat markdown formatting
 ```
 
 ## Auto-Init Behavior

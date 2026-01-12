@@ -137,8 +137,6 @@ def run(
     zuban_lsp_timeout: int = CLI_OPTIONS["zuban_lsp_timeout"],
     enable_lsp_hooks: bool = CLI_OPTIONS["enable_lsp_hooks"],
     watchdog: bool = CLI_OPTIONS["watchdog"],
-    monitor: bool = CLI_OPTIONS["monitor"],
-    enhanced_monitor: bool = CLI_OPTIONS["enhanced_monitor"],
     ai_debug: bool = CLI_OPTIONS["ai_debug"],
     job_id: str | None = CLI_OPTIONS["job_id"],
     dev: bool = CLI_OPTIONS["dev"],

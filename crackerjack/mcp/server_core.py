@@ -21,7 +21,7 @@ console = Console()
 try:
     import tomli
 except ImportError:
-    tomli = None  # type: ignore[assignment]
+    tomli = None # type: ignore[assignment]
 
 try:
     from fastmcp import FastMCP
@@ -29,7 +29,7 @@ try:
     _mcp_available = True
 except ImportError:
     _mcp_available = False
-    FastMCP = None  # type: ignore[misc, assignment, no-redef]
+    FastMCP = None # type: ignore[misc, assignment, no-redef]
 
 
 try:

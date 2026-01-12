@@ -26,7 +26,7 @@ MODULE_STATUS = AdapterStatus.STABLE
 class CodespellSettings(ToolAdapterSettings):
     tool_name: str = "codespell"
     use_json_output: bool = False
-    fix_enabled: bool = False
+    fix_enabled: bool = True
     skip_hidden: bool = True
     ignore_words: list[str] = Field(default_factory=list)
     ignore_words_file: Path | None = None
@@ -165,11 +165,11 @@ class CodespellAdapter(BaseToolAdapter):
                 "**/__pycache__/**",
             ],
             timeout_seconds=60,
-            is_formatter=False,
+            is_formatter=True,
             parallel_safe=True,
             stage="fast",
             settings={
-                "fix_enabled": False,
+                "fix_enabled": True,
                 "skip_hidden": True,
                 "ignore_words": ["pydantic", "uuid", "dataclass"],
                 "check_filenames": False,

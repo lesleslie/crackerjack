@@ -83,7 +83,7 @@ def load_schema(schema_path: Path) -> dict[str, t.Any] | None:
 
         return schema
     except (OSError, json.JSONDecodeError) as e:
-        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr)  # noqa: T201
+        print(f"Could not load schema {schema_path}: {e}", file=sys.stderr) # noqa: T201
         return None
 
 
@@ -162,17 +162,17 @@ def _get_json_files(args: argparse.Namespace) -> list[Path]:
 def _process_file(file_path: Path, schema_path: Path | None, strict: bool) -> int:
     if not schema_path:
         if strict:
-            print(f"✗ {file_path}: No schema found", file=sys.stderr)  # noqa: T201
+            print(f"✗ {file_path}: No schema found", file=sys.stderr) # noqa: T201
             return 1
-        print(f"→ {file_path}: No schema found, skipping validation")  # noqa: T201
+        print(f"→ {file_path}: No schema found, skipping validation") # noqa: T201
         return 0
 
     is_valid, error_msg = validate_json_against_schema(file_path, schema_path)
 
     if not is_valid:
-        print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
+        print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
         return 1
-    print(f"✓ {file_path}: Valid against {schema_path.name}")  # noqa: T201
+    print(f"✓ {file_path}: Valid against {schema_path.name}") # noqa: T201
     return 0
 
 
@@ -182,7 +182,7 @@ def main(argv: list[str] | None = None) -> int:
     files = _get_json_files(args)
 
     if not files:
-        print("No JSON files to validate")  # noqa: T201
+        print("No JSON files to validate") # noqa: T201
         return 0
 
     error_count = 0
@@ -191,7 +191,7 @@ def main(argv: list[str] | None = None) -> int:
         error_count += _process_file(file_path, schema_path, args.strict)
 
     if error_count > 0:
-        print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr)  # noqa: T201
+        print(f"\n{error_count} JSON file(s) failed schema validation", file=sys.stderr) # noqa: T201
         return 1
 
     return 0

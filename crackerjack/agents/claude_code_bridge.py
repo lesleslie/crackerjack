@@ -11,7 +11,7 @@ _claude_ai_available = False
 ClaudeCodeFixer: type[t.Any] | None = None
 
 with suppress(ImportError):
-    from crackerjack.adapters.ai.claude import ClaudeCodeFixer  # type: ignore[no-redef]
+    from crackerjack.adapters.ai.claude import ClaudeCodeFixer # type: ignore[no-redef]
 
     _claude_ai_available = True
 

@@ -92,7 +92,8 @@ class ConnectionPool:
         self.connections: dict[str, t.Any] = {}
         self.connection_stats: dict[str, dict[str, t.Any]] = {}
         self.last_cleanup = time.time()
-        self._lock = threading.Lock()
+
+        self._lock = threading.RLock()
 
     def add_connection(
         self,
@@ -401,7 +402,8 @@ class AdvancedOptimizer:
             }
 
             process = psutil.Process()
-            active_connections = len(process.connections())
+
+            active_connections = len(process.net_connections())
             thread_count = process.num_threads()
             file_descriptors = process.num_fds() if hasattr(process, "num_fds") else 0
 

@@ -282,7 +282,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start:conf_end].strip()
+            return message_part[conf_start: conf_end].strip()
 
         return "unknown"
 
