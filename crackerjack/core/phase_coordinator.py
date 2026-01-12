@@ -31,9 +31,9 @@ try:
         FileSystemCache,
         GitOperationCache,
     )
-except Exception:  # pragma: no cover - optional legacy module
-    FileSystemCache = t.Any  # type: ignore[assignment]
-    GitOperationCache = t.Any  # type: ignore[assignment]
+except Exception: # pragma: no cover - optional legacy module
+    FileSystemCache = t.Any # type: ignore[assignment]
+    GitOperationCache = t.Any # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
     from crackerjack.models.protocols import (

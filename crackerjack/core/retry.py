@@ -12,7 +12,7 @@ T = TypeVar("T")
 
 def _calculate_delay(current_delay: float, jitter: bool, backoff: float) -> float:
     if jitter:
-        return current_delay * (0.5 + random.random() * 0.5)  # nosec B311 # Not used for cryptographic purposes
+        return current_delay * (0.5 + random.random() * 0.5) # nosec B311 # Not used for cryptographic purposes
     return current_delay * backoff
 
 
@@ -54,7 +54,7 @@ def retry(
     backoff: float = 2.0,
     max_delay: float | None = None,
     jitter: bool = True,
-    exceptions: tuple[type[BaseException], ...] = (Exception,),
+    exceptions: tuple[type[BaseException], ...] = (Exception, ),
     logger_func: Callable[[str], None] | None = None,
 ) -> Callable[[Callable[..., T]], Callable[..., T]]:
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
@@ -112,7 +112,7 @@ async def _retry_async[T](
 
     for attempt in range(max_attempts):
         try:
-            return await func(*args, **kwargs)  # type: ignore[misc]
+            return await func(*args, **kwargs) # type: ignore[misc]
 
         except exceptions as e:
             last_exception = e
@@ -212,7 +212,7 @@ def retry_api_call(
 
 @retry_api_call(max_attempts=3, delay=0.5)
 async def example_api_call_async(url: str) -> str:
-    if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
+    if random.random() < 0.7: # 70% chance of failure for testing # nosec B311
         msg = "Simulated network error"
         raise ConnectionError(msg)
 
@@ -221,7 +221,7 @@ async def example_api_call_async(url: str) -> str:
 
 @retry_api_call(max_attempts=3, delay=0.5)
 def example_api_call_sync(url: str) -> str:
-    if random.random() < 0.7:  # 70% chance of failure for testing # nosec B311
+    if random.random() < 0.7: # 70% chance of failure for testing # nosec B311
         msg = "Simulated network error"
         raise ConnectionError(msg)
 

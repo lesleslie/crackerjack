@@ -153,7 +153,9 @@ FAST_HOOKS = [
     HookDefinition(
         name="codespell",
         command=[],
+        is_formatting=True,
         timeout=150,
+        retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=True,
     ),

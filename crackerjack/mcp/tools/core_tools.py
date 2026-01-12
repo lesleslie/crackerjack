@@ -183,7 +183,7 @@ def _execute_stage(
 
 
 def _adapt_settings_to_protocol(settings: CrackerjackSettings) -> t.Any:
-    return _AdaptedOptions(settings)  # type: ignore
+    return _AdaptedOptions(settings) # type: ignore
 
 
 class _AdaptedOptions:
@@ -335,7 +335,7 @@ def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
 
 
 def register_core_tools(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def run_crackerjack_stage(args: str, kwargs: str) -> str:
         context = get_context()
         rate_limiter = context.rate_limiter if context else None
@@ -388,7 +388,7 @@ def _detect_errors_and_suggestions(
 
 
 def register_analyze_errors_tool(mcp_app: t.Any) -> None:
-    @mcp_app.tool()  # type: ignore[misc]
+    @mcp_app.tool() # type: ignore[misc]
     async def analyze_errors(output: str = "", include_suggestions: bool = True) -> str:
         context = get_context()
         if not context:

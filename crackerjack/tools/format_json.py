@@ -60,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No JSON files to format")  # noqa: T201
+        print("No JSON files to format") # noqa: T201
         return 0
 
     error_count = 0
@@ -68,18 +68,18 @@ def main(argv: list[str] | None = None) -> int:
         is_success, error_msg = format_json_file(file_path)
 
         if not is_success:
-            print(f"✗ {file_path}: {error_msg}", file=sys.stderr)  # noqa: T201
+            print(f"✗ {file_path}: {error_msg}", file=sys.stderr) # noqa: T201
             error_count += 1
         elif error_msg:
-            print(f"→ {file_path}: {error_msg}")  # noqa: T201
+            print(f"→ {file_path}: {error_msg}") # noqa: T201
         else:
-            print(f"✓ {file_path}: Formatted successfully")  # noqa: T201
+            print(f"✓ {file_path}: Formatted successfully") # noqa: T201
 
     if error_count > 0:
-        print(f"\n{error_count} JSON file(s) failed to format", file=sys.stderr)  # noqa: T201
+        print(f"\n{error_count} JSON file(s) failed to format", file=sys.stderr) # noqa: T201
         return 1
 
-    print(f"\nAll {len(files)} JSON file(s) formatted successfully")  # noqa: T201
+    print(f"\nAll {len(files)} JSON file(s) formatted successfully") # noqa: T201
     return 0
 
 

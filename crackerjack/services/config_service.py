@@ -133,7 +133,7 @@ def _load_toml_from_text(content: str) -> dict[str, Any]:
     try:
         import tomllib
     except ImportError:
-        tomllib = None  # type: ignore[assignment]
+        tomllib = None # type: ignore[assignment]
 
     if tomllib is not None:
         return tomllib.loads(content)
@@ -147,7 +147,7 @@ def _dump_toml(config: dict[str, Any]) -> str:
     try:
         import toml
     except ImportError:
-        toml = None  # type: ignore[assignment]
+        toml = None # type: ignore[assignment]
 
     if toml is not None:
         return toml.dumps(config)

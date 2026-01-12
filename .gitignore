@@ -77,39 +77,86 @@ crackerjack-ai-debug-*.log
 **/.claude/settings.local.json
 
 # Crackerjack patterns
-complexipy_results_*.json
-complexipy.json
+
+
+
 
 # Build/Distribution
 # Caches
 # Coverage
 # Crackerjack specific
 # Development
+*$py.class
+**/.claude/settings.local.json
+*.egg-info/
+*.py[cod]
 *.pyc
+.DS_STORE
+.autotyping-cache/
+.coverage*
 .crackerjack-*
-/dist/
-htmlcov/
-/NOTES.md
-/.obsidian/
-/.smart-env/
-/.backups/
-settings/local.yaml
-
-# Local settings overrides (ACB configuration)
-/.uv-cache/
-/.complexipy_cache/
-
-# Pyscn static analysis reports
+.crackerjack/outputs/
+.envrc
+.hypothesis/
+.idea/
+.mcp.json
+.mypy_cache/
+.pdm-build/
+.pdm-python
+.pdm.toml
 .pyscn/
-
-# Documentation archives (skip in formatters/docs processing)
-/docs/archive/
-docs/archive/
-
-# Git worktrees (Crystal)
-/worktrees/
-/worktree-*/
-/.oneiric_cache/
-/.jbeval/
-/.conductor/
+.pytest_cache/
+.ruff_cache/
+.venv/
 /.ai/
+/.backups/
+/.benchmarks/
+/.claude/
+/.complexipy_cache/
+/.conductor/
+/.crackerjack-hooks-updated
+/.crackerjack-mcp/
+/.crackerjack-state
+/.crackerjack/
+/.jbeval/
+/.mcp-proxy.json
+/.obsidian/
+/.oneiric_cache/
+/.smart-env/
+/.uv-cache/
+/NOTES.md
+/__pypackages__/
+/ai-agent-summary.json
+/bandit-report.json
+/build/
+/complexipy.json
+/coverage.json
+/dist/
+/docs/archive/
+/error-context.json
+/examples/
+/feature-implementation-*.md
+/hooks-analysis.json
+/htmlcov/
+/project-structure.json
+/quality-metrics.json
+/scratch/
+/session_handoff_*.md
+/test-implementation-*.md
+/test-results.xml
+/tests/.benchmarks/
+/tests/htmlcov/
+/tmp/
+/worktree-*/
+/worktrees/
+__pycache__/
+build/
+complexipy.json
+complexipy_results_*.json
+crackerjack-ai-debug-*.log
+crackerjack-debug-*.log
+dist/
+docs/archive/
+htmlcov/
+settings/local.yaml
+venv/

@@ -134,7 +134,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "normalize_multiple_newlines": ValidatedPattern(
         name="normalize_multiple_newlines",
-        pattern=r"\n{3,}",
+        pattern=r"\n{3, }",
         replacement="\n\n",
         description="Normalize multiple consecutive newlines to maximum 2",
         global_replace=True,
@@ -164,7 +164,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "spacing_after_comma": ValidatedPattern(
         name="spacing_after_comma",
-        pattern=r",(?=[^ \n])",
+        pattern=r", (?=[^ \n])",
         replacement=r", ",
         description="Add space after comma if missing",
         global_replace=True,
@@ -196,7 +196,7 @@ PATTERNS: dict[str, ValidatedPattern] = {
     ),
     "multiple_spaces": ValidatedPattern(
         name="multiple_spaces",
-        pattern=r" {2,}",
+        pattern=r" {2, }",
         replacement=r" ",
         description="Replace multiple spaces with single space",
         global_replace=True,

@@ -35,23 +35,23 @@ class BreakingChangeAnalyzer:
             re.compile(
                 r"BREAKING\s*CHANGE[:\s]",
                 re.IGNORECASE,
-            ),  # REGEX OK: breaking change detection
+            ), # REGEX OK: breaking change detection
             re.compile(
                 r"^[^:\n]*!:",
                 re.MULTILINE,
-            ),  # REGEX OK: conventional commit breaking marker
+            ), # REGEX OK: conventional commit breaking marker
             re.compile(
                 r"\bremove\s+\w+\s+(api|function|method|class)",
                 re.IGNORECASE,
-            ),  # REGEX OK: API removal detection
+            ), # REGEX OK: API removal detection
             re.compile(
                 r"\bdelete\s+\w+\s+(api|endpoint|interface)",
                 re.IGNORECASE,
-            ),  # REGEX OK: API deletion detection
+            ), # REGEX OK: API deletion detection
             re.compile(
                 r"\bchange\s+\w+\s+(signature|interface|api)",
                 re.IGNORECASE,
-            ),  # REGEX OK: API signature change
+            ), # REGEX OK: API signature change
         ]
 
     def analyze(self, entries: list[ChangelogEntry]) -> tuple[bool, list[str], float]:
@@ -79,23 +79,23 @@ class FeatureAnalyzer:
             re.compile(
                 r"^feat[(\[]",
                 re.IGNORECASE,
-            ),  # REGEX OK: conventional commit feat
+            ), # REGEX OK: conventional commit feat
             re.compile(
                 r"\badd\s+(new\s+)?\w+",
                 re.IGNORECASE,
-            ),  # REGEX OK: addition detection
+            ), # REGEX OK: addition detection
             re.compile(
                 r"\bimplement\s+\w+",
                 re.IGNORECASE,
-            ),  # REGEX OK: implementation detection
+            ), # REGEX OK: implementation detection
             re.compile(
                 r"\bintroduce\s+\w+",
                 re.IGNORECASE,
-            ),  # REGEX OK: introduction detection
+            ), # REGEX OK: introduction detection
             re.compile(
                 r"\bcreate\s+(new\s+)?\w+",
                 re.IGNORECASE,
-            ),  # REGEX OK: creation detection
+            ), # REGEX OK: creation detection
         ]
 
     def analyze(self, entries: list[ChangelogEntry]) -> tuple[bool, list[str], float]:

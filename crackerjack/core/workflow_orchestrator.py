@@ -96,15 +96,15 @@ class WorkflowPipeline:
 
             cursor.execute(
                 "DELETE FROM workflow_checkpoints WHERE workflow_key = ?",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
             cursor.execute(
                 "DELETE FROM workflow_executions WHERE workflow_key = ?",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
             cursor.execute(
                 "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
-                ("crackerjack",),
+                ("crackerjack", ),
             )
 
             conn.commit()

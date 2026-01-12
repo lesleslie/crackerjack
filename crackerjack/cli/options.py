@@ -99,8 +99,6 @@ class Options(BaseModel):
     track_progress: bool = False
     boost_coverage: bool = True
     coverage: bool = False
-    monitor: bool = False
-    enhanced_monitor: bool = False
     watchdog: bool = False
     start_zuban_lsp: bool = False
     stop_zuban_lsp: bool = False
@@ -466,22 +464,6 @@ CLI_OPTIONS = {
         help=(
             "Start service watchdog to monitor and auto-restart "
             "MCP and WebSocket servers."
-        ),
-    ),
-    "monitor": typer.Option(
-        False,
-        "--monitor",
-        help=(
-            "Start multi-project progress monitor with WebSocket polling, "
-            "watchdog services, and autodiscovery."
-        ),
-    ),
-    "enhanced_monitor": typer.Option(
-        False,
-        "--enhanced-monitor",
-        help=(
-            "Start enhanced progress monitor with advanced MetricCard widgets "
-            "and modern web UI patterns."
         ),
     ),
     "dev": typer.Option(

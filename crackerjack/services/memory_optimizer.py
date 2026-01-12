@@ -252,13 +252,13 @@ class MemoryOptimizer:
     ) -> None:
         self._lazy_objects: WeakSet[t.Any] = WeakSet()
         self._resource_pools: dict[str, ResourcePool] = {}
-        self._profiler = MemoryProfiler(logger=logger)  # type: ignore[arg-type]
+        self._profiler = MemoryProfiler(logger=logger) # type: ignore[arg-type]
         self._stats_lock = Lock()
         self._lazy_created_count = 0
         self._lazy_loaded_count = 0
         self._gc_threshold = 100
         self._auto_gc = True
-        self._logger: logging.Logger = logger  # type: ignore[annotation]
+        self._logger: logging.Logger = logger # type: ignore[annotation]
 
     @classmethod
     def get_instance(cls) -> "MemoryOptimizer":

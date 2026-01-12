@@ -175,7 +175,7 @@ class PredictiveAnalyticsEngine:
         trend_direction, trend_strength = self._calculate_trend(values)
 
         config = self.metric_configs.get(metric_type, {})
-        predictor_name: str = config.get("predictor", "moving_average")  # type: ignore[assignment]
+        predictor_name: str = config.get("predictor", "moving_average") # type: ignore[assignment]
         predictor = self.predictors[predictor_name]
 
         predicted_values = predictor.predict(values, periods=24)

@@ -556,6 +556,13 @@ class TestManager:
                 key = "errors" if metric == "error" else metric
                 stats[key] = count
 
+
+        if stats["passed"] == 0:
+            collected_match = re.search(r"(\d+)\s+collected", summary_text, re.IGNORECASE)
+            if collected_match and stats["skipped"] == 0:
+
+                stats["passed"] = int(collected_match.group(1))
+
     def _calculate_total_tests(self, stats: dict[str, t.Any], output: str) -> None:
         stats["total"] = sum(
             [
@@ -610,10 +617,29 @@ class TestManager:
         )
 
         if stats["total"] == 0:
+
+
+            for metric in ("passed", "failed", "skipped", "error"):
+                metric_pattern = rf"(\d+)\s+{metric}"
+                metric_match = re.search(metric_pattern, output, re.IGNORECASE)
+                if metric_match:
+                    count = int(metric_match.group(1))
+                    key = "errors" if metric == "error" else metric
+                    stats[key] = count
+
+
+            if stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0:
+                stats["total"] = sum([
+                    stats["passed"], stats["failed"], stats["skipped"], stats["errors"],
+                    stats.get("xfailed", 0), stats.get("xpassed", 0),
+                ])
+                return
+
+
             legacy_patterns = {
-                "passed": r"(?:\.|✓)\s*(?:PASSED|pass)",
+                "passed": r"(?:\.|✓|✅)\s*(?:PASSED|pass|Tests\s+passed)",
                 "failed": r"(?:F|X|❌)\s*(?:FAILED|fail)",
-                "skipped": r"(?:s|S|.SKIPPED|skip)",
+                "skipped": r"(?<!\w)(?:s|S)(?!\w)|\.SKIPPED|skip|\d+\s+skipped",
                 "errors": r"ERROR|E\s+",
             }
             for key, pattern in legacy_patterns.items():

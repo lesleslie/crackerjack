@@ -86,9 +86,9 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.git import GitService
 
-            return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
+            return GitService(console=self.console, pkg_path=self.pkg_path) # type: ignore[return-value]
         except Exception:
-            return _NullGitService()  # type: ignore[return-value]
+            return _NullGitService() # type: ignore[return-value]
 
     def _resolve_version_analyzer(
         self,
@@ -99,9 +99,9 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return VersionAnalyzer(self._git_service)  # type: ignore[arg-type]
+            return VersionAnalyzer(self._git_service) # type: ignore[arg-type]
         except Exception:
-            return _NullVersionAnalyzer()  # type: ignore[return-value]
+            return _NullVersionAnalyzer() # type: ignore[return-value]
 
     def _resolve_changelog_generator(
         self,
@@ -112,9 +112,9 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
-            return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
+            return ChangelogGenerator(git_service=self._git_service) # type: ignore[return-value]
         except Exception:
-            return _NullChangelogGenerator()  # type: ignore[return-value]
+            return _NullChangelogGenerator() # type: ignore[return-value]
 
     def _resolve_regex_patterns(
         self,
@@ -122,7 +122,7 @@ class PublishManagerImpl:
     ) -> RegexPatternsProtocol:
         if regex_patterns is not None:
             return regex_patterns
-        return _RegexPatterns()  # type: ignore[return-value]
+        return _RegexPatterns() # type: ignore[return-value]
 
     def _resolve_filesystem(
         self,

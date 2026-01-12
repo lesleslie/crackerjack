@@ -47,12 +47,12 @@ class ChangelogGenerator:
             "revert": "Reverted",
         }
 
-        self.conventional_commit_pattern = re.compile(  # REGEX OK: conventional commit parsing
+        self.conventional_commit_pattern = re.compile( # REGEX OK: conventional commit parsing
             r"^(?P<type>\w+)(?:\((?P<scope>[^)]+)\))?(?P<breaking>!)?:\s*(?P<description>.+)$",
         )
 
         self.breaking_change_pattern = (
-            re.compile(  # REGEX OK: breaking change detection
+            re.compile( # REGEX OK: breaking change detection
                 r"BREAKING\s*CHANGE[:]\s*(.+)",
                 re.IGNORECASE | re.MULTILINE,
             )

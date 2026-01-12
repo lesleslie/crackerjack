@@ -12,26 +12,26 @@ from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
 from crackerjack.models.task import HookResult
 
 try:
-    from crackerjack.services.git import GitService  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    GitService = None  # type: ignore
+    from crackerjack.services.git import GitService # type: ignore
+except ModuleNotFoundError: # pragma: no cover - optional dependency
+    GitService = None # type: ignore
 
 try:
-    from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    OrchestrationConfig = None  # type: ignore
+    from crackerjack.orchestration.config import OrchestrationConfig # type: ignore
+except ModuleNotFoundError: # pragma: no cover - optional dependency
+    OrchestrationConfig = None # type: ignore
     orchestration_available = False
 else:
     orchestration_available = OrchestrationConfig is not None
 
 try:
-    from crackerjack.orchestration.hook_orchestrator import (  # type: ignore
+    from crackerjack.orchestration.hook_orchestrator import ( # type: ignore
         HookOrchestratorAdapter,
         HookOrchestratorSettings,
     )
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    HookOrchestratorAdapter = None  # type: ignore
-    HookOrchestratorSettings = None  # type: ignore
+except ModuleNotFoundError: # pragma: no cover - optional dependency
+    HookOrchestratorAdapter = None # type: ignore
+    HookOrchestratorSettings = None # type: ignore
     orchestration_available = False
 else:
     orchestration_available = HookOrchestratorSettings is not None
@@ -70,14 +70,14 @@ class HookManagerImpl:
                 git_service=git_service,
             )
         elif not debug and not use_incremental and git_service is None:
-            self.executor = HookExecutor(  # type: ignore[assignment]
+            self.executor = HookExecutor( # type: ignore[assignment]
                 self.console,
                 pkg_path,
                 verbose,
                 quiet,
             )
         else:
-            self.executor = HookExecutor(  # type: ignore[assignment]
+            self.executor = HookExecutor( # type: ignore[assignment]
                 self.console,
                 pkg_path,
                 verbose,
@@ -446,7 +446,7 @@ class HookManagerImpl:
             return
 
         if enable:
-            self.executor = LSPAwareHookExecutor(  # type: ignore[assignment]
+            self.executor = LSPAwareHookExecutor( # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
@@ -454,7 +454,7 @@ class HookManagerImpl:
                 use_tool_proxy=self.tool_proxy_enabled,
             )
         else:
-            self.executor = HookExecutor(  # type: ignore[assignment]
+            self.executor = HookExecutor( # type: ignore[assignment]
                 self.console,
                 self.pkg_path,
                 verbose=getattr(self.executor, "verbose", False),
