@@ -563,6 +563,7 @@ dependencies = [
     { name = "codespell" },
     { name = "complexipy" },
     { name = "creosote" },
+    { name = "duckdb" },
     { name = "fastapi" },
     { name = "fastmcp" },
     { name = "hatchling" },
@@ -616,6 +617,8 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "crackerjack" },
+    { name = "duckdb" },
     { name = "excalidraw-mcp" },
     { name = "zensical" },
 ]
@@ -631,6 +634,7 @@ requires-dist = [
     { name = "codespell", specifier = ">=2.4.1" },
     { name = "complexipy", specifier = ">=5.1.0" },
     { name = "creosote", specifier = ">=4.1.0" },
+    { name = "duckdb", specifier = ">=1.4.3" },
     { name = "fastapi", specifier = ">=0.124.2" },
     { name = "fastmcp", specifier = ">=2.13.2" },
     { name = "hatchling", specifier = ">=1.28.0" },
@@ -684,6 +688,8 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "crackerjack" },
+    { name = "duckdb", specifier = ">=1.4.3" },
     { name = "excalidraw-mcp", specifier = ">=0.34.0" },
     { name = "zensical", specifier = ">=0.0.15" },
 ]
