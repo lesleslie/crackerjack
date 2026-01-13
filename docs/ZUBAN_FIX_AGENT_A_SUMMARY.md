@@ -58,6 +58,7 @@ def smart_merge_pre_commit_config(
     self.logger.info(f"Smart merge pre-commit config for {project_name}")
     return source_content
 
+
 def write_pre_commit_config(
     self,
     config: dict[str, t.Any],

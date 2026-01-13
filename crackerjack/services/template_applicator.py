@@ -20,6 +20,96 @@ class TemplateApplicator:
         self.crackerjack_root = Path(__file__).parent.parent.parent
         self.templates_dir = self.crackerjack_root / "templates"
 
+    def _select_template(
+        self,
+        project_path: Path,
+        template_name: str | None,
+        interactive: bool,
+    ) -> str:
+        """Handle template selection with auto-detection and interactive fallback.
+
+        Selects a template either by manual override, auto-detection, or
+        interactive prompt. When auto-detecting in non-interactive mode,
+        displays the detected template for confirmation.
+
+        Args:
+            project_path: Path to the project for template detection
+            template_name: Manual template name override (skips detection)
+            interactive: Whether to prompt for manual selection
+
+        Returns:
+            The name of the selected template
+
+        Examples:
+            >>> _select_template(Path("/tmp/project"), "minimal", False)
+            'minimal'  # Manual override
+            >>> _select_template(Path("/tmp/project"), None, False)
+            'library'  # Auto-detected and confirmed
+        """
+        if template_name:
+            return self.detector.detect_template(
+                project_path,
+                manual_override=template_name,
+            )
+
+        auto_detected = self.detector.detect_template(project_path)
+        if interactive:
+            return self.detector.prompt_manual_selection(auto_detected)
+
+        self.console.print(
+            f"[green]✓[/green] Auto-detected template: [cyan]{auto_detected}[/cyan]",
+        )
+        return auto_detected
+
+    def _load_and_prepare_template(
+        self,
+        template_name: str,
+        package_name: str,
+        project_path: Path,
+        force: bool,
+    ) -> dict[str, t.Any] | None:
+        """Load template file, replace placeholders, and merge with existing config.
+
+        Loads the template file from disk, performs placeholder substitution
+        (e.g., <PACKAGE_NAME>), and optionally smart-merges with existing
+        pyproject.toml configuration.
+
+        Args:
+            template_name: Name of the template to load
+            package_name: Package name for placeholder substitution
+            project_path: Path to the target project
+            force: If True, skip smart merge and use full template
+
+        Returns:
+            Merged configuration dict, or None if template file not found
+
+        Examples:
+            >>> _load_and_prepare_template("minimal", "mypkg", Path("/tmp/project"), False)
+            {'project': {'name': 'mypkg'}, 'tool': {'ruff': {...}}}
+            >>> _load_and_prepare_template("nonexistent", "pkg", Path("/tmp"), False)
+            None
+        """
+        template_path = self.templates_dir / f"pyproject-{template_name}.toml"
+        if not template_path.exists():
+            return None
+
+        with template_path.open("rb") as f:
+            template_config = tomli.load(f)
+
+        template_config = self._replace_placeholders(
+            template_config,
+            package_name,
+            project_path,
+        )
+
+        pyproject_path = project_path / "pyproject.toml"
+        if pyproject_path.exists() and not force:
+            return self._smart_merge_configs(
+                template_config,
+                pyproject_path,
+            )
+        return template_config
+
     def apply_template(
         self,
         project_path: Path,
@@ -37,23 +127,9 @@ class TemplateApplicator:
         }
 
         try:
-            if template_name:
-                selected_template = self.detector.detect_template(
-                    project_path,
-                    manual_override=template_name,
-                )
-            else:
-                auto_detected = self.detector.detect_template(project_path)
-                if interactive:
-                    selected_template = self.detector.prompt_manual_selection(
-                        auto_detected,
-                    )
-                else:
-                    selected_template = auto_detected
-                    self.console.print(
-                        f"[green]✓[/green] Auto-detected template: [cyan]{selected_template}[/cyan]",
-                    )
-
+            selected_template = self._select_template(
+                project_path, template_name, interactive
+            )
             result["template_used"] = selected_template
 
             if package_name is None:
@@ -63,29 +139,23 @@ class TemplateApplicator:
                 result["errors"].append("Could not detect package name")
                 return result
 
-            template_path = self.templates_dir / f"pyproject-{selected_template}.toml"
-            if not template_path.exists():
-                result["errors"].append(f"Template file not found: {template_path}")
-                return result
-
-            with template_path.open("rb") as f:
-                template_config = tomli.load(f)
-
-            template_config = self._replace_placeholders(
-                template_config,
+            merged_config = self._load_and_prepare_template(
+                selected_template,
                 package_name,
                 project_path,
+                force,
             )
+
+            if merged_config is None:
+                result["errors"].append(
+                    f"Template file not found: {self.templates_dir / f'pyproject-{selected_template}.toml'}"
+                )
+                return result
 
             pyproject_path = project_path / "pyproject.toml"
             if pyproject_path.exists() and not force:
-                merged_config = self._smart_merge_configs(
-                    template_config,
-                    pyproject_path,
-                )
                 result["modifications"].append("Smart merged with existing config")
             else:
-                merged_config = template_config
                 result["modifications"].append("Applied full template (new config)")
 
             with pyproject_path.open("wb") as f:
@@ -103,16 +173,16 @@ class TemplateApplicator:
         return result
 
     def _detect_package_name(self, project_path: Path) -> str | None:
+        from contextlib import suppress
+
         pyproject_path = project_path / "pyproject.toml"
         if pyproject_path.exists():
-            try:
+            with suppress(Exception):
                 with pyproject_path.open("rb") as f:
                     config = tomli.load(f)
                 project_name = config.get("project", {}).get("name")
                 if project_name:
                     return project_name.replace("-", "_")
-            except Exception:
-                pass
 
         return project_path.name.replace("-", "_")
 
@@ -149,7 +219,7 @@ class TemplateApplicator:
         with existing_path.open("rb") as f:
             existing_config = tomli.load(f)
 
-        merged = dict(existing_config)
+        merged = existing_config.copy()
 
         if "tool" in template_config:
             if "tool" not in merged:
@@ -174,14 +244,13 @@ class TemplateApplicator:
         template: dict[str, t.Any],
         section_name: str,
     ) -> dict[str, t.Any]:
-        merged = dict(existing)
+        merged = existing.copy()
 
         for key, value in template.items():
             if key not in merged:
                 merged[key] = value
                 self.console.print(f"[green]+[/green] Added [{section_name}].{key}")
             elif key == "markers" and isinstance(value, list):
-
                 existing_markers = set(existing.get("markers", []))
                 for marker in value:
                     if marker not in existing_markers:
@@ -190,7 +259,6 @@ class TemplateApplicator:
                             f"[green]+[/green] Added test marker: {marker.split(':')[0]}",
                         )
             elif isinstance(value, dict) and isinstance(merged.get(key), dict):
-
                 merged[key] = self._merge_nested_dict(
                     merged[key],
                     value,
@@ -205,20 +273,18 @@ class TemplateApplicator:
         template: dict[str, t.Any],
         section_name: str,
     ) -> dict[str, t.Any]:
-        merged = dict(existing)
+        merged = existing.copy()
 
         for key, value in template.items():
             if key not in merged:
                 merged[key] = value
                 self.console.print(f"[green]+[/green] Added [{section_name}].{key}")
             elif isinstance(value, dict) and isinstance(merged.get(key), dict):
-
                 merged[key] = self._merge_nested_dict(
                     merged[key],
                     value,
                     f"{section_name}.{key}",
                 )
-
 
         return merged
 

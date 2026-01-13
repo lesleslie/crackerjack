@@ -144,10 +144,7 @@ ______________________________________________________________________
      ```python
      # Add to QABaseSettings
      def __init__(
-         self,
-         timeout_seconds: int = 300,
-         max_workers: int = 4,
-         **kwargs: Any
+         self, timeout_seconds: int = 300, max_workers: int = 4, **kwargs: Any
      ) -> None:
          super().__init__(**kwargs)
          self.timeout_seconds = timeout_seconds

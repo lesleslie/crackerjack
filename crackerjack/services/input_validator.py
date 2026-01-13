@@ -251,26 +251,8 @@ class InputSanitizer:
 
         try:
             parsed = json.loads(value)
+            actual_depth = cls._check_json_depth(parsed, max_depth)
 
-            def check_depth(obj: t.Any, current_depth: int = 0) -> int:
-                if current_depth > max_depth:
-                    return current_depth
-
-                if isinstance(obj, dict):
-                    return (
-                        max(check_depth(v, current_depth + 1) for v in obj.values())
-                        if obj
-                        else current_depth
-                    )
-                if isinstance(obj, list):
-                    return (
-                        max(check_depth(item, current_depth + 1) for item in obj)
-                        if obj
-                        else current_depth
-                    )
-                return current_depth
-
-            actual_depth = check_depth(parsed)
             if actual_depth > max_depth:
                 return ValidationResult(
                     valid=False,
@@ -292,6 +274,54 @@ class InputSanitizer:
                 security_level=SecurityEventLevel.MEDIUM,
                 validation_type="json_syntax",
             )
+
+    @classmethod
+    def _check_json_depth(
+        cls, obj: t.Any, max_depth: int, current_depth: int = 0
+    ) -> int:
+        """Recursively calculate JSON nesting depth.
+
+        Traverses nested dictionaries and lists to determine maximum nesting depth.
+        Early termination if current_depth exceeds max_depth.
+
+        Args:
+            obj: The JSON object (dict, list, or primitive) to analyze
+            max_depth: Maximum allowed depth (for early termination)
+            current_depth: Current nesting depth (default: 0 for root)
+
+        Returns:
+            Maximum nesting depth found
+
+        Examples:
+            >>> _check_json_depth({"a": 1}, max_depth=10)
+            1
+            >>> _check_json_depth({"a": {"b": {"c": 1}}}, max_depth=10)
+            3
+            >>> _check_json_depth([1, [2, [3]]], max_depth=10)
+            3
+        """
+        if current_depth > max_depth:
+            return current_depth
+
+        if isinstance(obj, dict):
+            return (
+                max(
+                    cls._check_json_depth(v, max_depth, current_depth + 1)
+                    for v in obj.values()
+                )
+                if obj
+                else current_depth
+            )
+        if isinstance(obj, list):
+            return (
+                max(
+                    cls._check_json_depth(item, max_depth, current_depth + 1)
+                    for item in obj
+                )
+                if obj
+                else current_depth
+            )
+        return current_depth
 
     @classmethod
     def sanitize_path(
@@ -690,7 +720,7 @@ def validate_and_sanitize_string(value: str, **kwargs: t.Any) -> str:
             error_code=ErrorCode.VALIDATION_ERROR,
         )
 
-    return result.sanitized_value # type: ignore[no-any-return]
+    return result.sanitized_value  # type: ignore[no-any-return]
 
 
 def validate_and_sanitize_path(value: str | Path, **kwargs: t.Any) -> Path:

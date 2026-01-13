@@ -36,7 +36,7 @@ class CrackerjackServer:
 
     async def _init_qa_adapters(self) -> None:
         self.adapters = []
-        enabled_names = []
+        enabled_names: list[str] = []
 
         await self._initialize_adapters(enabled_names)
 

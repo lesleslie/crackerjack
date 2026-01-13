@@ -536,6 +536,7 @@ from ..models.protocols import TestManagerProtocol
 - Development iteration speed dramatically improved
 
 <!-- CRACKERJACK INTEGRATION START -->
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -1072,4 +1073,5 @@ from ..models.protocols import TestManagerProtocol
 - `--run-tests` now blazingly fast with Rust-powered type checking
 - AI agents get faster feedback for more efficient fixing cycles
 - Development iteration speed dramatically improved
+
 <!-- CRACKERJACK INTEGRATION END -->

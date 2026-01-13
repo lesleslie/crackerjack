@@ -297,7 +297,7 @@ class QualityBaselineService(QualityBaselineProtocol):
                     "quality_score": metrics.quality_score,
                 },
             )
-        except Exception as exc: # pragma: no cover - defensive
+        except Exception as exc:  # pragma: no cover - defensive
             self._logger.debug(
                 "Failed to persist quality baseline record",
                 exc_info=exc,

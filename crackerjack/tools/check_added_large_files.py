@@ -15,7 +15,7 @@ def get_file_size(file_path: Path) -> int:
 
 
 def format_size(size_bytes: float) -> str:
-    size: float = float(size_bytes)
+    size: float = size_bytes
     for unit in ("B", "KB", "MB", "GB"):
         if size < 1024.0:
             return f"{size:.1f} {unit}"
@@ -62,7 +62,7 @@ def main(argv: list[str] | None = None) -> int:
     files = [f for f in files if f.is_file()]
 
     if not files:
-        print("No files to check") # noqa: T201
+        print("No files to check")  # noqa: T201
         return 0
 
     large_files = []
@@ -72,12 +72,12 @@ def main(argv: list[str] | None = None) -> int:
             large_files.append((file_path, size))
 
     if large_files:
-        print("Large files detected:", file=sys.stderr) # noqa: T201
+        print("Large files detected:", file=sys.stderr)  # noqa: T201
         for file_path, size in large_files:
-            print(f" {file_path}: {format_size(size)}", file=sys.stderr) # noqa: T201
+            print(f" {file_path}: {format_size(size)}", file=sys.stderr)  # noqa: T201
         return 1
 
-    print("All files are under size limit") # noqa: T201
+    print("All files are under size limit")  # noqa: T201
     return 0
 
 

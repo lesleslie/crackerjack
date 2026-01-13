@@ -7,11 +7,13 @@ These templates provide standardized `pyproject.toml` configurations for differe
 ### 1. `pyproject-minimal.toml` - Minimal MCP Server
 
 **Use For:**
+
 - MCP servers (mailgun-mcp, raindropio-mcp, unifi-mcp, opera-cloud-mcp)
 - Simple tools and utilities
 - Microservices with basic quality needs
 
 **Features:**
+
 - ✅ Basic Ruff formatting/linting
 - ✅ Standard pytest with coverage
 - ✅ **Parallel test support** (`parallel = true`, `concurrency`)
@@ -21,17 +23,19 @@ These templates provide standardized `pyproject.toml` configurations for differe
 
 **Size:** ~80 lines
 
----
+______________________________________________________________________
 
 ### 2. `pyproject-library.toml` - Full-Featured Library
 
 **Use For:**
+
 - Python libraries (oneiric, mcp-common, acb, fastblocks)
 - Shared packages
 - Frameworks
 - Projects with comprehensive testing needs
 
 **Features:**
+
 - ✅ All minimal template features
 - ✅ Comprehensive test markers (10 types)
 - ✅ Minimal Pyright type checking fallback
@@ -42,16 +46,18 @@ These templates provide standardized `pyproject.toml` configurations for differe
 
 **Size:** ~130 lines
 
----
+______________________________________________________________________
 
 ### 3. `pyproject-full.toml` - Crackerjack-Level
 
 **Use For:**
+
 - Crackerjack itself
 - Session-buddy
 - Complex AI systems with full tooling
 
 **Features:**
+
 - ✅ All library template features
 - ✅ Extended test markers (16 types including AI-generated, chaos, mutation)
 - ✅ MCP server configuration section
@@ -62,7 +68,7 @@ These templates provide standardized `pyproject.toml` configurations for differe
 
 **Size:** ~175 lines
 
----
+______________________________________________________________________
 
 ## Usage
 
@@ -76,10 +82,11 @@ Templates are automatically selected during `/crackerjack:init` based on project
 ```
 
 The AI will:
+
 1. Analyze your project structure
-2. Detect appropriate template
-3. Prompt for confirmation
-4. Apply template with smart merge
+1. Detect appropriate template
+1. Prompt for confirmation
+1. Apply template with smart merge
 
 ### Manual Selection
 
@@ -109,31 +116,34 @@ applicator.apply_template(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Template Detection Logic
 
 The AI uses multi-factor analysis:
 
 ### Minimal Template Selected When:
+
 - Project has MCP-related dependencies (`fastmcp`, `mcp`, `mcp-common`)
 - Simple dependency structure (< 15 deps, ≤ 2 dependency groups)
 - No AI agent indicators
 - No complex quality tools
 
 ### Library Template Selected When:
+
 - Project has library classifiers
 - Package structure with multiple modules (> 3 Python files)
 - Complex dependencies (> 15 deps or > 2 dependency groups)
 - Some quality tools configured (3-4 tools)
 
 ### Full Template Selected When:
+
 - Project is crackerjack itself
 - Has AI agent system (`agents/` or `intelligence/` directories)
 - Multiple AI dependencies (transformers, onnxruntime, nltk, etc.)
 - Complex quality tool configuration (5+ tools)
 
----
+______________________________________________________________________
 
 ## Placeholders
 
@@ -145,13 +155,14 @@ Templates use placeholders that are automatically replaced:
 | `<MCP_HTTP_PORT>` | Unique MCP HTTP port | `3032` |
 | `<MCP_WEBSOCKET_PORT>` | Unique MCP WebSocket port | `3031` |
 
----
+______________________________________________________________________
 
 ## Configuration Priorities
 
 All templates ensure these critical settings:
 
 ### Must-Have (Every Template)
+
 - ✅ `line-length = 88` (consistent formatting)
 - ✅ `parallel = true` in coverage (enables pytest-xdist)
 - ✅ `concurrency = ["multiprocessing"]` (prevents coverage corruption)
@@ -159,12 +170,14 @@ All templates ensure these critical settings:
 - ✅ `asyncio_mode = "auto"` (async test support)
 
 ### Recommended (Most Templates)
+
 - Bandit security scanning
 - Creosote unused dependency detection
 - Ruff extend-select (minimal rule set)
 - Standard test markers
 
 ### Optional (Complex Projects)
+
 - Pyright type checking
 - Codespell typo detection
 - Refurb modernization
@@ -172,13 +185,14 @@ All templates ensure these critical settings:
 - MCP server settings
 - AI agent timeouts
 
----
+______________________________________________________________________
 
 ## Smart Merge Behavior
 
 Templates are **intelligently merged** with existing configuration:
 
 ### Preserves
+
 - ✅ Project metadata (name, version, description)
 - ✅ Dependencies and dependency-groups
 - ✅ Higher coverage requirements
@@ -186,18 +200,20 @@ Templates are **intelligently merged** with existing configuration:
 - ✅ Custom tool settings
 
 ### Adds/Updates
+
 - ✅ Missing tool configurations
 - ✅ Critical parallel test settings
 - ✅ Standard quality tool configs
 - ✅ Security scanning setup
 
 ### Never Overwrites
+
 - ❌ Project identity
 - ❌ Custom dependencies
 - ❌ Stricter quality standards
 - ❌ Project-specific settings
 
----
+______________________________________________________________________
 
 ## Examples
 
@@ -243,7 +259,7 @@ test_workers = 0
 # ... rest of full template
 ```
 
----
+______________________________________________________________________
 
 ## Validation
 
@@ -260,32 +276,36 @@ python -m crackerjack run -t
 python -m crackerjack run --ai-fix -t
 ```
 
----
+______________________________________________________________________
 
 ## Benefits
 
 ### Immediate
+
 - ✅ **3-4x faster tests** (parallel execution)
 - ✅ **Consistent code style** (line-length 88)
 - ✅ **Security scanning** (bandit)
 - ✅ **Unused dependency detection** (creosote)
 
 ### Long-term
+
 - ✅ **Easy new projects** (use templates)
 - ✅ **Reduced maintenance** (fewer settings)
 - ✅ **Better tooling** (same quality standards)
 - ✅ **Faster CI/CD** (optimized timeouts)
 
----
+______________________________________________________________________
 
 ## Migration Guide
 
 ### Step 1: Backup
+
 ```bash
 cp pyproject.toml pyproject.toml.backup
 ```
 
 ### Step 2: Apply Template
+
 ```bash
 /crackerjack:init
 # Or manual:
@@ -293,36 +313,42 @@ python -m crackerjack init --template minimal
 ```
 
 ### Step 3: Verify
+
 ```bash
 python -m crackerjack run -t
 ```
 
 ### Step 4: Commit
+
 ```bash
 git add pyproject.toml
 git commit -m "chore: apply crackerjack minimal template"
 ```
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
 ### Q: Template applied incorrectly?
+
 **A:** Use `--force` flag to reapply, or manually edit `pyproject.toml`
 
 ### Q: Tests failing after template application?
+
 **A:** Check coverage parallel settings, ensure pytest-xdist installed
 
 ### Q: Which template for my project?
+
 **A:** Use automatic detection, it analyzes 6+ factors to choose correctly
 
 ### Q: Can I customize after applying?
+
 **A:** Yes! Templates are starting points, customize as needed
 
----
+______________________________________________________________________
 
 ## See Also
 
-- [CONFIG_SIMPLIFICATION_PROGRESS.md](../CONFIG_SIMPLIFICATION_PROGRESS.md) - Progress tracker
+- [CONFIG_SIMPLIFICATION_PROGRESS.md](../docs/archive/config-automation/CONFIG_SIMPLIFICATION_PROGRESS.md) - Progress tracker (archived)
 - [pyproject.toml](../pyproject.toml) - Crackerjack's own configuration (full template example)
 - [/crackerjack:init](../crackerjack/slash_commands/init.md) - Initialization command docs

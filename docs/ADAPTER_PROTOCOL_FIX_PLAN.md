@@ -37,8 +37,10 @@ def validate_pattern(cls, v: str | None, values: dict[str, t.Any]) -> str | None
             raise ValueError(f"Invalid regex pattern: {e}")
     return v
 
+
 # Fixed (Pydantic v2 compatible)
 from pydantic import ValidationInfo
+
 
 @field_validator("pattern")
 @classmethod

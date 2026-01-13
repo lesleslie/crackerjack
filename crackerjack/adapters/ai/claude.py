@@ -227,7 +227,7 @@ class ClaudeCodeFixer:
             if re.search(
                 pattern,
                 code,
-            ): # REGEX OK: security validation of AI-generated code
+            ):  # REGEX OK: security validation of AI-generated code
                 return False, f"Security violation: {message}"
 
         return True, ""
@@ -274,23 +274,23 @@ class ClaudeCodeFixer:
             r"/[\w\-./ ]+/",
             "<path>/",
             error_msg,
-        ) # REGEX OK: sanitizing Unix paths in error messages
+        )  # REGEX OK: sanitizing Unix paths in error messages
         error_msg = re.sub(
             r"[A-Z]:\\[\w\-\\ ]+\\",
             "<path>\\",
             error_msg,
-        ) # REGEX OK: sanitizing Windows paths in error messages
+        )  # REGEX OK: sanitizing Windows paths in error messages
 
         error_msg = re.sub(
             r"sk-[a-zA-Z0-9]{20, }",
             "<api-key>",
             error_msg,
-        ) # REGEX OK: masking OpenAI API keys in error messages
+        )  # REGEX OK: masking OpenAI API keys in error messages
         return re.sub(
             r'["\'][\w\-]{32, }["\']',
             "<secret>",
             error_msg,
-        ) # REGEX OK: masking generic secrets in error messages
+        )  # REGEX OK: masking generic secrets in error messages
 
     def _sanitize_prompt_input(self, user_input: str) -> str:
         sanitized = user_input
@@ -306,7 +306,7 @@ class ClaudeCodeFixer:
                 pattern,
                 "[FILTERED]",
                 sanitized,
-            ) # REGEX OK: preventing prompt injection attacks
+            )  # REGEX OK: preventing prompt injection attacks
 
         return sanitized.replace("```", "'''")
 
@@ -362,7 +362,7 @@ class ClaudeCodeFixer:
 
 Respond with ONLY the JSON, no additional text."""
 
-    async def _call_claude_api(self, client, prompt: str): # type: ignore[no-untyped-def]
+    async def _call_claude_api(self, client, prompt: str):  # type: ignore[no-untyped-def]
         assert self._settings is not None, "Settings not initialized"
         return await client.messages.create(
             model=self._settings.model,
@@ -374,7 +374,7 @@ Respond with ONLY the JSON, no additional text."""
     def _parse_fix_response(
         self,
         response,
-    ) -> dict[str, str | float | list[str] | bool]: # type: ignore[no-untyped-def]
+    ) -> dict[str, str | float | list[str] | bool]:  # type: ignore[no-untyped-def]
         try:
             content = response.content[0].text
 
@@ -440,12 +440,12 @@ Respond with ONLY the JSON, no additional text."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
-            return content[json_start: json_end].strip()
+            return content[json_start:json_end].strip()
 
         if "```" in content:
             json_start = content.find("```") + 3
             json_end = content.find("```", json_start)
-            return content[json_start: json_end].strip()
+            return content[json_start:json_end].strip()
 
         return content.strip()
 
@@ -484,7 +484,7 @@ Respond with ONLY the JSON, no additional text."""
     async def _backoff_delay(self, attempt: int) -> None:
         base_delay = 2**attempt
 
-        jitter = random.uniform(-0.25, 0.25) * base_delay # nosec B311 - not cryptographic
+        jitter = random.uniform(-0.25, 0.25) * base_delay  # nosec B311 - not cryptographic
         delay = base_delay + jitter
 
         logger.info(f"Backing off for {delay:.2f}s before retry")

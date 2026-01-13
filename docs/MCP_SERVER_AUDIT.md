@@ -399,13 +399,14 @@ ______________________________________________________________________
    # FastAPI example
    from fastapi import Header, HTTPException
 
+
    async def verify_api_key(x_api_key: str = Header(...)):
        if x_api_key != os.getenv("MCP_API_KEY"):
            raise HTTPException(status_code=403)
 
+
    @app.get("/mcp", dependencies=[Depends(verify_api_key)])
-   async def mcp_endpoint():
-       ...
+   async def mcp_endpoint(): ...
    ```
 
 1. **Secure Log Files**:
@@ -418,12 +419,13 @@ ______________________________________________________________________
 
    ```python
    from slowapi import Limiter
+
    limiter = Limiter(key_func=get_remote_address)
+
 
    @app.get("/mcp")
    @limiter.limit("100/minute")
-   async def mcp_endpoint():
-       ...
+   async def mcp_endpoint(): ...
    ```
 
 ______________________________________________________________________

@@ -110,7 +110,7 @@ class ValidatedPattern:
                 "Use \\g<1> not \\g <1>"
             )
             raise ValueError(
-                msg, # REGEX OK: educational example
+                msg,  # REGEX OK: educational example
             )
 
         warnings = validate_pattern_safety(self.pattern)

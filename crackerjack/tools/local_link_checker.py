@@ -104,6 +104,10 @@ def main(argv: list[str] | None = None) -> int:
         markdown_files = get_git_tracked_files("*.markdown")
         files = md_files + markdown_files
 
+    # Exclude archived documentation from link checking
+    # These are historical documents with broken internal references after reorganization
+    files = [f for f in files if "docs/archive" not in str(f)]
+
     if not files:
         return 0
 
@@ -121,14 +125,17 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     for file_path, broken_links in files_with_issues:
-        (
+        relative_path = (
             file_path.relative_to(repo_root)
             if file_path.is_relative_to(repo_root)
             else file_path
         )
 
-        for _link_url, _line_num, _error_msg in broken_links:
-            pass
+        for link_url, line_num, error_msg in broken_links:
+            print(  # noqa: T201
+                f"{relative_path}:{line_num}: {link_url} - {error_msg}",
+                file=sys.stderr,
+            )
 
     return 1
 

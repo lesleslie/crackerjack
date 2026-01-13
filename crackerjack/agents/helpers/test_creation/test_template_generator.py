@@ -114,12 +114,13 @@ class TestTemplateGenerator:
             content = self.context.get_file_content(module_file) or ""
             tree = ast.parse(content)
 
-            importable_items = []
-            for node in ast.walk(tree):
+            importable_items = [
+                node.name
+                for node in ast.walk(tree)
                 if (isinstance(node, ast.ClassDef) and not node.name.startswith("_")) or (isinstance(
                     node, ast.FunctionDef | ast.AsyncFunctionDef,
-                ) and not node.name.startswith("_")):
-                    importable_items.append(node.name)
+                ) and not node.name.startswith("_"))
+            ]
 
             if importable_items:
                 specific_imports = (

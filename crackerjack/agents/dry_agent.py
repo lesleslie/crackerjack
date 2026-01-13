@@ -270,20 +270,20 @@ class DRYAgent(SubAgent):
 
         exception_pattern = SAFE_PATTERNS["detect_exception_patterns"]
 
-        exception_handlers: list[dict[str, t.Any]] = []
-        for i, line in enumerate(lines):
-            if exception_pattern.test(line.strip()) and (
+        exception_handlers = [
+            {
+                "line_number": i + 1,
+                "content": line.strip(),
+                "next_line": lines[i + 1].strip(),
+            }
+            for i, line in enumerate(lines)
+            if exception_pattern.test(line.strip())
+            and (
                 i + 1 < len(lines)
                 and "error" in lines[i + 1]
                 and "str(" in lines[i + 1]
-            ):
-                exception_handlers.append(
-                    {
-                        "line_number": i + 1,
-                        "content": line.strip(),
-                        "next_line": lines[i + 1].strip(),
-                    },
-                )
+            )
+        ]
 
         if len(exception_handlers) >= 3:
             violations.append(
@@ -349,7 +349,7 @@ def _ensure_path(path: str | Path) -> Path:
         for i, util_line in enumerate(utility_lines):
             lines.insert(insert_pos + i, util_line)
 
-        return list(utility_lines)
+        return utility_lines.copy()
 
     def _find_utility_insert_position(self, lines: list[str]) -> int:
         insert_pos = 0

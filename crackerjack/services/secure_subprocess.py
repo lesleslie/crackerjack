@@ -494,10 +494,8 @@ class SecureSubprocessExecutor:
 
         cwd_str_lower = cwd_str.lower()
         for prefix in dangerous_prefixes:
-            if (
-                cwd_str_lower == prefix
-                or cwd_str_lower.startswith(prefix + "/")
-                or cwd_str_lower.startswith(prefix + "\\")
+            if cwd_str_lower == prefix or cwd_str_lower.startswith(
+                (prefix + "/", prefix + "\\")
             ):
                 self.security_logger.log_path_traversal_attempt(
                     attempted_path=cwd_str,

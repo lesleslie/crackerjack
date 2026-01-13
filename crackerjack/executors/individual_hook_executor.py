@@ -466,7 +466,7 @@ class IndividualHookExecutor:
         cmd = hook.get_command()
 
         try:
-            async with self.hook_lock_manager.acquire_hook_lock(hook.name): # type: ignore[attr-defined]
+            async with self.hook_lock_manager.acquire_hook_lock(hook.name):  # type: ignore[attr-defined]
                 result = await self._run_command_with_streaming(
                     cmd,
                     hook.timeout,

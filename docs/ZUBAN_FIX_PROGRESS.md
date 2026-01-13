@@ -202,6 +202,7 @@ ______________________________________________________________________
 # Added exception method to LoggerProtocol
 def exception(self, message: str, *args: t.Any, **kwargs: t.Any) -> None: ...
 
+
 # Proper type annotations
 self._logger: LoggerProtocol = logger or logging.getLogger(...)  # type: ignore[assignment]
 ```
@@ -243,9 +244,11 @@ settings_dict: dict[str, object] = {...}
 # After (Any allows mixed types)
 settings_dict: dict[str, t.Any] = {...}
 
+
 # Created protocol for predictors
 class PredictorProtocol(t.Protocol):
     def predict(self, values: list[float], periods: int = 1) -> list[float]: ...
+
 
 self.predictors: dict[str, PredictorProtocol] = {...}
 ```
@@ -264,6 +267,7 @@ self.predictors: dict[str, PredictorProtocol] = {...}
 ```python
 # Import mcp_common's type with alias
 from mcp_common.cli.health import RuntimeHealthSnapshot as MCPRuntimeHealthSnapshot
+
 
 # Convert between types in handler
 def health_probe_handler() -> MCPRuntimeHealthSnapshot:

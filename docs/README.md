@@ -44,6 +44,24 @@ uv run pytest --maxfail=1
 - Naming: use `*Agent` for agent classes; tests as `tests/test_<feature>.py`.
 - Keep complexity reasonable (Ruff guidance ≤ 15). Use `ruff check` to guard style, security, and dead code.
 
+### Complexity Management
+
+All functions must maintain cognitive complexity ≤ 15 as enforced by complexipy. See `complexity_refactoring_complete.md` for detailed refactoring patterns and examples.
+
+**Recent Refactoring Work** (2026-01-12):
+
+- ✅ `fix_trailing_whitespace`: 16 → 10 (38% reduction)
+- ✅ `InputSanitizer::sanitize_json`: 16 → 4 (75% reduction)
+- ✅ `TemplateApplicator::apply_template`: 18 → 11 (39% reduction)
+- ✅ `TestManager::_fallback_count_tests`: 24 → 2 (92% reduction)
+
+**Refactoring Principles**:
+
+1. Extract helpers when complexity > 10
+1. Use progressive fallback for multiple strategies
+1. Isolate recursive logic in dedicated methods
+1. Apply Single Responsibility Principle consistently
+
 ## Testing
 
 - Prefer shared fixtures from `tests/conftest.py`.

@@ -13,6 +13,36 @@ def has_trailing_whitespace(line: str) -> bool:
     return line_stripped != line_stripped.rstrip()
 
 
+def _fix_line_whitespace(line: str) -> str:
+    """Fix trailing whitespace while preserving line endings.
+
+    Removes trailing whitespace from a line while preserving the original
+    line ending style (CRLF, LF, or no ending).
+
+    Args:
+        line: The line to fix
+
+    Returns:
+        The line with trailing whitespace removed but line ending preserved
+
+    Examples:
+        >>> _fix_line_whitespace("text  \\r\\n")
+        'text\\r\\n'
+        >>> _fix_line_whitespace("text  \\n")
+        'text\\n'
+        >>> _fix_line_whitespace("text  ")
+        'text'
+    """
+    line_body = line.rstrip("\r\n")
+    stripped = line_body.rstrip()
+
+    if line.endswith("\r\n"):
+        return stripped + "\r\n"
+    if line.endswith("\n"):
+        return stripped + "\n"
+    return stripped
+
+
 def fix_trailing_whitespace(file_path: Path) -> bool:
     try:
         binary_content = file_path.read_bytes()
@@ -24,29 +54,21 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
         new_lines = []
         for line in lines:
             if has_trailing_whitespace(line):
-                line_body = line.rstrip("\r\n")
-                stripped = line_body.rstrip()
-
-                if line.endswith("\r\n"):
-                    new_lines.append(stripped + "\r\n")
-                elif line.endswith("\n"):
-                    new_lines.append(stripped + "\n")
-                else:
-                    new_lines.append(stripped)
+                new_lines.append(_fix_line_whitespace(line))
                 modified = True
             else:
                 new_lines.append(line)
 
         if modified:
             file_path.write_text("".join(new_lines), encoding="utf-8", newline="")
-            print(f"Fixed trailing whitespace: {file_path}") # noqa: T201
+            print(f"Fixed trailing whitespace: {file_path}")  # noqa: T201
 
         return modified
 
     except (UnicodeDecodeError, PermissionError, OSError):
         return False
     except Exception as e:
-        print(f"Error processing {file_path}: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
         return False
 
 
@@ -69,7 +91,7 @@ def _process_files_in_check_mode(files: list[Path]) -> int:
         content = file_path.read_text(encoding="utf-8")
         lines = content.splitlines(keepends=True)
         if any(has_trailing_whitespace(line) for line in lines):
-            print(f"Trailing whitespace found: {file_path}") # noqa: T201
+            print(f"Trailing whitespace found: {file_path}")  # noqa: T201
             modified_count += 1
     return modified_count
 
@@ -103,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     files = _collect_files_to_check(args)
 
     if not files:
-        print("No files to check") # noqa: T201
+        print("No files to check")  # noqa: T201
         return 0
 
     if args.check:
@@ -113,14 +135,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if modified_count > 0:
         if args.check:
-            print(f"\n{modified_count} file(s) with trailing whitespace") # noqa: T201
+            print(f"\n{modified_count} file(s) with trailing whitespace")  # noqa: T201
         else:
-            print(f"\nFixed {modified_count} file(s)") # noqa: T201
+            print(f"\nFixed {modified_count} file(s)")  # noqa: T201
 
-            print("files were modified by this hook") # noqa: T201
+            print("files were modified by this hook")  # noqa: T201
         return 1
 
-    print("No trailing whitespace found") # noqa: T201
+    print("No trailing whitespace found")  # noqa: T201
     return 0
 
 

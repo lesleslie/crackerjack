@@ -24,10 +24,10 @@ class AdapterMetadata:
     status: AdapterStatus
     description: str = ""
 
-    def dict(self) -> dict[str, t.Any]: # type: ignore[valid-type]
+    def dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
         return self.to_dict()
 
-    def to_dict(self) -> dict[str, t.Any]: # type: ignore[valid-type]
+    def to_dict(self) -> dict[str, t.Any]:  # type: ignore[valid-type]
         return {
             "module_id": str(self.module_id),
             "name": self.name,

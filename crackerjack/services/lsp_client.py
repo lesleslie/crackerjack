@@ -334,7 +334,7 @@ class LSPClient:
         if not await self._ensure_lsp_service():
             return False
 
-        return self._jsonrpc_client
+        return self._jsonrpc_client is not None
 
     async def _initialize_lsp_workspace(self, file_paths: list[str]) -> None:
         assert self._jsonrpc_client is not None, "LSP client must be initialized"

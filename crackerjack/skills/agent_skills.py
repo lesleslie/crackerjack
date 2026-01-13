@@ -239,13 +239,13 @@ class AgentSkillRegistry:
         self,
         context: AgentContext,
     ) -> list[AgentSkill]:
+        from contextlib import suppress
+
         skills = []
         for agent_class in agent_registry._agents.values():
-            try:
+            with suppress(Exception):
                 skill = self.register_agent(agent_class, context)
                 skills.append(skill)
-            except Exception:
-                pass
 
         return skills
 

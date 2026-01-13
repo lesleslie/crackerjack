@@ -579,7 +579,22 @@ class TestManager:
         if stats["total"] == 0:
             self._fallback_count_tests(output, stats)
 
-    def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
+    def _parse_test_lines_by_token(self, output: str, stats: dict[str, t.Any]) -> None:
+        """Parse test output lines for PASSED/FAILED/SKIPPED/ERROR tokens.
+
+        Scans pytest output for test result indicators within test identifiers
+        (lines containing "::"). Counts each status type for summary statistics.
+
+        Args:
+            output: Raw test output string
+            stats: Dictionary to populate with parsed statistics (modified in-place)
+
+        Examples:
+            >>> stats = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0}
+            >>> _parse_test_lines_by_token("tests/test_foo.py::test_bar PASSED", stats)
+            >>> stats["passed"]
+            1
+        """
         status_tokens = [
             ("passed", "PASSED"),
             ("failed", "FAILED"),
@@ -605,6 +620,21 @@ class TestManager:
                     stats[key] += 1
                     break
 
+    def _calculate_total(self, stats: dict[str, t.Any]) -> None:
+        """Calculate total test count from all status categories.
+
+        Sums all test status counts to determine the total number of tests
+        executed, including xfailed and xpassed tests.
+
+        Args:
+            stats: Dictionary containing test status counts (modified in-place)
+
+        Examples:
+            >>> stats = {"passed": 5, "failed": 1, "skipped": 2, "errors": 0}
+            >>> _calculate_total(stats)
+            >>> stats["total"]
+            8
+        """
         stats["total"] = sum(
             [
                 stats["passed"],
@@ -616,38 +646,96 @@ class TestManager:
             ],
         )
 
-        if stats["total"] == 0:
+    def _parse_metric_patterns(self, output: str, stats: dict[str, t.Any]) -> bool:
+        """Parse pytest summary lines for 'N passed' style metrics.
 
+        Searches for pytest summary patterns like "5 passed, 2 failed" and
+        extracts the numeric counts for each test status.
 
-            for metric in ("passed", "failed", "skipped", "error"):
-                metric_pattern = rf"(\d+)\s+{metric}"
-                metric_match = re.search(metric_pattern, output, re.IGNORECASE)
-                if metric_match:
-                    count = int(metric_match.group(1))
-                    key = "errors" if metric == "error" else metric
-                    stats[key] = count
+        Args:
+            output: Raw test output string
+            stats: Dictionary to populate with parsed statistics (modified in-place)
 
+        Returns:
+            True if any metrics were found, False otherwise
 
-            if stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0:
-                stats["total"] = sum([
-                    stats["passed"], stats["failed"], stats["skipped"], stats["errors"],
-                    stats.get("xfailed", 0), stats.get("xpassed", 0),
-                ])
-                return
+        Examples:
+            >>> stats = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0}
+            >>> _parse_metric_patterns("5 passed, 2 failed, 1 skipped", stats)
+            True
+            >>> stats["passed"], stats["failed"], stats["skipped"]
+            (5, 2, 1)
+        """
+        for metric in ("passed", "failed", "skipped", "error"):
+            metric_pattern = rf"(\d+)\s+{metric}"
+            metric_match = re.search(metric_pattern, output, re.IGNORECASE)
+            if metric_match:
+                count = int(metric_match.group(1))
+                key = "errors" if metric == "error" else metric
+                stats[key] = count
 
+        return stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0
 
-            legacy_patterns = {
-                "passed": r"(?:\.|✓|✅)\s*(?:PASSED|pass|Tests\s+passed)",
-                "failed": r"(?:F|X|❌)\s*(?:FAILED|fail)",
-                "skipped": r"(?<!\w)(?:s|S)(?!\w)|\.SKIPPED|skip|\d+\s+skipped",
-                "errors": r"ERROR|E\s+",
-            }
-            for key, pattern in legacy_patterns.items():
-                stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
+    def _parse_legacy_patterns(self, output: str, stats: dict[str, t.Any]) -> None:
+        """Parse legacy test output formats with various symbols.
 
-            stats["total"] = (
-                stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
-            )
+        Handles older test output formats that use symbols like dots, checkmarks,
+        or X's to indicate test status. This is a fallback parser for non-standard
+        test runners or custom output formats.
+
+        Args:
+            output: Raw test output string
+            stats: Dictionary to populate with parsed statistics (modified in-place)
+
+        Examples:
+            >>> stats = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0}
+            >>> _parse_legacy_patterns("...F..s", stats)
+            >>> stats["passed"], stats["failed"], stats["skipped"]
+            (4, 1, 1)
+        """
+        legacy_patterns = {
+            "passed": r"(?:\.|✓|✅)\s*(?:PASSED|pass|Tests\s+passed)",
+            "failed": r"(?:F|X|❌)\s*(?:FAILED|fail)",
+            "skipped": r"(?<!\w)(?:s|S)(?!\w)|\.SKIPPED|skip|\d+\s+skipped",
+            "errors": r"ERROR|E\s+",
+        }
+        for key, pattern in legacy_patterns.items():
+            stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
+
+    def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
+        """Main orchestration - progressive fallback through parsing strategies.
+
+        Implements a 3-tier progressive fallback pattern for parsing test output:
+        1. Parse test lines by token (most accurate for pytest)
+        2. Parse metric patterns (e.g., "5 passed")
+        3. Parse legacy patterns (last resort for custom formats)
+
+        Stops early if a strategy successfully extracts test counts.
+
+        Args:
+            output: Raw test output string
+            stats: Dictionary to populate with parsed statistics (modified in-place)
+
+        Examples:
+            >>> stats = {"passed": 0, "failed": 0, "skipped": 0, "errors": 0, "total": 0}
+            >>> _fallback_count_tests("tests/test_foo.py PASSED\\ntests/test_bar FAILED", stats)
+            >>> stats["total"]
+            2
+        """
+        self._parse_test_lines_by_token(output, stats)
+        self._calculate_total(stats)
+
+        if stats["total"] != 0:
+            return
+
+        if self._parse_metric_patterns(output, stats):
+            self._calculate_total(stats)
+            return
+
+        self._parse_legacy_patterns(output, stats)
+        stats["total"] = (
+            stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
+        )
 
     def _extract_coverage_from_output(self, output: str) -> float | None:
         coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+(\d+)%"

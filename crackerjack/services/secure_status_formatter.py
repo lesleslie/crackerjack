@@ -133,7 +133,7 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         self,
         status_data: dict[str, t.Any],
     ) -> dict[str, t.Any]:
-        return self._deep_copy_dict(status_data) # type: ignore[no-any-return]
+        return self._deep_copy_dict(status_data)  # type: ignore[no-any-return]
 
     def _apply_all_sanitization_steps(
         self,
@@ -182,7 +182,7 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         data: dict[str, t.Any],
         verbosity: StatusVerbosity,
     ) -> dict[str, t.Any]:
-        return self._sanitize_recursive(data, verbosity) # type: ignore[no-any-return]
+        return self._sanitize_recursive(data, verbosity)  # type: ignore[no-any-return]
 
     def _sanitize_recursive(self, obj: t.Any, verbosity: StatusVerbosity) -> t.Any:
         if isinstance(obj, dict):

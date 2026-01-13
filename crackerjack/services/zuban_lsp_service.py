@@ -276,7 +276,7 @@ class ZubanLSPService:
             return ""
 
         loop = asyncio.get_event_loop()
-        line = await loop.run_in_executor(None, self.process.stdout.readline) # type: ignore[call-arg]
+        line = await loop.run_in_executor(None, self.process.stdout.readline)  # type: ignore[call-arg]
         return line.decode("utf-8").rstrip("\r\n")
 
     async def _read_bytes_async(self, count: int) -> bytes:
@@ -284,7 +284,7 @@ class ZubanLSPService:
             return b""
 
         loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.process.stdout.read, count) # type: ignore[call-arg]
+        return await loop.run_in_executor(None, self.process.stdout.read, count)  # type: ignore[call-arg]
 
 
 async def create_zuban_lsp_service(
