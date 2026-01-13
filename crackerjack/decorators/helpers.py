@@ -3,8 +3,6 @@ import inspect
 import typing as t
 from functools import wraps
 
-F = t.TypeVar("F", bound=t.Callable[..., t.Any])
-
 
 def is_async_function(func: t.Callable[..., t.Any]) -> bool:
     return asyncio.iscoroutinefunction(func)
@@ -16,8 +14,8 @@ def preserve_signature[F: t.Callable[..., t.Any]](
     def decorator(func: t.Callable[..., t.Any]) -> F:
         wrapped = wraps(func)(wrapper)
 
-        wrapped.__wrapped__ = func # type: ignore[attr-defined]
-        return t.cast("F", wrapped)
+        wrapped.__wrapped__ = func  # type: ignore[attr-defined]
+        return t.cast(F, wrapped)
 
     return decorator
 

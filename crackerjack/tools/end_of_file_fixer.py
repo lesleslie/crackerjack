@@ -29,13 +29,13 @@ def fix_end_of_file(file_path: Path) -> bool:
 
         if needs_fix and fixed_content is not None:
             file_path.write_bytes(fixed_content)
-            print(f"Fixed end-of-file: {file_path}") # noqa: T201
+            print(f"Fixed end-of-file: {file_path}")  # noqa: T201
             return True
 
         return False
 
     except Exception as e:
-        print(f"Error processing {file_path}: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
         return False
 
 
@@ -60,10 +60,10 @@ def _process_files_in_check_mode(files: list[Path]) -> int:
             needs_fix, _ = needs_newline_fix(content)
 
             if needs_fix:
-                print(f"Missing/incorrect end-of-file: {file_path}") # noqa: T201
+                print(f"Missing/incorrect end-of-file: {file_path}")  # noqa: T201
                 modified_count += 1
         except Exception as e:
-            print(f"Error processing {file_path}: {e}", file=sys.stderr) # noqa: T201
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
     return modified_count
 
 
@@ -74,7 +74,7 @@ def _process_files_in_fix_mode(files: list[Path]) -> int:
             if fix_end_of_file(file_path):
                 modified_count += 1
         except Exception as e:
-            print(f"Error processing {file_path}: {e}", file=sys.stderr) # noqa: T201
+            print(f"Error processing {file_path}: {e}", file=sys.stderr)  # noqa: T201
     return modified_count
 
 
@@ -99,7 +99,7 @@ def main(argv: list[str] | None = None) -> int:
     files = _collect_files_to_check(args)
 
     if not files:
-        print("No files to check") # noqa: T201
+        print("No files to check")  # noqa: T201
         return 0
 
     if args.check:
@@ -109,14 +109,14 @@ def main(argv: list[str] | None = None) -> int:
 
     if modified_count > 0:
         if args.check:
-            print(f"\n{modified_count} file(s) with incorrect end-of-file") # noqa: T201
+            print(f"\n{modified_count} file(s) with incorrect end-of-file")  # noqa: T201
         else:
-            print(f"\nFixed {modified_count} file(s)") # noqa: T201
+            print(f"\nFixed {modified_count} file(s)")  # noqa: T201
 
-            print("files were modified by this hook") # noqa: T201
+            print("files were modified by this hook")  # noqa: T201
         return 1
 
-    print("All files end with correct newline") # noqa: T201
+    print("All files end with correct newline")  # noqa: T201
     return 0
 
 

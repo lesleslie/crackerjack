@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import subprocess
 import sys
 from pathlib import Path
@@ -7,13 +8,37 @@ from pathlib import Path
 from ._git_utils import get_git_tracked_files
 
 
+def should_skip_file(file_path: Path) -> bool:
+    """Check if file matches skip patterns from pyproject.toml."""
+    skip_patterns = [
+        "docs/archive/**",
+        "**/archives/**",
+        "*_COMPLETE.md",
+        "*_ANALYSIS.md",
+        "*_PROGRESS.md",
+        "*_STATUS.md",
+        "*_PLAN.md",
+        "*_SUMMARY.md",
+        "CHECKPOINT_*.md",
+        "NOTES.md",
+        "CLEANUP_*.md",
+        "COMPREHENSIVE_*.md",
+        "PYPROJECT_*.md",
+        "TEST_*.md",
+    ]
+    file_str = str(file_path)
+    return any(fnmatch.fnmatch(file_str, pattern) for pattern in skip_patterns)
+
+
 def main(argv: list[str] | None = None) -> int:
     md_files = get_git_tracked_files("*.md")
     markdown_files = get_git_tracked_files("*.markdown")
-    files = md_files + markdown_files
+    all_files = md_files + markdown_files
+
+    files = [f for f in all_files if not should_skip_file(f)]
 
     if not files:
-        print("No git-tracked markdown files found", file=sys.stderr) # noqa: T201
+        print("No git-tracked markdown files found", file=sys.stderr)  # noqa: T201
         return 0
 
     cmd = ["mdformat", "--no-codeformatters"]
@@ -57,7 +82,7 @@ def main(argv: list[str] | None = None) -> int:
     except FileNotFoundError:
         return 127
     except Exception as e:
-        print(f"Error running mdformat: {e}", file=sys.stderr) # noqa: T201
+        print(f"Error running mdformat: {e}", file=sys.stderr)  # noqa: T201
         return 1
 
 

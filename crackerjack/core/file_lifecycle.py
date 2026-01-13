@@ -397,7 +397,7 @@ class SafeFileOperations:
     ) -> str:
         fallback_encodings = fallback_encodings or ["latin-1", "cp1252"]
 
-        for enc in [encoding, *fallback_encodings]:
+        for enc in (encoding, *fallback_encodings):
             try:
                 return path.read_text(encoding=enc)
             except UnicodeDecodeError:

@@ -155,7 +155,7 @@ class ErrorPatternAnalyzer:
             for error_type in error_types:
                 count_val = float(file_error_counts[file_path].get(error_type, 0))
                 if count_val > 0:
-                    intensity = count_val / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+                    intensity = count_val / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
                     severity = self._get_severity_for_type(error_type)
 
                     cells.append(
@@ -300,7 +300,7 @@ class ErrorPatternAnalyzer:
         count: float,
         max_value: float,
     ) -> HeatMapCell:
-        intensity = count / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(
@@ -396,7 +396,7 @@ class ErrorPatternAnalyzer:
         count: float,
         max_value: float,
     ) -> HeatMapCell:
-        intensity = count / max_value if max_value > 0 else 0.0 # type: ignore[assignment]
+        intensity = count / max_value if max_value > 0 else 0.0  # type: ignore[assignment]
         severity = self._get_severity_for_type(error_type)
 
         return HeatMapCell(

@@ -80,7 +80,6 @@ dependencies = [
     "pyscn==1.5.0",
     "pip-audit>=2.10.0",
     "bandit>=1.9.2",
-    "duckdb>=1.4.3",
 ]
 
 [project.license]
@@ -350,4 +349,12 @@ max_complexity = 15
 skip = [
     "docs/archive/**",
     "**/archives/**",
+    "*_COMPLETE.md",
+    "*_ANALYSIS.md",
+    "*_PROGRESS.md",
+    "*_STATUS.md",
+    "*_PLAN.md",
+    "*_SUMMARY.md",
+    "CHECKPOINT_*.md",
+    "NOTES.md",
 ]

@@ -130,21 +130,21 @@ def generate_anomaly_sample_data(detector: t.Any) -> None:
 def get_sample_metric_value(metric_type: str) -> float:
     import random
 
-    is_anomaly = random.random() <= 0.1 # nosec B311
+    is_anomaly = random.random() <= 0.1  # nosec B311
 
     if metric_type == "test_pass_rate":
-        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98) # nosec B311
+        return random.uniform(0.3, 0.7) if is_anomaly else random.uniform(0.85, 0.98)  # nosec B311
 
     if metric_type == "coverage_percentage":
-        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95) # nosec B311
+        return random.uniform(40, 60) if is_anomaly else random.uniform(75, 95)  # nosec B311
 
     if metric_type == "complexity_score":
-        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15) # nosec B311
+        return random.uniform(20, 35) if is_anomaly else random.uniform(8, 15)  # nosec B311
 
     if metric_type == "execution_time":
-        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120) # nosec B311
+        return random.uniform(300, 600) if is_anomaly else random.uniform(30, 120)  # nosec B311
 
-    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3) # nosec B311
+    return random.uniform(8, 15) if is_anomaly else random.uniform(0, 3)  # nosec B311
 
 
 def display_anomaly_results(
@@ -281,7 +281,7 @@ def generate_predictive_sample_data(engine: t.Any) -> list[str]:
 
             trend_factor = 1.0 + (i * 0.001)
 
-            noise = random.uniform(0.9, 1.1) # nosec B311
+            noise = random.uniform(0.9, 1.1)  # nosec B311
 
             value = base_value * trend_factor * noise
 

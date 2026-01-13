@@ -310,15 +310,15 @@ class HybridSkillRegistry(AgentSkillRegistry):
         self,
         context: AgentContext,
     ) -> list[HybridSkill]:
+        from contextlib import suppress
+
         from crackerjack.agents.base import agent_registry
 
         skills = []
         for agent_class in agent_registry._agents.values():
-            try:
+            with suppress(Exception):
                 skill = self.register_hybrid_skill(agent_class, context)
                 skills.append(skill)
-            except Exception:
-                pass
 
         return skills
 

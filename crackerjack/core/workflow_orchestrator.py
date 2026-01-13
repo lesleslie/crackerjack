@@ -66,7 +66,12 @@ class WorkflowPipeline:
                 context={"pkg_path": str(self.pkg_path)},
             )
         except Exception as exc:
-            self.logger.exception("Workflow failed: %s", exc, extra={"error": str(exc)})
+            if self.settings.execution.verbose:
+                self.logger.exception(
+                    "Workflow failed: %s", exc, extra={"error": str(exc)}
+                )
+            else:
+                self.logger.error("Workflow failed: %s", str(exc))
             self.session.finalize_session(self.session.start_time, success=False)
             return False
 
@@ -96,15 +101,15 @@ class WorkflowPipeline:
 
             cursor.execute(
                 "DELETE FROM workflow_checkpoints WHERE workflow_key = ?",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
             cursor.execute(
                 "DELETE FROM workflow_executions WHERE workflow_key = ?",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
             cursor.execute(
                 "DELETE FROM workflow_execution_nodes WHERE run_id IN (SELECT run_id FROM workflow_executions WHERE workflow_key = ?)",
-                ("crackerjack", ),
+                ("crackerjack",),
             )
 
             conn.commit()

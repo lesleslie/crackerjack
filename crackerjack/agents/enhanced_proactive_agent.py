@@ -121,7 +121,7 @@ class EnhancedProactiveAgent(ProactiveAgent):
 def enhance_agent_with_claude_code_bridge(
     agent_class: type[ProactiveAgent],
 ) -> type[EnhancedProactiveAgent]:
-    class EnhancedAgent(EnhancedProactiveAgent, agent_class): # type: ignore[misc, valid-type]
+    class EnhancedAgent(EnhancedProactiveAgent, agent_class):  # type: ignore[misc, valid-type]
         def __init__(self, context: AgentContext) -> None:
             EnhancedProactiveAgent.__init__(self, context)
             agent_class.__init__(self, context)

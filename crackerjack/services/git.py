@@ -1,4 +1,4 @@
-import subprocess # nosec B404
+import subprocess  # nosec B404
 import typing as t
 from pathlib import Path
 
@@ -44,7 +44,7 @@ class GitService(GitInterface):
             pkg_path = console
             console = None
 
-        self.console: Console = console or Console() # type: ignore[assignment]
+        self.console: Console = console or Console()  # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(

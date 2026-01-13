@@ -121,7 +121,7 @@ class ToolExecutionError(Exception):
         }
 
         for patterns, suggestion in error_patterns.items():
-            patterns_list = patterns if isinstance(patterns, tuple) else (patterns, )
+            patterns_list = patterns if isinstance(patterns, tuple) else (patterns,)
             if any(pattern in combined_output for pattern in patterns_list):
                 return suggestion
 

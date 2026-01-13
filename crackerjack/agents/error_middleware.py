@@ -5,7 +5,7 @@ from functools import wraps
 
 from crackerjack.agents.base import FixResult, Issue, SubAgent
 
-if t.TYPE_CHECKING: # pragma: no cover - typing helpers
+if t.TYPE_CHECKING:  # pragma: no cover - typing helpers
     from rich.console import Console
 
     from crackerjack.agents.coordinator import AgentCoordinator
@@ -24,7 +24,7 @@ def agent_error_boundary(
     ) -> FixResult:
         try:
             return await func(self, agent, issue, *args, **kwargs)
-        except Exception as exc: # pragma: no cover - exercised via decorator tests
+        except Exception as exc:  # pragma: no cover - exercised via decorator tests
             console: Console | None = getattr(self.context, "console", None)
             message = f"{agent.name} encountered an error while processing issue {issue.id}: {exc}"
             self.logger.exception(message, exc_info=exc)

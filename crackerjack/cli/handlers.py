@@ -162,7 +162,7 @@ def handle_interactive_mode(options: Options) -> None:
     from .interactive import launch_interactive_cli
 
     pkg_version = get_package_version()
-    launch_interactive_cli(pkg_version, options) # type: ignore[arg-type]
+    launch_interactive_cli(pkg_version, options)  # type: ignore[arg-type]
 
 
 def handle_standard_mode(

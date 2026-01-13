@@ -87,7 +87,7 @@ class PythonDocstringParser:
         return ""
 
     def _extract_raises(self, docstring: str) -> list[str]:
-        raises_pattern = re.compile( # REGEX OK: exception extraction
+        raises_pattern = re.compile(  # REGEX OK: exception extraction
             r"(?:Raises?|Raise):\s*(.+?)(?=\n\n|\n\w+:|\Z)",
             re.MULTILINE | re.DOTALL,
         )
