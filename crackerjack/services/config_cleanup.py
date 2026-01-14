@@ -1103,7 +1103,9 @@ class ConfigCleanupService:
             # Create new .gitignore
             try:
                 gitignore_path.write_text("\n".join(gitignore_patterns))
-                self.console.print("[green]✅[/green] Created: .gitignore (with standard patterns)")
+                self.console.print(
+                    "[green]✅[/green] Created: .gitignore (with standard patterns)"
+                )
                 return True
             except Exception as e:
                 logger.exception(f"Failed to create .gitignore: {e}")
@@ -1136,7 +1138,11 @@ class ConfigCleanupService:
 
             # Count new patterns
             merged_lines = merged_content.splitlines()
-            merged_patterns = set(l.strip() for l in merged_lines if l.strip() and not l.strip().startswith("#"))
+            merged_patterns = set(
+                l.strip()
+                for l in merged_lines
+                if l.strip() and not l.strip().startswith("#")
+            )
 
             new_patterns_count = len(merged_patterns) - len(original_patterns)
             total_patterns_count = len(merged_patterns)
@@ -1150,7 +1156,9 @@ class ConfigCleanupService:
 
         except Exception as e:
             logger.exception(f"Failed to smart merge .gitignore: {e}")
-            self.console.print(f"[yellow]⚠️[/yellow] Failed to smart merge .gitignore: {e}")
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Failed to smart merge .gitignore: {e}"
+            )
             return False
 
     def _display_completion(self, result: ConfigCleanupResult) -> None:
