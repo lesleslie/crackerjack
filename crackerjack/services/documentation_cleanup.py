@@ -10,24 +10,23 @@ import fnmatch
 import logging
 import shutil
 import tarfile
-import time
 import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
 from fnmatch import fnmatch
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict
 from rich.console import Console
 
 from crackerjack.models.protocols import (
     ConsoleInterface as ConsoleProtocol,
+)
+from crackerjack.models.protocols import (
     GitInterface,
 )
 from crackerjack.services.backup_service import BackupMetadata, PackageBackupService
 from crackerjack.services.secure_path_utils import (
     AtomicFileOperations,
-    SecurePathValidator,
 )
 from crackerjack.services.security_logger import (
     SecurityEventLevel,
@@ -390,9 +389,7 @@ class DocumentationCleanup:
         subdirectories = self.settings.documentation.archive_subdirectories
 
         for pattern, subdirectory in subdirectories.items():
-            mappings.append(
-                ArchiveMapping(pattern=pattern, subdirectory=subdirectory)
-            )
+            mappings.append(ArchiveMapping(pattern=pattern, subdirectory=subdirectory))
 
         return mappings
 
@@ -652,9 +649,7 @@ class DocumentationCleanup:
         if result.success:
             self.console.print(f"\n{sep}")
             if result.files_moved > 0:
-                self.console.print(
-                    f"[green]✅ Documentation cleanup completed[/green]"
-                )
+                self.console.print("[green]✅ Documentation cleanup completed[/green]")
                 self.console.print(f"\n{result.summary}")
             else:
                 self.console.print(
@@ -663,9 +658,7 @@ class DocumentationCleanup:
             self.console.print(f"{sep}\n")
         else:
             self.console.print(f"\n{sep}")
-            self.console.print(
-                f"[red]❌ Documentation cleanup failed[/red]"
-            )
+            self.console.print("[red]❌ Documentation cleanup failed[/red]")
             if result.error_message:
                 self.console.print(f"Error: {result.error_message}")
             self.console.print(f"{sep}\n")

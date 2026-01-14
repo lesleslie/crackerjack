@@ -187,7 +187,7 @@ class TestBuildCommand:
 
     def test_adds_ignore_for_disabled_checks(self) -> None:
         """Test that --ignore is added for each disabled check."""
-        settings = refurb.RefurbSettings(timeout_seconds=60, max_workers=4, 
+        settings = refurb.RefurbSettings(timeout_seconds=60, max_workers=4,
             disable_checks=["FURB123", "FURB456"]
         )
         adapter = refurb.RefurbAdapter(settings=settings)
