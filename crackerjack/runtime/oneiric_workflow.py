@@ -113,6 +113,10 @@ def _register_tasks(
     options: t.Any,
 ) -> None:
     task_factories = {
+        "config_cleanup": lambda: _PhaseTask(
+            "config_cleanup",
+            lambda: phases.run_config_cleanup_phase(options),
+        ),
         "configuration": lambda: _PhaseTask(
             "configuration",
             lambda: phases.run_configuration_phase(options),
@@ -126,6 +130,18 @@ def _register_tasks(
             lambda: phases.run_fast_hooks_only(options),
         ),
         "tests": lambda: _PhaseTask("tests", lambda: phases.run_testing_phase(options)),
+        "documentation_cleanup": lambda: _PhaseTask(
+            "documentation_cleanup",
+            lambda: phases.run_documentation_cleanup_phase(options),
+        ),
+        "git_cleanup": lambda: _PhaseTask(
+            "git_cleanup",
+            lambda: phases.run_git_cleanup_phase(options),
+        ),
+        "doc_updates": lambda: _PhaseTask(
+            "doc_updates",
+            lambda: phases.run_doc_update_phase(options),
+        ),
         "comprehensive_hooks": lambda: _PhaseTask(
             "comprehensive_hooks",
             lambda: phases.run_comprehensive_hooks_only(options),
@@ -168,6 +184,10 @@ def _register_workflow(runtime: OneiricWorkflowRuntime, options: t.Any) -> None:
 def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     steps: list[str] = []
 
+    # Phase 0: Config/Test cleanup (ALWAYS runs first)
+    if _should_run_config_cleanup(options):
+        steps.append("config_cleanup")
+
     if not getattr(options, "no_config_updates", False):
         steps.append("configuration")
 
@@ -180,8 +200,19 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     if _should_run_tests(options):
         steps.append("tests")
 
+    if _should_run_documentation_cleanup(options):
+        steps.append("documentation_cleanup")
+
     if _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
+
+    # Pre-push: Git cleanup (before commit/push)
+    if _should_run_git_cleanup(options):
+        steps.append("git_cleanup")
+
+    # Pre-publish: Doc updates (before publish)
+    if _should_run_doc_updates(options):
+        steps.append("doc_updates")
 
     steps.extend(("publishing", "commit"))
 
@@ -203,6 +234,11 @@ def _should_clean(options: t.Any) -> bool:
     )
 
 
+def _should_run_config_cleanup(options: t.Any) -> bool:
+    """Config cleanup runs on every crackerjack run (Phase 0)."""
+    return True  # Always run config cleanup
+
+
 def _should_run_tests(options: t.Any) -> bool:
     return bool(getattr(options, "run_tests", False) or getattr(options, "test", False))
 
@@ -219,3 +255,17 @@ def _should_run_comprehensive_hooks(options: t.Any) -> bool:
     if getattr(options, "fast", False):
         return False
     return not getattr(options, "fast_iteration", False)
+
+
+def _should_run_documentation_cleanup(options: t.Any) -> bool:
+    return bool(getattr(options, "cleanup_docs", False))
+
+
+def _should_run_git_cleanup(options: t.Any) -> bool:
+    """Git cleanup runs before commit/push operations."""
+    return bool(getattr(options, "cleanup_git", False))
+
+
+def _should_run_doc_updates(options: t.Any) -> bool:
+    """Doc updates run before publish operations."""
+    return bool(getattr(options, "update_docs", False))
