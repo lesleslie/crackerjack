@@ -140,6 +140,11 @@ class Options(BaseModel):
 
     strip_code: bool | None = None
     run_tests: bool = False
+    xcode_tests: bool = False
+    xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj"
+    xcode_scheme: str = "MdInjectApp"
+    xcode_configuration: str = "Debug"
+    xcode_destination: str = "platform=macOS"
     ai_fix: bool | None = None
     dry_run: bool = False
     full_release: str | None = None
@@ -576,6 +581,31 @@ CLI_OPTIONS = {
             "and timeout handling."
         ),
     ),
+    "xcode_tests": typer.Option(
+        False,
+        "--xcode-tests",
+        help="Run Xcode tests (can be standalone or combined with pytest).",
+    ),
+    "xcode_project": typer.Option(
+        "app/MdInjectApp/MdInjectApp.xcodeproj",
+        "--xcode-project",
+        help="Path to the Xcode project for tests.",
+    ),
+    "xcode_scheme": typer.Option(
+        "MdInjectApp",
+        "--xcode-scheme",
+        help="Xcode scheme to test.",
+    ),
+    "xcode_configuration": typer.Option(
+        "Debug",
+        "--xcode-configuration",
+        help="Xcode build configuration.",
+    ),
+    "xcode_destination": typer.Option(
+        "platform=macOS",
+        "--xcode-destination",
+        help="Xcode destination string.",
+    ),
     "ai_fix": typer.Option(
         None,
         "--ai-fix",
@@ -593,7 +623,7 @@ CLI_OPTIONS = {
     ),
     "full_release": typer.Option(
         None,
-        "-a",
+        "-f",
         "--full-release",
         callback=parse_bump_option_with_flag_support,
         help="Complete release workflow: strip code, run tests, bump version, and publish (patch, minor, major, auto). Equivalent to `-x -t -p <version> -c`. When used as a flag (-a), defaults to 'interactive'.",
@@ -952,6 +982,11 @@ def create_options(
     refresh_cache: bool = False,
     strip_code: bool | None = None,
     run_tests: bool = False,
+    xcode_tests: bool = False,
+    xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj",
+    xcode_scheme: str = "MdInjectApp",
+    xcode_configuration: str = "Debug",
+    xcode_destination: str = "platform=macOS",
     ai_fix: bool | None = None,
     dry_run: bool = False,
     full_release: str | None = None,
@@ -1049,6 +1084,11 @@ def create_options(
         refresh_cache=refresh_cache,
         strip_code=strip_code,
         run_tests=run_tests,
+        xcode_tests=xcode_tests,
+        xcode_project=xcode_project,
+        xcode_scheme=xcode_scheme,
+        xcode_configuration=xcode_configuration,
+        xcode_destination=xcode_destination,
         ai_fix=ai_fix,
         dry_run=dry_run,
         full_release=full_release,

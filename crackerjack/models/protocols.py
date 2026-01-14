@@ -91,6 +91,11 @@ class OptionsProtocol(t.Protocol):
     global_lock_timeout: int = 600
     strip_code: bool = False
     run_tests: bool = False
+    xcode_tests: bool = False
+    xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj"
+    xcode_scheme: str = "MdInjectApp"
+    xcode_configuration: str = "Debug"
+    xcode_destination: str = "platform=macOS"
     global_lock_cleanup: bool = True
     global_lock_dir: str | None = None
     generate_docs: bool = False

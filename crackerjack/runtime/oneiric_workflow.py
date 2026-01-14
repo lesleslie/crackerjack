@@ -240,7 +240,11 @@ def _should_run_config_cleanup(options: t.Any) -> bool:
 
 
 def _should_run_tests(options: t.Any) -> bool:
-    return bool(getattr(options, "run_tests", False) or getattr(options, "test", False))
+    return bool(
+        getattr(options, "run_tests", False)
+        or getattr(options, "test", False)
+        or getattr(options, "xcode_tests", False)
+    )
 
 
 def _should_run_fast_hooks(options: t.Any) -> bool:

@@ -72,6 +72,11 @@ class TestConfig(BaseModel):
     benchmark_regression_threshold: float = 0.1
     test_workers: int = 0
     test_timeout: int = 0
+    xcode_tests: bool = False
+    xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj"
+    xcode_scheme: str = "MdInjectApp"
+    xcode_configuration: str = "Debug"
+    xcode_destination: str = "platform=macOS"
 
     @classmethod
     def from_settings(cls, settings: Any) -> "TestConfig":
@@ -86,6 +91,15 @@ class TestConfig(BaseModel):
             ),
             test_workers=getattr(settings, "test_workers", 0),
             test_timeout=getattr(settings, "test_timeout", 0),
+            xcode_tests=getattr(settings, "xcode_tests", False),
+            xcode_project=getattr(
+                settings,
+                "xcode_project",
+                "app/MdInjectApp/MdInjectApp.xcodeproj",
+            ),
+            xcode_scheme=getattr(settings, "xcode_scheme", "MdInjectApp"),
+            xcode_configuration=getattr(settings, "xcode_configuration", "Debug"),
+            xcode_destination=getattr(settings, "xcode_destination", "platform=macOS"),
         )
 
     @property

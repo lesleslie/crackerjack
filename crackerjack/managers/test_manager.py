@@ -1,5 +1,7 @@
 import re
+import shutil
 import subprocess
+import sys
 import time
 import typing as t
 from pathlib import Path
@@ -147,31 +149,43 @@ class TestManager:
 
     def run_tests(self, options: OptionsProtocol) -> bool:
 
-        if hasattr(options, "test") and not options.test:
+        run_pytest = bool(getattr(options, "test", False) or getattr(options, "run_tests", False))
+        run_xcode = bool(getattr(options, "xcode_tests", False))
+
+        if not run_pytest and not run_xcode:
             return True
 
         start_time = time.time()
 
         try:
-            result = self._execute_test_workflow(options)
-            duration = time.time() - start_time
+            if run_pytest:
+                result = self._execute_test_workflow(options)
+                duration = time.time() - start_time
 
-
-            workers = self.command_builder.get_optimal_workers(
-                options, print_info=False,
-            )
-
-            if result.returncode == 0:
-                return self._handle_test_success(
-                    result.stdout, duration, options, workers,
+                workers = self.command_builder.get_optimal_workers(
+                    options, print_info=False,
                 )
-            return self._handle_test_failure(
-                result.stderr if result else "",
-                result.stdout if result else "",
-                duration,
-                options,
-                workers,
-            )
+
+                if result.returncode == 0:
+                    pytest_ok = self._handle_test_success(
+                        result.stdout, duration, options, workers,
+                    )
+                else:
+                    return self._handle_test_failure(
+                        result.stderr if result else "",
+                        result.stdout if result else "",
+                        duration,
+                        options,
+                        workers,
+                    )
+            else:
+                pytest_ok = True
+
+            if run_xcode:
+                xcode_ok = self._execute_xcode_tests(options)
+                return pytest_ok and xcode_ok
+
+            return pytest_ok
 
         except Exception as e:
             return self._handle_test_error(start_time, e)
@@ -387,6 +401,29 @@ class TestManager:
         self.console.print(
             f"[cyan]🧪[/cyan] Running tests (workers: {workers}, timeout: {timeout}s)",
         )
+
+    def _execute_xcode_tests(self, options: OptionsProtocol) -> bool:
+        if sys.platform != "darwin":
+            self.console.print(
+                "[yellow]⚠️[/yellow] Xcode tests require macOS (xcodebuild not available).",
+            )
+            return False
+        if shutil.which("xcodebuild") is None:
+            self.console.print(
+                "[red]❌[/red] xcodebuild not found. Install Xcode or Xcode Command Line Tools.",
+            )
+            return False
+        cmd = self.command_builder.build_xcode_command(options)
+        self.console.print(
+            "[cyan]🧪[/cyan] Running Xcode tests "
+            f"({getattr(options, 'xcode_scheme', 'MdInjectApp')})",
+        )
+        result = self.executor.execute_with_progress(cmd, self._get_timeout(options))
+        if result.returncode == 0:
+            self.console.print("[green]✅[/green] Xcode tests passed")
+            return True
+        self.console.print("[red]❌[/red] Xcode tests failed")
+        return False
 
     def _handle_test_success(
         self,

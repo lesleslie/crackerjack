@@ -1130,6 +1130,9 @@ python -m crackerjack run
 # With testing
 python -m crackerjack run --run-tests
 
+# Xcode tests (macOS)
+python -m crackerjack run --xcode-tests
+
 # Full release workflow
 python -m crackerjack run --all patch
 
@@ -1187,6 +1190,11 @@ python -m crackerjack run --ai-fix
 | `--thorough` | - | Thorough mode (8 iterations) |
 | `--verbose` | `-v` | Enable verbose output |
 | `--watchdog` | - | Service watchdog with auto-restart |
+| `--xcode-configuration` | - | Xcode build configuration |
+| `--xcode-destination` | - | Xcode destination string |
+| `--xcode-project` | - | Path to Xcode project for tests |
+| `--xcode-scheme` | - | Xcode scheme to test |
+| `--xcode-tests` | - | Run Xcode tests (can be combined with `--run-tests`) |
 
 **🔗 Related Documentation**
 
@@ -1204,6 +1212,7 @@ ______________________________________________________________________
 python -m crackerjack run                    # Quality checks only
 python -m crackerjack run --run-tests        # Quality checks + tests
 python -m crackerjack run --ai-fix --run-tests  # AI auto-fixing + tests (recommended)
+python -m crackerjack run --xcode-tests      # Xcode tests (macOS)
 
 # Release workflow
 python -m crackerjack run --all patch # Full release workflow
