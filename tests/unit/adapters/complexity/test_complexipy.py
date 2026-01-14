@@ -22,7 +22,7 @@ class TestComplexipySettings:
 
     def test_default_field_values(self) -> None:
         """Test that ComplexipySettings has correct default values."""
-        settings = ComplexipySettings()
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
 
         assert settings.tool_name == "complexipy"
         assert settings.use_json_output is True
@@ -60,7 +60,7 @@ class TestConstructor:
     @patch("crackerjack.adapters.complexity.complexipy.BaseToolAdapter.__init__")
     def test_initialize_with_settings(self, mock_init: Mock) -> None:
         """Test initialization with settings."""
-        settings = ComplexipySettings(max_complexity=20)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=20)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_init.assert_called_once_with(settings=settings)
@@ -88,7 +88,7 @@ class TestInit:
     """Test async init() method."""
 
     @patch("crackerjack.adapters.complexity.complexipy.BaseToolAdapter.init")
-    @patch("crackerjack.adapters.complexity.complexipy.tomllib.load")
+    @patch("tomllib.load")
     @patch("crackerjack.adapters.complexity.complexipy.Path")
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_loads_config_from_pyproject_when_no_settings(
@@ -181,7 +181,7 @@ class TestBuildCommand:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_builds_basic_command_with_files(self, mock_logger: Mock) -> None:
         """Test building basic command with files."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
         files = [Path("test1.py"), Path("test2.py")]
 
@@ -205,7 +205,7 @@ class TestBuildCommand:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_includes_max_complexity_allowed(self, mock_logger: Mock) -> None:
         """Test that --max-complexity-allowed is included."""
-        settings = ComplexipySettings(max_complexity=20)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=20)
         adapter = ComplexipyAdapter(settings=settings)
         files = [Path("test.py")]
 
@@ -217,7 +217,7 @@ class TestBuildCommand:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_includes_sort_flag(self, mock_logger: Mock) -> None:
         """Test that --sort flag is included."""
-        settings = ComplexipySettings(sort_by="asc")
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, sort_by="asc")
         adapter = ComplexipyAdapter(settings=settings)
         files = [Path("test.py")]
 
@@ -240,7 +240,7 @@ class TestBuildCommand:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_converts_file_paths_to_strings(self, mock_logger: Mock) -> None:
         """Test that file paths are converted to strings."""
-        settings = ComplexipySettings()
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
         files = [Path("dir/test1.py"), Path("dir/test2.py")]
 
@@ -263,7 +263,7 @@ class TestParseOutputJSONFile:
         self, mock_logger: Mock, mock_path: Mock, mock_get_output_dir: Mock
     ) -> None:
         """Test loading JSON from file."""
-        settings = ComplexipySettings(use_json_output=True, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=True, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         # Mock file exists and contains valid JSON
@@ -294,7 +294,7 @@ class TestParseOutputJSONFile:
         self, mock_logger: Mock, mock_path: Mock, mock_get_output_dir: Mock
     ) -> None:
         """Test returning empty list when JSON file doesn't exist."""
-        settings = ComplexipySettings(use_json_output=True, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=True, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._move_complexipy_results_to_output_dir = Mock(return_value=None)
@@ -316,7 +316,7 @@ class TestParseOutputJSONFile:
         self, mock_logger: Mock, mock_path: Mock, mock_get_output_dir: Mock
     ) -> None:
         """Test falling back to stdout parsing on JSON read error."""
-        settings = ComplexipySettings(use_json_output=True, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=True, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         # Mock file exists but raises error on read
@@ -345,7 +345,7 @@ class TestParseOutputJSONStdout:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_parses_json_from_raw_output(self, mock_logger: Mock) -> None:
         """Test parsing JSON from raw_output."""
-        settings = ComplexipySettings(use_json_output=False, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=False, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._move_complexipy_results_to_output_dir = Mock(return_value=None)
@@ -368,7 +368,7 @@ class TestParseOutputJSONStdout:
         self, mock_logger: Mock
     ) -> None:
         """Test falling back to text parsing on JSON decode error."""
-        settings = ComplexipySettings(use_json_output=False, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=False, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._move_complexipy_results_to_output_dir = Mock(return_value=None)
@@ -385,7 +385,7 @@ class TestParseOutputJSONStdout:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_empty_list_when_no_output(self, mock_logger: Mock) -> None:
         """Test returning empty list when no output."""
-        settings = ComplexipySettings(use_json_output=False, max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, use_json_output=False, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._move_complexipy_results_to_output_dir = Mock(return_value=None)
@@ -405,7 +405,7 @@ class TestProcessComplexipyDataList:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_processes_list_of_function_dicts(self, mock_logger: Mock) -> None:
         """Test processing list of function dicts."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         data = [
@@ -421,7 +421,7 @@ class TestProcessComplexipyDataList:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_skips_functions_below_threshold(self, mock_logger: Mock) -> None:
         """Test skipping functions with complexity <= max_complexity."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         data = [
@@ -436,7 +436,7 @@ class TestProcessComplexipyDataList:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_creates_issue_with_correct_severity(self, mock_logger: Mock) -> None:
         """Test creating issues with correct severity."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         data = [
@@ -468,7 +468,7 @@ class TestProcessComplexipyDataDict:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_processes_dict_with_files_key(self, mock_logger: Mock) -> None:
         """Test processing dict with 'files' key."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._process_file_data = Mock(return_value=[])
@@ -487,7 +487,7 @@ class TestProcessComplexipyDataDict:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_empty_list_for_empty_dict(self, mock_logger: Mock) -> None:
         """Test returning empty list for empty dict."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         issues = adapter._process_complexipy_data({})
@@ -497,7 +497,7 @@ class TestProcessComplexipyDataDict:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_missing_files_key(self, mock_logger: Mock) -> None:
         """Test handling missing 'files' key."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         issues = adapter._process_complexipy_data({"other_key": "value"})
@@ -511,7 +511,7 @@ class TestProcessFileData:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_iterates_through_functions(self, mock_logger: Mock) -> None:
         """Test iterating through functions list."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._create_issue_if_needed = Mock(return_value=None)
@@ -529,7 +529,7 @@ class TestProcessFileData:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_list_of_issues(self, mock_logger: Mock) -> None:
         """Test returning list of issues."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_issue = Mock()
@@ -552,7 +552,7 @@ class TestCreateIssueIfNeeded:
         self, mock_logger: Mock
     ) -> None:
         """Test returning None when complexity <= max_complexity."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         file_path = Path("test.py")
@@ -567,7 +567,7 @@ class TestCreateIssueIfNeeded:
         self, mock_logger: Mock
     ) -> None:
         """Test returning ToolIssue when complexity > max_complexity."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         file_path = Path("test.py")
@@ -584,7 +584,7 @@ class TestCreateIssueIfNeeded:
         self, mock_logger: Mock
     ) -> None:
         """Test that message is built with _build_issue_message()."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         file_path = Path("test.py")
@@ -614,7 +614,7 @@ class TestBuildIssueMessage:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_includes_complexity_always(self, mock_logger: Mock) -> None:
         """Test that 'Complexity: N' is always included."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         func = {"name": "foo", "complexity": 20}
@@ -671,7 +671,7 @@ class TestDetermineIssueSeverity:
         self, mock_logger: Mock
     ) -> None:
         """Test returning 'error' when complexity > max_complexity * 2."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         severity = adapter._determine_issue_severity(35)
@@ -683,7 +683,7 @@ class TestDetermineIssueSeverity:
         self, mock_logger: Mock
     ) -> None:
         """Test returning 'warning' when complexity <= max_complexity * 2."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         severity = adapter._determine_issue_severity(20)
@@ -702,7 +702,7 @@ class TestDetermineIssueSeverity:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_boundary_case_exactly_double(self, mock_logger: Mock) -> None:
         """Test handling boundary case where complexity = 2x threshold."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         severity = adapter._determine_issue_severity(30)  # Exactly 2x
@@ -716,7 +716,7 @@ class TestParseTextOutput:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_parses_file_lines(self, mock_logger: Mock) -> None:
         """Test parsing 'File:' lines."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         adapter._parse_complexity_line = Mock(return_value=None)
@@ -730,7 +730,7 @@ class TestParseTextOutput:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_empty_list_for_empty_output(self, mock_logger: Mock) -> None:
         """Test returning empty list for empty output."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         issues = adapter._parse_text_output("")
@@ -740,7 +740,7 @@ class TestParseTextOutput:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_multiple_files_and_functions(self, mock_logger: Mock) -> None:
         """Test handling multiple files and functions."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_issue = Mock()
@@ -762,7 +762,7 @@ class TestUpdateCurrentFile:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_extracts_file_path_from_file_line(self, mock_logger: Mock) -> None:
         """Test extracting file path from 'File:' line."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         new_file = adapter._update_current_file("File: /path/to/test.py", None)
@@ -774,7 +774,7 @@ class TestUpdateCurrentFile:
         self, mock_logger: Mock
     ) -> None:
         """Test returning current_file for non-'File:' line."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         current_file = Path("/path/to/test.py")
@@ -789,7 +789,7 @@ class TestParseComplexityLine:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_parses_valid_complexity_line(self, mock_logger: Mock) -> None:
         """Test parsing valid complexity line."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         current_file = Path("/path/to/test.py")
@@ -807,7 +807,7 @@ class TestParseComplexityLine:
         self, mock_logger: Mock
     ) -> None:
         """Test returning None when complexity <= max_complexity."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         current_file = Path("/path/to/test.py")
@@ -820,7 +820,7 @@ class TestParseComplexityLine:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_none_on_parse_errors(self, mock_logger: Mock) -> None:
         """Test returning None on parse errors."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         current_file = Path("/path/to/test.py")
@@ -839,7 +839,7 @@ class TestExtractFunctionData:
         self, mock_logger: Mock
     ) -> None:
         """Test extracting function data from valid line."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         line = "foo(line 42) complexity 20"
@@ -854,7 +854,7 @@ class TestExtractFunctionData:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_returns_none_for_invalid_format(self, mock_logger: Mock) -> None:
         """Test returning None for invalid line format."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         line = "invalid line"
@@ -865,7 +865,7 @@ class TestExtractFunctionData:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_missing_parenthesis(self, mock_logger: Mock) -> None:
         """Test handling missing parenthesis."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         line = "foo line 42 complexity 20"
@@ -876,7 +876,7 @@ class TestExtractFunctionData:
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_missing_complexity_keyword(self, mock_logger: Mock) -> None:
         """Test handling missing 'complexity' keyword."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         line = "foo(line 42) something 20"
@@ -894,7 +894,7 @@ class TestGetDefaultConfig:
         self, mock_logger: Mock, mock_path: Mock
     ) -> None:
         """Test returning QACheckConfig with correct fields."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_path.cwd.return_value.exists.return_value = False
@@ -913,7 +913,7 @@ class TestGetDefaultConfig:
         self, mock_logger: Mock, mock_path: Mock
     ) -> None:
         """Test loading exclude_patterns from pyproject.toml."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_path.cwd.return_value.exists.return_value = True
@@ -935,7 +935,7 @@ class TestGetDefaultConfig:
         self, mock_logger: Mock, mock_path: Mock
     ) -> None:
         """Test using defaults when pyproject.toml missing."""
-        settings = ComplexipySettings(max_complexity=15)
+        settings = ComplexipySettings(timeout_seconds=90, max_workers=4, max_complexity=15)
         adapter = ComplexipyAdapter(settings=settings)
 
         mock_path.cwd.return_value.exists.return_value = False
@@ -969,7 +969,7 @@ class TestLoadConfigFromPyproject:
         assert config["exclude_patterns"] == ["**/.venv/**", "**/venv/**", "**/tests/**"]
         assert config["max_complexity"] == 15
 
-    @patch("crackerjack.adapters.complexity.complexipy.tomllib.load")
+    @patch("tomllib.load")
     @patch("crackerjack.adapters.complexity.complexipy.Path")
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_loads_exclude_patterns_from_tool_section(
@@ -987,7 +987,7 @@ class TestLoadConfigFromPyproject:
 
         assert config["exclude_patterns"] == ["**/tests/**"]
 
-    @patch("crackerjack.adapters.complexity.complexipy.tomllib.load")
+    @patch("tomllib.load")
     @patch("crackerjack.adapters.complexity.complexipy.Path")
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_loads_max_complexity_from_tool_section(
@@ -1005,7 +1005,7 @@ class TestLoadConfigFromPyproject:
 
         assert config["max_complexity"] == 20
 
-    @patch("crackerjack.adapters.complexity.complexipy.tomllib.load")
+    @patch("tomllib.load")
     @patch("crackerjack.adapters.complexity.complexipy.Path")
     @patch("crackerjack.adapters.complexity.complexipy.logger")
     def test_handles_toml_decode_errors(self, mock_logger: Mock, mock_path: Mock, _) -> None:

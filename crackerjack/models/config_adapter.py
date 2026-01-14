@@ -52,22 +52,31 @@ class OptionsAdapter:
                 enable_ty=getattr(options, "enable_ty", False),
                 enable_lsp_optimization=getattr(options, "enable_lsp_hooks", False),
             ),
-            testing=TestConfig(
-                test=getattr(
-                    options,
-                    "test",
-                    getattr(options, "run_tests", False),
-                ),
-                benchmark=getattr(options, "benchmark", False),
-                benchmark_regression=getattr(options, "benchmark_regression", False),
-                benchmark_regression_threshold=getattr(
-                    options,
-                    "benchmark_regression_threshold",
-                    0.1,
-                ),
-                test_workers=getattr(options, "test_workers", 0),
-                test_timeout=getattr(options, "test_timeout", 0),
+        testing=TestConfig(
+            test=getattr(
+                options,
+                "test",
+                getattr(options, "run_tests", False),
             ),
+            benchmark=getattr(options, "benchmark", False),
+            benchmark_regression=getattr(options, "benchmark_regression", False),
+            benchmark_regression_threshold=getattr(
+                options,
+                "benchmark_regression_threshold",
+                0.1,
+            ),
+            test_workers=getattr(options, "test_workers", 0),
+            test_timeout=getattr(options, "test_timeout", 0),
+            xcode_tests=getattr(options, "xcode_tests", False),
+            xcode_project=getattr(
+                options,
+                "xcode_project",
+                "app/MdInjectApp/MdInjectApp.xcodeproj",
+            ),
+            xcode_scheme=getattr(options, "xcode_scheme", "MdInjectApp"),
+            xcode_configuration=getattr(options, "xcode_configuration", "Debug"),
+            xcode_destination=getattr(options, "xcode_destination", "platform=macOS"),
+        ),
             publishing=PublishConfig(
                 publish=getattr(options, "publish", None),
                 bump=getattr(options, "bump", None),

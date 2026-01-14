@@ -29,6 +29,11 @@ class TestSettings(Settings):
     min_workers: int = 2
     memory_per_worker_gb: float = 2.0
     coverage: bool = False
+    xcode_tests: bool = False
+    xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj"
+    xcode_scheme: str = "MdInjectApp"
+    xcode_configuration: str = "Debug"
+    xcode_destination: str = "platform=macOS"
 
 
 class PublishSettings(Settings):

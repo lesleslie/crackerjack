@@ -19,6 +19,7 @@ def parse_pytest_addopts(addopts: str | list) -> list[str]:
     except Exception:
         return addopts.split()
 
+
 class TestCommandBuilder:
     def __init__(
         self,
@@ -59,6 +60,41 @@ class TestCommandBuilder:
         self._add_test_path(cmd)
 
         return cmd
+
+    def build_xcode_command(self, options: OptionsProtocol) -> list[str]:
+        project = getattr(
+            options,
+            "xcode_project",
+            getattr(self.settings.testing, "xcode_project", "app/MdInjectApp/MdInjectApp.xcodeproj"),
+        )
+        scheme = getattr(
+            options,
+            "xcode_scheme",
+            getattr(self.settings.testing, "xcode_scheme", "MdInjectApp"),
+        )
+        configuration = getattr(
+            options,
+            "xcode_configuration",
+            getattr(self.settings.testing, "xcode_configuration", "Debug"),
+        )
+        destination = getattr(
+            options,
+            "xcode_destination",
+            getattr(self.settings.testing, "xcode_destination", "platform=macOS"),
+        )
+
+        return [
+            "xcodebuild",
+            "test",
+            "-project",
+            project,
+            "-scheme",
+            scheme,
+            "-configuration",
+            configuration,
+            "-destination",
+            destination,
+        ]
 
     def _handle_not_implemented_error(self, print_info: bool) -> int:
         if print_info and self.console:
