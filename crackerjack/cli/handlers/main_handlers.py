@@ -71,6 +71,14 @@ def handle_standard_mode(
     job_id: str | None = None,
 ) -> None:
     from crackerjack.cli.facade import CrackerjackCLIFacade
+    from crackerjack.config import load_settings
+    from crackerjack.config.settings import CrackerjackSettings
+
+    # Automatically enable documentation cleanup on publish if configured
+    if options.publish and not options.cleanup_docs:
+        settings = load_settings(CrackerjackSettings)
+        if getattr(settings.documentation, "auto_cleanup_on_publish", True):
+            options.cleanup_docs = True
 
     runner = CrackerjackCLIFacade(console=console)
     runner.process(options)  # type: ignore[arg-type]

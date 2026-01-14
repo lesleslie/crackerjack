@@ -168,6 +168,37 @@ class PhaseCoordinator:
             return True
 
     @handle_errors
+    def run_config_cleanup_phase(self, options: OptionsProtocol) -> bool:
+        """Phase 0: Config file and test output cleanup (runs on every crackerjack run)."""
+        self.session.track_task("config_cleanup", "Config cleanup")
+        self._display_cleanup_header()
+
+        from crackerjack.services.config_cleanup import ConfigCleanupService
+
+        cleanup_service = ConfigCleanupService(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            git_service=self.git_service,
+            settings=self._settings,
+        )
+
+        dry_run = getattr(options, "configs_dry_run", False)
+        result = cleanup_service.cleanup_configs(dry_run=dry_run)
+
+        if result.success:
+            self.session.complete_task(
+                "config_cleanup",
+                details=result.summary,
+            )
+            return True
+
+        self.session.fail_task(
+            "config_cleanup",
+            result.error_message or "Config cleanup failed",
+        )
+        return False
+
+    @handle_errors
     def run_cleaning_phase(self, options: OptionsProtocol) -> bool:
         if not getattr(options, "clean", False):
             return True
@@ -324,6 +355,106 @@ class PhaseCoordinator:
             self.session.fail_task("testing", "Tests failed")
 
         return test_success
+
+    @handle_errors
+    def run_documentation_cleanup_phase(self, options: OptionsProtocol) -> bool:
+        """Phase 5: Documentation cleanup before publishing."""
+        if not getattr(options, "cleanup_docs", False):
+            return True
+
+        self.session.track_task("documentation_cleanup", "Documentation cleanup")
+        self._display_cleanup_header()
+
+        from crackerjack.services.documentation_cleanup import DocumentationCleanup
+
+        cleanup_service = DocumentationCleanup(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            git_service=self.git_service,
+            settings=self._settings,
+        )
+
+        dry_run = getattr(options, "docs_dry_run", False)
+        result = cleanup_service.cleanup_documentation(dry_run=dry_run)
+
+        if result.success:
+            self.session.complete_task(
+                "documentation_cleanup",
+                details=result.summary,
+            )
+            return True
+
+        self.session.fail_task(
+            "documentation_cleanup",
+            result.error_message or "Documentation cleanup failed",
+        )
+        return False
+
+    @handle_errors
+    def run_git_cleanup_phase(self, options: OptionsProtocol) -> bool:
+        """Pre-push phase: Clean up git index before push."""
+        if not getattr(options, "cleanup_git", False):
+            return True
+
+        self.session.track_task("git_cleanup", "Git cleanup")
+        self._display_cleanup_header()
+
+        from crackerjack.services.git_cleanup_service import GitCleanupService
+
+        git_service = GitCleanupService(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            git_service=self.git_service,
+            settings=self._settings,
+        )
+
+        result = git_service.cleanup_git_deleted_files(dry_run=False)
+
+        if result.success:
+            self.session.complete_task(
+                "git_cleanup",
+                details=result.summary,
+            )
+            return True
+
+        self.session.fail_task(
+            "git_cleanup",
+            result.error_message or "Git cleanup failed",
+        )
+        return False
+
+    @handle_errors
+    def run_doc_update_phase(self, options: OptionsProtocol) -> bool:
+        """Pre-publish phase: Update documentation before publishing."""
+        if not getattr(options, "update_docs", False):
+            return True
+
+        self.session.track_task("doc_updates", "Documentation updates")
+        self._display_cleanup_header()
+
+        from crackerjack.services.doc_update_service import DocUpdateService
+
+        doc_service = DocUpdateService(
+            console=self.console,
+            pkg_path=self.pkg_path,
+            git_service=self.git_service,
+            settings=self._settings,
+        )
+
+        result = doc_service.update_documentation(dry_run=False)
+
+        if result.success:
+            self.session.complete_task(
+                "doc_updates",
+                details=result.summary,
+            )
+            return True
+
+        self.session.fail_task(
+            "doc_updates",
+            result.error_message or "Documentation updates failed",
+        )
+        return False
 
     @handle_errors
     def run_publishing_phase(self, options: OptionsProtocol) -> bool:
@@ -1067,6 +1198,14 @@ class PhaseCoordinator:
         sep = make_separator("-")
         self.console.print("\n" + sep)
         self.console.print("[bold bright_green]🚀 PUBLISH TO PYPI[/bold bright_green]")
+        self.console.print(sep + "\n")
+
+    def _display_cleanup_header(self) -> None:
+        sep = make_separator("-")
+        self.console.print("\n" + sep)
+        self.console.print(
+            "[bold bright_cyan]🧹 DOCUMENTATION CLEANUP[/bold bright_cyan]"
+        )
         self.console.print(sep + "\n")
 
     def _handle_no_changes_to_commit(self) -> bool:

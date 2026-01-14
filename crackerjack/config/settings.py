@@ -70,6 +70,46 @@ class CleanupSettings(Settings):
     keep_coverage_files: int = 10
 
 
+class DocumentationSettings(Settings):
+    """Settings for automatic documentation cleanup."""
+
+    enabled: bool = True
+    auto_cleanup_on_publish: bool = True
+    dry_run_by_default: bool = False
+    backup_before_cleanup: bool = True
+    essential_files: list[str] = [
+        "AGENTS.md",
+        "CHANGELOG.md",
+        "CLAUDE.md",
+        "NOTES.md",
+        "QWEN.md",
+        "README.md",
+        "RULES.md",
+        "SECURITY.md",
+        "LICENSE",
+        "pyproject.toml",
+        "example.mcp.json",
+    ]
+    archive_patterns: list[str] = [
+        "*PLAN*.md",
+        "*SUMMARY*.md",
+        "*ANALYSIS*.md",
+        "*MIGRATION*.md",
+        "*PROGRESS*.md",
+        "SPRINT*.md",
+        "PHASE*.md",
+    ]
+    archive_subdirectories: dict[str, str] = {
+        "*PLAN*.md": "implementation-plans",
+        "*SUMMARY*.md": "summaries",
+        "SPRINT*.md": "sprints",
+        "PHASE*.md": "phase-completions",
+        "*CLEANUP*.md": "cleanup",
+        "*CONFIG*.md": "config-automation",
+        "*PERFORMANCE*.md": "performance",
+    }
+
+
 class AdvancedSettings(Settings):
     enabled: bool = False
     license_key: str | None = None
@@ -121,6 +161,72 @@ class AdapterTimeouts(Settings):
     gitleaks_timeout: int = 60
 
 
+class ConfigCleanupSettings(Settings):
+    """Settings for automatic config file cleanup."""
+
+    enabled: bool = True
+    backup_before_cleanup: bool = True
+    dry_run_by_default: bool = False
+
+    merge_strategies: dict[str, str] = {
+        "mypy.ini": "tool.mypy",
+        ".ruffignore": "tool.ruff.extend-exclude",
+        ".mdformatignore": "tool.mdformat.exclude",
+        "pyrightconfig.json": "tool.pyright",
+        ".codespell-ignore": "tool.codespell.ignore-words-list",
+        ".codespellrc": "tool.codespell",
+    }
+
+    config_files_to_remove: list[str] = [
+        ".semgrep.yml",
+        ".semgrepignore",
+        ".gitleaksignore",
+        ".gitleaks.toml",
+    ]
+
+    cache_dirs_to_clean: list[str] = [
+        ".complexipy_cache",
+        ".pyscn",
+        "__pycache__",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".mypy_cache",
+        ".coverage",
+        "htmlcov/",
+    ]
+
+    output_files_to_clean: list[str] = [
+        "complexipy.json",
+        "coverage.xml",
+        "coverage.json",
+    ]
+
+
+class GitCleanupSettings(Settings):
+    """Settings for git cleanup before push."""
+
+    enabled: bool = True
+    smart_approach: bool = True
+    filter_branch_threshold: int = 100
+    require_clean_working_tree: bool = True
+
+
+class DocUpdateSettings(Settings):
+    """Settings for AI-powered documentation updates."""
+
+    enabled: bool = True
+    ai_powered: bool = True
+    doc_patterns: list[str] = [
+        "*.md",
+        "docs/**/*.md",
+        "docs/reference/**/*.md",
+        "docs/guides/**/*.md",
+    ]
+    api_key: str | None = None
+    model: str = "claude-sonnet-4-20250514"
+    max_tokens: int = 4096
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
@@ -132,11 +238,15 @@ class CrackerjackSettings(Settings):
     execution: ExecutionSettings = ExecutionSettings()
     progress: ProgressSettings = ProgressSettings()
     cleanup: CleanupSettings = CleanupSettings()
+    documentation: DocumentationSettings = DocumentationSettings()
     advanced: AdvancedSettings = AdvancedSettings()
     mcp_server: MCPServerSettings = MCPServerSettings()
     zuban_lsp: ZubanLSPSettings = ZubanLSPSettings()
     global_lock: GlobalLockSettings = GlobalLockSettings()
     adapter_timeouts: AdapterTimeouts = AdapterTimeouts()
+    config_cleanup: ConfigCleanupSettings = ConfigCleanupSettings()
+    git_cleanup: GitCleanupSettings = GitCleanupSettings()
+    doc_updates: DocUpdateSettings = DocUpdateSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True

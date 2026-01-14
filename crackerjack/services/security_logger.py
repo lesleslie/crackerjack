@@ -80,6 +80,9 @@ class SecurityEventType(str, Enum):
     OPERATION_SUCCESS = "operation_success"
     OPERATION_TIMEOUT = "operation_timeout"
 
+    DOCUMENTATION_CLEANUP = "documentation_cleanup"
+    DOCUMENTATION_ROLLBACK = "documentation_rollback"
+
     INVALID_INPUT = "invalid_input"
 
 

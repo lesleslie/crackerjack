@@ -123,6 +123,12 @@ class Options(BaseModel):
     quick: bool = False
     thorough: bool = False
     clear_cache: bool = False
+    cleanup_docs: bool = False
+    docs_dry_run: bool = False
+    cleanup_configs: bool = False
+    configs_dry_run: bool = False
+    cleanup_git: bool = False
+    update_docs: bool = False
 
     index: str | None = None
     search: str | None = None
@@ -823,6 +829,37 @@ CLI_OPTIONS = {
         "--remove-from-index",
         help="Remove a file from the semantic search index (e.g., --remove-from-index path/to/file.py).",
     ),
+    "cleanup_docs": typer.Option(
+        False,
+        "-C",
+        "--cleanup-docs",
+        help="Clean up documentation files by moving non-essential files to archive (with automatic backup).",
+    ),
+    "docs_dry_run": typer.Option(
+        False,
+        "--docs-dry-run",
+        help="Preview documentation cleanup without making actual changes.",
+    ),
+    "cleanup_configs": typer.Option(
+        False,
+        "--cleanup-configs",
+        help="Clean up config files by merging into pyproject.toml and removing standalone files (auto-enabled on every run).",
+    ),
+    "configs_dry_run": typer.Option(
+        False,
+        "--configs-dry-run",
+        help="Preview config cleanup without making actual changes.",
+    ),
+    "cleanup_git": typer.Option(
+        False,
+        "--cleanup-git",
+        help="Remove .gitignore files from git index before push.",
+    ),
+    "update_docs": typer.Option(
+        False,
+        "--update-docs",
+        help="Update documentation using AI before publish.",
+    ),
 }
 
 
@@ -871,6 +908,12 @@ def create_options(
     quick: bool = False,
     thorough: bool = False,
     clear_cache: bool = False,
+    cleanup_docs: bool = False,
+    docs_dry_run: bool = False,
+    cleanup_configs: bool = False,
+    configs_dry_run: bool = False,
+    cleanup_git: bool = False,
+    update_docs: bool = False,
     cache_stats: bool = False,
     generate_docs: bool = False,
     docs_format: str = "markdown",
@@ -962,6 +1005,12 @@ def create_options(
         quick=quick,
         thorough=thorough,
         clear_cache=clear_cache,
+        cleanup_docs=cleanup_docs,
+        docs_dry_run=docs_dry_run,
+        cleanup_configs=cleanup_configs,
+        configs_dry_run=configs_dry_run,
+        cleanup_git=cleanup_git,
+        update_docs=update_docs,
         cache_stats=cache_stats,
         generate_docs=generate_docs,
         docs_format=docs_format,

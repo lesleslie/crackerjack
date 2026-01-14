@@ -7,6 +7,10 @@ from crackerjack.config.hooks import HookDefinition
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
 
+if t.TYPE_CHECKING:
+    from crackerjack.services.backup_service import BackupMetadata
+    from crackerjack.services.documentation_cleanup import DocumentationCleanupResult
+
 
 @t.runtime_checkable
 class ServiceProtocol(t.Protocol):
@@ -1008,3 +1012,18 @@ class TimeoutManagerProtocol(t.Protocol):
         *args: t.Any,
         **kwargs: t.Any,
     ) -> t.Any: ...
+
+
+@t.runtime_checkable
+class DocumentationCleanupProtocol(t.Protocol):
+    """Protocol for documentation cleanup operations."""
+
+    def cleanup_documentation(
+        self,
+        dry_run: bool = False,
+    ) -> "DocumentationCleanupResult": ...
+
+    def rollback_cleanup(
+        self,
+        backup_metadata: "BackupMetadata",
+    ) -> bool: ...

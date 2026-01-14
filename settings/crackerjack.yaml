@@ -66,6 +66,102 @@ auto_cleanup: true
 keep_debug_logs: 5
 keep_coverage_files: 10
 
+# === Documentation Cleanup Settings ===
+documentation:
+  enabled: true
+  auto_cleanup_on_publish: true
+  dry_run_by_default: false
+  backup_before_cleanup: true
+
+  essential_files:
+    - AGENTS.md
+    - CHANGELOG.md
+    - CLAUDE.md
+    - NOTES.md
+    - QWEN.md
+    - README.md
+    - RULES.md
+    - SECURITY.md
+    - LICENSE
+    - mypy.ini
+    - pyproject.toml
+    - example.mcp.json
+
+  archive_patterns:
+    - "*PLAN*.md"
+    - "*SUMMARY*.md"
+    - "*ANALYSIS*.md"
+    - "*MIGRATION*.md"
+    - "*PROGRESS*.md"
+    - "SPRINT*.md"
+    - "PHASE*.md"
+    - "*INITIATIVE*.md"
+
+  archive_subdirectories:
+    "*PLAN*.md": "implementation-plans"
+    "*SUMMARY*.md": "summaries"
+    "SPRINT*.md": "sprints"
+    "PHASE*.md": "phase-completions"
+    "*CLEANUP*.md": "cleanup"
+    "*CONFIG*.md": "config-automation"
+    "*PERFORMANCE*.md": "performance"
+    "TEST*.md": "test-fixing"
+
+# === Config File Cleanup Settings ===
+config_cleanup:
+  enabled: true
+  backup_before_cleanup: true
+  dry_run_by_default: false
+
+  merge_strategies:
+    mypy.ini: "tool.mypy"
+    .ruffignore: "tool.ruff.extend-exclude"
+    .mdformatignore: "tool.mdformat.exclude"
+    pyrightconfig.json: "tool.pyright"
+    .codespell-ignore: "tool.codespell.ignore-words-list"
+    .codespellrc: "tool.codespell"
+
+  config_files_to_remove:
+    - .semgrep.yml
+    - .semgrepignore
+    - .gitleaksignore
+    - .gitleaks.toml
+
+  cache_dirs_to_clean:
+    - .complexipy_cache
+    - .pyscn
+    - __pycache__
+    - .pytest_cache
+    - .ruff_cache
+    - .mypy_cache
+    - .coverage
+    - htmlcov/
+
+  output_files_to_clean:
+    - complexipy.json
+    - coverage.xml
+    - coverage.json
+
+# === Git Cleanup Settings ===
+git_cleanup:
+  enabled: true
+  smart_approach: true
+  filter_branch_threshold: 100
+  require_clean_working_tree: true
+
+# === Documentation Update Settings ===
+doc_updates:
+  enabled: true
+  ai_powered: true
+  doc_patterns:
+    - "*.md"
+    - "docs/**/*.md"
+    - "docs/reference/**/*.md"
+    - "docs/guides/**/*.md"
+  api_key: null  # Set via environment variable: ANTHROPIC_API_KEY
+  model: "claude-sonnet-4-20250514"
+  max_tokens: 4096
+
 # Enterprise
 enterprise_enabled: false
 license_key: null
