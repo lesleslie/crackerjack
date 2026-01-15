@@ -450,9 +450,22 @@ class ConfigCleanupService:
             try:
                 changed_files = self.git_service.get_changed_files()
                 if changed_files:
-                    return (
-                        False,
-                        "Git repository has uncommitted changes. Commit or stash first.",
+                    # Smart check: allow if only config files that will be merged are changed
+                    # This prevents the cycle where config_cleanup modifies pyproject.toml,
+                    # then the next run blocks on that uncommitted change
+                    allowed_files = {"pyproject.toml", ".gitignore", ".gitattributes"}
+                    unexpected_files = [f for f in changed_files if f not in allowed_files]
+
+                    if unexpected_files:
+                        return (
+                            False,
+                            f"Git repository has uncommitted changes. Commit or stash first.\n"
+                            f"Changed files: {', '.join(changed_files)}"
+                        )
+
+                    # Only allowed files changed - log but don't block
+                    self.console.print(
+                        f"[dim]ℹ️  Only config files modified: {', '.join(changed_files)}[/dim]"
                     )
             except Exception:
                 # Git check failed, but don't block cleanup
