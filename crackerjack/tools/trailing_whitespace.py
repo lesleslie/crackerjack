@@ -14,25 +14,6 @@ def has_trailing_whitespace(line: str) -> bool:
 
 
 def _fix_line_whitespace(line: str) -> str:
-    """Fix trailing whitespace while preserving line endings.
-
-    Removes trailing whitespace from a line while preserving the original
-    line ending style (CRLF, LF, or no ending).
-
-    Args:
-        line: The line to fix
-
-    Returns:
-        The line with trailing whitespace removed but line ending preserved
-
-    Examples:
-        >>> _fix_line_whitespace("text  \\r\\n")
-        'text\\r\\n'
-        >>> _fix_line_whitespace("text  \\n")
-        'text\\n'
-        >>> _fix_line_whitespace("text  ")
-        'text'
-    """
     line_body = line.rstrip("\r\n")
     stripped = line_body.rstrip()
 

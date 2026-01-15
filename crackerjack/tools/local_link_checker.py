@@ -104,8 +104,6 @@ def main(argv: list[str] | None = None) -> int:
         markdown_files = get_git_tracked_files("*.markdown")
         files = md_files + markdown_files
 
-    # Exclude archived documentation from link checking
-    # These are historical documents with broken internal references after reorganization
     files = [f for f in files if "docs/archive" not in str(f)]
 
     if not files:

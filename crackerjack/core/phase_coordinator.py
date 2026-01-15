@@ -169,7 +169,6 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_config_cleanup_phase(self, options: OptionsProtocol) -> bool:
-        """Phase 0: Config file and test output cleanup (runs on every crackerjack run)."""
         self.session.track_task("config_cleanup", "Config cleanup")
         self._display_cleanup_header()
 
@@ -358,7 +357,6 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_documentation_cleanup_phase(self, options: OptionsProtocol) -> bool:
-        """Phase 5: Documentation cleanup before publishing."""
         if not getattr(options, "cleanup_docs", False):
             return True
 
@@ -392,7 +390,6 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_git_cleanup_phase(self, options: OptionsProtocol) -> bool:
-        """Pre-push phase: Clean up git index before push."""
         if not getattr(options, "cleanup_git", False):
             return True
 
@@ -425,7 +422,6 @@ class PhaseCoordinator:
 
     @handle_errors
     def run_doc_update_phase(self, options: OptionsProtocol) -> bool:
-        """Pre-publish phase: Update documentation before publishing."""
         if not getattr(options, "update_docs", False):
             return True
 

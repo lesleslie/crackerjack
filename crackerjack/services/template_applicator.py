@@ -26,26 +26,6 @@ class TemplateApplicator:
         template_name: str | None,
         interactive: bool,
     ) -> str:
-        """Handle template selection with auto-detection and interactive fallback.
-
-        Selects a template either by manual override, auto-detection, or
-        interactive prompt. When auto-detecting in non-interactive mode,
-        displays the detected template for confirmation.
-
-        Args:
-            project_path: Path to the project for template detection
-            template_name: Manual template name override (skips detection)
-            interactive: Whether to prompt for manual selection
-
-        Returns:
-            The name of the selected template
-
-        Examples:
-            >>> _select_template(Path("/tmp/project"), "minimal", False)
-            'minimal'  # Manual override
-            >>> _select_template(Path("/tmp/project"), None, False)
-            'library'  # Auto-detected and confirmed
-        """
         if template_name:
             return self.detector.detect_template(
                 project_path,
@@ -68,27 +48,6 @@ class TemplateApplicator:
         project_path: Path,
         force: bool,
     ) -> dict[str, t.Any] | None:
-        """Load template file, replace placeholders, and merge with existing config.
-
-        Loads the template file from disk, performs placeholder substitution
-        (e.g., <PACKAGE_NAME>), and optionally smart-merges with existing
-        pyproject.toml configuration.
-
-        Args:
-            template_name: Name of the template to load
-            package_name: Package name for placeholder substitution
-            project_path: Path to the target project
-            force: If True, skip smart merge and use full template
-
-        Returns:
-            Merged configuration dict, or None if template file not found
-
-        Examples:
-            >>> _load_and_prepare_template("minimal", "mypkg", Path("/tmp/project"), False)
-            {'project': {'name': 'mypkg'}, 'tool': {'ruff': {...}}}
-            >>> _load_and_prepare_template("nonexistent", "pkg", Path("/tmp"), False)
-            None
-        """
         template_path = self.templates_dir / f"pyproject-{template_name}.toml"
         if not template_path.exists():
             return None

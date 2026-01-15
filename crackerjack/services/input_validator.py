@@ -279,27 +279,6 @@ class InputSanitizer:
     def _check_json_depth(
         cls, obj: t.Any, max_depth: int, current_depth: int = 0
     ) -> int:
-        """Recursively calculate JSON nesting depth.
-
-        Traverses nested dictionaries and lists to determine maximum nesting depth.
-        Early termination if current_depth exceeds max_depth.
-
-        Args:
-            obj: The JSON object (dict, list, or primitive) to analyze
-            max_depth: Maximum allowed depth (for early termination)
-            current_depth: Current nesting depth (default: 0 for root)
-
-        Returns:
-            Maximum nesting depth found
-
-        Examples:
-            >>> _check_json_depth({"a": 1}, max_depth=10)
-            1
-            >>> _check_json_depth({"a": {"b": {"c": 1}}}, max_depth=10)
-            3
-            >>> _check_json_depth([1, [2, [3]]], max_depth=10)
-            3
-        """
         if current_depth > max_depth:
             return current_depth
 

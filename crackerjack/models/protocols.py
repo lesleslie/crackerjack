@@ -1021,8 +1021,6 @@ class TimeoutManagerProtocol(t.Protocol):
 
 @t.runtime_checkable
 class DocumentationCleanupProtocol(t.Protocol):
-    """Protocol for documentation cleanup operations."""
-
     def cleanup_documentation(
         self,
         dry_run: bool = False,
