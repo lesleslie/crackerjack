@@ -213,7 +213,7 @@ class ConfigCleanupService:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
 
-                with tarfile.open(backup_archive, "r: gz") as tar:
+                with tarfile.open(backup_archive, "r:gz") as tar:
                     tar.extractall(temp_path)
 
                 restored = 0
