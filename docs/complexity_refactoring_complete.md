@@ -11,6 +11,7 @@ This document summarizes the comprehensive refactoring work completed to resolve
 ## Objectives
 
 Reduce cognitive complexity across all functions to meet the quality threshold of **≤15** as enforced by complexipy, ensuring:
+
 - Better code maintainability
 - Easier testing and debugging
 - Improved code comprehension
@@ -23,6 +24,7 @@ Reduce cognitive complexity across all functions to meet the quality threshold o
 **File**: `crackerjack/tools/trailing_whitespace.py`
 
 **Changes**:
+
 - Extracted `_fix_line_whitespace()` helper function (complexity 2)
 - Simplified main `fix_trailing_whitespace()` function
 
@@ -30,6 +32,7 @@ Reduce cognitive complexity across all functions to meet the quality threshold o
 **After**: Complexity 10
 
 **Refactoring Pattern**:
+
 ```python
 # Extracted helper
 def _fix_line_whitespace(line: str) -> str:
@@ -52,17 +55,19 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
 ```
 
 **Benefits**:
+
 - Single Responsibility: Helper handles one specific task
 - Testability: Line fixing logic can be unit tested independently
 - Reusability: Helper can be used in other contexts
 
----
+______________________________________________________________________
 
 ### 2. Input Validator Service
 
 **File**: `crackerjack/services/input_validator.py`
 
 **Changes**:
+
 - Extracted `_check_json_depth()` recursive helper method
 - Separated depth calculation logic from validation logic
 
@@ -70,6 +75,7 @@ def fix_trailing_whitespace(file_path: Path) -> bool:
 **After**: Complexity 4
 
 **Refactoring Pattern**:
+
 ```python
 @classmethod
 def sanitize_json(cls, value: str, max_size: int = 1024 * 1024, max_depth: int = 10) -> ValidationResult:
@@ -97,17 +103,19 @@ def _check_json_depth(cls, obj: t.Any, max_depth: int, current_depth: int = 0) -
 ```
 
 **Benefits**:
+
 - Recursive logic isolated in dedicated method
 - Clear separation of concerns (validation vs calculation)
 - Easier to test edge cases (nested dicts, lists, mixed types)
 
----
+______________________________________________________________________
 
 ### 3. Template Applicator Service
 
 **File**: `crackerjack/services/template_applicator.py`
 
 **Changes**:
+
 - Extracted `_select_template()` method (complexity 2)
 - Extracted `_load_and_prepare_template()` method (complexity 3)
 - Simplified main `apply_template()` orchestration
@@ -116,6 +124,7 @@ def _check_json_depth(cls, obj: t.Any, max_depth: int, current_depth: int = 0) -
 **After**: Complexity 11
 
 **Refactoring Pattern**:
+
 ```python
 def _select_template(self, project_path: Path, template_name: str | None, interactive: bool) -> str:
     """Handle template selection with auto-detection and interactive fallback."""
@@ -177,18 +186,20 @@ def apply_template(self, project_path: Path, *, ...) -> dict[str, t.Any]:
 ```
 
 **Benefits**:
+
 - Clear orchestration flow in main method
 - Each helper has a single, well-defined purpose
 - Easier to extend with new template sources or formats
 - Better error handling with isolated responsibilities
 
----
+______________________________________________________________________
 
 ### 4. Test Manager - Fallback Test Counter
 
 **File**: `crackerjack/managers/test_manager.py`
 
 **Changes**:
+
 - Extracted `_parse_test_lines_by_token()` method (complexity 10)
 - Extracted `_calculate_total()` method (complexity 0)
 - Extracted `_parse_metric_patterns()` method (complexity 6)
@@ -199,6 +210,7 @@ def apply_template(self, project_path: Path, *, ...) -> dict[str, t.Any]:
 **After**: Complexity 2
 
 **Refactoring Pattern**:
+
 ```python
 def _parse_test_lines_by_token(self, output: str, stats: dict[str, t.Any]) -> None:
     """Parse test output lines for PASSED/FAILED/SKIPPED/ERROR tokens."""
@@ -281,24 +293,29 @@ def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
 ```
 
 **Benefits**:
+
 - **Progressive Fallback Pattern**: Clear 3-tier parsing strategy
 - **Each Strategy Isolated**: Easy to test each parsing approach independently
 - **Easy to Extend**: Add new parsing strategies without touching existing code
 - **Dramatic Complexity Reduction**: 24 → 2 (92% reduction!)
 
----
+______________________________________________________________________
 
 ## Refactoring Principles Applied
 
 ### 1. Single Responsibility Principle
+
 Each extracted helper method has one clear purpose:
+
 - `_fix_line_whitespace()`: Fix a single line
 - `_check_json_depth()`: Calculate depth only
 - `_select_template()`: Choose template only
 - `_parse_test_lines_by_token()`: Parse one format only
 
 ### 2. Delegation Over Implementation
+
 Main methods become orchestrators that delegate to specialized helpers:
+
 ```python
 # Before: Main method does everything
 def complex_method(data):
@@ -315,7 +332,9 @@ def complex_method(data):
 ```
 
 ### 3. Early Returns
+
 Simplified control flow with early returns:
+
 ```python
 def orchestrate():
     result = self._try_strategy_a()
@@ -330,7 +349,9 @@ def orchestrate():
 ```
 
 ### 4. Explicit Naming
+
 Helper methods have clear, descriptive names:
+
 - `_select_template()` (not `_get_template()`)
 - `_load_and_prepare_template()` (not `_process_template()`)
 - `_parse_metric_patterns()` (not `_parse_metrics()`)
@@ -360,7 +381,9 @@ Helper methods have clear, descriptive names:
 ## Testing Strategy
 
 ### Unit Tests Added
+
 Each refactored helper method should have dedicated unit tests:
+
 ```python
 def test_fix_line_whitespace_preserves_crlf():
     line = "text  \r\n"
@@ -382,7 +405,9 @@ def test_parse_metric_patterns_finds_counts():
 ```
 
 ### Integration Tests
+
 Verify refactored code maintains existing behavior:
+
 ```python
 def test_template_applicator_full_workflow():
     applicator = TemplateApplicator()
@@ -399,13 +424,16 @@ def test_template_applicator_full_workflow():
 ## Maintenance Guidelines
 
 ### When to Refactor
+
 Consider extracting helper methods when:
+
 1. **Cyclomatic Complexity > 10**: Start planning extraction
-2. **Nesting > 3 levels**: Extract inner logic
-3. **Function > 20 lines**: Evaluate for extraction opportunities
-4. **Multiple Responsibilities**: Split by purpose
+1. **Nesting > 3 levels**: Extract inner logic
+1. **Function > 20 lines**: Evaluate for extraction opportunities
+1. **Multiple Responsibilities**: Split by purpose
 
 ### Extraction Checklist
+
 - [ ] Helper has single, clear purpose
 - [ ] Helper has descriptive name following naming conventions
 - [ ] Helper is testable independently
@@ -414,7 +442,9 @@ Consider extracting helper methods when:
 - [ ] No behavioral changes (refactoring only)
 
 ### Code Review Criteria
+
 When reviewing refactored code:
+
 - ✅ All functions have complexity ≤ 15
 - ✅ Helper methods follow existing patterns
 - ✅ Type hints preserved/improved
@@ -424,28 +454,36 @@ When reviewing refactored code:
 ## Lessons Learned
 
 ### 1. Progressive Fallback Pattern
+
 The `_fallback_count_tests` refactoring demonstrated the power of progressive fallback:
+
 - Try best approach first
 - Fall back to simpler approaches on failure
 - Each strategy is independently testable
 - Easy to add new strategies without touching existing code
 
 ### 2. Template Method Pattern
+
 `TemplateApplicator` shows how to use template methods effectively:
+
 - Define skeleton algorithm in main method
 - Delegate steps to helper methods
 - Helpers can be overridden in subclasses if needed
 - Clear extension points for future enhancements
 
 ### 3. Recursive Isolation
+
 `InputSanitizer` demonstrates isolating recursive logic:
+
 - Complex recursive logic hidden in helper
 - Main method handles validation only
 - Recursive helper can be tested independently with various inputs
 - Easy to add caching or memoization to helper if needed
 
 ### 4. Small Helpers Are Powerful
+
 All refactorings showed that small, focused helpers are:
+
 - Easier to understand (cognitive load reduced)
 - Easier to test (single responsibility)
 - Easier to reuse (composable building blocks)
@@ -454,14 +492,16 @@ All refactorings showed that small, focused helpers are:
 ## Future Improvements
 
 ### Short Term
+
 1. Add unit tests for all new helper methods
-2. Update API documentation for refactored services
-3. Add performance benchmarks for refactored code
+1. Update API documentation for refactored services
+1. Add performance benchmarks for refactored code
 
 ### Long Term
+
 1. Consider automated refactoring suggestions in CI
-2. Add complexity monitoring to quality dashboard
-3. Create refactoring playbooks for common patterns
+1. Add complexity monitoring to quality dashboard
+1. Create refactoring playbooks for common patterns
 
 ## References
 
@@ -470,7 +510,7 @@ All refactorings showed that small, focused helpers are:
 - **Quality Threshold**: Ruff complexity ≤ 15
 - **Related Work**: `docs/refurb_creosote_behavior.md`
 
----
+______________________________________________________________________
 
 **Document Status**: ✅ Complete
 **Next Review**: After next major feature addition
