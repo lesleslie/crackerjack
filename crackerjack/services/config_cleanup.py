@@ -356,7 +356,7 @@ class ConfigCleanupService:
 
             backup_archive = backup_dir / "backup.tar.gz"
 
-            with tarfile.open(backup_archive, "w: gz") as tar:
+            with tarfile.open(backup_archive, "w:gz") as tar:
                 for file_path in files:
                     if file_path.exists():
                         tar.add(file_path, arcname=file_path.name)
