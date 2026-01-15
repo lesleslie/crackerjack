@@ -459,10 +459,12 @@ class ConfigCleanupService:
                     allowed_files.add("crackerjack/services/config_cleanup.py")
 
                     # Allow documentation files (created during development)
-                    allowed_files.update({
-                        "SESSION_CHECKPOINT_REPORT.md",
-                        "docs/complexity_refactoring_complete.md",
-                    })
+                    allowed_files.update(
+                        {
+                            "SESSION_CHECKPOINT_REPORT.md",
+                            "docs/complexity_refactoring_complete.md",
+                        }
+                    )
 
                     # Filter out backup files (docs/.backups/*/backup.tar.gz)
                     non_backup_files = [
