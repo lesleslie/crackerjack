@@ -454,7 +454,19 @@ class ConfigCleanupService:
                     # This prevents the cycle where config_cleanup modifies pyproject.toml,
                     # then the next run blocks on that uncommitted change
                     allowed_files = {"pyproject.toml", ".gitignore", ".gitattributes"}
-                    unexpected_files = [f for f in changed_files if f not in allowed_files]
+
+                    # Also allow config_cleanup.py itself (for development)
+                    allowed_files.add("crackerjack/services/config_cleanup.py")
+
+                    # Filter out backup files (docs/.backups/*/backup.tar.gz)
+                    non_backup_files = [
+                        f
+                        for f in changed_files
+                        if not f.startswith("docs/.backups/") or not f.endswith("backup.tar.gz")
+                    ]
+
+                    # Filter out allowed files
+                    unexpected_files = [f for f in non_backup_files if f not in allowed_files]
 
                     if unexpected_files:
                         return (
@@ -463,7 +475,7 @@ class ConfigCleanupService:
                             f"Changed files: {', '.join(changed_files)}"
                         )
 
-                    # Only allowed files changed - log but don't block
+                    # Only allowed files/backup files changed - log but don't block
                     self.console.print(
                         f"[dim]ℹ️  Only config files modified: {', '.join(changed_files)}[/dim]"
                     )
