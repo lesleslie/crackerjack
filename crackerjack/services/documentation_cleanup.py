@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import fnmatch
 import logging
 import shutil
 import tarfile
@@ -179,7 +178,7 @@ class DocumentationCleanup:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
 
-                with tarfile.open(backup_archive, "r: gz") as tar:
+                with tarfile.open(backup_archive, "r:gz") as tar:
                     tar.extractall(temp_path)
 
                 restored = 0
@@ -291,7 +290,7 @@ class DocumentationCleanup:
 
             backup_archive = backup_dir / "backup.tar.gz"
 
-            with tarfile.open(backup_archive, "w: gz") as tar:
+            with tarfile.open(backup_archive, "w:gz") as tar:
                 for file_path in files:
                     if file_path.exists():
                         tar.add(file_path, arcname=file_path.name)
