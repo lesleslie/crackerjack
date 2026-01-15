@@ -70,7 +70,7 @@ memory_per_worker_gb = 2.0
 
 [tool.codespell]
 quiet-level = 3
-ignore-words-list = ["crate,uptodate,nd,nin"]
+ignore-words-list = ["crate,uptodate,nd,nin,som"]
 ignore-words = ".codespell-ignore"
 
 [tool.pytest]

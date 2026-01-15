@@ -76,8 +76,6 @@ class CleanupSettings(Settings):
 
 
 class DocumentationSettings(Settings):
-    """Settings for automatic documentation cleanup."""
-
     enabled: bool = True
     auto_cleanup_on_publish: bool = True
     dry_run_by_default: bool = False
@@ -167,8 +165,6 @@ class AdapterTimeouts(Settings):
 
 
 class ConfigCleanupSettings(Settings):
-    """Settings for automatic config file cleanup."""
-
     enabled: bool = True
     backup_before_cleanup: bool = True
     dry_run_by_default: bool = False
@@ -208,8 +204,6 @@ class ConfigCleanupSettings(Settings):
 
 
 class GitCleanupSettings(Settings):
-    """Settings for git cleanup before push."""
-
     enabled: bool = True
     smart_approach: bool = True
     filter_branch_threshold: int = 100
@@ -217,8 +211,6 @@ class GitCleanupSettings(Settings):
 
 
 class DocUpdateSettings(Settings):
-    """Settings for AI-powered documentation updates."""
-
     enabled: bool = True
     ai_powered: bool = True
     doc_patterns: list[str] = [

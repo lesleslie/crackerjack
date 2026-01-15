@@ -1,13 +1,3 @@
-"""Git cleanup service for removing deleted files from git index.
-
-This service handles smart cleanup of files that have been added to .gitignore
-but still exist in the git index. It uses a three-tiered strategy:
-
-1. Config files → git rm --cached (remove from index, keep local)
-2. Cache directories → git rm (remove from git and local)
-3. Large cleanups → Suggest git filter-branch (for history rewrite)
-"""
-
 from __future__ import annotations
 
 import logging
@@ -27,8 +17,6 @@ if t.TYPE_CHECKING:
 
 @dataclass
 class GitCommandResult:
-    """Result of a git command execution."""
-
     success: bool
     stdout: str = ""
     stderr: str = ""
@@ -40,11 +28,9 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class GitCleanupResult:
-    """Result of git cleanup operation."""
-
     success: bool
-    files_removed_cached: int = 0  # Config files (git rm --cached)
-    files_removed_hard: int = 0  # Cache dirs (git rm)
+    files_removed_cached: int = 0
+    files_removed_hard: int = 0
     total_files: int = 0
     config_files_removed: list[str] = field(default_factory=list)
     cache_dirs_removed: list[str] = field(default_factory=list)
@@ -55,12 +41,6 @@ class GitCleanupResult:
 
 
 class GitCleanupService:
-    """Service for cleaning up git index before push operations.
-
-    This service identifies files that have been added to .gitignore but
-    are still tracked in git, and removes them using appropriate strategies.
-    """
-
     def __init__(
         self,
         console: Console,
@@ -68,34 +48,17 @@ class GitCleanupService:
         git_service: GitInterface,
         settings: CrackerjackSettings | None = None,
     ) -> None:
-        """Initialize git cleanup service with dependencies.
-
-        Args:
-            console: Console protocol for output
-            pkg_path: Path to package directory
-            git_service: Git interface for git operations
-            settings: Optional CrackerjackSettings (loads default if None)
-        """
         self.console = console
         self.pkg_path = pkg_path
         self.git_service = git_service
         self._settings = settings
 
-        # Cache gitignore settings on first access
         self._gitignore_content: list[str] | None = None
 
     def _run_git_command(
         self,
         args: list[str],
     ) -> GitCommandResult:
-        """Run a git command and return the result.
-
-        Args:
-            args: Git command arguments (without 'git' prefix)
-
-        Returns:
-            GitCommandResult with success status and output
-        """
         cmd = ["git", *args]
         try:
             result = subprocess.run(
@@ -120,7 +83,6 @@ class GitCleanupService:
 
     @property
     def settings(self) -> GitCleanupSettings:
-        """Lazy load settings if not provided."""
         if self._settings is None:
             from crackerjack.config import load_settings
             from crackerjack.config.settings import CrackerjackSettings
@@ -132,20 +94,6 @@ class GitCleanupService:
         self,
         dry_run: bool = False,
     ) -> GitCleanupResult:
-        """Remove .gitignore files from git index using smart strategy.
-
-        This method implements a three-tiered cleanup approach:
-        1. Config files → git rm --cached (keep local, remove from index)
-        2. Cache directories → git rm (remove entirely)
-        3. Large cleanups → Suggest git filter-branch
-
-        Args:
-            dry_run: If True, preview changes without executing
-
-        Returns:
-            GitCleanupResult with operation details
-        """
-        # Precondition check: clean working tree
         if self.settings.require_clean_working_tree:
             is_clean, error_msg = self._validate_working_tree_clean()
             if not is_clean:
@@ -155,7 +103,6 @@ class GitCleanupService:
                     summary=str(error_msg or "Working tree validation failed"),
                 )
 
-        # Get all .gitignore patterns
         gitignore_patterns = self._load_gitignore_patterns()
         if not gitignore_patterns:
             return GitCleanupResult(
@@ -163,7 +110,6 @@ class GitCleanupService:
                 summary="No .gitignore patterns found - nothing to clean",
             )
 
-        # Get tracked files that match .gitignore patterns
         tracked_files = self._get_gitignore_changes(gitignore_patterns)
 
         if not tracked_files:
@@ -172,10 +118,8 @@ class GitCleanupService:
                 summary="No tracked files match .gitignore patterns",
             )
 
-        # Categorize files by cleanup strategy
         config_files, cache_dirs = self._categorize_files(tracked_files)
 
-        # Build summary for dry-run
         if dry_run:
             summary = self._generate_dry_run_summary(
                 config_files=config_files,
@@ -192,18 +136,15 @@ class GitCleanupService:
                 dry_run=True,
             )
 
-        # Execute cleanup
         removed_cached = self._remove_from_index_cached(config_files)
         removed_hard = self._remove_from_index_hard(cache_dirs)
 
-        # Check if filter-branch should be suggested
         total_removed = removed_cached + removed_hard
         suggest_filter_branch = (
             self.settings.smart_approach
             and total_removed >= self.settings.filter_branch_threshold
         )
 
-        # Generate summary
         summary = self._generate_cleanup_summary(
             removed_cached=removed_cached,
             removed_hard=removed_hard,
@@ -224,11 +165,6 @@ class GitCleanupService:
         )
 
     def _validate_working_tree_clean(self) -> tuple[bool, str | None]:
-        """Validate that git working tree is clean.
-
-        Returns:
-            Tuple of (is_clean, error_message)
-        """
         try:
             changed_files = self.git_service.get_changed_files()
             if changed_files:
@@ -243,11 +179,6 @@ class GitCleanupService:
             return False, f"Failed to validate working tree: {e}"
 
     def _load_gitignore_patterns(self) -> list[str]:
-        """Load and parse .gitignore file patterns.
-
-        Returns:
-            List of .gitignore patterns (empty if file doesn't exist)
-        """
         if self._gitignore_content is not None:
             return self._gitignore_content
 
@@ -258,7 +189,7 @@ class GitCleanupService:
 
         try:
             content = gitignore_path.read_text()
-            # Filter out comments and empty lines
+
             patterns = [
                 line.strip()
                 for line in content.splitlines()
@@ -275,41 +206,27 @@ class GitCleanupService:
         self,
         gitignore_patterns: list[str],
     ) -> list[Path]:
-        """Find files tracked in git that match .gitignore patterns.
-
-        Args:
-            gitignore_patterns: List of .gitignore patterns
-
-        Returns:
-            List of tracked files that match patterns
-        """
         tracked_files = []
 
-        # Use git ls-files to get all tracked files
         result = self._run_git_command(["ls-files"])
 
         if not result.success or not result.stdout:
             return []
 
-        # Parse tracked files
         all_tracked = [
             self.pkg_path / line.strip()
             for line in result.stdout.splitlines()
             if line.strip()
         ]
 
-        # Simple pattern matching (doesn't support full .gitignore semantics)
-        # For production, consider using 'pathspec' library
         from fnmatch import fnmatch
 
         for tracked_file in all_tracked:
             rel_path = tracked_file.relative_to(self.pkg_path)
             for pattern in gitignore_patterns:
-                # Handle directory patterns
                 if pattern.endswith("/"):
                     pattern = pattern[:-1]
 
-                # Match against file name
                 if fnmatch(rel_path.name, pattern) or fnmatch(
                     str(rel_path),
                     pattern,
@@ -323,18 +240,9 @@ class GitCleanupService:
         self,
         files: list[Path],
     ) -> tuple[list[Path], list[Path]]:
-        """Categorize files into config files and cache directories.
-
-        Args:
-            files: List of files to categorize
-
-        Returns:
-            Tuple of (config_files, cache_dirs)
-        """
         config_files = []
         cache_dirs = []
 
-        # Config file patterns (keep local, remove from index)
         config_patterns = [
             ".ruffignore",
             ".mdformatignore",
@@ -348,7 +256,6 @@ class GitCleanupService:
             ".gitleaks.toml",
         ]
 
-        # Cache directory patterns (remove entirely)
         cache_patterns = [
             ".complexipy_cache",
             ".pyscn",
@@ -361,12 +268,10 @@ class GitCleanupService:
         ]
 
         for file_path in files:
-            # Check if it's a config file
             if any(file_path.name == pattern for pattern in config_patterns):
                 config_files.append(file_path)
                 continue
 
-            # Check if it's a cache directory
             if any(
                 file_path.name == pattern or file_path.name.startswith(pattern)
                 for pattern in cache_patterns
@@ -374,22 +279,11 @@ class GitCleanupService:
                 cache_dirs.append(file_path)
                 continue
 
-            # Default: treat as config file (conservative)
             config_files.append(file_path)
 
         return config_files, cache_dirs
 
     def _remove_from_index_cached(self, files: list[Path]) -> int:
-        """Remove config files from git index but keep local copies.
-
-        Uses 'git rm --cached' to remove from index only.
-
-        Args:
-            files: List of config files to remove
-
-        Returns:
-            Number of files removed
-        """
         if not files:
             return 0
 
@@ -397,7 +291,6 @@ class GitCleanupService:
 
         for file_path in files:
             try:
-                # Use relative path for git command
                 rel_path = file_path.relative_to(self.pkg_path)
 
                 result = self._run_git_command(["rm", "--cached", str(rel_path)])
@@ -416,16 +309,6 @@ class GitCleanupService:
         return removed_count
 
     def _remove_from_index_hard(self, files: list[Path]) -> int:
-        """Remove cache directories from git index and local filesystem.
-
-        Uses 'git rm' to remove entirely.
-
-        Args:
-            files: List of cache directories to remove
-
-        Returns:
-            Number of directories removed
-        """
         if not files:
             return 0
 
@@ -433,7 +316,6 @@ class GitCleanupService:
 
         for file_path in files:
             try:
-                # Use relative path for git command
                 rel_path = file_path.relative_to(self.pkg_path)
 
                 result = self._run_git_command(["rm", "-r", str(rel_path)])
@@ -450,14 +332,6 @@ class GitCleanupService:
         return removed_count
 
     def _suggest_filter_branch(self, large_cleanup: bool) -> bool:
-        """Suggest git filter-branch for large cleanups.
-
-        Args:
-            large_cleanup: Whether cleanup exceeds threshold
-
-        Returns:
-            True if suggestion was made, False otherwise
-        """
         if not large_cleanup:
             return False
 
@@ -491,15 +365,6 @@ class GitCleanupService:
         config_files: list[Path],
         cache_dirs: list[Path],
     ) -> str:
-        """Generate summary for dry-run mode.
-
-        Args:
-            config_files: Config files to be removed
-            cache_dirs: Cache directories to be removed
-
-        Returns:
-            Formatted summary string
-        """
         lines = [
             "Git Cleanup (Dry Run)",
             "=" * 40,
@@ -507,7 +372,7 @@ class GitCleanupService:
         ]
 
         if config_files:
-            for file_path in config_files[:10]:  # Show first 10
+            for file_path in config_files[:10]:
                 rel_path = file_path.relative_to(self.pkg_path)
                 lines.append(f"  - {rel_path}")
             if len(config_files) > 10:
@@ -516,7 +381,7 @@ class GitCleanupService:
         lines.append(f"Cache dirs to remove (git rm -r): {len(cache_dirs)}")
 
         if cache_dirs:
-            for dir_path in cache_dirs[:10]:  # Show first 10
+            for dir_path in cache_dirs[:10]:
                 rel_path = dir_path.relative_to(self.pkg_path)
                 lines.append(f"  - {rel_path}")
             if len(cache_dirs) > 10:
@@ -536,18 +401,6 @@ class GitCleanupService:
         cache_dirs: list[Path],
         suggest_filter_branch: bool,
     ) -> str:
-        """Generate summary of cleanup operation.
-
-        Args:
-            removed_cached: Number of config files removed
-            removed_hard: Number of cache dirs removed
-            config_files: Config files that were removed
-            cache_dirs: Cache dirs that were removed
-            suggest_filter_branch: Whether filter-branch was suggested
-
-        Returns:
-            Formatted summary string
-        """
         lines = [
             "Git Cleanup Complete",
             "=" * 40,

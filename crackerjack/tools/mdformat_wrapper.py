@@ -9,7 +9,6 @@ from ._git_utils import get_git_tracked_files
 
 
 def should_skip_file(file_path: Path) -> bool:
-    """Check if file matches skip patterns from pyproject.toml."""
     skip_patterns = [
         "docs/archive/**",
         "**/archives/**",

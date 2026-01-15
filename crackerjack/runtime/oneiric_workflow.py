@@ -184,7 +184,6 @@ def _register_workflow(runtime: OneiricWorkflowRuntime, options: t.Any) -> None:
 def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     steps: list[str] = []
 
-    # Phase 0: Config/Test cleanup (ALWAYS runs first)
     if _should_run_config_cleanup(options):
         steps.append("config_cleanup")
 
@@ -206,11 +205,9 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
     if _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
 
-    # Pre-push: Git cleanup (before commit/push)
     if _should_run_git_cleanup(options):
         steps.append("git_cleanup")
 
-    # Pre-publish: Doc updates (before publish)
     if _should_run_doc_updates(options):
         steps.append("doc_updates")
 
@@ -235,8 +232,7 @@ def _should_clean(options: t.Any) -> bool:
 
 
 def _should_run_config_cleanup(options: t.Any) -> bool:
-    """Config cleanup runs on every crackerjack run (Phase 0)."""
-    return True  # Always run config cleanup
+    return True
 
 
 def _should_run_tests(options: t.Any) -> bool:
@@ -266,10 +262,8 @@ def _should_run_documentation_cleanup(options: t.Any) -> bool:
 
 
 def _should_run_git_cleanup(options: t.Any) -> bool:
-    """Git cleanup runs before commit/push operations."""
     return bool(getattr(options, "cleanup_git", False))
 
 
 def _should_run_doc_updates(options: t.Any) -> bool:
-    """Doc updates run before publish operations."""
     return bool(getattr(options, "update_docs", False))
