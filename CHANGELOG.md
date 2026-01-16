@@ -1,5 +1,52 @@
 ______________________________________________________________________
 
+## [0.48.0] - 2026-01-16
+
+### Added
+
+- Add smart git check to config_cleanup
+- Complete comprehensive cleanup features (Steps 6-7)
+- Config_cleanup workflow now passes with smart git check
+
+### Changed
+
+- Archive 6 unused modules (130 KB)
+- Crackerjack (quality: 65/100) - 2026-01-12 02:09:09
+- Crackerjack (quality: 65/100) - 2026-01-12 02:17:16
+- Crackerjack (quality: 65/100) - 2026-01-12 02:27:07
+- Crackerjack session analysis (quality: 92/100)
+- Fix flawed cleanup analysis
+- Format adapters/lint/README.md with mdformat
+- Update config, core, deps, docs, tests
+- Update core, docs, tests
+- Update documentation
+
+### Fixed
+
+- Add inline table support to custom TOML serializer
+- Address remaining 9 test failures
+- Allow documentation files in smart git check
+- Correct tarfile compression mode typo
+- Correct tarfile read mode typo in rollback
+- Extend smart git check to ignore backup files and config_cleanup.py
+- Reduce test failures from 73 to 49 (33% improvement)
+- Resolve codespell and ruff-check issues
+- Resolve fnmatch redefinition and tarfile typos
+- Resolve MCP server Pydantic validation and CLI flag bugs
+- Resolve quality check failures (mdformat & local links)
+- Resolve test failures in test_analytics.py
+
+### Documentation
+
+- Add comprehensive cleanup recommendations
+- Add warning to flawed cleanup recommendations
+
+### Internal
+
+- Apply TOML formatting from config cleanup
+- Cleanup and formatting improvements
+- Cleanup cache and analyze coverage discrepancy
+
 ## [0.47.18] - 2026-01-08
 
 ### Changed
