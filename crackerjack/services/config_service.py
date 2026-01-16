@@ -209,9 +209,7 @@ def _format_toml_value(value: Any) -> str:
     if isinstance(value, list):
         return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
     if isinstance(value, dict):
-        items = []
-        for k, v in value.items():
-            items.append(f"{k} = {_format_toml_value(v)}")
+        items = [f"{k} = {_format_toml_value(v)}" for k, v in value.items()]
         return "{" + ", ".join(items) + "}"
     msg = f"Unsupported TOML value: {value!r}"
     raise ValueError(msg)

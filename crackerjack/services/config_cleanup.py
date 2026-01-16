@@ -7,12 +7,12 @@ import shutil
 import tarfile
 import tomllib
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
-from rich.console import Console
-
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.services.backup_service import BackupMetadata, PackageBackupService
 from crackerjack.services.secure_path_utils import (
     AtomicFileOperations,
@@ -64,7 +64,7 @@ class ConfigCleanupService:
         git_service: GitInterface | None = None,
         settings: CrackerjackSettings | None = None,
     ) -> None:
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
         self.git_service = git_service
 
@@ -287,7 +287,7 @@ class ConfigCleanupService:
                 merge_type = "pattern_union"
             elif filename.endswith(".json"):
                 merge_type = "json_deep"
-            elif filename in [".codespell-ignore", ".codespellrc"]:
+            elif filename in (".codespell-ignore", ".codespellrc"):
                 merge_type = "ignore_list"
             else:
                 merge_type = "pattern_union"
@@ -308,7 +308,7 @@ class ConfigCleanupService:
             return False, "pyproject.toml not found"
 
         if self.git_service:
-            try:
+            with suppress(Exception):
                 changed_files = self.git_service.get_changed_files()
                 if changed_files:
                     allowed_files = {"pyproject.toml", ".gitignore", ".gitattributes"}
@@ -343,14 +343,14 @@ class ConfigCleanupService:
                     self.console.print(
                         f"[dim]ℹ️  Only config files modified: {', '.join(changed_files)}[/dim]"
                     )
-            except Exception:
-                pass
 
         return True, None
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:
         try:
             backup_id = self._generate_backup_id()
+            if self.backup_service.backup_root is None:
+                return None
             backup_dir = self.backup_service.backup_root / backup_id
             backup_dir.mkdir(parents=True, exist_ok=True)
 
@@ -396,17 +396,40 @@ class ConfigCleanupService:
         config_files: list[Path],
         dry_run: bool,
     ) -> tuple[int, dict[str, str]]:
-        merged_count = 0
-        merged_files: dict[str, str] = {}
+        """Merge all config files into pyproject.toml."""
+        pyproject_config = self._load_pyproject_config()
+        if pyproject_config is None:
+            return 0, {}
 
+        merged_count, merged_files = self._merge_config_files(
+            config_files, pyproject_config, dry_run
+        )
+
+        if merged_count > 0 and not dry_run:
+            self._write_pyproject_config(pyproject_config)
+
+        return merged_count, merged_files
+
+    def _load_pyproject_config(self) -> dict[str, t.Any] | None:
+        """Load pyproject.toml configuration."""
         pyproject_path = self.pkg_path / "pyproject.toml"
 
         try:
-            with open(pyproject_path, "rb") as f:
-                pyproject_config = tomllib.load(f)
+            with pyproject_path.open("rb") as f:
+                return tomllib.load(f)
         except Exception as e:
             self.console.print(f"[red]❌[/red] Failed to load pyproject.toml: {e}")
-            return 0, {}
+            return None
+
+    def _merge_config_files(
+        self,
+        config_files: list[Path],
+        pyproject_config: dict[str, t.Any],
+        dry_run: bool,
+    ) -> tuple[int, dict[str, str]]:
+        """Merge all config files into pyproject_config."""
+        merged_count = 0
+        merged_files: dict[str, str] = {}
 
         for config_file in config_files:
             strategy = self._get_strategy_for_file(config_file.name)
@@ -414,67 +437,80 @@ class ConfigCleanupService:
                 continue
 
             if dry_run:
-                self.console.print(
-                    f"[yellow]Would merge:[/yellow] {config_file.name} → [{strategy.target_section}]"
-                )
+                self._handle_dry_run_merge(config_file.name, strategy)
                 merged_count += 1
                 merged_files[config_file.name] = strategy.target_section
                 continue
 
-            try:
-                if strategy.merge_type == "ini_flatten":
-                    pyproject_config = self._merge_ini_file(
-                        config_file,
-                        pyproject_config,
-                        strategy.target_section,
-                    )
-                elif strategy.merge_type == "pattern_union":
-                    pyproject_config = self._merge_pattern_file(
-                        config_file,
-                        pyproject_config,
-                        strategy.target_section,
-                    )
-                elif strategy.merge_type == "json_deep":
-                    pyproject_config = self._merge_json_file(
-                        config_file,
-                        pyproject_config,
-                        strategy.target_section,
-                    )
-                elif strategy.merge_type == "ignore_list":
-                    pyproject_config = self._merge_ignore_file(
-                        config_file,
-                        pyproject_config,
-                        strategy.target_section,
-                    )
-
+            if self._merge_single_file(config_file, strategy, pyproject_config):
                 merged_count += 1
                 merged_files[config_file.name] = strategy.target_section
 
-                self.console.print(
-                    f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"
-                )
-
-            except Exception as e:
-                logger.exception(f"Failed to merge {config_file}: {e}")
-                self.console.print(
-                    f"[yellow]⚠️[/yellow] Failed to merge {config_file.name}: {e}"
-                )
-
-        if merged_count > 0 and not dry_run:
-            try:
-                from crackerjack.services.config_service import _dump_toml
-
-                toml_content = _dump_toml(pyproject_config)
-                with open(pyproject_path, "w") as f:
-                    f.write(toml_content)
-
-                self.console.print("[green]✅[/green] pyproject.toml updated")
-
-            except Exception as e:
-                logger.exception(f"Failed to write pyproject.toml: {e}")
-                self.console.print(f"[red]❌[/red] Failed to write pyproject.toml: {e}")
-
         return merged_count, merged_files
+
+    def _handle_dry_run_merge(self, filename: str, strategy: MergeStrategy) -> None:
+        """Handle dry-run merge by printing what would be merged."""
+        self.console.print(
+            f"[yellow]Would merge:[/yellow] {filename} → [{strategy.target_section}]"
+        )
+
+    def _merge_single_file(
+        self,
+        config_file: Path,
+        strategy: MergeStrategy,
+        pyproject_config: dict[str, t.Any],
+    ) -> bool:
+        """Merge a single config file into pyproject_config."""
+        try:
+            pyproject_config = self._apply_merge_strategy(
+                config_file, pyproject_config, strategy
+            )
+
+            self.console.print(
+                f"[green]✅[/green] Merged: {config_file.name} → [{strategy.target_section}]"
+            )
+            return True
+        except Exception as e:
+            logger.exception(f"Failed to merge {config_file}: {e}")
+            self.console.print(
+                f"[yellow]⚠️[/yellow] Failed to merge {config_file.name}: {e}"
+            )
+            return False
+
+    def _apply_merge_strategy(
+        self,
+        config_file: Path,
+        pyproject_config: dict[str, t.Any],
+        strategy: MergeStrategy,
+    ) -> dict[str, t.Any]:
+        """Apply the appropriate merge strategy for a config file."""
+        merge_methods = {
+            "ini_flatten": self._merge_ini_file,
+            "pattern_union": self._merge_pattern_file,
+            "json_deep": self._merge_json_file,
+            "ignore_list": self._merge_ignore_file,
+        }
+
+        merge_method = merge_methods.get(strategy.merge_type)
+        if merge_method:
+            return merge_method(config_file, pyproject_config, strategy.target_section)
+
+        return pyproject_config
+
+    def _write_pyproject_config(self, pyproject_config: dict[str, t.Any]) -> None:
+        """Write merged pyproject_config back to pyproject.toml."""
+        pyproject_path = self.pkg_path / "pyproject.toml"
+
+        try:
+            from crackerjack.services.config_service import _dump_toml
+
+            toml_content = _dump_toml(pyproject_config)
+            pyproject_path.write_text(toml_content)
+
+            self.console.print("[green]✅[/green] pyproject.toml updated")
+        except Exception as e:
+            logger.exception(f"Failed to write pyproject.toml: {e}")
+            self.console.print(f"[red]❌[/red] Failed to write pyproject.toml: {e}")
 
     def _get_strategy_for_file(self, filename: str) -> MergeStrategy | None:
         for strategy in self._merge_strategies:
@@ -515,15 +551,13 @@ class ConfigCleanupService:
         return pyproject_config
 
     def _convert_ini_value(self, value: str) -> str | bool | int:
-        if value.lower() in ["true", "yes", "on"]:
+        if value.lower() in ("true", "yes", "on"):
             return True
-        if value.lower() in ["false", "no", "off"]:
+        if value.lower() in ("false", "no", "off"):
             return False
 
-        try:
+        with suppress(ValueError):
             return int(value)
-        except ValueError:
-            pass
 
         return value
 
@@ -533,7 +567,7 @@ class ConfigCleanupService:
         pyproject_config: dict,
         target_section: str,
     ) -> dict:
-        with open(pattern_file) as f:
+        with pattern_file.open() as f:
             patterns = [
                 line.strip() for line in f if line.strip() and not line.startswith("#")
             ]
@@ -564,11 +598,21 @@ class ConfigCleanupService:
         pyproject_config: dict,
         target_section: str,
     ) -> dict:
-        with open(json_file) as f:
+        """Merge JSON file into pyproject_config using deep merge strategy."""
+        with json_file.open() as f:
             json_config = json.load(f)
 
-        section_parts = target_section.split(".")
-        current_section = pyproject_config
+        target_dict = self._get_target_section(pyproject_config, target_section)
+
+        for key, value in json_config.items():
+            self._merge_json_value(target_dict, key, value)
+
+        return pyproject_config
+
+    def _get_target_section(self, config: dict, section_path: str) -> dict:
+        """Navigate to target section, creating intermediate dicts as needed."""
+        section_parts = section_path.split(".")
+        current_section = config
 
         for part in section_parts[:-1]:
             if part not in current_section:
@@ -576,26 +620,30 @@ class ConfigCleanupService:
             current_section = current_section[part]
 
         final_section = section_parts[-1]
-
         if final_section not in current_section:
             current_section[final_section] = {}
 
-        for key, value in json_config.items():
-            if key not in current_section[final_section]:
-                current_section[final_section][key] = value
-            elif isinstance(value, list) and isinstance(
-                current_section[final_section][key], list
-            ):
-                merged = list(set(current_section[final_section][key] + value))
-                current_section[final_section][key] = merged
-            elif isinstance(value, dict) and isinstance(
-                current_section[final_section][key], dict
-            ):
-                for subkey, subvalue in value.items():
-                    if subkey not in current_section[final_section][key]:
-                        current_section[final_section][key][subkey] = subvalue
+        return current_section[final_section]
 
-        return pyproject_config
+    def _merge_json_value(self, target_dict: dict, key: str, value: t.Any) -> None:
+        """Merge a single JSON value into target dict."""
+        if key not in target_dict:
+            target_dict[key] = value
+        elif isinstance(value, list) and isinstance(target_dict[key], list):
+            self._merge_json_lists(target_dict, key, value)
+        elif isinstance(value, dict) and isinstance(target_dict[key], dict):
+            self._merge_json_dicts(target_dict, key, value)
+
+    def _merge_json_lists(self, target_dict: dict, key: str, value: list) -> None:
+        """Merge two lists by taking union of unique values."""
+        merged = list(set(target_dict[key] + value))
+        target_dict[key] = merged
+
+    def _merge_json_dicts(self, target_dict: dict, key: str, value: dict) -> None:
+        """Merge two dicts by adding missing keys from value into target."""
+        for subkey, subvalue in value.items():
+            if subkey not in target_dict[key]:
+                target_dict[key][subkey] = subvalue
 
     def _merge_ignore_file(
         self,
@@ -603,7 +651,7 @@ class ConfigCleanupService:
         pyproject_config: dict,
         target_section: str,
     ) -> dict:
-        with open(ignore_file) as f:
+        with ignore_file.open() as f:
             ignore_words = [
                 line.strip() for line in f if line.strip() and not line.startswith("#")
             ]

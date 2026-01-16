@@ -1,9 +1,9 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import (
+    ConsoleInterface,
     FileSystemInterface,
     GitInterface,
     HookManager,
@@ -38,13 +38,13 @@ class DependencyContainer:
 
     def create_default_container(
         self,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         dry_run: bool = False,
         verbose: bool = False,
     ) -> "DependencyContainer":
         if console is None:
-            console = Console()
+            console = CrackerjackConsole()
 
         if pkg_path is None:
             pkg_path = Path.cwd()
@@ -90,13 +90,13 @@ class DependencyContainer:
 
 
 def create_container(
-    console: Console | None = None,
+    console: ConsoleInterface | None = None,
     pkg_path: Path | None = None,
     dry_run: bool = False,
     verbose: bool = False,
 ) -> DependencyContainer:
     if console is None:
-        console = Console()
+        console = CrackerjackConsole()
     return DependencyContainer().create_default_container(
         console=console,
         pkg_path=pkg_path,

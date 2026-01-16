@@ -6,7 +6,6 @@ import typing as t
 from pathlib import Path
 
 from rich import box
-from rich.console import Console
 from rich.panel import Panel
 from rich.progress import (
     BarColumn,
@@ -22,8 +21,10 @@ from crackerjack.cli.formatting import separator as make_separator
 from crackerjack.code_cleaner import CodeCleaner
 from crackerjack.config import get_console_width
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.session_coordinator import SessionCoordinator
 from crackerjack.decorators import handle_errors
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.memory_optimizer import create_lazy_service
 
 try:
@@ -57,7 +58,7 @@ class PhaseCoordinator:
     def __init__(
         self,
         *,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         session: SessionCoordinator | None = None,
         filesystem: FileSystemInterface | None = None,
@@ -82,7 +83,7 @@ class PhaseCoordinator:
         from crackerjack.services.filesystem import FileSystemService
         from crackerjack.services.git import GitService
 
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
         self.session = session or SessionCoordinator(
             console=self.console,
@@ -306,6 +307,40 @@ class PhaseCoordinator:
             attempt=1,
         )
 
+        if not success and getattr(options, "ai_fix", False):
+            self.console.print("\n")
+            self.console.print(
+                "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes[/bold bright_white]"
+            )
+            self.console.print(make_separator("-") + "\n")
+
+            from crackerjack.core.autofix_coordinator import AutofixCoordinator
+
+            autofix_coordinator = AutofixCoordinator(
+                console=self.console,  # type: ignore[arg-type]
+                pkg_path=self.pkg_path,
+            )
+
+            ai_fix_success = autofix_coordinator.apply_comprehensive_stage_fixes(
+                self._last_hook_results  # type: ignore[arg-type]
+            )
+
+            if ai_fix_success:
+                self.console.print(
+                    "[green]✅[/green] AI agents applied fixes, retrying comprehensive hooks..."
+                )
+
+                success = self._execute_hooks_once(
+                    "comprehensive",
+                    self.hook_manager.run_comprehensive_hooks,
+                    options,
+                    attempt=2,
+                )
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] AI agents could not fix all issues"
+                )
+
         if not success:
             self._display_hook_failures(
                 "comprehensive",
@@ -510,13 +545,19 @@ class PhaseCoordinator:
         return self._process_hook_results(suite_name, elapsed_time, attempt)
 
     def _create_progress_bar(self) -> Progress:
+        from rich.console import Console as RichConsole
+
+        console = (
+            RichConsole() if not isinstance(self.console, RichConsole) else self.console
+        )
+
         return Progress(
             SpinnerColumn(spinner_name="dots"),
             TextColumn("[cyan]{task.description}[/cyan]"),
             BarColumn(bar_width=20),
             MofNCompleteColumn(),
             TimeElapsedColumn(),
-            console=self.console,
+            console=console,
             transient=True,
         )
 

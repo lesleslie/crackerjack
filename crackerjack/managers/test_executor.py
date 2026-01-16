@@ -6,14 +6,16 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
+from rich.console import Console as RichConsole
 from rich.live import Live
+
+from crackerjack.models.protocols import ConsoleInterface
 
 from .test_progress import TestProgress
 
 
 class TestExecutor:
-    def __init__(self, console: Console, pkg_path: Path) -> None:
+    def __init__(self, console: RichConsole, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path
 

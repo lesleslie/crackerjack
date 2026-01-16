@@ -10,17 +10,16 @@ if t.TYPE_CHECKING:
     import logging
     from pathlib import Path
 
-    from rich.console import Console
-
     from crackerjack.core.phase_coordinator import PhaseCoordinator
     from crackerjack.core.session_coordinator import SessionCoordinator
+    from crackerjack.models.protocols import ConsoleInterface
 
 
 class AsyncWorkflowPipeline:
     def __init__(
         self,
         logger: logging.Logger | t.Any,
-        console: Console,
+        console: ConsoleInterface,
         pkg_path: Path,
         session: SessionCoordinator,
         phases: PhaseCoordinator,

@@ -232,7 +232,9 @@ def _should_clean(options: t.Any) -> bool:
 
 
 def _should_run_config_cleanup(options: t.Any) -> bool:
-    return True
+    # TODO: Revert this temporary fix after config_cleanup debugging
+
+    return False
 
 
 def _should_run_tests(options: t.Any) -> bool:

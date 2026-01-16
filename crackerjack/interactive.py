@@ -5,12 +5,14 @@ from enum import Enum, auto
 from functools import partial
 from typing import Protocol
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Confirm
 from rich.table import Table
 from rich.text import Text
 from rich.tree import Tree
+
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConsoleInterface
 
 from .errors import CrackerjackError, ErrorCode
 
@@ -188,7 +190,7 @@ class Task:
 
 
 class WorkflowBuilder:
-    def __init__(self, console: Console) -> None:
+    def __init__(self, console: ConsoleInterface) -> None:
         self.console = console
         self.tasks: dict[str, TaskDefinition] = {}
         import logging
@@ -280,7 +282,7 @@ class WorkflowBuilder:
 
 
 class WorkflowManager:
-    def __init__(self, console: Console) -> None:
+    def __init__(self, console: ConsoleInterface) -> None:
         self.console = console
         self.tasks: dict[str, Task] = {}
         self.task_definitions: dict[str, TaskDefinition] = {}
@@ -412,8 +414,8 @@ class WorkflowManager:
 
 
 class InteractiveCLI:
-    def __init__(self, console: Console | None = None) -> None:
-        self.console = console or Console()
+    def __init__(self, console: ConsoleInterface | None = None) -> None:
+        self.console = console or CrackerjackConsole()
         self.workflow = WorkflowManager(self.console)
         import logging
 
@@ -697,7 +699,7 @@ class InteractiveCLI:
 
 
 def launch_interactive_cli(version: str, options: t.Any = None) -> None:
-    console = Console()
+    console = CrackerjackConsole()
     cli = InteractiveCLI(console)
 
     title = Text("Crackerjack", style="bold cyan")

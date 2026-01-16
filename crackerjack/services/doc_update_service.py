@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass, field
 from pathlib import Path
 from unittest.mock import Mock
@@ -165,7 +166,7 @@ class DocUpdateService:
         )
 
     def _analyze_code_changes(self) -> list[CodeChange]:
-        changes = []
+        changes: list[CodeChange] = []
 
         try:
             diff_output = self._get_git_diff()
@@ -231,14 +232,12 @@ class DocUpdateService:
         return changes
 
     def _extract_line_number(self, hunk_header: str) -> int | None:
-        try:
+        with suppress(Exception):
             import re
 
             match = re.search(r"\+\s*(\d+)", hunk_header)
             if match:
                 return int(match.group(1))
-        except Exception:
-            pass
 
         return None
 
@@ -282,7 +281,14 @@ class DocUpdateService:
                         ],
                     )
 
-                    updated_content = response.content[0].text
+                    content_block = response.content[0]
+                    if hasattr(content_block, "text"):
+                        updated_content = content_block.text
+                    else:
+                        logger.error(
+                            f"Unexpected content block type: {type(content_block)}"
+                        )
+                        continue
 
                     confidence = self._calculate_confidence(
                         original_content, updated_content

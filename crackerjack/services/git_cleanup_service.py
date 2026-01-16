@@ -224,8 +224,7 @@ class GitCleanupService:
         for tracked_file in all_tracked:
             rel_path = tracked_file.relative_to(self.pkg_path)
             for pattern in gitignore_patterns:
-                if pattern.endswith("/"):
-                    pattern = pattern[:-1]
+                pattern = pattern.removesuffix("/")
 
                 if fnmatch(rel_path.name, pattern) or fnmatch(
                     str(rel_path),
@@ -388,8 +387,7 @@ class GitCleanupService:
                 lines.append(f"  ... and {len(cache_dirs) - 10} more")
 
         total = len(config_files) + len(cache_dirs)
-        lines.append("=" * 40)
-        lines.append(f"Total files to be removed: {total}")
+        lines.extend(("=" * 40, f"Total files to be removed: {total}"))
 
         return "\n".join(lines)
 
@@ -410,7 +408,8 @@ class GitCleanupService:
         ]
 
         if suggest_filter_branch:
-            lines.append("")
-            lines.append("Note: Consider using git filter-branch for history cleanup")
+            lines.extend(
+                ("", "Note: Consider using git filter-branch for history cleanup")
+            )
 
         return "\n".join(lines)

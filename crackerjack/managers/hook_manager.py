@@ -2,10 +2,9 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.executors.hook_executor import HookExecutor
 from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
 from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
@@ -229,7 +228,7 @@ class HookManagerImpl:
         self.debug = debug
         self._settings = settings
 
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
 
         git_service = self._setup_git_service(use_incremental, pkg_path)
 

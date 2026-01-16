@@ -6,11 +6,11 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.config import CrackerjackSettings, load_settings
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.phase_coordinator import PhaseCoordinator
 from crackerjack.core.session_coordinator import SessionCoordinator
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.runtime.oneiric_workflow import (
     build_oneiric_runtime,
     register_crackerjack_workflow,
@@ -27,14 +27,14 @@ class WorkflowPipeline:
     def __init__(
         self,
         *,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         settings: CrackerjackSettings | None = None,
         session: SessionCoordinator | None = None,
         phases: PhaseCoordinator | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
         self.settings = settings or load_settings(CrackerjackSettings)
         self.logger = logger or logging.getLogger(__name__)
