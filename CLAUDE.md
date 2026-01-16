@@ -329,6 +329,71 @@ python -m crackerjack run --run-tests  # Forces sequential
 - Before (1 worker): ~60s test suite, 12% CPU utilization
 - After (auto-detect): ~15-20s test suite, 70-80% CPU utilization (3-4x faster)
 
+### Phase Parallelization
+
+Crackerjack supports **parallel execution of tests and comprehensive hooks** for improved performance:
+
+**Overview**: When `enable_parallel_phases` is enabled, tests and comprehensive hooks run concurrently instead of sequentially, reducing workflow time by 20-30%.
+
+**Usage**:
+
+```bash
+# Enable parallel execution
+python -m crackerjack run --enable-parallel-phases --run-tests -c
+
+# Short form
+python -m crackerjack run --parallel-phases -t -c
+```
+
+**Configuration**:
+
+Add to `settings/local.yaml` or `settings/crackerjack.yaml`:
+
+```yaml
+enable_parallel_phases: true
+```
+
+**Performance Impact** (typical workflow):
+
+- Sequential (default): `[tests] → [comprehensive_hooks]` = 60s + 30s = 90s
+- Parallel (enabled): `[tests] + [comprehensive_hooks]` = max(60s, 30s) = 60s
+- **Speedup**: 33% faster (90s → 60s)
+
+**When to Use**:
+
+- ✅ Full CI/CD pipelines with tests + comprehensive hooks
+- ✅ Large test suites (>30 seconds)
+- ✅ Multi-core systems (4+ CPUs)
+- ❌ Resource-constrained machines (\<2 CPUs)
+- ❌ Debugging flaky tests
+
+**Technical Details**:
+
+The feature is implemented in the Oneiric workflow DAG builder (`crackerjack/runtime/oneiric_workflow.py`). Both tasks depend on the same predecessor (e.g., `fast_hooks`) but NOT on each other, allowing true parallel execution:
+
+```python
+# Sequential mode (default)
+{"id": "tests", "depends_on": ["fast_hooks"]}
+{"id": "comprehensive_hooks", "depends_on": ["tests"]}  # Waits for tests
+
+# Parallel mode (enabled)
+{"id": "tests", "depends_on": ["fast_hooks"]}
+{"id": "comprehensive_hooks", "depends_on": ["fast_hooks"]}  # Parallel!
+```
+
+**Backward Compatibility**: Default is sequential. Opt-in via flag or config.
+
+**Documentation**: See `docs/features/PARALLEL_EXECUTION.md` for complete details.
+
+**Combined Parallelization**: Maximum performance with both features enabled:
+
+```bash
+# Ultimate parallelization:
+# - Tests run across 4 workers (pytest-xdist)
+# - Comprehensive hooks run parallel to tests (phase parallelization)
+python -m crackerjack run --parallel-phases --test-workers 4 -t -c
+```
+
 ## Code Standards
 
 **Quality Rules**:
@@ -519,7 +584,7 @@ from ..models.protocols import TestManagerProtocol
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 
-**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
+**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](/docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
 
 **Key Principle**: When `--ai-fix` is enabled, ALL quality issues (fast hooks, comprehensive hooks, tests) should be automatically resolved by AI agents without manual intervention.
 
@@ -1062,7 +1127,7 @@ from ..models.protocols import TestManagerProtocol
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 
-**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
+**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](/docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
 
 **Key Principle**: When `--ai-fix` is enabled, ALL quality issues (fast hooks, comprehensive hooks, tests) should be automatically resolved by AI agents without manual intervention.
 

@@ -112,7 +112,8 @@ class SecurityService(SecurityServiceProtocol):
         with suppress(OSError):
             if token_file.is_file():
                 with token_file.open("w") as f:
-                    f.write("0" * max(1024, token_file.stat().st_size))
+                    size = max(1024, token_file.stat().st_size)
+                    f.write("0" * size)
                     f.flush()
                     os.fsync(f.fileno())
             token_file.unlink()

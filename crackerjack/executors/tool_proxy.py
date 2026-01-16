@@ -54,6 +54,7 @@ class ToolProxy:
         self.console = console or Console()
         self.health_status: dict[str, ToolHealthStatus] = {}
         self.circuit_breakers: dict[str, CircuitBreakerState] = {}
+        self.fallback_tools: dict[str, list[str]] = {}
 
         self.tool_adapters = {
             "zuban": self._create_zuban_adapter,
@@ -62,12 +63,14 @@ class ToolProxy:
             "bandit": self._create_bandit_adapter,
         }
 
-        self.fallback_tools = {
-            "zuban": ["pyright", "mypy"],
-            "skylos": ["vulture"],
-            "ruff": [],
-            "bandit": [],
-        }
+        self.fallback_tools.update(
+            {
+                "zuban": ["pyright", "mypy"],
+                "skylos": ["vulture"],
+                "ruff": [],
+                "bandit": [],
+            }
+        )
 
     def execute_tool(self, tool_name: str, args: list[str]) -> int:
         try:

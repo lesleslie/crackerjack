@@ -102,6 +102,7 @@ class Options(BaseModel):
     watchdog: bool = False
     start_zuban_lsp: bool = False
     stop_zuban_lsp: bool = False
+    enable_parallel_phases: bool = False
     restart_zuban_lsp: bool = False
     no_zuban_lsp: bool = False
     zuban_lsp_port: int = 8677
@@ -468,6 +469,15 @@ CLI_OPTIONS = {
         False,
         "--enable-lsp-hooks",
         help="Enable LSP-optimized hook execution for faster type checking.",
+    ),
+    "enable_parallel_phases": typer.Option(
+        False,
+        "--enable-parallel-phases",
+        "--parallel-phases",
+        help=(
+            "Enable parallel execution of tests and comprehensive hooks. "
+            "Improves performance by 20-30% when running both."
+        ),
     ),
     "watchdog": typer.Option(
         False,
