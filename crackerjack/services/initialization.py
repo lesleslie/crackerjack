@@ -4,8 +4,8 @@ import typing as t
 from pathlib import Path
 
 import tomli
-from rich.console import Console
 
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConfigMergeServiceProtocol
 
 from .config_merge import ConfigMergeService
@@ -17,13 +17,13 @@ from .input_validator import get_input_validator, validate_and_sanitize_path
 class InitializationService:
     def __init__(
         self,
-        console: Console | None = None,
+        console: t.Any | None = None,
         filesystem: FileSystemService | None = None,
         git_service: GitService | None = None,
         pkg_path: Path | None = None,
         config_merge_service: ConfigMergeServiceProtocol | None = None,
     ) -> None:
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.filesystem = filesystem or FileSystemService()
         self.git_service = git_service or GitService(self.console, Path.cwd())
         self.pkg_path = pkg_path or Path.cwd()

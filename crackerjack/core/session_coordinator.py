@@ -7,8 +7,8 @@ import uuid
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
-
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.task import SessionTracker
 
 logger = logging.getLogger(__name__)
@@ -21,11 +21,11 @@ if t.TYPE_CHECKING:
 class SessionCoordinator:
     def __init__(
         self,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         web_job_id: str | None = None,
     ) -> None:
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
         self.web_job_id = web_job_id
         self.session_id = web_job_id or uuid.uuid4().hex[:8]

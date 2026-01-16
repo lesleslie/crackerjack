@@ -1,4 +1,5 @@
 import logging
+import os
 import subprocess
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -7,6 +8,10 @@ from rich.console import Console
 
 if TYPE_CHECKING:
     from crackerjack.models.protocols import LoggerProtocol
+
+from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+from crackerjack.agents.coordinator import AgentCoordinator
+from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +68,12 @@ class AutofixCoordinator:
         return self._execute_fast_fixes()
 
     def _apply_comprehensive_stage_fixes(self, hook_results: list[object]) -> bool:
+        ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
+
+        if ai_agent_enabled:
+            self.logger.info("AI agent mode enabled, attempting AI-based fixing")
+            return self._apply_ai_agent_fixes(hook_results)
+
         failed_hooks = self._extract_failed_hooks(hook_results)
         if not failed_hooks:
             return True
@@ -273,3 +284,330 @@ class AutofixCoordinator:
                     self.logger.info("Skipping autofix for import errors")
                     return True
         return False
+
+    def _apply_ai_agent_fixes(self, hook_results: list[object]) -> bool:
+        import asyncio
+
+        issues = self._parse_hook_results_to_issues(hook_results)
+
+        if not issues:
+            self.logger.info("No issues found for AI agents to handle")
+            return True
+
+        self.logger.info(f"Parsed {len(issues)} issues for AI agent handling")
+
+        context = AgentContext(
+            project_path=self.pkg_path,
+            subprocess_timeout=300,
+        )
+
+        cache = CrackerjackCache()
+        coordinator = AgentCoordinator(context=context, cache=cache)
+
+        try:
+            loop = asyncio.get_event_loop()
+        except RuntimeError:
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+
+        try:
+            fix_result = loop.run_until_complete(coordinator.handle_issues(issues))
+        except Exception:
+            self.logger.exception("AI agent handling failed")
+            return False
+
+        if fix_result.success:
+            self.logger.info(
+                f"AI agents fixed {len(fix_result.fixes_applied)} issues "
+                f"with confidence {fix_result.confidence:.2f}"
+            )
+            for fix in fix_result.fixes_applied:
+                self.logger.info(f"  - {fix}")
+
+            if fix_result.remaining_issues:
+                self.logger.warning(
+                    f"{len(fix_result.remaining_issues)} issues remain: "
+                    f"{fix_result.remaining_issues}"
+                )
+            return True
+        else:
+            self.logger.warning(
+                f"AI agents could not fix all issues. "
+                f"Remaining: {fix_result.remaining_issues}"
+            )
+            return False
+
+    def _parse_hook_results_to_issues(self, hook_results: list[object]) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+
+            if getattr(result, "status", "") != "Failed":
+                continue
+
+            hook_name = getattr(result, "name", "")
+            raw_output = getattr(result, "raw_output", "")
+
+            if not hook_name:
+                continue
+
+            hook_issues = self._parse_hook_to_issues(hook_name, raw_output)
+            issues.extend(hook_issues)
+
+        return issues
+
+    def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
+        issues: list[Issue] = []
+
+        hook_type_map: dict[str, IssueType] = {
+            "zuban": IssueType.TYPE_ERROR,
+            "refurb": IssueType.COMPLEXITY,
+            "complexipy": IssueType.COMPLEXITY,
+            "pyright": IssueType.TYPE_ERROR,
+            "mypy": IssueType.TYPE_ERROR,
+            "ruff": IssueType.FORMATTING,
+            "bandit": IssueType.SECURITY,
+            "vulture": IssueType.DEAD_CODE,
+            "skylos": IssueType.DEAD_CODE,
+            "creosote": IssueType.DEPENDENCY,
+        }
+
+        issue_type = hook_type_map.get(hook_name)
+        if not issue_type:
+            self.logger.debug(f"Unknown hook type: {hook_name}")
+            return issues
+
+        if hook_name in ("zuban", "pyright", "mypy"):
+            issues.extend(
+                self._parse_type_checker_output(hook_name, raw_output, issue_type)
+            )
+        elif hook_name == "refurb":
+            issues.extend(self._parse_refurb_output(raw_output, issue_type))
+        elif hook_name == "complexipy":
+            issues.extend(self._parse_complexity_output(raw_output, issue_type))
+        elif hook_name == "bandit":
+            issues.extend(self._parse_security_output(raw_output, issue_type))
+        elif hook_name in ("vulture", "skylos"):
+            issues.extend(self._parse_dead_code_output(raw_output, issue_type))
+        else:
+            issues.extend(self._parse_generic_output(hook_name, raw_output, issue_type))
+
+        return issues
+
+    def _parse_type_checker_output(
+        self,
+        tool_name: str,
+        raw_output: str,
+        issue_type: IssueType,
+    ) -> list[Issue]:
+        """Parse type checker output (zuban, pyright, mypy) into Issue objects."""
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_line(line):
+                continue
+
+            issue = self._parse_type_checker_line(line, tool_name, issue_type)
+            if issue:
+                issues.append(issue)
+
+        return issues
+
+    def _should_parse_line(self, line: str) -> bool:
+        """Check if a line should be parsed for type checker issues."""
+        if not line:
+            return False
+        return not line.startswith(("Found", "Checked"))
+
+    def _parse_type_checker_line(
+        self,
+        line: str,
+        tool_name: str,
+        issue_type: IssueType,
+    ) -> Issue | None:
+        """Parse a single type checker line into an Issue object."""
+        if ":" not in line:
+            return None
+
+        parts = line.split(":", 3)
+        if len(parts) < 3:
+            return None
+
+        file_path = parts[0].strip()
+        line_number = self._parse_line_number(parts[1])
+        message = self._extract_message(parts, line)
+
+        return Issue(
+            type=issue_type,
+            severity=Priority.HIGH,
+            message=message,
+            file_path=file_path,
+            line_number=line_number,
+            stage=tool_name,
+        )
+
+    def _parse_line_number(self, part: str) -> int | None:
+        """Parse line number from type checker output."""
+        try:
+            return int(part.strip())
+        except (ValueError, IndexError):
+            return None
+
+    def _extract_message(self, parts: list[str], fallback: str) -> str:
+        """Extract error message from type checker output parts."""
+        if len(parts) == 4:
+            return parts[3].strip()
+        if len(parts) > 2:
+            return parts[2].strip()
+        return fallback
+
+    def _parse_refurb_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or line.startswith(("Found", "Checked")):
+                continue
+
+            if "FURB" in line and ":" in line:
+                parts = line.split(":", 2)
+                if len(parts) >= 2:
+                    file_path = parts[0].strip()
+                    try:
+                        line_number = int(parts[1].strip())
+                    except (ValueError, IndexError):
+                        line_number = None
+
+                    message = parts[2].strip() if len(parts) > 2 else line
+
+                    issues.append(
+                        Issue(
+                            type=issue_type,
+                            severity=Priority.MEDIUM,
+                            message=message,
+                            file_path=file_path,
+                            line_number=line_number,
+                            stage="refurb",
+                        )
+                    )
+
+        return issues
+
+    def _parse_complexity_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or "complexity" not in line.lower():
+                continue
+
+            if "-" in line and ":" in line:
+                parts = line.split("-", 1)
+                if len(parts) == 2:
+                    location = parts[0].strip()
+                    message = parts[1].strip()
+
+                    file_path = (
+                        location.split(":")[0].strip() if ":" in location else location
+                    )
+
+                    issues.append(
+                        Issue(
+                            type=issue_type,
+                            severity=Priority.MEDIUM,
+                            message=message,
+                            file_path=file_path,
+                            line_number=None,
+                            stage="complexity",
+                        )
+                    )
+
+        return issues
+
+    def _parse_security_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or line.startswith((">>", "Run")):
+                continue
+
+            if "Issue:" in line:
+                parts = line.split("Issue:", 1)
+                if len(parts) == 2:
+                    message = parts[1].strip()
+
+                    issues.append(
+                        Issue(
+                            type=issue_type,
+                            severity=Priority.CRITICAL,
+                            message=message,
+                            file_path=None,
+                            line_number=None,
+                            stage="security",
+                        )
+                    )
+
+        return issues
+
+    def _parse_dead_code_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line:
+                continue
+
+            if ":" in line:
+                parts = line.split(":", 1)
+                file_path = parts[0].strip()
+                message = parts[1].strip() if len(parts) > 1 else "Dead code detected"
+
+                issues.append(
+                    Issue(
+                        type=issue_type,
+                        severity=Priority.LOW,
+                        message=message,
+                        file_path=file_path,
+                        line_number=None,
+                        stage="dead_code",
+                    )
+                )
+
+        return issues
+
+    def _parse_generic_output(
+        self,
+        hook_name: str,
+        raw_output: str,
+        issue_type: IssueType,
+    ) -> list[Issue]:
+        issues: list[Issue] = []
+
+        if not raw_output or not raw_output.strip():
+            return issues
+
+        issues.append(
+            Issue(
+                type=issue_type,
+                severity=Priority.MEDIUM,
+                message=f"{hook_name} check failed",
+                file_path=None,
+                line_number=None,
+                stage=hook_name,
+                details=[raw_output[:500]],
+            )
+        )
+
+        return issues

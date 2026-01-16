@@ -6,10 +6,11 @@ from pathlib import Path
 
 import tomli
 import tomli_w
-from rich.console import Console
 
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import (
     ConfigMergeServiceProtocol,
+    ConsoleInterface,
     FileSystemInterface,
     GitInterface,
 )
@@ -18,7 +19,7 @@ from crackerjack.models.protocols import (
 class ConfigMergeService(ConfigMergeServiceProtocol):
     def __init__(
         self,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         filesystem: FileSystemInterface | None = None,
         git_service: GitInterface | None = None,
         logger: t.Any | None = None,
@@ -32,7 +33,7 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
 
             git_service = GitService(console=console)
 
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.filesystem = filesystem
         self.git_service = git_service
         self.logger = logger or logging.getLogger(__name__)

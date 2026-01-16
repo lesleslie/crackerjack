@@ -216,13 +216,12 @@ def _execute_initialization(
     template: str | None = None,
     interactive: bool = True,
 ) -> dict[str, t.Any]:
-    from rich.console import Console
-
+    from crackerjack.core.console import CrackerjackConsole
     from crackerjack.services.filesystem import FileSystemService
     from crackerjack.services.git import GitService
     from crackerjack.services.initialization import InitializationService
 
-    console = Console()
+    console = CrackerjackConsole()
     filesystem = FileSystemService()
     git_service = GitService(console, target_path)
     return InitializationService(

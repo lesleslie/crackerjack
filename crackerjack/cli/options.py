@@ -607,7 +607,7 @@ CLI_OPTIONS = {
         help="Xcode destination string.",
     ),
     "ai_fix": typer.Option(
-        None,
+        False,
         "--ai-fix",
         help=(
             "Enable AI-powered auto-fixing. "

@@ -4,7 +4,8 @@ import os
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConsoleInterface
 
 if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
@@ -13,7 +14,7 @@ if t.TYPE_CHECKING:
         ConfigTemplateService,
     )
 
-console = Console()
+console = CrackerjackConsole()
 
 
 def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
@@ -107,7 +108,7 @@ def handle_config_updates(options: Options) -> None:
 def _handle_check_updates(
     config_service: ConfigTemplateService,
     pkg_path: Path,
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     console.print("[bold cyan]🔍 Checking for configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
@@ -129,7 +130,7 @@ def _handle_apply_updates(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     interactive: bool,
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     console.print("[bold cyan]🔧 Applying configuration updates...[/bold cyan]")
     updates = config_service.check_updates(pkg_path)
@@ -157,7 +158,7 @@ def _handle_diff_config(
     config_service: ConfigTemplateService,
     pkg_path: Path,
     config_type: str,
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     console.print(f"[bold cyan]📊 Showing diff for {config_type}...[/bold cyan]")
     diff_preview = config_service._generate_diff_preview(config_type, pkg_path)
@@ -168,7 +169,7 @@ def _handle_diff_config(
 def _handle_refresh_cache(
     config_service: ConfigTemplateService,
     pkg_path: Path,
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     console.print("[bold cyan]🧹 Refreshing cache...[/bold cyan]")
     config_service._invalidate_cache(pkg_path)
@@ -177,7 +178,7 @@ def _handle_refresh_cache(
 
 def _display_available_updates(
     updates: dict[str, ConfigUpdateInfo],
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     console.print("[yellow]📋 Available updates:[/yellow]")
     for config_type, update_info in updates.items():
@@ -200,7 +201,7 @@ def _apply_config_updates_batch(
     configs: list[str],
     pkg_path: Path,
     interactive: bool,
-    console: Console,
+    console: ConsoleInterface,
 ) -> int:
     success_count = 0
     for config_type in configs:
@@ -212,7 +213,7 @@ def _apply_config_updates_batch(
 def _report_update_results(
     success_count: int,
     total_count: int,
-    console: Console,
+    console: ConsoleInterface,
 ) -> None:
     if success_count == total_count:
         console.print(

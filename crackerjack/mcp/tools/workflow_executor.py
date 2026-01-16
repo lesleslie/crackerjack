@@ -218,8 +218,7 @@ def _create_standard_orchestrator(
 
 
 async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
-    from rich.console import Console
-
+    from crackerjack.core.console import CrackerjackConsole
     from crackerjack.managers.hook_manager import AsyncHookManager
     from crackerjack.managers.publish_manager import PublishManagerImpl
     from crackerjack.managers.test_manager import TestManagementImpl
@@ -231,7 +230,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
     )
     from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
-    console = Console()
+    console = CrackerjackConsole()
 
     container.register_singleton(
         HookManager,
@@ -245,7 +244,7 @@ async def _register_core_services(container: t.Any, working_dir: t.Any) -> None:
 
     container.register_singleton(
         PublishManager,
-        factory=PublishManagerImpl,
+        factory=lambda: PublishManagerImpl,
     )
 
     container.register_singleton(

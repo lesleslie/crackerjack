@@ -2,7 +2,8 @@ import typing as t
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConsoleInterface
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 
@@ -45,11 +46,11 @@ class CrackerjackAPI:
     def __init__(
         self,
         project_path: Path | None = None,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         verbose: bool = False,
     ) -> None:
         self.project_path = project_path or Path.cwd()
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.verbose = verbose
 
         # TODO(Phase 3): Replace with Oneiric workflow integration

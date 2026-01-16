@@ -3,11 +3,11 @@ import typing as t
 from contextlib import suppress
 from pathlib import Path
 
-from rich.console import Console
-
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.retry import retry_api_call
 from crackerjack.models.protocols import (
     ChangelogGeneratorProtocol,
+    ConsoleInterface,
     FileSystemInterface,
     GitServiceProtocol,
     RegexPatternsProtocol,
@@ -47,7 +47,7 @@ class PublishManagerImpl:
         filesystem: FileSystemInterface | None = None,
         security: SecurityServiceProtocol | None = None,
         regex_patterns: RegexPatternsProtocol | None = None,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         dry_run: bool = False,
     ) -> None:
@@ -64,13 +64,10 @@ class PublishManagerImpl:
         self.filesystem = self._resolve_filesystem(filesystem)
         self.security = self._resolve_security(security)
 
-    def _resolve_console(self, console: Console | None) -> Console:
+    def _resolve_console(self, console: ConsoleInterface | None) -> ConsoleInterface:
         if console is not None:
             return console
-        try:
-            return Console()
-        except Exception:
-            return Console()
+        return CrackerjackConsole()
 
     def _resolve_pkg_path(self, pkg_path: Path | None) -> Path:
         if pkg_path is not None:

@@ -2,9 +2,8 @@ import subprocess  # nosec B404
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-from crackerjack.models.protocols import GitInterface
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.models.protocols import ConsoleInterface, GitInterface
 
 from .secure_subprocess import execute_secure_subprocess
 from .security_logger import get_security_logger
@@ -37,14 +36,14 @@ class FailedGitResult:
 class GitService(GitInterface):
     def __init__(
         self,
-        console: Console | Path | None = None,
+        console: ConsoleInterface | Path | None = None,
         pkg_path: Path | None = None,
     ) -> None:
         if isinstance(console, Path) and pkg_path is None:
             pkg_path = console
             console = None
 
-        self.console: Console = console or Console()  # type: ignore[assignment]
+        self.console: ConsoleInterface = console or CrackerjackConsole()  # type: ignore[assignment]
         self.pkg_path = pkg_path or Path.cwd()
 
     def _run_git_command(

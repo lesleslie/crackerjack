@@ -2,10 +2,9 @@ import asyncio
 import shlex
 from pathlib import Path
 
-from rich.console import Console
-
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.core.workflow_orchestrator import WorkflowPipeline
-from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.models.protocols import ConsoleInterface, OptionsProtocol
 
 VALID_COMMANDS = {"test", "lint", "check", "format", "security", "complexity", "all"}
 
@@ -55,10 +54,10 @@ def validate_command(
 class CrackerjackCLIFacade:
     def __init__(
         self,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
     ) -> None:
-        self.console = console or Console()
+        self.console = console or CrackerjackConsole()
         self.pkg_path = pkg_path or Path.cwd()
 
     def process(self, options: OptionsProtocol) -> None:
@@ -123,7 +122,7 @@ class CrackerjackCLIFacade:
 
 
 def create_crackerjack_runner(
-    console: Console | None = None,
+    console: ConsoleInterface | None = None,
     pkg_path: Path | None = None,
 ) -> CrackerjackCLIFacade:
     return CrackerjackCLIFacade(console=console, pkg_path=pkg_path)

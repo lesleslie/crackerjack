@@ -519,6 +519,10 @@ from ..models.protocols import TestManagerProtocol
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 
+**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
+
+**Key Principle**: When `--ai-fix` is enabled, ALL quality issues (fast hooks, comprehensive hooks, tests) should be automatically resolved by AI agents without manual intervention.
+
 ## High-Performance Rust Integration
 
 **Ultra-Fast Static Analysis** with seamless Python integration:
@@ -1057,6 +1061,10 @@ from ..models.protocols import TestManagerProtocol
 - **EnhancedProactiveAgent** (0.9): Proactive prevention, predictive monitoring, preemptive optimization
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
+
+**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
+
+**Key Principle**: When `--ai-fix` is enabled, ALL quality issues (fast hooks, comprehensive hooks, tests) should be automatically resolved by AI agents without manual intervention.
 
 ## High-Performance Rust Integration
 

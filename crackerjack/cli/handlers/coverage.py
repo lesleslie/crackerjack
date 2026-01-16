@@ -1,9 +1,9 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from crackerjack.core.console import CrackerjackConsole
 
-console = Console()
+console = CrackerjackConsole()
 
 
 def display_coverage_info(coverage_info: dict[str, t.Any]) -> None:

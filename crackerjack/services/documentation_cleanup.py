@@ -4,6 +4,7 @@ import logging
 import shutil
 import tarfile
 import typing as t
+from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from fnmatch import fnmatch
@@ -270,21 +271,21 @@ class DocumentationCleanup:
                 return False, f"Cannot create archive directory: {e}"
 
         if self.git_service:
-            try:
+            with suppress(Exception):
                 changed_files = self.git_service.get_changed_files()
                 if changed_files:
                     return (
                         False,
                         "Git repository has uncommitted changes. Commit or stash first.",
                     )
-            except Exception:
-                pass
 
         return True, None
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:
         try:
             backup_id = self._generate_backup_id()
+            if self.backup_service.backup_root is None:
+                return None
             backup_dir = self.backup_service.backup_root / backup_id
             backup_dir.mkdir(parents=True, exist_ok=True)
 
@@ -353,11 +354,7 @@ class DocumentationCleanup:
                 try:
                     target_dir.mkdir(parents=True, exist_ok=True)
 
-                    self.atomic_ops.atomic_move(
-                        src=file_path,
-                        dest=target_path,
-                        create_parents=True,
-                    )
+                    file_path.replace(target_path)
 
                     files_moved += 1
 

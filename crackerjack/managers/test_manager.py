@@ -7,13 +7,14 @@ import typing as t
 from pathlib import Path
 
 from rich import box
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
 from crackerjack.config import get_console_width
+from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import (
+    ConsoleInterface,
     CoverageBadgeServiceProtocol,
     CoverageRatchetProtocol,
     OptionsProtocol,
@@ -32,7 +33,7 @@ root_path = Path.cwd()
 class TestManager:
     def __init__(
         self,
-        console: Console | None = None,
+        console: ConsoleInterface | None = None,
         pkg_path: Path | None = None,
         coverage_ratchet: CoverageRatchetProtocol | None = None,
         coverage_badge: CoverageBadgeServiceProtocol | None = None,
@@ -40,10 +41,7 @@ class TestManager:
         lsp_client: LSPClient | None = None,
     ) -> None:
         if console is None:
-            try:
-                console = Console()
-            except Exception:
-                console = Console()
+            console = CrackerjackConsole()
 
         if coverage_ratchet is None:
             coverage_ratchet = None
@@ -65,7 +63,9 @@ class TestManager:
             self.pkg_path = Path(resolved_path)
 
 
-        self.executor = TestExecutor(console, self.pkg_path)
+        from rich.console import Console as RichConsole
+        rich_console = console if isinstance(console, RichConsole) else RichConsole()
+        self.executor = TestExecutor(rich_console, self.pkg_path)
         self.command_builder = command_builder
 
 
@@ -148,7 +148,7 @@ class TestManager:
             self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
 
     def run_tests(self, options: OptionsProtocol) -> bool:
-
+        """Run test suite based on options (pytest and/or xcode)."""
         run_pytest = bool(getattr(options, "test", False) or getattr(options, "run_tests", False))
         run_xcode = bool(getattr(options, "xcode_tests", False))
 
@@ -158,37 +158,46 @@ class TestManager:
         start_time = time.time()
 
         try:
-            if run_pytest:
-                result = self._execute_test_workflow(options)
-                duration = time.time() - start_time
+            pytest_ok = self._run_pytest_if_needed(run_pytest, options, start_time)
+            xcode_ok = self._run_xcode_if_needed(run_xcode, options)
 
-                workers = self.command_builder.get_optimal_workers(
-                    options, print_info=False,
-                )
-
-                if result.returncode == 0:
-                    pytest_ok = self._handle_test_success(
-                        result.stdout, duration, options, workers,
-                    )
-                else:
-                    return self._handle_test_failure(
-                        result.stderr if result else "",
-                        result.stdout if result else "",
-                        duration,
-                        options,
-                        workers,
-                    )
-            else:
-                pytest_ok = True
-
-            if run_xcode:
-                xcode_ok = self._execute_xcode_tests(options)
-                return pytest_ok and xcode_ok
-
-            return pytest_ok
-
+            return pytest_ok and xcode_ok
         except Exception as e:
             return self._handle_test_error(start_time, e)
+
+    def _run_pytest_if_needed(
+        self,
+        run_pytest: bool,
+        options: OptionsProtocol,
+        start_time: float,
+    ) -> bool:
+        """Run pytest tests if requested, returning success status."""
+        if not run_pytest:
+            return True
+
+        result = self._execute_test_workflow(options)
+        duration = time.time() - start_time
+        workers = self.command_builder.get_optimal_workers(options, print_info=False)
+
+        if result.returncode == 0:
+            return self._handle_test_success(result.stdout, duration, options, workers)
+        return self._handle_test_failure(
+            result.stderr if result else "",
+            result.stdout if result else "",
+            duration,
+            options,
+            workers,
+        )
+
+    def _run_xcode_if_needed(
+        self,
+        run_xcode: bool,
+        options: OptionsProtocol,
+    ) -> bool:
+        """Run xcode tests if requested, returning success status."""
+        if not run_xcode:
+            return True
+        return self._execute_xcode_tests(options)
 
     def run_specific_tests(self, test_pattern: str) -> bool:
         self.console.print(f"[cyan]🧪[/cyan] Running tests matching: {test_pattern}")
@@ -216,7 +225,10 @@ class TestManager:
 
         spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
         try:
-            with Live(spinner, console=self.console, transient=True):
+
+            from rich.console import Console as RichConsole
+            rich_console = self.console if isinstance(self.console, RichConsole) else RichConsole()
+            with Live(spinner, console=rich_console, transient=True):
                 result = subprocess.run(
                     cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
                 )

@@ -112,7 +112,7 @@ def run(
     xcode_scheme: str = CLI_OPTIONS["xcode_scheme"],
     xcode_configuration: str = CLI_OPTIONS["xcode_configuration"],
     xcode_destination: str = CLI_OPTIONS["xcode_destination"],
-    ai_fix: bool | None = CLI_OPTIONS["ai_fix"],
+    ai_fix: bool = CLI_OPTIONS["ai_fix"],
     dry_run: bool = CLI_OPTIONS["dry_run"],
     full_release: str | None = CLI_OPTIONS["full_release"],
     show_progress: bool | None = CLI_OPTIONS["show_progress"],
