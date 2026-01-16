@@ -16,6 +16,7 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 ## Expected Workflow
 
 ### Phase 1: Quality Detection
+
 ```
 1. Run fast hooks → collect failures
 2. Run comprehensive hooks → collect failures
@@ -23,11 +24,13 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 ```
 
 ### Phase 2: AI Agent Analysis
+
 ```
 🤖 AI AGENT FIXING Attempting automated fixes
 ```
 
 **Parse ALL failures into Issue objects:**
+
 - Type errors (zuban, pyright, mypy)
 - Code modernization (refurb)
 - Complexity violations (complexipy)
@@ -37,11 +40,13 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 - Test failures (pytest)
 
 ### Phase 3: Automated Fixes
+
 ```
 ✅ AI agents applied fixes, retrying...
 ```
 
 **Apply fixes with appropriate agents:**
+
 - RefactoringAgent → Complexity, modernization
 - SecurityAgent → Security issues
 - FormattingAgent → Style, formatting
@@ -50,6 +55,7 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 - **ALL agents should attempt fixes**
 
 ### Phase 4: Verification
+
 ```
 Re-run fast hooks
 Re-run comprehensive hooks
@@ -57,6 +63,7 @@ Re-run test suite
 ```
 
 **Success criteria:**
+
 - All hooks pass ✅
 - All tests pass ✅
 - Zero remaining issues ✅
@@ -64,14 +71,17 @@ Re-run test suite
 ## Current Issues (Should Be Fixed)
 
 ### ❌ Issue 1: Zuban Type Error
+
 **Location:** `crackerjack/executors/hook_executor.py:664`
 
 **Error:**
+
 ```
 error: Need type annotation for "issues" (hint: "issues: List[<type>] = ...")  [var-annotated]
 ```
 
 **Expected AI Fix:**
+
 ```python
 # Before (line 664):
 issues = []
@@ -83,14 +93,17 @@ issues: list[str] = []
 **Why Not Fixed:** The RefactoringAgent or FormattingAgent should handle this automatically.
 
 ### ❌ Issue 2: Refurb Modernization #1
+
 **Location:** `crackerjack/executors/hook_executor.py:737:33`
 
 **Error:**
+
 ```
 [FURB102]: Replace `x.startswith(y) or x.startswith(z)` with `x.startswith((y, z))`
 ```
 
 **Expected AI Fix:**
+
 ```python
 # Before:
 if line.startswith(("Found", "Checked")):
@@ -104,14 +117,17 @@ if line.startswith(("Found", "Checked")):
 **Why Not Fixed:** The RefactoringAgent should apply this modernization automatically.
 
 ### ❌ Issue 3: Refurb Modernization #2
+
 **Location:** `crackerjack/managers/test_manager.py:185:13`
 
 **Error:**
+
 ```
 [FURB126]: Replace `else: return x` with `return x`
 ```
 
 **Expected AI Fix:**
+
 ```python
 # Before:
 if result.returncode == 0:
@@ -132,17 +148,20 @@ return self._handle_test_failure(...)
 ### Agents That SHOULD Be Handling These Issues:
 
 1. **RefactoringAgent** (0.9 confidence)
+
    - Complexity reduction ✅
    - Code modernization ✅
    - Dead code removal ✅
    - **Should fix:** refurb issues, complexity violations
 
-2. **FormattingAgent** (0.8 confidence)
+1. **FormattingAgent** (0.8 confidence)
+
    - Style violations ✅
    - Import optimization ✅
    - **Should fix:** Type annotations, formatting
 
-3. **SemanticAgent** (0.85 confidence)
+1. **SemanticAgent** (0.85 confidence)
+
    - Intelligent refactoring ✅
    - Code comprehension ✅
    - **Should fix:** Type inference improvements
@@ -152,6 +171,7 @@ return self._handle_test_failure(...)
 ### Problem: Conservative Agent Behavior
 
 **Current Implementation:**
+
 ```python
 # crackerjack/core/autofix_coordinator.py
 if fix_result.success:
@@ -161,13 +181,15 @@ else:
 ```
 
 **Issue:** Agents may be:
+
 1. **Not attempting fixes** for simple issues
-2. **Too conservative** with confidence thresholds
-3. **Missing specialized agents** for certain issue types
+1. **Too conservative** with confidence thresholds
+1. **Missing specialized agents** for certain issue types
 
 ### Problem: Parsing Issues
 
 **Current Implementation:**
+
 ```python
 def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
     # Parses zuban, refurb, etc. into Issue objects
@@ -175,6 +197,7 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ```
 
 **Issue:** Parser may not be capturing:
+
 - Exact line numbers
 - Suggested fixes from tools
 - Context needed for automatic fixing
@@ -184,11 +207,11 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ### When `--ai-fix` Is Enabled:
 
 1. **ALL zuban type errors** → Fixed by TypeCheckingAgent
-2. **ALL refurb suggestions** → Fixed by RefactoringAgent
-3. **ALL complexity violations** → Fixed by RefactoringAgent
-4. **ALL test failures** → Fixed by TestCreationAgent
-5. **ALL security issues** → Fixed by SecurityAgent
-6. **ALL formatting issues** → Fixed by FormattingAgent
+1. **ALL refurb suggestions** → Fixed by RefactoringAgent
+1. **ALL complexity violations** → Fixed by RefactoringAgent
+1. **ALL test failures** → Fixed by TestCreationAgent
+1. **ALL security issues** → Fixed by SecurityAgent
+1. **ALL formatting issues** → Fixed by FormattingAgent
 
 ### Success Criteria:
 
@@ -206,6 +229,7 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 **Current Problem:** Agents may be too conservative.
 
 **Required:**
+
 - Simple fixes (type annotations, formatting) → **0.95+ confidence**
 - Modernization (refurb) → **0.85+ confidence**
 - Complex refactoring → **0.75+ confidence**
@@ -213,6 +237,7 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ### 2. Issue Parsing Enhancement
 
 **Required:**
+
 - Parse tool suggestions (e.g., refurb's `Replace X with Y`)
 - Extract exact line numbers and context
 - Include tool recommendations in Issue objects
@@ -220,6 +245,7 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ### 3. Agent Coordination
 
 **Required:**
+
 - Route issues to most appropriate agent
 - Allow multiple agents to attempt fixes
 - Iterate until all issues resolved or max attempts reached
@@ -252,11 +278,13 @@ python -m crackerjack run -c
 ## Conclusion
 
 **The `--ai-fix` flag should result in ZERO remaining issues** for:
+
 - All fast hooks (formatting, style)
 - All comprehensive hooks (type, security, complexity)
 - All tests
 
 **Manual intervention should ONLY be required for:**
+
 - Architectural decisions
 - Business logic changes
 - Feature requirements
