@@ -4,7 +4,6 @@ import logging
 import shutil
 import tarfile
 import typing as t
-from contextlib import suppress
 from dataclasses import dataclass, field
 from datetime import datetime
 from fnmatch import fnmatch
@@ -270,14 +269,9 @@ class DocumentationCleanup:
             except Exception as e:
                 return False, f"Cannot create archive directory: {e}"
 
-        if self.git_service:
-            with suppress(Exception):
-                changed_files = self.git_service.get_changed_files()
-                if changed_files:
-                    return (
-                        False,
-                        "Git repository has uncommitted changes. Commit or stash first.",
-                    )
+        # Note: Git dirty check removed - documentation cleanup runs as part of
+        # a workflow that ends with a commit phase, so any moved files will be
+        # committed automatically. A backup is also created before moving files.
 
         return True, None
 
