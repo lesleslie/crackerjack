@@ -4,9 +4,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Crackerjack is an opinionated Python project management tool unifying UV, Ruff, pytest, and pre-commit into a single workflow with AI agent integration via MCP.
+Crackerjack is an opinionated Python project management tool unifying UV, Ruff, pytest, and quality tools into a single workflow with AI agent integration via MCP.
 
-**Key Dependencies**: Python 3.13+, UV, pre-commit, pytest
+**Key Dependencies**: Python 3.13+, UV, pytest
+
+**IMPORTANT**: Crackerjack does **NOT** use pre-commit.com hooks. It runs its own native tool orchestration system that integrates directly with git. When we say "hooks" in crackerjack, we mean **quality tools that run during our workflow** (ruff, pytest, codespell, etc.) - NOT pre-commit.com hooks.
 
 **Clean Code Philosophy**: DRY/YAGNI/KISS - Every line is a liability. Optimize for readability with self-documenting code.
 
@@ -269,11 +271,13 @@ Based on Phase 2-7 refactoring audit (100% legacy-free):
 
 ## Quality Process
 
+**Crackerjack vs pre-commit.com**: Crackerjack runs its own tool orchestration system - we call them "hooks" but they're **NOT** pre-commit.com hooks. We directly integrate with git and run quality tools (ruff, pytest, codespell, etc.) in our workflow.
+
 **Workflow Order**:
 
-1. **Fast Hooks** (~5s): formatting, basic checks → retry once if fail
+1. **Fast Tools/Hooks** (~5s): formatting, basic checks → retry once if fail
 1. **Full Test Suite**: collect ALL failures, don't stop on first
-1. **Comprehensive Hooks** (~30s): type checking, security, complexity → collect ALL issues
+1. **Comprehensive Tools/Hooks** (~30s): type checking, security, complexity → collect ALL issues
 1. **AI Batch Fixing**: process all collected failures together
 
 **Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
@@ -559,7 +563,7 @@ from ..managers.test_manager import TestManager
 from ..models.protocols import TestManagerProtocol
 ```
 
-**Current Status**: 21.6% coverage (baseline: 19.6%, targeting 100% via ratchet system). See [COVERAGE_POLICY.md](../reference/COVERAGE_POLICY.md) for complete details.
+**Current Status**: 21.6% coverage (baseline: 19.6%, targeting 100% via ratchet system). See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md) for complete details.
 
 - make sure to run `python -m crackerjack run` after every editing/debugging cycle for quality checking
 - always put implementation plans in a md doc for review and reference
@@ -584,7 +588,7 @@ from ..models.protocols import TestManagerProtocol
 
 **Usage**: `--ai-fix` enables batch fixing; confidence ≥0.7 uses specific agents
 
-**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](../AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
+**Expected Behavior**: See [AI_FIX_EXPECTED_BEHAVIOR.md](docs/AI_FIX_EXPECTED_BEHAVIOR.md) for complete details on what should be automatically fixed.
 
 **Key Principle**: When `--ai-fix` is enabled, ALL quality issues (fast hooks, comprehensive hooks, tests) should be automatically resolved by AI agents without manual intervention.
 
