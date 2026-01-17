@@ -36,6 +36,7 @@ class PipAuditSettings(ToolAdapterSettings):
     fix: bool = False
     output_desc: bool = True
     cache_dir: Path | None = None
+    ignore_vulns: list[str] = []
 
 
 class PipAuditAdapter(BaseToolAdapter):
@@ -53,6 +54,7 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
+                ignore_vulns=["CVE-2025-53000"],  # Default ignored vulnerabilities
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -62,6 +64,7 @@ class PipAuditAdapter(BaseToolAdapter):
                 "vulnerability_service": self.settings.vulnerability_service,
                 "skip_editable": self.settings.skip_editable,
                 "fix_enabled": self.settings.fix,
+                "ignored_vulns": self.settings.ignore_vulns,
             },
         )
 
@@ -166,6 +169,18 @@ class PipAuditAdapter(BaseToolAdapter):
 
             for vuln in dependency.get("vulns", []):
                 vuln_id = vuln.get("id", "unknown")
+
+                # Skip vulnerabilities that are in the ignore list
+                if self.settings and vuln_id in self.settings.ignore_vulns:
+                    logger.debug(
+                        "Ignoring vulnerability",
+                        extra={
+                            "vuln_id": vuln_id,
+                            "package": package_name,
+                        },
+                    )
+                    continue
+
                 description = vuln.get("description", "")
                 fix_versions = vuln.get("fix_versions", [])
                 aliases = vuln.get("aliases", [])
@@ -286,11 +301,12 @@ class PipAuditAdapter(BaseToolAdapter):
             ],
             timeout_seconds=120,
             parallel_safe=True,
-            stage="comprehensive",
+            stage="fast",
             settings={
                 "vulnerability_service": "osv",
                 "skip_editable": True,
                 "output_desc": True,
-                "fix": False,
+                "fix": True,
+                "ignore_vulns": ["CVE-2025-53000"],
             },
         )

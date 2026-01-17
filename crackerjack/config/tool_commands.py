@@ -211,6 +211,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "osv",
             "--ignore-vuln",
             "CVE-2025-53000",
+            "--fix",
         ],
         "pyscn": [
             "uv",
