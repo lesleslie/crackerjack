@@ -205,6 +205,10 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
     if _should_clean(options):
         steps.append("cleaning")
 
+    # Documentation cleanup BEFORE fast hooks so markdown tools fix links first
+    if _should_run_documentation_cleanup(options):
+        steps.append("documentation_cleanup")
+
     if _should_run_fast_hooks(options):
         steps.append("fast_hooks")
 
@@ -219,9 +223,6 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
         steps.append("tests")
     elif _should_run_comprehensive_hooks(options):
         steps.append("comprehensive_hooks")
-
-    if _should_run_documentation_cleanup(options):
-        steps.append("documentation_cleanup")
 
     if _should_run_git_cleanup(options):
         steps.append("git_cleanup")

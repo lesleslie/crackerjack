@@ -63,7 +63,7 @@
 - **Integrate with Quality Tools**
 
   - Configure code with Ruff for linting and formatting
-  - Set up pre-commit hooks for consistent code quality
+  - **Crackerjack runs its own tool orchestration** (NOT pre-commit.com hooks)
   - Use UV for dependency management
 
 ## Critical Error Prevention
@@ -139,21 +139,22 @@ def _should_process(self, data: dict) -> bool:
   - Execute tools like pyright, ruff, and crackerjack through UV: `uv run pyright`
   - Ensures consistent tool versions and environment isolation
 
-- **Pre-Commit Hook Configuration**
+- **Quality Tool Configuration**
 
-  - Enforce a comprehensive set of pre-commit hooks for quality control:
+  - Enforce a comprehensive set of quality tools via crackerjack:
     - Pyright for static type checking
     - Ruff for linting and formatting
-    - Vulture for detecting unused code
+    - Skylos for detecting unused code (20x faster than vulture)
+    - Zuban for type checking (20-200x faster than pyright)
     - Creosote for identifying unused dependencies
     - Complexipy for code complexity analysis
     - Codespell for spell checking
     - Autotyping for type annotation
     - Refurb for Python code modernization
     - Bandit for security vulnerabilities
-  - Run hooks with `uv run pre-commit run --all-files` during development
-  - Configure hooks in `.pre-commit-config.yaml` with exact versions
-  - Ensure all code passes pre-commit checks before submitting
+  - Run quality checks with `python -m crackerjack run -c` during development
+  - **Crackerjack manages tool orchestration** - NOT pre-commit.com hooks
+  - Ensure all code passes quality checks before submitting
 
 - **Specific Tool Compliance Standards**
 
@@ -289,7 +290,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
 - **Test Coverage Improvement (MANDATORY)**
 
-  - **Target 42% milestone coverage**: Work toward 42% milestone (current: 21.6%, baseline: 19.6%). See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md).
+  - **Target 100% milestone coverage**: Work toward 100% milestone (current: 21.6%, baseline: 19.6%). See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md).
   - **Always improve coverage incrementally** when working on projects with pytest coverage below the target
   - **Check coverage first**: Run `uv run pytest --cov=<package_name> --cov-report=term-missing` to see current status
   - **Target 2-5% improvement per session**: Add 1-3 focused tests that cover uncovered lines
@@ -365,7 +366,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
 - **Quality Standards Maintenance**
 
-  - AI assistants should update CLAUDE.md and RULES.md weekly or after pre-commit failures
+  - AI assistants should update CLAUDE.md and RULES.md weekly or after quality check failures
   - Learn from new Refurb rules (FURB codes), Pyright errors (reportXxx), and Complexipy thresholds
   - Add newly discovered error patterns to documentation with code examples
   - Test all documentation updates by running `python -m crackerjack --comprehensive`
@@ -373,7 +374,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
 - **Self-Learning Protocol**
 
-  - When encountering new pre-commit failures, extract the error pattern and add to standards
+  - When encountering new quality tool failures, extract the error pattern and add to standards
   - Format new patterns with "Bad" and "Good" code examples
   - Update the "AI Code Generation Best Practices" checklist in CLAUDE.md
   - Ensure RULES.md stays synchronized with CLAUDE.md standards

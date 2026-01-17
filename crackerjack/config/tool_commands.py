@@ -147,6 +147,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "ruff",
             "check",
             "--fix",
+            "--extension",
+            ".py:python",
             f"./{package_name}",
         ],
         "ruff-format": [
