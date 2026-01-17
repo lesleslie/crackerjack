@@ -7,6 +7,7 @@ The parallel execution feature allows **tests** and **comprehensive hooks** to r
 ## Performance Impact
 
 ### Sequential Execution (Default)
+
 ```
 [fast_hooks] → [tests] → [comprehensive_hooks] → [publishing]
      5s            60s              30s                2s
@@ -14,6 +15,7 @@ The parallel execution feature allows **tests** and **comprehensive hooks** to r
 ```
 
 ### Parallel Execution (Enabled)
+
 ```
                     [tests]        60s
 [fast_hooks] ───────┤                    ├─→ [publishing]
@@ -49,15 +51,15 @@ enable_parallel_phases: true
 ### ✅ Recommended Scenarios
 
 1. **Full CI/CD Pipelines**: When running both tests and comprehensive hooks
-2. **Large Test Suites**: Tests take >30 seconds
-3. **Development Iteration**: Frequent quality checks during development
-4. **Multi-Core Systems**: Machines with 4+ CPU cores
+1. **Large Test Suites**: Tests take >30 seconds
+1. **Development Iteration**: Frequent quality checks during development
+1. **Multi-Core Systems**: Machines with 4+ CPU cores
 
 ### ❌ Not Recommended
 
-1. **Resource-Constrained Systems**: Machines with <2 CPU cores
-2. **Debugging Flaky Tests**: When isolating test failures
-3. **Single-Phase Workflows**: Running only tests OR only hooks
+1. **Resource-Constrained Systems**: Machines with \<2 CPU cores
+1. **Debugging Flaky Tests**: When isolating test failures
+1. **Single-Phase Workflows**: Running only tests OR only hooks
 
 ## Technical Details
 
@@ -78,6 +80,7 @@ def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
 ### Dependency Chain
 
 **Sequential Mode** (default):
+
 ```python
 nodes = [
     {"id": "fast_hooks"},
@@ -88,6 +91,7 @@ nodes = [
 ```
 
 **Parallel Mode** (enabled):
+
 ```python
 nodes = [
     {"id": "fast_hooks"},
@@ -126,9 +130,9 @@ if step in ("tests", "comprehensive_hooks"):
 ### Priority Order
 
 1. CLI flag (highest)
-2. `settings/local.yaml`
-3. `settings/crackerjack.yaml`
-4. Default value (`False`)
+1. `settings/local.yaml`
+1. `settings/crackerjack.yaml`
+1. Default value (`False`)
 
 ## Backward Compatibility
 
@@ -168,6 +172,7 @@ python -m crackerjack run --run-tests  # Default: auto-detect
 ```
 
 **Combined Parallelization Example**:
+
 ```bash
 # Ultimate parallelization:
 # - Tests run across 4 workers
@@ -193,6 +198,7 @@ python -m pytest tests/unit/test_parallel_workflow.py -v
 ```
 
 **Test Coverage**:
+
 - ✅ Sequential execution (default backward compatibility)
 - ✅ Parallel execution with both tests and comp hooks
 - ✅ Sequential mode when explicitly disabled
@@ -208,6 +214,7 @@ python -m pytest tests/unit/test_parallel_workflow.py -v
 ### Issue: Tests and hooks still run sequentially
 
 **Solution**: Verify the flag is actually being used:
+
 ```bash
 # Check that parallel mode is enabled
 python -m crackerjack run --parallel-phases -t -c --verbose
@@ -216,6 +223,7 @@ python -m crackerjack run --parallel-phases -t -c --verbose
 ### Issue: Resource exhaustion on small machines
 
 **Solution**: Disable parallel execution or reduce test workers:
+
 ```bash
 # Force sequential execution
 python -m crackerjack run -t -c --no-parallel-phases
@@ -227,6 +235,7 @@ python -m crackerjack run -t -c --test-workers 1
 ### Issue: Flaky tests only in parallel mode
 
 **Solution**: Tests may have shared state or race conditions:
+
 ```bash
 # Debug sequentially first
 python -m crackerjack run -t -c --test-workers 1
@@ -240,9 +249,9 @@ python -m crackerjack run -t -c --parallel-phases
 Potential future improvements:
 
 1. **Adaptive Parallelization**: Automatically detect if tasks can run in parallel
-2. **Resource-Aware Scheduling**: Adjust parallelism based on available CPU/memory
-3. **Fine-Grained Phases**: Parallelize additional independent phases
-4. **Performance Metrics**: Track and report actual speedup percentages
+1. **Resource-Aware Scheduling**: Adjust parallelism based on available CPU/memory
+1. **Fine-Grained Phases**: Parallelize additional independent phases
+1. **Performance Metrics**: Track and report actual speedup percentages
 
 ## References
 

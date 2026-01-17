@@ -289,7 +289,7 @@ Following our **Clean Code Philosophy** where every line of code is a liability:
 
 - **Test Coverage Improvement (MANDATORY)**
 
-  - **Target 42% milestone coverage**: Work toward 42% milestone (current: 21.6%, baseline: 19.6%). See [COVERAGE_POLICY.md](./docs/reference/COVERAGE_POLICY.md).
+  - **Target 42% milestone coverage**: Work toward 42% milestone (current: 21.6%, baseline: 19.6%). See [COVERAGE_POLICY.md](docs/reference/COVERAGE_POLICY.md).
   - **Always improve coverage incrementally** when working on projects with pytest coverage below the target
   - **Check coverage first**: Run `uv run pytest --cov=<package_name> --cov-report=term-missing` to see current status
   - **Target 2-5% improvement per session**: Add 1-3 focused tests that cover uncovered lines
