@@ -74,13 +74,13 @@ The ratchet system is implemented in the test workflow itself, not as a static c
 
 ```bash
 # Run tests with coverage
-python -m crackerjack run --run-tests
+python -m crackerjack --run-tests
 
 # Generate HTML coverage report
-python -m crackerjack run --coverage-report
+python -m crackerjack --coverage-report
 
 # Check coverage status
-python -m crackerjack run --coverage-status
+python -m crackerjack --coverage-status
 ```
 
 ### Coverage Reports
@@ -153,7 +153,7 @@ python -m pytest --cov=crackerjack --cov-report=json
 
 ### What about the 42% reference?
 
-The 42% mentioned in some docs (guides/RULES.md, guides/AGENTS.md) is a **milestone target**, not the current baseline. It represents:
+The 42% mentioned in some docs (RULES.md, AGENTS.md) is a **milestone target**, not the current baseline. It represents:
 
 - Approximately halfway to 100% coverage
 - A significant quality achievement
@@ -185,9 +185,9 @@ If coverage drops below baseline:
 ## References
 
 - **Main README**: Coverage ratchet philosophy and milestones
-- **guides/CLAUDE.md**: Developer guidelines and current baseline (19.6%)
-- **guides/RULES.md**: Testing philosophy and 42% milestone target
-- **guides/AGENTS.md**: General testing guidelines
+- **CLAUDE.md**: Developer guidelines and current baseline (19.6%)
+- **RULES.md**: Testing philosophy and 42% milestone target
+- **AGENTS.md**: General testing guidelines
 
 ## Enforcement
 
@@ -196,7 +196,7 @@ If coverage drops below baseline:
 Coverage checks run as part of the test workflow:
 
 ```bash
-python -m crackerjack run --run-tests
+python -m crackerjack --run-tests
 ```
 
 ### CI/CD Integration
@@ -207,7 +207,7 @@ Coverage is tracked in CI but not used as a hard gate. The ratchet system is adv
 
 ```bash
 # Before committing major changes
-python -m crackerjack run --coverage-status
+python -m crackerjack --coverage-status
 
 # If below baseline, add tests before committing
 python -m pytest --cov=crackerjack --cov-report=term-missing tests/
@@ -219,5 +219,5 @@ For questions about coverage policy:
 
 - Review this document first
 - Check existing coverage reports
-- Consult guides/CLAUDE.md for developer guidelines
+- Consult CLAUDE.md for developer guidelines
 - Open GitHub issue for policy clarification
