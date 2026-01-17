@@ -194,6 +194,15 @@ FAST_HOOKS = [
         accepts_file_paths=True,
         description="Fast local link validation (file references and anchors only)",
     ),
+    HookDefinition(
+        name="pip-audit",
+        command=[],
+        timeout=180,
+        retry_on_failure=True,
+        security_level=SecurityLevel.CRITICAL,
+        accepts_file_paths=False,
+        description="Dependency vulnerability scanning with auto-fix",
+    ),
 ]
 
 COMPREHENSIVE_HOOKS = [
@@ -231,15 +240,6 @@ COMPREHENSIVE_HOOKS = [
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.CRITICAL,
-    ),
-    HookDefinition(
-        name="pip-audit",
-        command=[],
-        timeout=180,
-        stage=HookStage.FAST,
-        manual_stage=True,
-        security_level=SecurityLevel.CRITICAL,
-        accepts_file_paths=False,
     ),
     HookDefinition(
         name="skylos",
