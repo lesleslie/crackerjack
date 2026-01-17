@@ -233,6 +233,20 @@ class BaseToolAdapter(QAAdapterBase):
             start_time=start_time,
         )
 
+    async def _is_gitignored(self, path: Path) -> bool:
+        """Check if a file is ignored by git using git check-ignore."""
+        try:
+            import subprocess  # nosec B404
+
+            result = subprocess.run(
+                ["git", "check-ignore", "-q", str(path)],
+                capture_output=True,
+                timeout=1,
+            )
+            return result.returncode == 0
+        except (subprocess.SubprocessError, FileNotFoundError, OSError):
+            return False
+
     async def _get_target_files(
         self,
         files: list[Path] | None,
@@ -275,10 +289,23 @@ class BaseToolAdapter(QAAdapterBase):
         ):
             standard_excludes.add("tests")
 
-        candidates = list(root.rglob("*.py"))
+        candidates: list[Path] = []
+        for pattern in cfg.file_patterns:
+            ext = pattern.split(".")[-1] if "." in pattern else None
+            if ext:
+                candidates.extend(root.rglob(f"*.{ext}"))
+
         result: list[Path] = []
+        seen: set[Path] = set()
         for path in candidates:
+            if path in seen:
+                continue
+            seen.add(path)
+
             if any(excluded in path.parts for excluded in standard_excludes):
+                continue
+
+            if await self._is_gitignored(path):
                 continue
 
             include = any(path.match(pattern) for pattern in cfg.file_patterns)
