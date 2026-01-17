@@ -14,7 +14,7 @@ def main(argv: list[str] | None = None) -> int:
         print("No git-tracked files found", file=sys.stderr)  # noqa: T201
         return 1
 
-    cmd = ["codespell"]
+    cmd = ["codespell", "--write-changes"]
 
     if argv:
         cmd.extend(argv)

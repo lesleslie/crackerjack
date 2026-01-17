@@ -261,6 +261,18 @@ class BaseToolAdapter(QAAdapterBase):
         if not root.exists():
             root = Path.cwd()
 
+        standard_excludes = self._get_standard_excludes(cfg)
+
+        candidates = self._collect_candidate_files(root, cfg)
+
+        return await self._filter_valid_files(
+            candidates,
+            cfg,
+            standard_excludes,
+        )
+
+    def _get_standard_excludes(self, config: QACheckConfig | None) -> set[str]:
+        """Build standard exclusion set based on config stage."""
         standard_excludes = {
             ".venv",
             "venv",
@@ -283,37 +295,55 @@ class BaseToolAdapter(QAAdapterBase):
         }
 
         if (
-            cfg
-            and hasattr(cfg, "is_comprehensive_stage")
-            and cfg.is_comprehensive_stage
+            config
+            and hasattr(config, "is_comprehensive_stage")
+            and config.is_comprehensive_stage
         ):
             standard_excludes.add("tests")
 
+        return standard_excludes
+
+    def _collect_candidate_files(self, root: Path, config: QACheckConfig) -> list[Path]:
+        """Collect candidate files from root based on file patterns."""
         candidates: list[Path] = []
-        for pattern in cfg.file_patterns:
+        for pattern in config.file_patterns:
             ext = pattern.split(".")[-1] if "." in pattern else None
             if ext:
                 candidates.extend(root.rglob(f"*.{ext}"))
+        return candidates
 
+    async def _filter_valid_files(
+        self,
+        candidates: list[Path],
+        config: QACheckConfig,
+        standard_excludes: set[str],
+    ) -> list[Path]:
+        """Filter candidates through all exclusion checks."""
         result: list[Path] = []
         seen: set[Path] = set()
+
         for path in candidates:
             if path in seen:
                 continue
             seen.add(path)
 
+            # Check standard excludes
             if any(excluded in path.parts for excluded in standard_excludes):
                 continue
 
+            # Check .gitignore
             if await self._is_gitignored(path):
                 continue
 
-            include = any(path.match(pattern) for pattern in cfg.file_patterns)
+            # Check file patterns
+            include = any(path.match(pattern) for pattern in config.file_patterns)
             if not include:
                 continue
 
-            if any(path.match(pattern) for pattern in cfg.exclude_patterns):
+            # Check exclude patterns
+            if any(path.match(pattern) for pattern in config.exclude_patterns):
                 continue
+
             result.append(path)
 
         return result
