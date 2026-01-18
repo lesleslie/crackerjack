@@ -117,7 +117,7 @@ exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-m
 enable_all = false
 quiet = true
 python_version = "3.13"
-ignore = ["FURB184", "FURB120"]
+ignore = ["FURB184", "FURB120", "FURB137"]
 
 [tool.bandit]
 # Target is specified dynamically via command line (see tool_commands.py)
