@@ -198,7 +198,10 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "15",
             package_name,
         ],
-        "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
+        # IMPORTANT: Comprehensive hooks MUST only check the package directory
+        # Use trailing slash to treat package_name as directory path, not module name
+        # This prevents scanning subdirectories like worktrees, tests, scripts
+        "refurb": ["uv", "run", "python", "-m", "refurb", f"{package_name}/"],
         "pip-audit": [
             "uv",
             "run",
