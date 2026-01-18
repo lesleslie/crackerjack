@@ -18,9 +18,13 @@ def get_git_tracked_files(pattern: str | None = None) -> list[Path]:
             cwd=Path.cwd(),
         )
 
-        return [
+        files = [
             Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         ]
+
+        # Filter out files that are staged for deletion
+        # When a file is deleted (staged), it appears in ls-files but not on disk
+        return [f for f in files if f.exists()]
 
     except subprocess.CalledProcessError:
         return []
