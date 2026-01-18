@@ -1,5 +1,34 @@
 ______________________________________________________________________
 
+## [0.48.1] - 2026-01-17
+
+### Added
+
+- Add dynamic .gitignore reading to all QA hooks
+- Automated documentation cleanup system
+
+### Changed
+
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+
+### Fixed
+
+- Constrain refurb to package directory only
+- Ignore FURB137 in refurb (set literal suggestions)
+- Remove hardcoded bandit target from pyproject.toml
+
+### Documentation
+
+- Clarify crackerjack does not use pre-commit.com hooks
+
+### Internal
+
+- Clean up project root documentation and scripts
+
 ## [0.48.0] - 2026-01-16
 
 ### Added
