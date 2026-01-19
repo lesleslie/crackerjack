@@ -528,15 +528,18 @@ python -m crackerjack start
 
 ## Critical Reminders
 
-**Core Instructions**:
+**Core Principles**:
 
+- **Take the time to do things right the first time**: Quality > speed. Proper implementation prevents technical debt and future refactoring cycles.
 - Do only what's asked, nothing more
 - NEVER create files unless absolutely necessary
+  - **Exception**: When architectural patterns (protocols, proper separation) require it for correctness
 - ALWAYS prefer editing existing files
 - MAINTAIN coverage ratchet
 
 **Quality Standards**:
 
+- **Check yourself before you wreck yourself**: Always validate your work before considering it complete. Run `python -m crackerjack run`, verify dependencies, and ensure architectural compliance. Don't wait for quality gates to catch mistakes you could have prevented.
 - **Test Quality**: Avoid async tests that hang, use synchronous config tests
 - **Import Compliance**: Use protocols from `models/protocols.py`
 - **Fix failures FIRST** before creating new tests
