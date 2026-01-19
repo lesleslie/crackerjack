@@ -16,7 +16,6 @@ Usage:
 import argparse
 import re
 from pathlib import Path
-from typing import Dict, List
 
 
 class DocCleanupAnalyzer:
@@ -155,7 +154,7 @@ class DocCleanupAnalyzer:
 
         return None
 
-    def analyze(self) -> Dict[str, List[Dict]]:
+    def analyze(self) -> dict[str, list[dict]]:
         """Analyze all markdown files in docs root."""
         results = {
             "keep_in_root": [],
@@ -171,36 +170,44 @@ class DocCleanupAnalyzer:
             categorization = self.categorize_file(filepath)
 
             if categorization is None:
-                results["uncategorized"].append({
-                    "file": filepath.name,
-                    "path": str(filepath),
-                })
+                results["uncategorized"].append(
+                    {
+                        "file": filepath.name,
+                        "path": str(filepath),
+                    }
+                )
             elif categorization[0] == "keep_in_root":
-                results["keep_in_root"].append({
-                    "file": filepath.name,
-                    "path": str(filepath),
-                    "reason": self.CATEGORIES["keep_in_root"]["reason"],
-                })
+                results["keep_in_root"].append(
+                    {
+                        "file": filepath.name,
+                        "path": str(filepath),
+                        "reason": self.CATEGORIES["keep_in_root"]["reason"],
+                    }
+                )
             elif categorization[1] is None:
                 # Keep in same location
                 category = categorization[0]
-                results[category].append({
-                    "file": filepath.name,
-                    "path": str(filepath),
-                    "reason": self.CATEGORIES[category]["reason"],
-                })
+                results[category].append(
+                    {
+                        "file": filepath.name,
+                        "path": str(filepath),
+                        "reason": self.CATEGORIES[category]["reason"],
+                    }
+                )
             else:
-                results["move_to_archive"].append({
-                    "file": filepath.name,
-                    "path": str(filepath),
-                    "destination": categorization[1],
-                    "category": categorization[0],
-                    "reason": self.CATEGORIES[categorization[0]]["reason"],
-                })
+                results["move_to_archive"].append(
+                    {
+                        "file": filepath.name,
+                        "path": str(filepath),
+                        "destination": categorization[1],
+                        "category": categorization[0],
+                        "reason": self.CATEGORIES[categorization[0]]["reason"],
+                    }
+                )
 
         return results
 
-    def generate_report(self, results: Dict) -> str:
+    def generate_report(self, results: dict) -> str:
         """Generate a human-readable cleanup report."""
         lines = []
         lines.append("=" * 80)
@@ -227,7 +234,9 @@ class DocCleanupAnalyzer:
 
         # Implementation plans
         if results.get("implementation_plans"):
-            lines.append(f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files")
+            lines.append(
+                f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files"
+            )
             lines.append("-" * 80)
             for item in results["implementation_plans"]:
                 lines.append(f"  • {item['file']}")
@@ -262,9 +271,13 @@ class DocCleanupAnalyzer:
             lines.append("")
 
         # Summary
-        total = len(results["keep_in_root"]) + len(results.get("keep_in_docs", [])) + \
-                len(results.get("implementation_plans", [])) + len(results["move_to_archive"]) + \
-                len(results["uncategorized"])
+        total = (
+            len(results["keep_in_root"])
+            + len(results.get("keep_in_docs", []))
+            + len(results.get("implementation_plans", []))
+            + len(results["move_to_archive"])
+            + len(results["uncategorized"])
+        )
 
         lines.append("=" * 80)
         lines.append("SUMMARY")
@@ -272,7 +285,9 @@ class DocCleanupAnalyzer:
         lines.append(f"Total files analyzed: {total}")
         lines.append(f"Keep in root: {len(results['keep_in_root'])}")
         lines.append(f"Keep in docs/: {len(results.get('keep_in_docs', []))}")
-        lines.append(f"Implementation plans: {len(results.get('implementation_plans', []))}")
+        lines.append(
+            f"Implementation plans: {len(results.get('implementation_plans', []))}"
+        )
         lines.append(f"Move to archive: {len(results['move_to_archive'])}")
         lines.append(f"Uncategorized: {len(results['uncategorized'])}")
         lines.append("")
@@ -287,18 +302,18 @@ def main():
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Show what would be done without making changes"
+        help="Show what would be done without making changes",
     )
     parser.add_argument(
         "--execute",
         action="store_true",
-        help="Execute the cleanup (moves files to archive)"
+        help="Execute the cleanup (moves files to archive)",
     )
     parser.add_argument(
         "--docs-root",
         type=Path,
         default=Path.cwd() / "docs",
-        help="Path to docs directory (default: cwd/docs)"
+        help="Path to docs directory (default: cwd/docs)",
     )
 
     args = parser.parse_args()
