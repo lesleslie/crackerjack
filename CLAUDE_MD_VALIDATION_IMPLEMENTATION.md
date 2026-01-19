@@ -14,6 +14,7 @@ Implemented comprehensive CLAUDE.md validation system to ensure projects using c
 **Location**: `/Users/les/Projects/crackerjack/crackerjack/services/initialization.py:51-103`
 
 **Features**:
+
 - ✅ Validates CLAUDE.md exists
 - ✅ Checks for crackerjack integration markers (`<!-- CRACKERJACK INTEGRATION START/END -->`)
 - ✅ Verifies essential quality principles are present:
@@ -23,6 +24,7 @@ Implemented comprehensive CLAUDE.md validation system to ensure projects using c
 - ✅ Non-breaking (warns but doesn't fail the workflow)
 
 **Output Example**:
+
 ```
 ⚠️ Warning: CLAUDE.md not found. Run 'python -m crackerjack init' to create it.
 ⚠️ Warning: CLAUDE.md missing crackerjack section. Run 'python -m crackerjack init --force' to add it.
@@ -36,6 +38,7 @@ Implemented comprehensive CLAUDE.md validation system to ensure projects using c
 **Tool Name**: `validate_claude_md`
 
 **Features**:
+
 - ✅ Available to AI agents via MCP protocol
 - ✅ Validation-only mode (default) - checks compliance
 - ✅ Update mode (`--update` flag) - automatically updates CLAUDE.md if needed
@@ -56,6 +59,7 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ```
 
 **Response Format**:
+
 ```json
 {
   "success": true,
@@ -78,6 +82,7 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ### Test Results
 
 **Option 1 Test** (`test_claude_md_validation.py`):
+
 ```
 ✅ PASS - Correctly detects missing crackerjack integration markers
 ✅ PASS - Shows appropriate warnings
@@ -85,6 +90,7 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ```
 
 **Option 2 Test**:
+
 ```
 ✅ PASS - MCP tool imports successfully
 ✅ PASS - Tool registration works
@@ -92,6 +98,7 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ```
 
 **Quality Checks**:
+
 ```
 ✅ Fast hooks: 16/16 passed (124.19s)
 ✅ Comprehensive hooks: 3/4 passed (skylos timeout - unrelated to our changes)
@@ -104,10 +111,12 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ### Current Integration
 
 1. **Initialization Service** (`initialization.py:51-103`):
+
    - `validate_project_structure()` method implemented and ready to use
    - Not currently called in main workflow (was a stub before)
 
-2. **MCP Server** (`utility_tools.py:367-523`):
+1. **MCP Server** (`utility_tools.py:367-523`):
+
    - Registered in `register_utility_tools()` function
    - Available to AI agents when MCP server starts
    - Follows existing MCP tool patterns
@@ -115,17 +124,20 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ### Future Integration Opportunities
 
 1. **Run Command Integration**: Call `validate_project_structure()` during:
+
    - Pre-flight checks before running quality hooks
    - `python -m crackerjack init` validation
    - Health check endpoint
 
-2. **CI/CD Integration**: Add to GitHub Actions / GitLab CI:
+1. **CI/CD Integration**: Add to GitHub Actions / GitLab CI:
+
    ```yaml
    - name: Validate CLAUDE.md
      run: python -m crackerjack init --validate-only
    ```
 
-3. **AI Agent Workflow**: AI agents can proactively call:
+1. **AI Agent Workflow**: AI agents can proactively call:
+
    ```python
    mcp.call_tool("validate_claude_md", "--update")
    ```
@@ -147,11 +159,13 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ### Why These Two Principles?
 
 1. **"Check yourself before you wreck yourself"**:
+
    - Emphasizes self-validation before quality gates
    - Prevents cascading failures
    - Encourages ownership of code quality
 
-2. **"Take the time to do things right the first time"**:
+1. **"Take the time to do things right the first time"**:
+
    - Quality > speed mindset
    - Prevents technical debt
    - Reduces refactoring cycles
@@ -159,19 +173,23 @@ validate_claude_md("", '{"update": true, "project_path": "/path/to/project"}')
 ## Files Modified
 
 1. `/Users/les/Projects/crackerjack/crackerjack/services/initialization.py`
+
    - Enhanced `validate_project_structure()` method (lines 51-103)
    - Added comprehensive validation logic
 
-2. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/utility_tools.py`
+1. `/Users/les/Projects/crackerjack/crackerjack/mcp/tools/utility_tools.py`
+
    - Added `_register_claude_md_validator_tool()` (lines 367-422)
    - Added `_perform_claude_md_validation()` (lines 425-491)
    - Added `_update_claude_md_if_needed()` (lines 494-523)
    - Updated `register_utility_tools()` to include new tool (line 19)
 
-3. `/Users/les/Projects/crackerjack/test_claude_md_validation.py`
+1. `/Users/les/Projects/crackerjack/test_claude_md_validation.py`
+
    - Created test script for validation (new file)
 
-4. `/Users/les/Projects/crackerjack/CLAUDE.md` and `/Users/les/.claude/CLAUDE.md`
+1. `/Users/les/Projects/crackerjack/CLAUDE.md` and `/Users/les/.claude/CLAUDE.md`
+
    - Added two new quality principles (separate commit)
 
 ## Usage
@@ -199,16 +217,17 @@ mcp.call_tool("validate_claude_md", "--update")
 ## Next Steps (Optional Future Enhancements)
 
 1. **Versioned Templates**: Add version tracking to CLAUDE.md sections
-2. **Diff Preview**: Show what would change before updating
-3. **Custom Principles**: Allow projects to add their own principles
-4. **CI Integration**: Add GitHub Actions / GitLab CI templates
-5. **Migration Guide**: Document upgrading between crackerjack versions
+1. **Diff Preview**: Show what would change before updating
+1. **Custom Principles**: Allow projects to add their own principles
+1. **CI Integration**: Add GitHub Actions / GitLab CI templates
+1. **Migration Guide**: Document upgrading between crackerjack versions
 
 ## Conclusion
 
 ✅ **Both Option 1 and Option 2 successfully implemented and tested**
 
 The CLAUDE.md validation system provides:
+
 - **Immediate user feedback** during project setup (Option 1)
 - **AI agent integration** for proactive maintenance (Option 2)
 - **Non-breaking adoption** with helpful warnings
