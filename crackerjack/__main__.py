@@ -66,6 +66,16 @@ app.info.help = "Crackerjack MCP Server CLI"
 console = Console()
 
 
+@app.callback(invoke_without_command=True)
+def version_option(
+    version: bool = typer.Option(False, "--version", help="Show version and exit"),
+) -> None:
+    """Show crackerjack version and exit."""
+    if version:
+        console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
+        raise typer.Exit(0)
+
+
 def _detect_package_name_standalone() -> str:
     from pathlib import Path
 

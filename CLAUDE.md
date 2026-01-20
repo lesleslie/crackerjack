@@ -515,6 +515,8 @@ def my_function(settings: CrackerjackSettings | None = None):
 
 ## MCP Server Integration
 
+**Note:** This project uses the global MCP configuration in `~/.claude/.mcp.json` (recommended). The project-level `.mcp.json` has been removed as redundant.
+
 **Features**: MCP protocol, real-time progress tracking, job management
 
 ```bash
