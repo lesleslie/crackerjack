@@ -626,6 +626,16 @@ CLI_OPTIONS = {
             "Max 10 iterations, stops when all hooks pass."
         ),
     ),
+    "ai_fix_max_iterations": typer.Option(
+        5,
+        "--ai-fix-max-iterations",
+        help=(
+            "Maximum iterations for AI fix retry loop (default: 5). "
+            "The loop will exit early if all issues are resolved or "
+            "no progress is made for 3 consecutive iterations. "
+            "Use with --ai-fix flag."
+        ),
+    ),
     "dry_run": typer.Option(
         False,
         "--dry-run",

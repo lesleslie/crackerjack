@@ -16,15 +16,6 @@ wheels = [
 ]
 
 [[package]]
-name = "aiocache"
-version = "0.12.3"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/7a/64/b945b8025a9d1e6e2138845f4022165d3b337f55f50984fbc6a4c0a1e355/aiocache-0.12.3.tar.gz", hash = "sha256:f528b27bf4d436b497a1d0d1a8f59a542c153ab1e37c3621713cb376d44c4713", size = 132196, upload-time = "2024-09-25T13:20:23.823Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/37/d7/15d67e05b235d1ed8c3ce61688fe4d84130e72af1657acadfaac3479f4cf/aiocache-0.12.3-py2.py3-none-any.whl", hash = "sha256:889086fc24710f431937b87ad3720a289f7fc31c4fd8b68e9f918b9bacd8270d", size = 28199, upload-time = "2024-09-25T13:20:22.688Z" },
-]
-
-[[package]]
 name = "aiofiles"
 version = "25.1.0"
 source = { registry = "https://pypi.org/simple" }
@@ -554,7 +545,7 @@ wheels = [
 
 [[package]]
 name = "crackerjack"
-version = "0.48.2"
+version = "0.48.3"
 source = { editable = "." }
 dependencies = [
     { name = "aiofiles" },
@@ -1617,20 +1608,6 @@ wheels = [
 ]
 
 [[package]]
-name = "jinja2-async-environment"
-version = "0.18.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "anyio" },
-    { name = "jinja2" },
-    { name = "redis" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/5d/4d/8c743aec5bccaad5a2c4ec9485f94a4990c316aa6a2fb78a547fbcd6ba16/jinja2_async_environment-0.18.6.tar.gz", hash = "sha256:2127d0070c2b06d609dd6b115196d53086b9d5526ef35806a613be882b0ca3d8", size = 503247, upload-time = "2025-11-27T06:02:30.221Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/4f/82/361b87b586ed6441c6ec437834b18d7fc1dbe451ae12720306af68194160/jinja2_async_environment-0.18.6-py3-none-any.whl", hash = "sha256:1fe705a7b92fc051074570018da6eb91ab85bb20469684a43390782eaabc9b7e", size = 62240, upload-time = "2025-11-27T06:02:31.621Z" },
-]
-
-[[package]]
 name = "jinxed"
 version = "1.3.0"
 source = { registry = "https://pypi.org/simple" }
@@ -1904,20 +1881,6 @@ dependencies = [
     { name = "aiohttp" },
 ]
 sdist = { url = "https://files.pythonhosted.org/packages/59/ea/34da82a2c946699e18275b19a97464046f1193299c42401ae7b088108eed/linkcheckmd-1.4.0.tar.gz", hash = "sha256:3a539c9a4e11697fc7fcc269d379accf93c8cccbf971f3cea0bae40912d9f609", size = 10760, upload-time = "2021-02-28T02:50:22.504Z" }
-
-[[package]]
-name = "logly"
-version = "0.1.6"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/90/f8/b114104ae622b9b973502e743161a2802335fb3af12d14e38d8045f6d230/logly-0.1.6.tar.gz", hash = "sha256:82dbc85b0aa1d82f32d32fffe12f727637bdf67d5d53cf3fa989a51b093d4367", size = 546862, upload-time = "2025-10-11T16:46:50.685Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/f1/e3/4ce60ebee3a34a00deeff00cbb3d3999e7b6f47d0acc4d7ca7d6b18ecf88/logly-0.1.6-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:3c15612a73b73df538f89e101e76815182c01b9b3e2804b5941c6c161664e447", size = 1600768, upload-time = "2025-10-11T16:46:39.262Z" },
-    { url = "https://files.pythonhosted.org/packages/6e/46/c3453bd0d3346c6ecb3f9b549b8afbd7b88eed5d81cc58e254cc07676947/logly-0.1.6-cp313-cp313-manylinux_2_34_x86_64.whl", hash = "sha256:4112a176bff55ae056989274b7a9c42278607b6c750cb38a87bb03a2afef5571", size = 1857990, upload-time = "2025-10-11T16:46:40.769Z" },
-    { url = "https://files.pythonhosted.org/packages/3a/ae/5497dddf142291d31a4291c9c4a36f6e415c9ea6e22eddced0aa7440064f/logly-0.1.6-cp313-cp313-win_amd64.whl", hash = "sha256:109b1080d21ac45fadca5060bbcf60f810345318c95222918ec4ddc4823d2941", size = 1690451, upload-time = "2025-10-11T16:46:42.512Z" },
-    { url = "https://files.pythonhosted.org/packages/da/9c/bf44903b138afc9f3a44122638b229f04f2ccdb5e9d75a79cc71a31367a1/logly-0.1.6-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:9b396331b121e0edadcee96800e4ea062f325a1a8c12608acedfec361847491f", size = 1598959, upload-time = "2025-10-11T16:46:44.454Z" },
-    { url = "https://files.pythonhosted.org/packages/20/91/cb80b3ca0f0ff83c9c13b5eabab78a073cb1e192e54d082edb51363e6b5e/logly-0.1.6-cp314-cp314-manylinux_2_34_x86_64.whl", hash = "sha256:70cb0e50f51c5955c6679303794346c30ee497455a111c15ab077a9519eeb313", size = 1857146, upload-time = "2025-10-11T16:46:46.77Z" },
-    { url = "https://files.pythonhosted.org/packages/5c/6f/d6d4a77e2e48d25cbb0aa4ee6fd3f937b60f90afa3077906acc5360c46b9/logly-0.1.6-cp314-cp314-win_amd64.whl", hash = "sha256:39a2571e834ec6a7e181ff976a697683a962c991cc8705e5787270089faa3eb2", size = 1688812, upload-time = "2025-10-11T16:46:48.744Z" },
-]
 
 [[package]]
 name = "loguru"
@@ -3873,34 +3836,29 @@ wheels = [
 
 [[package]]
 name = "session-buddy"
-version = "0.10.12"
+version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "aiocache" },
+    { name = "aiofiles" },
+    { name = "aiohttp" },
     { name = "crackerjack" },
     { name = "duckdb" },
-    { name = "fastapi" },
-    { name = "httpx" },
-    { name = "jinja2" },
-    { name = "jinja2-async-environment" },
-    { name = "logly" },
-    { name = "mcp-common" },
+    { name = "fastmcp" },
+    { name = "hatchling" },
     { name = "numpy" },
     { name = "oneiric" },
     { name = "onnxruntime" },
     { name = "psutil" },
     { name = "pydantic" },
-    { name = "pydantic-settings" },
     { name = "rich" },
     { name = "structlog" },
     { name = "tiktoken" },
-    { name = "tomli" },
     { name = "transformers" },
     { name = "typer" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/05/a2/85c5636c2b8148c586507b6aca2f4c8661f6543a1760b7fb145c5563c4c8/session_buddy-0.10.12.tar.gz", hash = "sha256:22175b4c1ad6e24168fd803ae2f255d460ebc7d362179ccdd85dda1ee8738b91", size = 2275106, upload-time = "2026-01-08T12:39:31.803Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/1a/39/7d99af52a46d56497c8ffcb54f102032d3cefd7dff862f854d9cb025053a/session_buddy-0.11.0.tar.gz", hash = "sha256:67c38d471e6c6f72d12e71b1fedf068573a91eb23c4a970d1d5650da02770590", size = 2314128, upload-time = "2026-01-19T05:14:00.616Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ee/dc/9e0ba3b93e9cda1cb362362b00936ae6c45dea0022b69b4ec4d508830e41/session_buddy-0.10.12-py3-none-any.whl", hash = "sha256:4625d7f60af914035e3236b287d74e1ffa17e0643100d83c30018ad5f16ca1e8", size = 417161, upload-time = "2026-01-08T12:39:33.996Z" },
+    { url = "https://files.pythonhosted.org/packages/d1/b8/00f0dc998c0d1c433ecb5af22bcc71faea85560ab1eaba97036b862ebe06/session_buddy-0.11.0-py3-none-any.whl", hash = "sha256:4b15b2235447c9fdb91683b1bcfaca8f59a92812e6496488cce3af7a5f7218ae", size = 434481, upload-time = "2026-01-19T05:13:53.051Z" },
 ]
 
 [[package]]

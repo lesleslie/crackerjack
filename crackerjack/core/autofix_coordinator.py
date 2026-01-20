@@ -22,11 +22,13 @@ class AutofixCoordinator:
         console: Console | None = None,
         pkg_path: Path | None = None,
         logger: "LoggerProtocol | None" = None,
+        max_iterations: int | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
 
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
+        self._max_iterations = max_iterations
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
@@ -286,15 +288,21 @@ class AutofixCoordinator:
         return False
 
     def _apply_ai_agent_fixes(self, hook_results: list[object]) -> bool:
+        """
+        Apply AI agent fixes with Ralph-style retry loop.
+
+        Iterates until all issues are fixed or max_iterations is reached.
+        Re-runs quality checks on each iteration to detect new/remaining issues.
+
+        Args:
+            hook_results: Initial hook execution results
+
+        Returns:
+            bool: True if all issues resolved, False otherwise
+        """
         import asyncio
 
-        issues = self._parse_hook_results_to_issues(hook_results)
-
-        if not issues:
-            self.logger.info("No issues found for AI agents to handle")
-            return True
-
-        self.logger.info(f"Parsed {len(issues)} issues for AI agent handling")
+        max_iterations = self._get_max_iterations()
 
         context = AgentContext(
             project_path=self.pkg_path,
@@ -310,32 +318,154 @@ class AutofixCoordinator:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
+        previous_issue_count = float("inf")
+        no_progress_count = 0
+
+        for iteration in range(max_iterations):
+            # Collect and check issues
+            issues = self._get_iteration_issues(iteration, hook_results)
+            current_issue_count = len(issues)
+
+            # Check for success
+            if current_issue_count == 0:
+                self._report_iteration_success(iteration)
+                return True
+
+            # Check convergence
+            if self._should_stop_on_convergence(
+                current_issue_count,
+                previous_issue_count,
+                no_progress_count,
+            ):
+                return False
+
+            # Update progress tracking
+            no_progress_count = self._update_progress_count(
+                current_issue_count,
+                previous_issue_count,
+                no_progress_count,
+            )
+
+            # Report progress
+            self._report_iteration_progress(iteration, max_iterations, current_issue_count)
+
+            # Apply fixes
+            if not self._run_ai_fix_iteration(coordinator, loop, issues):
+                return False
+
+            previous_issue_count = current_issue_count
+
+        # Max iterations reached
+        return self._report_max_iterations_reached(max_iterations)
+
+    def _get_iteration_issues(
+        self,
+        iteration: int,
+        hook_results: list[object],
+    ) -> list[Issue]:
+        """Get issues for current iteration."""
+        if iteration == 0:
+            return self._parse_hook_results_to_issues(hook_results)
+        return self._collect_current_issues()
+
+    def _report_iteration_success(self, iteration: int) -> None:
+        """Report successful resolution of all issues."""
+        self.console.print(
+            f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
+        )
+        self.logger.info(f"All issues resolved in {iteration} iteration(s)")
+
+    def _should_stop_on_convergence(
+        self,
+        current_count: int,
+        previous_count: float,
+        no_progress_count: int,
+    ) -> bool:
+        """Check if we should stop due to lack of progress."""
+        convergence_threshold = self._get_convergence_threshold()
+
+        if current_count >= previous_count:
+            if no_progress_count + 1 >= convergence_threshold:
+                self.console.print(
+                    f"[yellow]⚠ No progress for {convergence_threshold} iterations "
+                    f"({current_count} issues remain)[/yellow]"
+                )
+                self.logger.warning(
+                    f"No progress for {convergence_threshold} iterations, "
+                    f"{current_count} issues remain"
+                )
+                return True
+        return False
+
+    def _update_progress_count(
+        self,
+        current_count: int,
+        previous_count: float,
+        no_progress_count: int,
+    ) -> int:
+        """Update progress tracking count."""
+        if current_count >= previous_count:
+            return no_progress_count + 1
+        return 0  # Reset if making progress
+
+    def _report_iteration_progress(
+        self,
+        iteration: int,
+        max_iterations: int,
+        issue_count: int,
+    ) -> None:
+        """Report progress for current iteration."""
+        self.console.print(
+            f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
+            f"{issue_count} issues to fix[/cyan]"
+        )
+        self.logger.info(
+            f"Iteration {iteration + 1}/{max_iterations}: "
+            f"{issue_count} issues to fix"
+        )
+
+    def _run_ai_fix_iteration(
+        self,
+        coordinator: "AgentCoordinator",
+        loop: "asyncio.AbstractEventLoop",
+        issues: list[Issue],
+    ) -> bool:
+        """
+        Run a single AI fix iteration.
+
+        Returns:
+            bool: True if iteration succeeded, False otherwise
+        """
         try:
             fix_result = loop.run_until_complete(coordinator.handle_issues(issues))
         except Exception:
             self.logger.exception("AI agent handling failed")
             return False
 
-        if fix_result.success:
-            self.logger.info(
-                f"AI agents fixed {len(fix_result.fixes_applied)} issues "
-                f"with confidence {fix_result.confidence:.2f}"
+        if not fix_result.success:
+            self.console.print(
+                "[yellow]⚠ Agents cannot fix remaining issues[/yellow]"
             )
-            for fix in fix_result.fixes_applied:
-                self.logger.info(f"  - {fix}")
-
-            if fix_result.remaining_issues:
-                self.logger.warning(
-                    f"{len(fix_result.remaining_issues)} issues remain: "
-                    f"{fix_result.remaining_issues}"
-                )
-            return True
-        else:
-            self.logger.warning(
-                f"AI agents could not fix all issues. "
-                f"Remaining: {fix_result.remaining_issues}"
-            )
+            self.logger.warning("AI agents cannot fix remaining issues")
             return False
+
+        self.logger.info(
+            f"Fixed {len(fix_result.fixes_applied)} issues "
+            f"with confidence {fix_result.confidence:.2f}"
+        )
+        return True
+
+    def _report_max_iterations_reached(self, max_iterations: int) -> bool:
+        """Report that max iterations were reached."""
+        final_issue_count = len(self._collect_current_issues())
+        self.console.print(
+            f"[yellow]⚠ Reached {max_iterations} iterations with "
+            f"{final_issue_count} issues remaining[/yellow]"
+        )
+        self.logger.warning(
+            f"Reached {max_iterations} iterations with {final_issue_count} issues remaining"
+        )
+        return False
 
     def _parse_hook_results_to_issues(self, hook_results: list[object]) -> list[Issue]:
         issues: list[Issue] = []
@@ -357,6 +487,72 @@ class AutofixCoordinator:
             issues.extend(hook_issues)
 
         return issues
+
+    def _get_max_iterations(self) -> int:
+        """Get maximum AI fix iterations from parameter, environment, or default."""
+        import os
+
+        if self._max_iterations is not None:
+            return self._max_iterations
+
+        return int(os.environ.get("CRACKERJACK_AI_FIX_MAX_ITERATIONS", "5"))
+
+    def _get_convergence_threshold(self) -> int:
+        """Get convergence threshold from environment or default."""
+        import os
+
+        return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
+
+    def _collect_current_issues(self) -> list[Issue]:
+        """
+        Re-run quality checks to collect current issues.
+
+        This method is called on each retry loop iteration to detect:
+        - New issues introduced by AI fixes
+        - Remaining issues that weren't fixed
+        - Issues that changed after fixes
+
+        Returns:
+            list[Issue]: Current issues from quality checks
+        """
+        import subprocess
+
+        self.logger.debug("Collecting current issues by re-running quality checks")
+
+        # Run a subset of fast hooks to detect current issues
+        # We focus on hooks that are most likely to catch issues introduced by AI fixes
+        check_commands = [
+            (["uv", "run", "ruff", "check", "."], "ruff"),
+            (["uv", "run", "ruff", "format", "--check", "."], "ruff-format"),
+        ]
+
+        all_issues: list[Issue] = []
+
+        for cmd, hook_name in check_commands:
+            try:
+                result = subprocess.run(
+                    cmd,
+                    check=False,
+                    cwd=self.pkg_path,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                )
+
+                if result.returncode != 0 or result.stdout:
+                    hook_issues = self._parse_hook_to_issues(
+                        hook_name,
+                        result.stdout + result.stderr,
+                    )
+                    all_issues.extend(hook_issues)
+
+            except subprocess.TimeoutExpired:
+                self.logger.warning(f"Timeout running {hook_name} check")
+            except Exception as e:
+                self.logger.warning(f"Error running {hook_name} check: {e}")
+
+        self.logger.debug(f"Collected {len(all_issues)} current issues")
+        return all_issues
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
         issues: list[Issue] = []

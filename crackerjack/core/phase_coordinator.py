@@ -319,6 +319,7 @@ class PhaseCoordinator:
             autofix_coordinator = AutofixCoordinator(
                 console=self.console,  # type: ignore[arg-type]
                 pkg_path=self.pkg_path,
+                max_iterations=getattr(options, "ai_fix_max_iterations", None),
             )
 
             ai_fix_success = autofix_coordinator.apply_comprehensive_stage_fixes(
