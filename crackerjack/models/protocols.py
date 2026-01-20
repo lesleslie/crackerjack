@@ -66,6 +66,7 @@ class OptionsProtocol(t.Protocol):
     all: t.Any | None
     ai_agent: bool = False
     start_mcp_server: bool = False
+    ai_fix_max_iterations: int = 5
     create_pr: bool = False
     skip_hooks: bool = False
     async_mode: bool = False
