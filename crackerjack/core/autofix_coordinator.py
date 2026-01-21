@@ -638,6 +638,8 @@ class AutofixCoordinator:
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
         issues: list[Issue] = []
 
+        # Map hook names to default issue types
+        # Note: ruff-check dynamically determines type based on error code
         hook_type_map: dict[str, IssueType] = {
             "zuban": IssueType.TYPE_ERROR,
             "refurb": IssueType.COMPLEXITY,
@@ -645,6 +647,7 @@ class AutofixCoordinator:
             "pyright": IssueType.TYPE_ERROR,
             "mypy": IssueType.TYPE_ERROR,
             "ruff": IssueType.FORMATTING,
+            "ruff-check": IssueType.FORMATTING,  # Default, overridden per-error
             "bandit": IssueType.SECURITY,
             "vulture": IssueType.DEAD_CODE,
             "skylos": IssueType.DEAD_CODE,
@@ -660,6 +663,8 @@ class AutofixCoordinator:
             issues.extend(
                 self._parse_type_checker_output(hook_name, raw_output, issue_type)
             )
+        elif hook_name in ("ruff", "ruff-check"):
+            issues.extend(self._parse_ruff_output(raw_output))
         elif hook_name == "refurb":
             issues.extend(self._parse_refurb_output(raw_output, issue_type))
         elif hook_name == "complexipy":
@@ -773,6 +778,82 @@ class AutofixCoordinator:
                     )
 
         return issues
+
+    def _parse_ruff_output(self, raw_output: str) -> list[Issue]:
+        """Parse ruff-check output with intelligent issue type detection.
+
+        Ruff output format: file:line:col: CODE message
+        Example: src/main.py:42:10: C901 `func` is too complex (16 > 15)
+
+        Issue type is determined dynamically based on error code:
+        - C901: COMPLEXITY (requires RefactoringAgent)
+        - E/W codes: FORMATTING
+        - F codes: IMPORT_ERROR or FORMATTING
+        - S codes: SECURITY
+        """
+        import re
+
+        issues: list[Issue] = []
+        # Pattern: file:line:col: CODE message
+        # Handles both ":" and " " after column number
+        pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or line.startswith(("Found", "Checked", "-")):
+                continue
+
+            match = pattern.match(line)
+            if not match:
+                continue
+
+            file_path, line_num, col_num, code, message = match.groups()
+
+            # Determine issue type based on ruff error code
+            issue_type = self._get_ruff_issue_type(code)
+            severity = self._get_ruff_severity(code)
+
+            issues.append(
+                Issue(
+                    type=issue_type,
+                    severity=severity,
+                    message=f"{code} {message}",
+                    file_path=file_path,
+                    line_number=int(line_num),
+                    stage="ruff-check",
+                    details=[f"column: {col_num}", f"code: {code}"],
+                )
+            )
+
+        return issues
+
+    def _get_ruff_issue_type(self, code: str) -> IssueType:
+        """Map ruff error codes to appropriate issue types."""
+        # C9xx: Complexity (McCabe)
+        if code.startswith("C9"):
+            return IssueType.COMPLEXITY
+        # S: Security (bandit-like)
+        if code.startswith("S"):
+            return IssueType.SECURITY
+        # F4xx: Import errors (unused imports, etc.)
+        if code.startswith("F4"):
+            return IssueType.IMPORT_ERROR
+        # F8xx, F9xx: Other flake8 errors
+        if code.startswith("F"):
+            return IssueType.FORMATTING
+        # E, W: Style/formatting
+        return IssueType.FORMATTING
+
+    def _get_ruff_severity(self, code: str) -> Priority:
+        """Map ruff error codes to severity levels."""
+        # Complexity and security are high priority
+        if code.startswith(("C9", "S")):
+            return Priority.HIGH
+        # Import errors are medium
+        if code.startswith("F4"):
+            return Priority.MEDIUM
+        # Style issues are lower priority
+        return Priority.LOW
 
     def _parse_complexity_output(
         self, raw_output: str, issue_type: IssueType
