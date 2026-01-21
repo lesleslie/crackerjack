@@ -4,23 +4,25 @@
 **Status**: ✅ FIXED AND TESTED
 **Severity**: Critical (AI agents giving up on first failure)
 
----
+______________________________________________________________________
 
 ## The User's Report
 
 **Original Output** (before fix):
+
 ```
 → Iteration 1/5: 120 issues to fix
 ⚠️ Agents cannot fix remaining issues
 ```
 
 The user correctly identified:
-1. Only 1 iteration ran instead of multiple
-2. Didn't actually fix anything before erroring
-3. Agents gave up immediately due to "No specialist agents for type_error"
-4. Questioned whether fixed iteration counts are the right approach vs Ralph/Oneiric workflow
 
----
+1. Only 1 iteration ran instead of multiple
+1. Didn't actually fix anything before erroring
+1. Agents gave up immediately due to "No specialist agents for type_error"
+1. Questioned whether fixed iteration counts are the right approach vs Ralph/Oneiric workflow
+
+______________________________________________________________________
 
 ## Root Causes Discovered
 
@@ -29,6 +31,7 @@ The user correctly identified:
 **Problem**: `ISSUE_TYPE_TO_AGENTS` in coordinator.py mapped issue types to agents that **don't actually support those issue types**.
 
 **Evidence**:
+
 ```python
 # In coordinator.py (BEFORE FIX - WRONG)
 IssueType.TYPE_ERROR: ["TestCreationAgent", "RefactoringAgent"]
@@ -50,12 +53,13 @@ def get_supported_types(self) -> set[IssueType]:
 ```
 
 **Impact**: When the coordinator tried to find agents for `TYPE_ERROR` issues:
+
 1. Looked up mapping: `["TestCreationAgent", "RefactoringAgent"]`
-2. Checked if those agents support `TYPE_ERROR` via `get_supported_types()`
-3. **Neither agent supports it!**
-4. Found zero specialist agents
-5. Returned `FixResult(success=False)`
-6. Iteration loop exited immediately
+1. Checked if those agents support `TYPE_ERROR` via `get_supported_types()`
+1. **Neither agent supports it!**
+1. Found zero specialist agents
+1. Returned `FixResult(success=False)`
+1. Iteration loop exited immediately
 
 **Fix**: Updated `ISSUE_TYPE_TO_AGENTS` mapping to match what agents actually support:
 
@@ -81,18 +85,20 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
 ```
 
 **Key Changes**:
+
 - `TYPE_ERROR` now maps to `ArchitectAgent` (which actually supports it)
 - Added `ArchitectAgent` as fallback for most issue types
 - Removed `RefactoringAgent` from `TYPE_ERROR` mapping (it doesn't support it)
 - Removed `TestCreationAgent` from `TYPE_ERROR` mapping (it doesn't support it)
 
----
+______________________________________________________________________
 
 ### Bug #2: All-or-Nothing Iteration Logic (SECONDARY BUG)
 
 **Problem**: The iteration loop exited immediately on **any** failure, even if some issues were successfully fixed.
 
 **Evidence** (in autofix_coordinator.py, lines 463-466, BEFORE FIX):
+
 ```python
 if not fix_result.success:
     self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
@@ -101,15 +107,17 @@ if not fix_result.success:
 ```
 
 And in `FixResult.merge_with` (agents/base.py, line 58):
+
 ```python
 success=self.success and other.success,  # ← ONE failure = ALL fail!
 ```
 
 **Impact**:
+
 1. If **any** issue type can't be fixed, overall `success=False`
-2. Iteration loop exits immediately
-3. Even if 50 issues were fixed, the loop stops if 1 issue can't be fixed
-4. No opportunity to iterate on remaining issues
+1. Iteration loop exits immediately
+1. Even if 50 issues were fixed, the loop stops if 1 issue can't be fixed
+1. No opportunity to iterate on remaining issues
 
 **Fix**: Changed iteration logic to allow partial progress:
 
@@ -148,11 +156,12 @@ return True
 ```
 
 **Key Changes**:
-1. If **any fixes applied** → Continue iterating (return True)
-2. If **no fixes applied AND remaining issues** → Exit (return False)
-3. If **all issues resolved** → Exit with success (return True)
 
----
+1. If **any fixes applied** → Continue iterating (return True)
+1. If **no fixes applied AND remaining issues** → Exit (return False)
+1. If **all issues resolved** → Exit with success (return True)
+
+______________________________________________________________________
 
 ## Technical Deep Dive
 
@@ -181,11 +190,12 @@ After fixing the mapping, here's what each agent actually supports:
 The `ISSUE_TYPE_TO_AGENTS` mapping was likely created based on **assumptions** about what agents should handle, rather than checking what they **actually support** via their `get_supported_types()` methods.
 
 **Prevention Strategy**:
-1. Keep mapping in sync with `get_supported_types()` implementations
-2. Add a validation test that checks mapping accuracy
-3. Consider auto-generating mapping from agent implementations
 
----
+1. Keep mapping in sync with `get_supported_types()` implementations
+1. Add a validation test that checks mapping accuracy
+1. Consider auto-generating mapping from agent implementations
+
+______________________________________________________________________
 
 ## Test Results
 
@@ -195,7 +205,7 @@ The `ISSUE_TYPE_TO_AGENTS` mapping was likely created based on **assumptions** a
    - 28 coordinator tests
 ```
 
----
+______________________________________________________________________
 
 ## Expected Behavior Now
 
@@ -227,17 +237,19 @@ Comprehensive Hook Results:
 ✅ Comprehensive hooks attempt 2: 10/10 passed
 ```
 
----
+______________________________________________________________________
 
 ## Files Modified
 
 1. **`crackerjack/agents/coordinator.py`** (1 change)
+
    - Lines 22-38: Fixed `ISSUE_TYPE_TO_AGENTS` mapping to match actual agent capabilities
 
-2. **`crackerjack/core/autofix_coordinator.py`** (1 change)
+1. **`crackerjack/core/autofix_coordinator.py`** (1 change)
+
    - Lines 463-492: Fixed iteration logic to allow partial progress
 
----
+______________________________________________________________________
 
 ## Oneiric Workflow Consideration
 
@@ -248,16 +260,18 @@ The user asked about using Ralph/Oneiric workflow capabilities instead of fixed 
 - Dependency tracking between tasks
 
 **However**, for the current AI-fix use case, the fixed iteration loop is appropriate because:
+
 1. Each iteration depends on the previous one (need to check if issues are still present)
-2. Convergence detection (stop when no more progress)
-3. Simple and predictable behavior
+1. Convergence detection (stop when no more progress)
+1. Simple and predictable behavior
 
 **Future enhancement**: Consider using Oneiric for more complex scenarios like:
+
 - Parallel fixing of independent issue types
 - Conditional retries based on issue patterns
 - Multi-stage fixing (e.g., fix dependencies first, then type errors)
 
----
+______________________________________________________________________
 
 ## Status Summary
 
