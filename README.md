@@ -243,6 +243,9 @@ python -m crackerjack run -i
 
 ## AI Auto-Fix Features
 
+![AI Agent Orchestration](docs/diagrams/ai-agent-orchestration.png)
+*12 specialized AI agents with confidence-based routing and batch processing*
+
 Crackerjack provides two distinct approaches to automatic error fixing:
 
 ### 1. Hook Auto-Fix Modes (Basic Formatting)
@@ -494,6 +497,9 @@ python -m crackerjack run --run-tests
 - **Git Hook Integration:** Ensures code quality before commits with fast, direct tool execution
 
 ## ⚡ legacy Architecture & Performance
+
+![Oneiric Workflow DAG](docs/diagrams/oneiric-workflow-dag.png)
+*Complete execution pipeline: CLI → Workflow Selection → Fast/Comprehensive Hooks → Tests → AI Batch Fixing*
 
 Crackerjack is built on the **legacy DI framework** framework, providing advanced-grade dependency injection, intelligent caching, and parallel execution.
 
@@ -810,6 +816,9 @@ with suppress(Exception):
 
 ## 🛡️ Advanced-Grade Pattern Management System
 
+![Pattern Management](docs/diagrams/pattern-management.png)
+*Centralized pattern registry with validation, safety limits, and thread-safe caching*
+
 ### Advanced Regex Pattern Validation
 
 Crackerjack includes a revolutionary **centralized regex pattern management system** that eliminates dangerous regex issues through comprehensive validation and safety controls.
@@ -915,6 +924,9 @@ python -m crackerjack run.tools.validate_regex_usage
 This advanced-grade pattern management system has **eliminated all regex-related spacing and security issues** that previously plagued the codebase, providing a robust foundation for safe text processing operations.
 
 ## Adapters
+
+![Adapter Taxonomy](docs/diagrams/adapter-taxonomy.png)
+*18 QA adapters organized by category with protocol-based registration*
 
 Adapters connect Crackerjack to external tools and subsystems (e.g., Ruff, Zuban, Bandit) using legacy patterns. Each adapter exposes typed settings, async initialization, and standardized results.
 
@@ -1091,6 +1103,9 @@ keyring set https://upload.pypi.org/legacy/ __token__
 ```
 
 ## Quality Hook Modes
+
+![Quality Hooks](docs/diagrams/quality-hooks.png)
+*Fast hooks (~5s) and Comprehensive hooks (~30s) with retry logic and AI-fix integration*
 
 Crackerjack runs quality checks in a two-stage process for optimal development workflow:
 
