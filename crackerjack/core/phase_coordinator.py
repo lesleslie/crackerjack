@@ -243,8 +243,28 @@ class PhaseCoordinator:
         self._fast_hooks_started = True
         self.session.track_task("hooks_fast", "Fast quality checks")
 
+        success = self._run_fast_hooks_with_retry(options)
+
+        # Apply AI-fix if fast hooks failed and ai_fix is enabled
+        if not success and getattr(options, "ai_fix", False):
+            success = self._apply_ai_fix_for_fast_hooks(options, success)
+
+        self._complete_fast_hooks_task(success)
+
+        return success
+
+    def _run_fast_hooks_with_retry(self, options: OptionsProtocol) -> bool:
+        """Run fast hooks with retry logic.
+
+        Args:
+            options: Command-line options
+
+        Returns:
+            bool: True if hooks passed, False otherwise
+        """
         max_attempts = 2
         attempt = 0
+        success = False  # Initialize to satisfy type checker
 
         while attempt < max_attempts:
             attempt += 1
@@ -275,6 +295,14 @@ class PhaseCoordinator:
             if attempt < max_attempts:
                 self._display_hook_failures("fast", self._last_hook_results, options)
 
+        return success
+
+    def _complete_fast_hooks_task(self, success: bool) -> None:
+        """Complete the fast hooks task with appropriate status.
+
+        Args:
+            success: Whether hooks passed
+        """
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
 
@@ -285,7 +313,69 @@ class PhaseCoordinator:
 
         self.console.print()
 
-        return success
+    def _apply_ai_fix_for_fast_hooks(
+        self, options: OptionsProtocol, current_success: bool
+    ) -> bool:
+        """Apply AI-fix for fast hook failures.
+
+        Args:
+            options: Command-line options
+            current_success: Current success status of fast hooks
+
+        Returns:
+            bool: Updated success status after AI-fix attempt
+        """
+        self.console.print("\n")
+        self.console.print(
+            "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
+        )
+        self.console.print(make_separator("-") + "\n")
+
+        from crackerjack.core.autofix_coordinator import AutofixCoordinator
+
+        autofix_coordinator = AutofixCoordinator(
+            console=self.console,  # type: ignore[arg-type]
+            pkg_path=self.pkg_path,
+            max_iterations=getattr(options, "ai_fix_max_iterations", None),
+        )
+
+        ai_fix_success = autofix_coordinator.apply_fast_stage_fixes()
+
+        if ai_fix_success:
+            self.console.print(
+                "[green]✅[/green] AI agents applied fixes, retrying fast hooks..."
+            )
+            self.console.print()
+
+            # Retry fast hooks one more time after AI-fix
+            self._display_hook_phase_header(
+                "FAST HOOKS",
+                "Formatters, import sorting, and quick static analysis",
+            )
+
+            success = self._execute_hooks_once(
+                "fast",
+                self.hook_manager.run_fast_hooks,
+                options,
+                attempt=3,  # Third attempt after AI-fix
+            )
+
+            if success:
+                self.console.print(
+                    "[green]✅[/green] Fast hooks passed after AI fixes!"
+                )
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] Fast hooks still failing after AI fixes"
+                )
+            self.console.print()
+            return success
+        else:
+            self.console.print(
+                "[yellow]⚠️[/yellow] AI agents unable to fix fast hook issues"
+            )
+            self.console.print()
+            return current_success
 
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:

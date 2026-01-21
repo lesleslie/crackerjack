@@ -275,10 +275,10 @@ Based on Phase 2-7 refactoring audit (100% legacy-free):
 
 **Workflow Order**:
 
-1. **Fast Tools/Hooks** (~5s): formatting, basic checks → retry once if fail
+1. **Fast Tools/Hooks** (~5s): formatting, basic checks → retry once if fail → **AI-fix if enabled and still failing**
 1. **Full Test Suite**: collect ALL failures, don't stop on first
-1. **Comprehensive Tools/Hooks** (~30s): type checking, security, complexity → collect ALL issues
-1. **AI Batch Fixing**: process all collected failures together
+1. **Comprehensive Tools/Hooks** (~30s): type checking, security, complexity → collect ALL issues → **AI-fix if enabled and failing**
+1. **AI Batch Fixing**: process all collected failures together (up to 10 iterations)
 
 **Testing**: pytest with asyncio, 300s timeout, auto-detected workers via pytest-xdist
 **Coverage**: Ratchet system targeting 100%, never decrease
@@ -430,6 +430,354 @@ from crackerjack.services.regex_patterns import SAFE_PATTERNS
 
 text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 ```
+
+## Working Protocols
+
+### Code Review Protocol
+
+**Purpose**: Ensure systematic, comprehensive review of code changes, PRs, and implementations.
+
+**Protocol Steps**:
+
+1. **READ FULL CONTEXT**
+
+   - Read entire modified files before suggesting changes
+   - Check imports against pyproject.toml dependencies
+   - Verify architectural compliance with protocol-based design
+   - **Verification**: Can you explain what the code does without looking at it again?
+
+1. **VALIDATE ARCHITECTURAL COMPLIANCE**
+
+   - Check imports: `from crackerjack.models.protocols import ...` ✅
+   - Check constructor injection: all dependencies via `__init__`
+   - Check no legacy patterns: no `depends.set()`, no global singletons
+   - **Verification**: Run `grep -n "from crackerjack\." file.py | grep -v protocols` - should return empty
+
+1. **VERIFY DEPENDENCIES**
+
+   - Every new import has corresponding entry in pyproject.toml
+   - Version constraints specified if needed
+   - No undeclared dependencies
+   - **Verification**: `uv pip check` passes without errors
+
+1. **CHECK QUALITY STANDARDS**
+
+   - Complexity ≤15 per function (run `python -m crackerjack run --comprehensive`)
+   - No hardcoded paths or placeholders
+   - Type annotations present
+   - **Verification**: Quality gates pass, no complexity warnings
+
+1. **VALIDATE TESTS**
+
+   - New code has corresponding tests
+   - Coverage not decreased (ratchet system)
+   - Tests use synchronous patterns where possible
+   - **Verification**: `python -m crackerjack run --run-tests` passes
+
+1. **RUN QUALITY GATES**
+
+   - Execute full quality workflow: `python -m crackerjack run --run-tests -c`
+   - Review ALL failures, not just first one
+   - Fix issues before claiming "done"
+   - **Verification**: Exit code 0, no failures
+
+1. **PROVIDE EVIDENCE**
+
+   - Reference specific files and line numbers
+   - Show code snippets for claims
+   - Never guess or assume
+   - **Verification**: Every claim has `[filename]:[line]` evidence
+
+**When to Use This Protocol**:
+
+- ✅ Before suggesting code changes
+- ✅ After implementing features
+- ✅ When reviewing PRs
+- ✅ Before claiming work is "complete"
+- ❌ Not for simple typo fixes or obvious bugs
+
+### Agent Selection Protocol
+
+**Purpose**: Ensure appropriate use of 9 specialized agents for task-specific expertise.
+
+**Key Selection Rules**:
+
+1. **Language-Specific Tasks** → Use language specialists
+
+   - Python → `python-pro`
+   - JavaScript/TypeScript → `javascript-pro`, `typescript-pro`
+   - Go → `golang-pro`
+   - Rust → `rust-pro`
+   - Java → `java-pro`
+   - C/C++ → `c-pro`, `cpp-pro`
+
+1. **Database & Storage** → Use database specialists
+
+   - PostgreSQL → `postgresql-specialist`
+   - MySQL → `mysql-specialist`
+   - SQLite → `sqlite-specialist`
+   - Redis → `redis-specialist`
+   - Vector Search → `vector-database-specialist`
+
+1. **Infrastructure & DevOps** → Use infrastructure specialists
+
+   - Docker → `docker-specialist`
+   - Kubernetes → `kubernetes-specialist`
+   - Terraform → `terraform-specialist`
+   - Monitoring → `observability-incident-lead`
+
+1. **Testing & Quality** → Use quality specialists
+
+   - Code Review → `code-reviewer` or `superpowers:code-reviewer`
+   - pytest → `pytest-hypothesis-specialist`
+   - Test Coverage → `test-coverage-review-specialist`
+
+1. **Security** → Use security specialists
+
+   - Security Audit → `security-auditor`
+   - Authentication → `authentication-specialist`
+   - Critical Audit → `critical-audit-specialist`
+   - Privacy → `privacy-officer`
+
+1. **Architecture & Design** → Use architecture specialists
+
+   - Feature Architecture → `feature-dev:code-architect`
+   - System Architecture → `architecture-council`
+   - Frontend Design → `frontend-developer`
+
+**Usage Protocol**:
+
+```python
+# Correct pattern - specific specialist
+Task(
+    subagent_type="python-pro",
+    prompt="Review this Python code for security issues"
+)
+
+# WRONG - generalist for specialist task
+Task(
+    subagent_type="general-assistant",
+    prompt="Review this Python code for security issues"
+)
+```
+
+**Workflows vs Agents**:
+
+- Complex multi-phase task → Use workflows (check `/workflows:WORKFLOW-CATALOG`)
+- Feature delivery → `feature-dev:feature-dev`
+- PR review → `pr-review-toolkit:review-pr`
+- Architecture planning → `Plan` agent (not Task)
+
+**Common Anti-Patterns**:
+
+- ❌ Using `general-assistant` for specialized tasks
+- ❌ Using `python-pro` for Rust code
+- ❌ Not using agents at all ("I'll just do it myself")
+- ❌ Using `code-reviewer` for implementation (use `feature-dev` instead)
+
+### Evidence Protocol
+
+**Purpose**: Ensure all claims, assertions, and responses are backed by specific, verifiable code evidence.
+
+**Format 1: Implementation Status**
+
+*When user asks "Is X implemented?"*
+
+````markdown
+Looking at [filename] (lines [start]-[end]):
+
+```python
+[code snippet]
+````
+
+[Explanation of what this shows]
+
+````
+
+**Format 2: Code Review Findings**
+
+*When identifying issues or violations*
+
+```markdown
+**Issue**: [Brief description]
+**Location**: [filename]:[line]
+**Evidence**:
+```python
+[problematic code]
+````
+
+**Impact**: [What problem this causes]
+**Fix**: [Specific fix]
+
+````
+
+**Format 3: Verification Claims**
+
+*When claiming something is "fixed" or "done"*
+
+```markdown
+**Verification**: [what was verified]
+**Method**: [how verification was performed]
+**Evidence**: [output, logs, or test results]
+**Status**: ✅ Verified / ❌ Failed
+````
+
+**Mandatory Evidence For**:
+
+- ✅ Implementation status claims
+- ✅ Architecture compliance assertions
+- ✅ Bug fix verification
+- ✅ Performance improvements
+- ✅ Security assessments
+- ✅ Test coverage changes
+
+**No Evidence Required For**:
+
+- ❌ Straightforward questions
+- ❌ Opinion-based requests
+- ❌ Documentation/explanation requests (unless citing specific behavior)
+
+### Architecture Compliance Protocol
+
+**Purpose**: Systematic verification that code follows crackerjack's protocol-based architecture.
+
+**Compliance Checklist**:
+
+1. **Import Compliance**
+
+   - All imports use protocols from `models/protocols.py`
+   - No direct class imports from other crackerjack modules
+   - Verification: `grep -r "from crackerjack" crackerjack/ --include="*.py" | grep -v protocols | grep -v __pycache__` should return empty
+
+1. **Constructor Injection**
+
+   - All dependencies injected via `__init__`
+   - No factory functions like `get_test_manager()`
+   - No module-level singletons
+   - Verification: Search for `get_.*()` patterns in `__init__` methods
+
+1. **Protocol Definitions**
+
+   - Custom types defined as protocols in `models/protocols.py`
+   - All protocol methods have type annotations
+   - `@runtime_checkable` decorator if using `isinstance()`
+
+1. **Lifecycle Management**
+
+   - No global state
+   - Proper cleanup patterns (context managers or explicit teardown)
+   - Resource management handled correctly
+
+1. **No Legacy Patterns**
+
+   - No `depends.set()` patterns
+   - No DI container usage
+   - No `@inject` decorators from old framework
+   - Verification: `grep -r "depends\." crackerjack/ --include="*.py"` should return empty
+
+**Non-Compliance Response**:
+
+When architecture violations are found:
+
+1. Document the issue with specific location and evidence
+1. Explain why it matters (impact on architecture, testing, maintenance)
+1. Provide correct pattern example
+1. Offer to refactor
+
+**Integration with Quality Gates**:
+
+- Automated checks: `python -m crackerjack run -c` (import verification, complexity, type checking)
+- Manual checks: Constructor injection, protocol definitions, lifecycle management
+- Protocol: Always run automated checks BEFORE claiming architectural compliance
+
+### Quality Decision Framework: "Fix Now or Later?"
+
+**Purpose**: Unified decision framework for when to fix issues immediately vs. defer them, preventing both technical debt accumulation and premature optimization.
+
+**Quick Decision Matrix**:
+
+| Issue Type | Not Touching Code | Touching Right Now | Action |
+|------------|-------------------|-------------------|--------|
+| Quality gates/tests failing | → | → | **FIX NOW** (Blocker) |
+| Complexity >15 | File issue | → | **FIX NOW** (While-Here) |
+| Known bottleneck (has evidence) | → | → | **FIX NOW** (Critical) |
+| "Could be better" (no evidence) | → | → | **DEFER** (YAGNI) |
+
+**Fix Now Categories**:
+
+1. **Blockers** (Never proceed without fixing)
+
+   - ✅ Test failures → Fix before adding features
+   - ✅ Complexity >15 → Refactor immediately
+   - ✅ Coverage decrease → Restore baseline first
+   - ✅ Quality gate failures → Fix ALL failures
+   - ✅ Architecture violations → Protocol-based design compliance
+   - ✅ Security issues → Fix immediately, never defer
+   - **Verification**: `python -m crackerjack run --run-tests -c` passes
+
+1. **While-Here Fixes** (Fix when touching code)
+
+   - ✅ Nearby complexity issues (you're already there)
+   - ✅ Improve readability while you understand the code
+   - ✅ Add missing tests for code you're modifying
+   - ✅ Update outdated comments/documentation
+   - ✅ Fix architectural violations in the same file
+   - **Protocol**: "I'm already touching this code, fix nearby issues too"
+
+1. **Critical Issues** (Fix even if not touching)
+
+   - ✅ Confirmed performance bottlenecks (requires profiling evidence)
+   - ✅ Security vulnerabilities (CVE reports, security audits)
+   - ✅ Data loss risks, race conditions, memory leaks
+   - **Evidence Required**: Document impact with metrics/data before treating as critical
+
+**Defer Categories**:
+
+1. **Performance Optimizations** (Without evidence)
+
+   - ❌ "This function looks slow" (no measurements)
+   - ❌ "I'll cache this result" (no evidence it's called frequently)
+   - **Protocol**: Profile first, confirm bottleneck, then optimize
+
+1. **Nice-to-Have Refactoring** (Not touching code)
+
+   - ❌ "This function could be more elegant" (but works fine)
+   - ❌ "I prefer a different pattern" (personal preference)
+   - **Protocol**: File issue for future consideration
+
+1. **Speculative Improvements** (YAGNI violations)
+
+   - ❌ "Let's add this parameter in case we need it"
+   - ❌ "I'll make this flexible for future use cases"
+   - **Protocol**: "You Aren't Gonna Need It" - wait for actual requirement
+
+**Protocol Checklist**:
+
+```markdown
+[ ] Does it break quality gates or tests?
+    → YES: Fix now (Blocker)
+
+[ ] Am I already touching this code right now?
+    → YES: Fix now (While-Here)
+
+[ ] Is there profiling/evidence it's a critical bottleneck?
+    → YES: Fix now (Critical), document evidence
+
+[ ] Is it just "could be better" without evidence?
+    → YES: Defer/Ignore (YAGNI/KISS)
+
+[ ] Have I run quality gates after my fixes?
+    → Verification: python -m crackerjack run --run-tests -c
+```
+
+**Anti-Patterns to Avoid**:
+
+- ❌ "I'll fix it later" (for blockers) → Compound failures
+- ❌ Premature optimization → No measurements, unnecessary complexity
+- ❌ Refactoring spree → Rewriting working code without understanding
+- ❌ "While I'm here" trap → Came for typo, stayed for 4 hours refactoring
+
+**Key Insight**: Fix what's broken, what you're touching, or what's proven critical. Defer everything else.
 
 ## Common Issues & Solutions
 
