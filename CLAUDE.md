@@ -12,6 +12,141 @@ Crackerjack is an opinionated Python project management tool unifying UV, Ruff, 
 
 **Clean Code Philosophy**: DRY/YAGNI/KISS - Every line is a liability. Optimize for readability with self-documenting code.
 
+______________________________________________________________________
+
+## Timeless Software Engineering Wisdom
+
+### The Zen of Python (PEP 20)
+
+Crackerjack embodies these principles:
+
+> Beautiful is better than ugly.
+> Explicit is better than implicit.
+> Simple is better than complex.
+> Complex is better than complicated.
+> Flat is better than nested.
+> Sparse is better than dense.
+> Readability counts.
+> Special cases aren't special enough to break the rules.
+> Although practicality beats purity.
+> Errors should never pass silently.
+> Unless explicitly silenced.
+> In the face of ambiguity, refuse the temptation to guess.
+> There should be one-- and preferably only one --obvious way to do it.
+> Now is better than never.
+
+*See: `python -c "import this"` or PEP 20 for the complete Zen of Python.*
+
+### The Unix Philosophy (Ken Thompson, Dennis Ritchie, 1978)
+
+> Write programs that do one thing and do it well. Write programs to work together. Write programs to handle text streams, because that is a universal interface.
+
+**Embodied in Crackerjack**:
+
+- 83 specialized agents, each doing one thing excellently
+- Modular hooks that work together via orchestration
+- Protocol-based design enables components to work together seamlessly
+
+### The Two Hard Problems (Phil Karlton, 1997)
+
+> There are only two hard things in Computer Science: cache invalidation and naming things.
+
+**Why Naming Matters**:
+
+- "Readability counts" from Zen of Python
+- Self-documenting code requires good names
+- Protocols and interfaces are all about clear naming
+
+### Knuth's Optimization Rule (Donald Knuth, 1974)
+
+> Premature optimization is the root of all evil.
+
+**Full Context**:
+
+> Programmers waste enormous amounts of time thinking about, or worrying about, the speed of noncritical parts of their programs, and these attempts at efficiency actually have a strong negative impact when debugging and maintenance are considered.
+
+**In Practice**:
+
+- Profile first, confirm bottleneck, then optimize
+- "Could be faster" is NOT a valid reason without evidence
+- See: Quality Decision Framework - "Fix Now or Later?"
+
+### Postel's Law (Jon Postel, 1984)
+
+> Be conservative in what you send, be liberal in what you accept.
+
+**Protocol-Based Design**:
+
+- Strict output contracts: protocols define exactly what to send
+- Flexible input handling: accept various compatible types
+- Robustness through clear boundaries
+
+### The Pragmatic Programmer: No Broken Windows (Andrew Hunt, David Thomas, 1999)
+
+> Don't leave "broken windows" (bad designs, wrong decisions, or poor code) unrepaired. Fix each one as soon as it's discovered.
+
+**In Crackerjack**:
+
+- "Fix failures FIRST" before adding features
+- "Complexity >15" must be fixed immediately
+- Quality gates catch issues early
+
+### Hyrum's Law (Hyrum Wright)
+
+> With a sufficient number of users of an API, it does not matter what you promise in the contract: all observable behaviors of your system will be depended on by somebody.
+
+**Implication**:
+
+- Breaking changes are dangerous even if "technically allowed"
+- Validates "NEVER MAKE UNAUTHORIZED CHANGES" rule
+- Observable behavior = part of the contract
+
+### Occam's Razor (William of Ockham, 14th Century)
+
+> Entities should not be multiplied beyond necessity.
+
+**Software Version**: KISS (Keep It Simple, Stupid)
+
+- Prefer simple solutions over clever ones
+- YAGNI: You Aren't Gonna Need It
+- Every line of code is a liability
+
+### The Tao of Programming (Geoffrey James, 1987)
+
+> A program should be light and agile, its subroutines connected like a string of pearls. The spirit and intent of the program should be retained throughout. There should be neither too little nor too much, neither needless loops nor useless variables, neither lack of structure nor overwhelming rigidity.
+
+**Modern Translation**:
+
+- Modular architecture with clear intent
+- No dead code, no complexity bloat
+- Flexible structure, not rigid hierarchies
+
+### Murphy's Law for Software (Edward Murphy, 1949)
+
+> Anything that can go wrong will go wrong.
+
+**Corollary**: Never test for an error condition you don't know how to handle.
+
+**In Crackerjack**:
+
+- Comprehensive error handling in quality tools
+- AI agents attempt fixes before giving up
+- Failing fast with clear error messages
+
+### Hanlon's Razor (Robert Hanlon)
+
+> Never attribute to malice that which is adequately explained by stupidity.
+
+**Software Version**: Never attribute to malice that which is adequately explained by a misunderstanding of the requirements.
+
+**Practice**:
+
+- Ask questions when requirements are unclear
+- Don't assume users are trying to trick you
+- "NO ASSUMPTIONS OR GUESSING" rule
+
+______________________________________________________________________
+
 ## CRITICAL SECURITY & QUALITY RULES
 
 ### 1. NEVER MAKE UNAUTHORIZED CHANGES
