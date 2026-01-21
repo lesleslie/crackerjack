@@ -339,7 +339,9 @@ class PhaseCoordinator:
             max_iterations=getattr(options, "ai_fix_max_iterations", None),
         )
 
-        ai_fix_success = autofix_coordinator.apply_fast_stage_fixes()
+        ai_fix_success = autofix_coordinator.apply_fast_stage_fixes(
+            hook_results=self._last_hook_results
+        )
 
         if ai_fix_success:
             self.console.print(

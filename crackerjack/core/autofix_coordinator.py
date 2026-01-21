@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import subprocess
+from collections.abc import Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -46,10 +47,12 @@ class AutofixCoordinator:
             self.logger.exception("Error applying autofix")
             return False
 
-    def apply_fast_stage_fixes(self) -> bool:
-        return self._apply_fast_stage_fixes()
+    def apply_fast_stage_fixes(
+        self, hook_results: Sequence[object] | None = None
+    ) -> bool:
+        return self._apply_fast_stage_fixes(hook_results)
 
-    def apply_comprehensive_stage_fixes(self, hook_results: list[object]) -> bool:
+    def apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
         return self._apply_comprehensive_stage_fixes(hook_results)
 
     def run_fix_command(self, cmd: list[str], description: str) -> bool:
@@ -64,13 +67,32 @@ class AutofixCoordinator:
     def validate_hook_result(self, result: object) -> bool:
         return self._validate_hook_result(result)
 
-    def should_skip_autofix(self, hook_results: list[object]) -> bool:
+    def should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
         return self._should_skip_autofix(hook_results)
 
-    def _apply_fast_stage_fixes(self) -> bool:
+    def _apply_fast_stage_fixes(
+        self, hook_results: Sequence[object] | None = None
+    ) -> bool:
+        """Apply fast stage fixes using AI agent retry loop if enabled.
+
+        Args:
+            hook_results: Optional hook execution results for AI agent analysis
+
+        Returns:
+            bool: True if all fixes applied successfully, False otherwise
+        """
+        ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
+
+        if ai_agent_enabled and hook_results is not None:
+            self.logger.info(
+                "AI agent mode enabled for fast stage, attempting AI-based fixing"
+            )
+            return self._apply_ai_agent_fixes(hook_results)
+
+        # Fallback to simple ruff fixes
         return self._execute_fast_fixes()
 
-    def _apply_comprehensive_stage_fixes(self, hook_results: list[object]) -> bool:
+    def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled:
@@ -93,7 +115,7 @@ class AutofixCoordinator:
 
         return all_successful
 
-    def _extract_failed_hooks(self, hook_results: list[object]) -> set[str]:
+    def _extract_failed_hooks(self, hook_results: Sequence[object]) -> set[str]:
         failed_hooks = set()
         for result in hook_results:
             if (
@@ -274,7 +296,7 @@ class AutofixCoordinator:
         valid_statuses = ["Passed", "Failed", "Skipped", "Error"]
         return status in valid_statuses
 
-    def _should_skip_autofix(self, hook_results: list[object]) -> bool:
+    def _should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
         for result in hook_results:
             raw_output = getattr(result, "raw_output", None)
             if raw_output:
@@ -288,7 +310,7 @@ class AutofixCoordinator:
                     return True
         return False
 
-    def _apply_ai_agent_fixes(self, hook_results: list[object]) -> bool:
+    def _apply_ai_agent_fixes(self, hook_results: Sequence[object]) -> bool:
         """
         Apply AI agent fixes with Ralph-style retry loop.
 
@@ -364,7 +386,7 @@ class AutofixCoordinator:
     def _get_iteration_issues(
         self,
         iteration: int,
-        hook_results: list[object],
+        hook_results: Sequence[object],
     ) -> list[Issue]:
         """Get issues for current iteration."""
         if iteration == 0:
@@ -467,7 +489,9 @@ class AutofixCoordinator:
         )
         return False
 
-    def _parse_hook_results_to_issues(self, hook_results: list[object]) -> list[Issue]:
+    def _parse_hook_results_to_issues(
+        self, hook_results: Sequence[object]
+    ) -> list[Issue]:
         issues: list[Issue] = []
 
         for result in hook_results:

@@ -54,6 +54,9 @@ crackerjack-ai-debug-*.log
 /.benchmarks/
 /tests/.benchmarks/
 
+# Tool caches and databases
+.skylos/
+
 # Adapter output files (centralized in .crackerjack/outputs/)
 # Note: Individual adapters may create timestamped results
 .crackerjack/outputs/
