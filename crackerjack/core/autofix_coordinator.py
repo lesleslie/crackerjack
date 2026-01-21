@@ -339,8 +339,25 @@ class AutofixCoordinator:
             current_issue_count = len(issues)
 
             if current_issue_count == 0:
-                self._report_iteration_success(iteration)
-                return True
+                # Verify this isn't a false positive from failed issue collection
+                if iteration > 0:  # Only verify after at least one fix attempt
+                    self.logger.debug("Verifying issue resolution...")
+                    verification_issues = self._collect_current_issues()
+                    if verification_issues:
+                        self.logger.warning(
+                            f"False positive detected: {len(verification_issues)} issues remain"
+                        )
+                        # Update issues to actual remaining issues
+                        issues = verification_issues
+                        current_issue_count = len(issues)
+                        # Continue to next iteration instead of returning success
+                    else:
+                        self._report_iteration_success(iteration)
+                        return True
+                else:
+                    # First iteration with zero issues - genuinely nothing to fix
+                    self._report_iteration_success(iteration)
+                    return True
 
             if self._should_stop_on_convergence(
                 current_issue_count,
@@ -469,7 +486,12 @@ class AutofixCoordinator:
             self.logger.info(
                 f"Fixed {fixes_count} issues with confidence {fix_result.confidence:.2f}"
             )
-            if remaining_count > 0:
+            # CRITICAL FIX: Only return True if ALL issues are fixed
+            if remaining_count == 0:
+                self.logger.info("All issues fixed")
+                return True
+            else:
+                # Partial progress - continue to next iteration
                 self.console.print(
                     f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
                     f"{remaining_count} issues remain[/yellow]"
@@ -478,7 +500,8 @@ class AutofixCoordinator:
                     f"Partial progress: {fixes_count} fixes applied, "
                     f"{remaining_count} issues remain"
                 )
-            return True
+                # Return False to continue fixing
+                return False
 
         # No fixes applied - check if there are remaining issues
         if not fix_result.success and remaining_count > 0:
@@ -486,11 +509,18 @@ class AutofixCoordinator:
             self.logger.warning("AI agents cannot fix remaining issues")
             return False
 
-        # All issues resolved
-        self.logger.info(
-            f"All {fixes_count} issues fixed with confidence {fix_result.confidence:.2f}"
+        # All issues resolved (no fixes needed or all fixes successful with no remaining)
+        if remaining_count == 0:
+            self.logger.info(
+                f"All {fixes_count} issues fixed with confidence {fix_result.confidence:.2f}"
+            )
+            return True
+
+        # Edge case: fixes_count == 0 but remaining_count > 0
+        self.logger.warning(
+            f"No fixes applied but {remaining_count} issues remain - agents unable to fix"
         )
-        return True
+        return False
 
     def _report_max_iterations_reached(self, max_iterations: int) -> bool:
         final_issue_count = len(self._collect_current_issues())
@@ -513,8 +543,28 @@ class AutofixCoordinator:
             hook_issues = self._parse_single_hook_result(result)
             issues.extend(hook_issues)
 
-        self.logger.info(f"Total issues extracted from all hooks: {len(issues)}")
-        return issues
+        # Deduplicate issues by (file_path, line_number, message)
+        seen = set()
+        unique_issues = []
+        for issue in issues:
+            # Create a key that uniquely identifies an issue
+            key = (
+                issue.file_path,
+                issue.line_number,
+                issue.message[:100],  # Truncate long messages for key
+            )
+            if key not in seen:
+                seen.add(key)
+                unique_issues.append(issue)
+
+        if len(issues) != len(unique_issues):
+            self.logger.info(
+                f"Deduplicated issues: {len(issues)} raw -> {len(unique_issues)} unique"
+            )
+        else:
+            self.logger.info(f"Total issues extracted from all hooks: {len(unique_issues)}")
+
+        return unique_issues
 
     def _parse_single_hook_result(self, result: object) -> list[Issue]:
         if not self._validate_hook_result(result):
@@ -576,6 +626,21 @@ class AutofixCoordinator:
 
         pkg_name = self.pkg_path.name
 
+        # Detect package directory - try common layouts
+        pkg_dirs = [
+            self.pkg_path / pkg_name,  # crackerjack/crackerjack
+            self.pkg_path,  # crackerjack
+        ]
+        pkg_dir = None
+        for d in pkg_dirs:
+            if d.exists() and d.is_dir():
+                pkg_dir = d
+                break
+
+        if not pkg_dir:
+            self.logger.warning(f"Cannot find package directory, using {self.pkg_path}")
+            pkg_dir = self.pkg_path
+
         check_commands = [
             (["uv", "run", "ruff", "check", "."], "ruff", 60),
             (["uv", "run", "ruff", "format", "--check", "."], "ruff-format", 60),
@@ -588,7 +653,7 @@ class AutofixCoordinator:
                     "--config-file",
                     "mypy.ini",
                     "--no-error-summary",
-                    f"./{pkg_name}",
+                    str(pkg_dir),
                 ],
                 "zuban",
                 120,
@@ -608,6 +673,7 @@ class AutofixCoordinator:
         ]
 
         all_issues: list[Issue] = []
+        successful_checks = 0
 
         for cmd, hook_name, timeout in check_commands:
             try:
@@ -620,19 +686,41 @@ class AutofixCoordinator:
                     timeout=timeout,
                 )
 
+                # Verify command actually ran
+                if result.returncode is None:
+                    self.logger.error(f"Command {hook_name} did not execute properly")
+                    continue
+
+                # Parse output if command failed or produced output
                 if result.returncode != 0 or result.stdout:
                     hook_issues = self._parse_hook_to_issues(
                         hook_name,
                         result.stdout + result.stderr,
                     )
-                    all_issues.extend(hook_issues)
+                    if hook_issues:
+                        all_issues.extend(hook_issues)
+                        self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
+                        successful_checks += 1
+                    else:
+                        self.logger.debug(f"{hook_name}: No issues parsed from output")
 
             except subprocess.TimeoutExpired:
                 self.logger.warning(f"Timeout running {hook_name} check")
+            except FileNotFoundError as e:
+                self.logger.error(f"Command not found for {hook_name}: {e}")
             except Exception as e:
-                self.logger.warning(f"Error running {hook_name} check: {e}")
+                self.logger.error(f"Error running {hook_name} check: {e}")
 
-        self.logger.debug(f"Collected {len(all_issues)} current issues")
+        # Warn if issue collection may have failed
+        if successful_checks == 0 and self.pkg_path.exists():
+            self.logger.warning(
+                "No issues collected from any checks - commands may have failed. "
+                "This could indicate a problem with the issue collection process."
+            )
+
+        self.logger.debug(
+            f"Collected {len(all_issues)} current issues (from {successful_checks} successful checks)"
+        )
         return all_issues
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
@@ -702,9 +790,16 @@ class AutofixCoordinator:
             return False
         # Skip summary lines and contextual note/help lines (zuban, mypy, pyright)
         # Note lines have format: file:line: note: message (with leading space after colon)
-        if ": note:" in line.lower() or ": help:" in line.lower():
+        line_lower = line.lower()
+        if any(pattern in line_lower for pattern in [": note:", ": help:", "note: ", "help: "]):
             return False
-        return not line.startswith(("Found", "Checked"))
+        # Skip summary lines
+        if line.startswith(("Found", "Checked", "N errors found", "errors in")):
+            return False
+        # Skip subsection headers
+        if line.strip().startswith(("===", "---", "Errors:")):
+            return False
+        return True
 
     def _parse_type_checker_line(
         self,
