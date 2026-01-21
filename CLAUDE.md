@@ -260,6 +260,9 @@ python -m crackerjack run-tests --workers 4  # With explicit workers
 
 **Modular Oneiric Architecture**: `__main__.py` → CLI Handlers → Coordinators → Managers → Services
 
+![Layered Architecture](docs/diagrams/layered-architecture.png)
+*8-layer modular architecture with 100% protocol compliance*
+
 ### Critical Architectural Pattern: Protocol-Based Design
 
 Crackerjack uses **protocol-based dependency injection** with constructor injection:
@@ -633,6 +636,9 @@ text = SAFE_PATTERNS["fix_hyphenated_names"].apply(text)
 
 ### Agent Selection Protocol
 
+![Agent Selection](docs/diagrams/agent-selection.png)
+*Task-based routing to specialized agents by domain*
+
 **Purpose**: Ensure appropriate use of 9 specialized agents for task-specific expertise.
 
 **Key Selection Rules**:
@@ -826,6 +832,9 @@ When architecture violations are found:
 - Protocol: Always run automated checks BEFORE claiming architectural compliance
 
 ### Quality Decision Framework: "Fix Now or Later?"
+
+![Decision Framework](docs/diagrams/decision-framework.png)
+*Decision tree for when to fix issues immediately vs. defer*
 
 **Purpose**: Unified decision framework for when to fix issues immediately vs. defer them, preventing both technical debt accumulation and premature optimization.
 
