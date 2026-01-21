@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 import subprocess
@@ -347,7 +348,9 @@ class AutofixCoordinator:
             )
 
             # Report progress
-            self._report_iteration_progress(iteration, max_iterations, current_issue_count)
+            self._report_iteration_progress(
+                iteration, max_iterations, current_issue_count
+            )
 
             # Apply fixes
             if not self._run_ai_fix_iteration(coordinator, loop, issues):
@@ -420,8 +423,7 @@ class AutofixCoordinator:
             f"{issue_count} issues to fix[/cyan]"
         )
         self.logger.info(
-            f"Iteration {iteration + 1}/{max_iterations}: "
-            f"{issue_count} issues to fix"
+            f"Iteration {iteration + 1}/{max_iterations}: {issue_count} issues to fix"
         )
 
     def _run_ai_fix_iteration(
@@ -443,9 +445,7 @@ class AutofixCoordinator:
             return False
 
         if not fix_result.success:
-            self.console.print(
-                "[yellow]⚠ Agents cannot fix remaining issues[/yellow]"
-            )
+            self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
             return False
 
