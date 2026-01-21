@@ -4,15 +4,15 @@
 **Status**: Analysis Complete, Fixes Pending
 **Priority**: HIGH
 
----
+______________________________________________________________________
 
 ## Problem Description
 
 The AI agent autofix system has three critical bugs:
 
 1. **Issue Miscounting**: Reports "225 issues to fix" when actual count is 189 (167+18+3+1)
-2. **False Success**: Claims "All issues resolved in 1 iteration!" when same 189 errors persist
-3. **Failed Fixes**: AI agents claim success but no actual fixes are applied
+1. **False Success**: Claims "All issues resolved in 1 iteration!" when same 189 errors persist
+1. **Failed Fixes**: AI agents claim success but no actual fixes are applied
 
 ### Example from session-buddy run:
 
@@ -28,7 +28,7 @@ The AI agent autofix system has three critical bugs:
 - refurb :: FAILED | issues=1
 ```
 
----
+______________________________________________________________________
 
 ## Root Cause Analysis
 
@@ -37,6 +37,7 @@ The AI agent autofix system has three critical bugs:
 **Location**: `crackerjack/core/autofix_coordinator.py:_parse_hook_results_to_issues()`
 
 **Problem**:
+
 - `_parse_hook_results_to_issues()` creates Issue objects from hook output
 - For zuban/mypy output, each line becomes an Issue object
 - Multi-line errors (error line + note lines) may be counted multiple times
@@ -48,6 +49,7 @@ The AI agent autofix system has three critical bugs:
   This creates 2 Issue objects instead of 1
 
 **Evidence**:
+
 - Line 506-517: Parses all hook results and extends issues list
 - Line 681-698: `_parse_type_checker_output()` processes each line separately
 - Line 705-706: Only filters out "note" and "help" lines, but some slip through
@@ -57,6 +59,7 @@ The AI agent autofix system has three critical bugs:
 **Location**: `crackerjack/core/autofix_coordinator.py:_apply_ai_agent_fixes()`
 
 **Problem**:
+
 - Line 341-343: Reports "All issues resolved" when `current_issue_count == 0`
 - This triggers when `_collect_current_issues()` returns empty list
 - `_collect_current_issues()` (line 572-636) runs hardcoded check commands that may fail silently:
@@ -65,6 +68,7 @@ The AI agent autofix system has three critical bugs:
   - If all commands fail, returns empty issues list → False success!
 
 **Evidence**:
+
 - User's console shows same 189 errors before and after "fix"
 - Success message printed immediately after iteration 1
 - No actual code changes occurred
@@ -74,6 +78,7 @@ The AI agent autofix system has three critical bugs:
 **Location**: `crackerjack/core/autofix_coordinator.py:_run_ai_fix_iteration()`
 
 **Problem**:
+
 - Line 464-493: Checks `fixes_count > 0` to determine if fixes were applied
 - Line 484-493: If `not fix_result.success and remaining_count > 0`, warns and returns False
 - **BUT**: If `fix_result.success=True` with `remaining_count > 0`, returns True anyway!
@@ -85,11 +90,12 @@ The AI agent autofix system has three critical bugs:
 - If some agents can't fix issues but others succeed, overall success=True with remaining_issues
 
 **Evidence**:
+
 - "All issues resolved" printed but errors persist
 - No git changes, no file modifications
 - AI agents likely can't handle session-buddy specific issues
 
----
+______________________________________________________________________
 
 ## Implementation Plan
 
@@ -100,6 +106,7 @@ The AI agent autofix system has three critical bugs:
 **Changes**:
 
 1. **Deduplicate issues by location** (Line 506-517):
+
    ```python
    def _parse_hook_results_to_issues(self, hook_results: Sequence[object]) -> list[Issue]:
        issues: list[Issue] = []
@@ -118,7 +125,8 @@ The AI agent autofix system has three critical bugs:
        return unique_issues
    ```
 
-2. **Better multi-line error handling** (Line 700-707):
+1. **Better multi-line error handling** (Line 700-707):
+
    ```python
    def _should_parse_line(self, line: str) -> bool:
        if not line:
@@ -139,6 +147,7 @@ The AI agent autofix system has three critical bugs:
 **Changes**:
 
 1. **Validate issue collection success** (Line 572-636):
+
    ```python
    def _collect_current_issues(self) -> list[Issue]:
        all_issues: list[Issue] = []
@@ -175,7 +184,8 @@ The AI agent autofix system has three critical bugs:
        return all_issues
    ```
 
-2. **Verify actual fixes were applied** (Line 341-343):
+1. **Verify actual fixes were applied** (Line 341-343):
+
    ```python
    # BEFORE:
    if current_issue_count == 0:
@@ -208,6 +218,7 @@ The AI agent autofix system has three critical bugs:
 **Changes**:
 
 1. **Require remaining_count == 0 for success** (Line 489-493):
+
    ```python
    # BEFORE:
    if fixes_count > 0:
@@ -235,7 +246,8 @@ The AI agent autofix system has three critical bugs:
            return False  # CHANGED: Continue fixing
    ```
 
-2. **Add validation step after each iteration** (Line 362-365):
+1. **Add validation step after each iteration** (Line 362-365):
+
    ```python
    if not self._run_ai_fix_iteration(coordinator, loop, issues):
        # NEW: Verify this isn't a recoverable failure
@@ -256,6 +268,7 @@ The AI agent autofix system has three critical bugs:
 **Changes**:
 
 1. **Dynamic path detection** (Line 577):
+
    ```python
    # BEFORE:
    pkg_name = self.pkg_path.name
@@ -280,7 +293,8 @@ The AI agent autofix system has three critical bugs:
    cmd = ["uv", "run", "zuban", "mypy", "--config-file", "mypy.ini", str(pkg_dir)]
    ```
 
-2. **Add fallback collection** (Line 632):
+1. **Add fallback collection** (Line 632):
+
    ```python
    # NEW: If all commands fail, try parsing hook results
    if not all_issues:
@@ -291,35 +305,39 @@ The AI agent autofix system has three critical bugs:
    return all_issues
    ```
 
----
+______________________________________________________________________
 
 ## Testing Plan
 
 1. **Unit Tests**:
+
    - Test issue parsing with various tool outputs
    - Test deduplication logic
    - Test success detection with various FixResult scenarios
 
-2. **Integration Tests**:
+1. **Integration Tests**:
+
    - Run autofix on known issues
    - Verify issue count accuracy
    - Verify no false success claims
 
-3. **Manual Testing**:
+1. **Manual Testing**:
+
    - Run on session-buddy with AI fix enabled
    - Verify actual issues match reported count
    - Verify fixes are actually applied
 
----
+______________________________________________________________________
 
 ## Rollback Plan
 
 If fixes cause regressions:
-1. Revert specific changes via git
-2. Keep improved logging for debugging
-3. File follow-up issues for remaining problems
 
----
+1. Revert specific changes via git
+1. Keep improved logging for debugging
+1. File follow-up issues for remaining problems
+
+______________________________________________________________________
 
 ## Success Criteria
 
@@ -327,4 +345,3 @@ If fixes cause regressions:
 ✅ No false success claims when issues persist
 ✅ AI agents either apply actual fixes or accurately report failure
 ✅ Console output reflects reality
-

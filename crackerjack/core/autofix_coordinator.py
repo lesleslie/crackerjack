@@ -2,17 +2,20 @@ import asyncio
 import logging
 import os
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 from rich.console import Console
 
 if TYPE_CHECKING:
-    from crackerjack.models.protocols import LoggerProtocol
+    from crackerjack.agents.coordinator import AgentCoordinator
+    from crackerjack.models.protocols import (
+        AgentCoordinatorProtocol,
+        LoggerProtocol,
+    )
 
 from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-from crackerjack.agents.coordinator import AgentCoordinator
 from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
@@ -25,12 +28,17 @@ class AutofixCoordinator:
         pkg_path: Path | None = None,
         logger: "LoggerProtocol | None" = None,
         max_iterations: int | None = None,
+        coordinator_factory: Callable[
+            [AgentContext, CrackerjackCache], "AgentCoordinatorProtocol"
+        ]
+        | None = None,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
 
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
+        self._coordinator_factory = coordinator_factory
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
@@ -107,20 +115,22 @@ class AutofixCoordinator:
         return all_successful
 
     def _extract_failed_hooks(self, hook_results: Sequence[object]) -> set[str]:
-        failed_hooks = set()
+        failed_hooks: set[str] = set()
         for result in hook_results:
             if (
                 self._validate_hook_result(result)
                 and getattr(result, "status", "").lower() == "failed"
             ):
-                failed_hooks.add(getattr(result, "name", ""))
+                name = getattr(result, "name", "")
+                if isinstance(name, str):
+                    failed_hooks.add(name)
         return failed_hooks
 
     def _get_hook_specific_fixes(
         self,
         failed_hooks: set[str],
     ) -> list[tuple[list[str], str]]:
-        fixes = []
+        fixes: list[tuple[list[str], str]] = []
 
         if "bandit" in failed_hooks:
             fixes.append((["uv", "run", "bandit", "-r", "."], "bandit analysis"))
@@ -284,8 +294,9 @@ class AutofixCoordinator:
         if not status or not isinstance(status, str):
             return False
 
-        valid_statuses = ["passed", "failed", "skipped", "error", "timeout"]
-        return status in valid_statuses
+        # Case-insensitive validation to support both "Passed" and "passed"
+        valid_statuses = {"passed", "failed", "skipped", "error", "timeout"}
+        return status.lower() in valid_statuses
 
     def _should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
         for result in hook_results:
@@ -313,23 +324,23 @@ class AutofixCoordinator:
         return "importerror" in output_lower or "modulenotfounderror" in output_lower
 
     def _apply_ai_agent_fixes(self, hook_results: Sequence[object]) -> bool:
-        import asyncio
-
         max_iterations = self._get_max_iterations()
 
+        # Create context and cache
         context = AgentContext(
             project_path=self.pkg_path,
             subprocess_timeout=300,
         )
-
         cache = CrackerjackCache()
-        coordinator = AgentCoordinator(context=context, cache=cache)
 
-        try:
-            loop = asyncio.get_event_loop()
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # Use injected coordinator factory or fall back to direct instantiation
+        if self._coordinator_factory is not None:
+            coordinator = self._coordinator_factory(context, cache)
+        else:
+            # Fallback for backward compatibility
+            from crackerjack.agents.coordinator import AgentCoordinator
+
+            coordinator = AgentCoordinator(context=context, cache=cache)
 
         previous_issue_count = float("inf")
         no_progress_count = 0
@@ -338,27 +349,13 @@ class AutofixCoordinator:
             issues = self._get_iteration_issues(iteration, hook_results)
             current_issue_count = len(issues)
 
+            # Handle case when no issues are found
             if current_issue_count == 0:
-                # Verify this isn't a false positive from failed issue collection
-                if iteration > 0:  # Only verify after at least one fix attempt
-                    self.logger.debug("Verifying issue resolution...")
-                    verification_issues = self._collect_current_issues()
-                    if verification_issues:
-                        self.logger.warning(
-                            f"False positive detected: {len(verification_issues)} issues remain"
-                        )
-                        # Update issues to actual remaining issues
-                        issues = verification_issues
-                        current_issue_count = len(issues)
-                        # Continue to next iteration instead of returning success
-                    else:
-                        self._report_iteration_success(iteration)
-                        return True
-                else:
-                    # First iteration with zero issues - genuinely nothing to fix
-                    self._report_iteration_success(iteration)
-                    return True
+                result = self._handle_zero_issues_case(iteration)
+                if result is not None:  # If result is not None, we should return
+                    return result
 
+            # Check if we should stop due to convergence
             if self._should_stop_on_convergence(
                 current_issue_count,
                 previous_issue_count,
@@ -376,12 +373,32 @@ class AutofixCoordinator:
                 iteration, max_iterations, current_issue_count
             )
 
-            if not self._run_ai_fix_iteration(coordinator, loop, issues):
+            if not self._run_ai_fix_iteration(coordinator, issues):
                 return False
 
             previous_issue_count = current_issue_count
 
         return self._report_max_iterations_reached(max_iterations)
+
+    def _handle_zero_issues_case(self, iteration: int) -> bool | None:
+        """Handle the case when no issues are found during an iteration."""
+        # Verify this isn't a false positive from failed issue collection
+        if iteration > 0:  # Only verify after at least one fix attempt
+            self.logger.debug("Verifying issue resolution...")
+            verification_issues = self._collect_current_issues()
+            if verification_issues:
+                self.logger.warning(
+                    f"False positive detected: {len(verification_issues)} issues remain"
+                )
+                # Returning None means continue to next iteration instead of returning success
+                return None
+            else:
+                self._report_iteration_success(iteration)
+                return True
+        else:
+            # First iteration with zero issues - genuinely nothing to fix
+            self._report_iteration_success(iteration)
+            return True
 
     def _get_iteration_issues(
         self,
@@ -445,34 +462,14 @@ class AutofixCoordinator:
 
     def _run_ai_fix_iteration(
         self,
-        coordinator: "AgentCoordinator",
-        loop: "asyncio.AbstractEventLoop",
+        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> bool:
+        """Run a single AI fix iteration using asyncio.run()."""
         try:
-            coro = coordinator.handle_issues(issues)
-
-            # Check if there's already a running event loop
-            try:
-                asyncio.get_running_loop()  # noqa: F841 (only checking if loop exists)
-                # There's already a running loop, run in a thread-safe way
-                import concurrent.futures
-
-                def run_in_new_loop():
-                    new_loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(new_loop)
-                    try:
-                        return new_loop.run_until_complete(coro)
-                    finally:
-                        new_loop.close()
-
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(run_in_new_loop)
-                    fix_result = future.result(timeout=300)
-
-            except RuntimeError:
-                # No running loop, use asyncio.run() which creates a new loop
-                fix_result = asyncio.run(coro)
+            # Use asyncio.run() - Python 3.11+ best practice
+            # Creates new event loop, handles cleanup automatically
+            fix_result = asyncio.run(coordinator.handle_issues(issues))
 
         except Exception:
             self.logger.exception("AI agent handling failed")
@@ -544,8 +541,8 @@ class AutofixCoordinator:
             issues.extend(hook_issues)
 
         # Deduplicate issues by (file_path, line_number, message)
-        seen = set()
-        unique_issues = []
+        seen: set[tuple[str | None, int | None, str]] = set()
+        unique_issues: list[Issue] = []
         for issue in issues:
             # Create a key that uniquely identifies an issue
             key = (
@@ -562,7 +559,9 @@ class AutofixCoordinator:
                 f"Deduplicated issues: {len(issues)} raw -> {len(unique_issues)} unique"
             )
         else:
-            self.logger.info(f"Total issues extracted from all hooks: {len(unique_issues)}")
+            self.logger.info(
+                f"Total issues extracted from all hooks: {len(unique_issues)}"
+            )
 
         return unique_issues
 
@@ -607,41 +606,57 @@ class AutofixCoordinator:
         )
 
     def _get_max_iterations(self) -> int:
-        import os
-
         if self._max_iterations is not None:
             return self._max_iterations
 
         return int(os.environ.get("CRACKERJACK_AI_FIX_MAX_ITERATIONS", "5"))
 
     def _get_convergence_threshold(self) -> int:
-        import os
-
         return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
 
     def _collect_current_issues(self) -> list[Issue]:
-        import subprocess
+        """Collect current issues by re-running quality checks."""
+        pkg_dir = self._detect_package_directory()
+        check_commands = self._build_check_commands(pkg_dir)
+        all_issues, successful_checks = self._execute_check_commands(check_commands)
 
-        self.logger.debug("Collecting current issues by re-running quality checks")
+        # Warn if issue collection may have failed
+        if successful_checks == 0 and self.pkg_path.exists():
+            self.logger.warning(
+                "No issues collected from any checks - commands may have failed. "
+                "This could indicate a problem with the issue collection process."
+            )
 
+        self.logger.debug(
+            f"Collected {len(all_issues)} current issues (from {successful_checks} successful checks)"
+        )
+        return all_issues
+
+    def _detect_package_directory(self) -> Path:
+        """Detect package directory from common project layouts."""
         pkg_name = self.pkg_path.name
 
-        # Detect package directory - try common layouts
+        # Try common layouts
         pkg_dirs = [
             self.pkg_path / pkg_name,  # crackerjack/crackerjack
-            self.pkg_path,  # crackerjack
+            self.pkg_path / "src" / pkg_name,  # src/crackerjack
+            self.pkg_path / "src",  # src/ layout
+            self.pkg_path,  # flat layout
         ]
-        pkg_dir = None
+
         for d in pkg_dirs:
             if d.exists() and d.is_dir():
-                pkg_dir = d
-                break
+                return d
 
-        if not pkg_dir:
-            self.logger.warning(f"Cannot find package directory, using {self.pkg_path}")
-            pkg_dir = self.pkg_path
+        # Fallback to pkg_path if none found
+        self.logger.warning(f"Cannot find package directory, using {self.pkg_path}")
+        return self.pkg_path
 
-        check_commands = [
+    def _build_check_commands(self, pkg_dir: Path) -> list[tuple[list[str], str, int]]:
+        """Build list of quality check commands to run."""
+        pkg_name = self.pkg_path.name
+
+        return [
             (["uv", "run", "ruff", "check", "."], "ruff", 60),
             (["uv", "run", "ruff", "format", "--check", "."], "ruff-format", 60),
             (
@@ -667,11 +682,15 @@ class AutofixCoordinator:
                     "15",
                     pkg_name,
                 ],
-                "complexipy",
+                "complexity",
                 60,
             ),
         ]
 
+    def _execute_check_commands(
+        self, check_commands: list[tuple[list[str], str, int]]
+    ) -> tuple[list[Issue], int]:
+        """Execute quality check commands and collect issues."""
         all_issues: list[Issue] = []
         successful_checks = 0
 
@@ -686,10 +705,8 @@ class AutofixCoordinator:
                     timeout=timeout,
                 )
 
-                # Verify command actually ran
-                if result.returncode is None:
-                    self.logger.error(f"Command {hook_name} did not execute properly")
-                    continue
+                # Command executed successfully
+                successful_checks += 1
 
                 # Parse output if command failed or produced output
                 if result.returncode != 0 or result.stdout:
@@ -700,9 +717,6 @@ class AutofixCoordinator:
                     if hook_issues:
                         all_issues.extend(hook_issues)
                         self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
-                        successful_checks += 1
-                    else:
-                        self.logger.debug(f"{hook_name}: No issues parsed from output")
 
             except subprocess.TimeoutExpired:
                 self.logger.warning(f"Timeout running {hook_name} check")
@@ -711,17 +725,7 @@ class AutofixCoordinator:
             except Exception as e:
                 self.logger.error(f"Error running {hook_name} check: {e}")
 
-        # Warn if issue collection may have failed
-        if successful_checks == 0 and self.pkg_path.exists():
-            self.logger.warning(
-                "No issues collected from any checks - commands may have failed. "
-                "This could indicate a problem with the issue collection process."
-            )
-
-        self.logger.debug(
-            f"Collected {len(all_issues)} current issues (from {successful_checks} successful checks)"
-        )
-        return all_issues
+        return all_issues, successful_checks
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
         issues: list[Issue] = []
@@ -791,7 +795,10 @@ class AutofixCoordinator:
         # Skip summary lines and contextual note/help lines (zuban, mypy, pyright)
         # Note lines have format: file:line: note: message (with leading space after colon)
         line_lower = line.lower()
-        if any(pattern in line_lower for pattern in [": note:", ": help:", "note: ", "help: "]):
+        if any(
+            pattern in line_lower
+            for pattern in (": note:", ": help:", "note: ", "help: ")
+        ):
             return False
         # Skip summary lines
         if line.startswith(("Found", "Checked", "N errors found", "errors in")):
