@@ -70,7 +70,6 @@ console = Console()
 def version_option(
     version: bool = typer.Option(False, "--version", help="Show version and exit"),
 ) -> None:
-    """Show crackerjack version and exit."""
     if version:
         console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
         raise typer.Exit(0)

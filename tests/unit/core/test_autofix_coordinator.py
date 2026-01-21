@@ -198,7 +198,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_no_errors(self, coordinator) -> None:
         """Test should not skip when no import errors."""
         result1 = Mock()
-        result1.raw_output = "Everything is fine"
+        result1.output = "Everything is fine"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -207,7 +209,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_import_error(self, coordinator) -> None:
         """Test should skip when ImportError present."""
         result1 = Mock()
-        result1.raw_output = "ImportError: cannot import name 'foo'"
+        result1.output = "ImportError: cannot import name 'foo'"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -216,7 +220,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_module_not_found_error(self, coordinator) -> None:
         """Test should skip when ModuleNotFoundError present."""
         result1 = Mock()
-        result1.raw_output = "ModuleNotFoundError: No module named 'bar'"
+        result1.output = "ModuleNotFoundError: No module named 'bar'"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -225,16 +231,20 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_case_insensitive(self, coordinator) -> None:
         """Test skip detection is case-insensitive."""
         result1 = Mock()
-        result1.raw_output = "IMPORTERROR: Cannot import"
+        result1.output = "IMPORTERROR: Cannot import"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
         assert should_skip is True
 
-    def test_should_skip_autofix_no_raw_output(self, coordinator) -> None:
-        """Test should not skip when no raw_output."""
+    def test_should_skip_autofix_no_output(self, coordinator) -> None:
+        """Test should not skip when no output."""
         result1 = Mock()
-        result1.raw_output = None
+        result1.output = None
+        result1.error = None
+        result1.error_message = None
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -596,8 +606,15 @@ class TestAutofixCoordinatorApplyFixes:
 
     def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
         """Test applying autofix in comprehensive mode."""
-        # Create hook result without raw_output to avoid triggering skip logic
-        hook_results = [Mock(name="hook1", status="Failed", raw_output=None)]
+        # Create hook result without import errors to avoid triggering skip logic
+        hook_result = Mock()
+        hook_result.name = "hook1"
+        hook_result.status = "Failed"
+        hook_result.output = "Some error"
+        hook_result.error = ""
+        hook_result.error_message = ""
+
+        hook_results = [hook_result]
 
         with patch.object(coordinator, "_apply_comprehensive_stage_fixes") as mock_comp:
             mock_comp.return_value = True
@@ -616,7 +633,9 @@ class TestAutofixCoordinatorApplyFixes:
     def test_apply_autofix_for_hooks_should_skip(self, coordinator) -> None:
         """Test autofix skipped when should_skip is True."""
         result1 = Mock()
-        result1.raw_output = "ImportError: cannot import"
+        result1.output = "ImportError: cannot import"
+        result1.error = ""
+        result1.error_message = ""
 
         result = coordinator.apply_autofix_for_hooks("fast", [result1])
 

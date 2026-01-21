@@ -1,5 +1,20 @@
 from typing import Any
 
+# Import all agent modules to trigger agent_registry.register() calls
+# These imports populate the agent registry so agents can be created
+from . import (
+    architect_agent,
+    documentation_agent,
+    dry_agent,
+    formatting_agent,
+    import_optimization_agent,
+    performance_agent,
+    refactoring_agent,
+    security_agent,
+    semantic_agent,
+    test_creation_agent,
+    test_specialist_agent,
+)
 from .base import AgentContext, FixResult, Issue, IssueType, Priority, SubAgent
 from .coordinator import AgentCoordinator
 from .error_middleware import agent_error_boundary

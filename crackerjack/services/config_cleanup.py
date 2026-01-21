@@ -396,7 +396,6 @@ class ConfigCleanupService:
         config_files: list[Path],
         dry_run: bool,
     ) -> tuple[int, dict[str, str]]:
-        """Merge all config files into pyproject.toml."""
         pyproject_config = self._load_pyproject_config()
         if pyproject_config is None:
             return 0, {}
@@ -411,7 +410,6 @@ class ConfigCleanupService:
         return merged_count, merged_files
 
     def _load_pyproject_config(self) -> dict[str, t.Any] | None:
-        """Load pyproject.toml configuration."""
         pyproject_path = self.pkg_path / "pyproject.toml"
 
         try:
@@ -427,7 +425,6 @@ class ConfigCleanupService:
         pyproject_config: dict[str, t.Any],
         dry_run: bool,
     ) -> tuple[int, dict[str, str]]:
-        """Merge all config files into pyproject_config."""
         merged_count = 0
         merged_files: dict[str, str] = {}
 
@@ -449,7 +446,6 @@ class ConfigCleanupService:
         return merged_count, merged_files
 
     def _handle_dry_run_merge(self, filename: str, strategy: MergeStrategy) -> None:
-        """Handle dry-run merge by printing what would be merged."""
         self.console.print(
             f"[yellow]Would merge:[/yellow] {filename} → [{strategy.target_section}]"
         )
@@ -460,7 +456,6 @@ class ConfigCleanupService:
         strategy: MergeStrategy,
         pyproject_config: dict[str, t.Any],
     ) -> bool:
-        """Merge a single config file into pyproject_config."""
         try:
             pyproject_config = self._apply_merge_strategy(
                 config_file, pyproject_config, strategy
@@ -483,7 +478,6 @@ class ConfigCleanupService:
         pyproject_config: dict[str, t.Any],
         strategy: MergeStrategy,
     ) -> dict[str, t.Any]:
-        """Apply the appropriate merge strategy for a config file."""
         merge_methods = {
             "ini_flatten": self._merge_ini_file,
             "pattern_union": self._merge_pattern_file,
@@ -498,7 +492,6 @@ class ConfigCleanupService:
         return pyproject_config
 
     def _write_pyproject_config(self, pyproject_config: dict[str, t.Any]) -> None:
-        """Write merged pyproject_config back to pyproject.toml."""
         pyproject_path = self.pkg_path / "pyproject.toml"
 
         try:
@@ -598,7 +591,6 @@ class ConfigCleanupService:
         pyproject_config: dict,
         target_section: str,
     ) -> dict:
-        """Merge JSON file into pyproject_config using deep merge strategy."""
         with json_file.open() as f:
             json_config = json.load(f)
 
@@ -610,7 +602,6 @@ class ConfigCleanupService:
         return pyproject_config
 
     def _get_target_section(self, config: dict, section_path: str) -> dict:
-        """Navigate to target section, creating intermediate dicts as needed."""
         section_parts = section_path.split(".")
         current_section = config
 
@@ -626,7 +617,6 @@ class ConfigCleanupService:
         return current_section[final_section]
 
     def _merge_json_value(self, target_dict: dict, key: str, value: t.Any) -> None:
-        """Merge a single JSON value into target dict."""
         if key not in target_dict:
             target_dict[key] = value
         elif isinstance(value, list) and isinstance(target_dict[key], list):
@@ -635,12 +625,10 @@ class ConfigCleanupService:
             self._merge_json_dicts(target_dict, key, value)
 
     def _merge_json_lists(self, target_dict: dict, key: str, value: list) -> None:
-        """Merge two lists by taking union of unique values."""
         merged = list(set(target_dict[key] + value))
         target_dict[key] = merged
 
     def _merge_json_dicts(self, target_dict: dict, key: str, value: dict) -> None:
-        """Merge two dicts by adding missing keys from value into target."""
         for subkey, subvalue in value.items():
             if subkey not in target_dict[key]:
                 target_dict[key][subkey] = subvalue
