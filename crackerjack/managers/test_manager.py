@@ -148,7 +148,6 @@ class TestManager:
             self.console.print("[yellow]⚠️[/yellow] Coverage ratchet disabled")
 
     def run_tests(self, options: OptionsProtocol) -> bool:
-        """Run test suite based on options (pytest and/or xcode)."""
         run_pytest = bool(getattr(options, "test", False) or getattr(options, "run_tests", False))
         run_xcode = bool(getattr(options, "xcode_tests", False))
 
@@ -171,7 +170,6 @@ class TestManager:
         options: OptionsProtocol,
         start_time: float,
     ) -> bool:
-        """Run pytest tests if requested, returning success status."""
         if not run_pytest:
             return True
 
@@ -194,7 +192,6 @@ class TestManager:
         run_xcode: bool,
         options: OptionsProtocol,
     ) -> bool:
-        """Run xcode tests if requested, returning success status."""
         if not run_xcode:
             return True
         return self._execute_xcode_tests(options)

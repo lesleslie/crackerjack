@@ -54,7 +54,7 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=["CVE-2025-53000"],  # Default ignored vulnerabilities
+                ignore_vulns=["CVE-2025-53000"],
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -170,7 +170,6 @@ class PipAuditAdapter(BaseToolAdapter):
             for vuln in dependency.get("vulns", []):
                 vuln_id = vuln.get("id", "unknown")
 
-                # Skip vulnerabilities that are in the ignore list
                 if self.settings and vuln_id in self.settings.ignore_vulns:
                     logger.debug(
                         "Ignoring vulnerability",

@@ -365,21 +365,8 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
 
 def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
-    """Register CLAUDE.md validation tool for AI agents."""
-
     @mcp_app.tool()
     async def validate_claude_md(args: str = "", kwargs: str = "{}") -> str:
-        """
-        Validate CLAUDE.md contains current crackerjack standards.
-
-        Usage:
-            validate_claude_md()                    # Check compliance only
-            validate_claude_md("--update")          # Update if needed
-            validate_claude_md("", '{"update": true}')  # Update via kwargs
-
-        Returns:
-            Validation results with suggested updates or confirmation of update.
-        """
         context = get_context()
         if not context:
             return _create_error_response("Server context not available")
@@ -388,7 +375,6 @@ def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
         if parse_error:
             return _create_error_response(parse_error)
 
-        # Parse arguments
         update_if_needed = "--update" in args or extra_kwargs.get("update", False)
         project_path_str = extra_kwargs.get("project_path", "")
         project_path = Path(project_path_str) if project_path_str else Path.cwd()
@@ -396,7 +382,6 @@ def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
         try:
             validation_result = _perform_claude_md_validation(project_path)
 
-            # If validation fails and update requested, attempt update
             if not validation_result["valid"] and update_if_needed:
                 update_result = _update_claude_md_if_needed(
                     project_path,
@@ -421,7 +406,6 @@ def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
 
 
 def _check_claude_md_missing(file_path: Path) -> dict[str, t.Any] | None:
-    """Check if CLAUDE.md file exists."""
     if file_path.exists():
         return None
     return {
@@ -437,7 +421,6 @@ def _check_claude_md_missing(file_path: Path) -> dict[str, t.Any] | None:
 def _check_integration_markers(
     content: str, file_path: Path
 ) -> tuple[list[str], list[str]]:
-    """Check for crackerjack integration markers."""
     issues = []
     suggestions = []
     crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
@@ -455,7 +438,6 @@ def _check_integration_markers(
 def _check_quality_principles(
     crackerjack_section: str,
 ) -> tuple[list[str], list[str]]:
-    """Check for essential quality principles in crackerjack section."""
     issues = []
     suggestions = []
     essential_principles = [
@@ -482,7 +464,6 @@ def _check_quality_principles(
 
 
 def _extract_crackerjack_section(content: str) -> str | None:
-    """Extract crackerjack integration section from content."""
     crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
     crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
 
@@ -495,25 +476,20 @@ def _extract_crackerjack_section(content: str) -> str | None:
 
 
 def _perform_claude_md_validation(project_path: Path) -> dict[str, t.Any]:
-    """Perform CLAUDE.md validation checks."""
     claude_md = project_path / "CLAUDE.md"
 
-    # Check if file exists
     missing_result = _check_claude_md_missing(claude_md)
     if missing_result is not None:
         return missing_result
 
-    # Read and validate content
     content = claude_md.read_text()
     issues = []
     suggestions = []
 
-    # Check for integration markers
     marker_issues, marker_suggestions = _check_integration_markers(content, claude_md)
     issues.extend(marker_issues)
     suggestions.extend(marker_suggestions)
 
-    # If markers present, validate principles
     if not marker_issues:
         crackerjack_section = _extract_crackerjack_section(content)
         if crackerjack_section:
@@ -535,7 +511,6 @@ def _update_claude_md_if_needed(
     project_path: Path,
     context: t.Any,
 ) -> dict[str, t.Any]:
-    """Update CLAUDE.md with current crackerjack standards."""
     try:
         from crackerjack.services.initialization import InitializationService
 
@@ -543,7 +518,6 @@ def _update_claude_md_if_needed(
             console=context.console if hasattr(context, "console") else None,
         )
 
-        # Run init with force to update CLAUDE.md
         result = init_service.initialize_project_full(
             target_path=project_path,
             force=True,

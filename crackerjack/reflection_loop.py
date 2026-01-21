@@ -1,16 +1,3 @@
-"""Reflection Loop for Pattern Capture and Learning.
-
-This module implements the Reflection Loop pattern from awesome-agentic-patterns,
-capturing successful patterns from commits and feeding them back into the system
-for continuous improvement.
-
-The reflection loop analyzes commit outcomes to:
-1. Capture successful resolution patterns
-2. Identify failure patterns and anti-patterns
-3. Generate improvement suggestions
-4. Update agent knowledge bases
-"""
-
 from __future__ import annotations
 
 import json
@@ -22,8 +9,6 @@ from typing import Any
 
 @dataclass
 class CommitResult:
-    """Result of a commit attempt."""
-
     success: bool
     quality_metrics: dict[str, float]
     problem_context: dict[str, Any]
@@ -33,42 +18,28 @@ class CommitResult:
 
 @dataclass
 class Pattern:
-    """A captured solution or anti-pattern."""
-
-    pattern_type: str  # 'solution', 'workaround', 'optimization', 'anti_pattern'
-    category: str  # 'security', 'performance', 'testing', 'documentation'
+    pattern_type: str
+    category: str
     context: dict[str, Any]
     solution: dict[str, Any] | None
-    outcome_score: float  # 0.0-1.0
+    outcome_score: float
     created_at: datetime = field(default_factory=datetime.now)
     last_applied: datetime | None = None
     application_count: int = 0
-    feedback_score: float = 0.0  # Updated based on user feedback
+    feedback_score: float = 0.0
 
 
 class ReflectionLoop:
-    """Captures learnings from commits and improves future outcomes.
-
-    The reflection loop analyzes each commit to extract reusable patterns
-    that can be applied to similar situations in the future.
-    """
-
     def __init__(self, storage_path: str | Path = ".crackerjack/patterns.json"):
-        """Initialize the reflection loop.
-
-        Args:
-            storage_path: Path to pattern storage file
-        """
         self.storage_path = Path(storage_path)
         self.patterns: list[Pattern] = []
-        # Create parent directory and initialize storage file
+
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.storage_path.exists():
-            self._save_patterns()  # Create initial file with empty patterns
+            self._save_patterns()
         self._load_patterns()
 
     def _load_patterns(self) -> None:
-        """Load patterns from storage."""
         if self.storage_path.exists():
             try:
                 data = json.loads(self.storage_path.read_text())
@@ -92,7 +63,6 @@ class ReflectionLoop:
                 print(f"Warning: Could not load patterns: {e}")
 
     def _save_patterns(self) -> None:
-        """Save patterns to storage."""
         self.storage_path.parent.mkdir(parents=True, exist_ok=True)
         data = {
             "patterns": [
@@ -115,11 +85,6 @@ class ReflectionLoop:
         self.storage_path.write_text(json.dumps(data, indent=2))
 
     def analyze_commit(self, result: CommitResult) -> None:
-        """Analyze commit result and capture patterns.
-
-        Args:
-            result: The commit result to analyze
-        """
         if result.success:
             self._capture_success_pattern(result)
         else:
@@ -128,11 +93,6 @@ class ReflectionLoop:
         self._save_patterns()
 
     def _capture_success_pattern(self, result: CommitResult) -> None:
-        """Capture successful resolution pattern.
-
-        Args:
-            result: Successful commit result
-        """
         pattern = Pattern(
             pattern_type="solution",
             category=self._infer_category(result),
@@ -149,11 +109,6 @@ class ReflectionLoop:
         print(f"✓ Captured successful pattern: {pattern.category}")
 
     def _capture_failure_pattern(self, result: CommitResult) -> None:
-        """Capture failure pattern for learning.
-
-        Args:
-            result: Failed commit result
-        """
         pattern = Pattern(
             pattern_type="anti_pattern",
             category=self._infer_category(result),
@@ -162,7 +117,7 @@ class ReflectionLoop:
                 "error_message": result.error_message,
                 "quality_metrics": result.quality_metrics,
             },
-            solution=None,  # No solution since it failed
+            solution=None,
             outcome_score=0.0,
         )
 
@@ -175,17 +130,6 @@ class ReflectionLoop:
         threshold: float = 0.75,
         limit: int = 5,
     ) -> list[Pattern]:
-        """Find patterns similar to current context.
-
-        Args:
-            current_context: Current problem context
-            threshold: Similarity threshold (0.0-1.0)
-            limit: Maximum number of patterns to return
-
-        Returns:
-            List of similar patterns, ranked by outcome score
-        """
-        # Simple keyword-based similarity (in production, use embeddings)
         similar_patterns = []
 
         for pattern in self.patterns:
@@ -193,7 +137,6 @@ class ReflectionLoop:
             if similarity >= threshold:
                 similar_patterns.append((similarity, pattern))
 
-        # Sort by similarity, then by outcome score
         similar_patterns.sort(key=lambda x: (x[0], x[1].outcome_score), reverse=True)
 
         return [pattern for _, pattern in similar_patterns[:limit]]
@@ -201,19 +144,11 @@ class ReflectionLoop:
     def apply_pattern(
         self, pattern_id: int, outcome: str, feedback: str | None = None
     ) -> None:
-        """Record pattern application outcome.
-
-        Args:
-            pattern_id: Index of pattern that was applied
-            outcome: Application outcome ('success', 'partial', 'failure')
-            feedback: Optional user feedback
-        """
         if 0 <= pattern_id < len(self.patterns):
             pattern = self.patterns[pattern_id]
             pattern.last_applied = datetime.now()
             pattern.application_count += 1
 
-            # Update feedback score based on outcome
             if outcome == "success":
                 pattern.feedback_score = min(1.0, pattern.feedback_score + 0.1)
             elif outcome == "failure":
@@ -223,15 +158,6 @@ class ReflectionLoop:
             print(f"✓ Recorded pattern application: {outcome}")
 
     def _infer_category(self, result: CommitResult) -> str:
-        """Infer pattern category from result.
-
-        Args:
-            result: Commit result
-
-        Returns:
-            Category string
-        """
-        # Check quality metrics for category hints
         if result.quality_metrics.get("security_score", 1.0) < 0.8:
             return "security"
         if result.quality_metrics.get("performance_score", 1.0) < 0.8:
@@ -243,15 +169,6 @@ class ReflectionLoop:
         return "general"
 
     def _calculate_outcome_score(self, result: CommitResult) -> float:
-        """Calculate overall outcome score from commit result.
-
-        Args:
-            result: Commit result
-
-        Returns:
-            Score between 0.0 and 1.0
-        """
-        # Average of all quality metrics
         metrics = [
             result.quality_metrics.get("security_score", 1.0),
             result.quality_metrics.get("performance_score", 1.0),
@@ -263,16 +180,6 @@ class ReflectionLoop:
     def _calculate_similarity(
         self, context1: dict[str, Any], context2: dict[str, Any]
     ) -> float:
-        """Calculate similarity between two contexts.
-
-        Args:
-            context1: First context
-            context2: Second context
-
-        Returns:
-            Similarity score between 0.0 and 1.0
-        """
-        # Simple keyword matching (in production, use semantic similarity)
         keys1 = set(context1.keys())
         keys2 = set(context2.keys())
 
@@ -285,26 +192,16 @@ class ReflectionLoop:
         return len(intersection) / len(union) if union else 0.0
 
     def generate_improvements(self, recent_results: list[CommitResult]) -> list[str]:
-        """Generate improvement suggestions from recent results.
-
-        Args:
-            recent_results: List of recent commit results
-
-        Returns:
-            List of improvement suggestions
-        """
         suggestions = []
 
         for result in recent_results:
             if result.success:
-                # What worked well?
                 if result.quality_metrics.get("test_coverage", 1.0) > 0.9:
                     suggestions.append(
                         "✓ Excellent test coverage achieved. "
                         "Consider this as a best practice for future changes."
                     )
             else:
-                # What went wrong?
                 error_type = result.problem_context.get("error_type", "unknown")
                 suggestions.append(
                     f"⚠ Common error pattern: {error_type}. "
@@ -314,14 +211,6 @@ class ReflectionLoop:
         return suggestions
 
     def _get_suggested_fix(self, error_type: str) -> str:
-        """Get suggested fix for common error type.
-
-        Args:
-            error_type: Type of error
-
-        Returns:
-            Suggested fix description
-        """
         fixes = {
             "ImportError": "Check dependencies are listed in requirements.txt or pyproject.toml",
             "SyntaxError": "Run linter (ruff) to catch syntax errors before commit",
@@ -332,16 +221,10 @@ class ReflectionLoop:
         return fixes.get(error_type, "Review error details and consult documentation")
 
 
-# Singleton instance
 _reflection_loop: ReflectionLoop | None = None
 
 
 def get_reflection_loop() -> ReflectionLoop:
-    """Get or create the singleton reflection loop instance.
-
-    Returns:
-        Reflection loop instance
-    """
     global _reflection_loop
     if _reflection_loop is None:
         _reflection_loop = ReflectionLoop()

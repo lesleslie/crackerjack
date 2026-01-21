@@ -73,14 +73,6 @@ class AutofixCoordinator:
     def _apply_fast_stage_fixes(
         self, hook_results: Sequence[object] | None = None
     ) -> bool:
-        """Apply fast stage fixes using AI agent retry loop if enabled.
-
-        Args:
-            hook_results: Optional hook execution results for AI agent analysis
-
-        Returns:
-            bool: True if all fixes applied successfully, False otherwise
-        """
         ai_agent_enabled = os.environ.get("AI_AGENT") == "1"
 
         if ai_agent_enabled and hook_results is not None:
@@ -89,7 +81,6 @@ class AutofixCoordinator:
             )
             return self._apply_ai_agent_fixes(hook_results)
 
-        # Fallback to simple ruff fixes
         return self._execute_fast_fixes()
 
     def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bool:
@@ -120,7 +111,7 @@ class AutofixCoordinator:
         for result in hook_results:
             if (
                 self._validate_hook_result(result)
-                and getattr(result, "status", "") == "Failed"
+                and getattr(result, "status", "").lower() == "failed"
             ):
                 failed_hooks.add(getattr(result, "name", ""))
         return failed_hooks
@@ -293,36 +284,35 @@ class AutofixCoordinator:
         if not status or not isinstance(status, str):
             return False
 
-        valid_statuses = ["Passed", "Failed", "Skipped", "Error"]
+        valid_statuses = ["passed", "failed", "skipped", "error", "timeout"]
         return status in valid_statuses
 
     def _should_skip_autofix(self, hook_results: Sequence[object]) -> bool:
         for result in hook_results:
-            raw_output = getattr(result, "raw_output", None)
-            if raw_output:
-                output_lower = raw_output.lower()
-
-                if (
-                    "importerror" in output_lower
-                    or "modulenotfounderror" in output_lower
-                ):
-                    self.logger.info("Skipping autofix for import errors")
-                    return True
+            raw_output = self._extract_raw_output(result)
+            if self._has_import_errors(raw_output):
+                self.logger.info("Skipping autofix for import errors")
+                return True
         return False
 
+    def _extract_raw_output(self, result: object) -> str:
+        output = getattr(result, "output", None)
+        error = getattr(result, "error", None)
+        error_message = getattr(result, "error_message", None)
+
+        output = str(output) if output else ""
+        error = str(error) if error else ""
+        error_message = str(error_message) if error_message else ""
+
+        return output + error + error_message
+
+    def _has_import_errors(self, raw_output: str) -> bool:
+        if not raw_output:
+            return False
+        output_lower = raw_output.lower()
+        return "importerror" in output_lower or "modulenotfounderror" in output_lower
+
     def _apply_ai_agent_fixes(self, hook_results: Sequence[object]) -> bool:
-        """
-        Apply AI agent fixes with Ralph-style retry loop.
-
-        Iterates until all issues are fixed or max_iterations is reached.
-        Re-runs quality checks on each iteration to detect new/remaining issues.
-
-        Args:
-            hook_results: Initial hook execution results
-
-        Returns:
-            bool: True if all issues resolved, False otherwise
-        """
         import asyncio
 
         max_iterations = self._get_max_iterations()
@@ -345,16 +335,13 @@ class AutofixCoordinator:
         no_progress_count = 0
 
         for iteration in range(max_iterations):
-            # Collect and check issues
             issues = self._get_iteration_issues(iteration, hook_results)
             current_issue_count = len(issues)
 
-            # Check for success
             if current_issue_count == 0:
                 self._report_iteration_success(iteration)
                 return True
 
-            # Check convergence
             if self._should_stop_on_convergence(
                 current_issue_count,
                 previous_issue_count,
@@ -362,25 +349,21 @@ class AutofixCoordinator:
             ):
                 return False
 
-            # Update progress tracking
             no_progress_count = self._update_progress_count(
                 current_issue_count,
                 previous_issue_count,
                 no_progress_count,
             )
 
-            # Report progress
             self._report_iteration_progress(
                 iteration, max_iterations, current_issue_count
             )
 
-            # Apply fixes
             if not self._run_ai_fix_iteration(coordinator, loop, issues):
                 return False
 
             previous_issue_count = current_issue_count
 
-        # Max iterations reached
         return self._report_max_iterations_reached(max_iterations)
 
     def _get_iteration_issues(
@@ -388,13 +371,11 @@ class AutofixCoordinator:
         iteration: int,
         hook_results: Sequence[object],
     ) -> list[Issue]:
-        """Get issues for current iteration."""
         if iteration == 0:
             return self._parse_hook_results_to_issues(hook_results)
         return self._collect_current_issues()
 
     def _report_iteration_success(self, iteration: int) -> None:
-        """Report successful resolution of all issues."""
         self.console.print(
             f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
         )
@@ -406,7 +387,6 @@ class AutofixCoordinator:
         previous_count: float,
         no_progress_count: int,
     ) -> bool:
-        """Check if we should stop due to lack of progress."""
         convergence_threshold = self._get_convergence_threshold()
 
         if current_count >= previous_count:
@@ -428,10 +408,9 @@ class AutofixCoordinator:
         previous_count: float,
         no_progress_count: int,
     ) -> int:
-        """Update progress tracking count."""
         if current_count >= previous_count:
             return no_progress_count + 1
-        return 0  # Reset if making progress
+        return 0
 
     def _report_iteration_progress(
         self,
@@ -439,7 +418,6 @@ class AutofixCoordinator:
         max_iterations: int,
         issue_count: int,
     ) -> None:
-        """Report progress for current iteration."""
         self.console.print(
             f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
             f"{issue_count} issues to fix[/cyan]"
@@ -454,31 +432,67 @@ class AutofixCoordinator:
         loop: "asyncio.AbstractEventLoop",
         issues: list[Issue],
     ) -> bool:
-        """
-        Run a single AI fix iteration.
-
-        Returns:
-            bool: True if iteration succeeded, False otherwise
-        """
         try:
-            fix_result = loop.run_until_complete(coordinator.handle_issues(issues))
+            coro = coordinator.handle_issues(issues)
+
+            # Check if there's already a running event loop
+            try:
+                asyncio.get_running_loop()  # noqa: F841 (only checking if loop exists)
+                # There's already a running loop, run in a thread-safe way
+                import concurrent.futures
+
+                def run_in_new_loop():
+                    new_loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(new_loop)
+                    try:
+                        return new_loop.run_until_complete(coro)
+                    finally:
+                        new_loop.close()
+
+                with concurrent.futures.ThreadPoolExecutor() as executor:
+                    future = executor.submit(run_in_new_loop)
+                    fix_result = future.result(timeout=300)
+
+            except RuntimeError:
+                # No running loop, use asyncio.run() which creates a new loop
+                fix_result = asyncio.run(coro)
+
         except Exception:
             self.logger.exception("AI agent handling failed")
             return False
 
-        if not fix_result.success:
+        # Allow partial progress: continue if any fixes were applied
+        fixes_count = len(fix_result.fixes_applied)
+        remaining_count = len(fix_result.remaining_issues)
+
+        if fixes_count > 0:
+            self.logger.info(
+                f"Fixed {fixes_count} issues with confidence {fix_result.confidence:.2f}"
+            )
+            if remaining_count > 0:
+                self.console.print(
+                    f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
+                    f"{remaining_count} issues remain[/yellow]"
+                )
+                self.logger.info(
+                    f"Partial progress: {fixes_count} fixes applied, "
+                    f"{remaining_count} issues remain"
+                )
+            return True
+
+        # No fixes applied - check if there are remaining issues
+        if not fix_result.success and remaining_count > 0:
             self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
             return False
 
+        # All issues resolved
         self.logger.info(
-            f"Fixed {len(fix_result.fixes_applied)} issues "
-            f"with confidence {fix_result.confidence:.2f}"
+            f"All {fixes_count} issues fixed with confidence {fix_result.confidence:.2f}"
         )
         return True
 
     def _report_max_iterations_reached(self, max_iterations: int) -> bool:
-        """Report that max iterations were reached."""
         final_issue_count = len(self._collect_current_issues())
         self.console.print(
             f"[yellow]⚠ Reached {max_iterations} iterations with "
@@ -493,27 +507,56 @@ class AutofixCoordinator:
         self, hook_results: Sequence[object]
     ) -> list[Issue]:
         issues: list[Issue] = []
+        self.logger.debug(f"Parsing {len(hook_results)} hook results for issues")
 
         for result in hook_results:
-            if not self._validate_hook_result(result):
-                continue
-
-            if getattr(result, "status", "") != "Failed":
-                continue
-
-            hook_name = getattr(result, "name", "")
-            raw_output = getattr(result, "raw_output", "")
-
-            if not hook_name:
-                continue
-
-            hook_issues = self._parse_hook_to_issues(hook_name, raw_output)
+            hook_issues = self._parse_single_hook_result(result)
             issues.extend(hook_issues)
 
+        self.logger.info(f"Total issues extracted from all hooks: {len(issues)}")
         return issues
 
+    def _parse_single_hook_result(self, result: object) -> list[Issue]:
+        if not self._validate_hook_result(result):
+            return []
+
+        status = getattr(result, "status", "")
+        if status.lower() != "failed":
+            return []
+
+        hook_name = getattr(result, "name", "")
+        if not hook_name:
+            return []
+
+        raw_output = self._extract_raw_output(result)
+        self._log_hook_parsing_start(hook_name, result, raw_output)
+
+        hook_issues = self._parse_hook_to_issues(hook_name, raw_output)
+        self._log_hook_parsing_result(hook_name, hook_issues, raw_output)
+
+        return hook_issues
+
+    def _log_hook_parsing_start(
+        self, hook_name: str, result: object, raw_output: str
+    ) -> None:
+        output = getattr(result, "output", None) or ""
+        error = getattr(result, "error", None) or ""
+        error_message = getattr(result, "error_message", None) or ""
+        self.logger.debug(
+            f"Parsing hook '{hook_name}': "
+            f"output_len={len(str(output))}, error_len={len(str(error))}, "
+            f"error_msg_len={len(str(error_message))}, total_raw_len={len(raw_output)}"
+        )
+
+    def _log_hook_parsing_result(
+        self, hook_name: str, hook_issues: list[Issue], raw_output: str
+    ) -> None:
+        self.logger.debug(
+            f"Hook '{hook_name}' produced {len(hook_issues)} issues. "
+            f"Sample (first 200 chars of raw_output): {raw_output[:200]!r}"
+        )
+
     def _get_max_iterations(self) -> int:
-        """Get maximum AI fix iterations from parameter, environment, or default."""
         import os
 
         if self._max_iterations is not None:
@@ -522,37 +565,51 @@ class AutofixCoordinator:
         return int(os.environ.get("CRACKERJACK_AI_FIX_MAX_ITERATIONS", "5"))
 
     def _get_convergence_threshold(self) -> int:
-        """Get convergence threshold from environment or default."""
         import os
 
         return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
 
     def _collect_current_issues(self) -> list[Issue]:
-        """
-        Re-run quality checks to collect current issues.
-
-        This method is called on each retry loop iteration to detect:
-        - New issues introduced by AI fixes
-        - Remaining issues that weren't fixed
-        - Issues that changed after fixes
-
-        Returns:
-            list[Issue]: Current issues from quality checks
-        """
         import subprocess
 
         self.logger.debug("Collecting current issues by re-running quality checks")
 
-        # Run a subset of fast hooks to detect current issues
-        # We focus on hooks that are most likely to catch issues introduced by AI fixes
+        pkg_name = self.pkg_path.name
+
         check_commands = [
-            (["uv", "run", "ruff", "check", "."], "ruff"),
-            (["uv", "run", "ruff", "format", "--check", "."], "ruff-format"),
+            (["uv", "run", "ruff", "check", "."], "ruff", 60),
+            (["uv", "run", "ruff", "format", "--check", "."], "ruff-format", 60),
+            (
+                [
+                    "uv",
+                    "run",
+                    "zuban",
+                    "mypy",
+                    "--config-file",
+                    "mypy.ini",
+                    "--no-error-summary",
+                    f"./{pkg_name}",
+                ],
+                "zuban",
+                120,
+            ),
+            (
+                [
+                    "uv",
+                    "run",
+                    "complexipy",
+                    "--max-complexity-allowed",
+                    "15",
+                    pkg_name,
+                ],
+                "complexipy",
+                60,
+            ),
         ]
 
         all_issues: list[Issue] = []
 
-        for cmd, hook_name in check_commands:
+        for cmd, hook_name, timeout in check_commands:
             try:
                 result = subprocess.run(
                     cmd,
@@ -560,7 +617,7 @@ class AutofixCoordinator:
                     cwd=self.pkg_path,
                     capture_output=True,
                     text=True,
-                    timeout=60,
+                    timeout=timeout,
                 )
 
                 if result.returncode != 0 or result.stdout:
@@ -622,7 +679,6 @@ class AutofixCoordinator:
         raw_output: str,
         issue_type: IssueType,
     ) -> list[Issue]:
-        """Parse type checker output (zuban, pyright, mypy) into Issue objects."""
         issues: list[Issue] = []
 
         for line in raw_output.split("\n"):
@@ -637,8 +693,11 @@ class AutofixCoordinator:
         return issues
 
     def _should_parse_line(self, line: str) -> bool:
-        """Check if a line should be parsed for type checker issues."""
         if not line:
+            return False
+        # Skip summary lines and contextual note/help lines (zuban, mypy, pyright)
+        # Note lines have format: file:line: note: message (with leading space after colon)
+        if ": note:" in line.lower() or ": help:" in line.lower():
             return False
         return not line.startswith(("Found", "Checked"))
 
@@ -648,7 +707,6 @@ class AutofixCoordinator:
         tool_name: str,
         issue_type: IssueType,
     ) -> Issue | None:
-        """Parse a single type checker line into an Issue object."""
         if ":" not in line:
             return None
 
@@ -670,14 +728,12 @@ class AutofixCoordinator:
         )
 
     def _parse_line_number(self, part: str) -> int | None:
-        """Parse line number from type checker output."""
         try:
             return int(part.strip())
         except (ValueError, IndexError):
             return None
 
     def _extract_message(self, parts: list[str], fallback: str) -> str:
-        """Extract error message from type checker output parts."""
         if len(parts) == 4:
             return parts[3].strip()
         if len(parts) > 2:

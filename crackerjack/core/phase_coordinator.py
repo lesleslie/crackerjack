@@ -245,7 +245,6 @@ class PhaseCoordinator:
 
         success = self._run_fast_hooks_with_retry(options)
 
-        # Apply AI-fix if fast hooks failed and ai_fix is enabled
         if not success and getattr(options, "ai_fix", False):
             success = self._apply_ai_fix_for_fast_hooks(options, success)
 
@@ -254,17 +253,9 @@ class PhaseCoordinator:
         return success
 
     def _run_fast_hooks_with_retry(self, options: OptionsProtocol) -> bool:
-        """Run fast hooks with retry logic.
-
-        Args:
-            options: Command-line options
-
-        Returns:
-            bool: True if hooks passed, False otherwise
-        """
         max_attempts = 2
         attempt = 0
-        success = False  # Initialize to satisfy type checker
+        success = False
 
         while attempt < max_attempts:
             attempt += 1
@@ -298,11 +289,6 @@ class PhaseCoordinator:
         return success
 
     def _complete_fast_hooks_task(self, success: bool) -> None:
-        """Complete the fast hooks task with appropriate status.
-
-        Args:
-            success: Whether hooks passed
-        """
         summary = self._last_hook_summary or {}
         details = self._format_hook_summary(summary)
 
@@ -316,15 +302,6 @@ class PhaseCoordinator:
     def _apply_ai_fix_for_fast_hooks(
         self, options: OptionsProtocol, current_success: bool
     ) -> bool:
-        """Apply AI-fix for fast hook failures.
-
-        Args:
-            options: Command-line options
-            current_success: Current success status of fast hooks
-
-        Returns:
-            bool: Updated success status after AI-fix attempt
-        """
         self.console.print("\n")
         self.console.print(
             "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated fixes for fast hook failures[/bold bright_white]"
@@ -349,7 +326,6 @@ class PhaseCoordinator:
             )
             self.console.print()
 
-            # Retry fast hooks one more time after AI-fix
             self._display_hook_phase_header(
                 "FAST HOOKS",
                 "Formatters, import sorting, and quick static analysis",
@@ -359,7 +335,7 @@ class PhaseCoordinator:
                 "fast",
                 self.hook_manager.run_fast_hooks,
                 options,
-                attempt=3,  # Third attempt after AI-fix
+                attempt=3,
             )
 
             if success:

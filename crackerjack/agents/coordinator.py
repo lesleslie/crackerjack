@@ -20,21 +20,34 @@ from crackerjack.services.debug import get_ai_agent_debugger
 from crackerjack.services.logging import get_logger
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
-    IssueType.FORMATTING: ["FormattingAgent"],
-    IssueType.TYPE_ERROR: ["TestCreationAgent", "RefactoringAgent"],
-    IssueType.SECURITY: ["SecurityAgent"],
-    IssueType.TEST_FAILURE: ["TestSpecialistAgent", "TestCreationAgent"],
-    IssueType.IMPORT_ERROR: ["ImportOptimizationAgent"],
-    IssueType.COMPLEXITY: ["RefactoringAgent"],
-    IssueType.DEAD_CODE: ["RefactoringAgent", "ImportOptimizationAgent"],
-    IssueType.DEPENDENCY: ["ImportOptimizationAgent"],
-    IssueType.DRY_VIOLATION: ["DRYAgent"],
-    IssueType.PERFORMANCE: ["PerformanceAgent"],
-    IssueType.DOCUMENTATION: ["DocumentationAgent"],
-    IssueType.TEST_ORGANIZATION: ["TestSpecialistAgent"],
+    IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
+    IssueType.TYPE_ERROR: ["ArchitectAgent"],
+    IssueType.SECURITY: ["SecurityAgent", "ArchitectAgent"],
+    IssueType.TEST_FAILURE: [
+        "TestSpecialistAgent",
+        "TestCreationAgent",
+        "ArchitectAgent",
+    ],
+    IssueType.IMPORT_ERROR: [
+        "ImportOptimizationAgent",
+        "FormattingAgent",
+        "TestSpecialistAgent",
+        "ArchitectAgent",
+    ],
+    IssueType.COMPLEXITY: ["RefactoringAgent", "ArchitectAgent"],
+    IssueType.DEAD_CODE: [
+        "RefactoringAgent",
+        "ImportOptimizationAgent",
+        "ArchitectAgent",
+    ],
+    IssueType.DEPENDENCY: ["TestCreationAgent", "ArchitectAgent"],
+    IssueType.DRY_VIOLATION: ["DRYAgent", "ArchitectAgent"],
+    IssueType.PERFORMANCE: ["PerformanceAgent", "ArchitectAgent"],
+    IssueType.DOCUMENTATION: ["DocumentationAgent", "ArchitectAgent"],
+    IssueType.TEST_ORGANIZATION: ["TestCreationAgent", "ArchitectAgent"],
     IssueType.COVERAGE_IMPROVEMENT: ["TestCreationAgent"],
-    IssueType.REGEX_VALIDATION: ["SecurityAgent", "RefactoringAgent"],
-    IssueType.SEMANTIC_CONTEXT: ["SemanticAgent", "ArchitectAgent"],
+    IssueType.REGEX_VALIDATION: ["SecurityAgent"],
+    IssueType.SEMANTIC_CONTEXT: ["SemanticAgent"],
 }
 
 

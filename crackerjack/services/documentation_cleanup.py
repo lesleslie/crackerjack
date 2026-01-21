@@ -269,10 +269,6 @@ class DocumentationCleanup:
             except Exception as e:
                 return False, f"Cannot create archive directory: {e}"
 
-        # Note: Git dirty check removed - documentation cleanup runs as part of
-        # a workflow that ends with a commit phase, so any moved files will be
-        # committed automatically. A backup is also created before moving files.
-
         return True, None
 
     def _create_backup(self, files: list[Path]) -> BackupMetadata | None:

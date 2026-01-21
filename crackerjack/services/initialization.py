@@ -49,7 +49,6 @@ class InitializationService:
             return False
 
     def validate_project_structure(self) -> bool:
-        """Validate CLAUDE.md exists and contains crackerjack standards."""
         try:
             claude_md = Path.cwd() / "CLAUDE.md"
             if not claude_md.exists():
@@ -70,13 +69,11 @@ class InitializationService:
                 )
                 return False
 
-            # Check for essential quality principles
             essential_principles = [
                 "Check yourself before you wreck yourself",
                 "Take the time to do things right the first time",
             ]
 
-            # Extract crackerjack section for validation
             start_idx = content.find(crackerjack_start_marker)
             end_idx = content.find(crackerjack_end_marker)
 

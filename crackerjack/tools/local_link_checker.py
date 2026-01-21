@@ -74,9 +74,6 @@ def validate_local_link(
 
 
 def check_file(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:
-    # Skip symlinked files to avoid false positive path resolution issues
-    # Symlinks in /docs/guides/ point to root files, and .resolve() changes the
-    # base path, causing link validation to fail incorrectly
     if file_path.is_symlink():
         return []
 

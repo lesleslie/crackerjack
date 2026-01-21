@@ -234,7 +234,6 @@ class BaseToolAdapter(QAAdapterBase):
         )
 
     async def _is_gitignored(self, path: Path) -> bool:
-        """Check if a file is ignored by git using git check-ignore."""
         try:
             import subprocess  # nosec B404
 
@@ -272,7 +271,6 @@ class BaseToolAdapter(QAAdapterBase):
         )
 
     def _get_standard_excludes(self, config: QACheckConfig | None) -> set[str]:
-        """Build standard exclusion set based on config stage."""
         standard_excludes = {
             ".venv",
             "venv",
@@ -304,7 +302,6 @@ class BaseToolAdapter(QAAdapterBase):
         return standard_excludes
 
     def _collect_candidate_files(self, root: Path, config: QACheckConfig) -> list[Path]:
-        """Collect candidate files from root based on file patterns."""
         candidates: list[Path] = []
         for pattern in config.file_patterns:
             ext = pattern.split(".")[-1] if "." in pattern else None
@@ -318,7 +315,6 @@ class BaseToolAdapter(QAAdapterBase):
         config: QACheckConfig,
         standard_excludes: set[str],
     ) -> list[Path]:
-        """Filter candidates through all exclusion checks."""
         result: list[Path] = []
         seen: set[Path] = set()
 
@@ -327,20 +323,16 @@ class BaseToolAdapter(QAAdapterBase):
                 continue
             seen.add(path)
 
-            # Check standard excludes
             if any(excluded in path.parts for excluded in standard_excludes):
                 continue
 
-            # Check .gitignore
             if await self._is_gitignored(path):
                 continue
 
-            # Check file patterns
             include = any(path.match(pattern) for pattern in config.file_patterns)
             if not include:
                 continue
 
-            # Check exclude patterns
             if any(path.match(pattern) for pattern in config.exclude_patterns):
                 continue
 

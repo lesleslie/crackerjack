@@ -1,17 +1,4 @@
 #!/usr/bin/env python3
-"""
-Documentation cleanup utility for crackerjack project.
-
-This script identifies and organizes documentation files based on their type:
-- Implementation plans (stay in root or docs/)
-- Completion reports (move to docs/archive/completion-reports/)
-- Audit/investigation docs (move to appropriate archive subdirs)
-- Temporary sprint docs (move to docs/archive/sprints-and-fixes/)
-
-Usage:
-    python scripts/docs_cleanup.py --dry-run  # Preview changes
-    python scripts/docs_cleanup.py --execute    # Execute cleanup
-"""
 
 import argparse
 import re
@@ -19,9 +6,6 @@ from pathlib import Path
 
 
 class DocCleanupAnalyzer:
-    """Analyzes documentation files and categorizes them for cleanup."""
-
-    # File patterns and their destinations
     CATEGORIES = {
         "keep_in_root": {
             "patterns": [
@@ -44,12 +28,12 @@ class DocCleanupAnalyzer:
                 r"HOOK_ISSUE_COUNT_(ROOT_CAUSE|DISPLAY_OPTIONS)\.md$",
                 r"refurb_creosote_behavior\.md$",
             ],
-            "destination": None,  # Keep in root
+            "destination": None,
             "reason": "Core documentation or completion milestones",
         },
         "keep_in_docs": {
             "patterns": [
-                r"AI_FIX_EXPECTED_BEHAVIOR\.md$",  # User-facing, referenced by CLAUDE.md
+                r"AI_FIX_EXPECTED_BEHAVIOR\.md$",
             ],
             "destination": "docs/",
             "reason": "User-facing documentation referenced by CLAUDE.md",
@@ -64,7 +48,7 @@ class DocCleanupAnalyzer:
                 r"refactoring-.*-plan\.md$",
                 r".*-plan-.*\.md$",
             ],
-            "destination": "docs/",  # Keep in docs root as active plans
+            "destination": "docs/",
             "reason": "Active implementation plans (not completed)",
         },
         "completion_reports": {
@@ -144,7 +128,6 @@ class DocCleanupAnalyzer:
         self.docs_root = docs_root
 
     def categorize_file(self, filepath: Path) -> tuple[str, str] | None:
-        """Categorize a single file and return (category, destination)."""
         filename = filepath.name
 
         for category, config in self.CATEGORIES.items():
@@ -155,7 +138,6 @@ class DocCleanupAnalyzer:
         return None
 
     def analyze(self) -> dict[str, list[dict]]:
-        """Analyze all markdown files in docs root."""
         results = {
             "keep_in_root": [],
             "keep_in_docs": [],
@@ -185,7 +167,6 @@ class DocCleanupAnalyzer:
                     }
                 )
             elif categorization[1] is None:
-                # Keep in same location
                 category = categorization[0]
                 results[category].append(
                     {
@@ -208,14 +189,12 @@ class DocCleanupAnalyzer:
         return results
 
     def generate_report(self, results: dict) -> str:
-        """Generate a human-readable cleanup report."""
         lines = []
         lines.append("=" * 80)
         lines.append("DOCUMENTATION CLEANUP ANALYSIS")
         lines.append("=" * 80)
         lines.append("")
 
-        # Keep in root
         lines.append(f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files")
         lines.append("-" * 80)
         for item in results["keep_in_root"]:
@@ -223,7 +202,6 @@ class DocCleanupAnalyzer:
             lines.append(f"    Reason: {item['reason']}")
         lines.append("")
 
-        # Keep in docs (but not root)
         if results.get("keep_in_docs"):
             lines.append(f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files")
             lines.append("-" * 80)
@@ -232,7 +210,6 @@ class DocCleanupAnalyzer:
                 lines.append(f"    Reason: {item['reason']}")
             lines.append("")
 
-        # Implementation plans
         if results.get("implementation_plans"):
             lines.append(
                 f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files"
@@ -243,11 +220,9 @@ class DocCleanupAnalyzer:
                 lines.append(f"    Reason: {item['reason']}")
             lines.append("")
 
-        # Move to archive
         lines.append(f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files")
         lines.append("-" * 80)
 
-        # Group by destination
         by_destination = {}
         for item in results["move_to_archive"]:
             dest = item["destination"]
@@ -262,7 +237,6 @@ class DocCleanupAnalyzer:
 
         lines.append("")
 
-        # Uncategorized
         if results["uncategorized"]:
             lines.append(f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files")
             lines.append("-" * 80)
@@ -270,7 +244,6 @@ class DocCleanupAnalyzer:
                 lines.append(f"  • {item['file']}")
             lines.append("")
 
-        # Summary
         total = (
             len(results["keep_in_root"])
             + len(results.get("keep_in_docs", []))
@@ -339,12 +312,6 @@ def main():
         print("output first and manually move files if needed.")
         print("")
         # TODO: Implement actual file movement
-        # for item in results["move_to_archive"]:
-        #     src = Path(item["path"])
-        #     dst = args.docs_root / item["destination"] / src.name
-        #     dst.parent.mkdir(parents=True, exist_ok=True)
-        #     src.rename(dst)
-        #     print(f"  ✓ Moved {src.name} → {item['destination']}")
 
     return 0
 

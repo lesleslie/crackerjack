@@ -106,6 +106,8 @@ class CustomHookPlugin(HookPluginBase):
                 status="error",
                 duration=0.0,
                 issues_found=[f"Hook definition not found: {hook_name}"],
+                output="",
+                error=f"Hook definition not found: {hook_name}",
             )
 
         if not hook_def.command:
@@ -115,6 +117,8 @@ class CustomHookPlugin(HookPluginBase):
                 status="error",
                 duration=0.0,
                 issues_found=[f"No command defined for hook: {hook_name}"],
+                output="",
+                error=f"No command defined for hook: {hook_name}",
             )
 
         return self._execute_command_hook(hook_def, files)
@@ -136,6 +140,8 @@ class CustomHookPlugin(HookPluginBase):
                     status="failed",
                     issues_found=["Hook command is None"],
                     duration=0.0,
+                    output="",
+                    error="Hook command is None",
                 )
             cmd = hook_def.command.copy()
             if hook_def.requires_files and files:
@@ -160,6 +166,8 @@ class CustomHookPlugin(HookPluginBase):
                 status=status,
                 duration=duration,
                 issues_found=issues,
+                output=result.stdout,
+                error=result.stderr,
             )
 
         except subprocess.TimeoutExpired:
@@ -169,6 +177,8 @@ class CustomHookPlugin(HookPluginBase):
                 status="timeout",
                 duration=time.time() - start_time,
                 issues_found=[f"Hook timed out after {hook_def.timeout}s"],
+                output="",
+                error=f"Hook timed out after {hook_def.timeout}s",
             )
         except Exception as e:
             return HookResult(
@@ -177,6 +187,8 @@ class CustomHookPlugin(HookPluginBase):
                 status="error",
                 duration=time.time() - start_time,
                 issues_found=[f"Execution error: {e}"],
+                output="",
+                error=str(e),
             )
 
     def activate(self) -> bool:

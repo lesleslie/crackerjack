@@ -532,6 +532,8 @@ class AsyncHookExecutor:
             if status == "failed" and output_text
             else None,
             is_timeout=False,
+            output=self._last_stdout.decode() if self._last_stdout else "",
+            error=self._last_stderr.decode() if self._last_stderr else "",
         )
 
     def _decode_process_output(self, stdout: bytes | None, stderr: bytes | None) -> str:
