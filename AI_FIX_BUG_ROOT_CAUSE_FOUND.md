@@ -3,9 +3,11 @@
 ## The Bug
 
 When running `python -m crackerjack run --comp --ai-fix`, the AI fixer was reporting:
+
 ```
 ✓ All issues resolved in 0 iteration(s)!
 ```
+
 Even when 5 comprehensive hooks failed with 237 total issues.
 
 ## Root Cause: CASE SENSITIVITY MISMATCH
@@ -15,11 +17,13 @@ Even when 5 comprehensive hooks failed with 237 total issues.
 The autofix_coordinator was checking for **uppercase** status values, but HookResult objects use **lowercase** status values.
 
 **In HookResult (actual data model):**
+
 ```python
 status = "passed" if return_code == 0 else "failed"  # LOWERCASE!
 ```
 
 **In autofix_coordinator.py (BEFORE FIX):**
+
 ```python
 # Line 287 - VALIDATION FAILING
 valid_statuses = ["Passed", "Failed", "Skipped", "Error"]  # UPPERCASE!
@@ -36,9 +40,9 @@ and getattr(result, "status", "") == "Failed":  # Never matches lowercase
 ### Impact
 
 1. **All HookResult objects failed validation** - rejected before any processing
-2. **No failed hooks were detected** - all skipped due to case mismatch
-3. **Zero issues extracted** - empty issue list
-4. **"0 iterations" reported** - AI fixer thought there were no issues to fix
+1. **No failed hooks were detected** - all skipped due to case mismatch
+1. **Zero issues extracted** - empty issue list
+1. **"0 iterations" reported** - AI fixer thought there were no issues to fix
 
 ## The Fix
 
@@ -80,20 +84,25 @@ and getattr(result, "status", "").lower() == "failed":
 ## Files Modified
 
 1. **`crackerjack/core/autofix_coordinator.py`** (3 critical fixes)
+
    - Validation to accept lowercase status values
    - Status checks to use case-insensitive comparison
    - Extract failed hooks to use case-insensitive comparison
 
-2. **`crackerjack/executors/hook_executor.py`** (already fixed earlier)
+1. **`crackerjack/executors/hook_executor.py`** (already fixed earlier)
+
    - Populate `output` and `error` fields
 
-3. **`crackerjack/executors/async_hook_executor.py`** (already had correct code)
+1. **`crackerjack/executors/async_hook_executor.py`** (already had correct code)
+
    - Lines 535-536: Already populating `output` and `error` fields correctly
 
-4. **`crackerjack/plugins/hooks.py`** (fixed earlier)
+1. **`crackerjack/plugins/hooks.py`** (fixed earlier)
+
    - Populate `output` and `error` fields for plugin hooks
 
-5. **Test files**
+1. **Test files**
+
    - Updated to use lowercase status values to match HookResult data model
 
 ## Test Results
@@ -113,6 +122,7 @@ and getattr(result, "status", "").lower() == "failed":
 ## Verification
 
 The fix ensures that:
+
 - ✅ HookResult validation passes for actual lowercase status values
 - ✅ Failed hooks are correctly detected and processed
 - ✅ Issues are extracted from hook output (stdout/stderr)
@@ -123,17 +133,19 @@ The fix ensures that:
 
 `★ Insight ─────────────────────────────────────`
 **Case Sensitivity Bugs** are particularly insidious because:
+
 1. They don't cause crashes - just silent failures
-2. No error messages explaining WHY validation failed
-3. Objects are created correctly but silently rejected
-4. Assumptions about data ("status should be Title Case") don't match reality
+1. No error messages explaining WHY validation failed
+1. Objects are created correctly but silently rejected
+1. Assumptions about data ("status should be Title Case") don't match reality
 
 **Prevention Strategy**:
+
 - Always match the actual data model, not assumptions
 - Write tests that use real data structures, not Mock objects with made-up values
 - Use case-insensitive comparisons when dealing with string status values
 - Add debug logging to see what's actually being processed
-`─────────────────────────────────────────────────`
+  `─────────────────────────────────────────────────`
 
 ## Expected Behavior After Fix
 

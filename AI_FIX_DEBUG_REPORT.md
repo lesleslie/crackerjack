@@ -58,11 +58,11 @@ return HookResult(
 When `autofix_coordinator` tried to parse hook results into AI-fixable issues:
 
 1. `getattr(result, "raw_output", "")` returned `""` (empty string)
-2. `_parse_hook_to_issues(hook_name, "")` received no actual error output
-3. No issues were extracted, even though 5 hooks had failed
-4. `current_issue_count == 0` on iteration 0
-5. AI fixer reported "All issues resolved in 0 iteration(s)!"
-6. No actual fixing was attempted
+1. `_parse_hook_to_issues(hook_name, "")` received no actual error output
+1. No issues were extracted, even though 5 hooks had failed
+1. `current_issue_count == 0` on iteration 0
+1. AI fixer reported "All issues resolved in 0 iteration(s)!"
+1. No actual fixing was attempted
 
 ## The Fix
 
@@ -116,9 +116,9 @@ return HookResult(
 The fix ensures that:
 
 1. ✅ HookResult objects contain the actual stdout/stderr from hook execution
-2. ✅ The AI fixer can properly parse hook output into Issue objects
-3. ✅ Multiple iterations will occur until issues are fixed or max iterations reached
-4. ✅ Comprehensive hook failures (zuban, pyscn, creosote, complexipy, refurb) will be properly handled
+1. ✅ The AI fixer can properly parse hook output into Issue objects
+1. ✅ Multiple iterations will occur until issues are fixed or max iterations reached
+1. ✅ Comprehensive hook failures (zuban, pyscn, creosote, complexipy, refurb) will be properly handled
 
 ## Expected Behavior After Fix
 
@@ -145,8 +145,8 @@ When running `python -m crackerjack run --comp --ai-fix` with failures:
 ## Files Modified
 
 1. `crackerjack/core/autofix_coordinator.py` - Fixed field access (2 methods)
-2. `crackerjack/executors/hook_executor.py` - Populate output/error fields
-3. `crackerjack/executors/async_hook_executor.py` - Populate output/error fields
+1. `crackerjack/executors/hook_executor.py` - Populate output/error fields
+1. `crackerjack/executors/async_hook_executor.py` - Populate output/error fields
 
 ## Testing
 
@@ -158,7 +158,7 @@ python -m crackerjack run --comp --ai-fix
 
 Expected result: Multiple iteration loop with actual issue fixing attempts.
 
----
+______________________________________________________________________
 
 **Date**: 2026-01-20
 **Severity**: Critical (main feature completely broken)
