@@ -754,40 +754,60 @@ class AutofixCoordinator:
     def _execute_check_commands(
         self, check_commands: list[tuple[list[str], str, int]]
     ) -> tuple[list[Issue], int]:
-        """Execute quality check commands and collect issues."""
+        """Execute quality check commands and collect issues.
+
+        Uses Popen with communicate() to avoid blocking on large output.
+        This prevents deadlocks when tools produce substantial output.
+        """
         all_issues: list[Issue] = []
         successful_checks = 0
 
         for cmd, hook_name, timeout in check_commands:
+            process: subprocess.Popen[str] | None = None
             try:
-                result = subprocess.run(
+                # Use Popen with PIPE for non-blocking output handling
+                process = subprocess.Popen(
                     cmd,
-                    check=False,
                     cwd=self.pkg_path,
-                    capture_output=True,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
                     text=True,
-                    timeout=timeout,
                 )
+
+                # communicate() handles output buffering properly
+                # Returns (stdout, stderr) tuple
+                stdout, stderr = process.communicate(timeout=timeout)
 
                 # Command executed successfully
                 successful_checks += 1
 
                 # Parse output if command failed or produced output
-                if result.returncode != 0 or result.stdout:
+                if process.returncode != 0 or stdout:
                     hook_issues = self._parse_hook_to_issues(
                         hook_name,
-                        result.stdout + result.stderr,
+                        stdout + stderr,
                     )
                     if hook_issues:
                         all_issues.extend(hook_issues)
                         self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
 
             except subprocess.TimeoutExpired:
+                if process:
+                    process.kill()
+                    # Wait for process to terminate and collect remaining output
+                    try:
+                        process.communicate(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        process.kill()  # Force kill if still running
                 self.logger.warning(f"Timeout running {hook_name} check")
             except FileNotFoundError as e:
                 self.logger.error(f"Command not found for {hook_name}: {e}")
             except Exception as e:
                 self.logger.error(f"Error running {hook_name} check: {e}")
+            finally:
+                # Ensure process is cleaned up
+                if process and process.poll() is None:
+                    process.kill()
 
         return all_issues, successful_checks
 
