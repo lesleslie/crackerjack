@@ -365,10 +365,6 @@ class PhaseCoordinator:
         from rich.console import Console as RichConsole
         from rich.prompt import Confirm
 
-        from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
-        from crackerjack.agents.coordinator import AgentCoordinator
-        from crackerjack.services.cache import CrackerjackCache
-
         # Get test failure details
         test_failures = self.test_manager.get_test_failures()
         if not test_failures:
