@@ -15,7 +15,7 @@ if TYPE_CHECKING:
         LoggerProtocol,
     )
 
-from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
@@ -465,40 +465,79 @@ class AutofixCoordinator:
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> bool:
-        """Run a single AI fix iteration using asyncio.run()."""
-        try:
-            # Use asyncio.run() - Python 3.11+ best practice
-            # Creates new event loop, handles cleanup automatically
-            fix_result = asyncio.run(coordinator.handle_issues(issues))
-
-        except Exception:
-            self.logger.exception("AI agent handling failed")
+        """Run a single AI fix iteration, handling both sync and async contexts."""
+        fix_result = self._execute_ai_fix(coordinator, issues)
+        if fix_result is None:
             return False
 
-        # Allow partial progress: continue if any fixes were applied
+        return self._process_fix_result(fix_result)
+
+    def _execute_ai_fix(
+        self,
+        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
+        issues: list[Issue],
+    ) -> FixResult | None:
+        """Execute the AI fix and return the result or None if failed."""
+        try:
+            # Check if we're already in a running event loop (e.g., from Oneiric workflow)
+            try:
+                asyncio.get_running_loop()
+                # We're in an async context, run in a new thread to avoid nested loop issues
+                return self._run_in_threaded_loop(coordinator, issues)
+            except RuntimeError:
+                # No running loop, use asyncio.run() - Python 3.11+ best practice
+                # Creates new event loop, handles cleanup automatically
+                return asyncio.run(coordinator.handle_issues(issues))
+        except Exception:
+            self.logger.exception("AI agent handling failed")
+            return None
+
+    def _run_in_threaded_loop(
+        self,
+        coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
+        issues: list[Issue],
+    ) -> FixResult | None:
+        """Run the async function in a new event loop in a separate thread."""
+        import threading
+
+        result_container: list[FixResult | None] = [None]
+        exception_container: list[Exception | None] = [None]
+
+        def run_in_new_loop() -> None:
+            """Run the async function in a new event loop in a separate thread."""
+            try:
+                new_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(new_loop)
+                try:
+                    result_container[0] = new_loop.run_until_complete(
+                        coordinator.handle_issues(issues)
+                    )
+                finally:
+                    new_loop.close()
+            except Exception as e:
+                exception_container[0] = e
+
+        thread = threading.Thread(target=run_in_new_loop)
+        thread.start()
+        thread.join(timeout=300)  # 5 minute timeout
+
+        if exception_container[0] is not None:
+            raise exception_container[0]
+
+        if result_container[0] is None:
+            raise RuntimeError("AI agent fixing timed out")
+
+        return result_container[0]
+
+    def _process_fix_result(self, fix_result: FixResult) -> bool:
+        """Process the fix result and determine if iteration was successful."""
         fixes_count = len(fix_result.fixes_applied)
         remaining_count = len(fix_result.remaining_issues)
 
         if fixes_count > 0:
-            self.logger.info(
-                f"Fixed {fixes_count} issues with confidence {fix_result.confidence:.2f}"
+            return self._handle_partial_progress(
+                fix_result, fixes_count, remaining_count
             )
-            # CRITICAL FIX: Only return True if ALL issues are fixed
-            if remaining_count == 0:
-                self.logger.info("All issues fixed")
-                return True
-            else:
-                # Partial progress - continue to next iteration
-                self.console.print(
-                    f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
-                    f"{remaining_count} issues remain[/yellow]"
-                )
-                self.logger.info(
-                    f"Partial progress: {fixes_count} fixes applied, "
-                    f"{remaining_count} issues remain"
-                )
-                # Return False to continue fixing
-                return False
 
         # No fixes applied - check if there are remaining issues
         if not fix_result.success and remaining_count > 0:
@@ -518,6 +557,31 @@ class AutofixCoordinator:
             f"No fixes applied but {remaining_count} issues remain - agents unable to fix"
         )
         return False
+
+    def _handle_partial_progress(
+        self, fix_result: FixResult, fixes_count: int, remaining_count: int
+    ) -> bool:
+        """Handle the case when partial progress was made."""
+        self.logger.info(
+            f"Fixed {fixes_count} issues with confidence {fix_result.confidence:.2f}"
+        )
+
+        # CRITICAL FIX: Only return True if ALL issues are fixed
+        if remaining_count == 0:
+            self.logger.info("All issues fixed")
+            return True
+        else:
+            # Partial progress - continue to next iteration
+            self.console.print(
+                f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
+                f"{remaining_count} issues remain[/yellow]"
+            )
+            self.logger.info(
+                f"Partial progress: {fixes_count} fixes applied, "
+                f"{remaining_count} issues remain"
+            )
+            # Return False to continue fixing
+            return False
 
     def _report_max_iterations_reached(self, max_iterations: int) -> bool:
         final_issue_count = len(self._collect_current_issues())
