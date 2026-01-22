@@ -43,24 +43,27 @@ This directory contains visual documentation for the Crackerjack project, design
 ### By Priority (Impact on Understanding)
 
 1. **Start Here**: `oneiric-workflow-dag.png` - Understand the complete execution flow
-2. **Architecture**: `layered-architecture.png` - Understand the codebase structure
-3. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works
-4. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
-5. **Decision Making**: `decision-framework.png` - Know when to fix vs defer
+1. **Architecture**: `layered-architecture.png` - Understand the codebase structure
+1. **AI System**: `ai-agent-orchestration.png` - Understand how AI fixing works
+1. **Quality**: `quality-hooks.png` - Understand the two-phase quality system
+1. **Decision Making**: `decision-framework.png` - Know when to fix vs defer
 
 ### By Audience
 
 **New Contributors:**
+
 - `layered-architecture.png` - Where does my code go?
 - `oneiric-workflow-dag.png` - How does everything connect?
 - `adapter-taxonomy.png` - What tools are available?
 
 **AI Agents (Claude, etc.):**
+
 - `agent-selection.png` - Which specialist to use?
 - `ai-agent-orchestration.png` - How does batch fixing work?
 - `decision-framework.png` - Fix now or later?
 
 **Security Reviewers:**
+
 - `security-threat-model.png` - What threats are mitigated?
 - `pattern-management.png` - How is regex handled safely?
 
@@ -78,10 +81,10 @@ These diagrams were generated using the **Mermaid MCP server** with the followin
 To regenerate or modify diagrams:
 
 1. Use the Mermaid MCP server via Claude Code
-2. Modify the Mermaid syntax as needed
-3. Save output to this directory with descriptive filename
-4. Update this README with any new diagrams
-5. Embed in appropriate documentation files
+1. Modify the Mermaid syntax as needed
+1. Save output to this directory with descriptive filename
+1. Update this README with any new diagrams
+1. Embed in appropriate documentation files
 
 ## Mermaid Source
 
