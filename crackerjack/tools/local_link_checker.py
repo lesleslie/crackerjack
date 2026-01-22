@@ -131,8 +131,7 @@ def _resolve_target_path(path_part: str, source_file: Path, repo_root: Path) -> 
     """Resolve the target path of a local link."""
     if path_part.startswith("/"):
         return repo_root / path_part.lstrip("/")
-    else:
-        return (source_file.parent / path_part).resolve()
+    return (source_file.parent / path_part).resolve()
 
 
 def check_file(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:

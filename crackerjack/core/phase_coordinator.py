@@ -362,11 +362,12 @@ class PhaseCoordinator:
         Only attempts fixes for safe failure types (import errors, typos, etc.)
         and requires user confirmation in interactive mode.
         """
-        from crackerjack.agents.coordinator import AgentCoordinator
-        from crackerjack.agents.base import AgentContext, Issue, IssueType
-        from crackerjack.services.cache import CrackerjackCache
         from rich.console import Console as RichConsole
         from rich.prompt import Confirm
+
+        from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+        from crackerjack.agents.coordinator import AgentCoordinator
+        from crackerjack.services.cache import CrackerjackCache
 
         # Get test failure details
         test_failures = self.test_manager.get_test_failures()
@@ -380,7 +381,9 @@ class PhaseCoordinator:
             self.console.print(
                 "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"
             )
-            self.console.print("[yellow]   Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues")
+            self.console.print(
+                "[yellow]   Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues"
+            )
             return False
 
         # Count fixable vs total failures
@@ -431,6 +434,17 @@ class PhaseCoordinator:
             return False
 
         # Apply AI fixes
+        return self._run_ai_test_fix(safe_failures)
+
+    def _run_ai_test_fix(self, safe_failures: list[str]) -> bool:
+        """Run AI agent coordination to fix test failures.
+
+        Extracted to reduce complexity of _apply_ai_fix_for_tests.
+        """
+        from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
+        from crackerjack.agents.coordinator import AgentCoordinator
+        from crackerjack.services.cache import CrackerjackCache
+
         self.console.print(
             "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated test fixes[/bold bright_white]"
         )
@@ -442,24 +456,20 @@ class PhaseCoordinator:
             subprocess_timeout=300,
         )
         cache = CrackerjackCache()
-
-        # Create coordinator directly
         coordinator = AgentCoordinator(context=context, cache=cache)
 
         # Convert test failures to Issue objects
-        issues = []
-        for failure in safe_failures:
-            issues.append(
-                Issue(
-                    type=IssueType.IMPORT_ERROR,  # Most test failures are import-related
-                    severity="high",  # type: ignore[call-arg]
-                    message=failure,
-                    priority="high",  # type: ignore[call-arg]
-                    file_path="test_failures",
-                    line_number=0,
-                    stage="tests",
-                )
+        issues = [
+            Issue(
+                type=IssueType.IMPORT_ERROR,
+                severity=Priority.HIGH,
+                message=failure,
+                file_path="test_failures",
+                line_number=0,
+                stage="tests",
             )
+            for failure in safe_failures
+        ]
 
         # Run AI fix
         try:
@@ -487,11 +497,11 @@ class PhaseCoordinator:
                         f"[yellow]⚠️[/yellow] {remaining_count} test failures remain"
                     )
                 return fixed_count == 0
-            else:
-                self.console.print(
-                    "[yellow]⚠️[/yellow] AI agents unable to fix test failures"
-                )
-                return False
+
+            self.console.print(
+                "[yellow]⚠️[/yellow] AI agents unable to fix test failures"
+            )
+            return False
 
         except Exception as e:
             self.console.print(f"[yellow]⚠️[/yellow] AI fix failed: {e}")
@@ -531,17 +541,15 @@ class PhaseCoordinator:
                 continue
 
             # Check for safe patterns
-            if any(
-                safe in failure_lower
-                for safe in [
-                    "modulenotfounderror",
-                    "importerror",
-                    "attributeerror",
-                    "import ",
-                    "no module named",
-                    "cannot import",
-                ]
-            ):
+            safe_patterns = (
+                "modulenotfounderror",
+                "importerror",
+                "attributeerror",
+                "import ",
+                "no module named",
+                "cannot import",
+            )
+            if any(safe in failure_lower for safe in safe_patterns):
                 safe_failures.append(failure)
                 continue
 
