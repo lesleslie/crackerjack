@@ -379,8 +379,10 @@ class AutofixCoordinator:
             self.logger.debug("Verifying issue resolution...")
             verification_issues = self._collect_current_issues()
             if verification_issues:
+                count = len(verification_issues)
+                issue_word = "issue" if count == 1 else "issues"
                 self.logger.warning(
-                    f"False positive detected: {len(verification_issues)} issues remain"
+                    f"False positive detected: {count} {issue_word} remain"
                 )
 
                 return None
@@ -416,13 +418,14 @@ class AutofixCoordinator:
 
         if current_count >= previous_count:
             if no_progress_count + 1 >= convergence_threshold:
+                issue_word = "issue" if current_count == 1 else "issues"
                 self.console.print(
                     f"[yellow]⚠ No progress for {convergence_threshold} iterations "
-                    f"({current_count} issues remain)[/yellow]"
+                    f"({current_count} {issue_word} remain)[/yellow]"
                 )
                 self.logger.warning(
                     f"No progress for {convergence_threshold} iterations, "
-                    f"{current_count} issues remain"
+                    f"{current_count} {issue_word} remain"
                 )
                 return True
         return False
@@ -443,12 +446,13 @@ class AutofixCoordinator:
         max_iterations: int,
         issue_count: int,
     ) -> None:
+        issue_word = "issue" if issue_count == 1 else "issues"
         self.console.print(
             f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
-            f"{issue_count} issues to fix[/cyan]"
+            f"{issue_count} {issue_word} to fix[/cyan]"
         )
         self.logger.info(
-            f"Iteration {iteration + 1}/{max_iterations}: {issue_count} issues to fix"
+            f"Iteration {iteration + 1}/{max_iterations}: {issue_count} {issue_word} to fix"
         )
 
     def _run_ai_fix_iteration(
@@ -533,8 +537,9 @@ class AutofixCoordinator:
             )
             return True
 
+        issue_word = "issue" if remaining_count == 1 else "issues"
         self.logger.warning(
-            f"No fixes applied but {remaining_count} issues remain - agents unable to fix"
+            f"No fixes applied but {remaining_count} {issue_word} remain - agents unable to fix"
         )
         return False
 
@@ -548,26 +553,28 @@ class AutofixCoordinator:
         if remaining_count == 0:
             self.logger.info("All issues fixed")
             return True
-        else:
-            self.console.print(
-                f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
-                f"{remaining_count} issues remain[/yellow]"
-            )
-            self.logger.info(
-                f"Partial progress: {fixes_count} fixes applied, "
-                f"{remaining_count} issues remain"
-            )
 
-            return False
+        issue_word = "issue" if remaining_count == 1 else "issues"
+        self.console.print(
+            f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
+            f"{remaining_count} {issue_word} remain[/yellow]"
+        )
+        self.logger.info(
+            f"Partial progress: {fixes_count} fixes applied, "
+            f"{remaining_count} {issue_word} remain"
+        )
+
+        return False
 
     def _report_max_iterations_reached(self, max_iterations: int) -> bool:
         final_issue_count = len(self._collect_current_issues())
+        issue_word = "issue" if final_issue_count == 1 else "issues"
         self.console.print(
             f"[yellow]⚠ Reached {max_iterations} iterations with "
-            f"{final_issue_count} issues remaining[/yellow]"
+            f"{final_issue_count} {issue_word} remaining[/yellow]"
         )
         self.logger.warning(
-            f"Reached {max_iterations} iterations with {final_issue_count} issues remaining"
+            f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
         )
         return False
 
@@ -704,6 +711,16 @@ class AutofixCoordinator:
                     str(pkg_dir),
                 ],
                 "zuban",
+                120,
+            ),
+            (
+                [
+                    "uv",
+                    "run",
+                    "refurb",
+                    str(pkg_dir),
+                ],
+                "refurb",
                 120,
             ),
             (
