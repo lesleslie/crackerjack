@@ -481,8 +481,7 @@ class TestManager:
                 self._render_banner("Key Test Failures", line_style="red")
 
                 for _failure in failure_lines:
-
-                    pass
+                    self.console.print(f"  {_failure}")
             else:
                 self._last_test_failures = []
         else:

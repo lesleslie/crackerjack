@@ -374,7 +374,7 @@ class ZubanAdapter(BaseToolAdapter):
                 "**/.pytest_cache/**",
                 "**/htmlcov/**",
                 "**/.coverage*",
-                "**/worktrees/**",  # Exclude git worktrees from comprehensive hooks
+                "**/worktrees/**",
             ],
             timeout_seconds=180,
             parallel_safe=True,

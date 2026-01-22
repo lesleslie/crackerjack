@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import typing as t
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from rich import box
@@ -355,6 +356,197 @@ class PhaseCoordinator:
             self.console.print()
             return current_success
 
+    def _apply_ai_fix_for_tests(self, options: OptionsProtocol) -> bool:
+        """Apply AI fixes to test failures with guardrails.
+
+        Only attempts fixes for safe failure types (import errors, typos, etc.)
+        and requires user confirmation in interactive mode.
+        """
+        from crackerjack.agents.coordinator import AgentCoordinator
+        from crackerjack.agents.base import AgentContext, Issue, IssueType
+        from crackerjack.services.cache import CrackerjackCache
+        from rich.console import Console as RichConsole
+        from rich.prompt import Confirm
+
+        # Get test failure details
+        test_failures = self.test_manager.get_test_failures()
+        if not test_failures:
+            self.console.print("[yellow]⚠️[/yellow] No test failures detected")
+            return False
+
+        # Check if failures are safe to auto-fix
+        safe_failures = self._classify_safe_test_failures(test_failures)
+        if not safe_failures:
+            self.console.print(
+                "[yellow]⚠️[/yellow] Test failures require manual review (not safe for auto-fix)"
+            )
+            self.console.print("[yellow]   Hint:[/yellow] Complex logic errors, assertion failures, or infrastructure issues")
+            return False
+
+        # Count fixable vs total failures
+        total_failures = len(test_failures)
+        fixable_count = len(safe_failures)
+
+        self.console.print("\n")
+        self.console.print(
+            f"[cyan]📊 AI Analysis:[/cyan] {fixable_count}/{total_failures} test failures may be auto-fixable"
+        )
+        self.console.print()
+
+        # Show some examples of safe failures
+        for failure in safe_failures[:3]:
+            self.console.print(f"  • {failure[:100]}")
+
+        if len(safe_failures) > 3:
+            self.console.print(f"  ... and {len(safe_failures) - 3} more")
+
+        # Request user confirmation
+        self.console.print()
+        self.console.print(
+            "[bold yellow]⚠️  AI will attempt to fix these test failures[/bold yellow]"
+        )
+        self.console.print(
+            "[bold yellow]    Review all changes carefully before accepting[/bold yellow]"
+        )
+        self.console.print()
+
+        # Check for interactive mode
+        try:
+            rich_console = RichConsole()
+            user_confirms = Confirm.ask(
+                "[yellow]Attempt AI auto-fix for these test failures?[/yellow]",
+                console=rich_console,
+                default=False,
+            )
+
+            if not user_confirms:
+                self.console.print("[yellow]Skipped AI-fix for tests[/yellow]")
+                return False
+
+        except Exception:
+            # Non-interactive mode or prompt failed - skip AI-fix
+            self.console.print(
+                "[yellow]⚠️[/yellow] Test AI-fix requires interactive mode"
+            )
+            return False
+
+        # Apply AI fixes
+        self.console.print(
+            "[bold bright_magenta]🤖 AI AGENT FIXING[/bold bright_magenta] [bold bright_white]Attempting automated test fixes[/bold bright_white]"
+        )
+        self.console.print(make_separator("-") + "\n")
+
+        # Create AI context and coordinator
+        context = AgentContext(
+            project_path=self.pkg_path,
+            subprocess_timeout=300,
+        )
+        cache = CrackerjackCache()
+
+        # Create coordinator directly
+        coordinator = AgentCoordinator(context=context, cache=cache)
+
+        # Convert test failures to Issue objects
+        issues = []
+        for failure in safe_failures:
+            issues.append(
+                Issue(
+                    type=IssueType.IMPORT_ERROR,  # Most test failures are import-related
+                    severity="high",  # type: ignore[call-arg]
+                    message=failure,
+                    priority="high",  # type: ignore[call-arg]
+                    file_path="test_failures",
+                    line_number=0,
+                    stage="tests",
+                )
+            )
+
+        # Run AI fix
+        try:
+            import asyncio
+
+            try:
+                asyncio.get_running_loop()
+                with ThreadPoolExecutor() as executor:
+                    future = executor.submit(
+                        asyncio.run,
+                        coordinator.handle_issues(issues),
+                    )
+                    fix_result = future.result(timeout=300)
+            except RuntimeError:
+                fix_result = asyncio.run(coordinator.handle_issues(issues))
+
+            if fix_result and fix_result.success:
+                fixed_count = len(fix_result.fixes_applied)
+                remaining_count = len(fix_result.remaining_issues)
+                self.console.print(
+                    f"[green]✅[/green] AI agents fixed {fixed_count} test failure(s)"
+                )
+                if remaining_count > 0:
+                    self.console.print(
+                        f"[yellow]⚠️[/yellow] {remaining_count} test failures remain"
+                    )
+                return fixed_count == 0
+            else:
+                self.console.print(
+                    "[yellow]⚠️[/yellow] AI agents unable to fix test failures"
+                )
+                return False
+
+        except Exception as e:
+            self.console.print(f"[yellow]⚠️[/yellow] AI fix failed: {e}")
+            return False
+
+    def _classify_safe_test_failures(self, failures: list[str]) -> list[str]:
+        """Classify test failures as safe or risky for AI auto-fix.
+
+        Safe failures (AI can attempt):
+        - Import errors (ModuleNotFoundError, ImportError)
+        - Attribute errors on imported modules
+        - Type errors related to imports
+        - Simple syntax errors
+
+        Risky failures (require human review):
+        - Assertion failures
+        - Logic errors in test expectations
+        - Integration test failures
+        - Test infrastructure issues
+        - Complex type errors in test logic
+        """
+        safe_failures = []
+        risky_patterns = [
+            "AssertionError",
+            "assert ",
+            "Failed: ",  # pytest assertion format
+            "AssertionError: ",
+            "Integration",
+            "infrastructure",
+        ]
+
+        for failure in failures:
+            failure_lower = failure.lower()
+
+            # Check for risky patterns
+            if any(risky.lower() in failure_lower for risky in risky_patterns):
+                continue
+
+            # Check for safe patterns
+            if any(
+                safe in failure_lower
+                for safe in [
+                    "modulenotfounderror",
+                    "importerror",
+                    "attributeerror",
+                    "import ",
+                    "no module named",
+                    "cannot import",
+                ]
+            ):
+                safe_failures.append(failure)
+                continue
+
+        return safe_failures
+
     def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
         if options.skip_hooks:
             self.console.print(
@@ -448,6 +640,7 @@ class PhaseCoordinator:
             self.session.fail_task("testing", "Test environment validation failed")
             return False
         test_success = self.test_manager.run_tests(options)
+
         if test_success:
             coverage_info = self.test_manager.get_coverage()
             self.session.complete_task(
@@ -455,6 +648,24 @@ class PhaseCoordinator:
                 f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
             )
         else:
+            # Attempt AI-fix for test failures if enabled and safe to do so
+            if getattr(options, "ai_fix", False):
+                ai_fix_success = self._apply_ai_fix_for_tests(options)
+                if ai_fix_success:
+                    # Re-run tests after AI-fix
+                    self.console.print(
+                        "[green]✅[/green] AI agents applied fixes, re-running tests..."
+                    )
+                    self.console.print()
+                    test_success = self.test_manager.run_tests(options)
+                    if test_success:
+                        coverage_info = self.test_manager.get_coverage()
+                        self.session.complete_task(
+                            "testing",
+                            f"Tests passed after AI fixes, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
+                        )
+                        return test_success
+
             self.session.fail_task("testing", "Tests failed")
 
         return test_success
