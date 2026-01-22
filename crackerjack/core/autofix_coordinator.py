@@ -735,9 +735,7 @@ class AutofixCoordinator:
             result = self._run_check_command(cmd, timeout, hook_name)
             if result:  # (process, stdout, stderr) tuple
                 process, stdout, stderr = result
-                issues = self._process_check_result(
-                    process, stdout, stderr, hook_name
-                )
+                issues = self._process_check_result(process, stdout, stderr, hook_name)
                 all_issues.extend(issues)
                 successful_checks += 1
 
