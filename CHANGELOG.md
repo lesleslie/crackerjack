@@ -1,5 +1,14 @@
 ______________________________________________________________________
 
+## [0.49.7] - 2026-01-22
+
+### Changed
+
+- Update core functionality
+- Update core functionality
+- Update core, deps, docs
+- Update core, deps, tests
+
 ## [0.49.6] - 2026-01-22
 
 ### Changed
