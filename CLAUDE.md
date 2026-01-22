@@ -43,7 +43,7 @@ Crackerjack embodies these principles:
 
 **Embodied in Crackerjack**:
 
-- 83 specialized agents, each doing one thing excellently
+- 9 specialized agents, each doing one thing excellently
 - Modular hooks that work together via orchestration
 - Protocol-based design enables components to work together seamlessly
 
