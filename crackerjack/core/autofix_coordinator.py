@@ -294,7 +294,6 @@ class AutofixCoordinator:
         if not status or not isinstance(status, str):
             return False
 
-        # Case-insensitive validation to support both "Passed" and "passed"
         valid_statuses = {"passed", "failed", "skipped", "error", "timeout"}
         return status.lower() in valid_statuses
 
@@ -326,18 +325,15 @@ class AutofixCoordinator:
     def _apply_ai_agent_fixes(self, hook_results: Sequence[object]) -> bool:
         max_iterations = self._get_max_iterations()
 
-        # Create context and cache
         context = AgentContext(
             project_path=self.pkg_path,
             subprocess_timeout=300,
         )
         cache = CrackerjackCache()
 
-        # Use injected coordinator factory or fall back to direct instantiation
         if self._coordinator_factory is not None:
             coordinator = self._coordinator_factory(context, cache)
         else:
-            # Fallback for backward compatibility
             from crackerjack.agents.coordinator import AgentCoordinator
 
             coordinator = AgentCoordinator(context=context, cache=cache)
@@ -349,13 +345,11 @@ class AutofixCoordinator:
             issues = self._get_iteration_issues(iteration, hook_results)
             current_issue_count = len(issues)
 
-            # Handle case when no issues are found
             if current_issue_count == 0:
                 result = self._handle_zero_issues_case(iteration)
-                if result is not None:  # If result is not None, we should return
+                if result is not None:
                     return result
 
-            # Check if we should stop due to convergence
             if self._should_stop_on_convergence(
                 current_issue_count,
                 previous_issue_count,
@@ -381,22 +375,19 @@ class AutofixCoordinator:
         return self._report_max_iterations_reached(max_iterations)
 
     def _handle_zero_issues_case(self, iteration: int) -> bool | None:
-        """Handle the case when no issues are found during an iteration."""
-        # Verify this isn't a false positive from failed issue collection
-        if iteration > 0:  # Only verify after at least one fix attempt
+        if iteration > 0:
             self.logger.debug("Verifying issue resolution...")
             verification_issues = self._collect_current_issues()
             if verification_issues:
                 self.logger.warning(
                     f"False positive detected: {len(verification_issues)} issues remain"
                 )
-                # Returning None means continue to next iteration instead of returning success
+
                 return None
             else:
                 self._report_iteration_success(iteration)
                 return True
         else:
-            # First iteration with zero issues - genuinely nothing to fix
             self._report_iteration_success(iteration)
             return True
 
@@ -465,7 +456,6 @@ class AutofixCoordinator:
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> bool:
-        """Run a single AI fix iteration, handling both sync and async contexts."""
         fix_result = self._execute_ai_fix(coordinator, issues)
         if fix_result is None:
             return False
@@ -477,16 +467,12 @@ class AutofixCoordinator:
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> FixResult | None:
-        """Execute the AI fix and return the result or None if failed."""
         try:
-            # Check if we're already in a running event loop (e.g., from Oneiric workflow)
             try:
                 asyncio.get_running_loop()
-                # We're in an async context, run in a new thread to avoid nested loop issues
+
                 return self._run_in_threaded_loop(coordinator, issues)
             except RuntimeError:
-                # No running loop, use asyncio.run() - Python 3.11+ best practice
-                # Creates new event loop, handles cleanup automatically
                 return asyncio.run(coordinator.handle_issues(issues))
         except Exception:
             self.logger.exception("AI agent handling failed")
@@ -497,14 +483,12 @@ class AutofixCoordinator:
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> FixResult | None:
-        """Run the async function in a new event loop in a separate thread."""
         import threading
 
         result_container: list[FixResult | None] = [None]
         exception_container: list[Exception | None] = [None]
 
         def run_in_new_loop() -> None:
-            """Run the async function in a new event loop in a separate thread."""
             try:
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
@@ -519,7 +503,7 @@ class AutofixCoordinator:
 
         thread = threading.Thread(target=run_in_new_loop)
         thread.start()
-        thread.join(timeout=300)  # 5 minute timeout
+        thread.join(timeout=300)
 
         if exception_container[0] is not None:
             raise exception_container[0]
@@ -530,7 +514,6 @@ class AutofixCoordinator:
         return result_container[0]
 
     def _process_fix_result(self, fix_result: FixResult) -> bool:
-        """Process the fix result and determine if iteration was successful."""
         fixes_count = len(fix_result.fixes_applied)
         remaining_count = len(fix_result.remaining_issues)
 
@@ -539,20 +522,17 @@ class AutofixCoordinator:
                 fix_result, fixes_count, remaining_count
             )
 
-        # No fixes applied - check if there are remaining issues
         if not fix_result.success and remaining_count > 0:
             self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
             return False
 
-        # All issues resolved (no fixes needed or all fixes successful with no remaining)
         if remaining_count == 0:
             self.logger.info(
                 f"All {fixes_count} issues fixed with confidence {fix_result.confidence:.2f}"
             )
             return True
 
-        # Edge case: fixes_count == 0 but remaining_count > 0
         self.logger.warning(
             f"No fixes applied but {remaining_count} issues remain - agents unable to fix"
         )
@@ -561,17 +541,14 @@ class AutofixCoordinator:
     def _handle_partial_progress(
         self, fix_result: FixResult, fixes_count: int, remaining_count: int
     ) -> bool:
-        """Handle the case when partial progress was made."""
         self.logger.info(
             f"Fixed {fixes_count} issues with confidence {fix_result.confidence:.2f}"
         )
 
-        # CRITICAL FIX: Only return True if ALL issues are fixed
         if remaining_count == 0:
             self.logger.info("All issues fixed")
             return True
         else:
-            # Partial progress - continue to next iteration
             self.console.print(
                 f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
                 f"{remaining_count} issues remain[/yellow]"
@@ -580,7 +557,7 @@ class AutofixCoordinator:
                 f"Partial progress: {fixes_count} fixes applied, "
                 f"{remaining_count} issues remain"
             )
-            # Return False to continue fixing
+
             return False
 
     def _report_max_iterations_reached(self, max_iterations: int) -> bool:
@@ -604,15 +581,13 @@ class AutofixCoordinator:
             hook_issues = self._parse_single_hook_result(result)
             issues.extend(hook_issues)
 
-        # Deduplicate issues by (file_path, line_number, message)
         seen: set[tuple[str | None, int | None, str]] = set()
         unique_issues: list[Issue] = []
         for issue in issues:
-            # Create a key that uniquely identifies an issue
             key = (
                 issue.file_path,
                 issue.line_number,
-                issue.message[:100],  # Truncate long messages for key
+                issue.message[:100],
             )
             if key not in seen:
                 seen.add(key)
@@ -679,12 +654,10 @@ class AutofixCoordinator:
         return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
 
     def _collect_current_issues(self) -> list[Issue]:
-        """Collect current issues by re-running quality checks."""
         pkg_dir = self._detect_package_directory()
         check_commands = self._build_check_commands(pkg_dir)
         all_issues, successful_checks = self._execute_check_commands(check_commands)
 
-        # Warn if issue collection may have failed
         if successful_checks == 0 and self.pkg_path.exists():
             self.logger.warning(
                 "No issues collected from any checks - commands may have failed. "
@@ -697,27 +670,23 @@ class AutofixCoordinator:
         return all_issues
 
     def _detect_package_directory(self) -> Path:
-        """Detect package directory from common project layouts."""
         pkg_name = self.pkg_path.name
 
-        # Try common layouts
         pkg_dirs = [
-            self.pkg_path / pkg_name,  # crackerjack/crackerjack
-            self.pkg_path / "src" / pkg_name,  # src/crackerjack
-            self.pkg_path / "src",  # src/ layout
-            self.pkg_path,  # flat layout
+            self.pkg_path / pkg_name,
+            self.pkg_path / "src" / pkg_name,
+            self.pkg_path / "src",
+            self.pkg_path,
         ]
 
         for d in pkg_dirs:
             if d.exists() and d.is_dir():
                 return d
 
-        # Fallback to pkg_path if none found
         self.logger.warning(f"Cannot find package directory, using {self.pkg_path}")
         return self.pkg_path
 
     def _build_check_commands(self, pkg_dir: Path) -> list[tuple[list[str], str, int]]:
-        """Build list of quality check commands to run."""
         pkg_name = self.pkg_path.name
 
         return [
@@ -763,59 +732,70 @@ class AutofixCoordinator:
         successful_checks = 0
 
         for cmd, hook_name, timeout in check_commands:
-            process: subprocess.Popen[str] | None = None
-            try:
-                # Use Popen with PIPE for non-blocking output handling
-                process = subprocess.Popen(
-                    cmd,
-                    cwd=self.pkg_path,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE,
-                    text=True,
+            result = self._run_check_command(cmd, timeout, hook_name)
+            if result:  # (process, stdout, stderr) tuple
+                process, stdout, stderr = result
+                issues = self._process_check_result(
+                    process, stdout, stderr, hook_name
                 )
-
-                # communicate() handles output buffering properly
-                # Returns (stdout, stderr) tuple
-                stdout, stderr = process.communicate(timeout=timeout)
-
-                # Command executed successfully
+                all_issues.extend(issues)
                 successful_checks += 1
 
-                # Parse output if command failed or produced output
-                if process.returncode != 0 or stdout:
-                    hook_issues = self._parse_hook_to_issues(
-                        hook_name,
-                        stdout + stderr,
-                    )
-                    if hook_issues:
-                        all_issues.extend(hook_issues)
-                        self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
-
-            except subprocess.TimeoutExpired:
-                if process:
-                    process.kill()
-                    # Wait for process to terminate and collect remaining output
-                    try:
-                        process.communicate(timeout=5)
-                    except subprocess.TimeoutExpired:
-                        process.kill()  # Force kill if still running
-                self.logger.warning(f"Timeout running {hook_name} check")
-            except FileNotFoundError as e:
-                self.logger.error(f"Command not found for {hook_name}: {e}")
-            except Exception as e:
-                self.logger.error(f"Error running {hook_name} check: {e}")
-            finally:
-                # Ensure process is cleaned up
-                if process and process.poll() is None:
-                    process.kill()
-
         return all_issues, successful_checks
+
+    def _run_check_command(
+        self, cmd: list[str], timeout: int, hook_name: str
+    ) -> tuple[subprocess.Popen[str], str, str] | None:
+        """Run a single check command with timeout.
+
+        Returns None on error/timeout, otherwise returns (process, stdout, stderr).
+        """
+        process: subprocess.Popen[str] | None = None
+        try:
+            process = subprocess.Popen(
+                cmd,
+                cwd=self.pkg_path,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            stdout, stderr = process.communicate(timeout=timeout)
+            return (process, stdout, stderr)
+        except subprocess.TimeoutExpired:
+            self._kill_process_gracefully(process)
+            self.logger.warning(f"Timeout running {hook_name} check")
+            return None
+        except Exception as e:
+            self._kill_process_gracefully(process)
+            self.logger.error(f"Error running {hook_name} check: {e}")
+            return None
+
+    def _kill_process_gracefully(self, process: subprocess.Popen[str] | None) -> None:
+        """Kill a subprocess with cleanup."""
+        if process:
+            process.kill()
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()  # Force kill if still running
+
+    def _process_check_result(
+        self, process: subprocess.Popen[str], stdout: str, stderr: str, hook_name: str
+    ) -> list[Issue]:
+        """Process check command output and extract issues."""
+        combined_output = stdout + stderr
+
+        if process.returncode != 0 or combined_output:
+            hook_issues = self._parse_hook_to_issues(hook_name, combined_output)
+            if hook_issues:
+                self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
+            return hook_issues
+
+        return []
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
         issues: list[Issue] = []
 
-        # Map hook names to default issue types
-        # Note: ruff-check dynamically determines type based on error code
         hook_type_map: dict[str, IssueType] = {
             "zuban": IssueType.TYPE_ERROR,
             "refurb": IssueType.COMPLEXITY,
@@ -823,7 +803,7 @@ class AutofixCoordinator:
             "pyright": IssueType.TYPE_ERROR,
             "mypy": IssueType.TYPE_ERROR,
             "ruff": IssueType.FORMATTING,
-            "ruff-check": IssueType.FORMATTING,  # Default, overridden per-error
+            "ruff-check": IssueType.FORMATTING,
             "bandit": IssueType.SECURITY,
             "vulture": IssueType.DEAD_CODE,
             "skylos": IssueType.DEAD_CODE,
@@ -876,18 +856,17 @@ class AutofixCoordinator:
     def _should_parse_line(self, line: str) -> bool:
         if not line:
             return False
-        # Skip summary lines and contextual note/help lines (zuban, mypy, pyright)
-        # Note lines have format: file:line: note: message (with leading space after colon)
+
         line_lower = line.lower()
         if any(
             pattern in line_lower
             for pattern in (": note:", ": help:", "note: ", "help: ")
         ):
             return False
-        # Skip summary lines
+
         if line.startswith(("Found", "Checked", "N errors found", "errors in")):
             return False
-        # Skip subsection headers
+
         if line.strip().startswith(("===", "---", "Errors:")):
             return False
         return True
@@ -966,22 +945,10 @@ class AutofixCoordinator:
         return issues
 
     def _parse_ruff_output(self, raw_output: str) -> list[Issue]:
-        """Parse ruff-check output with intelligent issue type detection.
-
-        Ruff output format: file:line:col: CODE message
-        Example: src/main.py:42:10: C901 `func` is too complex (16 > 15)
-
-        Issue type is determined dynamically based on error code:
-        - C901: COMPLEXITY (requires RefactoringAgent)
-        - E/W codes: FORMATTING
-        - F codes: IMPORT_ERROR or FORMATTING
-        - S codes: SECURITY
-        """
         import re
 
         issues: list[Issue] = []
-        # Pattern: file:line:col: CODE message
-        # Handles both ":" and " " after column number
+
         pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
 
         for line in raw_output.split("\n"):
@@ -995,7 +962,6 @@ class AutofixCoordinator:
 
             file_path, line_num, col_num, code, message = match.groups()
 
-            # Determine issue type based on ruff error code
             issue_type = self._get_ruff_issue_type(code)
             severity = self._get_ruff_severity(code)
 
@@ -1014,31 +980,27 @@ class AutofixCoordinator:
         return issues
 
     def _get_ruff_issue_type(self, code: str) -> IssueType:
-        """Map ruff error codes to appropriate issue types."""
-        # C9xx: Complexity (McCabe)
         if code.startswith("C9"):
             return IssueType.COMPLEXITY
-        # S: Security (bandit-like)
+
         if code.startswith("S"):
             return IssueType.SECURITY
-        # F4xx: Import errors (unused imports, etc.)
+
         if code.startswith("F4"):
             return IssueType.IMPORT_ERROR
-        # F8xx, F9xx: Other flake8 errors
+
         if code.startswith("F"):
             return IssueType.FORMATTING
-        # E, W: Style/formatting
+
         return IssueType.FORMATTING
 
     def _get_ruff_severity(self, code: str) -> Priority:
-        """Map ruff error codes to severity levels."""
-        # Complexity and security are high priority
         if code.startswith(("C9", "S")):
             return Priority.HIGH
-        # Import errors are medium
+
         if code.startswith("F4"):
             return Priority.MEDIUM
-        # Style issues are lower priority
+
         return Priority.LOW
 
     def _parse_complexity_output(

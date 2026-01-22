@@ -1,7 +1,5 @@
 from typing import Any
 
-# Import all agent modules to trigger agent_registry.register() calls
-# These imports populate the agent registry so agents can be created
 from . import (
     architect_agent,
     documentation_agent,
