@@ -147,6 +147,7 @@ class Options(BaseModel):
     xcode_configuration: str = "Debug"
     xcode_destination: str = "platform=macOS"
     ai_fix: bool | None = None
+    select_provider: bool = False
     dry_run: bool = False
     full_release: str | None = None
     show_progress: bool | None = None
@@ -634,6 +635,15 @@ CLI_OPTIONS = {
             "The loop will exit early if all issues are resolved or "
             "no progress is made for 3 consecutive iterations. "
             "Use with --ai-fix flag."
+        ),
+    ),
+    "select_provider": typer.Option(
+        False,
+        "--select-provider",
+        help=(
+            "Launch interactive provider selection menu. "
+            "Configure AI provider for code fixing (Claude, Qwen, Ollama). "
+            "Saves selection to settings/local.yaml."
         ),
     ),
     "dry_run": typer.Option(

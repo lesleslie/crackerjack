@@ -122,6 +122,7 @@ def run(
     xcode_configuration: str = CLI_OPTIONS["xcode_configuration"],
     xcode_destination: str = CLI_OPTIONS["xcode_destination"],
     ai_fix: bool = CLI_OPTIONS["ai_fix"],
+    select_provider: bool = CLI_OPTIONS["select_provider"],
     dry_run: bool = CLI_OPTIONS["dry_run"],
     full_release: str | None = CLI_OPTIONS["full_release"],
     show_progress: bool | None = CLI_OPTIONS["show_progress"],
@@ -222,6 +223,15 @@ def run(
     settings = load_settings(CrackerjackSettings)
 
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
+
+    # Handle provider selection first
+    if select_provider:
+        import asyncio
+
+        from crackerjack.cli.handlers.provider_selection import handle_select_provider
+
+        asyncio.run(handle_select_provider())
+        return  # Exit after selection
 
     options = create_options(
         commit,
