@@ -1621,15 +1621,77 @@ class TestManager:
         self.console.print()
 
 
-        for failure in failures:
+        for i, failure in enumerate(failures, 1):
+            self._render_single_failure(failure, i, len(failures), style)
 
+    def _render_single_failure(
+        self, failure: "TestFailure", index: int, total: int, style: str,
+    ) -> None:
+        """Render a single test failure with detailed information."""
+        self._print_failure_header(index, failure, style)
+        self._print_failure_location(failure)
+        self._print_failure_status(failure, style)
+        self._print_failure_summary(failure)
+        self._print_failure_traceback(failure)
 
-            if failure.location and failure.location != failure.test_name:
-                pass
-            if failure.short_summary:
-                pass
-            elif failure.assertion:
-                first_line = failure.assertion.split("\n")[0]
+    def _print_failure_header(
+        self, index: int, failure: "TestFailure", style: str,
+    ) -> None:
+        """Print the test name header."""
+        self.console.print()
+        self.console.print(
+            f"[bold {style}]{index}.[/bold {style}] "
+            f"[bold cyan]{failure.test_name}[/bold cyan]"
+        )
+
+    def _print_failure_location(self, failure: "TestFailure") -> None:
+        """Print the failure location if available."""
+        if failure.location and failure.location != failure.test_name:
+            self.console.print(
+                f"   [dim]📍 Location:[/dim] [blue]{failure.location}[/blue]"
+            )
+
+    def _print_failure_status(self, failure: "TestFailure", style: str) -> None:
+        """Print the failure status."""
+        self.console.print(
+            f"   [dim]❌ Status:[/dim] [bold {style}]{failure.status}[/bold {style}]"
+        )
+
+    def _print_failure_summary(self, failure: "TestFailure") -> None:
+        """Print the failure summary or assertion."""
+        summary = self._get_failure_summary(failure)
+        if summary:
+            self.console.print(f"   [dim]📝[/dim] [yellow]{summary}[/yellow]")
+
+    def _get_failure_summary(self, failure: "TestFailure") -> str | None:
+        """Get the failure summary with truncation."""
+        if failure.short_summary:
+            return self._truncate_text(failure.short_summary, 200)
+        if failure.assertion:
+            first_line = failure.assertion.split("\n")[0].strip()
+            return self._truncate_text(first_line, 200)
+        return None
+
+    def _truncate_text(self, text: str, max_length: int) -> str:
+        """Truncate text to max_length with ellipsis."""
+        if len(text) > max_length:
+            return text[:max_length - 3] + "..."
+        return text
+
+    def _print_failure_traceback(self, failure: "TestFailure") -> None:
+        """Print the traceback preview if available."""
+        preview = self._get_traceback_preview(failure)
+        if preview:
+            self.console.print(f"   [dim]💡 Traceback:[/dim] [dim]{preview}[/dim]")
+
+    def _get_traceback_preview(self, failure: "TestFailure") -> str | None:
+        """Get the traceback preview with truncation."""
+        if not failure.traceback:
+            return None
+        preview = failure.traceback[0]
+        if not preview:
+            return None
+        return self._truncate_text(preview, 150)
 
     def _build_simple_failure_list(self, failures: list["TestFailure"]) -> str:
         lines = []
