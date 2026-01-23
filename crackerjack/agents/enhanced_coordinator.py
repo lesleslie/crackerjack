@@ -1,8 +1,12 @@
 import typing as t
 
+from crackerjack.config import load_settings
+from crackerjack.config.settings import AISettings
+
 from .base import AgentContext, FixResult, Issue
 from .claude_code_bridge import ClaudeCodeBridge
 from .coordinator import AgentCoordinator
+from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedAgentCoordinator(AgentCoordinator):
@@ -13,7 +17,14 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         enable_external_agents: bool = True,
     ) -> None:
         super().__init__(context, cache)
-        self.claude_bridge = ClaudeCodeBridge(context)
+
+        # Select AI bridge based on settings
+        ai_settings = load_settings(AISettings)
+        if ai_settings.ai_provider == "qwen":
+            self.claude_bridge = QwenCodeBridge(context)  # type: ignore[assignment]
+        else:
+            self.claude_bridge = ClaudeCodeBridge(context)
+
         self.external_agents_enabled = enable_external_agents
         self._external_consultation_stats: dict[str, int] = {
             "consultations_requested": 0,
