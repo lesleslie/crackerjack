@@ -1,15 +1,26 @@
 import typing as t
 from abc import abstractmethod
 
+from crackerjack.config import load_settings
+from crackerjack.config.settings import AISettings
+
 from .base import AgentContext, FixResult, Issue
 from .claude_code_bridge import ClaudeCodeBridge
 from .proactive_agent import ProactiveAgent
+from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedProactiveAgent(ProactiveAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
-        self.claude_bridge = ClaudeCodeBridge(context)
+
+        # Select AI bridge based on settings
+        ai_settings = load_settings(AISettings)
+        if ai_settings.ai_provider == "qwen":
+            self.claude_bridge = QwenCodeBridge(context)  # type: ignore[assignment]
+        else:
+            self.claude_bridge = ClaudeCodeBridge(context)
+
         self._external_consultation_enabled = True
 
     def enable_external_consultation(self, enabled: bool = True) -> None:
