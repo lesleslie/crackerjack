@@ -120,25 +120,14 @@ class CrackerjackServer:
         ai_settings = getattr(self.settings, "ai", None)
         if ai_settings and getattr(ai_settings, "ai_agent", False):
             try:
-                from pydantic import SecretStr
+                from crackerjack.adapters.ai.claude import ClaudeCodeFixer
 
-                from crackerjack.adapters.ai.claude import (
-                    ClaudeCodeFixer,
-                    ClaudeCodeFixerSettings,
-                )
-
-                api_key = getattr(ai_settings, "anthropic_api_key", None)
-                if api_key:
-                    claude_settings = ClaudeCodeFixerSettings(
-                        anthropic_api_key=SecretStr(api_key),
-                    )
-                    claude = ClaudeCodeFixer(settings=claude_settings)
-                    await claude.init()
-                    self.adapters.append(claude)
-                    enabled_names.append("Claude AI")
-                    logger.debug("Claude AI adapter initialized")
-                else:
-                    logger.warning("Claude AI enabled but no API key configured")
+                # Provider loads settings from environment variables
+                claude = ClaudeCodeFixer()
+                await claude.init()
+                self.adapters.append(claude)
+                enabled_names.append("Claude AI")
+                logger.debug("Claude AI adapter initialized")
             except Exception as e:
                 logger.warning(f"Failed to initialize Claude AI adapter: {e}")
 

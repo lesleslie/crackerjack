@@ -1,0 +1,60 @@
+# Qwen AI Provider Configuration Example for Crackerjack
+#
+# This file demonstrates how to configure crackerjack to use Qwen as the AI provider
+# for code fixing instead of Claude.
+#
+# To use Qwen:
+# 1. Copy this file to settings/local.yaml (or append to your existing local.yaml)
+# 2. Set your QWEN_API_KEY environment variable
+# 3. Run crackerjack with --ai-fix flag
+
+# AI Provider Selection
+# Options: "claude" (default) or "qwen"
+ai:
+  ai_provider: qwen  # Use Qwen instead of Claude for AI-powered fixes
+
+# Alternative: Use environment variables (recommended for API keys)
+# ---------------------------------------------------------------
+# Set these environment variables instead of putting keys in config files:
+#
+# export QWEN_API_KEY="sk-your-qwen-api-key-here"
+# export QWEN_BASE_URL="https://dashscope.aliyuncs.com/compatible-mode/v1"
+# export QWEN_MODEL="qwen-coder-plus"
+#
+# Then crackerjack will automatically use these values.
+
+# Configuration via YAML (optional, if you prefer config files over env vars)
+# -----------------------------------------------------------------------------------
+# ai:
+#   ai_provider: qwen
+#
+# NOTE: Qwen API keys should be set via QWEN_API_KEY environment variable for security.
+# Do NOT hardcode API keys in configuration files.
+
+# Available Qwen Models
+# ----------------------
+# - qwen-coder-plus: Best for code fixing (default, recommended)
+# - qwen-plus: General purpose, good for most tasks
+# - qwen-max: Highest quality, slower and more expensive
+# - qwen-turbo: Fastest, good for simple fixes
+
+# Example: Using specific Qwen model
+# ----------------------------------
+# ai:
+#   ai_provider: qwen
+#
+# Then set environment variable:
+# export QWEN_MODEL="qwen-max"
+
+# Example: Switching back to Claude
+# ----------------------------------
+# ai:
+#   ai_provider: claude  # Default setting
+
+# Complete example with all AI settings
+# -------------------------------------
+# ai:
+#   ai_provider: qwen
+#   ai_agent: true  # Enable AI agent
+#   autofix: true   # Enable automatic fixing
+#   max_iterations: 5

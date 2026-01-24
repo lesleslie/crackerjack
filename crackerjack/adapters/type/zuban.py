@@ -374,6 +374,7 @@ class ZubanAdapter(BaseToolAdapter):
                 "**/.pytest_cache/**",
                 "**/htmlcov/**",
                 "**/.coverage*",
+                "**/worktrees/**",
             ],
             timeout_seconds=180,
             parallel_safe=True,

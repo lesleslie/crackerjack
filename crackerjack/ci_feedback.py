@@ -1,10 +1,3 @@
-"""CI Feedback Integration for Pattern-Based Improvement Suggestions.
-
-This module analyzes CI/CD failure patterns and suggests improvements
-based on historical resolutions, implementing the CI Feedback Integration
-pattern from awesome-agentic-patterns.
-"""
-
 from __future__ import annotations
 
 import json
@@ -17,42 +10,25 @@ from typing import Any
 
 @dataclass
 class CIFailureAnalysis:
-    """Analysis of a CI failure."""
-
     failure_type: str
     pattern_id: str
     description: str
     similar_failures: list[dict[str, Any]]
     suggestions: list[str]
-    confidence: float  # 0.0-1.0
+    confidence: float
 
 
 class CIFeedbackAnalyzer:
-    """Analyzes CI failures and provides improvement suggestions.
-
-    This analyzer:
-    1. Identifies failure patterns from build logs
-    2. Matches against historical patterns
-    3. Suggests solutions based on past resolutions
-    4. Tracks improvement over time
-    """
-
     def __init__(self, patterns_path: str | Path = ".crackerjack/ci_patterns.json"):
-        """Initialize the CI feedback analyzer.
-
-        Args:
-            patterns_path: Path to CI failure patterns storage
-        """
         self.patterns_path = Path(patterns_path)
         self.patterns: list[dict[str, Any]] = []
-        # Create parent directory and initialize storage file
+
         self.patterns_path.parent.mkdir(parents=True, exist_ok=True)
         if not self.patterns_path.exists():
-            self._save_patterns()  # Create initial file with empty patterns
+            self._save_patterns()
         self._load_patterns()
 
     def _load_patterns(self) -> None:
-        """Load historical CI failure patterns."""
         if self.patterns_path.exists():
             try:
                 data = json.loads(self.patterns_path.read_text())
@@ -61,7 +37,6 @@ class CIFeedbackAnalyzer:
                 print(f"Warning: Could not load CI patterns: {e}")
 
     def _save_patterns(self) -> None:
-        """Save CI failure patterns."""
         self.patterns_path.parent.mkdir(parents=True, exist_ok=True)
         data = {"patterns": self.patterns}
         self.patterns_path.write_text(json.dumps(data, indent=2))
@@ -72,26 +47,12 @@ class CIFeedbackAnalyzer:
         test_results: dict[str, Any] | None = None,
         coverage_report: dict[str, Any] | None = None,
     ) -> CIFailureAnalysis:
-        """Analyze CI failure and provide suggestions.
-
-        Args:
-            build_log: Build log output
-            test_results: Test results summary
-            coverage_report: Code coverage report
-
-        Returns:
-            Analysis with failure pattern and suggestions
-        """
-        # Identify failure pattern
         failure_type = self._identify_failure_type(build_log)
 
-        # Find similar historical failures
         similar_failures = self._find_similar_failures(failure_type, build_log)
 
-        # Generate suggestions based on historical resolutions
         suggestions = self._generate_suggestions(failure_type, similar_failures)
 
-        # Calculate confidence
         confidence = self._calculate_confidence(similar_failures)
 
         return CIFailureAnalysis(
@@ -104,17 +65,8 @@ class CIFeedbackAnalyzer:
         )
 
     def _identify_failure_type(self, build_log: str) -> str:
-        """Identify the type of CI failure.
-
-        Args:
-            build_log: Build log output
-
-        Returns:
-            Failure type string
-        """
         log_lower = build_log.lower()
 
-        # Check failure types in order of specificity
         if self._is_test_failure(log_lower):
             return "test_failure"
         if self._is_coverage_failure(log_lower):
@@ -135,7 +87,6 @@ class CIFeedbackAnalyzer:
         return "unknown_failure"
 
     def _is_test_failure(self, log_lower: str) -> bool:
-        """Check if failure is a test failure."""
         return (
             "pytest" in log_lower
             or "test session starts" in log_lower
@@ -145,23 +96,19 @@ class CIFeedbackAnalyzer:
         )
 
     def _is_coverage_failure(self, log_lower: str) -> bool:
-        """Check if failure is a coverage failure."""
         return "coverage" in log_lower and (
             "below threshold" in log_lower or "coverage check failed" in log_lower
         )
 
     def _is_linting_failure(self, build_log: str) -> bool:
-        """Check if failure is a linting error."""
         log_lower = build_log.lower()
         return "ruff error" in log_lower or "lint" in log_lower
 
     def _is_type_check_failure(self, build_log: str) -> bool:
-        """Check if failure is a type checking error."""
         log_lower = build_log.lower()
         return "mypy error" in log_lower or "type checking" in log_lower
 
     def _is_import_failure(self, build_log: str) -> bool:
-        """Check if failure is an import error."""
         log_lower = build_log.lower()
         return any(
             pattern in log_lower
@@ -169,15 +116,6 @@ class CIFeedbackAnalyzer:
         )
 
     def _extract_pattern_id(self, build_log: str) -> str:
-        """Extract unique pattern identifier from build log.
-
-        Args:
-            build_log: Build log output
-
-        Returns:
-            Pattern identifier string
-        """
-        # Extract first error line as pattern ID
         lines = build_log.split("\n")
         for line in lines:
             line = line.strip()
@@ -185,12 +123,9 @@ class CIFeedbackAnalyzer:
                 marker in line.lower()
                 for marker in ("error", "failed", "timeout", "exception")
             ):
-                # Normalize the error line
-                normalized = re.sub(r"\d+", "N", line)  # Replace numbers
-                normalized = re.sub(
-                    r"[a-f0-9]{8,}", "HEX", normalized
-                )  # Replace hashes
-                return normalized[:100]  # Truncate to 100 chars
+                normalized = re.sub(r"\d+", "N", line)
+                normalized = re.sub(r"[a-f0-9]{8,}", "HEX", normalized)
+                return normalized[:100]
 
         return "unknown_pattern"
 
@@ -200,43 +135,21 @@ class CIFeedbackAnalyzer:
         build_log: str,
         limit: int = 5,
     ) -> list[dict[str, Any]]:
-        """Find similar historical failures.
-
-        Args:
-            failure_type: Type of failure
-            build_log: Current build log
-            limit: Maximum number of patterns to return
-
-        Returns:
-            List of similar failure patterns
-        """
         similar = []
 
         for pattern in self.patterns:
             if pattern.get("failure_type") == failure_type:
-                # Calculate simple similarity
                 similarity = self._calculate_log_similarity(
                     build_log,
                     pattern.get("log_sample", ""),
                 )
-                if similarity > 0.3:  # Threshold for similarity
+                if similarity > 0.3:
                     similar.append(pattern | {"similarity": similarity})
 
-        # Sort by similarity
         similar.sort(key=lambda x: x.get("similarity", 0), reverse=True)
         return similar[:limit]
 
     def _calculate_log_similarity(self, log1: str, log2: str) -> float:
-        """Calculate similarity between two log samples.
-
-        Args:
-            log1: First log
-            log2: Second log
-
-        Returns:
-            Similarity score 0.0-1.0
-        """
-        # Extract error keywords
         words1 = set(re.findall(r"\b\w+\b", log1.lower()))
         words2 = set(re.findall(r"\b\w+\b", log2.lower()))
 
@@ -253,18 +166,8 @@ class CIFeedbackAnalyzer:
         failure_type: str,
         similar_failures: list[dict[str, Any]],
     ) -> list[str]:
-        """Generate improvement suggestions.
-
-        Args:
-            failure_type: Type of failure
-            similar_failures: Similar historical failures
-
-        Returns:
-            List of suggestion strings
-        """
         suggestions = []
 
-        # Add generic suggestions based on failure type
         generic_suggestions = {
             "test_failure": [
                 "✓ Run tests locally before pushing: uv run pytest",
@@ -306,13 +209,11 @@ class CIFeedbackAnalyzer:
 
         suggestions.extend(generic_suggestions.get(failure_type, []))
 
-        # Add suggestions from similar historical failures
         for failure in similar_failures:
             resolution = failure.get("resolution")
             if resolution:
                 suggestions.append(f"✓ Historical fix: {resolution}")
 
-        # Remove duplicates while preserving order
         seen = set()
         unique_suggestions = []
         for suggestion in suggestions:
@@ -323,15 +224,6 @@ class CIFeedbackAnalyzer:
         return unique_suggestions
 
     def _describe_failure(self, failure_type: str, build_log: str) -> str:
-        """Generate human-readable failure description.
-
-        Args:
-            failure_type: Type of failure
-            build_log: Build log output
-
-        Returns:
-            Description string
-        """
         descriptions = {
             "test_failure": "One or more tests failed during execution",
             "coverage_below_threshold": "Code coverage dropped below minimum threshold",
@@ -346,7 +238,6 @@ class CIFeedbackAnalyzer:
 
         base_desc = descriptions.get(failure_type, "Unknown failure")
 
-        # Extract first few lines of actual error for context
         error_lines = []
         for line in build_log.split("\n"):
             if any(
@@ -361,18 +252,9 @@ class CIFeedbackAnalyzer:
         return base_desc
 
     def _calculate_confidence(self, similar_failures: list[dict[str, Any]]) -> float:
-        """Calculate confidence in suggestions.
-
-        Args:
-            similar_failures: Similar historical failures
-
-        Returns:
-            Confidence score 0.0-1.0
-        """
         if not similar_failures:
-            return 0.5  # Medium confidence for generic suggestions
+            return 0.5
 
-        # Higher confidence if we have close matches
         best_similarity = similar_failures[0].get("similarity", 0)
         return min(1.0, 0.5 + best_similarity)
 
@@ -382,13 +264,6 @@ class CIFeedbackAnalyzer:
         resolution: str,
         successful: bool,
     ) -> None:
-        """Record successful resolution for future reference.
-
-        Args:
-            pattern_id: Pattern identifier
-            resolution: How the failure was resolved
-            successful: Whether the resolution worked
-        """
         pattern = {
             "pattern_id": pattern_id,
             "resolution": resolution,
@@ -405,18 +280,6 @@ def analyze_ci_failure(
     test_results: dict[str, Any] | None = None,
     coverage_report: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Analyze CI failure and provide suggestions (MCP-compatible function).
-
-    This is the main entry point for MCP tool integration.
-
-    Args:
-        build_log: Build log output
-        test_results: Test results summary
-        coverage_report: Code coverage report
-
-    Returns:
-        Dictionary with analysis results
-    """
     analyzer = CIFeedbackAnalyzer()
     analysis = analyzer.analyze_ci_failure(build_log, test_results, coverage_report)
 
@@ -425,7 +288,7 @@ def analyze_ci_failure(
         "pattern_id": analysis.pattern_id,
         "description": analysis.description,
         "similar_failures_count": len(analysis.similar_failures),
-        "similar_failures": analysis.similar_failures[:3],  # Top 3
+        "similar_failures": analysis.similar_failures[:3],
         "suggestions": analysis.suggestions,
         "confidence": analysis.confidence,
         "recommended_next_steps": _generate_next_steps(analysis),
@@ -433,14 +296,6 @@ def analyze_ci_failure(
 
 
 def _generate_next_steps(analysis: CIFailureAnalysis) -> list[str]:
-    """Generate recommended next steps.
-
-    Args:
-        analysis: Failure analysis
-
-    Returns:
-        List of recommended actions
-    """
     steps = []
 
     if analysis.confidence > 0.7:

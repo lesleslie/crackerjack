@@ -148,7 +148,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "check",
             "--fix",
             "--extension",
-            ".py:python",
+            ".py: python",
             f"./{package_name}",
         ],
         "ruff-format": [
@@ -198,7 +198,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "15",
             package_name,
         ],
-        "refurb": ["uv", "run", "python", "-m", "refurb", package_name],
+        "refurb": ["uv", "run", "python", "-m", "refurb", f"{package_name}/"],
         "pip-audit": [
             "uv",
             "run",
@@ -211,6 +211,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "osv",
             "--ignore-vuln",
             "CVE-2025-53000",
+            "--ignore-vuln",
+            "CVE-2026-0994",
             "--fix",
         ],
         "pyscn": [

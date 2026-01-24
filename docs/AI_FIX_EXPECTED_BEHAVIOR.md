@@ -9,9 +9,23 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 **ALL quality issues should be automatically fixed by AI agents when `--ai-fix` is enabled:**
 
 - ✅ Fast hook issues (formatting, style, imports)
-- ✅ Comprehensive hook issues (type errors, security, complexity, dead code)
-- ✅ Test failures (unit tests, integration tests)
+- ✅ Comprehensive hook issues (type errors, security, complexity, dead code, refurb)
+- ✅ Test failures (unit tests, integration tests) - **NEW: Safe failures with guardrails**
 - ❌ **NOT** manual review requirements
+
+**Test AI-Fix Guardrails (NEW):**
+
+- Only attempts fixes for **safe** test failures:
+  - Import errors (`ModuleNotFoundError`, `ImportError`)
+  - Attribute errors on imported modules
+  - "No module named" errors
+  - Cannot import errors
+- **Requires user confirmation** in interactive mode
+- Skips **risky** failures (requires manual review):
+  - Assertion failures
+  - Logic errors in test expectations
+  - Integration test failures
+  - Test infrastructure issues
 
 ## Expected Workflow
 
@@ -32,12 +46,12 @@ The `--ai-fix` flag enables **fully automated fixing** of all quality issues det
 **Parse ALL failures into Issue objects:**
 
 - Type errors (zuban, pyright, mypy)
-- Code modernization (refurb)
+- Code modernization (refurb) ✅ **Now included in AI-fix loop**
 - Complexity violations (complexipy)
 - Security issues (bandit, semgrep)
 - Dead code (vulture, skylos)
 - Formatting (ruff)
-- Test failures (pytest)
+- Test failures (pytest) ✅ **NEW: Safe failures with user confirmation**
 
 ### Phase 3: Automated Fixes
 
@@ -68,80 +82,75 @@ Re-run test suite
 - All tests pass ✅
 - Zero remaining issues ✅
 
-## Current Issues (Should Be Fixed)
+## Recent Fixes (Completed)
 
-### ❌ Issue 1: Zuban Type Error
+### ✅ Fix 1: Test AI-Fix Implementation (Jan 2025)
 
-**Location:** `crackerjack/executors/hook_executor.py:664`
+**Location:** `crackerjack/core/phase_coordinator.py`
 
-**Error:**
+**Feature:** Added AI-fix capability for test failures with safety guardrails
 
-```
-error: Need type annotation for "issues" (hint: "issues: List[<type>] = ...")  [var-annotated]
-```
+**Implementation:**
 
-**Expected AI Fix:**
+- Classifies test failures as safe vs risky
+- Safe: import errors, attribute errors, "no module named"
+- Risky: assertions, logic errors, integration tests
+- Requires user confirmation in interactive mode
+- Re-runs tests after successful AI fixes
 
-```python
-# Before (line 664):
-issues = []
+**Files Modified:**
 
-# After (AI should fix):
-issues: list[str] = []
-```
+- `crackerjack/managers/test_manager.py` - Fixed test failure display bug
+- `crackerjack/core/phase_coordinator.py` - Added `_apply_ai_fix_for_tests()` method
+- `crackerjack/core/phase_coordinator.py` - Added `_classify_safe_test_failures()` method
+- `crackerjack/core/phase_coordinator.py` - Added `_run_ai_test_fix()` helper
 
-**Why Not Fixed:** The RefactoringAgent or FormattingAgent should handle this automatically.
+### ✅ Fix 2: Refurb Added to AI-Fix Loop (Jan 2025)
 
-### ❌ Issue 2: Refurb Modernization #1
+**Location:** `crackerjack/core/autofix_coordinator.py:_build_check_commands()`
 
-**Location:** `crackerjack/executors/hook_executor.py:737:33`
+**Problem:** Refurb was excluded from `_collect_current_issues()`, causing:
 
-**Error:**
+- Wrong issue counts (showed 4 instead of 6)
+- Refurb issues never detected or fixed during iterations
 
-```
-[FURB102]: Replace `x.startswith(y) or x.startswith(z)` with `x.startswith((y, z))`
-```
+**Solution:** Added refurb check command to AI-fix loop
 
-**Expected AI Fix:**
+**Impact:** Now detects and fixes all comprehensive hook issues including refurb
 
-```python
-# Before:
-if line.startswith(("Found", "Checked")):
-    return False
+### ✅ Fix 3: All Type Errors Fixed (Jan 2025)
 
-# After (AI should fix):
-if line.startswith(("Found", "Checked")):
-    return False
-```
+**Location:** `crackerjack/core/phase_coordinator.py`
 
-**Why Not Fixed:** The RefactoringAgent should apply this modernization automatically.
+**Problems Fixed:**
 
-### ❌ Issue 3: Refurb Modernization #2
+1. `severity="high"` → `severity=Priority.HIGH` (proper enum)
+1. Removed non-existent `priority` parameter
+1. List comprehension instead of for loop with append
+1. Tuple membership instead of list in `any()`
+1. Removed unnecessary `else: return` pattern
 
-**Location:** `crackerjack/managers/test_manager.py:185:13`
+**Result:** All 2 zuban type errors, 3 refurb warnings, and 1 complexity warning fixed
 
-**Error:**
+### ✅ Fix 4: AI-Fix Reporting Grammar (Jan 2025)
 
-```
-[FURB126]: Replace `else: return x` with `return x`
-```
+**Location:** `crackerjack/core/autofix_coordinator.py` (6 locations)
 
-**Expected AI Fix:**
+**Problem:** "1 issues" (grammatically incorrect)
+
+**Solution:** Added pluralization logic
 
 ```python
-# Before:
-if result.returncode == 0:
-    return self._handle_test_success(...)
-else:
-    return self._handle_test_failure(...)
-
-# After (AI should fix):
-if result.returncode == 0:
-    return self._handle_test_success(...)
-return self._handle_test_failure(...)
+issue_word = "issue" if count == 1 else "issues"
+f"{count} {issue_word} to fix"  # ✅ "1 issue" or "2 issues"
 ```
 
-**Why Not Fixed:** The RefactoringAgent should apply this simplification automatically.
+**Locations Fixed:**
+
+- Iteration progress reports
+- Convergence detection messages
+- Partial progress messages
+- Max iterations reached messages
 
 ## Agent Capabilities
 
@@ -168,39 +177,39 @@ return self._handle_test_failure(...)
 
 ## Why Issues Aren't Being Fixed
 
-### Problem: Conservative Agent Behavior
+### Problem: Conservative Agent Behavior (RESOLVED)
 
-**Current Implementation:**
+**Previous Implementation:**
 
-```python
-# crackerjack/core/autofix_coordinator.py
-if fix_result.success:
-    self.logger.info(f"AI agents fixed {len(fix_result.fixes_applied)} issues")
-else:
-    self.logger.warning(f"AI agents could not fix all issues")
-```
+Agents were too conservative, but recent improvements include:
 
-**Issue:** Agents may be:
+- ✅ Added refurb to AI-fix loop (was missing)
+- ✅ Fixed issue counting and reporting
+- ✅ Improved pluralization in user-facing messages
 
-1. **Not attempting fixes** for simple issues
-1. **Too conservative** with confidence thresholds
-1. **Missing specialized agents** for certain issue types
+**Remaining Challenges:**
 
-### Problem: Parsing Issues
+Agents may still be:
+
+1. **Not attempting fixes** for complex architectural issues
+1. **Too conservative** with confidence thresholds for some patterns
+1. **Missing context** for business logic changes
+
+### Problem: Parsing Issues (IMPROVED)
 
 **Current Implementation:**
 
 ```python
 def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
-    # Parses zuban, refurb, etc. into Issue objects
-    # But may not be extracting all the details needed
+    # Parses zuban, refurb, complexipy, etc. into Issue objects
+    # ✅ Now includes refurb parser
 ```
 
-**Issue:** Parser may not be capturing:
+**Status:**
 
-- Exact line numbers
-- Suggested fixes from tools
-- Context needed for automatic fixing
+- ✅ Refurb parser exists and working
+- ✅ All comprehensive hooks detected (zuban, refurb, complexipy)
+- ✅ Proper issue counting and reporting
 
 ## Expected Behavior
 
@@ -255,40 +264,65 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ### Manual Testing:
 
 ```bash
-# Before fix:
-python -m crackerjack run -c
-# Should show: zuban (1 issue), refurb (2 issues)
-
-# Run AI fix:
-python -m crackerjack run --ai-fix -c
-# Should show: AI agents applied fixes
-
-# After fix:
-python -m crackerjack run -c
+# Comprehensive hooks (including refurb):
+python -m crackerjack run -c --ai-fix
 # Should show: All hooks passing ✅
+
+# Test AI-fix (NEW):
+python -m crackerjack run -t --ai-fix -v
+# Should prompt for confirmation on safe test failures
+# Should re-run tests after AI fixes
+
+# Full workflow:
+python -m crackerjack run -t -c --ai-fix
+# Should fix all issues automatically
 ```
 
 ### Expected Results:
 
-- ✅ Zuban: 0 issues (type annotation added)
+**Comprehensive Hooks:**
+
+- ✅ Zuban: 0 issues (type errors fixed)
 - ✅ Refurb: 0 issues (modernization applied)
-- ✅ All hooks: 11/11 passing
-- ✅ All tests: Passing
+- ✅ Complexipy: 0 issues (complexity ≤15)
+- ✅ All comprehensive hooks: 10/10 passing
+
+**Test Suite:**
+
+- ✅ Safe failures: AI-fixed with confirmation
+- ✅ Risky failures: Require manual review
+- ✅ All tests: Passing after fixes
+
+**Workflow:**
+
+- ✅ Correct issue counts (includes refurb)
+- ✅ Proper pluralization ("1 issue" vs "2 issues")
+- ✅ User confirmation for test AI-fix
 
 ## Conclusion
 
 **The `--ai-fix` flag should result in ZERO remaining issues** for:
 
-- All fast hooks (formatting, style)
-- All comprehensive hooks (type, security, complexity)
-- All tests
+- All fast hooks (formatting, style) ✅
+- All comprehensive hooks (type, security, complexity, refurb) ✅
+- Safe test failures (import errors, typos) ✅ **NEW**
 
 **Manual intervention should ONLY be required for:**
 
 - Architectural decisions
 - Business logic changes
 - Feature requirements
+- **Risky test failures** (assertions, logic errors, integration tests) ✅ **NEW**
 
-**Current Status:** ❌ **FAILING** - AI agents not fixing simple issues
+**Current Status:** ✅ **IMPROVED** - Major enhancements completed:
 
-**Required Action:** Enhance agent confidence, parsing, and coordination to achieve 100% automated fixing.
+1. ✅ Test AI-fix implemented with guardrails (Jan 2025)
+1. ✅ Refurb added to AI-fix loop (Jan 2025)
+1. ✅ All type errors and refurb warnings fixed (Jan 2025)
+1. ✅ AI-fix reporting improved (issue counts, pluralization) (Jan 2025)
+
+**Ongoing Work:**
+
+- Continue improving agent confidence for complex issues
+- Enhance parsing to capture tool suggestions
+- Optimize agent coordination for faster convergence
