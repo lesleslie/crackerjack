@@ -526,78 +526,106 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
         self.log(f"Fixing broken link in {issue.file_path}")
 
         if not issue.file_path:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["No file path provided for broken link fix"],
+            return self._create_error_result(
+                "No file path provided for broken link fix"
             )
 
-        # Extract target file from details
-        target_file = None
-        for detail in issue.details:
-            if detail.startswith("Target file:"):
-                target_file = detail.split(":", 1)[1].strip()
-                break
-
-        # Read the file content
-        content = self.context.get_file_content(issue.file_path)
+        target_file = self._extract_target_file_from_details(issue.details)
+        content = self._read_file_content(issue.file_path)
         if content is None:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Failed to read {issue.file_path}"],
-            )
+            return self._create_error_result(f"Failed to read {issue.file_path}")
 
-        lines = content.split("\n")
-        updated_lines = []
+        updated_content = self._fix_or_remove_broken_link_line(
+            content, issue.file_path, issue.line_number, target_file
+        )
 
-        # Find and fix the broken link
-        for i, line in enumerate(lines):
-            if i + 1 == issue.line_number:
-                # This is the line with the broken link
-                if target_file:
-                    # Try to find the target file
-                    fixed_link = self._find_and_fix_link(
-                        target_file, line, issue.file_path
-                    )
-                    if fixed_link != line:
-                        updated_lines.append(fixed_link)
-                        self.log(
-                            f"Fixed link to {target_file} in {issue.file_path}:{issue.line_number}"
-                        )
-                        continue
+        return self._write_fixed_content(issue.file_path, updated_content, target_file)
 
-                # If we couldn't fix it, remove the broken link line
-                self.log(
-                    f"Removing unfixable broken link in {issue.file_path}:{issue.line_number}"
-                )
-                continue
+    def _extract_target_file_from_details(self, details: list[str]) -> str | None:
+        """Extract target file path from issue details."""
+        for detail in details:
+            if detail.startswith("Target file:"):
+                return detail.split(":", 1)[1].strip()
+        return None
 
-            updated_lines.append(line)
+    def _read_file_content(self, file_path: str) -> str | None:
+        """Read file content from context."""
+        return self.context.get_file_content(file_path)
 
-        updated_content = "\n".join(updated_lines)
-
-        # Write the fixed content
-        success = self.context.write_file_content(issue.file_path, updated_content)
-
-        if success:
-            if target_file:
-                message = f"Fixed broken link to '{target_file}' in {issue.file_path}"
-            else:
-                message = f"Removed broken link from {issue.file_path}"
-
-            return FixResult(
-                success=True,
-                confidence=0.85,
-                fixes_applied=[message],
-                files_modified=[issue.file_path],
-            )
-
+    def _create_error_result(self, message: str) -> FixResult:
+        """Create an error FixResult."""
         return FixResult(
             success=False,
             confidence=0.0,
-            remaining_issues=[f"Failed to write fixed content to {issue.file_path}"],
+            remaining_issues=[message],
         )
+
+    def _fix_or_remove_broken_link_line(
+        self,
+        content: str,
+        file_path: str,
+        line_number: int | None,
+        target_file: str | None,
+    ) -> str:
+        """Fix or remove the broken link line from content."""
+        lines = content.split("\n")
+        updated_lines = []
+
+        for i, line in enumerate(lines):
+            if i + 1 == line_number:
+                fixed_line = self._attempt_link_fix(
+                    target_file, line, file_path, line_number
+                )
+                if fixed_line is not None:
+                    updated_lines.append(fixed_line)
+                # If None, line is removed
+            else:
+                updated_lines.append(line)
+
+        return "\n".join(updated_lines)
+
+    def _attempt_link_fix(
+        self,
+        target_file: str | None,
+        line: str,
+        file_path: str,
+        line_number: int | None,
+    ) -> str | None:
+        """Attempt to fix the broken link, return None to remove line."""
+        if target_file:
+            fixed_link = self._find_and_fix_link(target_file, line, file_path)
+            if fixed_link != line:
+                self.log(f"Fixed link to {target_file} in {file_path}:{line_number}")
+                return fixed_link
+
+        # If we couldn't fix it, remove the broken link line
+        self.log(f"Removing unfixable broken link in {file_path}:{line_number}")
+        return None
+
+    def _write_fixed_content(
+        self, file_path: str, updated_content: str, target_file: str | None
+    ) -> FixResult:
+        """Write the fixed content and return result."""
+        success = self.context.write_file_content(file_path, updated_content)
+
+        if not success:
+            return self._create_error_result(
+                f"Failed to write fixed content to {file_path}"
+            )
+
+        message = self._create_success_message(file_path, target_file)
+        return FixResult(
+            success=True,
+            confidence=0.85,
+            fixes_applied=[message],
+            files_modified=[file_path],
+        )
+
+    def _create_success_message(self, file_path: str, target_file: str | None) -> str:
+        """Create success message based on operation performed."""
+        if target_file:
+            return f"Fixed broken link to '{target_file}' in {file_path}"
+        return f"Removed broken link from {file_path}"
 
     def _find_and_fix_link(self, target_file: str, line: str, source_file: str) -> str:
         """Search for the target file and update the link.

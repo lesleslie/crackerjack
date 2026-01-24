@@ -1131,64 +1131,84 @@ class AutofixCoordinator:
 
         for line in raw_output.split("\n"):
             line = line.strip()
-            if not line or "File not found:" not in line:
+            if not self._should_parse_local_link_line(line):
                 continue
 
-            # Parse: "docs/features/QWEN_PROVIDER.md:345: TARGET.md - File not found: TARGET.md"
-            try:
-                # Split by first colon to get file path
-                if ":" not in line:
-                    continue
-
-                file_path, rest = line.split(":", 1)
-
-                # Extract line number (before second colon)
-                if ":" not in rest:
-                    continue
-
-                line_number_str, message_part = rest.split(":", 1)
-
-                try:
-                    line_number = int(line_number_str.strip())
-                except ValueError:
-                    line_number = None
-
-                # Extract target file from message
-                # Format: "TARGET.md - File not found: TARGET.md"
-                target_file = None
-                if " - " in message_part:
-                    target_file = message_part.split(" - ")[0].strip()
-
-                # Create descriptive message
-                if target_file:
-                    message = (
-                        f"Broken documentation link: '{target_file}' (file not found)"
-                    )
-                else:
-                    message = "Broken documentation link (target file not found)"
-
-                # Store target file in details for later use by the agent
-                details = [f"Target file: {target_file}"] if target_file else []
-
-                issues.append(
-                    Issue(
-                        type=issue_type,
-                        severity=Priority.MEDIUM,
-                        message=message,
-                        file_path=file_path.strip(),
-                        line_number=line_number,
-                        stage="documentation",
-                        details=details,
-                    )
-                )
-
-            except Exception as e:
-                self.logger.debug(
-                    f"Failed to parse check-local-links line: {line} ({e})"
-                )
-                continue
+            issue = self._parse_single_local_link_line(line, issue_type)
+            if issue:
+                issues.append(issue)
 
         return issues
+
+    def _should_parse_local_link_line(self, line: str) -> bool:
+        """Check if line should be parsed as local link error."""
+        return bool(line and "File not found:" in line)
+
+    def _parse_single_local_link_line(
+        self, line: str, issue_type: IssueType
+    ) -> Issue | None:
+        """Parse a single local link error line into an Issue."""
+        try:
+            file_path, line_number, target_file = self._extract_local_link_parts(line)
+            if not file_path:
+                return None
+
+            message = self._create_link_error_message(target_file)
+            details = self._create_link_error_details(target_file)
+
+            return Issue(
+                type=issue_type,
+                severity=Priority.MEDIUM,
+                message=message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="documentation",
+                details=details,
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to parse check-local-links line: {line} ({e})")
+            return None
+
+    def _extract_local_link_parts(
+        self, line: str
+    ) -> tuple[str, int | None, str | None]:
+        """Extract file path, line number, and target file from local link error line.
+
+        Expected format: "docs/features/QWEN_PROVIDER.md:345: TARGET.md - File not found: TARGET.md"
+        """
+        if ":" not in line:
+            return "", None, None
+
+        file_path, rest = line.split(":", 1)
+
+        if ":" not in rest:
+            return file_path.strip(), None, None
+
+        line_number_str, message_part = rest.split(":", 1)
+        line_number = self._parse_line_number(line_number_str)
+
+        target_file = self._extract_target_file_from_message(message_part)
+
+        return file_path.strip(), line_number, target_file
+
+    def _extract_target_file_from_message(self, message_part: str) -> str | None:
+        """Extract target file from message part.
+
+        Format: "TARGET.md - File not found: TARGET.md"
+        """
+        if " - " in message_part:
+            return message_part.split(" - ")[0].strip()
+        return None
+
+    def _create_link_error_message(self, target_file: str | None) -> str:
+        """Create descriptive error message for broken link."""
+        if target_file:
+            return f"Broken documentation link: '{target_file}' (file not found)"
+        return "Broken documentation link (target file not found)"
+
+    def _create_link_error_details(self, target_file: str | None) -> list[str]:
+        """Create details list for the agent to use later."""
+        return [f"Target file: {target_file}"] if target_file else []
 
     def _parse_codespell_output(
         self, raw_output: str, issue_type: IssueType
@@ -1202,51 +1222,63 @@ class AutofixCoordinator:
 
         for line in raw_output.split("\n"):
             line = line.strip()
-            if not line or "==>" not in line:
+            if not self._should_parse_codespell_line(line):
                 continue
 
-            # Parse: "FILE.md:123: wrong ==> correct, suggestions"
-            try:
-                if ":" not in line:
-                    continue
-
-                file_path, rest = line.split(":", 1)
-
-                # Extract line number
-                if ":" not in rest:
-                    continue
-
-                line_number_str, message_part = rest.split(":", 1)
-
-                try:
-                    line_number = int(line_number_str.strip())
-                except ValueError:
-                    line_number = None
-
-                # Extract the spelling suggestion
-                # Format: "wrong ==> correct, suggestion1, suggestion2"
-                if "==>" in message_part:
-                    wrong_word, suggestions = message_part.split("==>", 1)
-                    message = f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
-                else:
-                    message = message_part.strip()
-
-                issues.append(
-                    Issue(
-                        type=issue_type,
-                        severity=Priority.LOW,
-                        message=message,
-                        file_path=file_path.strip(),
-                        line_number=line_number,
-                        stage="spelling",
-                    )
-                )
-
-            except Exception as e:
-                self.logger.debug(f"Failed to parse codespell line: {line} ({e})")
-                continue
+            issue = self._parse_single_codespell_line(line, issue_type)
+            if issue:
+                issues.append(issue)
 
         return issues
+
+    def _should_parse_codespell_line(self, line: str) -> bool:
+        """Check if line should be parsed as codespell output."""
+        return bool(line and "==>" in line)
+
+    def _parse_single_codespell_line(
+        self, line: str, issue_type: IssueType
+    ) -> Issue | None:
+        """Parse a single codespell line into an Issue."""
+        try:
+            file_path, line_number, message = self._extract_codespell_parts(line)
+            if not file_path:
+                return None
+
+            return Issue(
+                type=issue_type,
+                severity=Priority.LOW,
+                message=message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="spelling",
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to parse codespell line: {line} ({e})")
+            return None
+
+    def _extract_codespell_parts(self, line: str) -> tuple[str, int | None, str]:
+        """Extract file path, line number, and message from codespell line."""
+        if ":" not in line:
+            return "", None, ""
+
+        file_path, rest = line.split(":", 1)
+
+        if ":" not in rest:
+            return file_path.strip(), None, rest.strip()
+
+        line_number_str, message_part = rest.split(":", 1)
+        line_number = self._parse_line_number(line_number_str)
+
+        message = self._format_codespell_message(message_part)
+
+        return file_path.strip(), line_number, message
+
+    def _format_codespell_message(self, message_part: str) -> str:
+        """Format codespell message from the message part."""
+        if "==>" in message_part:
+            wrong_word, suggestions = message_part.split("==>", 1)
+            return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
+        return message_part.strip()
 
     def _parse_ruff_format_output(
         self, raw_output: str, issue_type: IssueType
