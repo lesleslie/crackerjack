@@ -1,5 +1,32 @@
 ______________________________________________________________________
 
+## [0.50.0] - 2026-01-24
+
+### Added
+
+- Add ai_provider configuration
+- Add BaseCodeFixer abstract base class
+- Add interactive provider selection CLI
+- Add Ollama provider for local model execution
+- Add ProviderFactory and provider registry
+- Add QwenCodeBridge for agent consultation
+- Update agents to support provider selection
+
+### Changed
+
+- Reduce ClaudeCodeFixer and QwenCodeFixer to 70% smaller
+- Update config, core
+- Update config, core, deps, docs
+- Update core functionality
+
+### Documentation
+
+- Add comprehensive provider documentation
+
+### Testing
+
+- Add integration tests for provider architecture
+
 ## [0.49.8] - 2026-01-22
 
 ### Changed
