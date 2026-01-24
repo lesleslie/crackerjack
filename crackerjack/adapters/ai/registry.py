@@ -4,7 +4,6 @@ Central registry of all available providers with metadata and factory functions.
 """
 
 import logging
-import typing as t
 from dataclasses import dataclass
 from enum import Enum
 
@@ -15,6 +14,7 @@ logger = logging.getLogger(__name__)
 
 class ProviderID(str, Enum):
     """Identifier for each AI provider."""
+
     CLAUDE = "claude"
     QWEN = "qwen"
     OLLAMA = "ollama"
@@ -23,6 +23,7 @@ class ProviderID(str, Enum):
 @dataclass(frozen=True)
 class ProviderInfo:
     """Metadata about an AI provider."""
+
     id: ProviderID
     name: str
     description: str
@@ -30,7 +31,7 @@ class ProviderInfo:
     default_model: str
     setup_url: str
     cost_tier: str  # "free", "low", "medium", "high"
-    
+
     def __str__(self) -> str:
         return f"{self.name} ({self.id.value})"
 
@@ -69,24 +70,28 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
 
 class ProviderFactory:
     """Factory for creating AI provider instances."""
-    
+
     @staticmethod
     def create_provider(
         provider_id: ProviderID | str,
-        settings: BaseCodeFixerSettings | None = None,
+        settings: None = None,  # Settings not supported - must be loaded from config/env
     ) -> BaseCodeFixer:
         """Create a provider instance.
-        
+
         Args:
             provider_id: Provider identifier (enum or string)
-            settings: Provider-specific settings (optional)
-            
+            settings: Must be None - providers load their own settings
+
         Returns:
             Instantiated provider
-            
+
         Raises:
             ValueError: If provider_id is unknown
         """
+        if settings is not None:
+            msg = "Settings must be loaded from configuration, not passed to create_provider"
+            raise TypeError(msg)
+
         # Convert string to enum if needed
         if isinstance(provider_id, str):
             try:
@@ -95,41 +100,36 @@ class ProviderFactory:
                 available = [p.value for p in ProviderID]
                 msg = f"Unknown provider: {provider_id}. Available: {available}"
                 raise ValueError(msg) from None
-        
+
         # Import adapter classes (lazy import to avoid circular dependencies)
-        from crackerjack.adapters.ai.claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
-        from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
-        from crackerjack.adapters.ai.ollama import OllamaCodeFixer, OllamaCodeFixerSettings
-        
+        from crackerjack.adapters.ai.claude import ClaudeCodeFixer
+        from crackerjack.adapters.ai.ollama import OllamaCodeFixer
+        from crackerjack.adapters.ai.qwen import QwenCodeFixer
+
         # Create provider instance
+        # Note: Providers load their own settings from environment variables
         if provider_id == ProviderID.CLAUDE:
-            if settings is None:
-                settings = ClaudeCodeFixerSettings()
-            return ClaudeCodeFixer(settings)
-        
+            return ClaudeCodeFixer()
+
         if provider_id == ProviderID.QWEN:
-            if settings is None:
-                settings = QwenCodeFixerSettings()
-            return QwenCodeFixer(settings)
-        
+            return QwenCodeFixer()
+
         if provider_id == ProviderID.OLLAMA:
-            if settings is None:
-                settings = OllamaCodeFixerSettings()
-            return OllamaCodeFixer(settings)
-        
+            return OllamaCodeFixer()
+
         msg = f"Provider not implemented: {provider_id}"
         raise ValueError(msg)
-    
+
     @staticmethod
     def get_provider_info(provider_id: ProviderID | str) -> ProviderInfo:
         """Get metadata about a provider.
-        
+
         Args:
             provider_id: Provider identifier
-            
+
         Returns:
             ProviderInfo object
-            
+
         Raises:
             ValueError: If provider_id is unknown
         """
@@ -140,17 +140,17 @@ class ProviderFactory:
                 available = [p.value for p in ProviderID]
                 msg = f"Unknown provider: {provider_id}. Available: {available}"
                 raise ValueError(msg) from None
-        
+
         if provider_id not in PROVIDER_INFO:
             msg = f"Provider info not found: {provider_id}"
             raise ValueError(msg)
-        
+
         return PROVIDER_INFO[provider_id]
-    
+
     @staticmethod
     def list_providers() -> list[ProviderInfo]:
         """List all available providers.
-        
+
         Returns:
             List of ProviderInfo objects
         """

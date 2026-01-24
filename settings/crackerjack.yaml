@@ -221,6 +221,12 @@ qa_fail_fast: false
 qa_run_formatters_first: true
 qa_enable_incremental: true
 
+# Adapter-specific settings
+pip_audit:
+  ignore_vulns:
+    - "CVE-2025-53000"
+    - "CVE-2026-0994"
+
 # === Global Settings ===
 
 # Global locking

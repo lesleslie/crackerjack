@@ -185,9 +185,9 @@ python -m crackerjack run --select-provider
 ### Optimization Tips
 
 1. **Use smaller models** for simple fixes (7B)
-2. **Use larger models** only for complex issues (14B)
-3. **Ensure sufficient RAM** (model size × 2)
-4. **Use SSD** for model storage (faster loading)
+1. **Use larger models** only for complex issues (14B)
+1. **Ensure sufficient RAM** (model size × 2)
+1. **Use SSD** for model storage (faster loading)
 
 ## Troubleshooting
 
@@ -196,6 +196,7 @@ python -m crackerjack run --select-provider
 **Problem**: `Connection refused` error
 
 **Solution**:
+
 ```bash
 # Check if Ollama is running
 ps aux | grep ollama
@@ -209,6 +210,7 @@ ollama serve
 **Problem**: `model not found` error
 
 **Solution**:
+
 ```bash
 # List available models
 ollama list
@@ -222,20 +224,22 @@ ollama pull qwen2.5-coder:7b
 **Problem**: Fixes taking too long
 
 **Solutions**:
+
 1. Use smaller model (7B instead of 14B)
-2. Check available RAM: `vm_stat` (macOS) or `free -h` (Linux)
-3. Close other applications
-4. Ensure model is in memory (first call loads model)
+1. Check available RAM: `vm_stat` (macOS) or `free -h` (Linux)
+1. Close other applications
+1. Ensure model is in memory (first call loads model)
 
 ### Out of Memory
 
 **Problem**: `Out of memory` error
 
 **Solutions**:
+
 1. Use smaller model
-2. Reduce max_tokens in settings
-3. Close other applications
-4. Add more RAM to system
+1. Reduce max_tokens in settings
+1. Close other applications
+1. Add more RAM to system
 
 ## Comparison: Ollama vs Cloud Providers
 
@@ -289,25 +293,25 @@ on: [push, pull_request]
 jobs:
   code-fixing:
     runs-on: ubuntu-latest
-    
+
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Install Ollama
         run: |
           curl -fsSL https://ollama.com/install.sh | sh
           ollama serve &
           ollama pull qwen2.5-coder:7b
-      
+
       - name: Install Python
         uses: actions/setup-python@v3
         with:
           python-version: '3.13'
-      
+
       - name: Install crackerjack
         run: |
           pip install crackerjack
-      
+
       - name: Run crackerjack with Ollama
         env:
           AI_PROVIDER: ollama
@@ -332,6 +336,7 @@ python -m crackerjack run --ai-fix
 ### Q: Can I use Ollama and cloud providers together?
 
 A: Yes! You can switch between providers using:
+
 ```bash
 # Use Ollama for local development
 python -m crackerjack run --ai-fix --ai-provider ollama
@@ -343,6 +348,7 @@ python -m crackerjack run --ai-fix --ai-provider claude
 ### Q: How much RAM do I need?
 
 A: As a rule of thumb:
+
 - 7B model: 8GB RAM minimum, 16GB recommended
 - 14B model: 16GB RAM minimum, 32GB recommended
 - Plus RAM for your OS and other applications
@@ -350,6 +356,7 @@ A: As a rule of thumb:
 ### Q: Can I use GPU acceleration?
 
 A: Yes! Ollama supports GPU acceleration:
+
 ```bash
 # Check GPU support
 ollama ls --show-gpu-support
@@ -361,13 +368,15 @@ CUDA_VISIBLE_DEVICES=0 ollama serve
 ### Q: What if Ollama doesn't support a model I need?
 
 A: You have three options:
+
 1. Use a different provider (Claude or Qwen)
-2. Check if Ollama has added the model: `ollama list`
-3. Request the model on Ollama's GitHub
+1. Check if Ollama has added the model: `ollama list`
+1. Request the model on Ollama's GitHub
 
 ### Q: Is Ollama suitable for team use?
 
 A: For team use, consider:
+
 - **Central server**: Run Ollama on shared server
 - **Multiple users**: Configure clients to point to server: `OLLAMA_BASE_URL=http://server:11434`
 - **Resource management**: Monitor server load and RAM
@@ -418,6 +427,7 @@ python -m crackerjack run --ai-fix --changed-only
 ### Step 2: Compare Quality
 
 Run same codebase with both providers:
+
 ```bash
 # Ollama
 export AI_PROVIDER=ollama
@@ -457,6 +467,7 @@ export AI_PROVIDER=ollama
 ## Changelog
 
 ### Version 0.50.0 (2025-01-23)
+
 - ✅ Added Ollama provider support
 - ✅ Local model execution (zero API costs)
 - ✅ Interactive provider selection CLI

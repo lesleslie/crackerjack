@@ -103,10 +103,10 @@ python -m crackerjack run --ai-fix --ai-provider claude
 ## Getting a Qwen API Key
 
 1. Visit [Alibaba Cloud DashScope](https://dashscope.aliyun.com/)
-2. Create an account or sign in
-3. Navigate to API Keys
-4. Create a new API key
-5. Set the `QWEN_API_KEY` environment variable
+1. Create an account or sign in
+1. Navigate to API Keys
+1. Create a new API key
+1. Set the `QWEN_API_KEY` environment variable
 
 ## Usage Examples
 
@@ -189,6 +189,7 @@ Both providers use the same JSON response format for fixes.
 **Problem**: `Authentication failed` error
 
 **Solution**:
+
 - Verify `QWEN_API_KEY` is set correctly
 - Check the API key is valid and active
 - Ensure the key has sufficient permissions
@@ -198,6 +199,7 @@ Both providers use the same JSON response format for fixes.
 **Problem**: `Cannot import QwenCodeFixer`
 
 **Solution**:
+
 - Ensure `openai` package is installed: `uv pip install openai`
 - Verify crackerjack is up to date: `uv sync`
 
@@ -206,6 +208,7 @@ Both providers use the same JSON response format for fixes.
 **Problem**: `Model not found` error
 
 **Solution**:
+
 - Verify the model name is correct
 - Check the model is available in your region
 - Try the default: `qwen-coder-plus`
@@ -215,6 +218,7 @@ Both providers use the same JSON response format for fixes.
 **Problem**: Qwen is slower than expected
 
 **Solution**:
+
 - Switch to a faster model (e.g., `qwen-turbo`)
 - Check your network connection to the API endpoint
 - Consider using `qwen-coder-plus` for best balance of speed and quality
@@ -324,6 +328,7 @@ A: No, the interface is identical. Just set the provider selection and API key.
 ### Q: What about other crackerjack features?
 
 A: All crackerjack features work with both providers:
+
 - Quality gates (ruff, pytest, etc.)
 - Parallel execution
 - Test running
@@ -337,19 +342,20 @@ A: Yes, when using Qwen, code snippets are sent to Alibaba's DashScope API for p
 ## Related Documentation
 
 - [Configuration Reference](../reference/CONFIGURATION.md)
-- [AI Fixing Documentation](AI_FIX_EXPECTED_BEHAVIOR.md)
-- [API Key Setup](../API_KEY_SETUP.md)
+- [AI Fixing Documentation](../AI_FIX_EXPECTED_BEHAVIOR.md)
 
 ## Support
 
 For issues or questions:
+
 1. Check the [troubleshooting section](#troubleshooting)
-2. Review [test integration script](../../test_qwen_integration.py)
-3. Open an issue on GitHub
+1. Review [test integration script](../../test_qwen_integration.py)
+1. Open an issue on GitHub
 
 ## Changelog
 
 ### Version 0.49.9 (2025-01-23)
+
 - ✅ Initial Qwen provider support
 - ✅ Provider selection via `ai_provider` setting
 - ✅ QwenCodeFixer adapter with full security validation
