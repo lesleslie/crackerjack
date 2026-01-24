@@ -1,5 +1,142 @@
 ______________________________________________________________________
 
+## [0.50.1] - 2026-01-24
+
+### Changed
+
+- Update dependencies
+
+## [0.50.0] - 2026-01-24
+
+### Added
+
+- Add ai_provider configuration
+- Add BaseCodeFixer abstract base class
+- Add interactive provider selection CLI
+- Add Ollama provider for local model execution
+- Add ProviderFactory and provider registry
+- Add QwenCodeBridge for agent consultation
+- Update agents to support provider selection
+
+### Changed
+
+- Reduce ClaudeCodeFixer and QwenCodeFixer to 70% smaller
+- Update config, core
+- Update config, core, deps, docs
+- Update core functionality
+
+### Documentation
+
+- Add comprehensive provider documentation
+
+### Testing
+
+- Add integration tests for provider architecture
+
+## [0.49.8] - 2026-01-22
+
+### Changed
+
+- Update core, deps, docs, tests
+
+## [0.49.7] - 2026-01-22
+
+### Changed
+
+- Update core functionality
+- Update core functionality
+- Update core, deps, docs
+- Update core, deps, tests
+
+## [0.49.6] - 2026-01-22
+
+### Changed
+
+- Update core, deps, docs
+
+## [0.49.5] - 2026-01-21
+
+### Changed
+
+- Update deps, docs
+
+## [0.49.4] - 2026-01-21
+
+### Changed
+
+- Update core, deps, docs
+
+## [0.49.3] - 2026-01-21
+
+### Changed
+
+- Update core, deps, docs
+- Update core, docs
+
+## [0.49.2] - 2026-01-21
+
+### Changed
+
+- Crackerjack (quality: 67/100) - 2026-01-21 11:12:11
+
+## [0.49.1] - 2026-01-21
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-01-21 10:08:59
+- Update core, docs
+
+## [0.49.0] - 2026-01-20
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-01-19 23:17:56
+- Crackerjack (quality: 69/100) - 2026-01-20 02:44:18
+- Crackerjack (quality: 72/100) - 2026-01-20 17:57:01
+- Update core, deps, docs
+
+## [0.48.3] - 2026-01-18
+
+### Changed
+
+- Update core, deps
+
+## [0.48.2] - 2026-01-18
+
+### Changed
+
+- Crackerjack (quality: 71/100) - 2026-01-18 19:24:17
+- Update documentation
+
+## [0.48.1] - 2026-01-17
+
+### Added
+
+- Add dynamic .gitignore reading to all QA hooks
+- Automated documentation cleanup system
+
+### Changed
+
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+
+### Fixed
+
+- Constrain refurb to package directory only
+- Ignore FURB137 in refurb (set literal suggestions)
+- Remove hardcoded bandit target from pyproject.toml
+
+### Documentation
+
+- Clarify crackerjack does not use pre-commit.com hooks
+
+### Internal
+
+- Clean up project root documentation and scripts
+
 ## [0.48.0] - 2026-01-16
 
 ### Added

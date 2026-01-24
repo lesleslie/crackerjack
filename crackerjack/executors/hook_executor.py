@@ -495,6 +495,8 @@ class HookExecutor:
             exit_code=exit_code,
             error_message=error_message,
             is_timeout=False,
+            output=result.stdout,
+            error=result.stderr,
         )
 
     def _determine_initial_status(
@@ -564,8 +566,6 @@ class HookExecutor:
         return issues_found
 
     def _calculate_issues_count(self, status: str, issues_found: list[str]) -> int:
-        # Don't guarantee minimum 1 for failed status - let actual issues count stand
-        # This handles cases like complexipy where exit code is non-zero but no actual issues
         return len(issues_found)
 
     def _extract_issues_from_process_output(
@@ -657,10 +657,6 @@ class HookExecutor:
         return "│" in line and package_name in line
 
     def _parse_complexipy_issues(self, output: str) -> list[str]:
-        """Parse complexipy output to extract failed functions.
-
-        Returns list of "filename: function" entries for functions exceeding complexity threshold.
-        """
         issues: list[str] = []
         failed_section = self._extract_failed_functions_section(output)
 
@@ -679,12 +675,7 @@ class HookExecutor:
         return issues
 
     def _parse_file_line(self, line: str, issues: list[str]) -> str | None:
-        """Parse a line starting with '- ' that contains filename and optionally functions.
-
-        Returns the filename for use in continuation lines, or None if no valid filename found.
-        Appends any function entries found on this line to issues.
-        """
-        remainder = line[2:].strip()  # Remove "- " prefix
+        remainder = line[2:].strip()
 
         if ":" not in remainder:
             return self._extract_filename(remainder)
@@ -692,7 +683,6 @@ class HookExecutor:
         parts = remainder.split(":", 1)
         filename = self._extract_filename(parts[0].strip())
 
-        # Check if there's a function name after ":"
         if len(parts) >= 2:
             func_text = parts[1].strip()
             if func_text:
@@ -701,7 +691,6 @@ class HookExecutor:
         return filename
 
     def _extract_filename(self, filepath: str) -> str:
-        """Extract just the filename from a path for cleaner output."""
         if "/" in filepath:
             return filepath.split("/")[-1]
         return filepath
@@ -709,7 +698,6 @@ class HookExecutor:
     def _add_function_entries(
         self, filename: str, func_text: str, issues: list[str]
     ) -> None:
-        """Parse comma-separated function names and add them to issues list."""
         functions = [f.strip() for f in func_text.split(",")]
         for func in functions:
             if func:
@@ -718,21 +706,19 @@ class HookExecutor:
     def _parse_continuation_line(
         self, line: str, filename: str, issues: list[str]
     ) -> None:
-        """Parse a continuation line containing function names for the current file."""
         self._add_function_entries(filename, line, issues)
 
     def _extract_failed_functions_section(self, output: str) -> str | None:
         if "Failed functions:" not in output:
             return None
 
-        # Find the section between "Failed functions:" and the next separator line
         lines = output.split("\n")
         start_idx = None
         end_idx = None
 
         for i, line in enumerate(lines):
             if "Failed functions:" in line:
-                start_idx = i + 1  # Start from the line after "Failed functions:"
+                start_idx = i + 1
             elif start_idx is not None and line.startswith(("─", "=")):
                 end_idx = i
                 break

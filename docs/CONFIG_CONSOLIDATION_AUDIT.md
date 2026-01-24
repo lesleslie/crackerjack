@@ -469,7 +469,7 @@ ______________________________________________________________________
 ```toml
 [tool.codespell]
 quiet-level = 3
-ignore-words-list = "crate,uptodate,nd,nin"
+ignore-words-list = "crate,up-to-date,nd,nin"
 ignore-words = ".codespell-ignore"  # ⚠️ Points to empty file
 ```
 
@@ -493,7 +493,7 @@ Remove file and update config:
 ```toml
 [tool.codespell]
 quiet-level = 3
-ignore-words-list = "crate,uptodate,nd,nin"
+ignore-words-list = "crate,up-to-date,nd,nin"
 # ignore-words = ".codespell-ignore"  # Removed: file was empty
 ```
 

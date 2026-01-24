@@ -1,11 +1,35 @@
 from __future__ import annotations
 
+import fnmatch
 import re
 import sys
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from ._git_utils import get_git_tracked_files
+
+# Archive patterns from DocumentationSettings
+ARCHIVE_PATTERNS = [
+    "*PLAN*.md",
+    "*SUMMARY*.md",
+    "*ANALYSIS*.md",
+    "*MIGRATION*.md",
+    "*PROGRESS*.md",
+    "SPRINT*.md",
+    "PHASE*.md",
+    "*CLEANUP*.md",
+    "*CONFIG*.md",
+    "*PERFORMANCE*.md",
+]
+
+
+def is_archived_filename(filename: str) -> bool:
+    """Check if a filename matches archive documentation patterns.
+
+    Files matching these patterns are moved to docs/archive/ subdirectories
+    by the documentation cleanup process.
+    """
+    return any(fnmatch.fnmatch(filename, pattern) for pattern in ARCHIVE_PATTERNS)
 
 
 def extract_markdown_links(content: str) -> list[tuple[str, int]]:
@@ -49,34 +73,68 @@ def validate_local_link(
     source_file: Path,
     repo_root: Path,
 ) -> tuple[bool, str]:
-    link_url = unquote(link_url)
+    """Validate a local markdown link.
 
-    if "#" in link_url:
-        path_part, _anchor = link_url.split("#", 1)
-    else:
-        path_part = link_url
+    Returns (is_valid, error_message). If the link points to an archived
+    documentation file, checks the archive location instead of the original path.
+    """
+    link_url = unquote(link_url)
+    path_part = _extract_path_part(link_url)
 
     if not path_part:
-        # TODO: Could validate anchor exists in source_file
         return True, ""
 
-    if path_part.startswith("/"):
-        target_path = repo_root / path_part.lstrip("/")
-    else:
-        target_path = (source_file.parent / path_part).resolve()
+    # Check if this is an archived documentation file
+    target_filename = Path(path_part).name
+    if _check_archived_file(target_filename, repo_root):
+        return True, ""
+
+    # Normal link validation
+    target_path = _resolve_target_path(path_part, source_file, repo_root)
 
     if not target_path.exists():
         return False, f"File not found: {path_part}"
 
-    # TODO: If anchor specified, could validate it exists in target file
-
     return True, ""
 
 
+def _extract_path_part(link_url: str) -> str:
+    """Extract the path portion from a URL, removing anchors."""
+    if "#" in link_url:
+        path_part, _anchor = link_url.split("#", 1)
+    else:
+        path_part = link_url
+    return path_part
+
+
+def _check_archived_file(filename: str, repo_root: Path) -> bool:
+    """Check if a file exists in the archive directory.
+
+    Returns True if the file is found in docs/archive/, False otherwise.
+    """
+    if not is_archived_filename(filename):
+        return False
+
+    archive_path = repo_root / "docs" / "archive"
+    if not archive_path.exists():
+        return False
+
+    # Search in archive subdirectories
+    for archived_file in archive_path.rglob(filename):
+        if archived_file.is_file():
+            return True
+
+    return False
+
+
+def _resolve_target_path(path_part: str, source_file: Path, repo_root: Path) -> Path:
+    """Resolve the target path of a local link."""
+    if path_part.startswith("/"):
+        return repo_root / path_part.lstrip("/")
+    return (source_file.parent / path_part).resolve()
+
+
 def check_file(file_path: Path, repo_root: Path) -> list[tuple[str, int, str]]:
-    # Skip symlinked files to avoid false positive path resolution issues
-    # Symlinks in /docs/guides/ point to root files, and .resolve() changes the
-    # base path, causing link validation to fail incorrectly
     if file_path.is_symlink():
         return []
 

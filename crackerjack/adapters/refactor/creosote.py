@@ -101,7 +101,7 @@ class CreosoteAdapter(BaseToolAdapter):
 
         if self.settings.exclude_deps:
             for dep in self.settings.exclude_deps:
-                cmd.extend(["--exclude", dep])
+                cmd.extend(["--exclude-dep", dep])
 
         if self.settings.paths:
             for path in self.settings.paths:

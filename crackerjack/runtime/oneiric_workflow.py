@@ -182,18 +182,12 @@ def _register_workflow(runtime: OneiricWorkflowRuntime, options: t.Any) -> None:
 
 
 def _build_dag_nodes(options: t.Any) -> list[dict[str, t.Any]]:
-    """Build workflow DAG nodes with optional parallel execution.
-
-    When enable_parallel_phases is True, tests and comprehensive_hooks
-    run in parallel for improved performance (20-30% faster).
-    """
     steps = _build_workflow_steps(options)
     enable_parallel = getattr(options, "enable_parallel_phases", False)
     return _build_nodes_with_dependencies(steps, enable_parallel)
 
 
 def _build_workflow_steps(options: t.Any) -> list[str]:
-    """Build the ordered list of workflow steps."""
     steps: list[str] = []
 
     if _should_run_config_cleanup(options):
@@ -205,14 +199,12 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
     if _should_clean(options):
         steps.append("cleaning")
 
-    # Documentation cleanup BEFORE fast hooks so markdown tools fix links first
     if _should_run_documentation_cleanup(options):
         steps.append("documentation_cleanup")
 
     if _should_run_fast_hooks(options):
         steps.append("fast_hooks")
 
-    # Add tests and comprehensive hooks (parallel or sequential)
     if _should_run_tests(options) and _should_run_comprehensive_hooks(options):
         enable_parallel = getattr(options, "enable_parallel_phases", False)
         if enable_parallel:
@@ -237,7 +229,6 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 def _build_nodes_with_dependencies(
     steps: list[str], enable_parallel: bool
 ) -> list[dict[str, t.Any]]:
-    """Build DAG nodes with proper dependency chains."""
     nodes: list[dict[str, t.Any]] = []
     previous: str | None = None
     parallel_start_index: int | None = None
@@ -250,7 +241,7 @@ def _build_nodes_with_dependencies(
             node = _handle_parallel_step(
                 node, step, previous, parallel_start_index, parallel_predecessor
             )
-            # Update parallel tracking state
+
             if step in ("tests", "comprehensive_hooks"):
                 if parallel_start_index is None:
                     parallel_start_index = idx
@@ -259,7 +250,6 @@ def _build_nodes_with_dependencies(
                 parallel_start_index = None
                 parallel_predecessor = None
         else:
-            # Sequential mode - every task depends on previous
             if previous:
                 node["depends_on"] = [previous]
 
@@ -276,17 +266,13 @@ def _handle_parallel_step(
     parallel_start_index: int | None,
     parallel_predecessor: str | None,
 ) -> dict[str, t.Any]:
-    """Handle dependency assignment for parallel workflow steps."""
     if step in ("tests", "comprehensive_hooks"):
         if parallel_start_index is None:
-            # First parallel task - depends on previous sequential task
             if previous:
                 node["depends_on"] = [previous]
         elif parallel_predecessor is not None:
-            # Second parallel task - also depends on previous sequential task
             node["depends_on"] = [parallel_predecessor]
     else:
-        # Sequential task - depends on the last task
         if previous:
             node["depends_on"] = [previous]
 

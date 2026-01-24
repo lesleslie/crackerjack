@@ -18,9 +18,11 @@ def get_git_tracked_files(pattern: str | None = None) -> list[Path]:
             cwd=Path.cwd(),
         )
 
-        return [
+        files = [
             Path(line.strip()) for line in result.stdout.splitlines() if line.strip()
         ]
+
+        return [f for f in files if f.exists()]
 
     except subprocess.CalledProcessError:
         return []

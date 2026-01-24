@@ -16,6 +16,7 @@ def register_utility_tools(mcp_app: t.Any) -> None:
     _register_clean_tool(mcp_app)
     _register_config_tool(mcp_app)
     _register_analyze_tool(mcp_app)
+    _register_claude_md_validator_tool(mcp_app)
 
 
 async def clean_temp_files(
@@ -361,3 +362,176 @@ def _register_analyze_tool(mcp_app: t.Any) -> None:
 
         except Exception as e:
             return _create_error_response(f"Analysis failed: {e}")
+
+
+def _register_claude_md_validator_tool(mcp_app: t.Any) -> None:
+    @mcp_app.tool()
+    async def validate_claude_md(args: str = "", kwargs: str = "{}") -> str:
+        context = get_context()
+        if not context:
+            return _create_error_response("Server context not available")
+
+        extra_kwargs, parse_error = _parse_cleanup_options(kwargs)
+        if parse_error:
+            return _create_error_response(parse_error)
+
+        update_if_needed = "--update" in args or extra_kwargs.get("update", False)
+        project_path_str = extra_kwargs.get("project_path", "")
+        project_path = Path(project_path_str) if project_path_str else Path.cwd()
+
+        try:
+            validation_result = _perform_claude_md_validation(project_path)
+
+            if not validation_result["valid"] and update_if_needed:
+                update_result = _update_claude_md_if_needed(
+                    project_path,
+                    context,
+                )
+                validation_result["update_attempted"] = True
+                validation_result["update_result"] = update_result
+
+            return json.dumps(
+                {
+                    "success": True,
+                    "command": "validate_claude_md",
+                    "project_path": str(project_path),
+                    "timestamp": time.time(),
+                    "validation": validation_result,
+                },
+                indent=2,
+            )
+
+        except Exception as e:
+            return _create_error_response(f"CLAUDE.md validation failed: {e}")
+
+
+def _check_claude_md_missing(file_path: Path) -> dict[str, t.Any] | None:
+    if file_path.exists():
+        return None
+    return {
+        "valid": False,
+        "issues": ["CLAUDE.md file not found"],
+        "suggestions": [
+            "Run 'python -m crackerjack init' to create CLAUDE.md",
+        ],
+        "file_path": str(file_path),
+    }
+
+
+def _check_integration_markers(
+    content: str, file_path: Path
+) -> tuple[list[str], list[str]]:
+    issues = []
+    suggestions = []
+    crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+
+    if crackerjack_start_marker not in content:
+        issues.append("Missing crackerjack integration section")
+        suggestions.append(
+            "Run 'python -m crackerjack init --force' to add crackerjack section"
+        )
+        return issues, suggestions
+
+    return issues, suggestions
+
+
+def _check_quality_principles(
+    crackerjack_section: str,
+) -> tuple[list[str], list[str]]:
+    issues = []
+    suggestions = []
+    essential_principles = [
+        (
+            "Check yourself before you wreck yourself",
+            "Self-validation principle",
+        ),
+        (
+            "Take the time to do things right the first time",
+            "Quality-first principle",
+        ),
+        ("Coverage ratchet", "Coverage quality system"),
+        ("Cognitive complexity", "Complexity enforcement"),
+    ]
+
+    for principle, description in essential_principles:
+        if principle not in crackerjack_section:
+            issues.append(f"Missing: {description}")
+            suggestions.append(
+                f"Ensure '{principle}' is in CLAUDE.md crackerjack section"
+            )
+
+    return issues, suggestions
+
+
+def _extract_crackerjack_section(content: str) -> str | None:
+    crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+    crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
+
+    start_idx = content.find(crackerjack_start_marker)
+    end_idx = content.find(crackerjack_end_marker)
+
+    if start_idx != -1 and end_idx != -1:
+        return content[start_idx : end_idx + len(crackerjack_end_marker)]
+    return None
+
+
+def _perform_claude_md_validation(project_path: Path) -> dict[str, t.Any]:
+    claude_md = project_path / "CLAUDE.md"
+
+    missing_result = _check_claude_md_missing(claude_md)
+    if missing_result is not None:
+        return missing_result
+
+    content = claude_md.read_text()
+    issues = []
+    suggestions = []
+
+    marker_issues, marker_suggestions = _check_integration_markers(content, claude_md)
+    issues.extend(marker_issues)
+    suggestions.extend(marker_suggestions)
+
+    if not marker_issues:
+        crackerjack_section = _extract_crackerjack_section(content)
+        if crackerjack_section:
+            principle_issues, principle_suggestions = _check_quality_principles(
+                crackerjack_section
+            )
+            issues.extend(principle_issues)
+            suggestions.extend(principle_suggestions)
+
+    return {
+        "valid": len(issues) == 0,
+        "issues": issues,
+        "suggestions": suggestions,
+        "file_path": str(claude_md),
+    }
+
+
+def _update_claude_md_if_needed(
+    project_path: Path,
+    context: t.Any,
+) -> dict[str, t.Any]:
+    try:
+        from crackerjack.services.initialization import InitializationService
+
+        init_service = InitializationService(
+            console=context.console if hasattr(context, "console") else None,
+        )
+
+        result = init_service.initialize_project_full(
+            target_path=project_path,
+            force=True,
+            interactive=False,
+        )
+
+        return {
+            "success": result.get("success", False),
+            "files_updated": result.get("files_copied", []),
+            "errors": result.get("errors", []),
+        }
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+        }

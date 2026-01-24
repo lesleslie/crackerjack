@@ -50,8 +50,56 @@ class InitializationService:
 
     def validate_project_structure(self) -> bool:
         try:
+            claude_md = Path.cwd() / "CLAUDE.md"
+            if not claude_md.exists():
+                self.console.print(
+                    "[yellow]⚠️ Warning: CLAUDE.md not found. "
+                    "Run 'python -m crackerjack init' to create it.[/yellow]"
+                )
+                return False
+
+            content = claude_md.read_text()
+            crackerjack_start_marker = "<!-- CRACKERJACK INTEGRATION START -->"
+            crackerjack_end_marker = "<!-- CRACKERJACK INTEGRATION END -->"
+
+            if crackerjack_start_marker not in content:
+                self.console.print(
+                    "[yellow]⚠️ Warning: CLAUDE.md missing crackerjack section. "
+                    "Run 'python -m crackerjack init --force' to add it.[/yellow]"
+                )
+                return False
+
+            essential_principles = [
+                "Check yourself before you wreck yourself",
+                "Take the time to do things right the first time",
+            ]
+
+            start_idx = content.find(crackerjack_start_marker)
+            end_idx = content.find(crackerjack_end_marker)
+
+            if start_idx != -1 and end_idx != -1:
+                crackerjack_section = content[
+                    start_idx : end_idx + len(crackerjack_end_marker)
+                ]
+                missing_principles = [
+                    principle
+                    for principle in essential_principles
+                    if principle not in crackerjack_section
+                ]
+
+                if missing_principles:
+                    self.console.print(
+                        f"[yellow]⚠️ Warning: CLAUDE.md missing current crackerjack standards: "
+                        f"{', '.join(missing_principles)}. "
+                        "Run 'python -m crackerjack init --force' to update.[/yellow]"
+                    )
+                    return False
+
             return True
-        except Exception:
+        except Exception as e:
+            self.console.print(
+                f"[yellow]⚠️ Warning: Could not validate CLAUDE.md: {e}[/yellow]"
+            )
             return False
 
     def initialize_project_full(

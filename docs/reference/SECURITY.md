@@ -6,6 +6,9 @@ This document outlines the comprehensive security measures implemented to protec
 
 ## Critical Vulnerabilities Addressed
 
+![Security Threat Model](../diagrams/security-threat-model.png)
+*Attack vectors mapped to defense mechanisms across security layers*
+
 ### 1. Command Injection Prevention (CWE-77) - CRITICAL
 
 **Problem**: User input could contain shell metacharacters enabling command injection

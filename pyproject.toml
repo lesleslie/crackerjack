@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "crackerjack"
-version = "0.48.0"
+version = "0.50.1"
 description = "Crackerjack Python project management tool"
 readme = "README.md"
 authors = [{name = "Les Leslie", email = "les@wedgwoodwebworks.com"}]
@@ -63,7 +63,7 @@ zuban_lsp_timeout = 120.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
 skylos_timeout = 600
-refurb_timeout = 180
+refurb_timeout = 600
 test_workers = 0
 max_workers = 8
 memory_per_worker_gb = 2.0
@@ -117,10 +117,11 @@ exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-m
 enable_all = false
 quiet = true
 python_version = "3.13"
-ignore = ["FURB184", "FURB120"]
+ignore = ["FURB184", "FURB120", "FURB137"]
 
 [tool.bandit]
-target = ["crackerjack"]
+# Target is specified dynamically via command line (see tool_commands.py)
+# Do NOT hardcode target here as it would break for projects with different names
 skips = ["B101", "B110", "B112", "B404", "B603", "B607"]
 exclude_dirs = ["tests/", "test_*.py", "*_test.py"]
 

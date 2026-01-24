@@ -26,7 +26,7 @@ class TestAutofixCoordinator:
         assert coordinator.logger.name == "crackerjack.autofix"
 
     def test_apply_autofix_for_hooks_fast_mode(self, coordinator) -> None:
-        hook_results = [Mock(name="test_hook", status="Failed")]
+        hook_results = [Mock(name="test_hook", status="failed")]
 
         with (
             patch.object(coordinator, "_should_skip_autofix", return_value=False),
@@ -37,7 +37,7 @@ class TestAutofixCoordinator:
             assert result is True
 
     def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
-        hook_results = [Mock(name="test_hook", status="Failed")]
+        hook_results = [Mock(name="test_hook", status="failed")]
 
         with (
             patch.object(coordinator, "_should_skip_autofix", return_value=False),
@@ -160,7 +160,7 @@ class TestAutofixCoordinator:
             assert result is False
 
     def test_apply_comprehensive_stage_fixes(self, coordinator) -> None:
-        hook_results = [Mock(name="bandit", status="Failed")]
+        hook_results = [Mock(name="bandit", status="failed")]
 
         with (
             patch.object(coordinator, "_apply_fast_stage_fixes", return_value=True),
@@ -175,15 +175,15 @@ class TestAutofixCoordinator:
     def test_extract_failed_hooks(self, coordinator) -> None:
         ruff_result = Mock()
         ruff_result.name = "ruff"
-        ruff_result.status = "Failed"
+        ruff_result.status = "failed"
 
         bandit_result = Mock()
         bandit_result.name = "bandit"
-        bandit_result.status = "Passed"
+        bandit_result.status = "passed"
 
         pyright_result = Mock()
         pyright_result.name = "pyright"
-        pyright_result.status = "Failed"
+        pyright_result.status = "failed"
 
         hook_results = [ruff_result, bandit_result, pyright_result]
 
@@ -315,7 +315,7 @@ class TestAutofixCoordinator:
     def test_validate_hook_result(self, coordinator) -> None:
         valid_result = Mock()
         valid_result.name = "test_hook"
-        valid_result.status = "Failed"
+        valid_result.status = "failed"
         assert coordinator._validate_hook_result(valid_result) is True
 
         invalid_result1 = object()
@@ -323,7 +323,7 @@ class TestAutofixCoordinator:
 
         invalid_result2 = Mock()
         invalid_result2.name = ""
-        invalid_result2.status = "Failed"
+        invalid_result2.status = "failed"
         assert coordinator._validate_hook_result(invalid_result2) is False
 
         invalid_result3 = Mock()
@@ -332,20 +332,28 @@ class TestAutofixCoordinator:
         assert coordinator._validate_hook_result(invalid_result3) is False
 
     def test_should_skip_autofix(self, coordinator) -> None:
-        normal_result = Mock(raw_output="Some normal output")
+        normal_result = Mock()
+        normal_result.output = "Some normal output"
+        normal_result.error = ""
+        normal_result.error_message = ""
         assert coordinator._should_skip_autofix([normal_result]) is False
 
-        import_error_result = Mock(
-            raw_output="ModuleNotFoundError: No module named 'test'",
-        )
+        import_error_result = Mock()
+        import_error_result.output = "ModuleNotFoundError: No module named 'test'"
+        import_error_result.error = ""
+        import_error_result.error_message = ""
         assert coordinator._should_skip_autofix([import_error_result]) is True
 
-        import_error_result2 = Mock(raw_output="ImportError: cannot import name 'test'")
+        import_error_result2 = Mock()
+        import_error_result2.output = "ImportError: cannot import name 'test'"
+        import_error_result2.error = ""
+        import_error_result2.error_message = ""
         assert coordinator._should_skip_autofix([import_error_result2]) is True
 
         no_output_result = Mock()
-        if hasattr(no_output_result, "raw_output"):
-            delattr(no_output_result, "raw_output")
+        no_output_result.output = None
+        no_output_result.error = None
+        no_output_result.error_message = None
         assert coordinator._should_skip_autofix([no_output_result]) is False
 
 
@@ -373,13 +381,17 @@ class TestAutofixCoordinatorIntegration:
     def test_full_comprehensive_workflow(self, coordinator) -> None:
         ruff_result = Mock()
         ruff_result.name = "ruff"
-        ruff_result.status = "Failed"
-        ruff_result.raw_output = "Some ruff error output"
+        ruff_result.status = "failed"
+        ruff_result.output = "Some ruff error output"
+        ruff_result.error = ""
+        ruff_result.error_message = ""
 
         bandit_result = Mock()
         bandit_result.name = "bandit"
-        bandit_result.status = "Failed"
-        bandit_result.raw_output = "Some bandit error output"
+        bandit_result.status = "failed"
+        bandit_result.output = "Some bandit error output"
+        bandit_result.error = ""
+        bandit_result.error_message = ""
 
         hook_results = [ruff_result, bandit_result]
 

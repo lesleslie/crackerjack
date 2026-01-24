@@ -198,7 +198,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_no_errors(self, coordinator) -> None:
         """Test should not skip when no import errors."""
         result1 = Mock()
-        result1.raw_output = "Everything is fine"
+        result1.output = "Everything is fine"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -207,7 +209,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_import_error(self, coordinator) -> None:
         """Test should skip when ImportError present."""
         result1 = Mock()
-        result1.raw_output = "ImportError: cannot import name 'foo'"
+        result1.output = "ImportError: cannot import name 'foo'"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -216,7 +220,9 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_module_not_found_error(self, coordinator) -> None:
         """Test should skip when ModuleNotFoundError present."""
         result1 = Mock()
-        result1.raw_output = "ModuleNotFoundError: No module named 'bar'"
+        result1.output = "ModuleNotFoundError: No module named 'bar'"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -225,16 +231,20 @@ class TestAutofixCoordinatorSkipLogic:
     def test_should_skip_autofix_case_insensitive(self, coordinator) -> None:
         """Test skip detection is case-insensitive."""
         result1 = Mock()
-        result1.raw_output = "IMPORTERROR: Cannot import"
+        result1.output = "IMPORTERROR: Cannot import"
+        result1.error = ""
+        result1.error_message = ""
 
         should_skip = coordinator.should_skip_autofix([result1])
 
         assert should_skip is True
 
-    def test_should_skip_autofix_no_raw_output(self, coordinator) -> None:
-        """Test should not skip when no raw_output."""
+    def test_should_skip_autofix_no_output(self, coordinator) -> None:
+        """Test should not skip when no output."""
         result1 = Mock()
-        result1.raw_output = None
+        result1.output = None
+        result1.error = None
+        result1.error_message = None
 
         should_skip = coordinator.should_skip_autofix([result1])
 
@@ -596,8 +606,15 @@ class TestAutofixCoordinatorApplyFixes:
 
     def test_apply_autofix_for_hooks_comprehensive_mode(self, coordinator) -> None:
         """Test applying autofix in comprehensive mode."""
-        # Create hook result without raw_output to avoid triggering skip logic
-        hook_results = [Mock(name="hook1", status="Failed", raw_output=None)]
+        # Create hook result without import errors to avoid triggering skip logic
+        hook_result = Mock()
+        hook_result.name = "hook1"
+        hook_result.status = "Failed"
+        hook_result.output = "Some error"
+        hook_result.error = ""
+        hook_result.error_message = ""
+
+        hook_results = [hook_result]
 
         with patch.object(coordinator, "_apply_comprehensive_stage_fixes") as mock_comp:
             mock_comp.return_value = True
@@ -616,7 +633,9 @@ class TestAutofixCoordinatorApplyFixes:
     def test_apply_autofix_for_hooks_should_skip(self, coordinator) -> None:
         """Test autofix skipped when should_skip is True."""
         result1 = Mock()
-        result1.raw_output = "ImportError: cannot import"
+        result1.output = "ImportError: cannot import"
+        result1.error = ""
+        result1.error_message = ""
 
         result = coordinator.apply_autofix_for_hooks("fast", [result1])
 
@@ -725,3 +744,184 @@ class TestAutofixCoordinatorPublicAPI:
 
             assert result is True
             mock_private.assert_called_once_with(hook_results)
+
+
+@pytest.mark.unit
+class TestAutofixCoordinatorRuffParsing:
+    """Test ruff output parsing with intelligent issue type detection."""
+
+    @pytest.fixture
+    def coordinator(self):
+        """Create coordinator instance."""
+        mock_console = Mock()
+        mock_logger = Mock()
+        mock_logger.bind.return_value = mock_logger
+        return AutofixCoordinator(console=mock_console, logger=mock_logger)
+
+    def test_parse_ruff_output_c901_complexity(self, coordinator) -> None:
+        """Test parsing C901 complexity errors."""
+        from crackerjack.agents.base import IssueType, Priority
+
+        raw_output = (
+            "session_buddy/tools/search_tools.py:756:5: "
+            "C901 `register_search_tools` is too complex (16 > 15)"
+        )
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 1
+        issue = issues[0]
+        assert issue.type == IssueType.COMPLEXITY
+        assert issue.severity == Priority.HIGH
+        assert issue.file_path == "session_buddy/tools/search_tools.py"
+        assert issue.line_number == 756
+        assert "C901" in issue.message
+        assert "too complex" in issue.message
+
+    def test_parse_ruff_output_e501_line_too_long(self, coordinator) -> None:
+        """Test parsing E501 line too long errors."""
+        from crackerjack.agents.base import IssueType, Priority
+
+        raw_output = "src/main.py:42:10: E501 Line too long (88 > 79 characters)"
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 1
+        issue = issues[0]
+        assert issue.type == IssueType.FORMATTING
+        assert issue.severity == Priority.LOW
+        assert issue.file_path == "src/main.py"
+        assert issue.line_number == 42
+
+    def test_parse_ruff_output_f401_unused_import(self, coordinator) -> None:
+        """Test parsing F401 unused import errors."""
+        from crackerjack.agents.base import IssueType, Priority
+
+        raw_output = "crackerjack/core.py:123:5: F401 'os' imported but unused"
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 1
+        issue = issues[0]
+        assert issue.type == IssueType.IMPORT_ERROR
+        assert issue.severity == Priority.MEDIUM
+        assert issue.file_path == "crackerjack/core.py"
+        assert issue.line_number == 123
+
+    def test_parse_ruff_output_security_code(self, coordinator) -> None:
+        """Test parsing S101 security errors (bandit)."""
+        from crackerjack.agents.base import IssueType, Priority
+
+        raw_output = "tests/test_main.py:10:5: S101 Use of assert detected"
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 1
+        issue = issues[0]
+        assert issue.type == IssueType.SECURITY
+        assert issue.severity == Priority.HIGH
+        assert issue.file_path == "tests/test_main.py"
+
+    def test_parse_ruff_output_multiple_errors(self, coordinator) -> None:
+        """Test parsing multiple errors in one output."""
+        raw_output = """session_buddy/tools/search_tools.py:756:5: C901 `func` is too complex (16 > 15)
+src/main.py:42:10: E501 Line too long (88 > 79 characters)
+Found 2 errors."""
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 2  # Summary line should be skipped
+
+    def test_parse_ruff_output_skips_summary_lines(self, coordinator) -> None:
+        """Test that summary lines are skipped."""
+        raw_output = """src/main.py:42:10: E501 Line too long
+Found 8 errors (7 fixed, 1 remaining).
+Checked 100 files."""
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert len(issues) == 1  # Only the actual error
+
+    def test_parse_ruff_output_empty_string(self, coordinator) -> None:
+        """Test parsing empty output."""
+        issues = coordinator._parse_ruff_output("")
+
+        assert issues == []
+
+    def test_parse_ruff_output_no_errors(self, coordinator) -> None:
+        """Test parsing output with no errors."""
+        raw_output = "All checks passed!"
+
+        issues = coordinator._parse_ruff_output(raw_output)
+
+        assert issues == []
+
+    def test_get_ruff_issue_type_complexity(self, coordinator) -> None:
+        """Test issue type detection for complexity codes."""
+        from crackerjack.agents.base import IssueType
+
+        assert coordinator._get_ruff_issue_type("C901") == IssueType.COMPLEXITY
+
+    def test_get_ruff_issue_type_security(self, coordinator) -> None:
+        """Test issue type detection for security codes."""
+        from crackerjack.agents.base import IssueType
+
+        assert coordinator._get_ruff_issue_type("S101") == IssueType.SECURITY
+        assert coordinator._get_ruff_issue_type("S501") == IssueType.SECURITY
+
+    def test_get_ruff_issue_type_import_error(self, coordinator) -> None:
+        """Test issue type detection for import codes."""
+        from crackerjack.agents.base import IssueType
+
+        assert coordinator._get_ruff_issue_type("F401") == IssueType.IMPORT_ERROR
+        assert coordinator._get_ruff_issue_type("F403") == IssueType.IMPORT_ERROR
+
+    def test_get_ruff_issue_type_formatting(self, coordinator) -> None:
+        """Test issue type detection for formatting codes."""
+        from crackerjack.agents.base import IssueType
+
+        assert coordinator._get_ruff_issue_type("E501") == IssueType.FORMATTING
+        assert coordinator._get_ruff_issue_type("W291") == IssueType.FORMATTING
+        assert coordinator._get_ruff_issue_type("F841") == IssueType.FORMATTING
+
+    def test_get_ruff_severity_high_priority(self, coordinator) -> None:
+        """Test severity detection for high priority codes."""
+        from crackerjack.agents.base import Priority
+
+        assert coordinator._get_ruff_severity("C901") == Priority.HIGH
+        assert coordinator._get_ruff_severity("S101") == Priority.HIGH
+
+    def test_get_ruff_severity_medium_priority(self, coordinator) -> None:
+        """Test severity detection for medium priority codes."""
+        from crackerjack.agents.base import Priority
+
+        assert coordinator._get_ruff_severity("F401") == Priority.MEDIUM
+
+    def test_get_ruff_severity_low_priority(self, coordinator) -> None:
+        """Test severity detection for low priority codes."""
+        from crackerjack.agents.base import Priority
+
+        assert coordinator._get_ruff_severity("E501") == Priority.LOW
+        assert coordinator._get_ruff_severity("W291") == Priority.LOW
+
+    def test_parse_hook_to_issues_routes_ruff_check(self, coordinator) -> None:
+        """Test that ruff-check is properly routed to _parse_ruff_output."""
+        from crackerjack.agents.base import IssueType
+
+        raw_output = "src/main.py:10:5: C901 `func` is too complex (16 > 15)"
+
+        issues = coordinator._parse_hook_to_issues("ruff-check", raw_output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.COMPLEXITY
+
+    def test_parse_hook_to_issues_routes_ruff(self, coordinator) -> None:
+        """Test that plain ruff is also properly routed."""
+        from crackerjack.agents.base import IssueType
+
+        raw_output = "src/main.py:10:5: E501 Line too long"
+
+        issues = coordinator._parse_hook_to_issues("ruff", raw_output)
+
+        assert len(issues) == 1
+        assert issues[0].type == IssueType.FORMATTING
