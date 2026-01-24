@@ -1,4 +1,5 @@
 from pathlib import Path
+import typing as t
 
 from pydantic_settings import BaseSettings as Settings
 
@@ -55,6 +56,12 @@ class AISettings(Settings):
     max_iterations: int = 5
     autofix: bool = True
     ai_agent_autofix: bool = False
+    ai_provider: t.Literal["claude", "qwen", "ollama"] = "claude"
+
+    # Ollama-specific settings
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen2.5-coder:7b"
+    ollama_timeout: int = 300
 
 
 class ExecutionSettings(Settings):
