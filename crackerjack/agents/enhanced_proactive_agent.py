@@ -11,13 +11,15 @@ from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedProactiveAgent(ProactiveAgent):
+    claude_bridge: ClaudeCodeBridge | QwenCodeBridge
+
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
 
         # Select AI bridge based on settings
         ai_settings = load_settings(AISettings)
         if ai_settings.ai_provider == "qwen":
-            self.claude_bridge = QwenCodeBridge(context)  # type: ignore[assignment]
+            self.claude_bridge = QwenCodeBridge(context)
         else:
             self.claude_bridge = ClaudeCodeBridge(context)
 

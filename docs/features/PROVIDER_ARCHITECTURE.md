@@ -88,11 +88,13 @@ Crackerjack's AI provider system uses a **unified architecture** that eliminates
 **Lines of Code**: ~150 (down from ~507 before refactoring)
 
 **Key Features**:
+
 - Uses Anthropic's Messages API
 - Response format: `response.content[0].text`
 - API key format: `sk-ant-...`
 
 **Unique Implementation**:
+
 ```python
 async def _call_provider_api(self, client, prompt):
     return await client.messages.create(
@@ -113,11 +115,13 @@ def _extract_content_from_response(self, response):
 **Lines of Code**: ~140 (down from ~508 before refactoring)
 
 **Key Features**:
+
 - Uses Qwen's OpenAI-compatible API
 - Response format: `response.choices[0].message.content`
 - API key format: Variable (no prefix check)
 
 **Unique Implementation**:
+
 ```python
 async def _call_provider_api(self, client, prompt):
     return await client.chat.completions.create(
@@ -138,11 +142,13 @@ def _extract_content_from_response(self, response):
 **Lines of Code**: ~150
 
 **Key Features**:
+
 - Uses Ollama's OpenAI-compatible API
 - No API key required (local execution)
 - Response format: `response.choices[0].message.content`
 
 **Unique Implementation**:
+
 ```python
 async def _initialize_client(self):
     client = openai.AsyncOpenAI(
@@ -190,11 +196,11 @@ class ProviderFactory:
     @staticmethod
     def create_provider(provider_id, settings=None) -> BaseCodeFixer:
         """Factory method to create provider instances."""
-        
+
     @staticmethod
     def get_provider_info(provider_id) -> ProviderInfo:
         """Get metadata about a provider."""
-        
+
     @staticmethod
     def list_providers() -> list[ProviderInfo]:
         """List all available providers."""
@@ -239,6 +245,7 @@ All providers **MUST** enforce identical security checks:
 ### Security Checks (Identical for All Providers)
 
 1. **Dangerous Pattern Detection**
+
    - `eval()` calls
    - `exec()` calls
    - `__import__()` calls
@@ -247,22 +254,26 @@ All providers **MUST** enforce identical security checks:
    - `pickle.loads/unpickle()`
    - `yaml.load(..., Loader=yaml.Loader)`
 
-2. **AST Security Scanning**
+1. **AST Security Scanning**
+
    - Parse code into AST
    - Scan for dangerous imports (`os`, `subprocess`, `sys`)
    - Validate syntax
 
-3. **Code Size Limits**
+1. **Code Size Limits**
+
    - Maximum: 10MB (configurable)
    - Prevents DoS via excessive code size
 
-4. **Prompt Injection Prevention**
+1. **Prompt Injection Prevention**
+
    - Filter "ignore previous" patterns
    - Filter "system:/assistant:/user:" patterns
    - Filter "you are now/act as" patterns
-   - Replace ``` with ''' to prevent markdown injection
+   - Replace \`\`\` with ''' to prevent markdown injection
 
-5. **Error Message Sanitization**
+1. **Error Message Sanitization**
+
    - Remove Unix paths: `/[\w\-./ ]+/` → `<path>/`
    - Remove Windows paths: `[A-Z]:\\[\w\-\\ ]+\\` → `<path>\\`
    - Remove API keys: `sk-[a-zA-Z0-9]{20,}` → `<api-key>`
@@ -308,21 +319,21 @@ class OpenAICodeFixerSettings(BaseCodeFixerSettings):
 
 class OpenAICodeFixer(BaseCodeFixer):
     """OpenAI AI code fixer implementation."""
-    
+
     def __init__(self, settings: OpenAICodeFixerSettings | None = None) -> None:
         super().__init__(settings)
-    
+
     async def _initialize_client(self) -> t.Any:
         """Initialize OpenAI client."""
         import openai
-        
+
         assert isinstance(self._settings, OpenAICodeFixerSettings)
         api_key = self._settings.openai_api_key.get_secret_value()
-        
+
         client = openai.AsyncOpenAI(api_key=api_key)
         logger.debug("OpenAI API client initialized")
         return client
-    
+
     async def _call_provider_api(self, client: t.Any, prompt: str) -> t.Any:
         """Call OpenAI Chat Completions API."""
         assert isinstance(self._settings, OpenAICodeFixerSettings)
@@ -330,17 +341,17 @@ class OpenAICodeFixer(BaseCodeFixer):
             model=self._settings.model,
             messages=[{"role": "user", "content": prompt}],
         )
-    
+
     def _extract_content_from_response(self, response: t.Any) -> str:
         """Extract content from OpenAI response."""
         return response.choices[0].message.content
-    
+
     def _validate_provider_specific_settings(self) -> None:
         """Validate OpenAI API key."""
         if not self._settings:
             msg = "OpenAICodeFixerSettings not provided"
             raise RuntimeError(msg)
-        
+
         assert isinstance(self._settings, OpenAICodeFixerSettings)
         key = self._settings.openai_api_key.get_secret_value()
         if not key.startswith("sk-"):
@@ -426,11 +437,13 @@ __all__ = [
 **Purpose**: Define algorithm skeleton in base class, override specific steps in subclasses.
 
 **Implementation**:
+
 - Base class defines `_fix_code_issue_with_retry()`
 - Subclasses override `_call_provider_api()` and `_extract_content_from_response()`
 - All providers inherit security validation
 
 **Benefits**:
+
 - Eliminates code duplication
 - Ensures consistent behavior
 - Easy to add new providers
@@ -440,11 +453,13 @@ __all__ = [
 **Purpose**: Create provider instances without specifying concrete classes.
 
 **Implementation**:
+
 - `ProviderFactory.create_provider(id, settings)`
 - Returns `BaseCodeFixer` (not concrete classes)
 - Caller doesn't need to know which class
 
 **Benefits**:
+
 - Decouples caller from implementation
 - Easy to add new providers
 - Centralized provider metadata
@@ -454,11 +469,13 @@ __all__ = [
 **Purpose**: Different algorithms for different providers.
 
 **Implementation**:
+
 - `_call_provider_api()` = strategy
 - Each provider implements different API call
 - Base class orchestrates the flow
 
 **Benefits**:
+
 - Provider-specific logic isolated
 - Easy to test individual providers
 - Clear separation of concerns
@@ -505,11 +522,13 @@ User Request
 ### 1. Reduced Code Duplication
 
 **Before**:
+
 - ClaudeCodeFixer: ~507 lines
 - QwenCodeFixer: ~508 lines
 - **Total**: ~1,015 lines with ~400 lines duplicated
 
 **After**:
+
 - BaseCodeFixer: ~500 lines (shared)
 - ClaudeCodeFixer: ~150 lines
 - QwenCodeFixer: ~140 lines
@@ -609,13 +628,13 @@ await fixer.fix_code_issue(...)
 # Test base class security validation
 def test_base_security_validation():
     from crackerjack.adapters.ai.base import BaseCodeFixer, BaseCodeFixerSettings
-    
+
     class MockProvider(BaseCodeFixer):
         async def _initialize_client(self): ...
         async def _call_provider_api(self, client, prompt): ...
         def _extract_content_from_response(self, response): ...
         def _validate_provider_specific_settings(self): ...
-    
+
     # Test dangerous pattern detection
     provider = MockProvider(BaseCodeFixerSettings())
     is_valid, msg = provider._check_dangerous_patterns("eval(x)")
@@ -624,7 +643,7 @@ def test_base_security_validation():
 # Test provider factory
 def test_provider_factory():
     from crackerjack.adapters.ai.registry import ProviderFactory, ProviderID
-    
+
     provider = ProviderFactory.create_provider(ProviderID.QWEN)
     assert isinstance(provider, QwenCodeFixer)  # Type-safe
 ```
@@ -635,9 +654,9 @@ def test_provider_factory():
 # Test all providers with same test case
 async def test_all_providers():
     from crackerjack.adapters.ai.registry import ProviderFactory, ProviderID
-    
+
     code = "def broken():\n    return 1/0"
-    
+
     for provider_id in [ProviderID.CLAUDE, ProviderID.QWEN, ProviderID.OLLAMA]:
         provider = ProviderFactory.create_provider(provider_id)
         result = await provider.fix_code_issue(
@@ -654,11 +673,13 @@ async def test_all_providers():
 ### 1. Use Base Classes
 
 **When** implementing new providers:
+
 - Always inherit from `BaseCodeFixer`
 - Always inherit settings from `BaseCodeFixerSettings`
 - Use abstract methods for provider-specific logic
 
 **Don't**:
+
 - Copy code from existing providers (use base class instead)
 - Skip security validation (enforced in base class)
 - Implement `fix_code_issue()` directly (use template method)
@@ -666,11 +687,13 @@ async def test_all_providers():
 ### 2. Use Factory Pattern
 
 **When** creating provider instances:
+
 - Use `ProviderFactory.create_provider()`
 - Pass `ProviderID` enum (not strings)
 - Let factory handle defaults
 
 **Don't**:
+
 - Import concrete classes directly (unless testing)
 - Hardcode provider names (use ProviderID enum)
 - Create instances with `new ClassName()` (use factory)
@@ -678,20 +701,22 @@ async def test_all_providers():
 ### 3. Document Provider-Specific Behavior
 
 **In provider docstring**, document:
+
 - API endpoint being used
 - Response format
 - Authentication method
 - Any limitations or quirks
 
 **Example**:
+
 ```python
 class QwenCodeFixer(BaseCodeFixer):
     """Qwen AI code fixer using Alibaba DashScope API.
-    
+
     API Documentation: https://help.aliyun.com/zh/dashscope/
     Response Format: OpenAI-compatible (response.choices[0].message.content)
     Authentication: API key via QWEN_API_KEY environment variable
-    
+
     Limitations:
     - Requires internet connection
     - Rate limits apply (see Dashscope docs)

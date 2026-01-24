@@ -390,8 +390,11 @@ class AutofixCoordinator:
                 self._report_iteration_success(iteration)
                 return True
         else:
-            self._report_iteration_success(iteration)
-            return True
+            # Iteration 0 with zero issues means no issues were detected from hooks
+            # This could be because hooks aren't mapped to IssueTypes
+            # Return None to continue to next iteration rather than false positive
+            self.logger.debug("Iteration 0: No issues detected from hook results")
+            return None
 
     def _get_iteration_issues(
         self,
@@ -819,10 +822,13 @@ class AutofixCoordinator:
             "mypy": IssueType.TYPE_ERROR,
             "ruff": IssueType.FORMATTING,
             "ruff-check": IssueType.FORMATTING,
+            "ruff-format": IssueType.FORMATTING,
+            "codespell": IssueType.FORMATTING,
             "bandit": IssueType.SECURITY,
             "vulture": IssueType.DEAD_CODE,
             "skylos": IssueType.DEAD_CODE,
             "creosote": IssueType.DEPENDENCY,
+            "check-local-links": IssueType.DOCUMENTATION,
         }
 
         issue_type = hook_type_map.get(hook_name)
@@ -836,6 +842,10 @@ class AutofixCoordinator:
             )
         elif hook_name in ("ruff", "ruff-check"):
             issues.extend(self._parse_ruff_output(raw_output))
+        elif hook_name == "ruff-format":
+            issues.extend(self._parse_ruff_format_output(raw_output, issue_type))
+        elif hook_name == "codespell":
+            issues.extend(self._parse_codespell_output(raw_output, issue_type))
         elif hook_name == "refurb":
             issues.extend(self._parse_refurb_output(raw_output, issue_type))
         elif hook_name == "complexipy":
@@ -844,6 +854,8 @@ class AutofixCoordinator:
             issues.extend(self._parse_security_output(raw_output, issue_type))
         elif hook_name in ("vulture", "skylos"):
             issues.extend(self._parse_dead_code_output(raw_output, issue_type))
+        elif hook_name == "check-local-links":
+            issues.extend(self._parse_check_local_links_output(raw_output, issue_type))
         else:
             issues.extend(self._parse_generic_output(hook_name, raw_output, issue_type))
 
@@ -1104,6 +1116,180 @@ class AutofixCoordinator:
                         stage="dead_code",
                     )
                 )
+
+        return issues
+
+    def _parse_check_local_links_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        """Parse check-local-links output into DOCUMENTATION issues.
+
+        Expected format:
+        docs/features/QWEN_PROVIDER.md:345: AI_FIX_EXPECTED_BEHAVIOR.md - File not found: AI_FIX_EXPECTED_BEHAVIOR.md
+        """
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or "File not found:" not in line:
+                continue
+
+            # Parse: "docs/features/QWEN_PROVIDER.md:345: TARGET.md - File not found: TARGET.md"
+            try:
+                # Split by first colon to get file path
+                if ":" not in line:
+                    continue
+
+                file_path, rest = line.split(":", 1)
+
+                # Extract line number (before second colon)
+                if ":" not in rest:
+                    continue
+
+                line_number_str, message_part = rest.split(":", 1)
+
+                try:
+                    line_number = int(line_number_str.strip())
+                except ValueError:
+                    line_number = None
+
+                # Extract target file from message
+                # Format: "TARGET.md - File not found: TARGET.md"
+                target_file = None
+                if " - " in message_part:
+                    target_file = message_part.split(" - ")[0].strip()
+
+                # Create descriptive message
+                if target_file:
+                    message = (
+                        f"Broken documentation link: '{target_file}' (file not found)"
+                    )
+                else:
+                    message = "Broken documentation link (target file not found)"
+
+                # Store target file in details for later use by the agent
+                details = [f"Target file: {target_file}"] if target_file else []
+
+                issues.append(
+                    Issue(
+                        type=issue_type,
+                        severity=Priority.MEDIUM,
+                        message=message,
+                        file_path=file_path.strip(),
+                        line_number=line_number,
+                        stage="documentation",
+                        details=details,
+                    )
+                )
+
+            except Exception as e:
+                self.logger.debug(
+                    f"Failed to parse check-local-links line: {line} ({e})"
+                )
+                continue
+
+        return issues
+
+    def _parse_codespell_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        """Parse codespell output into FORMATTING issues.
+
+        Expected format:
+        CONFIG_CONSOLIDATION_AUDIT.md:472: nd ==> and, 2nd
+        """
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not line or "==>" not in line:
+                continue
+
+            # Parse: "FILE.md:123: wrong ==> correct, suggestions"
+            try:
+                if ":" not in line:
+                    continue
+
+                file_path, rest = line.split(":", 1)
+
+                # Extract line number
+                if ":" not in rest:
+                    continue
+
+                line_number_str, message_part = rest.split(":", 1)
+
+                try:
+                    line_number = int(line_number_str.strip())
+                except ValueError:
+                    line_number = None
+
+                # Extract the spelling suggestion
+                # Format: "wrong ==> correct, suggestion1, suggestion2"
+                if "==>" in message_part:
+                    wrong_word, suggestions = message_part.split("==>", 1)
+                    message = f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
+                else:
+                    message = message_part.strip()
+
+                issues.append(
+                    Issue(
+                        type=issue_type,
+                        severity=Priority.LOW,
+                        message=message,
+                        file_path=file_path.strip(),
+                        line_number=line_number,
+                        stage="spelling",
+                    )
+                )
+
+            except Exception as e:
+                self.logger.debug(f"Failed to parse codespell line: {line} ({e})")
+                continue
+
+        return issues
+
+    def _parse_ruff_format_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        """Parse ruff-format output into FORMATTING issues.
+
+        Expected format:
+        error: Failed to format docs: No such file or directory (os error 2)
+        1 file would be reformatted.
+        """
+        issues: list[Issue] = []
+
+        # Ruff format typically returns summary, not per-file issues
+        # We create a single issue to trigger the FormattingAgent
+        if "would be reformatted" in raw_output or "Failed to format" in raw_output:
+            # Extract file count if available
+            file_count = 1
+            if "file" in raw_output:
+                import re
+
+                match = re.search(r"(\d+) files?", raw_output)
+                if match:
+                    file_count = int(match.group(1))
+
+            message = f"{file_count} file(s) require formatting"
+
+            # Extract error details if present
+            if "error:" in raw_output:
+                error_lines = [line for line in raw_output.split("\n") if line.strip()]
+                if error_lines:
+                    message = f"Formatting error: {error_lines[0]}"
+
+            issues.append(
+                Issue(
+                    type=issue_type,
+                    severity=Priority.MEDIUM,
+                    message=message,
+                    file_path=None,  # Ruff format works on entire project
+                    line_number=None,
+                    stage="formatting",
+                    details=["Run 'uv run ruff format .' to fix"],
+                )
+            )
 
         return issues
 

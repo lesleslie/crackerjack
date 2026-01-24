@@ -25,6 +25,7 @@ class FormattingAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
+        # High confidence for specific formatting issues we can fix
         if any(
             keyword in message_lower
             for keyword in (
@@ -34,6 +35,7 @@ class FormattingAgent(SubAgent):
                 "import sorting",
                 "unused import",
                 "ruff",
+                "spelling",  # Added for codespell support
             )
         ):
             return 1.0
@@ -64,6 +66,14 @@ class FormattingAgent(SubAgent):
         files_modified: list[str] = []
 
         try:
+            # Check if this is a spelling issue
+            message_lower = issue.message.lower()
+            if "spelling" in message_lower:
+                spelling_fixes = await self._apply_spelling_fixes(issue)
+                fixes_applied.extend(spelling_fixes)
+                if spelling_fixes and issue.file_path:
+                    files_modified.append(issue.file_path)
+
             ruff_fixes = await self._apply_ruff_fixes()
             fixes_applied.extend(ruff_fixes)
 
@@ -73,7 +83,7 @@ class FormattingAgent(SubAgent):
             import_fixes = await self._apply_import_fixes()
             fixes_applied.extend(import_fixes)
 
-            if issue.file_path:
+            if issue.file_path and "spelling" not in message_lower:
                 file_fixes = await self._fix_specific_file(issue.file_path, issue)
                 fixes_applied.extend(file_fixes)
                 if file_fixes:
@@ -180,6 +190,48 @@ class FormattingAgent(SubAgent):
         if returncode == 0:
             fixes.append("Organized imports and removed unused imports")
             self.log("Fixed import organization")
+
+        return fixes
+
+    async def _apply_spelling_fixes(self, issue: Issue) -> list[str]:
+        """Apply spelling corrections using codespell -w.
+
+        Only runs if the issue is related to spelling errors.
+        """
+        fixes: list[str] = []
+
+        # Only process if we have a specific file
+        if not issue.file_path:
+            self.log("No specific file path for spelling fix", "WARNING")
+            return fixes
+
+        try:
+            self.log(f"Applying spelling fixes to {issue.file_path}")
+
+            # Run codespell with -w flag on the specific file
+            returncode, stdout, stderr = await self.run_command(
+                ["uv", "run", "codespell", "-w", issue.file_path],
+            )
+
+            if returncode == 0:
+                fix_count = stdout.count("FIXED") if stdout else 0
+                message = f"Fixed {fix_count} spelling error(s) in {issue.file_path}"
+                fixes.append(message)
+                self.log(message)
+            else:
+                # Check if codespell actually made changes despite non-zero exit
+                if "FIXED" in stdout or "fixed" in stdout.lower():
+                    fix_count = stdout.count("FIXED")
+                    message = (
+                        f"Fixed {fix_count} spelling error(s) in {issue.file_path}"
+                    )
+                    fixes.append(message)
+                    self.log(message)
+                else:
+                    self.log(f"Codespell returned {returncode}: {stderr}", "WARNING")
+
+        except Exception as e:
+            self.log(f"Error applying spelling fixes: {e}", "ERROR")
 
         return fixes
 

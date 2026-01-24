@@ -28,6 +28,11 @@ class DocumentationAgent(SubAgent):
         self.log(f"Analyzing documentation issue: {issue.message}")
 
         try:
+            if (
+                "broken documentation link" in issue.message.lower()
+                or "file not found" in issue.message.lower()
+            ):
+                return await self._fix_broken_link(issue)
             if "changelog" in issue.message.lower():
                 return await self._update_changelog(issue)
             if (
@@ -508,6 +513,131 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
         except Exception:
             return []
+
+    async def _fix_broken_link(self, issue: Issue) -> FixResult:
+        """Fix broken documentation links by searching for the target file or removing the link.
+
+        Strategy:
+        1. Extract the target file from the issue details
+        2. Search for the target file in common documentation locations
+        3. If found, update the link path
+        4. If not found, remove the broken link
+        """
+        self.log(f"Fixing broken link in {issue.file_path}")
+
+        if not issue.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided for broken link fix"],
+            )
+
+        # Extract target file from details
+        target_file = None
+        for detail in issue.details:
+            if detail.startswith("Target file:"):
+                target_file = detail.split(":", 1)[1].strip()
+                break
+
+        # Read the file content
+        content = self.context.get_file_content(issue.file_path)
+        if content is None:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to read {issue.file_path}"],
+            )
+
+        lines = content.split("\n")
+        updated_lines = []
+
+        # Find and fix the broken link
+        for i, line in enumerate(lines):
+            if i + 1 == issue.line_number:
+                # This is the line with the broken link
+                if target_file:
+                    # Try to find the target file
+                    fixed_link = self._find_and_fix_link(
+                        target_file, line, issue.file_path
+                    )
+                    if fixed_link != line:
+                        updated_lines.append(fixed_link)
+                        self.log(
+                            f"Fixed link to {target_file} in {issue.file_path}:{issue.line_number}"
+                        )
+                        continue
+
+                # If we couldn't fix it, remove the broken link line
+                self.log(
+                    f"Removing unfixable broken link in {issue.file_path}:{issue.line_number}"
+                )
+                continue
+
+            updated_lines.append(line)
+
+        updated_content = "\n".join(updated_lines)
+
+        # Write the fixed content
+        success = self.context.write_file_content(issue.file_path, updated_content)
+
+        if success:
+            if target_file:
+                message = f"Fixed broken link to '{target_file}' in {issue.file_path}"
+            else:
+                message = f"Removed broken link from {issue.file_path}"
+
+            return FixResult(
+                success=True,
+                confidence=0.85,
+                fixes_applied=[message],
+                files_modified=[issue.file_path],
+            )
+
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Failed to write fixed content to {issue.file_path}"],
+        )
+
+    def _find_and_fix_link(self, target_file: str, line: str, source_file: str) -> str:
+        """Search for the target file and update the link.
+
+        Returns the fixed line, or the original line if the target cannot be found.
+        """
+        # Common documentation locations to search
+        search_paths = [
+            Path(target_file),  # Same directory as source
+            Path("docs") / target_file,  # docs/ folder
+            Path("docs") / "reference" / target_file,  # docs/reference/
+            Path("docs") / "features" / target_file,  # docs/features/
+            Path("docs") / "guides" / target_file,  # docs/guides/
+        ]
+
+        # Try to find the target file
+        for path in search_paths:
+            if path.exists():
+                # Found it! Calculate the relative path
+                source_path = Path(source_file).parent
+                with suppress(ValueError):
+                    relative_path = path.relative_to(source_path)
+                    # Convert to markdown link format
+                    new_link = str(relative_path)
+                    # Replace the old link with the new one
+                    import re
+
+                    # Match markdown link: [text](old_link.md)
+                    pattern = r"\[([^\]]+)\]\([^)]*?" + re.escape(target_file) + r"\)"
+
+                    def replace_link(match: t.Match[str]) -> str:
+                        text = match.group(1)
+                        return f"[{text}]({new_link})"
+
+                    fixed_line = re.sub(pattern, replace_link, line)
+                    return fixed_line
+                # Can't create relative path, continue to next path
+
+        # Target file not found, return original line (will be removed)
+        return line
 
     def _update_readme_examples(
         self,

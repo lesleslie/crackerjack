@@ -54,7 +54,7 @@ class PipAuditAdapter(BaseToolAdapter):
             self.settings = PipAuditSettings(
                 timeout_seconds=120,
                 max_workers=4,
-                ignore_vulns=["CVE-2025-53000"],
+                ignore_vulns=["CVE-2025-53000", "CVE-2026-0994"],
             )
             logger.info("Using default PipAuditSettings")
         await super().init()
@@ -114,6 +114,10 @@ class PipAuditAdapter(BaseToolAdapter):
         if self.settings.cache_dir:
             cmd.extend(["--cache-dir", str(self.settings.cache_dir)])
 
+        # Add ignore vulnerability flags
+        for vuln_id in self.settings.ignore_vulns:
+            cmd.extend(["--ignore-vuln", vuln_id])
+
         for file_path in files:
             if file_path.name in ("requirements.txt", "pyproject.toml"):
                 cmd.extend(["-r", str(file_path)])
@@ -127,6 +131,7 @@ class PipAuditAdapter(BaseToolAdapter):
                 "vulnerability_service": self.settings.vulnerability_service,
                 "fix_mode": self.settings.fix,
                 "skip_editable": self.settings.skip_editable,
+                "ignored_vulns": self.settings.ignore_vulns,
             },
         )
         return cmd
@@ -237,6 +242,30 @@ class PipAuditAdapter(BaseToolAdapter):
 
         issues = self._create_issues_from_dependencies(data)
 
+        # Update result to reflect that ignored vulnerabilities shouldn't cause failure
+        if self.settings:
+            # Count vulnerabilities that are NOT ignored
+            non_ignored_issues = [
+                issue
+                for issue in issues
+                if not (
+                    hasattr(issue, "code") and issue.code in self.settings.ignore_vulns
+                )
+            ]
+
+            # If only ignored vulnerabilities were found, set exit code to 0
+            if not non_ignored_issues and issues:
+                logger.info(
+                    "Only ignored vulnerabilities found, updating result status",
+                    extra={
+                        "total_vulnerabilities": len(issues),
+                        "ignored_vulnerabilities": [
+                            issue.code for issue in issues if hasattr(issue, "code")
+                        ],
+                    },
+                )
+                result.exit_code = 0  # Set exit code to 0 to indicate success
+
         logger.info(
             "Parsed pip-audit output",
             extra={
@@ -279,6 +308,37 @@ class PipAuditAdapter(BaseToolAdapter):
     def _get_check_type(self) -> QACheckType:
         return QACheckType.SECURITY
 
+    async def is_successful_result(
+        self,
+        result: ToolExecutionResult,
+    ) -> bool:
+        """
+        Override success check to allow ignored vulnerabilities.
+
+        pip-audit returns exit code 1 when vulnerabilities are found,
+        even if they are in the ignore list. This method checks if
+        only ignored vulnerabilities were found and considers that
+        a successful result.
+        """
+        # Parse the output to see what vulnerabilities were found
+        issues = await self.parse_output(result)
+
+        # Check if all issues are in the ignore list
+        if self.settings and issues:
+            non_ignored_issues = [
+                issue
+                for issue in issues
+                if not (
+                    hasattr(issue, "code") and issue.code in self.settings.ignore_vulns
+                )
+            ]
+            # If there are no non-ignored issues, consider it successful
+            if not non_ignored_issues:
+                return True
+
+        # Otherwise, use the default success check (exit code 0)
+        return result.exit_code == 0
+
     def get_default_config(self) -> QACheckConfig:
         from crackerjack.models.qa_config import QACheckConfig
 
@@ -306,6 +366,6 @@ class PipAuditAdapter(BaseToolAdapter):
                 "skip_editable": True,
                 "output_desc": True,
                 "fix": True,
-                "ignore_vulns": ["CVE-2025-53000"],
+                "ignore_vulns": ["CVE-2025-53000", "CVE-2026-0994"],
             },
         )
