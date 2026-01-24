@@ -7,7 +7,7 @@ import logging
 from dataclasses import dataclass
 from enum import Enum
 
-from crackerjack.adapters.ai.base import BaseCodeFixer, BaseCodeFixerSettings
+from crackerjack.adapters.ai.base import BaseCodeFixer
 
 logger = logging.getLogger(__name__)
 
