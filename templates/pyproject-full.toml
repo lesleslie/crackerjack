@@ -162,7 +162,7 @@ mcp_http_enabled = true
 
 # Quality tool timeout settings (in seconds)
 skylos_timeout = 600  # Dead code detection (10 minutes)
-refurb_timeout = 180  # Modern Python suggestions (3 minutes)
+refurb_timeout = 600  # Modern Python suggestions (10 minutes)
 
 # Test parallelization settings
 test_workers = 0  # 0 = auto-detect, 1 = sequential, >1 = explicit, <0 = fractional
