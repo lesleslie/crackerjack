@@ -22,7 +22,7 @@ import logging
 import re
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, TypedDict
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +40,14 @@ DocCategory = Literal[
     "analysis",
     "uncategorized",
 ]
+
+
+class CategoryConfig(TypedDict):
+    """Configuration for a single documentation category."""
+
+    patterns: list[str]
+    destination: str | None
+    reason: str
 
 
 @dataclass
@@ -67,7 +75,7 @@ class DocumentationCategorizer:
 
     # Comprehensive pattern definitions
     # Each category has patterns, a destination, and a reason explaining the logic
-    CATEGORIES = {
+    CATEGORIES: dict[DocCategory, CategoryConfig] = {
         "keep_in_root": {
             "patterns": [
                 r"^README\.md$",

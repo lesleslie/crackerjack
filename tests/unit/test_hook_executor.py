@@ -181,7 +181,7 @@ class TestHookExecutorMethods:
         # Mock the internal methods
         with patch.object(executor, '_execute_hooks', return_value=[]), \
              patch.object(executor, '_create_execution_result') as mock_create_result:
-            
+
             mock_create_result.return_value = HookExecutionResult(
                 strategy_name="test",
                 results=[],
@@ -191,7 +191,7 @@ class TestHookExecutorMethods:
                 cache_misses=0,
                 performance_gain=0.0,
             )
-            
+
             result = executor.execute_strategy(strategy)
 
             # Verify the result is as expected
@@ -217,7 +217,7 @@ class TestHookExecutorMethods:
         """Test is_concurrent method."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
         strategy = MagicMock(spec=HookStrategy)
-        
+
         # Set the concurrent attribute on the strategy
         strategy.concurrent = True
 
@@ -398,11 +398,11 @@ class TestHookExecutorEdgeCases:
         """Test execute_single_hook with invalid hook."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
         hook = MagicMock()
-        
+
         # Mock to simulate an error during execution
         with patch.object(executor, '_run_hook_subprocess', side_effect=Exception("Test error")):
             result = executor.execute_single_hook(hook)
-            
+
             # Should handle the error gracefully and return an error result
             assert isinstance(result, HookResult)
             assert result.status == "error"

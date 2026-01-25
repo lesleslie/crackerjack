@@ -19,7 +19,7 @@ class TestCodeCleanerEdgeCases:
     def test_cleaner_with_nonexistent_directory(self) -> None:
         """Test CodeCleaner with nonexistent base directory."""
         cleaner = CodeCleaner(base_directory=Path("/nonexistent/directory"))
-        
+
         # Should handle gracefully when trying to find files
         try:
             result = cleaner._find_package_directory(Path("/nonexistent/directory"))
@@ -205,7 +205,7 @@ class TestTimeoutManagerEdgeCases:
     def test_timeout_manager_get_timeout_unknown_operation(self) -> None:
         """Test get_timeout with unknown operation."""
         manager = AsyncTimeoutManager()
-        
+
         # Should return default timeout for unknown operations
         timeout = manager.get_timeout("unknown_operation")
         assert isinstance(timeout, float)
@@ -224,7 +224,7 @@ class TestSessionCoordinatorEdgeCases:
         coordinator.complete_task("task1", "details", ["file.py"])
         coordinator.fail_task("task1", "error", "details")
         coordinator.update_task("task1", "status", details="details")
-        
+
         # get_summary should return basic info even with None tracker
         summary = coordinator.get_summary()
         assert "session_id" in summary
@@ -233,7 +233,7 @@ class TestSessionCoordinatorEdgeCases:
     def test_session_coordinator_with_invalid_paths(self) -> None:
         """Test session coordinator with invalid paths."""
         coordinator = SessionCoordinator(pkg_path=Path("/nonexistent/path"))
-        
+
         # Should handle invalid paths gracefully
         try:
             coordinator._cleanup_debug_logs()
@@ -258,11 +258,11 @@ class TestSessionCoordinatorEdgeCases:
     def test_session_coordinator_with_long_task_ids(self) -> None:
         """Test session coordinator with very long task IDs."""
         coordinator = SessionCoordinator()
-        
+
         # Use a very long task ID
         long_task_id = "x" * 1000
         details = "Test with long task ID"
-        
+
         # Should handle long task IDs gracefully
         result_id = coordinator.track_task(long_task_id, "Long Task", details)
         assert result_id == long_task_id
@@ -284,9 +284,9 @@ class TestHookExecutorEdgeCases:
         # Mock subprocess.run to simulate command not found
         with patch("subprocess.run") as mock_run:
             mock_run.side_effect = FileNotFoundError("Command not found")
-            
+
             result = executor.execute_single_hook(hook)
-            
+
             # Should handle the error gracefully
             assert result.status == "error"
             assert "not found" in result.error or "FileNotFoundError" in str(result.error)
@@ -310,9 +310,9 @@ class TestHookExecutorEdgeCases:
             mock_proc.stderr = "Some error"
             mock_proc.returncode = None
             mock_run.side_effect = TimeoutExpired(cmd=hook.cmd, timeout=hook.timeout)
-            
+
             result = executor.execute_single_hook(hook)
-            
+
             # Should handle the timeout gracefully
             assert result.status == "timeout"
 
@@ -333,9 +333,9 @@ class TestHookExecutorEdgeCases:
             mock_proc.stderr = "Error output"
             mock_proc.returncode = 1  # Non-zero means failure
             mock_run.return_value = mock_proc
-            
+
             result = executor.execute_single_hook(hook)
-            
+
             # Should handle the failure gracefully
             assert result.status == "failed"
             assert result.return_code == 1
@@ -375,9 +375,9 @@ class TestHookExecutorEdgeCases:
             mock_proc.stderr = ""
             mock_proc.returncode = 0
             mock_run.return_value = mock_proc
-            
+
             result = executor.execute_single_hook(hook)
-            
+
             # Should handle long output gracefully
             assert result.status in ["passed", "failed"]  # Depends on parsing logic
 
@@ -412,7 +412,7 @@ class TestGeneralErrorHandling:
         # This tests the pattern used in some modules where imports are wrapped in try/except
         # Although we can't easily test the import error itself, we can verify the pattern works
         from crackerjack.core.phase_coordinator import PhaseCoordinator
-        
+
         # Verify that the class can be instantiated without import errors
         coordinator = PhaseCoordinator()
         assert coordinator is not None
@@ -423,23 +423,23 @@ class TestGeneralErrorHandling:
         class MinimalObject:
             def __init__(self):
                 self.existing_attr = "value"
-        
+
         obj = MinimalObject()
-        
+
         # Test safe attribute access pattern
         attr_value = getattr(obj, 'existing_attr', 'default')
         assert attr_value == "value"
-        
+
         attr_value = getattr(obj, 'nonexistent_attr', 'default')
         assert attr_value == "default"
 
     def test_file_operation_error_handling(self) -> None:
         """Test file operation error handling."""
         executor = HookExecutor(console=MagicMock(), pkg_path=Path("/tmp"))
-        
+
         # Test with a path that causes errors
         problematic_path = Path("/nonexistent/directory/file.txt")
-        
+
         # This tests the pattern of handling file operations that might fail
         try:
             # Simulate a file operation that would fail

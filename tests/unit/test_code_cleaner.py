@@ -93,7 +93,7 @@ class TestDataClasses:
             cleaned_lines=8,
             errors=[],
         )
-        
+
         package_result = PackageCleaningResult(
             package_path=Path("mypackage"),
             success=True,
@@ -163,7 +163,7 @@ class TestCodeCleanerMethods:
     def test_should_process_file(self) -> None:
         """Test should_process_file method."""
         cleaner = CodeCleaner()
-        
+
         # Test with Python file
         py_file = Path("test.py")
         result = cleaner.should_process_file(py_file)
@@ -281,7 +281,7 @@ class TestCodeCleanerFileProcessing:
         # Create a temporary directory with some Python files
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            
+
             # Create a Python file
             py_file = temp_path / "test.py"
             py_file.write_text("print('hello')")
@@ -296,13 +296,13 @@ class TestCodeCleanerFileProcessing:
         # Create a temporary directory with a Python file
         with tempfile.TemporaryDirectory() as temp_dir:
             temp_path = Path(temp_dir)
-            
+
             # Create a Python file
             py_file = temp_path / "test.py"
             py_file.write_text("print('hello')")
 
             files_to_clean = [py_file]
-            
+
             # Mock the internal clean_file method to avoid complex processing
             with patch.object(cleaner, 'clean_file') as mock_clean:
                 mock_clean.return_value = CleaningResult(
@@ -312,9 +312,9 @@ class TestCodeCleanerFileProcessing:
                     cleaned_lines=1,
                     errors=[],
                 )
-                
+
                 result = cleaner.clean_files(files_to_clean)
-                
+
                 # Verify that clean_file was called for each file
                 assert mock_clean.call_count == len(files_to_clean)
                 assert result.success is True

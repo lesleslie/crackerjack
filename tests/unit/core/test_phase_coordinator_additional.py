@@ -193,7 +193,7 @@ class TestPhaseCoordinatorMoreMethods:
     def test_classify_safe_test_failures(self) -> None:
         """Test _classify_safe_test_failures method."""
         coordinator = PhaseCoordinator()
-        
+
         # Test with import error (should be safe)
         failures = ["ModuleNotFoundError: No module named 'missing_module'"]
         safe_failures = coordinator._classify_safe_test_failures(failures)
