@@ -1,5 +1,16 @@
 ______________________________________________________________________
 
+## [0.50.2] - 2026-01-25
+
+### Added
+
+- Integrate regex-based documentation categorization into production service
+
+### Changed
+
+- Crackerjack (quality: 69/100) - 2026-01-24 19:07:35
+- Update core, docs, tests
+
 ## [0.50.1] - 2026-01-24
 
 ### Changed
