@@ -224,14 +224,13 @@ def run(
 
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
 
-    # Handle provider selection first
     if select_provider:
         import asyncio
 
         from crackerjack.cli.handlers.provider_selection import handle_select_provider
 
         asyncio.run(handle_select_provider())
-        return  # Exit after selection
+        return
 
     options = create_options(
         commit,

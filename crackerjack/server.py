@@ -122,7 +122,6 @@ class CrackerjackServer:
             try:
                 from crackerjack.adapters.ai.claude import ClaudeCodeFixer
 
-                # Provider loads settings from environment variables
                 claude = ClaudeCodeFixer()
                 await claude.init()
                 self.adapters.append(claude)

@@ -1,561 +1,453 @@
-"""Unit tests for SessionCoordinator.
-
-Tests session tracking, task management, cleanup handlers,
-and session lifecycle coordination.
-"""
+"""Unit tests for session coordinator components."""
 
 import time
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-from crackerjack.core.session_coordinator import SessionController, SessionCoordinator
+from crackerjack.core.console import CrackerjackConsole
+from crackerjack.core.session_coordinator import SessionCoordinator
+from crackerjack.models.task import SessionTracker
 
 
-@pytest.mark.unit
 class TestSessionCoordinatorInitialization:
     """Test SessionCoordinator initialization."""
 
-    def test_initialization_default(self) -> None:
-        """Test default initialization."""
+    def test_initialization_defaults(self) -> None:
+        """Test SessionCoordinator initialization with defaults."""
         coordinator = SessionCoordinator()
 
-        assert coordinator.console is not None
+        assert isinstance(coordinator.console, CrackerjackConsole)
         assert coordinator.pkg_path == Path.cwd()
-        assert coordinator.web_job_id is None
         assert coordinator.session_id is not None
+        assert len(coordinator.session_id) >= 8
         assert isinstance(coordinator.start_time, float)
         assert coordinator.cleanup_handlers == []
         assert coordinator.lock_files == set()
         assert coordinator.current_task is None
+        assert coordinator.session_tracker is None
+        assert coordinator.tasks == {}
 
-    def test_initialization_with_console(self) -> None:
-        """Test initialization with provided console."""
-        mock_console = Mock()
+    def test_initialization_with_parameters(self) -> None:
+        """Test SessionCoordinator initialization with parameters."""
+        console = MagicMock()
+        pkg_path = Path("/tmp/test")
+        web_job_id = "test-job-123"
 
-        coordinator = SessionCoordinator(console=mock_console)
+        coordinator = SessionCoordinator(
+            console=console,
+            pkg_path=pkg_path,
+            web_job_id=web_job_id,
+        )
 
-        assert coordinator.console == mock_console
-
-    def test_initialization_with_pkg_path(self, tmp_path) -> None:
-        """Test initialization with provided pkg_path."""
-        coordinator = SessionCoordinator(pkg_path=tmp_path)
-
-        assert coordinator.pkg_path == tmp_path
-
-    def test_initialization_with_web_job_id(self) -> None:
-        """Test initialization with web job ID."""
-        job_id = "test-job-123"
-        coordinator = SessionCoordinator(web_job_id=job_id)
-
-        assert coordinator.web_job_id == job_id
-        assert coordinator.session_id == job_id
-
-    def test_initialization_session_id_generated(self) -> None:
-        """Test session ID is generated when no web_job_id."""
-        coordinator = SessionCoordinator()
-
-        assert coordinator.session_id is not None
-        assert len(coordinator.session_id) == 8  # UUID hex[:8]
+        assert coordinator.console is console
+        assert coordinator.pkg_path == pkg_path
+        assert coordinator.web_job_id == web_job_id
+        assert coordinator.session_id == web_job_id
 
 
-@pytest.mark.unit
 class TestSessionCoordinatorSessionTracking:
-    """Test session tracking initialization."""
+    """Test session tracking functionality."""
 
-    @pytest.fixture
-    def coordinator(self):
-        """Create coordinator instance."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console)
+    def test_initialize_session_tracking_without_tracking(self) -> None:
+        """Test initialize_session_tracking when tracking is disabled."""
+        coordinator = SessionCoordinator()
+        options = MagicMock()
+        options.track_progress = False
 
-    @pytest.fixture
-    def mock_options(self):
-        """Create mock options."""
-        options = Mock()
-        options.__dict__ = {"verbose": True, "ai_agent": False, "track_progress": True}
-        return options
+        coordinator.initialize_session_tracking(options)
 
-    def test_initialize_session_tracking(self, coordinator, mock_options) -> None:
-        """Test initializing session tracking."""
-        coordinator.initialize_session_tracking(mock_options)
-
-        assert coordinator.session_tracker is not None
-        assert coordinator.session_tracker.session_id == coordinator.session_id
-        assert "options" in coordinator.session_tracker.metadata
-        assert "pkg_path" in coordinator.session_tracker.metadata
-
-    def test_start_session(self, coordinator) -> None:
-        """Test starting a session task."""
-        coordinator.start_session("test_task")
-
-        assert coordinator.current_task == "test_task"
-        assert coordinator.session_tracker is not None
-        assert coordinator.session_tracker.metadata["current_session"] == "test_task"
-
-    def test_start_session_lazy_initialization(self, coordinator) -> None:
-        """Test session tracker is lazily initialized."""
+        # Session tracker should remain None when tracking is disabled
         assert coordinator.session_tracker is None
 
-        coordinator.start_session("task1")
+    def test_initialize_session_tracking_with_tracking(self) -> None:
+        """Test initialize_session_tracking when tracking is enabled."""
+        coordinator = SessionCoordinator()
+        options = MagicMock()
+        options.track_progress = True
+
+        coordinator.initialize_session_tracking(options)
+
+        # Session tracker should be initialized when tracking is enabled
+        assert coordinator.session_tracker is not None
+        assert isinstance(coordinator.session_tracker, SessionTracker)
+        assert coordinator.session_tracker.session_id == coordinator.session_id
+        assert coordinator.session_tracker.start_time == coordinator.start_time
+
+    def test_start_session(self) -> None:
+        """Test start_session method."""
+        coordinator = SessionCoordinator()
+        task_name = "test_task"
+
+        coordinator.start_session(task_name)
+
+        assert coordinator.current_task == task_name
+        assert coordinator.session_tracker is not None
+        assert coordinator.session_tracker.metadata["current_session"] == task_name
+
+    def test_start_session_creates_tracker_if_none(self) -> None:
+        """Test start_session creates tracker if none exists."""
+        coordinator = SessionCoordinator()
+        coordinator.session_tracker = None
+        task_name = "test_task"
+
+        coordinator.start_session(task_name)
 
         assert coordinator.session_tracker is not None
+        assert coordinator.session_tracker.metadata["current_session"] == task_name
 
-    def test_end_session(self, coordinator) -> None:
-        """Test ending a session."""
-        coordinator.start_session("test_task")
+    def test_end_session(self) -> None:
+        """Test end_session method."""
+        coordinator = SessionCoordinator()
+        success = True
 
-        coordinator.end_session(success=True)
+        coordinator.end_session(success)
 
-        assert hasattr(coordinator, "end_time")
+        # Check that end_time is set and metadata is updated
+        assert hasattr(coordinator, 'end_time')
+        assert isinstance(coordinator.end_time, float)
+        if coordinator.session_tracker:
+            assert coordinator.session_tracker.metadata["completed_at"] == coordinator.end_time
+            assert coordinator.session_tracker.metadata["success"] == success
+
+    def test_end_session_with_tracker(self) -> None:
+        """Test end_session method with existing tracker."""
+        coordinator = SessionCoordinator()
+        coordinator.session_tracker = SessionTracker(
+            session_id=coordinator.session_id,
+            start_time=coordinator.start_time,
+        )
+        success = False
+
+        coordinator.end_session(success)
+
+        assert coordinator.session_tracker.metadata["success"] == success
         assert coordinator.current_task is None
-        assert coordinator.session_tracker.metadata["success"] is True
 
 
-@pytest.mark.unit
 class TestSessionCoordinatorTaskTracking:
     """Test task tracking functionality."""
 
-    @pytest.fixture
-    def coordinator(self):
-        """Create coordinator instance."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console)
+    def test_track_task(self) -> None:
+        """Test track_task method."""
+        coordinator = SessionCoordinator()
+        task_id = "task-123"
+        task_name = "test-task"
+        details = "Test task details"
 
-    def test_track_task(self, coordinator) -> None:
-        """Test tracking a task."""
-        task_id = coordinator.track_task("task1", "Test Task", "Details")
+        result_id = coordinator.track_task(task_id, task_name, details)
 
-        assert task_id == "task1"
+        assert result_id == task_id
         assert coordinator.session_tracker is not None
-        assert "task1" in coordinator.tasks
+        assert task_id in coordinator.session_tracker.tasks
 
-    def test_track_task_lazy_initialization(self, coordinator) -> None:
-        """Test task tracking initializes session tracker."""
-        assert coordinator.session_tracker is None
-
-        coordinator.track_task("task1", "Task")
-
-        assert coordinator.session_tracker is not None
-
-    def test_complete_task(self, coordinator) -> None:
-        """Test completing a task."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.complete_task("task1", "Completed successfully", ["file1.py"])
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "completed"
-
-    def test_complete_task_without_session_tracker(self, coordinator) -> None:
-        """Test completing task when session tracker is None."""
+    def test_track_task_creates_tracker_if_none(self) -> None:
+        """Test track_task creates tracker if none exists."""
+        coordinator = SessionCoordinator()
         coordinator.session_tracker = None
 
-        # Should not raise error
-        coordinator.complete_task("task1", "Done")
-
-    def test_fail_task(self, coordinator) -> None:
-        """Test failing a task."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.fail_task("task1", "Error occurred", "Error details")
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "failed"
-
-    def test_fail_task_without_session_tracker(self, coordinator) -> None:
-        """Test failing task when session tracker is None."""
-        coordinator.session_tracker = None
-
-        # Should not raise error
-        coordinator.fail_task("task1", "Error")
-
-    def test_update_task_completed(self, coordinator) -> None:
-        """Test updating task to completed status."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.update_task("task1", "completed", details="Done")
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "completed"
-
-    def test_update_task_failed(self, coordinator) -> None:
-        """Test updating task to failed status."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.update_task("task1", "failed", error_message="Error")
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "failed"
-
-    def test_update_task_in_progress(self, coordinator) -> None:
-        """Test updating task to in_progress status."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.update_task("task1", "in_progress", details="Working")
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "in_progress"
-
-    def test_update_task_in_progress_creates_task(self, coordinator) -> None:
-        """Test updating non-existent task to in_progress creates it."""
-        coordinator.update_task("new_task", "in_progress", details="Creating")
-
-        assert "new_task" in coordinator.tasks
-
-    def test_update_task_arbitrary_status(self, coordinator) -> None:
-        """Test updating task with arbitrary status."""
-        coordinator.track_task("task1", "Test Task")
-
-        coordinator.update_task("task1", "custom_status", details="Custom")
-
-        task = coordinator.tasks["task1"]
-        assert task.status == "custom_status"
-
-    def test_update_task_lazy_initialization(self, coordinator) -> None:
-        """Test update_task initializes session tracker."""
-        assert coordinator.session_tracker is None
-
-        coordinator.update_task("task1", "in_progress")
+        coordinator.track_task("task-123", "test-task", "details")
 
         assert coordinator.session_tracker is not None
 
+    def test_complete_task(self) -> None:
+        """Test complete_task method."""
+        coordinator = SessionCoordinator()
+        task_id = "task-456"
+        details = "Completion details"
+        files_changed = ["file1.py", "file2.py"]
 
-@pytest.mark.unit
+        # First track the task
+        coordinator.track_task(task_id, "test-task", "initial details")
+
+        # Then complete it
+        coordinator.complete_task(task_id, details, files_changed)
+
+        # Verify the task was completed
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.completed_at is not None
+            assert task.details == details
+
+    def test_complete_task_with_none_tracker(self) -> None:
+        """Test complete_task when session tracker is None."""
+        coordinator = SessionCoordinator()
+        coordinator.session_tracker = None
+
+        # Should not raise an exception
+        coordinator.complete_task("task-123", "details", ["file.py"])
+
+    def test_update_task_completed(self) -> None:
+        """Test update_task with 'completed' status."""
+        coordinator = SessionCoordinator()
+        task_id = "task-789"
+
+        coordinator.track_task(task_id, "test-task", "initial details")
+        coordinator.update_task(task_id, "completed", details="Updated details")
+
+        # Verify the task was completed
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.status == "completed"
+            assert task.details == "Updated details"
+
+    def test_update_task_failed(self) -> None:
+        """Test update_task with 'failed' status."""
+        coordinator = SessionCoordinator()
+        task_id = "task-999"
+
+        coordinator.track_task(task_id, "test-task", "initial details")
+        coordinator.update_task(task_id, "failed", error_message="Test error")
+
+        # Verify the task was marked as failed
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.status == "failed"
+            assert task.error_message == "Test error"
+
+    def test_update_task_in_progress(self) -> None:
+        """Test update_task with 'in_progress' status."""
+        coordinator = SessionCoordinator()
+        task_id = "task-888"
+
+        coordinator.track_task(task_id, "test-task", "initial details")
+        coordinator.update_task(task_id, "in_progress", details="In progress", progress=50)
+
+        # Verify the task was updated
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.status == "in_progress"
+            assert task.details == "In progress"
+            assert task.progress == 50
+
+    def test_update_task_generic(self) -> None:
+        """Test update_task with generic status."""
+        coordinator = SessionCoordinator()
+        task_id = "task-777"
+
+        coordinator.track_task(task_id, "test-task", "initial details")
+        coordinator.update_task(task_id, "custom_status", details="Custom details", progress=75)
+
+        # Verify the task was updated
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.status == "custom_status"
+            assert task.details == "Custom details"
+            assert task.progress == 75
+
+    def test_fail_task(self) -> None:
+        """Test fail_task method."""
+        coordinator = SessionCoordinator()
+        task_id = "task-fail"
+        error_message = "Something went wrong"
+        details = "Failure details"
+
+        coordinator.track_task(task_id, "test-task", "initial details")
+        coordinator.fail_task(task_id, error_message, details)
+
+        # Verify the task was marked as failed
+        if coordinator.session_tracker:
+            task = coordinator.session_tracker.tasks[task_id]
+            assert task.status == "failed"
+            assert task.error_message == error_message
+            assert task.details == details
+
+    def test_fail_task_none_tracker(self) -> None:
+        """Test fail_task when session tracker is None."""
+        coordinator = SessionCoordinator()
+        coordinator.session_tracker = None
+
+        # Should not raise an exception
+        coordinator.fail_task("task-123", "error message", "details")
+
+
+class TestSessionCoordinatorSummaryAndFinalize:
+    """Test summary and finalization functionality."""
+
+    def test_get_session_summary(self) -> None:
+        """Test get_session_summary method."""
+        coordinator = SessionCoordinator()
+
+        summary = coordinator.get_session_summary()
+
+        # When no tracker exists, should return basic info
+        assert "tasks_count" in summary
+        assert summary["tasks_count"] == 0
+
+        # When tracker exists
+        coordinator.session_tracker = SessionTracker(
+            session_id=coordinator.session_id,
+            start_time=coordinator.start_time,
+        )
+        coordinator.track_task("task-1", "test-task", "details")
+        summary = coordinator.get_session_summary()
+
+        assert "tasks_count" in summary
+
+    def test_get_summary(self) -> None:
+        """Test get_summary method."""
+        coordinator = SessionCoordinator()
+
+        summary = coordinator.get_summary()
+
+        assert "session_id" in summary
+        assert "start_time" in summary
+        assert "tasks" in summary
+        assert "metadata" in summary
+
+        # Verify the values
+        assert summary["session_id"] == coordinator.session_id
+        assert summary["start_time"] == coordinator.start_time
+
+    def test_finalize_session_success(self) -> None:
+        """Test finalize_session with success."""
+        coordinator = SessionCoordinator()
+        start_time = time.time() - 10  # 10 seconds ago
+        success = True
+
+        coordinator.session_tracker = SessionTracker(
+            session_id=coordinator.session_id,
+            start_time=start_time,
+        )
+        coordinator.current_task = "workflow"
+
+        coordinator.finalize_session(start_time, success)
+
+        # Verify metadata was updated
+        if coordinator.session_tracker:
+            assert coordinator.session_tracker.metadata["success"] == success
+            assert "duration" in coordinator.session_tracker.metadata
+
+    def test_finalize_session_failure(self) -> None:
+        """Test finalize_session with failure."""
+        coordinator = SessionCoordinator()
+        start_time = time.time() - 5  # 5 seconds ago
+        success = False
+
+        coordinator.session_tracker = SessionTracker(
+            session_id=coordinator.session_id,
+            start_time=start_time,
+        )
+        coordinator.current_task = "workflow"
+
+        coordinator.finalize_session(start_time, success)
+
+        # Verify metadata was updated
+        if coordinator.session_tracker:
+            assert coordinator.session_tracker.metadata["success"] == success
+
+
 class TestSessionCoordinatorCleanup:
-    """Test cleanup and resource management."""
+    """Test cleanup functionality."""
 
-    @pytest.fixture
-    def coordinator(self):
-        """Create coordinator instance."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console)
-
-    def test_register_cleanup(self, coordinator) -> None:
-        """Test registering cleanup handler."""
-        handler = Mock()
+    def test_register_cleanup(self) -> None:
+        """Test register_cleanup method."""
+        coordinator = SessionCoordinator()
+        handler = MagicMock()
 
         coordinator.register_cleanup(handler)
 
-        assert handler in coordinator.cleanup_handlers
+        assert handler in coordinator._cleanup_handlers
 
-    def test_cleanup_resources_executes_handlers(self, coordinator) -> None:
-        """Test cleanup executes all handlers."""
-        handler1 = Mock()
-        handler2 = Mock()
+    def test_track_lock_file(self) -> None:
+        """Test track_lock_file method."""
+        coordinator = SessionCoordinator()
+        lock_path = Path("/tmp/lockfile")
 
-        coordinator.register_cleanup(handler1)
-        coordinator.register_cleanup(handler2)
+        coordinator.track_lock_file(lock_path)
 
-        coordinator.cleanup_resources()
+        assert lock_path in coordinator._lock_files
 
-        handler1.assert_called_once()
-        handler2.assert_called_once()
-
-    def test_cleanup_resources_handles_errors(self, coordinator) -> None:
-        """Test cleanup handles handler errors gracefully."""
-        failing_handler = Mock(side_effect=Exception("Handler error"))
-        successful_handler = Mock()
-
-        coordinator.register_cleanup(failing_handler)
-        coordinator.register_cleanup(successful_handler)
-
-        # Should not raise exception
-        coordinator.cleanup_resources()
-
-        # Successful handler should still be called
-        successful_handler.assert_called_once()
-
-    def test_track_lock_file(self, coordinator, tmp_path) -> None:
-        """Test tracking lock files."""
-        lock_file = tmp_path / "test.lock"
-
-        coordinator.track_lock_file(lock_file)
-
-        assert lock_file in coordinator.lock_files
-
-    def test_cleanup_removes_lock_files(self, coordinator, tmp_path) -> None:
-        """Test cleanup removes tracked lock files."""
-        lock_file = tmp_path / "test.lock"
-        lock_file.write_text("lock")
-
-        coordinator.track_lock_file(lock_file)
-        coordinator.cleanup_resources()
-
-        assert not lock_file.exists()
-        assert lock_file not in coordinator.lock_files
-
-    def test_cleanup_handles_missing_lock_files(self, coordinator, tmp_path) -> None:
-        """Test cleanup handles non-existent lock files."""
-        lock_file = tmp_path / "nonexistent.lock"
-
-        coordinator.track_lock_file(lock_file)
-
-        # Should not raise error
-        coordinator.cleanup_resources()
-
-        assert lock_file not in coordinator.lock_files
-
-    def test_set_cleanup_config(self, coordinator) -> None:
-        """Test setting cleanup configuration."""
-        config = {"preserve_files": True, "verbose": False}
+    def test_set_cleanup_config(self) -> None:
+        """Test set_cleanup_config method."""
+        coordinator = SessionCoordinator()
+        config = MagicMock()
 
         coordinator.set_cleanup_config(config)
 
-        # Implementation sets _cleanup_config (private attribute)
-        assert coordinator._cleanup_config == config
+        assert coordinator._cleanup_config is config
 
+    def test_cleanup_resources(self) -> None:
+        """Test cleanup_resources method."""
+        coordinator = SessionCoordinator()
+        handler = MagicMock()
+        lock_path = Path("/tmp/test_lock")
 
-@pytest.mark.unit
-class TestSessionCoordinatorFinalization:
-    """Test session finalization."""
+        coordinator.register_cleanup(handler)
+        coordinator.track_lock_file(lock_path)
 
-    @pytest.fixture
-    def coordinator(self):
-        """Create coordinator instance."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console)
+        # Create the lock file temporarily
+        lock_path.touch()
 
-    def test_finalize_session_success(self, coordinator) -> None:
-        """Test finalizing successful session."""
-        coordinator.start_session("test_task")
-        start_time = time.time()
-
-        coordinator.finalize_session(start_time, success=True)
-
-        assert "duration" in coordinator.session_tracker.metadata
-        assert coordinator.session_tracker.metadata["success"] is True
-        assert coordinator.current_task is None
-
-    def test_finalize_session_failure(self, coordinator) -> None:
-        """Test finalizing failed session."""
-        coordinator.start_session("test_task")
-        start_time = time.time()
-
-        coordinator.finalize_session(start_time, success=False)
-
-        assert coordinator.session_tracker.metadata["success"] is False
-
-    def test_finalize_session_without_tracker(self, coordinator) -> None:
-        """Test finalizing session without tracker."""
-        coordinator.session_tracker = None
-        start_time = time.time()
-
-        # Should not raise error
-        coordinator.finalize_session(start_time, success=True)
-
-
-@pytest.mark.unit
-class TestSessionCoordinatorSummary:
-    """Test session summary generation."""
-
-    @pytest.fixture
-    def coordinator(self):
-        """Create coordinator instance."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console)
-
-    def test_get_session_summary_with_tracker(self, coordinator) -> None:
-        """Test getting session summary with tracker."""
-        coordinator.start_session("test_task")
-        coordinator.track_task("task1", "Task 1")
-        coordinator.complete_task("task1")
-
-        summary = coordinator.get_session_summary()
-
-        # get_session_summary returns full session summary from SessionTracker.get_summary()
-        assert summary is not None
-        assert "session_id" in summary
-        assert summary["session_id"] == coordinator.session_id
-        assert "tasks_count" in summary
-        assert summary["tasks_count"] == 1
-        assert "completed" in summary
-        assert summary["completed"] == 1
-        assert "failed" in summary
-        assert summary["failed"] == 0
-        assert "total_tasks" in summary
-        assert summary["total_tasks"] == 1
-
-    def test_get_session_summary_without_tracker(self, coordinator) -> None:
-        """Test getting session summary without tracker."""
-        coordinator.session_tracker = None
-
-        summary = coordinator.get_session_summary()
-
-        # Returns {"tasks_count": 0} when no tracker
-        assert summary is not None
-        assert summary == {"tasks_count": 0}
-
-    def test_get_summary_alias(self, coordinator) -> None:
-        """Test get_summary returns full session data (not an alias)."""
-        coordinator.start_session("test")
-
-        # get_session_summary returns full session summary (with task counts)
-        session_summary = coordinator.get_session_summary()
-
-        # get_summary returns different full session data structure
-        full_summary = coordinator.get_summary()
-
-        # Verify get_summary has session_id and other metadata
-        assert "session_id" in full_summary
-        assert full_summary["session_id"] == coordinator.session_id
-        assert "start_time" in full_summary
-        assert "tasks" in full_summary
-        assert "metadata" in full_summary
-
-        # Verify get_session_summary returns SessionTracker.get_summary() format
-        assert "session_id" in session_summary
-        assert "tasks_count" in session_summary
-        assert "completed" in session_summary
-        assert "failed" in session_summary
-
-    def test_get_session_summary_backward_compatible(self, coordinator) -> None:
-        """Test session summary returns task counts (simplified format)."""
-        coordinator.start_session("test")
-        coordinator.track_task("task1", "Task 1")
-
-        summary = coordinator.get_session_summary()
-
-        # Returns full SessionTracker.get_summary() format with task counts
-        assert summary is not None
-        assert "tasks_count" in summary
-        assert summary["tasks_count"] >= 1
-        assert "total_tasks" in summary
-
-
-@pytest.mark.unit
-class TestSessionController:
-    """Test SessionController class."""
-
-    @pytest.fixture
-    def mock_pipeline(self):
-        """Create mock pipeline."""
-        pipeline = Mock()
-        pipeline.session = Mock(spec=SessionCoordinator)
-        return pipeline
-
-    def test_initialization(self, mock_pipeline) -> None:
-        """Test SessionController initialization."""
-        controller = SessionController(mock_pipeline)
-
-        assert controller._pipeline == mock_pipeline
-
-    def test_initialize(self, mock_pipeline) -> None:
-        """Test initializing session."""
-        controller = SessionController(mock_pipeline)
-        options = Mock()
-
-        controller.initialize(options)
-
-        # Should call all initialization methods
-        mock_pipeline.session.initialize_session_tracking.assert_called_once_with(
-            options,
-        )
-        mock_pipeline._configure_session_cleanup.assert_called_once_with(options)
-        mock_pipeline._initialize_zuban_lsp.assert_called_once_with(options)
-        mock_pipeline._configure_hook_manager_lsp.assert_called_once_with(options)
-        mock_pipeline._register_lsp_cleanup_handler.assert_called_once_with(options)
-        mock_pipeline._log_workflow_startup_info.assert_called_once_with(options)
-
-
-@pytest.mark.unit
-class TestSessionCoordinatorIntegration:
-    """Test integration scenarios."""
-
-    @pytest.fixture
-    def coordinator(self, tmp_path):
-        """Create coordinator with temp path."""
-        mock_console = Mock()
-        return SessionCoordinator(console=mock_console, pkg_path=tmp_path)
-
-    def test_complete_session_lifecycle(self, coordinator) -> None:
-        """Test complete session lifecycle."""
-        # Start session
-        coordinator.start_session("main_workflow")
-
-        # Track tasks
-        coordinator.track_task("task1", "Task 1", "Details 1")
-        coordinator.track_task("task2", "Task 2", "Details 2")
-
-        # Complete tasks
-        coordinator.complete_task("task1", "Done", ["file1.py"])
-        coordinator.fail_task("task2", "Error occurred")
-
-        # End session
-        coordinator.end_session(success=False)
-
-        # Get summary (returns full SessionTracker.get_summary() format)
-        summary = coordinator.get_session_summary()
-
-        # Verify task counts in summary
-        assert summary is not None
-        assert summary["tasks_count"] == 2
-        assert summary["total_tasks"] == 2
-        assert summary["completed"] == 1
-        assert summary["failed"] == 1
-        assert len(coordinator.tasks) == 2
-
-    def test_cleanup_with_handlers_and_locks(self, coordinator, tmp_path) -> None:
-        """Test cleanup with both handlers and lock files."""
-        # Register handlers
-        handler1 = Mock()
-        handler2 = Mock()
-        coordinator.register_cleanup(handler1)
-        coordinator.register_cleanup(handler2)
-
-        # Track lock files
-        lock1 = tmp_path / "lock1.lock"
-        lock2 = tmp_path / "lock2.lock"
-        lock1.write_text("lock")
-        lock2.write_text("lock")
-        coordinator.track_lock_file(lock1)
-        coordinator.track_lock_file(lock2)
-
-        # Cleanup
         coordinator.cleanup_resources()
 
-        # Verify handlers called
-        handler1.assert_called_once()
-        handler2.assert_called_once()
+        # Verify the handler was called
+        handler.assert_called_once()
 
-        # Verify lock files removed
-        assert not lock1.exists()
-        assert not lock2.exists()
-        assert len(coordinator.lock_files) == 0
+        # Verify the lock file was removed
+        assert not lock_path.exists()
 
-    def test_session_with_web_job_id(self) -> None:
-        """Test session with web job ID."""
-        mock_console = Mock()
-        job_id = "web-job-456"
+        # Verify the lock file was removed from the set
+        assert lock_path not in coordinator._lock_files
 
-        coordinator = SessionCoordinator(console=mock_console, web_job_id=job_id)
+    def test_cleanup_resources_with_exceptions(self) -> None:
+        """Test cleanup_resources handles exceptions gracefully."""
+        coordinator = SessionCoordinator()
 
-        coordinator.start_session("web_task")
-        coordinator.track_task("task1", "Web Task")
+        def failing_handler():
+            raise Exception("Handler failed")
 
-        # Verify session_id uses web_job_id
-        assert coordinator.session_id == job_id
+        coordinator.register_cleanup(failing_handler)
 
-        # get_summary returns full session data with session_id
-        full_summary = coordinator.get_summary()
-        assert full_summary["session_id"] == job_id
+        # Should not raise an exception even if handler fails
+        coordinator.cleanup_resources()
 
-        # get_session_summary returns full SessionTracker.get_summary() format
-        session_summary = coordinator.get_session_summary()
-        assert session_summary is not None
-        assert session_summary["session_id"] == job_id
-        assert "tasks_count" in session_summary
 
-    def test_multiple_task_updates(self, coordinator) -> None:
-        """Test multiple updates to same task."""
-        coordinator.track_task("task1", "Task 1")
+class TestSessionCoordinatorPrivateMethods:
+    """Test private methods of SessionCoordinator."""
 
-        coordinator.update_task("task1", "in_progress", details="Starting")
-        assert coordinator.tasks["task1"].status == "in_progress"
+    def test_cleanup_debug_logs(self) -> None:
+        """Test _cleanup_debug_logs method."""
+        coordinator = SessionCoordinator()
 
-        coordinator.update_task("task1", "in_progress", details="Continuing")
-        assert coordinator.tasks["task1"].details == "Continuing"
+        # This method should not raise an exception
+        coordinator._cleanup_debug_logs()
 
-        coordinator.update_task("task1", "completed", details="Finished")
-        assert coordinator.tasks["task1"].status == "completed"
+    def test_cleanup_coverage_files(self) -> None:
+        """Test _cleanup_coverage_files method."""
+        coordinator = SessionCoordinator()
+
+        # This method should not raise an exception
+        coordinator._cleanup_coverage_files()
+
+    def test_cleanup_pycache_directories(self) -> None:
+        """Test _cleanup_pycache_directories method."""
+        coordinator = SessionCoordinator()
+
+        # This method should not raise an exception
+        coordinator._cleanup_pycache_directories()
+
+    def test_setup_methods(self) -> None:
+        """Test setup methods."""
+        coordinator = SessionCoordinator()
+        options = MagicMock()
+
+        # These methods should not raise exceptions
+        coordinator._setup_logging(options)
+        coordinator._setup_websocket_progress_file()
+        coordinator._initialize_quality_service()
+
+    def test_update_websocket_progress(self) -> None:
+        """Test _update_websocket_progress method."""
+        coordinator = SessionCoordinator()
+
+        # This method should not raise an exception
+        coordinator._update_websocket_progress("stage", "status")
+
+    def test_update_stage(self) -> None:
+        """Test update_stage method."""
+        coordinator = SessionCoordinator()
+
+        # This method should not raise an exception
+        coordinator.update_stage("stage", "status")

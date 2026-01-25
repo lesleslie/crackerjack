@@ -1,15 +1,3 @@
-"""Ollama AI provider for local code fixing.
-
-Supports running Qwen models locally via Ollama:
-- No API key required
-- Complete data privacy
-- Zero cost
-- Models: qwen2.5-coder, qwen2.5, deepseek-coder, etc.
-
-Setup: https://ollama.com/download
-Models: https://ollama.com/search
-"""
-
 import logging
 import os
 import typing as t
@@ -27,16 +15,14 @@ logger = logging.getLogger(__name__)
 
 
 class OllamaCodeFixerSettings(BaseCodeFixerSettings):
-    """Ollama-specific settings."""
-
     base_url: str = Field(
         default_factory=lambda: os.environ.get(
-            "OLLAMA_BASE_URL", "http://localhost:11434"
+            "OLLAMA_BASE_URL", "http://localhost: 11434"
         ),
         description="Ollama API endpoint from environment variable OLLAMA_BASE_URL",
     )
     model: str = Field(
-        default_factory=lambda: os.environ.get("OLLAMA_MODEL", "qwen2.5-coder:7b"),
+        default_factory=lambda: os.environ.get("OLLAMA_MODEL", "qwen2.5-coder: 7b"),
         description="Ollama model from environment variable OLLAMA_MODEL",
     )
     timeout: int = Field(
@@ -55,52 +41,24 @@ class OllamaCodeFixerSettings(BaseCodeFixerSettings):
     @field_validator("model")
     @classmethod
     def validate_model_name(cls, v: str) -> str:
-        """Validate Ollama model name format."""
-        # Ollama models: name:tag format (e.g., qwen2.5-coder:7b)
         if ":" not in v:
-            # Default to :latest if no tag specified
             return f"{v}:latest"
         return v
 
 
 class OllamaCodeFixer(BaseCodeFixer):
-    """Ollama AI code fixer implementation.
-
-    Uses Ollama's OpenAI-compatible API:
-    https://github.com/ollama/ollama/blob/main/docs/api.md
-
-    Advantages:
-    - No API keys required
-    - Complete data privacy
-    - Zero cost
-    - Support for multiple open-source models
-
-    Disadvantages:
-    - Requires local installation
-    - Slower than cloud APIs
-    - Quality depends on model choice
-    """
-
     def __init__(self) -> None:
-        """Initialize Ollama code fixer.
-
-        Settings are loaded from environment variables and configuration.
-        """
-        # Load settings from environment
         settings = OllamaCodeFixerSettings()
         super().__init__(settings)
 
     async def _initialize_client(self) -> t.Any:
-        """Initialize OpenAI-compatible client for Ollama."""
         import openai
 
         assert isinstance(self._settings, OllamaCodeFixerSettings)
 
-        # Ollama uses OpenAI-compatible API
-        # No API key required for local Ollama
         client = openai.AsyncOpenAI(
             base_url=self._settings.base_url + "/v1",
-            api_key="ollama",  # Required by OpenAI client but ignored by Ollama
+            api_key="ollama",
             timeout=self._settings.timeout,
         )
 
@@ -112,15 +70,6 @@ class OllamaCodeFixer(BaseCodeFixer):
         client: t.Any,
         prompt: str,
     ) -> t.Any:
-        """Call Ollama Chat API.
-
-        Args:
-            client: openai.AsyncOpenAI instance
-            prompt: Sanitized prompt for Ollama
-
-        Returns:
-            Chat completion response object
-        """
         assert isinstance(self._settings, OllamaCodeFixerSettings)
         return await client.chat.completions.create(
             model=self._settings.model,
@@ -130,27 +79,15 @@ class OllamaCodeFixer(BaseCodeFixer):
         )
 
     def _extract_content_from_response(self, response: t.Any) -> str:
-        """Extract text from Ollama response.
-
-        OpenAI-compatible format: response.choices[0].message.content
-        """
         return response.choices[0].message.content
 
     def _validate_provider_specific_settings(self) -> None:
-        """Validate Ollama settings and connectivity.
-
-        For Ollama, we verify:
-        - base_url is accessible
-        - model is available locally
-        """
         if not self._settings:
             msg = "OllamaCodeFixerSettings not provided"
             raise RuntimeError(msg)
 
         assert isinstance(self._settings, OllamaCodeFixerSettings)
 
-        # Note: Could add async connection test here
-        # For now, we trust the configuration
         logger.info(
             f"Ollama configured: {self._settings.base_url} with model {self._settings.model}",
         )

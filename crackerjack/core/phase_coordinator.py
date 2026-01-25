@@ -357,21 +357,14 @@ class PhaseCoordinator:
             return current_success
 
     def _apply_ai_fix_for_tests(self, options: OptionsProtocol) -> bool:
-        """Apply AI fixes to test failures with guardrails.
-
-        Only attempts fixes for safe failure types (import errors, typos, etc.)
-        and requires user confirmation in interactive mode.
-        """
         from rich.console import Console as RichConsole
         from rich.prompt import Confirm
 
-        # Get test failure details
         test_failures = self.test_manager.get_test_failures()
         if not test_failures:
             self.console.print("[yellow]⚠️[/yellow] No test failures detected")
             return False
 
-        # Check if failures are safe to auto-fix
         safe_failures = self._classify_safe_test_failures(test_failures)
         if not safe_failures:
             self.console.print(
@@ -382,7 +375,6 @@ class PhaseCoordinator:
             )
             return False
 
-        # Count fixable vs total failures
         total_failures = len(test_failures)
         fixable_count = len(safe_failures)
 
@@ -392,14 +384,12 @@ class PhaseCoordinator:
         )
         self.console.print()
 
-        # Show some examples of safe failures
         for failure in safe_failures[:3]:
             self.console.print(f"  • {failure[:100]}")
 
         if len(safe_failures) > 3:
             self.console.print(f"  ... and {len(safe_failures) - 3} more")
 
-        # Request user confirmation
         self.console.print()
         self.console.print(
             "[bold yellow]⚠️  AI will attempt to fix these test failures[/bold yellow]"
@@ -409,7 +399,6 @@ class PhaseCoordinator:
         )
         self.console.print()
 
-        # Check for interactive mode
         try:
             rich_console = RichConsole()
             user_confirms = Confirm.ask(
@@ -423,20 +412,14 @@ class PhaseCoordinator:
                 return False
 
         except Exception:
-            # Non-interactive mode or prompt failed - skip AI-fix
             self.console.print(
                 "[yellow]⚠️[/yellow] Test AI-fix requires interactive mode"
             )
             return False
 
-        # Apply AI fixes
         return self._run_ai_test_fix(safe_failures)
 
     def _run_ai_test_fix(self, safe_failures: list[str]) -> bool:
-        """Run AI agent coordination to fix test failures.
-
-        Extracted to reduce complexity of _apply_ai_fix_for_tests.
-        """
         from crackerjack.agents.base import AgentContext, Issue, IssueType, Priority
         from crackerjack.agents.coordinator import AgentCoordinator
         from crackerjack.services.cache import CrackerjackCache
@@ -446,7 +429,6 @@ class PhaseCoordinator:
         )
         self.console.print(make_separator("-") + "\n")
 
-        # Create AI context and coordinator
         context = AgentContext(
             project_path=self.pkg_path,
             subprocess_timeout=300,
@@ -454,7 +436,6 @@ class PhaseCoordinator:
         cache = CrackerjackCache()
         coordinator = AgentCoordinator(context=context, cache=cache)
 
-        # Convert test failures to Issue objects
         issues = [
             Issue(
                 type=IssueType.IMPORT_ERROR,
@@ -467,7 +448,6 @@ class PhaseCoordinator:
             for failure in safe_failures
         ]
 
-        # Run AI fix
         try:
             import asyncio
 
@@ -504,26 +484,11 @@ class PhaseCoordinator:
             return False
 
     def _classify_safe_test_failures(self, failures: list[str]) -> list[str]:
-        """Classify test failures as safe or risky for AI auto-fix.
-
-        Safe failures (AI can attempt):
-        - Import errors (ModuleNotFoundError, ImportError)
-        - Attribute errors on imported modules
-        - Type errors related to imports
-        - Simple syntax errors
-
-        Risky failures (require human review):
-        - Assertion failures
-        - Logic errors in test expectations
-        - Integration test failures
-        - Test infrastructure issues
-        - Complex type errors in test logic
-        """
         safe_failures = []
         risky_patterns = [
             "AssertionError",
             "assert ",
-            "Failed: ",  # pytest assertion format
+            "Failed: ",
             "AssertionError: ",
             "Integration",
             "infrastructure",
@@ -532,11 +497,9 @@ class PhaseCoordinator:
         for failure in failures:
             failure_lower = failure.lower()
 
-            # Check for risky patterns
             if any(risky.lower() in failure_lower for risky in risky_patterns):
                 continue
 
-            # Check for safe patterns
             safe_patterns = (
                 "modulenotfounderror",
                 "importerror",
@@ -652,11 +615,9 @@ class PhaseCoordinator:
                 f"Tests passed, coverage: {coverage_info.get('total_coverage', 0):.1f}%",
             )
         else:
-            # Attempt AI-fix for test failures if enabled and safe to do so
             if getattr(options, "ai_fix", False):
                 ai_fix_success = self._apply_ai_fix_for_tests(options)
                 if ai_fix_success:
-                    # Re-run tests after AI-fix
                     self.console.print(
                         "[green]✅[/green] AI agents applied fixes, re-running tests..."
                     )

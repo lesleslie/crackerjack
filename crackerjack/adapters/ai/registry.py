@@ -1,8 +1,3 @@
-"""Provider registry for AI code fixers.
-
-Central registry of all available providers with metadata and factory functions.
-"""
-
 import logging
 from dataclasses import dataclass
 from enum import Enum
@@ -13,8 +8,6 @@ logger = logging.getLogger(__name__)
 
 
 class ProviderID(str, Enum):
-    """Identifier for each AI provider."""
-
     CLAUDE = "claude"
     QWEN = "qwen"
     OLLAMA = "ollama"
@@ -22,21 +15,18 @@ class ProviderID(str, Enum):
 
 @dataclass(frozen=True)
 class ProviderInfo:
-    """Metadata about an AI provider."""
-
     id: ProviderID
     name: str
     description: str
     requires_api_key: bool
     default_model: str
     setup_url: str
-    cost_tier: str  # "free", "low", "medium", "high"
+    cost_tier: str
 
     def __str__(self) -> str:
         return f"{self.name} ({self.id.value})"
 
 
-# Provider metadata registry
 PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
     ProviderID.CLAUDE: ProviderInfo(
         id=ProviderID.CLAUDE,
@@ -61,7 +51,7 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         name="Ollama (Local)",
         description="Free local models, complete privacy, requires installation",
         requires_api_key=False,
-        default_model="qwen2.5-coder:7b",
+        default_model="qwen2.5-coder: 7b",
         setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
@@ -69,30 +59,15 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
 
 
 class ProviderFactory:
-    """Factory for creating AI provider instances."""
-
     @staticmethod
     def create_provider(
         provider_id: ProviderID | str,
-        settings: None = None,  # Settings not supported - must be loaded from config/env
+        settings: None = None,
     ) -> BaseCodeFixer:
-        """Create a provider instance.
-
-        Args:
-            provider_id: Provider identifier (enum or string)
-            settings: Must be None - providers load their own settings
-
-        Returns:
-            Instantiated provider
-
-        Raises:
-            ValueError: If provider_id is unknown
-        """
         if settings is not None:
             msg = "Settings must be loaded from configuration, not passed to create_provider"
             raise TypeError(msg)
 
-        # Convert string to enum if needed
         if isinstance(provider_id, str):
             try:
                 provider_id = ProviderID(provider_id.lower())
@@ -101,13 +76,10 @@ class ProviderFactory:
                 msg = f"Unknown provider: {provider_id}. Available: {available}"
                 raise ValueError(msg) from None
 
-        # Import adapter classes (lazy import to avoid circular dependencies)
         from crackerjack.adapters.ai.claude import ClaudeCodeFixer
         from crackerjack.adapters.ai.ollama import OllamaCodeFixer
         from crackerjack.adapters.ai.qwen import QwenCodeFixer
 
-        # Create provider instance
-        # Note: Providers load their own settings from environment variables
         if provider_id == ProviderID.CLAUDE:
             return ClaudeCodeFixer()
 
@@ -122,17 +94,6 @@ class ProviderFactory:
 
     @staticmethod
     def get_provider_info(provider_id: ProviderID | str) -> ProviderInfo:
-        """Get metadata about a provider.
-
-        Args:
-            provider_id: Provider identifier
-
-        Returns:
-            ProviderInfo object
-
-        Raises:
-            ValueError: If provider_id is unknown
-        """
         if isinstance(provider_id, str):
             try:
                 provider_id = ProviderID(provider_id.lower())
@@ -149,9 +110,4 @@ class ProviderFactory:
 
     @staticmethod
     def list_providers() -> list[ProviderInfo]:
-        """List all available providers.
-
-        Returns:
-            List of ProviderInfo objects
-        """
         return list(PROVIDER_INFO.values())

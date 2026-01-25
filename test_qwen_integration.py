@@ -1,11 +1,9 @@
 #!/usr/bin/env python3
-"""Test script to verify Qwen provider integration in crackerjack."""
 
 import asyncio
 
 
 async def test_qwen_settings_field() -> bool:
-    """Test that ai_provider field exists in AISettings."""
     from crackerjack.config.settings import AISettings
 
     print("Testing Qwen AI provider field in AISettings...")
@@ -21,7 +19,6 @@ async def test_qwen_settings_field() -> bool:
 
 
 async def test_qwen_adapter_import() -> bool:
-    """Test that QwenCodeFixer adapter can be imported."""
     print("\nTesting QwenCodeFixer adapter import...")
 
     try:
@@ -35,18 +32,17 @@ async def test_qwen_adapter_import() -> bool:
 
 
 async def test_qwen_settings_validation() -> bool:
-    """Test that QwenCodeFixerSettings validates API keys."""
     print("\nTesting QwenCodeFixerSettings validation...")
 
     try:
         from crackerjack.adapters.ai import QwenCodeFixerSettings
         from pydantic import SecretStr
 
-        # Test valid API key
+
         settings = QwenCodeFixerSettings(qwen_api_key=SecretStr("sk" + "a" * 30))
         print(f"✅ Valid API key accepted (model: {settings.model})")
 
-        # Test invalid API key (too short)
+
         try:
             QwenCodeFixerSettings(qwen_api_key=SecretStr("short"))
             print("❌ Short API key should have been rejected")
@@ -61,7 +57,6 @@ async def test_qwen_settings_validation() -> bool:
 
 
 async def test_qwen_fixer_initialization() -> bool:
-    """Test that QwenCodeFixer can be initialized."""
     print("\nTesting QwenCodeFixer initialization...")
 
     try:
@@ -83,7 +78,6 @@ async def test_qwen_fixer_initialization() -> bool:
 
 
 async def test_qwen_bridge_import() -> bool:
-    """Test that QwenCodeBridge can be imported."""
     print("\nTesting QwenCodeBridge import...")
 
     try:
@@ -97,14 +91,13 @@ async def test_qwen_bridge_import() -> bool:
 
 
 async def test_qwen_provider_selection() -> bool:
-    """Test that provider selection works in settings."""
     print("\nTesting AI provider selection...")
 
     try:
         from crackerjack.config import load_settings
         from crackerjack.config.settings import AISettings
 
-        # Load default settings
+
         settings = load_settings(AISettings)
 
         if hasattr(settings, "ai_provider"):
@@ -126,14 +119,13 @@ async def test_qwen_provider_selection() -> bool:
 
 
 async def main() -> None:
-    """Run all Qwen integration tests."""
     print("=" * 60)
     print("Crackerjack Qwen Integration Tests")
     print("=" * 60)
 
     results = []
 
-    # Run tests
+
     results.append(await test_qwen_settings_field())
     results.append(await test_qwen_adapter_import())
     results.append(await test_qwen_settings_validation())
@@ -141,7 +133,7 @@ async def main() -> None:
     results.append(await test_qwen_bridge_import())
     results.append(await test_qwen_provider_selection())
 
-    # Summary
+
     print("\n" + "=" * 60)
     print(f"Test Results: {sum(results)}/{len(results)} passed")
     print("=" * 60)

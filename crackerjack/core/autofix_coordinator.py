@@ -390,9 +390,6 @@ class AutofixCoordinator:
                 self._report_iteration_success(iteration)
                 return True
         else:
-            # Iteration 0 with zero issues means no issues were detected from hooks
-            # This could be because hooks aren't mapped to IssueTypes
-            # Return None to continue to next iteration rather than false positive
             self.logger.debug("Iteration 0: No issues detected from hook results")
             return None
 
@@ -743,17 +740,12 @@ class AutofixCoordinator:
     def _execute_check_commands(
         self, check_commands: list[tuple[list[str], str, int]]
     ) -> tuple[list[Issue], int]:
-        """Execute quality check commands and collect issues.
-
-        Uses Popen with communicate() to avoid blocking on large output.
-        This prevents deadlocks when tools produce substantial output.
-        """
         all_issues: list[Issue] = []
         successful_checks = 0
 
         for cmd, hook_name, timeout in check_commands:
             result = self._run_check_command(cmd, timeout, hook_name)
-            if result:  # (process, stdout, stderr) tuple
+            if result:
                 process, stdout, stderr = result
                 issues = self._process_check_result(process, stdout, stderr, hook_name)
                 all_issues.extend(issues)
@@ -764,10 +756,6 @@ class AutofixCoordinator:
     def _run_check_command(
         self, cmd: list[str], timeout: int, hook_name: str
     ) -> tuple[subprocess.Popen[str], str, str] | None:
-        """Run a single check command with timeout.
-
-        Returns None on error/timeout, otherwise returns (process, stdout, stderr).
-        """
         process: subprocess.Popen[str] | None = None
         try:
             process = subprocess.Popen(
@@ -789,18 +777,16 @@ class AutofixCoordinator:
             return None
 
     def _kill_process_gracefully(self, process: subprocess.Popen[str] | None) -> None:
-        """Kill a subprocess with cleanup."""
         if process:
             process.kill()
             try:
                 process.communicate(timeout=5)
             except subprocess.TimeoutExpired:
-                process.kill()  # Force kill if still running
+                process.kill()
 
     def _process_check_result(
         self, process: subprocess.Popen[str], stdout: str, stderr: str, hook_name: str
     ) -> list[Issue]:
-        """Process check command output and extract issues."""
         combined_output = stdout + stderr
 
         if process.returncode != 0 or combined_output:
@@ -1122,11 +1108,6 @@ class AutofixCoordinator:
     def _parse_check_local_links_output(
         self, raw_output: str, issue_type: IssueType
     ) -> list[Issue]:
-        """Parse check-local-links output into DOCUMENTATION issues.
-
-        Expected format:
-        docs/features/QWEN_PROVIDER.md:345: AI_FIX_EXPECTED_BEHAVIOR.md - File not found: AI_FIX_EXPECTED_BEHAVIOR.md
-        """
         issues: list[Issue] = []
 
         for line in raw_output.split("\n"):
@@ -1141,13 +1122,11 @@ class AutofixCoordinator:
         return issues
 
     def _should_parse_local_link_line(self, line: str) -> bool:
-        """Check if line should be parsed as local link error."""
         return bool(line and "File not found:" in line)
 
     def _parse_single_local_link_line(
         self, line: str, issue_type: IssueType
     ) -> Issue | None:
-        """Parse a single local link error line into an Issue."""
         try:
             file_path, line_number, target_file = self._extract_local_link_parts(line)
             if not file_path:
@@ -1172,10 +1151,6 @@ class AutofixCoordinator:
     def _extract_local_link_parts(
         self, line: str
     ) -> tuple[str, int | None, str | None]:
-        """Extract file path, line number, and target file from local link error line.
-
-        Expected format: "docs/features/QWEN_PROVIDER.md:345: TARGET.md - File not found: TARGET.md"
-        """
         if ":" not in line:
             return "", None, None
 
@@ -1192,32 +1167,21 @@ class AutofixCoordinator:
         return file_path.strip(), line_number, target_file
 
     def _extract_target_file_from_message(self, message_part: str) -> str | None:
-        """Extract target file from message part.
-
-        Format: "TARGET.md - File not found: TARGET.md"
-        """
         if " - " in message_part:
             return message_part.split(" - ")[0].strip()
         return None
 
     def _create_link_error_message(self, target_file: str | None) -> str:
-        """Create descriptive error message for broken link."""
         if target_file:
             return f"Broken documentation link: '{target_file}' (file not found)"
         return "Broken documentation link (target file not found)"
 
     def _create_link_error_details(self, target_file: str | None) -> list[str]:
-        """Create details list for the agent to use later."""
         return [f"Target file: {target_file}"] if target_file else []
 
     def _parse_codespell_output(
         self, raw_output: str, issue_type: IssueType
     ) -> list[Issue]:
-        """Parse codespell output into FORMATTING issues.
-
-        Expected format:
-        CONFIG_CONSOLIDATION_AUDIT.md:472: nd ==> and, 2nd
-        """
         issues: list[Issue] = []
 
         for line in raw_output.split("\n"):
@@ -1232,13 +1196,11 @@ class AutofixCoordinator:
         return issues
 
     def _should_parse_codespell_line(self, line: str) -> bool:
-        """Check if line should be parsed as codespell output."""
         return bool(line and "==>" in line)
 
     def _parse_single_codespell_line(
         self, line: str, issue_type: IssueType
     ) -> Issue | None:
-        """Parse a single codespell line into an Issue."""
         try:
             file_path, line_number, message = self._extract_codespell_parts(line)
             if not file_path:
@@ -1257,7 +1219,6 @@ class AutofixCoordinator:
             return None
 
     def _extract_codespell_parts(self, line: str) -> tuple[str, int | None, str]:
-        """Extract file path, line number, and message from codespell line."""
         if ":" not in line:
             return "", None, ""
 
@@ -1274,7 +1235,6 @@ class AutofixCoordinator:
         return file_path.strip(), line_number, message
 
     def _format_codespell_message(self, message_part: str) -> str:
-        """Format codespell message from the message part."""
         if "==>" in message_part:
             wrong_word, suggestions = message_part.split("==>", 1)
             return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
@@ -1283,18 +1243,9 @@ class AutofixCoordinator:
     def _parse_ruff_format_output(
         self, raw_output: str, issue_type: IssueType
     ) -> list[Issue]:
-        """Parse ruff-format output into FORMATTING issues.
-
-        Expected format:
-        error: Failed to format docs: No such file or directory (os error 2)
-        1 file would be reformatted.
-        """
         issues: list[Issue] = []
 
-        # Ruff format typically returns summary, not per-file issues
-        # We create a single issue to trigger the FormattingAgent
         if "would be reformatted" in raw_output or "Failed to format" in raw_output:
-            # Extract file count if available
             file_count = 1
             if "file" in raw_output:
                 import re
@@ -1305,7 +1256,6 @@ class AutofixCoordinator:
 
             message = f"{file_count} file(s) require formatting"
 
-            # Extract error details if present
             if "error:" in raw_output:
                 error_lines = [line for line in raw_output.split("\n") if line.strip()]
                 if error_lines:
@@ -1316,7 +1266,7 @@ class AutofixCoordinator:
                     type=issue_type,
                     severity=Priority.MEDIUM,
                     message=message,
-                    file_path=None,  # Ruff format works on entire project
+                    file_path=None,
                     line_number=None,
                     stage="formatting",
                     details=["Run 'uv run ruff format .' to fix"],

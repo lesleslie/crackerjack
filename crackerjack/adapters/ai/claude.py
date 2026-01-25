@@ -1,5 +1,3 @@
-"""Claude AI provider for code fixing."""
-
 import logging
 import os
 import typing as t
@@ -17,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class ClaudeCodeFixerSettings(BaseCodeFixerSettings):
-    """Claude-specific settings."""
-
     anthropic_api_key: SecretStr = Field(
         default_factory=lambda: SecretStr(os.environ.get("ANTHROPIC_API_KEY", "")),
         description="Anthropic API key from environment variable ANTHROPIC_API_KEY",
@@ -45,25 +41,11 @@ class ClaudeCodeFixerSettings(BaseCodeFixerSettings):
 
 
 class ClaudeCodeFixer(BaseCodeFixer):
-    """Claude AI code fixer implementation.
-
-    Uses Anthropic's Messages API:
-    https://docs.anthropic.com/claude/reference/messages_post
-
-    Refactored to inherit from BaseCodeFixer, reducing code from ~507 lines to ~150 lines.
-    """
-
     def __init__(self) -> None:
-        """Initialize Claude code fixer.
-
-        Settings are loaded from environment variables and configuration.
-        """
-        # Load settings from environment
         settings = ClaudeCodeFixerSettings()
         super().__init__(settings)
 
     async def _initialize_client(self) -> t.Any:
-        """Initialize Anthropic AsyncClient."""
         import anthropic
 
         assert isinstance(self._settings, ClaudeCodeFixerSettings)
@@ -82,15 +64,6 @@ class ClaudeCodeFixer(BaseCodeFixer):
         client: t.Any,
         prompt: str,
     ) -> t.Any:
-        """Call Claude Messages API.
-
-        Args:
-            client: anthropic.AsyncAnthropic instance
-            prompt: Sanitized prompt for Claude
-
-        Returns:
-            Message response object
-        """
         assert isinstance(self._settings, ClaudeCodeFixerSettings)
         return await client.messages.create(
             model=self._settings.model,
@@ -100,14 +73,9 @@ class ClaudeCodeFixer(BaseCodeFixer):
         )
 
     def _extract_content_from_response(self, response: t.Any) -> str:
-        """Extract text from Claude response.
-
-        Claude format: response.content[0].text
-        """
         return response.content[0].text
 
     def _validate_provider_specific_settings(self) -> None:
-        """Validate Claude API key format."""
         if not self._settings:
             msg = "ClaudeCodeFixerSettings not provided"
             raise RuntimeError(msg)

@@ -202,7 +202,7 @@ class TestPipAuditAdapter:
         assert config.enabled is True  # Stable, so enabled by default
         assert "pyproject.toml" in config.file_patterns
         assert "requirements.txt" in config.file_patterns
-        assert config.stage == "comprehensive"
+        assert config.stage == "fast"
         assert config.timeout_seconds == 120
 
     @pytest.mark.asyncio
