@@ -288,7 +288,9 @@ class DocCleanupAnalyzer:
             if files:
                 # Extract destination from first file
                 if files and "reason" in files[0]:
-                    lines.append(f"\n  → {category.replace('_', '-').title()} ({len(files)} files)")
+                    lines.append(
+                        f"\n  → {category.replace('_', '-').title()} ({len(files)} files)"
+                    )
                     for item in files:
                         lines.append(f"     • {item['file']}")
         lines.append(f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files")
@@ -331,7 +333,9 @@ class DocCleanupAnalyzer:
         lines.append(f"Total files analyzed: {total}")
         lines.append(f"Keep in root: {len(results['keep_in_root'])}")
         lines.append(f"Keep in docs/: {len(results.get('keep_in_docs', []))}")
-        lines.append(f"Implementation plans: {len(results.get('implementation_plans', []))}")
+        lines.append(
+            f"Implementation plans: {len(results.get('implementation_plans', []))}"
+        )
         lines.append(f"Move to archive: {total_archive}")
         lines.append(
             f"Implementation plans: {len(results.get('implementation_plans', []))}"

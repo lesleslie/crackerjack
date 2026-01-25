@@ -55,7 +55,7 @@ def test_timeout_config_properties(
         "workflow_iteration",
         "complete_workflow",
     ]
-    
+
     for op in default_ops:
         assert op in config.operation_timeouts
 
@@ -163,15 +163,15 @@ def test_global_timeout_manager_property(timeout_val: float) -> None:
     # Reset the global timeout manager to ensure clean state
     import crackerjack.core.timeout_manager as tm
     tm._global_timeout_manager = None
-    
+
     manager1 = get_timeout_manager()
     manager2 = get_timeout_manager()
-    
+
     # Both calls should return the same instance (singleton)
     assert manager1 is manager2
-    
+
     # Test that the manager works consistently
     timeout1 = manager1.get_timeout("test_op")
     timeout2 = manager2.get_timeout("test_op")
-    
+
     assert timeout1 == timeout2

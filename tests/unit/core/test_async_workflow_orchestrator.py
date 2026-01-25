@@ -63,10 +63,10 @@ class TestAsyncWorkflowPipelineRunCompleteWorkflowAsync:
         # Mock the underlying pipeline's run_complete_workflow method
         with patch.object(pipeline._pipeline, 'run_complete_workflow', new_callable=AsyncMock) as mock_run:
             mock_run.return_value = True
-            
+
             options = {"test": True}
             result = await pipeline.run_complete_workflow_async(options)
-            
+
             assert result is True
             mock_run.assert_called_once_with(options)
 
@@ -88,10 +88,10 @@ class TestAsyncWorkflowPipelineRunCompleteWorkflowAsync:
 
         with patch.object(pipeline._pipeline, 'run_complete_workflow', new_callable=AsyncMock) as mock_run:
             mock_run.return_value = False
-            
+
             options = {"test": True}
             result = await pipeline.run_complete_workflow_async(options)
-            
+
             assert result is False
             mock_run.assert_called_once_with(options)
 
@@ -113,12 +113,12 @@ class TestAsyncWorkflowPipelineRunCompleteWorkflowAsync:
 
         with patch.object(pipeline._pipeline, 'run_complete_workflow', new_callable=AsyncMock) as mock_run:
             mock_run.side_effect = Exception("Test error")
-            
+
             options = {"test": True}
-            
+
             with pytest.raises(Exception, match="Test error"):
                 await pipeline.run_complete_workflow_async(options)
-            
+
             mock_run.assert_called_once_with(options)
 
 
@@ -126,22 +126,22 @@ def test_run_complete_workflow_async_function():
     """Test the standalone run_complete_workflow_async function."""
     # This function creates a new event loop and runs the workflow
     # We'll test that it properly creates the pipeline and calls run_complete_workflow
-    
+
     # Mock the WorkflowPipeline and its methods
     with patch('crackerjack.core.async_workflow_orchestrator.WorkflowPipeline') as mock_pipeline_class:
         mock_pipeline_instance = MagicMock()
         mock_pipeline_instance.run_complete_workflow = AsyncMock(return_value=True)
         mock_pipeline_class.return_value = mock_pipeline_instance
-        
+
         # Call the function with some test args
         result = asyncio.run(asyncio.create_task(
             asyncio.sleep(0)  # Placeholder to avoid direct call
         ))
-        
+
         # Since the function runs asyncio.run internally, we can't easily test it directly
         # without causing event loop issues. Instead, we'll just verify the implementation
         # by checking that the function exists and has the expected signature
         from crackerjack.core.async_workflow_orchestrator import run_complete_workflow_async
-        
+
         # The function should exist
         assert callable(run_complete_workflow_async)

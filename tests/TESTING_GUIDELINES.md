@@ -7,24 +7,28 @@ This document describes the test suite for the Crackerjack project, including th
 The test suite is organized into the following categories:
 
 ### Unit Tests (`tests/unit/`)
+
 - Test individual units of code in isolation
 - Located in `tests/unit/<module_name>/`
 - Named `test_<component>.py`
 - Focus on testing one class or function at a time
 
 ### Integration Tests (`tests/integration/`)
+
 - Test how multiple components work together
 - Located in `tests/integration/`
 - Named `test_<integration_scenario>.py`
 - Validate that different modules interact correctly
 
 ### Performance Tests (`tests/performance/`)
+
 - Benchmark performance characteristics
 - Located in `tests/performance/`
 - Named `test_<component>_performance.py`
 - Use pytest-benchmark for consistent measurements
 
 ### End-to-End Tests (`tests/e2e/`)
+
 - Test complete workflows from start to finish
 - Located in `tests/e2e/`
 - Named `test_<workflow>.py`
@@ -33,11 +37,13 @@ The test suite is organized into the following categories:
 ## Test Conventions
 
 ### Naming Conventions
+
 - Test files: `test_<component>.py`
 - Test classes: `Test<ComponentName>` (e.g., `TestClassifierAgent`)
 - Test methods: `test_<behavior_under_test>` (e.g., `test_classifier_returns_correct_category`)
 
 ### Test Organization
+
 - Each test method should test one specific behavior
 - Use descriptive names that explain the expected behavior
 - Follow the Arrange-Act-Assert pattern:
@@ -46,6 +52,7 @@ The test suite is organized into the following categories:
   - Assert: Verify the expected outcome
 
 ### Assertions
+
 - Use specific assertions when possible (e.g., `assertEqual`, `assertTrue`)
 - Provide meaningful error messages for complex assertions
 - Test both positive and negative cases
@@ -53,19 +60,21 @@ The test suite is organized into the following categories:
 ## Testing Patterns
 
 ### Mocking Dependencies
+
 Use `unittest.mock` or `pytest-mock` to isolate the code under test:
 
 ```python
 def test_example_with_mock(mocker):
     mock_dependency = mocker.patch('module.dependency.method')
     mock_dependency.return_value = 'expected_value'
-    
+
     # Test code that uses the dependency
-    
+
     mock_dependency.assert_called_once()
 ```
 
 ### Parametrized Tests
+
 Use `@pytest.mark.parametrize` for testing multiple inputs:
 
 ```python
@@ -80,6 +89,7 @@ def test_double_value(input_value, expected):
 ```
 
 ### Async Testing
+
 For async code, use `@pytest.mark.asyncio`:
 
 ```python
@@ -136,6 +146,7 @@ Tests are categorized using pytest markers:
 ## Running Tests
 
 ### Basic Test Execution
+
 ```bash
 # Run all tests
 pytest
@@ -151,6 +162,7 @@ pytest -m "not slow"
 ```
 
 ### Coverage
+
 ```bash
 # Run tests with coverage
 pytest --cov=crackerjack --cov-report=html
@@ -160,6 +172,7 @@ coverage report
 ```
 
 ### Performance Testing
+
 ```bash
 # Run performance benchmarks
 pytest tests/performance/ --benchmark-only
@@ -171,16 +184,17 @@ pytest --benchmark-skip
 ## Best Practices
 
 1. **Keep tests fast**: Aim for tests that run in under 100ms
-2. **Make tests deterministic**: Tests should produce the same results every time
-3. **Test behavior, not implementation**: Focus on what the code does, not how it does it
-4. **Use descriptive names**: Test names should clearly indicate what is being tested
-5. **Test edge cases**: Include tests for boundary conditions and error cases
-6. **Maintain test independence**: Tests should not depend on each other's execution order
-7. **Use appropriate test doubles**: Choose between mocks, stubs, and fakes appropriately
+1. **Make tests deterministic**: Tests should produce the same results every time
+1. **Test behavior, not implementation**: Focus on what the code does, not how it does it
+1. **Use descriptive names**: Test names should clearly indicate what is being tested
+1. **Test edge cases**: Include tests for boundary conditions and error cases
+1. **Maintain test independence**: Tests should not depend on each other's execution order
+1. **Use appropriate test doubles**: Choose between mocks, stubs, and fakes appropriately
 
 ## Continuous Integration
 
 The CI pipeline runs:
+
 - All unit and integration tests
 - Performance benchmarks
 - Code coverage checks

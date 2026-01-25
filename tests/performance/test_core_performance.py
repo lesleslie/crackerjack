@@ -174,7 +174,7 @@ def test_performance_thresholds() -> None:
     start = time.time()
     coordinator = SessionCoordinator()
     creation_time = time.time() - start
-    
+
     # Creation should be fast (< 100ms)
     assert creation_time < 0.1, f"SessionCoordinator creation took {creation_time:.3f}s, expected < 0.1s"
 
@@ -182,7 +182,7 @@ def test_performance_thresholds() -> None:
     start = time.time()
     phase_coordinator = PhaseCoordinator()
     creation_time = time.time() - start
-    
+
     # Creation should be reasonably fast (< 500ms, as it has more dependencies)
     assert creation_time < 0.5, f"PhaseCoordinator creation took {creation_time:.3f}s, expected < 0.5s"
 
@@ -194,6 +194,6 @@ def test_performance_thresholds() -> None:
         coordinator.update_task(task_id, "in_progress")
         coordinator.complete_task(task_id, f"Completed {i}", [f"file_{i}.py"])
     tracking_time = time.time() - start
-    
+
     # Should handle 50 operations quickly (< 100ms)
     assert tracking_time < 0.1, f"50 session operations took {tracking_time:.3f}s, expected < 0.1s"
