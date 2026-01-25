@@ -8,7 +8,6 @@ from urllib.parse import unquote, urlparse
 
 from ._git_utils import get_git_tracked_files
 
-# Archive patterns from DocumentationSettings
 ARCHIVE_PATTERNS = [
     "*PLAN*.md",
     "*SUMMARY*.md",
@@ -24,11 +23,6 @@ ARCHIVE_PATTERNS = [
 
 
 def is_archived_filename(filename: str) -> bool:
-    """Check if a filename matches archive documentation patterns.
-
-    Files matching these patterns are moved to docs/archive/ subdirectories
-    by the documentation cleanup process.
-    """
     return any(fnmatch.fnmatch(filename, pattern) for pattern in ARCHIVE_PATTERNS)
 
 
@@ -73,23 +67,16 @@ def validate_local_link(
     source_file: Path,
     repo_root: Path,
 ) -> tuple[bool, str]:
-    """Validate a local markdown link.
-
-    Returns (is_valid, error_message). If the link points to an archived
-    documentation file, checks the archive location instead of the original path.
-    """
     link_url = unquote(link_url)
     path_part = _extract_path_part(link_url)
 
     if not path_part:
         return True, ""
 
-    # Check if this is an archived documentation file
     target_filename = Path(path_part).name
     if _check_archived_file(target_filename, repo_root):
         return True, ""
 
-    # Normal link validation
     target_path = _resolve_target_path(path_part, source_file, repo_root)
 
     if not target_path.exists():
@@ -99,7 +86,6 @@ def validate_local_link(
 
 
 def _extract_path_part(link_url: str) -> str:
-    """Extract the path portion from a URL, removing anchors."""
     if "#" in link_url:
         path_part, _anchor = link_url.split("#", 1)
     else:
@@ -108,10 +94,6 @@ def _extract_path_part(link_url: str) -> str:
 
 
 def _check_archived_file(filename: str, repo_root: Path) -> bool:
-    """Check if a file exists in the archive directory.
-
-    Returns True if the file is found in docs/archive/, False otherwise.
-    """
     if not is_archived_filename(filename):
         return False
 
@@ -119,7 +101,6 @@ def _check_archived_file(filename: str, repo_root: Path) -> bool:
     if not archive_path.exists():
         return False
 
-    # Search in archive subdirectories
     for archived_file in archive_path.rglob(filename):
         if archived_file.is_file():
             return True
@@ -128,7 +109,6 @@ def _check_archived_file(filename: str, repo_root: Path) -> bool:
 
 
 def _resolve_target_path(path_part: str, source_file: Path, repo_root: Path) -> Path:
-    """Resolve the target path of a local link."""
     if path_part.startswith("/"):
         return repo_root / path_part.lstrip("/")
     return (source_file.parent / path_part).resolve()

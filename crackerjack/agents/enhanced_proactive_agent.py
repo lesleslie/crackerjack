@@ -16,7 +16,6 @@ class EnhancedProactiveAgent(ProactiveAgent):
     def __init__(self, context: AgentContext) -> None:
         super().__init__(context)
 
-        # Select AI bridge based on settings
         ai_settings = load_settings(AISettings)
         if ai_settings.ai_provider == "qwen":
             self.claude_bridge = QwenCodeBridge(context)

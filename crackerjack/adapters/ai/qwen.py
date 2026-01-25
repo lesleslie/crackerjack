@@ -1,5 +1,3 @@
-"""Qwen AI provider for code fixing."""
-
 import logging
 import os
 import typing as t
@@ -17,8 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class QwenCodeFixerSettings(BaseCodeFixerSettings):
-    """Qwen-specific settings."""
-
     qwen_api_key: SecretStr = Field(
         default_factory=lambda: SecretStr(os.environ.get("QWEN_API_KEY", "")),
         description="Qwen API key from environment variable QWEN_API_KEY",
@@ -34,25 +30,11 @@ class QwenCodeFixerSettings(BaseCodeFixerSettings):
 
 
 class QwenCodeFixer(BaseCodeFixer):
-    """Qwen AI code fixer implementation.
-
-    Uses Qwen's OpenAI-compatible API:
-    https://help.aliyun.com/zh/dashscope/developer-reference/compatibility-of-openai-with-dashscope
-
-    Refactored to inherit from BaseCodeFixer, reducing code from ~508 lines to ~140 lines.
-    """
-
     def __init__(self) -> None:
-        """Initialize Qwen code fixer.
-
-        Settings are loaded from environment variables and configuration.
-        """
-        # Load settings from environment
         settings = QwenCodeFixerSettings()
         super().__init__(settings)
 
     async def _initialize_client(self) -> t.Any:
-        """Initialize OpenAI-compatible client for Qwen."""
         import openai
 
         assert isinstance(self._settings, QwenCodeFixerSettings)
@@ -72,15 +54,6 @@ class QwenCodeFixer(BaseCodeFixer):
         client: t.Any,
         prompt: str,
     ) -> t.Any:
-        """Call Qwen Chat Completions API.
-
-        Args:
-            client: openai.AsyncOpenAI instance
-            prompt: Sanitized prompt for Qwen
-
-        Returns:
-            Chat completion response object
-        """
         assert isinstance(self._settings, QwenCodeFixerSettings)
         return await client.chat.completions.create(
             model=self._settings.model,
@@ -90,14 +63,9 @@ class QwenCodeFixer(BaseCodeFixer):
         )
 
     def _extract_content_from_response(self, response: t.Any) -> str:
-        """Extract text from Qwen response.
-
-        OpenAI-compatible format: response.choices[0].message.content
-        """
         return response.choices[0].message.content
 
     def _validate_provider_specific_settings(self) -> None:
-        """Validate Qwen API key format."""
         if not self._settings:
             msg = "QwenCodeFixerSettings not provided"
             raise RuntimeError(msg)

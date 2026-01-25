@@ -188,9 +188,9 @@ class SecurityService(SecurityServiceProtocol):
         secrets = []
 
         patterns = {
-            "api_key": r'(?i)(?:api[_-]?key)[\s]*[=:][\s]*["\']([A-Za-z0-9_-]{20, })["\']',
-            "password": r'(?i)(?:password)[\s]*[=:][\s]*["\']([^"\s]{8, })["\']',
-            "token": r'(?i)(?:token)[\s]*[=:][\s]*["\']([A-Za-z0-9_-]{20, })["\']',
+            "api_key": r'(?i)(?:api[_-]?key)[\s]*[=:][\s]*["\']([A-Za-z0-9_-]{20,})["\']',
+            "password": r'(?i)(?:password)[\s]*[=:][\s]*["\']([^"\s]{8,})["\']',
+            "token": r'(?i)(?:token)[\s]*[=:][\s]*["\']([A-Za-z0-9_-]{20,})["\']',
         }
 
         import re

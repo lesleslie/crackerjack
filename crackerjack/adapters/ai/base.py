@@ -1,12 +1,3 @@
-"""Unified base class for all AI code fixer providers.
-
-Follows crackerjack's protocol-based architecture with:
-- Constructor dependency injection
-- Async lifecycle management
-- Comprehensive security validation
-- Provider-agnostic interface
-"""
-
 import ast
 import asyncio
 import json
@@ -28,11 +19,6 @@ logger = logging.getLogger(__name__)
 
 
 class BaseCodeFixerSettings(BaseModel):
-    """Base settings for all AI providers.
-
-    Common configuration shared across Claude, Qwen, Ollama, and future providers.
-    """
-
     model: str = Field(
         description="Model identifier for the AI provider",
     )
@@ -69,34 +55,16 @@ class BaseCodeFixerSettings(BaseModel):
 
 
 class BaseCodeFixer(ABC):
-    """Abstract base class for AI code fixers.
-
-    Implements the Template Method pattern:
-    - Base class provides common implementation
-    - Subclasses implement provider-specific details
-    - All security validation enforced in base class
-    """
-
     def __init__(
         self,
         settings: BaseCodeFixerSettings | None = None,
     ) -> None:
-        """Constructor with dependency injection.
-
-        Args:
-            settings: Provider-specific settings (subclass of BaseCodeFixerSettings)
-        """
         self._client: t.Any | None = None
         self._settings = settings
         self._client_lock: asyncio.Lock | None = None
         self._initialized = False
 
-    # ========================================================================
-    # PUBLIC INTERFACE
-    # ========================================================================
-
     async def init(self) -> None:
-        """Initialize the adapter (async lifecycle)."""
         if self._initialized:
             return
 
@@ -115,7 +83,6 @@ class BaseCodeFixer(ABC):
         fix_type: str,
         max_retries: int = 3,
     ) -> dict[str, str | float | list[str] | bool]:
-        """Fix a code issue using AI."""
         return await self._fix_code_issue_with_retry(
             file_path,
             issue_description,
@@ -124,40 +91,24 @@ class BaseCodeFixer(ABC):
             max_retries,
         )
 
-    # ========================================================================
-    # ABSTRACT METHODS (Subclasses MUST implement)
-    # ========================================================================
-
     @abstractmethod
-    async def _initialize_client(self) -> t.Any:
-        """Initialize provider-specific API client."""
-        ...
+    async def _initialize_client(self) -> t.Any: ...
 
     @abstractmethod
     async def _call_provider_api(
         self,
         client: t.Any,
         prompt: str,
-    ) -> t.Any:
-        """Call provider's API with generated prompt."""
-        ...
+    ) -> t.Any: ...
 
     @abstractmethod
     def _extract_content_from_response(
         self,
         response: t.Any,
-    ) -> str:
-        """Extract text content from provider response."""
-        ...
+    ) -> str: ...
 
     @abstractmethod
-    def _validate_provider_specific_settings(self) -> None:
-        """Validate provider-specific settings."""
-        ...
-
-    # ========================================================================
-    # TEMPLATE METHODS (Common implementation)
-    # ========================================================================
+    def _validate_provider_specific_settings(self) -> None: ...
 
     async def _fix_code_issue_with_retry(
         self,
@@ -167,7 +118,6 @@ class BaseCodeFixer(ABC):
         fix_type: str,
         max_retries: int,
     ) -> dict[str, str | float | list[str] | bool]:
-        """Template method: Fix with retry logic."""
         client = await self._ensure_client()
 
         prompt = self._build_fix_prompt(
@@ -206,7 +156,6 @@ class BaseCodeFixer(ABC):
         return {"success": False, "error": "Max retries exceeded", "confidence": 0.0}
 
     async def _ensure_client(self) -> t.Any:
-        """Lazy initialization with thread-safe double-check locking."""
         if self._client is None:
             if self._client_lock is None:
                 self._client_lock = asyncio.Lock()
@@ -222,7 +171,6 @@ class BaseCodeFixer(ABC):
         self,
         response: t.Any,
     ) -> dict[str, str | float | list[str] | bool]:
-        """Parse provider response into standardized format."""
         try:
             content = self._extract_content_from_response(response)
 
@@ -230,7 +178,6 @@ class BaseCodeFixer(ABC):
 
             data = json.loads(json_str)
 
-            # Ensure required fields exist
             required_fields = ["fixed_code", "explanation", "confidence"]
             missing = [f for f in required_fields if f not in data]
 
@@ -240,11 +187,9 @@ class BaseCodeFixer(ABC):
                 data.setdefault("explanation", "No explanation provided")
                 data.setdefault("confidence", 0.5)
 
-            # Normalize confidence to [0.0, 1.0]
             confidence = float(data.get("confidence", 0.5))
             data["confidence"] = max(0.0, min(1.0, confidence))
 
-            # Security validation (MANDATORY for all providers)
             fixed_code = data["fixed_code"]
             is_valid, error_msg = self._validate_ai_generated_code(fixed_code)
 
@@ -286,12 +231,7 @@ class BaseCodeFixer(ABC):
                 "confidence": 0.0,
             }
 
-    # ========================================================================
-    # SECURITY VALIDATION (Identical for all providers)
-    # ========================================================================
-
     def _validate_ai_generated_code(self, code: str) -> tuple[bool, str]:
-        """Comprehensive security validation of AI-generated code."""
         is_valid, error_msg = self._check_dangerous_patterns(code)
         if not is_valid:
             return False, error_msg
@@ -307,7 +247,6 @@ class BaseCodeFixer(ABC):
         return True, ""
 
     def _check_dangerous_patterns(self, code: str) -> tuple[bool, str]:
-        """Check for dangerous function calls and patterns."""
         dangerous_patterns = [
             (r"\beval\s*\(", "eval() call detected"),
             (r"\bexec\s*\(", "exec() call detected"),
@@ -334,7 +273,6 @@ class BaseCodeFixer(ABC):
         return True, ""
 
     def _validate_ast_security(self, code: str) -> tuple[bool, str]:
-        """Parse AST and check for dangerous imports."""
         try:
             tree = ast.parse(code)
             self._scan_ast_for_dangerous_imports(tree)
@@ -352,20 +290,17 @@ class BaseCodeFixer(ABC):
         return True, ""
 
     def _is_dangerous_import(self, node: ast.Import) -> bool:
-        """Check if import is potentially dangerous."""
         for alias in node.names:
             if alias.name in ("os", "subprocess", "sys"):
                 return not self._is_safe_usage(node)
         return False
 
     def _scan_ast_for_dangerous_imports(self, tree: ast.AST) -> None:
-        """Walk AST scanning for dangerous imports."""
         for node in ast.walk(tree):
             if isinstance(node, ast.Import) and self._is_dangerous_import(node):
-                pass  # Could log warning here
+                pass
 
     def _check_code_size_limit(self, code: str) -> tuple[bool, str]:
-        """Prevent DoS via excessive code size."""
         assert self._settings is not None, "Settings not initialized"
         if len(code) > self._settings.max_file_size_bytes:
             return (
@@ -375,31 +310,20 @@ class BaseCodeFixer(ABC):
         return True, ""
 
     def _is_safe_usage(self, import_node: ast.Import) -> bool:
-        """Check if dangerous import is used in safe context."""
         return True
 
-    # ========================================================================
-    # SANITIZATION
-    # ========================================================================
-
     def _sanitize_error_message(self, error_msg: str) -> str:
-        """Remove sensitive data from error messages."""
-        # Remove Unix paths
         error_msg = re.sub(r"/[\w\-./ ]+/", "<path>/", error_msg)
 
-        # Remove Windows paths
         error_msg = re.sub(r"[A-Z]:\\[\w\-\\ ]+\\", "<path>\\", error_msg)
 
-        # Remove API keys
         error_msg = re.sub(r"sk-[a-zA-Z0-9]{20,}", "<api-key>", error_msg)
 
-        # Remove generic secrets
         error_msg = re.sub(r'["\'][\w\-]{32,}["\']', "<secret>", error_msg)
 
         return error_msg
 
     def _sanitize_prompt_input(self, user_input: str) -> str:
-        """Prevent prompt injection attacks."""
         sanitized = user_input
 
         injection_patterns = [
@@ -413,10 +337,6 @@ class BaseCodeFixer(ABC):
 
         return sanitized.replace("```", "'''")
 
-    # ========================================================================
-    # PROMPT BUILDING
-    # ========================================================================
-
     def _build_fix_prompt(
         self,
         file_path: str,
@@ -424,7 +344,6 @@ class BaseCodeFixer(ABC):
         context: str,
         fix_type: str,
     ) -> str:
-        """Build standardized prompt for code fixing."""
         issue = self._sanitize_prompt_input(issue)
         context = self._sanitize_prompt_input(context)
 
@@ -467,12 +386,7 @@ class BaseCodeFixer(ABC):
 
 Respond with ONLY the JSON, no additional text."""
 
-    # ========================================================================
-    # RETRY LOGIC
-    # ========================================================================
-
     def _extract_json_from_response(self, content: str) -> str:
-        """Extract JSON from markdown-wrapped response."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
@@ -490,7 +404,6 @@ Respond with ONLY the JSON, no additional text."""
         parsed_response: dict[str, str | float | list[str] | bool],
         original_code: str,
     ) -> bool:
-        """Validate that fix meets quality thresholds."""
         if not parsed_response.get("success"):
             return False
 
@@ -519,7 +432,6 @@ Respond with ONLY the JSON, no additional text."""
         return True
 
     async def _backoff_delay(self, attempt: int) -> None:
-        """Exponential backoff with jitter."""
         base_delay = 2**attempt
 
         jitter = random.uniform(-0.25, 0.25) * base_delay  # nosec B311
@@ -533,7 +445,6 @@ Respond with ONLY the JSON, no additional text."""
         original_prompt: str,
         previous_response: dict[str, str | float | list[str] | bool],
     ) -> str:
-        """Enhance prompt for retry with context from previous attempt."""
         confidence = previous_response.get("confidence", 0.0)
 
         return f"""

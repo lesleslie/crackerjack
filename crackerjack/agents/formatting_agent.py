@@ -25,7 +25,6 @@ class FormattingAgent(SubAgent):
 
         message_lower = issue.message.lower()
 
-        # High confidence for specific formatting issues we can fix
         if any(
             keyword in message_lower
             for keyword in (
@@ -35,7 +34,7 @@ class FormattingAgent(SubAgent):
                 "import sorting",
                 "unused import",
                 "ruff",
-                "spelling",  # Added for codespell support
+                "spelling",
             )
         ):
             return 1.0
@@ -66,7 +65,6 @@ class FormattingAgent(SubAgent):
         files_modified: list[str] = []
 
         try:
-            # Check if this is a spelling issue
             message_lower = issue.message.lower()
             if "spelling" in message_lower:
                 spelling_fixes = await self._apply_spelling_fixes(issue)
@@ -194,13 +192,8 @@ class FormattingAgent(SubAgent):
         return fixes
 
     async def _apply_spelling_fixes(self, issue: Issue) -> list[str]:
-        """Apply spelling corrections using codespell -w.
-
-        Only runs if the issue is related to spelling errors.
-        """
         fixes: list[str] = []
 
-        # Only process if we have a specific file
         if not issue.file_path:
             self.log("No specific file path for spelling fix", "WARNING")
             return fixes
@@ -208,7 +201,6 @@ class FormattingAgent(SubAgent):
         try:
             self.log(f"Applying spelling fixes to {issue.file_path}")
 
-            # Run codespell with -w flag on the specific file
             returncode, stdout, stderr = await self.run_command(
                 ["uv", "run", "codespell", "-w", issue.file_path],
             )
@@ -219,7 +211,6 @@ class FormattingAgent(SubAgent):
                 fixes.append(message)
                 self.log(message)
             else:
-                # Check if codespell actually made changes despite non-zero exit
                 if "FIXED" in stdout or "fixed" in stdout.lower():
                     fix_count = stdout.count("FIXED")
                     message = (

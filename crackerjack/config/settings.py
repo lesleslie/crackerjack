@@ -58,9 +58,8 @@ class AISettings(Settings):
     ai_agent_autofix: bool = False
     ai_provider: t.Literal["claude", "qwen", "ollama"] = "claude"
 
-    # Ollama-specific settings
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_model: str = "qwen2.5-coder:7b"
+    ollama_base_url: str = "http://localhost: 11434"
+    ollama_model: str = "qwen2.5-coder: 7b"
     ollama_timeout: int = 300
 
 
@@ -160,7 +159,7 @@ class GlobalLockSettings(Settings):
 class AdapterTimeouts(Settings):
     zuban_lsp_timeout: float = 120.0
     skylos_timeout: int = 600
-    refurb_timeout: int = 120
+    refurb_timeout: int = 600
     zuban_timeout: int = 120
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
