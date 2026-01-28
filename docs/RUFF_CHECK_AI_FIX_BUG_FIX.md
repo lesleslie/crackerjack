@@ -30,17 +30,20 @@ Fast Hook Results:
 **Data Flow Trace**:
 
 1. **Fast Hooks (Iteration 0)**:
+
    - `ruff-check` runs with `--fix` flag
    - ruff auto-fixes some issues, reports 12 remaining
    - Multi-line diagnostic output format (not parseable)
 
-2. **Iteration 1**:
+1. **Iteration 1**:
+
    - AI fixer calls `_parse_hook_results_to_issues()`
    - Parser expects single-line format: `file:line:col CODE message`
    - Actual ruff --fix output: multi-line with `--> file:line:col` arrows
    - **Result**: 0 issues parsed (regex doesn't match)
 
-3. **Iterations 2-3**:
+1. **Iterations 2-3**:
+
    - AI fixer calls `_collect_current_issues()`
    - Runs ruff WITHOUT --fix flag
    - Gets single-line format that parser can handle
@@ -111,16 +114,19 @@ Found 2 errors.
 ### Option Analysis
 
 1. **❌ Keep --fix, add multi-line parser**
+
    - Complex regex needed for multi-line format
    - Fragile (ruff output format may change)
    - Mixing concerns (auto-fix + issue detection)
 
-2. **❌ Run ruff twice (--fix then check)**
+1. **❌ Run ruff twice (--fix then check)**
+
    - Slower (runs ruff twice)
    - Redundant work
    - Confusing workflow
 
-3. **✅ Use --output-format concise (CHOSEN)**
+1. **✅ Use --output-format concise (CHOSEN)**
+
    - Single ruff run
    - Parseable output for AI agents
    - AI agents fix issues, not ruff --fix
@@ -132,8 +138,8 @@ Found 2 errors.
 The crackerjack philosophy is:
 
 1. **ruff-format**: Handles formatting (runs first, auto-fixes)
-2. **ruff-check**: Reports issues for AI agents to fix
-3. **AI agents**: Intelligently fix reported issues
+1. **ruff-check**: Reports issues for AI agents to fix
+1. **AI agents**: Intelligently fix reported issues
 
 Using `--fix` on ruff-check undermines this workflow:
 
@@ -146,12 +152,14 @@ Using `--fix` on ruff-check undermines this workflow:
 ### Test Results
 
 **Before fix**:
+
 ```
 → Iteration 1/5: 0 issues to fix      # ❌ Parser failed
 → Iteration 2/5: 2 issues to fix      # ✅ Different code path
 ```
 
 **After fix**:
+
 ```
 → Iteration 1/5: 12 issues to fix     # ✅ Parser succeeds
 → Iteration 2/5: 5 issues to fix      # ✅ Progress!
@@ -162,6 +170,7 @@ Using `--fix` on ruff-check undermines this workflow:
 ### Test Coverage
 
 All 28 integration tests pass:
+
 ```bash
 pytest tests/test_core_autofix_coordinator.py
 =================== 28 passed in 62.70s ===================
@@ -170,12 +179,14 @@ pytest tests/test_core_autofix_coordinator.py
 ## Impact
 
 **Benefits**:
+
 - ✅ AI fix iteration 1 now correctly detects all ruff issues
 - ✅ Faster convergence (fewer iterations needed)
 - ✅ Clearer workflow (format → check → AI fix)
 - ✅ Better separation of concerns
 
 **No Breaking Changes**:
+
 - ruff-format still handles auto-formatting
 - ruff-check still detects issues
 - AI agents still fix issues (now with correct input)
@@ -198,6 +209,7 @@ Both caused "0 issues to fix" but had different root causes.
 ## Documentation
 
 **Key Insight**:
+
 ```
 ★ Insight ─────────────────────────────────────
 Tool output format matters! When integrating

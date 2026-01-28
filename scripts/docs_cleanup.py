@@ -12,44 +12,11 @@ Usage:
 """
 
 import argparse
+import re
 from pathlib import Path
 
 # Use the shared categorization logic
 from crackerjack.services.doc_categorizer import DocumentationCategorizer
-
-
-class DocCleanupAnalyzer:
-    """Analyzes documentation files and categorizes them for cleanup.
-
-    This is now a thin wrapper around DocumentationCategorizer, providing
-    a convenient CLI interface with formatted reporting.
-    """
-
-    def __init__(self, docs_root: Path):
-        """Initialize the analyzer with a documentation root directory.
-
-        Args:
-            docs_root: Path to directory containing markdown files
-        """
-        self.categorizer = DocumentationCategorizer(docs_root)
-
-    def analyze(self) -> dict[str, list[dict]]:
-        """Analyze all markdown files in docs root.
-
-        Returns:
-            Dictionary with categorized file lists
-        """
-        return self.categorizer.analyze_all()
-
-    def generate_report(self, results: dict) -> str:
-        """Generate a human-readable cleanup report.
-
-        Args:
-            results: Categorization results from analyze()
-
-        Returns:
-            Formatted report string
-        """
 
 
 class DocCleanupAnalyzer:
@@ -237,34 +204,46 @@ class DocCleanupAnalyzer:
 
     def generate_report(self, results: dict) -> str:
         lines = []
-        lines.append("=" * 80)
-        lines.append("DOCUMENTATION CLEANUP ANALYSIS")
-        lines.append("=" * 80)
-        lines.append("")
+        lines.extend([
+            "=" * 80,
+            "DOCUMENTATION CLEANUP ANALYSIS",
+            "=" * 80,
+            ""
+        ])
 
-        lines.append(f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files")
-        lines.append("-" * 80)
+        lines.extend([
+            f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files",
+            "-" * 80
+        ])
         for item in results["keep_in_root"]:
-            lines.append(f"  • {item['file']}")
-            lines.append(f"    Reason: {item['reason']}")
+            lines.extend([
+                f"  • {item['file']}",
+                f"    Reason: {item['reason']}"
+            ])
         lines.append("")
 
         if results.get("keep_in_docs"):
-            lines.append(f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files")
-            lines.append("-" * 80)
+            lines.extend([
+                f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files",
+                "-" * 80
+            ])
             for item in results["keep_in_docs"]:
-                lines.append(f"  • {item['file']}")
-                lines.append(f"    Reason: {item['reason']}")
+                lines.extend([
+                    f"  • {item['file']}",
+                    f"    Reason: {item['reason']}"
+                ])
             lines.append("")
 
         if results.get("implementation_plans"):
-            lines.append(
-                f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files"
-            )
-            lines.append("-" * 80)
+            lines.extend([
+                f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files",
+                "-" * 80
+            ])
             for item in results["implementation_plans"]:
-                lines.append(f"  • {item['file']}")
-                lines.append(f"    Reason: {item['reason']}")
+                lines.extend([
+                    f"  • {item['file']}",
+                    f"    Reason: {item['reason']}"
+                ])
             lines.append("")
 
         # Move to archive
@@ -279,8 +258,10 @@ class DocCleanupAnalyzer:
         ]
 
         total_archive = sum(len(results.get(cat, [])) for cat in archive_categories)
-        lines.append(f"📦 MOVE TO ARCHIVE: {total_archive} files")
-        lines.append("-" * 80)
+        lines.extend([
+            f"📦 MOVE TO ARCHIVE: {total_archive} files",
+            "-" * 80
+        ])
 
         # Group by destination
         for category in archive_categories:
@@ -293,8 +274,11 @@ class DocCleanupAnalyzer:
                     )
                     for item in files:
                         lines.append(f"     • {item['file']}")
-        lines.append(f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files")
-        lines.append("-" * 80)
+
+        lines.extend([
+            f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files",
+            "-" * 80
+        ])
 
         by_destination = {}
         for item in results["move_to_archive"]:
@@ -311,8 +295,10 @@ class DocCleanupAnalyzer:
         lines.append("")
 
         if results["uncategorized"]:
-            lines.append(f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files")
-            lines.append("-" * 80)
+            lines.extend([
+                f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files",
+                "-" * 80
+            ])
             for item in results["uncategorized"]:
                 lines.append(f"  • {item['file']}")
             lines.append("")
@@ -327,22 +313,20 @@ class DocCleanupAnalyzer:
             + len(results["uncategorized"])
         )
 
-        lines.append("=" * 80)
-        lines.append("SUMMARY")
-        lines.append("=" * 80)
-        lines.append(f"Total files analyzed: {total}")
-        lines.append(f"Keep in root: {len(results['keep_in_root'])}")
-        lines.append(f"Keep in docs/: {len(results.get('keep_in_docs', []))}")
-        lines.append(
-            f"Implementation plans: {len(results.get('implementation_plans', []))}"
-        )
-        lines.append(f"Move to archive: {total_archive}")
-        lines.append(
-            f"Implementation plans: {len(results.get('implementation_plans', []))}"
-        )
-        lines.append(f"Move to archive: {len(results['move_to_archive'])}")
-        lines.append(f"Uncategorized: {len(results['uncategorized'])}")
-        lines.append("")
+        lines.extend([
+            "=" * 80,
+            "SUMMARY",
+            "=" * 80,
+            f"Total files analyzed: {total}",
+            f"Keep in root: {len(results['keep_in_root'])}",
+            f"Keep in docs/: {len(results.get('keep_in_docs', []))}",
+            f"Implementation plans: {len(results.get('implementation_plans', []))}",
+            f"Move to archive: {total_archive}",
+            f"Implementation plans: {len(results.get('implementation_plans', []))}",
+            f"Move to archive: {len(results['move_to_archive'])}",
+            f"Uncategorized: {len(results['uncategorized'])}",
+            ""
+        ])
 
         return "\n".join(lines)
 
@@ -399,10 +383,10 @@ def main():
         print("=" * 80)
         print("NOTE: Archive directory is gitignored - files moved there will not")
         print("      be tracked by git. This is intentional for historical docs.")
-        print("")
+        print()
         print("This would move files, but for safety, please review the dry-run")
         print("output first and manually move files if needed.")
-        print("")
+        print()
         # TODO: Implement actual file movement
 
     return 0

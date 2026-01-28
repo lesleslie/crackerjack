@@ -350,14 +350,14 @@ class TestWorkflowOptions:
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.cleaning.strip_code is True
-        assert options.testing.test is True
+        assert options.cleaning.strip_code
+        assert options.testing.test
         assert options.publishing.publish == "pypi"
         assert options.publishing.bump == "patch"
-        assert options.git.commit is True
-        assert options.git.create_pr is False
-        assert options.execution.interactive is False
-        assert options.execution.dry_run is True
+        assert options.git.commit
+        assert not options.git.create_pr
+        assert not options.execution.interactive
+        assert options.execution.dry_run
 
     def test_from_args_missing_attributes(self) -> None:
         class MockArgs:
@@ -367,9 +367,9 @@ class TestWorkflowOptions:
         args = MockArgs()
         options = WorkflowOptions.from_args(args)
 
-        assert options.cleaning.strip_code is True
+        assert options.cleaning.strip_code
 
-        assert options.testing.test is False
+        assert not options.testing.test
         assert options.publishing.publish is None
 
 

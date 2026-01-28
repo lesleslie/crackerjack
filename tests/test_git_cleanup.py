@@ -191,7 +191,7 @@ class TestGetGitignoreChanges:
 
         # Should find .pyc files
         assert len(changes) == 2
-        assert all(f.name == "test.pyc" or f.name == "module.pyc" for f in changes)
+        assert all(f.name in ("test.pyc", "module.pyc") for f in changes)
 
 
 class TestCategorizeFiles:

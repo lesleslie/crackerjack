@@ -25,6 +25,9 @@ finally:
 
 from crackerjack.models.semantic_models import SemanticConfig
 
+# Define a more flexible type for the tokenizer to handle different backend types
+TokenizerType = AutoTokenizer | object
+
 logger = logging.getLogger(__name__)
 
 
@@ -32,7 +35,7 @@ class EmbeddingService:
     def __init__(self, config: SemanticConfig) -> None:
         self.config = config
         self._session: ort.InferenceSession | None = None
-        self._tokenizer: AutoTokenizer | None = None
+        self._tokenizer: TokenizerType | None = None
         self._model_loaded = False
 
     @property
@@ -45,7 +48,7 @@ class EmbeddingService:
         return self._session
 
     @property
-    def tokenizer(self) -> AutoTokenizer:
+    def tokenizer(self) -> TokenizerType:
         if not self._model_loaded:
             self._load_model()
         if self._tokenizer is None:

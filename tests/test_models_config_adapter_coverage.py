@@ -238,12 +238,12 @@ class TestEdgeCasesAndDefaults:
 
         workflow_options = OptionsAdapter.from_options_protocol(minimal_options)
 
-        assert workflow_options.cleaning.clean is False
-        assert workflow_options.execution.verbose is True
+        assert not workflow_options.cleaning.clean
+        assert workflow_options.execution.verbose
 
-        assert workflow_options.cleaning.update_docs is False
-        assert workflow_options.testing.benchmark is False
-        assert workflow_options.hooks.skip_hooks is False
+        assert not workflow_options.cleaning.update_docs
+        assert not workflow_options.testing.benchmark
+        assert not workflow_options.hooks.skip_hooks
 
     def test_boolean_type_safety(self) -> None:
         options = Mock(spec=OptionsProtocol)

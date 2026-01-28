@@ -140,12 +140,12 @@ class TestPluginManager:
         plugin.deactivated = False
 
         result = plugin_manager.enable_plugin("lifecycle - plugin")
-        assert result is True
-        assert plugin.activated is True
+        assert result
+        assert plugin.activated
 
         result = plugin_manager.disable_plugin("lifecycle - plugin")
-        assert result is True
-        assert plugin.deactivated is True
+        assert result
+        assert plugin.deactivated
 
     def test_plugin_error_handling(self, plugin_manager) -> None:
         from crackerjack.plugins.base import PluginMetadata, PluginType
@@ -270,8 +270,8 @@ class TestPluginIntegration:
         mock_fs_service = Mock()
         plugin = ServicePlugin(metadata, filesystem_service=mock_fs_service)
 
-        assert plugin.activate() is True
-        assert plugin.execute() is True
+        assert plugin.activate()
+        assert plugin.execute()
 
     def test_plugin_manager_service_integration(self) -> None:
         from rich.console import Console
@@ -360,7 +360,7 @@ class TestPluginIntegration:
 
         result = plugin.execute(context=test_context)
 
-        assert result is True
+        assert result
         assert plugin.last_context == test_context
 
 

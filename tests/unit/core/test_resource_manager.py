@@ -222,13 +222,12 @@ class TestResourceManagerContextManager:
         resource = Mock()
         resource.cleanup = AsyncMock()
 
-        try:
+        from contextlib import suppress
+        with suppress(RuntimeError):
             async with ResourceManager() as manager:
                 manager.register_resource(resource)
                 msg = "Test error"
                 raise RuntimeError(msg)
-        except RuntimeError:
-            pass
 
         # Resource should still be cleaned up
         resource.cleanup.assert_called_once()

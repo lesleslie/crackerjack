@@ -138,7 +138,7 @@ class TestUtilityCheckDefaultConfigs:
         assert isinstance(config.check_id, UUID)
         assert config.enabled is True
         assert isinstance(config.file_patterns, list)
-        assert config.stage in ["fast", "comprehensive"]
+        assert config.stage in ("fast", "comprehensive")
 
     def test_get_default_config_eof_newline(self) -> None:
         """Test default config for EOF_NEWLINE check."""
@@ -327,7 +327,7 @@ class TestUtilityCheckStageAssignment:
             config = adapter.get_default_config()
 
             # Should be in fast stage (or at least have a stage)
-            assert config.stage in ["fast", "comprehensive"]
+            assert config.stage in ("fast", "comprehensive")
 
     def test_comprehensive_checks_in_comp_stage(self) -> None:
         """Test comprehensive checks may be in comprehensive stage."""
@@ -341,4 +341,4 @@ class TestUtilityCheckStageAssignment:
         config = adapter.get_default_config()
 
         # Should have a valid stage
-        assert config.stage in ["fast", "comprehensive"]
+        assert config.stage in ("fast", "comprehensive")
