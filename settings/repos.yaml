@@ -4,11 +4,11 @@
 repos:
   # Default MCP integration type - can be 'native' or '3rd-party'
   mcp_type: "native"  # Options: 'native' or '3rd-party' (was previously 'integrated')
-  
+
   # Repository settings
   default_branch: "main"
   allow_forks: true
-  
+
   # MCP-specific configurations
   mcp_configurations:
     native:
@@ -16,7 +16,7 @@ repos:
       enabled: true
       timeout: 300
       retry_attempts: 3
-      
+
     third_party:
       description: "3rd-party MCP integration with external tools"
       enabled: false

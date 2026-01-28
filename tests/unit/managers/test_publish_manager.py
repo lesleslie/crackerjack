@@ -170,6 +170,98 @@ class TestPublishManagerVersionManagement:
         # Should not write file in dry run mode
         manager.filesystem.write_file.assert_not_called()
 
+    def test_update_python_version_files_init_py(self, manager, tmp_path) -> None:
+        """Test updating __version__ in __init__.py."""
+        init_content = '"""Package module."""\n__version__ = "1.2.3"\n'
+        updated_content = '"""Package module."""\n__version__ = "1.2.4"\n'
+
+        init_path = tmp_path / "__init__.py"
+        init_path.write_text(init_content)
+        manager.filesystem.read_file.return_value = init_content
+
+        # Mock the update_python_version function at its source
+        with patch(
+            "crackerjack.services.regex_patterns.update_python_version",
+            return_value=updated_content,
+        ):
+            result = manager._update_python_version_files("1.2.4")
+
+            assert result is True
+            manager.filesystem.write_file.assert_called_once_with(
+                init_path,
+                updated_content,
+            )
+
+    def test_update_python_version_files_version_py(self, manager, tmp_path) -> None:
+        """Test updating __version__ in __version__.py."""
+        version_content = '__version__ = "1.2.3"\n'
+        updated_content = '__version__ = "1.2.4"\n'
+
+        version_path = tmp_path / "__version__.py"
+        version_path.write_text(version_content)
+        manager.filesystem.read_file.return_value = version_content
+
+        # Mock the update_python_version function at its source
+        with patch(
+            "crackerjack.services.regex_patterns.update_python_version",
+            return_value=updated_content,
+        ):
+            result = manager._update_python_version_files("1.2.4")
+
+            assert result is True
+            manager.filesystem.write_file.assert_called_once_with(
+                version_path,
+                updated_content,
+            )
+
+    def test_update_python_version_files_no_change(self, manager, tmp_path) -> None:
+        """Test when __version__ is already at target version."""
+        init_content = '__version__ = "1.2.4"\n'
+
+        init_path = tmp_path / "__init__.py"
+        init_path.write_text(init_content)
+        manager.filesystem.read_file.return_value = init_content
+
+        # Mock the update_python_version function (returns same content)
+        with patch(
+            "crackerjack.services.regex_patterns.update_python_version",
+            return_value=init_content,
+        ):
+            result = manager._update_python_version_files("1.2.4")
+
+            assert result is False
+            manager.filesystem.write_file.assert_not_called()
+
+    def test_update_python_version_files_dry_run(self, manager, tmp_path) -> None:
+        """Test _update_python_version_files in dry run mode."""
+        manager.dry_run = True
+        init_content = '__version__ = "1.2.3"\n'
+        updated_content = '__version__ = "1.2.4"\n'
+
+        init_path = tmp_path / "__init__.py"
+        init_path.write_text(init_content)
+        manager.filesystem.read_file.return_value = init_content
+
+        # Mock the update_python_version function at its source
+        with patch(
+            "crackerjack.services.regex_patterns.update_python_version",
+            return_value=updated_content,
+        ):
+            result = manager._update_python_version_files("1.2.4")
+
+            assert result is True
+            # Should not write file in dry run mode
+            manager.filesystem.write_file.assert_not_called()
+
+    def test_update_python_version_files_no_files(self, manager, tmp_path) -> None:
+        """Test when no __version__ files exist."""
+        # Don't create any __init__.py or __version__.py
+        result = manager._update_python_version_files("1.2.4")
+
+        assert result is False
+        manager.filesystem.read_file.assert_not_called()
+        manager.filesystem.write_file.assert_not_called()
+
     def test_bump_version_patch(self, manager, tmp_path) -> None:
         """Test bumping patch version."""
         pyproject_path = tmp_path / "pyproject.toml"
@@ -182,10 +274,11 @@ class TestPublishManagerVersionManagement:
         )
 
         with patch.object(manager, "_get_version_recommendation", return_value=None):
-            with patch.object(manager, "_update_changelog_for_version"):
-                new_version = manager.bump_version("patch")
+            with patch.object(manager, "_update_python_version_files"):
+                with patch.object(manager, "_update_changelog_for_version"):
+                    new_version = manager.bump_version("patch")
 
-                assert new_version == "1.2.4"
+                    assert new_version == "1.2.4"
 
     def test_bump_version_no_current_version(self, manager) -> None:
         """Test bump_version when current version cannot be determined."""
@@ -209,10 +302,11 @@ class TestPublishManagerVersionManagement:
 
         with patch.object(manager, "_get_version_recommendation", return_value=mock_recommendation):
             with patch.object(manager, "_display_version_analysis"):
-                with patch.object(manager, "_update_changelog_for_version"):
-                    new_version = manager.bump_version("auto")
+                with patch.object(manager, "_update_python_version_files"):
+                    with patch.object(manager, "_update_changelog_for_version"):
+                        new_version = manager.bump_version("auto")
 
-                    assert new_version == "1.3.0"
+                        assert new_version == "1.3.0"
 
 
 @pytest.mark.unit

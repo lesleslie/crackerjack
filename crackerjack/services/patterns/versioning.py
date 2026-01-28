@@ -57,4 +57,20 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ),
         ],
     ),
+    "update_python_version": ValidatedPattern(
+        name="update_python_version",
+        pattern=r'(__version__\s*=\s*["\'])([^"\']+)(["\'])',
+        replacement=r"\g<1>NEW_VERSION\g<3>",
+        description="Update __version__ in Python files (NEW_VERSION placeholder"
+        " replaced dynamically)",
+        test_cases=[
+            ('__version__ = "1.2.3"', '__version__ = "NEW_VERSION"'),
+            ("__version__='0.1.0'", "__version__='NEW_VERSION'"),
+            ('__version__="1.0.0-beta"', '__version__="NEW_VERSION"'),
+            ("__version__ = '2.1.0'", "__version__ = 'NEW_VERSION'"),
+            ("__version__='10.20.30'", "__version__='NEW_VERSION'"),
+            ('    __version__ = "1.2.3"', '    __version__ = "NEW_VERSION"'),
+            ('name = "my-package"', 'name = "my-package"'),
+        ],
+    ),
 }
