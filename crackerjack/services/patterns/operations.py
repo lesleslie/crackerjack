@@ -68,6 +68,36 @@ def update_pyproject_version(content: str, new_version: str) -> str:
     )
 
 
+def update_python_version(content: str, new_version: str) -> str:
+    """Update __version__ variable in Python files.
+
+    Args:
+        content: The Python file content to update
+        new_version: The new version string to set
+
+    Returns:
+        Updated content with __version__ modified
+    """
+    from . import SAFE_PATTERNS
+
+    pattern_obj = SAFE_PATTERNS["update_python_version"]
+
+    temp_pattern = ValidatedPattern(
+        name="temp_python_version_update",
+        pattern=pattern_obj.pattern,
+        replacement=f"\\g<1>{new_version}\\g<3>",
+        description=f"Update __version__ to {new_version}",
+        test_cases=[
+            ('__version__ = "1.2.3"', f'__version__ = "{new_version}"'),
+        ],
+    )
+
+    return re.compile(pattern_obj.pattern, re.MULTILINE).sub(
+        temp_pattern.replacement,
+        content,
+    )
+
+
 def apply_formatting_fixes(content: str) -> str:
     from . import SAFE_PATTERNS
 

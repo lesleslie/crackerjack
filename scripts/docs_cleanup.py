@@ -1,21 +1,10 @@
 #!/usr/bin/env python3
-"""
-Documentation cleanup utility for crackerjack project.
-
-This script uses the shared DocumentationCategorizer to analyze and categorize
-documentation files. It provides the same 100% accuracy as the production
-DocumentationCleanup service but doesn't move files - just reports.
-
-Usage:
-    python scripts/docs_cleanup.py --dry-run  # Preview changes
-    python scripts/docs_cleanup.py --execute    # Execute cleanup (via production service)
-"""
 
 import argparse
 import re
 from pathlib import Path
 
-# Use the shared categorization logic
+
 from crackerjack.services.doc_categorizer import DocumentationCategorizer
 
 
@@ -246,7 +235,7 @@ class DocCleanupAnalyzer:
                 ])
             lines.append("")
 
-        # Move to archive
+
         archive_categories = [
             "completion_reports",
             "audits",
@@ -263,11 +252,11 @@ class DocCleanupAnalyzer:
             "-" * 80
         ])
 
-        # Group by destination
+
         for category in archive_categories:
             files = results.get(category, [])
             if files:
-                # Extract destination from first file
+
                 if files and "reason" in files[0]:
                     lines.append(
                         f"\n  → {category.replace('_', '-').title()} ({len(files)} files)"
@@ -303,7 +292,7 @@ class DocCleanupAnalyzer:
                 lines.append(f"  • {item['file']}")
             lines.append("")
 
-        # Summary
+
         total = (
             len(results["keep_in_root"])
             + len(results.get("keep_in_docs", []))
@@ -366,11 +355,6 @@ def main():
 
     print(report)
 
-    # Note: Actual file movement is now handled by the production DocumentationCleanup service
-    # which has backup, rollback, and security features. To execute cleanup, use:
-    #   python -m crackerjack run --cleanup-docs
-    # or with preview:
-    #   python -m crackerjack run --cleanup-docs --docs-dry-run
 
     if results["uncategorized"]:
         print(

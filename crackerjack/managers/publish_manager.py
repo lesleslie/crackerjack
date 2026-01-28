@@ -215,6 +215,54 @@ class PublishManagerImpl:
             self.console.print(f"[red]❌[/ red] Error updating version: {e}")
             return False
 
+    def _update_python_version_files(self, new_version: str) -> bool:
+        """Update __version__ in Python files within the package root.
+
+        Finds and updates __version__ assignments in:
+        - __init__.py (fallback version)
+        - __version__.py (if exists in package root)
+
+        Args:
+            new_version: The new version string to set
+
+        Returns:
+            True if at least one file was updated, False otherwise
+        """
+        from crackerjack.services.regex_patterns import update_python_version
+
+        updated_files: list[str] = []
+        package_root = self.pkg_path
+
+        # Files to check for __version__ assignments
+        version_files = [
+            package_root / "__init__.py",
+            package_root / "__version__.py",
+        ]
+
+        for version_file in version_files:
+            if not version_file.exists():
+                continue
+
+            try:
+                content = self.filesystem.read_file(version_file)
+                new_content = update_python_version(content, new_version)
+
+                if content != new_content:
+                    if not self.dry_run:
+                        self.filesystem.write_file(version_file, new_content)
+                    updated_files.append(version_file.name)
+                    self.console.print(
+                        f"[green]✅[/ green] Updated __version__ in {version_file.name}",
+                    )
+            except Exception as e:
+                self.console.print(
+                    f"[yellow]⚠️[/ yellow] Could not update {version_file.name}: {e}",
+                )
+
+        if updated_files:
+            return True
+        return False
+
     def _calculate_next_version(self, current: str, bump_type: str) -> str:
         try:
             parts = current.split(".")
@@ -264,6 +312,9 @@ class PublishManagerImpl:
                 self.console.print(
                     f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
+
+                # Update Python version files (__init__.py, __version__.py)
+                self._update_python_version_files(new_version)
 
                 self._update_changelog_for_version(current_version, new_version)
             else:
