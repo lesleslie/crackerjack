@@ -351,12 +351,10 @@ class TestHookExecutorEdgeCases:
         hook.timeout = 1.0
 
         # Should handle empty command gracefully
-        try:
+        from contextlib import suppress
+        with suppress(Exception):
             result = executor.execute_single_hook(hook)
             # Behavior depends on implementation
-        except Exception:
-            # Acceptable to raise an exception for empty command
-            pass
 
     def test_hook_executor_with_very_long_output(self) -> None:
         """Test hook executor with command that produces very long output."""
@@ -379,7 +377,7 @@ class TestHookExecutorEdgeCases:
             result = executor.execute_single_hook(hook)
 
             # Should handle long output gracefully
-            assert result.status in ["passed", "failed"]  # Depends on parsing logic
+            assert result.status in ("passed", "failed")  # Depends on parsing logic
 
     def test_hook_executor_parsing_edge_cases(self) -> None:
         """Test hook executor output parsing edge cases."""

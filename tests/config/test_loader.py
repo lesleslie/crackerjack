@@ -1,93 +1,275 @@
+import tempfile
+import yaml
 from pathlib import Path
-
 import pytest
+from unittest.mock import patch, mock_open
+from pydantic import BaseModel
+from crackerjack.config.loader import (
+    _load_single_config_file,
+    _merge_config_data,
+    _extract_adapter_timeouts,
+    _load_pyproject_toml,
+    load_settings,
+    load_settings_async,
+    _load_yaml_data,
+    _load_single_yaml_file,
+    _filter_relevant_data,
+    _log_filtered_fields,
+    _log_load_info
+)
 
 
-def _make_settings_class():
-    # Create a fake Settings-like class with required surface
-    class FakeSettings:  # not subclassing to avoid dependency
-        model_fields = {"debug": None, "max_workers": None}
-
-        def __init__(self, debug: bool = False, max_workers: int = 4) -> None:
-            self.debug = debug
-            self.max_workers = max_workers
-
-        @classmethod
-        async def create_async(cls, **kwargs):
-            return cls(**kwargs)
-
-    return FakeSettings
+class MockSettings(BaseModel):
+    """Mock settings class for testing."""
+    name: str = "default"
+    value: int = 42
+    timeout: int = 30
 
 
-def _write_yaml(base: Path, name: str, content: str) -> Path:
-    base.mkdir(parents=True, exist_ok=True)
-    path = base / name
-    path.write_text(content, encoding="utf-8")
-    return path
-
-
-def test_load_settings_merges_and_filters(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    from importlib import import_module, reload
+def test_load_single_config_file_exists():
+    """Test loading a single config file that exists."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        yaml.dump({"name": "test", "value": 100}, tmp)
+        tmp_path = Path(tmp.name)
 
     try:
-        loader = import_module("crackerjack.config.loader")
-        reload(loader)
-    except ImportError as e:  # e.g., missing PyYAML in environment
-        pytest.skip(f"loader import prerequisites missing: {e}")
+        data = _load_single_config_file(tmp_path)
+        assert data == {"name": "test", "value": 100}
+    finally:
+        tmp_path.unlink()
 
-    FakeSettings = _make_settings_class()
 
-    settings_dir = tmp_path / "settings"
-    _write_yaml(settings_dir, "crackerjack.yaml", "debug: false\nmax_workers: 2\nunknown: 1\n")
-    _write_yaml(settings_dir, "local.yaml", "debug: true\n")
+def test_load_single_config_file_not_exists():
+    """Test loading a single config file that doesn't exist."""
+    data = _load_single_config_file(Path("nonexistent.yaml"))
+    assert data == {}
 
-    result = loader.load_settings(FakeSettings, settings_dir=settings_dir)
 
-    # local.yaml should override crackerjack.yaml
-    assert result.debug is True
-    assert result.max_workers == 2
-    # Unknown fields are ignored and not passed to constructor
-    assert not hasattr(result, "unknown")
+def test_load_single_config_file_invalid_yaml():
+    """Test loading a config file with invalid YAML."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        tmp.write("invalid: [ yaml: content")
+        tmp_path = Path(tmp.name)
+
+    try:
+        data = _load_single_config_file(tmp_path)
+        assert data == {}  # Should return empty dict on error
+    finally:
+        tmp_path.unlink()
+
+
+def test_merge_config_data():
+    """Test merging multiple config files."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_dir_path = Path(tmp_dir)
+
+        # Create first config file
+        config1_path = tmp_dir_path / "config1.yaml"
+        with config1_path.open('w') as f:
+            yaml.dump({"name": "first", "value": 1}, f)
+
+        # Create second config file
+        config2_path = tmp_dir_path / "config2.yaml"
+        with config2_path.open('w') as f:
+            yaml.dump({"name": "second", "extra": "data"}, f)
+
+        merged = _merge_config_data([config1_path, config2_path])
+
+        # Second file should override first for overlapping keys
+        assert merged["name"] == "second"
+        assert merged["value"] == 1
+        assert merged["extra"] == "data"
+
+
+def test_extract_adapter_timeouts():
+    """Test extracting adapter timeouts from config."""
+    config = {
+        "name": "test",
+        "ruff_timeout": 60,
+        "mypy_timeout": 120,
+        "value": 42
+    }
+
+    _extract_adapter_timeouts(config)
+
+    # Check that timeouts were extracted
+    assert "adapter_timeouts" in config
+    assert config["adapter_timeouts"]["ruff_timeout"] == 60
+    assert config["adapter_timeouts"]["mypy_timeout"] == 120
+
+    # Check that original timeout keys were removed
+    assert "ruff_timeout" not in config
+    assert "mypy_timeout" not in config
+
+    # Check that non-timeout keys remain
+    assert config["name"] == "test"
+    assert config["value"] == 42
+
+
+def test_load_pyproject_toml_exists():
+    """Test loading configuration from pyproject.toml."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_dir_path = Path(tmp_dir)
+
+        # Create a pyproject.toml file
+        pyproject_path = tmp_dir_path.parent / "pyproject.toml"  # Need to simulate parent structure
+        with tempfile.TemporaryDirectory() as outer_tmp:
+            outer_path = Path(outer_tmp)
+            pyproject_path = outer_path / "pyproject.toml"
+
+            with pyproject_path.open('w') as f:
+                f.write("""
+[tool.crackerjack]
+name = "from_pyproject"
+value = 999
+ruff_timeout = 45
+""")
+
+            # Create a settings directory to match the expected structure
+            settings_dir = outer_path / "settings"
+            settings_dir.mkdir()
+
+            data = _load_pyproject_toml(settings_dir)
+
+            # Check that the data was loaded correctly
+            assert data["name"] == "from_pyproject"
+            assert data["value"] == 999
+            assert data["adapter_timeouts"]["ruff_timeout"] == 45
+
+
+def test_load_settings():
+    """Test loading settings with the main function."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_dir_path = Path(tmp_dir)
+
+        # Create settings directory
+        settings_dir = tmp_dir_path / "settings"
+        settings_dir.mkdir()
+
+        # Create a config file
+        config_path = settings_dir / "crackerjack.yaml"
+        with config_path.open('w') as f:
+            yaml.dump({"name": "configured", "value": 200}, f)
+
+        # Load settings
+        settings = load_settings(MockSettings, settings_dir)
+
+        assert settings.name == "configured"
+        assert settings.value == 200
+        assert settings.timeout == 30  # Default value
 
 
 @pytest.mark.asyncio
-async def test_load_settings_async_handles_invalid_yaml_and_continues(tmp_path: Path) -> None:
-    from importlib import import_module, reload
+async def test_load_settings_async():
+    """Test loading settings with the async function."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_dir_path = Path(tmp_dir)
+
+        # Create settings directory
+        settings_dir = tmp_dir_path / "settings"
+        settings_dir.mkdir()
+
+        # Create a config file
+        config_path = settings_dir / "crackerjack.yaml"
+        with config_path.open('w') as f:
+            yaml.dump({"name": "async_configured", "value": 300}, f)
+
+        # Load settings
+        settings = await load_settings_async(MockSettings, settings_dir)
+
+        assert settings.name == "async_configured"
+        assert settings.value == 300
+        assert settings.timeout == 30  # Default value
+
+
+@pytest.mark.asyncio
+async def test_load_yaml_data():
+    """Test loading YAML data asynchronously."""
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_dir_path = Path(tmp_dir)
+
+        # Create a config file
+        config_path = tmp_dir_path / "test.yaml"
+        with config_path.open('w') as f:
+            yaml.dump({"name": "yaml_test", "value": 400}, f)
+
+        data = await _load_yaml_data([config_path])
+
+        assert data["name"] == "yaml_test"
+        assert data["value"] == 400
+
+
+@pytest.mark.asyncio
+async def test_load_single_yaml_file():
+    """Test loading a single YAML file asynchronously."""
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.yaml', delete=False) as tmp:
+        yaml.dump({"name": "single_file", "value": 500}, tmp)
+        tmp_path = Path(tmp.name)
 
     try:
-        loader = import_module("crackerjack.config.loader")
-        reload(loader)
-    except ImportError as e:
-        pytest.skip(f"loader import prerequisites missing: {e}")
-
-    FakeSettings = _make_settings_class()
-
-    settings_dir = tmp_path / "settings"
-    # Invalid YAML in local.yaml should be logged and ignored
-    _write_yaml(settings_dir, "local.yaml", ":::: not yaml ::::\n")
-    _write_yaml(settings_dir, "crackerjack.yaml", "debug: true\nmax_workers: 8\n")
-
-    result = await loader.load_settings_async(FakeSettings, settings_dir=settings_dir)
-    assert result.debug is True
-    assert result.max_workers == 8
+        data = await _load_single_yaml_file(tmp_path)
+        assert data == {"name": "single_file", "value": 500}
+    finally:
+        tmp_path.unlink()
 
 
-def test_load_settings_ignores_non_mapping_yaml(tmp_path: Path) -> None:
-    from importlib import import_module, reload
+@pytest.mark.asyncio
+async def test_load_single_yaml_file_not_exists():
+    """Test loading a single YAML file that doesn't exist asynchronously."""
+    data = await _load_single_yaml_file(Path("nonexistent.yaml"))
+    assert data is None
 
-    try:
-        loader = import_module("crackerjack.config.loader")
-        reload(loader)
-    except ImportError as e:
-        pytest.skip(f"loader import prerequisites missing: {e}")
 
-    FakeSettings = _make_settings_class()
+def test_filter_relevant_data():
+    """Test filtering relevant data for a settings class."""
+    merged_data = {
+        "name": "test",
+        "value": 100,
+        "unknown_field": "should_be_filtered",
+        "another_unknown": "also_filtered"
+    }
 
-    settings_dir = tmp_path / "settings"
-    # Non-dict YAML should be ignored with a warning; only valid mapping should apply
-    _write_yaml(settings_dir, "crackerjack.yaml", "- a\n- b\n- c\n")
-    _write_yaml(settings_dir, "local.yaml", "max_workers: 6\n")
+    filtered_data = _filter_relevant_data(merged_data, MockSettings)
 
-    result = loader.load_settings(FakeSettings, settings_dir=settings_dir)
-    assert result.max_workers == 6
-    assert result.debug is False  # default
+    # Should only contain fields that exist in MockSettings
+    assert "name" in filtered_data
+    assert "value" in filtered_data
+    assert "unknown_field" not in filtered_data
+    assert "another_unknown" not in filtered_data
+    assert filtered_data["name"] == "test"
+    assert filtered_data["value"] == 100
+
+
+def test_log_filtered_fields(caplog):
+    """Test logging of filtered fields."""
+    merged_data = {
+        "name": "test",
+        "value": 100,
+        "unknown_field": "should_be_filtered"
+    }
+
+    relevant_data = {
+        "name": "test",
+        "value": 100
+    }
+
+    with caplog.at_level("DEBUG"):
+        _log_filtered_fields(merged_data, relevant_data)
+
+        # Check that the unknown field was logged
+        assert "unknown_field" in caplog.text
+
+
+def test_log_load_info(caplog):
+    """Test logging of load information."""
+    relevant_data = {
+        "name": "test",
+        "value": 100
+    }
+
+    with caplog.at_level("DEBUG"):
+        _log_load_info(MockSettings, relevant_data)
+
+        # Check that the load info was logged
+        assert "Loaded 2 configuration values" in caplog.text
+        assert "MockSettings" in caplog.text

@@ -104,7 +104,7 @@ async def test_qwen_provider_selection() -> bool:
             provider = settings.ai_provider
             print(f"✅ Current AI provider: {provider}")
 
-            if provider in ["claude", "qwen"]:
+            if provider in ("claude", "qwen"):
                 print(f"✅ Provider '{provider}' is valid")
                 return True
             else:
@@ -126,12 +126,16 @@ async def main() -> None:
     results = []
 
 
-    results.append(await test_qwen_settings_field())
-    results.append(await test_qwen_adapter_import())
-    results.append(await test_qwen_settings_validation())
-    results.append(await test_qwen_fixer_initialization())
-    results.append(await test_qwen_bridge_import())
-    results.append(await test_qwen_provider_selection())
+    results.extend([
+        await test_qwen_settings_field(),
+        await test_qwen_adapter_import()
+    ])
+    results.extend([
+        await test_qwen_settings_validation(),
+        await test_qwen_fixer_initialization(),
+        await test_qwen_bridge_import(),
+        await test_qwen_provider_selection()
+    ])
 
 
     print("\n" + "=" * 60)

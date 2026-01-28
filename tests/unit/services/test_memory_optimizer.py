@@ -88,7 +88,7 @@ class TestLazyLoader:
         result = loader.get()
 
         assert result == "loaded_value"
-        assert loader.is_loaded is True
+        assert loader.is_loaded
         assert loader.access_count == 1
         assert factory.call_count == 1
 
@@ -133,12 +133,12 @@ class TestLazyLoader:
             )
 
         loader.get()
-        assert loader.is_loaded is True
+        assert loader.is_loaded
 
         loader.dispose()
 
-        assert loader.is_loaded is False
-        assert resource.closed is True
+        assert not loader.is_loaded
+        assert resource.closed
 
     def test_auto_dispose_on_deletion(self) -> None:
         """Test auto_dispose=True calls dispose on __del__."""

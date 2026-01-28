@@ -87,7 +87,7 @@ class AutofixCoordinator:
             self.logger.info(
                 "AI agent mode enabled for fast stage, attempting AI-based fixing"
             )
-            return self._apply_ai_agent_fixes(hook_results)
+            return self._apply_ai_agent_fixes(hook_results, stage="fast")
 
         return self._execute_fast_fixes()
 
@@ -96,7 +96,7 @@ class AutofixCoordinator:
 
         if ai_agent_enabled:
             self.logger.info("AI agent mode enabled, attempting AI-based fixing")
-            return self._apply_ai_agent_fixes(hook_results)
+            return self._apply_ai_agent_fixes(hook_results, stage="comprehensive")
 
         failed_hooks = self._extract_failed_hooks(hook_results)
         if not failed_hooks:
@@ -322,7 +322,9 @@ class AutofixCoordinator:
         output_lower = raw_output.lower()
         return "importerror" in output_lower or "modulenotfounderror" in output_lower
 
-    def _apply_ai_agent_fixes(self, hook_results: Sequence[object]) -> bool:
+    def _apply_ai_agent_fixes(
+        self, hook_results: Sequence[object], stage: str = "fast"
+    ) -> bool:
         max_iterations = self._get_max_iterations()
 
         context = AgentContext(
@@ -342,11 +344,11 @@ class AutofixCoordinator:
         no_progress_count = 0
 
         for iteration in range(max_iterations):
-            issues = self._get_iteration_issues(iteration, hook_results)
+            issues = self._get_iteration_issues(iteration, hook_results, stage)
             current_issue_count = len(issues)
 
             if current_issue_count == 0:
-                result = self._handle_zero_issues_case(iteration)
+                result = self._handle_zero_issues_case(iteration, stage)
                 if result is not None:
                     return result
 
@@ -372,12 +374,14 @@ class AutofixCoordinator:
 
             previous_issue_count = current_issue_count
 
-        return self._report_max_iterations_reached(max_iterations)
+        return self._report_max_iterations_reached(max_iterations, stage)
 
-    def _handle_zero_issues_case(self, iteration: int) -> bool | None:
+    def _handle_zero_issues_case(
+        self, iteration: int, stage: str = "fast"
+    ) -> bool | None:
         if iteration > 0:
             self.logger.debug("Verifying issue resolution...")
-            verification_issues = self._collect_current_issues()
+            verification_issues = self._collect_current_issues(stage=stage)
             if verification_issues:
                 count = len(verification_issues)
                 issue_word = "issue" if count == 1 else "issues"
@@ -397,15 +401,17 @@ class AutofixCoordinator:
         self,
         iteration: int,
         hook_results: Sequence[object],
+        stage: str = "fast",
     ) -> list[Issue]:
         if iteration == 0:
             return self._parse_hook_results_to_issues(hook_results)
-        return self._collect_current_issues()
+        return self._collect_current_issues(stage=stage)
 
     def _report_iteration_success(self, iteration: int) -> None:
         self.console.print(
             f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
         )
+        self.console.print()  # Add newline for cleaner UI
         self.logger.info(f"All issues resolved in {iteration} iteration(s)")
 
     def _should_stop_on_convergence(
@@ -451,6 +457,7 @@ class AutofixCoordinator:
             f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
             f"{issue_count} {issue_word} to fix[/cyan]"
         )
+        self.console.print()  # Add newline for cleaner UI
         self.logger.info(
             f"Iteration {iteration + 1}/{max_iterations}: {issue_count} {issue_word} to fix"
         )
@@ -460,10 +467,26 @@ class AutofixCoordinator:
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
     ) -> bool:
+        self.logger.info(
+            f"Starting AI agent fixing iteration with {len(issues)} issues"
+        )
+
+        # Log issue details for transparency
+        for i, issue in enumerate(issues[:3]):  # Log first 3 issues for brevity
+            self.logger.info(
+                f"  Issue {i + 1}: {issue.type.value} in {issue.file_path}:{issue.line_number} - {issue.message[:100]}..."
+            )
+        if len(issues) > 3:
+            self.logger.info(f"  ... and {len(issues) - 3} more issues")
+
         fix_result = self._execute_ai_fix(coordinator, issues)
         if fix_result is None:
+            self.logger.warning("AI agent fixing iteration failed")
             return False
 
+        self.logger.info(
+            f"AI agent fixing iteration completed with {len(fix_result.remaining_issues)} remaining issues"
+        )
         return self._process_fix_result(fix_result)
 
     def _execute_ai_fix(
@@ -472,12 +495,18 @@ class AutofixCoordinator:
         issues: list[Issue],
     ) -> FixResult | None:
         try:
+            self.logger.info("Initiating AI agent coordination for issue resolution")
+
             try:
                 asyncio.get_running_loop()
-
-                return self._run_in_threaded_loop(coordinator, issues)
+                self.logger.debug("Running AI agent fixing in existing event loop")
+                result = self._run_in_threaded_loop(coordinator, issues)
             except RuntimeError:
-                return asyncio.run(coordinator.handle_issues(issues))
+                self.logger.debug("Creating new event loop for AI agent fixing")
+                result = asyncio.run(coordinator.handle_issues(issues))
+
+            self.logger.info("AI agent coordination completed")
+            return result
         except Exception:
             self.logger.exception("AI agent handling failed")
             return None
@@ -497,12 +526,17 @@ class AutofixCoordinator:
                 new_loop = asyncio.new_event_loop()
                 asyncio.set_event_loop(new_loop)
                 try:
+                    self.logger.info(
+                        "Starting AI agent coordination in threaded event loop"
+                    )
                     result_container[0] = new_loop.run_until_complete(
                         coordinator.handle_issues(issues)
                     )
+                    self.logger.info("AI agent coordination in threaded loop completed")
                 finally:
                     new_loop.close()
             except Exception as e:
+                self.logger.exception("Error in threaded AI agent coordination")
                 exception_container[0] = e
 
         thread = threading.Thread(target=run_in_new_loop)
@@ -521,7 +555,21 @@ class AutofixCoordinator:
         fixes_count = len(fix_result.fixes_applied)
         remaining_count = len(fix_result.remaining_issues)
 
+        self.logger.info(
+            f"Processing fix result: {fixes_count} fixes applied, {remaining_count} issues remaining"
+        )
+
         if fixes_count > 0:
+            # Log details about applied fixes
+            for i, fix in enumerate(
+                fix_result.fixes_applied[:3]
+            ):  # Log first 3 fixes for brevity
+                self.logger.info(f"  Applied fix {i + 1}: {fix[:100]}...")
+            if len(fix_result.fixes_applied) > 3:
+                self.logger.info(
+                    f"  ... and {len(fix_result.fixes_applied) - 3} more fixes"
+                )
+
             return self._handle_partial_progress(
                 fix_result, fixes_count, remaining_count
             )
@@ -529,6 +577,17 @@ class AutofixCoordinator:
         if not fix_result.success and remaining_count > 0:
             self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
+
+            # Log details about remaining issues
+            for i, issue in enumerate(
+                fix_result.remaining_issues[:3]
+            ):  # Log first 3 issues for brevity
+                self.logger.info(f"  Remaining issue {i + 1}: {issue[:100]}...")
+            if len(fix_result.remaining_issues) > 3:
+                self.logger.info(
+                    f"  ... and {len(fix_result.remaining_issues) - 3} more issues"
+                )
+
             return False
 
         if remaining_count == 0:
@@ -541,6 +600,7 @@ class AutofixCoordinator:
         self.logger.warning(
             f"No fixes applied but {remaining_count} {issue_word} remain - agents unable to fix"
         )
+
         return False
 
     def _handle_partial_progress(
@@ -566,13 +626,16 @@ class AutofixCoordinator:
 
         return False
 
-    def _report_max_iterations_reached(self, max_iterations: int) -> bool:
-        final_issue_count = len(self._collect_current_issues())
+    def _report_max_iterations_reached(
+        self, max_iterations: int, stage: str = "fast"
+    ) -> bool:
+        final_issue_count = len(self._collect_current_issues(stage=stage))
         issue_word = "issue" if final_issue_count == 1 else "issues"
         self.console.print(
             f"[yellow]⚠ Reached {max_iterations} iterations with "
             f"{final_issue_count} {issue_word} remaining[/yellow]"
         )
+        self.console.print()  # Add newline for cleaner UI
         self.logger.warning(
             f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
         )
@@ -660,9 +723,9 @@ class AutofixCoordinator:
     def _get_convergence_threshold(self) -> int:
         return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
 
-    def _collect_current_issues(self) -> list[Issue]:
+    def _collect_current_issues(self, stage: str = "fast") -> list[Issue]:
         pkg_dir = self._detect_package_directory()
-        check_commands = self._build_check_commands(pkg_dir)
+        check_commands = self._build_check_commands(pkg_dir, stage=stage)
         all_issues, successful_checks = self._execute_check_commands(check_commands)
 
         if successful_checks == 0 and self.pkg_path.exists():
@@ -693,10 +756,13 @@ class AutofixCoordinator:
         self.logger.warning(f"Cannot find package directory, using {self.pkg_path}")
         return self.pkg_path
 
-    def _build_check_commands(self, pkg_dir: Path) -> list[tuple[list[str], str, int]]:
+    def _build_check_commands(
+        self, pkg_dir: Path, stage: str = "fast"
+    ) -> list[tuple[list[str], str, int]]:
         pkg_name = self.pkg_path.name
 
-        return [
+        # Define all possible commands
+        all_commands = [
             (["uv", "run", "ruff", "check", "."], "ruff", 60),
             (["uv", "run", "ruff", "format", "--check", "."], "ruff-format", 60),
             (
@@ -735,6 +801,17 @@ class AutofixCoordinator:
                 "complexity",
                 60,
             ),
+        ]
+
+        # Filter commands based on stage
+        if stage == "fast":
+            # Only include fast stage commands (ruff-related)
+            return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
+
+        # stage == "comprehensive" or any other value
+        # Only include comprehensive stage commands (type checkers, complexity, etc.)
+        return [
+            cmd for cmd in all_commands if cmd[1] in ("zuban", "refurb", "complexity")
         ]
 
     def _execute_check_commands(
