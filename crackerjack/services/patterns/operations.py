@@ -69,15 +69,6 @@ def update_pyproject_version(content: str, new_version: str) -> str:
 
 
 def update_python_version(content: str, new_version: str) -> str:
-    """Update __version__ variable in Python files.
-
-    Args:
-        content: The Python file content to update
-        new_version: The new version string to set
-
-    Returns:
-        Updated content with __version__ modified
-    """
     from . import SAFE_PATTERNS
 
     pattern_obj = SAFE_PATTERNS["update_python_version"]

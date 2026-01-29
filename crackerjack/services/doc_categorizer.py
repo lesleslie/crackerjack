@@ -1,21 +1,3 @@
-"""Documentation categorization logic for automated cleanup.
-
-This module provides sophisticated regex-based categorization of documentation
-files, achieving 100% accuracy across all markdown files in the project.
-
-Categorization is based on filename patterns using case-insensitive regex matching.
-Files are categorized into 10 distinct types with specific archive destinations.
-
-Example:
-    >>> from crackerjack.services.doc_categorizer import DocumentationCategorizer
-    >>> categorizer = DocumentationCategorizer(Path("/project"))
-    >>> result = categorizer.categorize_file(Path("TYPE_FIXING_REPORT_AGENT4.md"))
-    >>> print(result.category)
-    'completion_reports'
-    >>> print(result.destination)
-    'docs/archive/completion-reports/'
-"""
-
 from __future__ import annotations
 
 import logging
@@ -43,8 +25,6 @@ DocCategory = Literal[
 
 
 class CategoryConfig(TypedDict):
-    """Configuration for a single documentation category."""
-
     patterns: list[str]
     destination: str | None
     reason: str
@@ -52,29 +32,12 @@ class CategoryConfig(TypedDict):
 
 @dataclass
 class CategoryResult:
-    """Result of categorizing a single documentation file."""
-
     category: DocCategory | None
     destination: str | None
     reason: str
 
 
 class DocumentationCategorizer:
-    """Categorize documentation files using regex patterns.
-
-    This class encapsulates all categorization logic, providing a single
-    source of truth for documentation organization rules. It uses
-    sophisticated regex patterns to handle edge cases like:
-    - Agent reports with all-caps names (TYPE_FIXING_REPORT_AGENT4)
-    - Dash-separated filenames (bandit-performance-investigation)
-    - Mixed patterns (refactoring-plan-complexity-violations)
-
-    The categorizer achieves 100% accuracy on the crackerjack codebase
-    (60/60 files successfully categorized).
-    """
-
-    # Comprehensive pattern definitions
-    # Each category has patterns, a destination, and a reason explaining the logic
     CATEGORIES: dict[DocCategory, CategoryConfig] = {
         "keep_in_root": {
             "patterns": [
@@ -97,12 +60,12 @@ class DocumentationCategorizer:
                 r"HOOK_ISSUE_COUNT_(ROOT_CAUSE|DISPLAY_OPTIONS)\.md",
                 r"refurb_creosote_behavior\.md",
             ],
-            "destination": None,  # Keep in root
+            "destination": None,
             "reason": "Core documentation or completion milestones",
         },
         "keep_in_docs": {
             "patterns": [
-                r"AI_FIX_EXPECTED_BEHAVIOR\.md",  # User-facing, referenced by CLAUDE.md
+                r"AI_FIX_EXPECTED_BEHAVIOR\.md",
             ],
             "destination": "docs/",
             "reason": "User-facing documentation referenced by CLAUDE.md",
@@ -194,23 +157,9 @@ class DocumentationCategorizer:
     }
 
     def __init__(self, docs_root: Path) -> None:
-        """Initialize the categorizer.
-
-        Args:
-            docs_root: Root directory containing markdown files to categorize
-        """
         self.docs_root = docs_root
 
     def categorize_file(self, filepath: Path) -> CategoryResult:
-        """Categorize a single documentation file.
-
-        Args:
-            filepath: Path to the markdown file to categorize
-
-        Returns:
-            CategoryResult with category, destination, and reason.
-            If no pattern matches, category will be "uncategorized".
-        """
         filename = filepath.name
 
         for category, config in self.CATEGORIES.items():
@@ -222,7 +171,6 @@ class DocumentationCategorizer:
                         reason=config["reason"],
                     )
 
-        # No pattern matched
         return CategoryResult(
             category=None,
             destination=None,
@@ -230,12 +178,6 @@ class DocumentationCategorizer:
         )
 
     def analyze_all(self) -> dict[str, list[dict[str, str]]]:
-        """Analyze all markdown files in the docs root.
-
-        Returns:
-            Dictionary mapping category names to lists of file information.
-            Includes an "uncategorized" key for files that don't match any pattern.
-        """
         results: dict[str, list[dict[str, str]]] = {
             category: []
             for category in list(self.CATEGORIES.keys()) + ["uncategorized"]
@@ -260,68 +202,34 @@ class DocumentationCategorizer:
         return results
 
     def get_archivable_files(self) -> list[Path]:
-        """Get list of files that should be archived (not kept in root/docs).
-
-        Returns:
-            List of Path objects for files that should be moved to archive.
-        """
         archivable = []
 
         for md_file in self.docs_root.glob("*.md"):
             result = self.categorize_file(md_file)
 
-            # Archive if not categorized as "keep_in_*"
             if result.category and not result.category.startswith("keep_in_"):
                 archivable.append(md_file)
 
         return archivable
 
     def get_archive_subdirectory(self, filepath: Path) -> str | None:
-        """Determine the archive subdirectory for a file.
-
-        Args:
-            filepath: Path to the markdown file
-
-        Returns:
-            Subdirectory name (e.g., "completion-reports") or None if file
-            should not be archived.
-        """
         result = self.categorize_file(filepath)
 
         if not result.destination:
             return None
 
-        # Extract subdirectory from full destination path
-        # e.g., "docs/archive/completion-reports/" -> "completion-reports"
         dest_path = Path(result.destination)
         if "archive" in dest_path.parts:
             idx = dest_path.parts.index("archive")
             if idx + 1 < len(dest_path.parts):
                 return dest_path.parts[idx + 1]
 
-        # If destination doesn't follow archive pattern, return last part
         return dest_path.parts[-1] if dest_path.parts else None
 
     def should_keep_in_root(self, filepath: Path) -> bool:
-        """Check if a file should be kept in the project root.
-
-        Args:
-            filepath: Path to the markdown file
-
-        Returns:
-            True if file should stay in root, False otherwise.
-        """
         result = self.categorize_file(filepath)
         return result.category == "keep_in_root"
 
     def should_keep_in_docs(self, filepath: Path) -> bool:
-        """Check if a file should be kept in the docs/ directory.
-
-        Args:
-            filepath: Path to the markdown file
-
-        Returns:
-            True if file should stay in docs/, False otherwise.
-        """
         result = self.categorize_file(filepath)
         return result.category == "keep_in_docs"
