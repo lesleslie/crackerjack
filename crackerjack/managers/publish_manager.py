@@ -216,24 +216,11 @@ class PublishManagerImpl:
             return False
 
     def _update_python_version_files(self, new_version: str) -> bool:
-        """Update __version__ in Python files within the package root.
-
-        Finds and updates __version__ assignments in:
-        - __init__.py (fallback version)
-        - __version__.py (if exists in package root)
-
-        Args:
-            new_version: The new version string to set
-
-        Returns:
-            True if at least one file was updated, False otherwise
-        """
         from crackerjack.services.regex_patterns import update_python_version
 
         updated_files: list[str] = []
         package_root = self.pkg_path
 
-        # Files to check for __version__ assignments
         version_files = [
             package_root / "__init__.py",
             package_root / "__version__.py",
@@ -313,7 +300,6 @@ class PublishManagerImpl:
                     f"[green]🚀[/ green] Bumped {version_type} version: {current_version} → {new_version}",
                 )
 
-                # Update Python version files (__init__.py, __version__.py)
                 self._update_python_version_files(new_version)
 
                 self._update_changelog_for_version(current_version, new_version)

@@ -13,7 +13,6 @@ import onnxruntime as ort
 _original_stderr = sys.stderr
 sys.stderr = StringIO()
 
-
 os.environ["TRANSFORMERS_VERBOSITY"] = "error"
 
 try:
@@ -25,7 +24,6 @@ finally:
 
 from crackerjack.models.semantic_models import SemanticConfig
 
-# Define a more flexible type for the tokenizer to handle different backend types
 TokenizerType = AutoTokenizer | object
 
 logger = logging.getLogger(__name__)

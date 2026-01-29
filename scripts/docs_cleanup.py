@@ -5,9 +5,6 @@ import re
 from pathlib import Path
 
 
-from crackerjack.services.doc_categorizer import DocumentationCategorizer
-
-
 class DocCleanupAnalyzer:
     CATEGORIES = {
         "keep_in_root": {
@@ -193,48 +190,33 @@ class DocCleanupAnalyzer:
 
     def generate_report(self, results: dict) -> str:
         lines = []
-        lines.extend([
-            "=" * 80,
-            "DOCUMENTATION CLEANUP ANALYSIS",
-            "=" * 80,
-            ""
-        ])
+        lines.extend(["=" * 80, "DOCUMENTATION CLEANUP ANALYSIS", "=" * 80, ""])
 
-        lines.extend([
-            f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files",
-            "-" * 80
-        ])
+        lines.extend(
+            [f"✅ KEEP IN ROOT: {len(results['keep_in_root'])} files", "-" * 80]
+        )
         for item in results["keep_in_root"]:
-            lines.extend([
-                f"  • {item['file']}",
-                f"    Reason: {item['reason']}"
-            ])
+            lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
         lines.append("")
 
         if results.get("keep_in_docs"):
-            lines.extend([
-                f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files",
-                "-" * 80
-            ])
+            lines.extend(
+                [f"✅ KEEP IN DOCS/: {len(results['keep_in_docs'])} files", "-" * 80]
+            )
             for item in results["keep_in_docs"]:
-                lines.extend([
-                    f"  • {item['file']}",
-                    f"    Reason: {item['reason']}"
-                ])
+                lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
             lines.append("")
 
         if results.get("implementation_plans"):
-            lines.extend([
-                f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files",
-                "-" * 80
-            ])
+            lines.extend(
+                [
+                    f"📋 IMPLEMENTATION PLANS: {len(results['implementation_plans'])} files",
+                    "-" * 80,
+                ]
+            )
             for item in results["implementation_plans"]:
-                lines.extend([
-                    f"  • {item['file']}",
-                    f"    Reason: {item['reason']}"
-                ])
+                lines.extend([f"  • {item['file']}", f"    Reason: {item['reason']}"])
             lines.append("")
-
 
         archive_categories = [
             "completion_reports",
@@ -247,16 +229,11 @@ class DocCleanupAnalyzer:
         ]
 
         total_archive = sum(len(results.get(cat, [])) for cat in archive_categories)
-        lines.extend([
-            f"📦 MOVE TO ARCHIVE: {total_archive} files",
-            "-" * 80
-        ])
-
+        lines.extend([f"📦 MOVE TO ARCHIVE: {total_archive} files", "-" * 80])
 
         for category in archive_categories:
             files = results.get(category, [])
             if files:
-
                 if files and "reason" in files[0]:
                     lines.append(
                         f"\n  → {category.replace('_', '-').title()} ({len(files)} files)"
@@ -264,10 +241,9 @@ class DocCleanupAnalyzer:
                     for item in files:
                         lines.append(f"     • {item['file']}")
 
-        lines.extend([
-            f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files",
-            "-" * 80
-        ])
+        lines.extend(
+            [f"📦 MOVE TO ARCHIVE: {len(results['move_to_archive'])} files", "-" * 80]
+        )
 
         by_destination = {}
         for item in results["move_to_archive"]:
@@ -284,14 +260,12 @@ class DocCleanupAnalyzer:
         lines.append("")
 
         if results["uncategorized"]:
-            lines.extend([
-                f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files",
-                "-" * 80
-            ])
+            lines.extend(
+                [f"❓ UNCATEGORIZED: {len(results['uncategorized'])} files", "-" * 80]
+            )
             for item in results["uncategorized"]:
                 lines.append(f"  • {item['file']}")
             lines.append("")
-
 
         total = (
             len(results["keep_in_root"])
@@ -302,20 +276,22 @@ class DocCleanupAnalyzer:
             + len(results["uncategorized"])
         )
 
-        lines.extend([
-            "=" * 80,
-            "SUMMARY",
-            "=" * 80,
-            f"Total files analyzed: {total}",
-            f"Keep in root: {len(results['keep_in_root'])}",
-            f"Keep in docs/: {len(results.get('keep_in_docs', []))}",
-            f"Implementation plans: {len(results.get('implementation_plans', []))}",
-            f"Move to archive: {total_archive}",
-            f"Implementation plans: {len(results.get('implementation_plans', []))}",
-            f"Move to archive: {len(results['move_to_archive'])}",
-            f"Uncategorized: {len(results['uncategorized'])}",
-            ""
-        ])
+        lines.extend(
+            [
+                "=" * 80,
+                "SUMMARY",
+                "=" * 80,
+                f"Total files analyzed: {total}",
+                f"Keep in root: {len(results['keep_in_root'])}",
+                f"Keep in docs/: {len(results.get('keep_in_docs', []))}",
+                f"Implementation plans: {len(results.get('implementation_plans', []))}",
+                f"Move to archive: {total_archive}",
+                f"Implementation plans: {len(results.get('implementation_plans', []))}",
+                f"Move to archive: {len(results['move_to_archive'])}",
+                f"Uncategorized: {len(results['uncategorized'])}",
+                "",
+            ]
+        )
 
         return "\n".join(lines)
 
@@ -354,7 +330,6 @@ def main():
     report = analyzer.generate_report(results)
 
     print(report)
-
 
     if results["uncategorized"]:
         print(

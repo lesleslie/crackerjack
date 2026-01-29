@@ -411,7 +411,7 @@ class AutofixCoordinator:
         self.console.print(
             f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
         )
-        self.console.print()  # Add newline for cleaner UI
+        self.console.print()
         self.logger.info(f"All issues resolved in {iteration} iteration(s)")
 
     def _should_stop_on_convergence(
@@ -457,7 +457,7 @@ class AutofixCoordinator:
             f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
             f"{issue_count} {issue_word} to fix[/cyan]"
         )
-        self.console.print()  # Add newline for cleaner UI
+        self.console.print()
         self.logger.info(
             f"Iteration {iteration + 1}/{max_iterations}: {issue_count} {issue_word} to fix"
         )
@@ -471,8 +471,7 @@ class AutofixCoordinator:
             f"Starting AI agent fixing iteration with {len(issues)} issues"
         )
 
-        # Log issue details for transparency
-        for i, issue in enumerate(issues[:3]):  # Log first 3 issues for brevity
+        for i, issue in enumerate(issues[:3]):
             self.logger.info(
                 f"  Issue {i + 1}: {issue.type.value} in {issue.file_path}:{issue.line_number} - {issue.message[:100]}..."
             )
@@ -560,10 +559,7 @@ class AutofixCoordinator:
         )
 
         if fixes_count > 0:
-            # Log details about applied fixes
-            for i, fix in enumerate(
-                fix_result.fixes_applied[:3]
-            ):  # Log first 3 fixes for brevity
+            for i, fix in enumerate(fix_result.fixes_applied[:3]):
                 self.logger.info(f"  Applied fix {i + 1}: {fix[:100]}...")
             if len(fix_result.fixes_applied) > 3:
                 self.logger.info(
@@ -578,10 +574,7 @@ class AutofixCoordinator:
             self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
 
-            # Log details about remaining issues
-            for i, issue in enumerate(
-                fix_result.remaining_issues[:3]
-            ):  # Log first 3 issues for brevity
+            for i, issue in enumerate(fix_result.remaining_issues[:3]):
                 self.logger.info(f"  Remaining issue {i + 1}: {issue[:100]}...")
             if len(fix_result.remaining_issues) > 3:
                 self.logger.info(
@@ -635,7 +628,7 @@ class AutofixCoordinator:
             f"[yellow]⚠ Reached {max_iterations} iterations with "
             f"{final_issue_count} {issue_word} remaining[/yellow]"
         )
-        self.console.print()  # Add newline for cleaner UI
+        self.console.print()
         self.logger.warning(
             f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
         )
@@ -761,7 +754,6 @@ class AutofixCoordinator:
     ) -> list[tuple[list[str], str, int]]:
         pkg_name = self.pkg_path.name
 
-        # Define all possible commands
         all_commands = [
             (["uv", "run", "ruff", "check", "."], "ruff", 60),
             (["uv", "run", "ruff", "format", "--check", "."], "ruff-format", 60),
@@ -803,13 +795,9 @@ class AutofixCoordinator:
             ),
         ]
 
-        # Filter commands based on stage
         if stage == "fast":
-            # Only include fast stage commands (ruff-related)
             return [cmd for cmd in all_commands if cmd[1] in ("ruff", "ruff-format")]
 
-        # stage == "comprehensive" or any other value
-        # Only include comprehensive stage commands (type checkers, complexity, etc.)
         return [
             cmd for cmd in all_commands if cmd[1] in ("zuban", "refurb", "complexity")
         ]
@@ -892,6 +880,9 @@ class AutofixCoordinator:
             "skylos": IssueType.DEAD_CODE,
             "creosote": IssueType.DEPENDENCY,
             "check-local-links": IssueType.DOCUMENTATION,
+            "check-yaml": IssueType.FORMATTING,
+            "check-toml": IssueType.FORMATTING,
+            "check-json": IssueType.FORMATTING,
         }
 
         issue_type = hook_type_map.get(hook_name)
@@ -919,6 +910,8 @@ class AutofixCoordinator:
             issues.extend(self._parse_dead_code_output(raw_output, issue_type))
         elif hook_name == "check-local-links":
             issues.extend(self._parse_check_local_links_output(raw_output, issue_type))
+        elif hook_name in ("check-yaml", "check-toml", "check-json"):
+            issues.extend(self._parse_structured_data_output(raw_output, issue_type))
         else:
             issues.extend(self._parse_generic_output(hook_name, raw_output, issue_type))
 
@@ -1255,6 +1248,75 @@ class AutofixCoordinator:
 
     def _create_link_error_details(self, target_file: str | None) -> list[str]:
         return [f"Target file: {target_file}"] if target_file else []
+
+    def _parse_structured_data_output(
+        self, raw_output: str, issue_type: IssueType
+    ) -> list[Issue]:
+        """Parse output from check-yaml, check-toml, and check-json hooks.
+
+        These tools use format: '✗ filepath: error message'
+        """
+        issues: list[Issue] = []
+
+        for line in raw_output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_structured_data_line(line):
+                continue
+
+            issue = self._parse_single_structured_data_line(line, issue_type)
+            if issue:
+                issues.append(issue)
+
+        return issues
+
+    def _should_parse_structured_data_line(self, line: str) -> bool:
+        """Check if line is an error line (starts with ✗)."""
+        return bool(line and line.startswith("✗"))
+
+    def _parse_single_structured_data_line(
+        self, line: str, issue_type: IssueType
+    ) -> Issue | None:
+        """Parse a single error line from check-yaml/check-toml/check-json.
+
+        Format: '✗ filepath: error message'
+        Example: '✗ settings/crackerjack.yaml: could not determine a constructor'
+        """
+        try:
+            file_path, error_message = self._extract_structured_data_parts(line)
+            if not file_path:
+                return None
+
+            return Issue(
+                type=issue_type,
+                severity=Priority.MEDIUM,
+                message=error_message,
+                file_path=file_path,
+                line_number=None,  # File-level validation, no line numbers
+                stage="structured-data",
+            )
+        except Exception as e:
+            self.logger.debug(f"Failed to parse structured data line: {line} ({e})")
+            return None
+
+    def _extract_structured_data_parts(self, line: str) -> tuple[str, str]:
+        """Extract file path and error message from structured data error line.
+
+        Args:
+            line: Format: '✗ filepath: error message'
+
+        Returns:
+            tuple: (file_path, error_message)
+        """
+        # Remove the ✗ prefix
+        if line.startswith("✗"):
+            line = line[1:].strip()
+
+        # Split on first colon to separate filepath from error
+        if ":" not in line:
+            return "", line
+
+        file_path, error_message = line.split(":", 1)
+        return file_path.strip(), error_message.strip()
 
     def _parse_codespell_output(
         self, raw_output: str, issue_type: IssueType
