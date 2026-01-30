@@ -233,7 +233,7 @@ def run(
             from crackerjack.utils.temp_file_cleanup import cleanup_temp_files
 
             cleaned = cleanup_temp_files()
-            if cleaned > 0 and settings.verbose:
+            if cleaned > 0 and settings.execution.verbose:
                 console.print(
                     f"[dim]Cleaned up {cleaned} temporary file(s) from previous runs[/dim]"
                 )

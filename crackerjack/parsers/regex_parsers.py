@@ -8,9 +8,13 @@ in json_parsers.py instead.
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import RegexParser
+
+if TYPE_CHECKING:
+    from crackerjack.parsers.factory import ParserFactory
 
 logger = logging.getLogger(__name__)
 

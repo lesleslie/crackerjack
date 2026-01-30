@@ -80,7 +80,7 @@ class ParserFactory:
         """Initialize the parser factory."""
         self._json_parsers: dict[str, type[JSONParser]] = {}
         self._regex_parsers: dict[str, type[RegexParser]] = {}
-        self._parser_cache: dict[str, ToolParser] = {}
+        self._parser_cache: dict[str, JSONParser | RegexParser] = {}
 
         # Register parsers (will be populated by JSON parsers module)
         self._register_parsers()
