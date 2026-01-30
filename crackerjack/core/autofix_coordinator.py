@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 import subprocess
@@ -16,6 +17,7 @@ if TYPE_CHECKING:
     )
 
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
+from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.cache import CrackerjackCache
 from crackerjack.utils.issue_detection import should_count_as_issue
 
@@ -40,6 +42,7 @@ class AutofixCoordinator:
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
+        self._parser_factory = ParserFactory()  # Create parser factory instance
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
@@ -650,13 +653,17 @@ class AutofixCoordinator:
             hook_issues = self._parse_single_hook_result(result)
             issues.extend(hook_issues)
 
-        seen: set[tuple[str | None, int | None, str]] = set()
+        seen: set[tuple[str | None, int | None, str, str]] = set()
         unique_issues: list[Issue] = []
         for issue in issues:
+            # More specific deduplication key to avoid false positives
+            # Include: file_path, line_number, stage (tool name), and full message
+            # This prevents legitimate issues from being incorrectly deduplicated
             key = (
                 issue.file_path,
                 issue.line_number,
-                issue.message[:100],
+                issue.stage,  # Tool name (e.g., "mypy", "ruff-check")
+                issue.message,  # Full message, not truncated
             )
             if key not in seen:
                 seen.add(key)
@@ -895,612 +902,81 @@ class AutofixCoordinator:
         return []
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
-        issues: list[Issue] = []
+        """Parse hook output using JSON parser with validation.
 
+        This method now uses the ParserFactory which automatically selects
+        the appropriate parser (JSON or regex) based on tool capabilities.
+
+        Args:
+            hook_name: Name of the hook
+            raw_output: Raw tool output (JSON or text)
+
+        Returns:
+            List of parsed Issue objects
+
+        Raises:
+            ParsingError: If parsing fails or validation fails
+        """
         self.logger.debug(
-            f"Parsing hook '{hook_name}': raw_output_lines={len(raw_output.split(chr(10)))}"
+            f"Parsing hook '{hook_name}': "
+            f"raw_output_lines={len(raw_output.split(chr(10)))}"
         )
 
-        hook_type_map: dict[str, IssueType] = {
-            "zuban": IssueType.TYPE_ERROR,
-            "refurb": IssueType.COMPLEXITY,
-            "complexipy": IssueType.COMPLEXITY,
-            "pyright": IssueType.TYPE_ERROR,
-            "mypy": IssueType.TYPE_ERROR,
-            "ruff": IssueType.FORMATTING,
-            "ruff-check": IssueType.FORMATTING,
-            "ruff-format": IssueType.FORMATTING,
-            "codespell": IssueType.FORMATTING,
-            "bandit": IssueType.SECURITY,
-            "vulture": IssueType.DEAD_CODE,
-            "skylos": IssueType.DEAD_CODE,
-            "creosote": IssueType.DEPENDENCY,
-            "check-local-links": IssueType.DOCUMENTATION,
-            "check-yaml": IssueType.FORMATTING,
-            "check-toml": IssueType.FORMATTING,
-            "check-json": IssueType.FORMATTING,
-        }
+        # Extract expected issue count from output for validation
+        expected_count = self._extract_issue_count(raw_output, hook_name)
 
-        issue_type = hook_type_map.get(hook_name)
-        if not issue_type:
-            self.logger.debug(f"Unknown hook type: {hook_name}")
+        # Parse with validation using the factory
+        try:
+            issues = self._parser_factory.parse_with_validation(
+                tool_name=hook_name,
+                output=raw_output,
+                expected_count=expected_count,
+            )
+
+            self.logger.info(
+                f"Successfully parsed {len(issues)} issues from '{hook_name}'"
+            )
             return issues
 
-        if hook_name in ("zuban", "pyright", "mypy"):
-            self.logger.debug(f"Using type checker parser for '{hook_name}'")
-            issues.extend(
-                self._parse_type_checker_output(hook_name, raw_output, issue_type)
-            )
-        elif hook_name in ("ruff", "ruff-check"):
-            self.logger.debug(f"Using ruff parser for '{hook_name}'")
-            issues.extend(self._parse_ruff_output(raw_output))
-        elif hook_name == "ruff-format":
-            self.logger.debug(f"Using ruff-format parser for '{hook_name}'")
-            issues.extend(self._parse_ruff_format_output(raw_output, issue_type))
-        elif hook_name == "codespell":
-            self.logger.debug(f"Using codespell parser for '{hook_name}'")
-            issues.extend(self._parse_codespell_output(raw_output, issue_type))
-        elif hook_name == "refurb":
-            self.logger.debug(f"Using refurb parser for '{hook_name}'")
-            issues.extend(self._parse_refurb_output(raw_output, issue_type))
-        elif hook_name == "complexipy":
-            self.logger.debug(f"Using complexipy parser for '{hook_name}'")
-            issues.extend(self._parse_complexity_output(raw_output, issue_type))
-        elif hook_name == "bandit":
-            self.logger.debug(f"Using bandit parser for '{hook_name}'")
-            issues.extend(self._parse_security_output(raw_output, issue_type))
-        elif hook_name in ("vulture", "skylos"):
-            self.logger.debug(f"Using dead code parser for '{hook_name}'")
-            issues.extend(self._parse_dead_code_output(raw_output, issue_type))
-        elif hook_name == "check-local-links":
-            self.logger.debug(f"Using local links parser for '{hook_name}'")
-            issues.extend(self._parse_check_local_links_output(raw_output, issue_type))
-        elif hook_name in ("check-yaml", "check-toml", "check-json"):
-            self.logger.debug(f"Using structured data parser for '{hook_name}'")
-            issues.extend(self._parse_structured_data_output(raw_output, issue_type))
-        else:
-            self.logger.debug(f"Using generic parser for '{hook_name}'")
-            issues.extend(self._parse_generic_output(hook_name, raw_output, issue_type))
+        except ParsingError as e:
+            self.logger.error(f"Parsing failed for '{hook_name}': {e}")
+            # Re-raise to fail fast - don't silently continue with wrong data
+            raise
 
-        self.logger.debug(f"Hook '{hook_name}' produced {len(issues)} issues total")
-        return issues
+    def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
+        """Extract expected issue count from tool output.
 
-    def _parse_type_checker_output(
-        self,
-        tool_name: str,
-        raw_output: str,
-        issue_type: IssueType,
-    ) -> list[Issue]:
-        issues: list[Issue] = []
+        This attempts to parse the tool's output to determine how many issues
+        it reported, for validation purposes.
 
-        lines = raw_output.split("\n")
-        self.logger.debug(f"{tool_name}: Processing {len(lines)} output lines")
+        Args:
+            output: Raw tool output
+            tool_name: Name of the tool
 
-        lines_filtered = 0
-        lines_parsed = 0
-        lines_failed = 0
-
-        for line in lines:
-            line = line.strip()
-            if not self._should_parse_line(line):
-                lines_filtered += 1
-                continue
-
-            issue = self._parse_type_checker_line(line, tool_name, issue_type)
-            if issue:
-                issues.append(issue)
-                lines_parsed += 1
-            else:
-                lines_failed += 1
-
-        self.logger.debug(
-            f"{tool_name}: Parsed {lines_parsed} issues, "
-            f"filtered {lines_filtered} lines, "
-            f"failed to parse {lines_failed} lines"
-        )
-
-        return issues
-
-    def _should_parse_line(self, line: str) -> bool:
-        return should_count_as_issue(line)
-
-    def _parse_type_checker_line(
-        self,
-        line: str,
-        tool_name: str,
-        issue_type: IssueType,
-    ) -> Issue | None:
-        if ":" not in line:
-            return None
-
-        parts = line.split(":", 3)
-        if len(parts) < 3:
-            return None
-
-        file_path = parts[0].strip()
-        line_number = self._parse_line_number(parts[1])
-        message = self._extract_message(parts, line)
-
-        return Issue(
-            type=issue_type,
-            severity=Priority.HIGH,
-            message=message,
-            file_path=file_path,
-            line_number=line_number,
-            stage=tool_name,
-        )
-
-    def _parse_line_number(self, part: str) -> int | None:
+        Returns:
+            Expected issue count, or None if unable to determine
+        """
+        # Try parsing JSON to get count
         try:
-            return int(part.strip())
-        except (ValueError, IndexError):
-            return None
-
-    def _extract_message(self, parts: list[str], fallback: str) -> str:
-        if len(parts) == 4:
-            return parts[3].strip()
-        if len(parts) > 2:
-            return parts[2].strip()
-        return fallback
-
-    def _parse_refurb_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not line or line.startswith(("Found", "Checked")):
-                continue
-
-            if "FURB" in line and ":" in line:
-                parts = line.split(":", 2)
-                if len(parts) >= 2:
-                    file_path = parts[0].strip()
-                    try:
-                        line_number = int(parts[1].strip())
-                    except (ValueError, IndexError):
-                        line_number = None
-
-                    message = parts[2].strip() if len(parts) > 2 else line
-
-                    issues.append(
-                        Issue(
-                            type=issue_type,
-                            severity=Priority.MEDIUM,
-                            message=message,
-                            file_path=file_path,
-                            line_number=line_number,
-                            stage="refurb",
-                        )
-                    )
-
-        return issues
-
-    def _parse_ruff_output(self, raw_output: str) -> list[Issue]:
-        import re
-
-        issues: list[Issue] = []
-
-        pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not line or line.startswith(("Found", "Checked", "-")):
-                continue
-
-            match = pattern.match(line)
-            if not match:
-                continue
-
-            file_path, line_num, col_num, code, message = match.groups()
-
-            issue_type = self._get_ruff_issue_type(code)
-            severity = self._get_ruff_severity(code)
-
-            issues.append(
-                Issue(
-                    type=issue_type,
-                    severity=severity,
-                    message=f"{code} {message}",
-                    file_path=file_path,
-                    line_number=int(line_num),
-                    stage="ruff-check",
-                    details=[f"column: {col_num}", f"code: {code}"],
-                )
-            )
-
-        return issues
-
-    def _get_ruff_issue_type(self, code: str) -> IssueType:
-        if code.startswith("C9"):
-            return IssueType.COMPLEXITY
-
-        if code.startswith("S"):
-            return IssueType.SECURITY
-
-        if code.startswith("F4"):
-            return IssueType.IMPORT_ERROR
-
-        if code.startswith("F"):
-            return IssueType.FORMATTING
-
-        return IssueType.FORMATTING
-
-    def _get_ruff_severity(self, code: str) -> Priority:
-        if code.startswith(("C9", "S")):
-            return Priority.HIGH
-
-        if code.startswith("F4"):
-            return Priority.MEDIUM
-
-        return Priority.LOW
-
-    def _parse_complexity_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        """Parse complexipy output to extract complexity issues."""
-        issues: list[Issue] = []
-        lines = raw_output.split("\n")
-
-        in_failed_section = False
-        current_file = ""
-
-        for line in lines:
-            line_stripped = line.strip()
-
-            if self._is_failed_section_start(line_stripped):
-                in_failed_section = True
-                continue
-
-            if self._is_failed_section_end(line_stripped, in_failed_section):
-                break
-
-            if self._is_file_marker(line_stripped, in_failed_section):
-                current_file = self._extract_file_from_marker(line_stripped)
-                continue
-
-            if self._is_function_line(
-                line_stripped, in_failed_section, bool(current_file)
-            ):
-                issue = self._create_complexity_issue(
-                    line_stripped, current_file, issue_type
-                )
-                issues.append(issue)
-
-        return issues
-
-    def _is_failed_section_start(self, line: str) -> bool:
-        """Check if line marks the start of the failed functions section."""
-        return line.startswith("Failed functions:")
-
-    def _is_failed_section_end(self, line: str, in_section: bool) -> bool:
-        """Check if line marks the end of the failed functions section."""
-        return in_section and (not line or line.startswith("─"))
-
-    def _is_file_marker(self, line: str, in_section: bool) -> bool:
-        """Check if line is a file path marker."""
-        return in_section and line.startswith("- ") and line.endswith(":")
-
-    def _extract_file_from_marker(self, line: str) -> str:
-        """Extract file path from a file marker line."""
-        remaining = line[2:].strip()  # Remove "- " prefix
-        return remaining[:-1].strip()  # Remove trailing ":"
-
-    def _is_function_line(self, line: str, in_section: bool, has_file: bool) -> bool:
-        """Check if line is a function with complexity issue."""
-        return in_section and has_file and not line.startswith("- ") and "::" in line
-
-    def _create_complexity_issue(
-        self, line: str, file_path: str, issue_type: IssueType
-    ) -> Issue:
-        """Create an Issue object for a complexity violation."""
-        message = f"Complexity exceeded for {line}"
-        return Issue(
-            type=issue_type,
-            severity=Priority.MEDIUM,
-            message=message,
-            file_path=file_path,
-            line_number=None,
-            stage="complexity",
-        )
-
-    def _parse_security_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not line or line.startswith((">>", "Run")):
-                continue
-
-            if "Issue:" in line:
-                parts = line.split("Issue:", 1)
-                if len(parts) == 2:
-                    message = parts[1].strip()
-
-                    issues.append(
-                        Issue(
-                            type=issue_type,
-                            severity=Priority.CRITICAL,
-                            message=message,
-                            file_path=None,
-                            line_number=None,
-                            stage="security",
-                        )
-                    )
-
-        return issues
-
-    def _parse_dead_code_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not line:
-                continue
-
-            if ":" in line:
-                parts = line.split(":", 1)
-                file_path = parts[0].strip()
-                message = parts[1].strip() if len(parts) > 1 else "Dead code detected"
-
-                issues.append(
-                    Issue(
-                        type=issue_type,
-                        severity=Priority.LOW,
-                        message=message,
-                        file_path=file_path,
-                        line_number=None,
-                        stage="dead_code",
-                    )
-                )
-
-        return issues
-
-    def _parse_check_local_links_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not self._should_parse_local_link_line(line):
-                continue
-
-            issue = self._parse_single_local_link_line(line, issue_type)
-            if issue:
-                issues.append(issue)
-
-        return issues
-
-    def _should_parse_local_link_line(self, line: str) -> bool:
-        return bool(line and "File not found:" in line)
-
-    def _parse_single_local_link_line(
-        self, line: str, issue_type: IssueType
-    ) -> Issue | None:
-        try:
-            file_path, line_number, target_file = self._extract_local_link_parts(line)
-            if not file_path:
-                return None
-
-            message = self._create_link_error_message(target_file)
-            details = self._create_link_error_details(target_file)
-
-            return Issue(
-                type=issue_type,
-                severity=Priority.MEDIUM,
-                message=message,
-                file_path=file_path,
-                line_number=line_number,
-                stage="documentation",
-                details=details,
-            )
-        except Exception as e:
-            self.logger.debug(f"Failed to parse check-local-links line: {line} ({e})")
-            return None
-
-    def _extract_local_link_parts(
-        self, line: str
-    ) -> tuple[str, int | None, str | None]:
-        if ":" not in line:
-            return "", None, None
-
-        file_path, rest = line.split(":", 1)
-
-        if ":" not in rest:
-            return file_path.strip(), None, None
-
-        line_number_str, message_part = rest.split(":", 1)
-        line_number = self._parse_line_number(line_number_str)
-
-        target_file = self._extract_target_file_from_message(message_part)
-
-        return file_path.strip(), line_number, target_file
-
-    def _extract_target_file_from_message(self, message_part: str) -> str | None:
-        if " - " in message_part:
-            return message_part.split(" - ")[0].strip()
-        return None
-
-    def _create_link_error_message(self, target_file: str | None) -> str:
-        if target_file:
-            return f"Broken documentation link: '{target_file}' (file not found)"
-        return "Broken documentation link (target file not found)"
-
-    def _create_link_error_details(self, target_file: str | None) -> list[str]:
-        return [f"Target file: {target_file}"] if target_file else []
-
-    def _parse_structured_data_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not self._should_parse_structured_data_line(line):
-                continue
-
-            issue = self._parse_single_structured_data_line(line, issue_type)
-            if issue:
-                issues.append(issue)
-
-        return issues
-
-    def _should_parse_structured_data_line(self, line: str) -> bool:
-        return bool(line and line.startswith("✗"))
-
-    def _parse_single_structured_data_line(
-        self, line: str, issue_type: IssueType
-    ) -> Issue | None:
-        try:
-            file_path, error_message = self._extract_structured_data_parts(line)
-            if not file_path:
-                return None
-
-            return Issue(
-                type=issue_type,
-                severity=Priority.MEDIUM,
-                message=error_message,
-                file_path=file_path,
-                line_number=None,
-                stage="structured-data",
-            )
-        except Exception as e:
-            self.logger.debug(f"Failed to parse structured data line: {line} ({e})")
-            return None
-
-    def _extract_structured_data_parts(self, line: str) -> tuple[str, str]:
-        if line.startswith("✗"):
-            line = line[1:].strip()
-
-        if ":" not in line:
-            return "", line
-
-        file_path, error_message = line.split(":", 1)
-        return file_path.strip(), error_message.strip()
-
-    def _parse_codespell_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not self._should_parse_codespell_line(line):
-                continue
-
-            issue = self._parse_single_codespell_line(line, issue_type)
-            if issue:
-                issues.append(issue)
-
-        return issues
-
-    def _should_parse_codespell_line(self, line: str) -> bool:
-        return bool(line and "==>" in line)
-
-    def _parse_single_codespell_line(
-        self, line: str, issue_type: IssueType
-    ) -> Issue | None:
-        try:
-            file_path, line_number, message = self._extract_codespell_parts(line)
-            if not file_path:
-                return None
-
-            return Issue(
-                type=issue_type,
-                severity=Priority.LOW,
-                message=message,
-                file_path=file_path,
-                line_number=line_number,
-                stage="spelling",
-            )
-        except Exception as e:
-            self.logger.debug(f"Failed to parse codespell line: {line} ({e})")
-            return None
-
-    def _extract_codespell_parts(self, line: str) -> tuple[str, int | None, str]:
-        if ":" not in line:
-            return "", None, ""
-
-        file_path, rest = line.split(":", 1)
-
-        if ":" not in rest:
-            return file_path.strip(), None, rest.strip()
-
-        line_number_str, message_part = rest.split(":", 1)
-        line_number = self._parse_line_number(line_number_str)
-
-        message = self._format_codespell_message(message_part)
-
-        return file_path.strip(), line_number, message
-
-    def _format_codespell_message(self, message_part: str) -> str:
-        if "==>" in message_part:
-            wrong_word, suggestions = message_part.split("==>", 1)
-            return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
-        return message_part.strip()
-
-    def _parse_ruff_format_output(
-        self, raw_output: str, issue_type: IssueType
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        if "would be reformatted" in raw_output or "Failed to format" in raw_output:
-            file_count = 1
-            if "file" in raw_output:
-                import re
-
-                match = re.search(r"(\d+) files?", raw_output)
-                if match:
-                    file_count = int(match.group(1))
-
-            message = f"{file_count} file(s) require formatting"
-
-            if "error:" in raw_output:
-                error_lines = [line for line in raw_output.split("\n") if line.strip()]
-                if error_lines:
-                    message = f"Formatting error: {error_lines[0]}"
-
-            issues.append(
-                Issue(
-                    type=issue_type,
-                    severity=Priority.MEDIUM,
-                    message=message,
-                    file_path=None,
-                    line_number=None,
-                    stage="formatting",
-                    details=["Run 'uv run ruff format .' to fix"],
-                )
-            )
-
-        return issues
-
-    def _parse_generic_output(
-        self,
-        hook_name: str,
-        raw_output: str,
-        issue_type: IssueType,
-    ) -> list[Issue]:
-        issues: list[Issue] = []
-
-        if not raw_output or not raw_output.strip():
-            return issues
-
-        issues.append(
-            Issue(
-                type=issue_type,
-                severity=Priority.MEDIUM,
-                message=f"{hook_name} check failed",
-                file_path=None,
-                line_number=None,
-                stage=hook_name,
-                details=[raw_output[:500]],
-            )
-        )
-
-        return issues
+            data = json.loads(output)
+            if tool_name in ("ruff", "ruff-check"):
+                return len(data) if isinstance(data, list) else None
+            elif tool_name == "bandit":
+                if isinstance(data, dict) and "results" in data:
+                    results = data["results"]
+                    return len(results) if isinstance(results, list) else None
+            elif tool_name in ("mypy", "zuban"):
+                return len(data) if isinstance(data, list) else None
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+        # Fallback: count lines that look like issues
+        lines = output.split("\n")
+        issue_lines = [
+            line
+            for line in lines
+            if line.strip()
+            and ":" in line
+            and not line.strip().startswith(("#", "─", "Found"))
+        ]
+        return len(issue_lines) if issue_lines else None

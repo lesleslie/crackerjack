@@ -1,3 +1,4 @@
+import logging
 import os
 import subprocess
 import typing as t
@@ -5,6 +6,8 @@ import typing as t
 import typer
 from mcp_common.cli import MCPServerCLIFactory
 from rich.console import Console
+
+logger = logging.getLogger(__name__)
 
 from crackerjack import __version__
 from crackerjack.cli import (
@@ -223,6 +226,19 @@ def run(
     settings = load_settings(CrackerjackSettings)
 
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
+
+    # Clean up temporary files from previous runs
+    if not dry_run:
+        try:
+            from crackerjack.utils.temp_file_cleanup import cleanup_temp_files
+
+            cleaned = cleanup_temp_files()
+            if cleaned > 0 and settings.verbose:
+                console.print(
+                    f"[dim]Cleaned up {cleaned} temporary file(s) from previous runs[/dim]"
+                )
+        except Exception as e:
+            logger.warning(f"Failed to cleanup temporary files: {e}")
 
     if select_provider:
         import asyncio

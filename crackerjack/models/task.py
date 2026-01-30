@@ -59,10 +59,13 @@ class HookResult:
             self.id = self.name
         if self.returncode is not None and self.exit_code is None:
             self.exit_code = self.returncode
-        if self.output and self.error_message is None:
-            self.error_message = self.output
-        if self.error and self.error_message is None:
-            self.error_message = self.error
+        # REMOVED: Auto-copying output/error to error_message causes JSON duplication
+        # The autofix coordinator's _extract_raw_output() combines output + error + error_message
+        # When output is JSON, copying it to error_message creates duplicated JSON content
+        # if self.output and self.error_message is None:
+        #     self.error_message = self.output
+        # if self.error and self.error_message is None:
+        #     self.error_message = self.error
         if self.files_checked and not self.files_processed:
             self.files_processed = len(self.files_checked)
         if self.issues_found is None:
