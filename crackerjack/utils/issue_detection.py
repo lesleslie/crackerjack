@@ -12,12 +12,18 @@ def should_count_as_issue(
     if not line or not line.strip():
         return False
 
-    if line.strip().startswith("#"):
-        logger.debug(f"Filtering out comment line: {line.strip()[:100]}")
+    line_stripped = line.strip()
+
+    # Skip JSON output - tools using JSON are parsed separately
+    if line_stripped.startswith(("[", "{")):
+        logger.debug(f"Skipping JSON output line from {tool_name}")
+        return False
+
+    if line_stripped.startswith("#"):
+        logger.debug(f"Filtering out comment line: {line_stripped[:100]}")
         return False
 
     line_lower = line.lower()
-    line_stripped = line.strip()
 
     note_help_patterns = (": note:", ": help:", "note: ", "help: ")
     if any(pattern in line_lower for pattern in note_help_patterns):
