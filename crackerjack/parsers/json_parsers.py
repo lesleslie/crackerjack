@@ -945,4 +945,6 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("semgrep", SemgrepJSONParser)
     factory.register_json_parser("pip-audit", PipAuditJSONParser)
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
-    logger.info("Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks")
+    logger.info(
+        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks"
+    )

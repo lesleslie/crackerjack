@@ -98,7 +98,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "protect",
             "--report-format",
             "json",
-            "--report",
+            "--report-path",
             "/tmp/gitleaks-report.json",
             "-v",
         ],
