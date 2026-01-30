@@ -22,6 +22,7 @@ from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
 
+
 class AutofixCoordinator:
     def __init__(
         self,

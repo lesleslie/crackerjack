@@ -13,6 +13,7 @@ from crackerjack.parsers.base import JSONParser, RegexParser, ToolParser
 
 logger = logging.getLogger(__name__)
 
+
 class ParsingError(Exception):
     """Error raised when parsing fails validation.
 
@@ -61,6 +62,7 @@ class ParsingError(Exception):
             parts.append(f"  Output preview: {preview}")
 
         return "\n".join(parts)
+
 
 class ParserFactory:
     """Factory for creating tool output parsers with validation.

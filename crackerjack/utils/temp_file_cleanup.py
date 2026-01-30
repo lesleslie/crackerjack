@@ -19,6 +19,7 @@ TEMP_FILE_PATTERNS = [
     "complexipy_results_*.json",  # Also check in project directory
 ]
 
+
 def cleanup_temp_files() -> int:
     """Clean up all temporary files created by quality tools.
 
@@ -55,6 +56,7 @@ def cleanup_temp_files() -> int:
 
     return cleaned_count
 
+
 def get_temp_file_size() -> int:
     """Get total size of all temporary files.
 
@@ -75,6 +77,7 @@ def get_temp_file_size() -> int:
                 pass
 
     return total_size
+
 
 def cleanup_old_complexipy_files(max_age_hours: int = 24) -> int:
     """Clean up old complexipy JSON files that may have been left behind.

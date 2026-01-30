@@ -14,6 +14,7 @@ from crackerjack.parsers.factory import ParserFactory
 
 logger = logging.getLogger(__name__)
 
+
 class RuffJSONParser(JSONParser):
     """Parse ruff JSON output.
 
@@ -163,6 +164,7 @@ class RuffJSONParser(JSONParser):
             return Priority.MEDIUM
         return Priority.LOW
 
+
 class MypyJSONParser(JSONParser):
     """Parse mypy JSON output.
 
@@ -253,6 +255,7 @@ class MypyJSONParser(JSONParser):
             Number of issues in the data
         """
         return len(data) if isinstance(data, list) else 0
+
 
 class BanditJSONParser(JSONParser):
     """Parse bandit JSON output.
@@ -375,6 +378,7 @@ class BanditJSONParser(JSONParser):
             "LOW": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
+
 
 class ComplexipyJSONParser(JSONParser):
     """Parse complexipy JSON output.
@@ -526,6 +530,7 @@ class ComplexipyJSONParser(JSONParser):
             )
         return 0
 
+
 class SemgrepJSONParser(JSONParser):
     """Parse semgrep JSON output.
 
@@ -644,6 +649,7 @@ class SemgrepJSONParser(JSONParser):
             "INFO": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
+
 
 class PipAuditJSONParser(JSONParser):
     """Parse pip-audit JSON output.
@@ -769,6 +775,7 @@ class PipAuditJSONParser(JSONParser):
             "LOW": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
+
 
 class GitleaksJSONParser(JSONParser):
     """Parse gitleaks JSON output.
@@ -916,6 +923,7 @@ class GitleaksJSONParser(JSONParser):
             "LOW": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
+
 
 # Register parsers with factory
 def register_json_parsers(factory: ParserFactory) -> None:
