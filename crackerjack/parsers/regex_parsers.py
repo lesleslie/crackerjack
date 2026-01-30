@@ -8,19 +8,17 @@ in json_parsers.py instead.
 """
 
 import logging
-import re
 
-from crackerjack.parsers.base import RegexParser
 from crackerjack.agents.base import Issue, IssueType, Priority
+from crackerjack.parsers.base import RegexParser
 
 logger = logging.getLogger(__name__)
-
 
 class CodespellRegexParser(RegexParser):
     """Parse codespell output (text-based, no JSON support).
 
     Example output:
-        tests/test_file.py:10: teh ==> the
+        tests/test_file.py:10: the ==> the
     """
 
     def parse_text(self, output: str) -> list[Issue]:
@@ -94,7 +92,6 @@ class CodespellRegexParser(RegexParser):
             return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
         return message_part.strip()
 
-
 class RefurbRegexParser(RegexParser):
     """Parse refurb output (text-based, no JSON support).
 
@@ -141,7 +138,6 @@ class RefurbRegexParser(RegexParser):
 
         logger.debug(f"Parsed {len(issues)} issues from refurb")
         return issues
-
 
 class RuffFormatRegexParser(RegexParser):
     """Parse ruff-format output (text-based, no JSON support).
@@ -193,7 +189,6 @@ class RuffFormatRegexParser(RegexParser):
 
         logger.debug(f"Parsed {len(issues)} issues from ruff-format")
         return issues
-
 
 class ComplexityRegexParser(RegexParser):
     """Parse complexipy output (text-based, no JSON support).
@@ -275,7 +270,6 @@ class ComplexityRegexParser(RegexParser):
             stage="complexity",
         )
 
-
 class GenericRegexParser(RegexParser):
     """Generic parser for tools without specific parsers.
 
@@ -317,7 +311,6 @@ class GenericRegexParser(RegexParser):
                 details=[output[:500]],
             )
         ]
-
 
 class StructuredDataParser(RegexParser):
     """Parse structured data tool output (check-yaml, check-toml, check-json).
@@ -405,7 +398,6 @@ class StructuredDataParser(RegexParser):
         file_path, error_message = line.split(":", 1)
         return file_path.strip(), error_message.strip()
 
-
 # Register parsers with factory
 def register_regex_parsers(factory: "ParserFactory") -> None:
     """Register all regex parsers with the parser factory.
@@ -413,7 +405,6 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     Args:
         factory: ParserFactory instance to register parsers with
     """
-    from crackerjack.parsers.factory import ParserFactory
 
     # Create parser instances
     codespell_parser = CodespellRegexParser()

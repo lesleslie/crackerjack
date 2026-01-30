@@ -8,7 +8,7 @@
 
 **Impact:** Eliminates silent failures, improves maintainability, makes system resilient to tool updates.
 
----
+______________________________________________________________________
 
 ## Current State Analysis
 
@@ -17,6 +17,7 @@
 **Location:** `crackerjack/core/autofix_coordinator.py`
 
 **Example Bug (Current Issue):**
+
 ```python
 # Line 1085 - Fails to parse ruff output with [*] marker
 pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
@@ -27,11 +28,12 @@ pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
 ```
 
 **Problems:**
+
 1. Silent failures when regex doesn't match
-2. No validation that parsed count matches tool's reported count
-3. Brittle contract with tool output format
-4. Different regex patterns for each tool
-5. Hard to maintain and debug
+1. No validation that parsed count matches tool's reported count
+1. Brittle contract with tool output format
+1. Different regex patterns for each tool
+1. Hard to maintain and debug
 
 ### Tools and JSON Support
 
@@ -48,17 +50,17 @@ pattern = re.compile(r"^(.+?):(\d+):(\d+):?\s*([A-Z]\d+)\s+(.+)$")
 
 **JSON Coverage:** 6/8 tools (75%)
 
----
+______________________________________________________________________
 
 ## Proposed Architecture
 
 ### Design Principles
 
 1. **Parse, Don't Validate:** JSON provides structured data, not text to validate
-2. **Fail Loudly:** Missing required fields → explicit error, not silent drop
-3. **Validate Counts:** Compare parsed issue count with tool's reported count
-4. **Graceful Fallback:** Regex for tools without JSON support
-5. **Unified Interface:** All parsers return `list[Issue]`
+1. **Fail Loudly:** Missing required fields → explicit error, not silent drop
+1. **Validate Counts:** Compare parsed issue count with tool's reported count
+1. **Graceful Fallback:** Regex for tools without JSON support
+1. **Unified Interface:** All parsers return `list[Issue]`
 
 ### Architecture Overview
 
@@ -688,7 +690,7 @@ class AutofixCoordinator:
             raise  # Let caller handle the error
 ```
 
----
+______________________________________________________________________
 
 ## Migration Strategy
 
@@ -731,7 +733,7 @@ class AutofixCoordinator:
 - [ ] Explore alternative tools with JSON support
 - [ ] Document tools without JSON support
 
----
+______________________________________________________________________
 
 ## Validation Strategy
 
@@ -783,7 +785,7 @@ CRACKERJACK_USE_JSON_PARSERS=false python -m crackerjack run --ai-fix
 python scripts/compare_parsing_results.py json_output.json regex_output.json
 ```
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
@@ -798,19 +800,20 @@ python scripts/compare_parsing_results.py json_output.json regex_output.json
 | **Debugging** | Hard (regex complexity) | Easy (structured data) |
 
 **Expected Performance Impact:**
+
 - JSON parsing: ~2-5x slower than regex
 - BUT: Tool execution dominates (seconds vs milliseconds)
-- Net impact: <1% difference in total workflow time
+- Net impact: \<1% difference in total workflow time
 - Trade-off: Worth it for reliability
 
 ### Optimization Strategies
 
 1. **Reuse JSON parsers** (don't recreate per issue)
-2. **Cache parsed schemas** if using JSON schema validation
-3. **Batch parsing** for tools with multiple files
-4. **Lazy validation** in development, strict in CI
+1. **Cache parsed schemas** if using JSON schema validation
+1. **Batch parsing** for tools with multiple files
+1. **Lazy validation** in development, strict in CI
 
----
+______________________________________________________________________
 
 ## Error Handling
 
@@ -845,7 +848,7 @@ except ParsingError as e:
     # Decide: abort or continue with partial results?
 ```
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -968,7 +971,7 @@ def test_json_regex_parity():
         assert j.message == r.message
 ```
 
----
+______________________________________________________________________
 
 ## Rollout Plan
 
@@ -1007,23 +1010,23 @@ grep "ParsingError" logs/crackerjack.log
 - Week 3: 100% of runs
 - Week 4: Remove old regex code
 
----
+______________________________________________________________________
 
 ## Benefits
 
 ### Immediate Benefits
 
-1. **Fixes Current Bug:** Ruff [*] marker issue eliminated
-2. **No Silent Failures:** Validation catches parsing errors immediately
-3. **Easier Debugging:** JSON is human-readable and structured
-4. **Better Error Messages:** Know exactly which field is missing
+1. **Fixes Current Bug:** Ruff [\*] marker issue eliminated
+1. **No Silent Failures:** Validation catches parsing errors immediately
+1. **Easier Debugging:** JSON is human-readable and structured
+1. **Better Error Messages:** Know exactly which field is missing
 
 ### Long-term Benefits
 
 1. **Maintainability:** Tool updates don't break parsing
-2. **Reliability:** Stable schemas backed by tool APIs
-3. **Extensibility:** Easy to add new tools
-4. **Testability:** JSON samples are easy to mock
+1. **Reliability:** Stable schemas backed by tool APIs
+1. **Extensibility:** Easy to add new tools
+1. **Testability:** JSON samples are easy to mock
 
 ### Developer Experience
 
@@ -1046,7 +1049,7 @@ else:
     logger.warning(f"Missing fields: {item}")  # ✅ Clear problem
 ```
 
----
+______________________________________________________________________
 
 ## Risks and Mitigations
 
@@ -1057,27 +1060,31 @@ else:
 | **Missing field in old tool version** | Medium | Required field config + graceful degradation |
 | **JSON output less verbose** | Low | Keep regex as fallback |
 
----
+______________________________________________________________________
 
 ## Open Questions
 
 1. **Tools without JSON support** (codespell, refurb):
+
    - Status: Keep regex parsers
    - Alternative: Find replacement tools with JSON support?
 
-2. **Custom tool wrappers** (zuban, skylos):
+1. **Custom tool wrappers** (zuban, skylos):
+
    - Can we modify them to output JSON?
    - Or add JSON serialization layer?
 
-3. **Error recovery**:
+1. **Error recovery**:
+
    - When parsing fails, should we abort or continue with partial results?
    - Proposal: Configurable `strict_mode` (default: abort in CI, continue in dev)
 
-4. **Backward compatibility**:
+1. **Backward compatibility**:
+
    - How long to maintain regex parsers?
    - Proposal: Keep for 2 major versions, deprecate with warnings
 
----
+______________________________________________________________________
 
 ## Success Metrics
 
@@ -1086,7 +1093,7 @@ else:
 - [ ] All 16 ruff issues parsed successfully (current bug fixed)
 - [ ] Zero silent parsing failures in logs
 - [ ] 100% count validation accuracy
-- [ ] <5% performance overhead vs regex
+- [ ] \<5% performance overhead vs regex
 
 ### Quality Metrics
 
@@ -1100,17 +1107,17 @@ else:
 - [ ] Easier onboarding for new contributors
 - [ ] Clear error messages for all failure modes
 
----
+______________________________________________________________________
 
 ## Next Steps
 
 1. **Review this proposal** with team
-2. **Create implementation plan** with task breakdown
-3. **Set up feature flags** for gradual rollout
-4. **Start Phase 1** (Foundation)
-5. **Weekly syncs** to track progress
+1. **Create implementation plan** with task breakdown
+1. **Set up feature flags** for gradual rollout
+1. **Start Phase 1** (Foundation)
+1. **Weekly syncs** to track progress
 
----
+______________________________________________________________________
 
 ## Appendix: Tool JSON Format Samples
 
@@ -1180,7 +1187,7 @@ else:
 }
 ```
 
----
+______________________________________________________________________
 
 **Document Version:** 1.0
 **Last Updated:** 2025-01-29

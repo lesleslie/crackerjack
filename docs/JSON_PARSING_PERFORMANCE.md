@@ -3,9 +3,9 @@
 ## Performance Goals
 
 1. **No significant slowdown** in total workflow time
-2. **Benchmark everything** before/after implementation
-3. **Optimize hot paths** where parsing happens repeatedly
-4. **Prove with data** that performance is acceptable
+1. **Benchmark everything** before/after implementation
+1. **Optimize hot paths** where parsing happens repeatedly
+1. **Prove with data** that performance is acceptable
 
 ## Expected Performance Characteristics
 
@@ -80,7 +80,7 @@ for item in ijson.items(output, 'item'):
     issue = self._parse_single_item(item)  # Stream processing
 ```
 
-**Reality check:** Most runs have <100 issues, full parse is fine
+**Reality check:** Most runs have \<100 issues, full parse is fine
 
 ### 3. Skip Validation in Development
 
@@ -105,6 +105,7 @@ class ParserFactory:
 ```
 
 **Usage:**
+
 ```python
 # Production/CI: Always validate
 issues = parser.parse_with_validation(output, "ruff", validate_count=True)
@@ -347,26 +348,27 @@ data = msgpack.unpackb(packed_data)
 ### When to Optimize
 
 1. **Measure first** - Don't optimize without benchmarks
-2. **Focus on bottlenecks** - Optimize the slowest 20%
-3. **Consider total time** - 10x faster parsing is useless if it saves only 10ms on a 90s run
-4. **Trade correctness for speed** - Never skip validation for performance
+1. **Focus on bottlenecks** - Optimize the slowest 20%
+1. **Consider total time** - 10x faster parsing is useless if it saves only 10ms on a 90s run
+1. **Trade correctness for speed** - Never skip validation for performance
 
 ### Performance Budget
 
-- **Acceptable overhead:** <1% of total workflow time
-- **Target:** <0.5% overhead
+- **Acceptable overhead:** \<1% of total workflow time
+- **Target:** \<0.5% overhead
 - **Current expectation:** ~0.1% overhead (100ms on 90s)
 
 ## Conclusion
 
 JSON parsing is 10x slower than regex, but:
+
 - Tool execution time dominates (94% of total)
-- Parsing overhead is negligible (<1%)
+- Parsing overhead is negligible (\<1%)
 - Benefits (correctness, maintainability) far outweigh costs
 - Performance can be monitored and optimized if needed
 
 **Recommendation:** Proceed with JSON parsing, add benchmarks, and optimize only if data shows a problem.
 
----
+______________________________________________________________________
 
 **Bottom line:** We can prove with data that performance is not a concern.
