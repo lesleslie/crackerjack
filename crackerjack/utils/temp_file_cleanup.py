@@ -5,12 +5,11 @@ instead of stdout. This module provides utilities to ensure these files
 are cleaned up properly.
 """
 
+import glob
 import logging
 import os
-import glob
 
 logger = logging.getLogger(__name__)
-
 
 # Patterns for temporary files created by our tools
 TEMP_FILE_PATTERNS = [
@@ -19,7 +18,6 @@ TEMP_FILE_PATTERNS = [
     "/tmp/ruff_output.json",  # If we save ruff output
     "complexipy_results_*.json",  # Also check in project directory
 ]
-
 
 def cleanup_temp_files() -> int:
     """Clean up all temporary files created by quality tools.
@@ -57,7 +55,6 @@ def cleanup_temp_files() -> int:
 
     return cleaned_count
 
-
 def get_temp_file_size() -> int:
     """Get total size of all temporary files.
 
@@ -78,7 +75,6 @@ def get_temp_file_size() -> int:
                 pass
 
     return total_size
-
 
 def cleanup_old_complexipy_files(max_age_hours: int = 24) -> int:
     """Clean up old complexipy JSON files that may have been left behind.

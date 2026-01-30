@@ -8,12 +8,11 @@ with structured data that's part of the tool's API contract.
 import json
 import logging
 
+from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser
 from crackerjack.parsers.factory import ParserFactory
-from crackerjack.agents.base import Issue, IssueType, Priority
 
 logger = logging.getLogger(__name__)
-
 
 class RuffJSONParser(JSONParser):
     """Parse ruff JSON output.
@@ -164,7 +163,6 @@ class RuffJSONParser(JSONParser):
             return Priority.MEDIUM
         return Priority.LOW
 
-
 class MypyJSONParser(JSONParser):
     """Parse mypy JSON output.
 
@@ -255,7 +253,6 @@ class MypyJSONParser(JSONParser):
             Number of issues in the data
         """
         return len(data) if isinstance(data, list) else 0
-
 
 class BanditJSONParser(JSONParser):
     """Parse bandit JSON output.
@@ -379,7 +376,6 @@ class BanditJSONParser(JSONParser):
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
-
 class ComplexipyJSONParser(JSONParser):
     """Parse complexipy JSON output.
 
@@ -408,7 +404,6 @@ class ComplexipyJSONParser(JSONParser):
         Returns:
             List of Issue objects for functions exceeding complexity threshold
         """
-        import json
         import os
         import re
 
@@ -426,7 +421,7 @@ class ComplexipyJSONParser(JSONParser):
             return []
 
         try:
-            with open(json_path, "r") as f:
+            with open(json_path) as f:
                 json_content = f.read()
             data = json.loads(json_content)
 
@@ -530,7 +525,6 @@ class ComplexipyJSONParser(JSONParser):
                 and item["complexity"] > 15
             )
         return 0
-
 
 class SemgrepJSONParser(JSONParser):
     """Parse semgrep JSON output.
@@ -650,7 +644,6 @@ class SemgrepJSONParser(JSONParser):
             "INFO": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
-
 
 class PipAuditJSONParser(JSONParser):
     """Parse pip-audit JSON output.
@@ -777,7 +770,6 @@ class PipAuditJSONParser(JSONParser):
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
-
 class GitleaksJSONParser(JSONParser):
     """Parse gitleaks JSON output.
 
@@ -805,7 +797,6 @@ class GitleaksJSONParser(JSONParser):
         Returns:
             List of Issue objects for secret leaks
         """
-        import json
         import os
 
         # Gitleaks writes to fixed path from command line
@@ -819,7 +810,7 @@ class GitleaksJSONParser(JSONParser):
             return []
 
         try:
-            with open(json_path, "r") as f:
+            with open(json_path) as f:
                 json_content = f.read()
             data = json.loads(json_content)
 
@@ -925,7 +916,6 @@ class GitleaksJSONParser(JSONParser):
             "LOW": Priority.MEDIUM,
         }
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
-
 
 # Register parsers with factory
 def register_json_parsers(factory: ParserFactory) -> None:

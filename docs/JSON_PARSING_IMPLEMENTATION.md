@@ -1,9 +1,11 @@
 # JSON Parsing Implementation - Single PR
 
 ## Goal
+
 Replace fragile regex-based parsing with robust JSON parsing in one complete PR.
 
 ## Scope
+
 - ✅ Implement JSON parsers for ruff, mypy, bandit
 - ✅ Add validation layer with count checking
 - ✅ Update hook execution to use JSON flags
@@ -18,12 +20,14 @@ Replace fragile regex-based parsing with robust JSON parsing in one complete PR.
 ### 1. Create Parser Infrastructure (30 min)
 
 **Files to create:**
+
 - `crackerjack/parsers/__init__.py`
 - `crackerjack/parsers/base.py` - Protocol interfaces
 - `crackerjack/parsers/factory.py` - Parser factory with validation
 - `crackerjack/models/tool_config.py` - Tool configurations
 
 **Code structure:**
+
 ```python
 # parsers/base.py
 from typing import Protocol
@@ -40,9 +44,10 @@ class JSONParser(Protocol):
 ### 2. Implement JSON Parsers (2 hours)
 
 **Priority order:**
+
 1. `RuffJSONParser` - Highest impact (fixes current bug)
-2. `MypyJSONParser` - High usage
-3. `BanditJSONParser` - Security critical
+1. `MypyJSONParser` - High usage
+1. `BanditJSONParser` - Security critical
 
 **File:** `crackerjack/parsers/json_parsers.py`
 
@@ -116,10 +121,11 @@ def _get_hook_command(self, hook: HookDefinition) -> list[str]:
 **File:** `crackerjack/core/autofix_coordinator.py`
 
 **Changes:**
+
 1. Import `ParserFactory`
-2. Replace `_parse_hook_to_issues()` with factory call
-3. Remove old regex parsing methods
-4. Add validation
+1. Replace `_parse_hook_to_issues()` with factory call
+1. Remove old regex parsing methods
+1. Add validation
 
 ```python
 from crackerjack.parsers.factory import ParserFactory, ParsingError
@@ -172,6 +178,7 @@ class AutofixCoordinator:
 ```
 
 **Remove these methods (no longer needed):**
+
 - `_parse_ruff_output()`
 - `_parse_mypy_output()`
 - `_parse_bandit_output()`
@@ -184,6 +191,7 @@ class AutofixCoordinator:
 **File:** `crackerjack/parsers/regex_parsers.py`
 
 Keep existing regex parsers for:
+
 - codespell (no JSON support)
 - refurb (no JSON support)
 - Other tools without JSON
@@ -193,6 +201,7 @@ Move these from `autofix_coordinator.py` to dedicated file.
 ### 6. Update Tests (2 hours)
 
 **Unit tests to create:**
+
 ```
 tests/parsers/
 ├── test_json_parsers.py       # Test all JSON parsers
@@ -204,11 +213,13 @@ tests/parsers/
 ```
 
 **Tests to update:**
+
 - `tests/test_core_autofix_coordinator.py` - Use factory instead of direct parsing
 - Remove tests for old regex methods
 - Add tests for validation error cases
 
 **Integration tests:**
+
 - Run real tools and parse their JSON output
 - Verify count validation catches mismatches
 - Test error handling for malformed JSON
@@ -216,6 +227,7 @@ tests/parsers/
 ### 7. Documentation (30 min)
 
 **Files to update:**
+
 - `CLAUDE.md` - Document JSON parsing approach
 - `docs/AI_FIX_ARCHITECTURE.md` - Update with JSON parsing section
 - Add inline docstrings to all new code
@@ -223,6 +235,7 @@ tests/parsers/
 ### 8. Cleanup (15 min)
 
 **Remove:**
+
 - Old regex parsing code from `autofix_coordinator.py`
 - Any dead code imports
 - Outdated comments about regex parsing
@@ -259,34 +272,39 @@ python -m crackerjack run --ai-fix --run-tests
 ## File Changes Summary
 
 **New files (7):**
+
 1. `crackerjack/parsers/__init__.py`
-2. `crackerjack/parsers/base.py`
-3. `crackerjack/parsers/factory.py`
-4. `crackerjack/parsers/json_parsers.py`
-5. `crackerjack/parsers/regex_parsers.py` (moved from autofix_coordinator)
-6. `crackerjack/models/tool_config.py`
-7. `tests/parsers/test_json_parsers.py`
+1. `crackerjack/parsers/base.py`
+1. `crackerjack/parsers/factory.py`
+1. `crackerjack/parsers/json_parsers.py`
+1. `crackerjack/parsers/regex_parsers.py` (moved from autofix_coordinator)
+1. `crackerjack/models/tool_config.py`
+1. `tests/parsers/test_json_parsers.py`
 
 **Modified files (3):**
+
 1. `crackerjack/core/autofix_coordinator.py` (remove regex parsing, use factory)
-2. `crackerjack/managers/hook_manager.py` (add JSON flags)
-3. `tests/test_core_autofix_coordinator.py` (update to use factory)
+1. `crackerjack/managers/hook_manager.py` (add JSON flags)
+1. `tests/test_core_autofix_coordinator.py` (update to use factory)
 
 **Estimated total time:** 6-7 hours
 
 ## Risk Mitigation
 
 **What if JSON format changes?**
+
 - Tool's JSON schema is part of their API (more stable than text)
 - Can add version pinning if needed
 - Validation will catch format changes immediately
 
 **What if parsing is slower?**
-- Benchmark first (expect <5% difference)
+
+- Benchmark first (expect \<5% difference)
 - Tool execution dominates (seconds vs milliseconds)
 - Net impact should be negligible
 
 **What if a tool doesn't output valid JSON?**
+
 - ParsingError raised immediately
 - Clear error message with output preview
 - Fail fast instead of silent data loss
@@ -294,11 +312,11 @@ python -m crackerjack run --ai-fix --run-tests
 ## Next Steps
 
 1. **Review this plan** - approve or adjust
-2. **Start implementation** - work through steps 1-8
-3. **Test thoroughly** - verify all success criteria
-4. **Single PR** - complete migration in one shot
-5. **Merge** - celebrate the bug fix!
+1. **Start implementation** - work through steps 1-8
+1. **Test thoroughly** - verify all success criteria
+1. **Single PR** - complete migration in one shot
+1. **Merge** - celebrate the bug fix!
 
----
+______________________________________________________________________
 
 **Ready to start?** Say the word and I'll begin implementation!

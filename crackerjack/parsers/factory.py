@@ -6,14 +6,12 @@ and validates parsing results to ensure correctness.
 
 import json
 import logging
-from typing import Protocol
 
-from crackerjack.models.tool_config import get_tool_config, supports_json
-from crackerjack.parsers.base import JSONParser, RegexParser, ToolParser
 from crackerjack.agents.base import Issue
+from crackerjack.models.tool_config import supports_json
+from crackerjack.parsers.base import JSONParser, RegexParser, ToolParser
 
 logger = logging.getLogger(__name__)
-
 
 class ParsingError(Exception):
     """Error raised when parsing fails validation.
@@ -63,7 +61,6 @@ class ParsingError(Exception):
             parts.append(f"  Output preview: {preview}")
 
         return "\n".join(parts)
-
 
 class ParserFactory:
     """Factory for creating tool output parsers with validation.

@@ -16,13 +16,11 @@ if TYPE_CHECKING:
         LoggerProtocol,
     )
 
-from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
+from crackerjack.agents.base import AgentContext, FixResult, Issue
 from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.cache import CrackerjackCache
-from crackerjack.utils.issue_detection import should_count_as_issue
 
 logger = logging.getLogger(__name__)
-
 
 class AutofixCoordinator:
     def __init__(

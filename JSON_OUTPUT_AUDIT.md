@@ -49,11 +49,13 @@
 ### Priority 1: Easy Wins (Tools that already support JSON)
 
 1. **complexipy** - Add `--output-json` flag
+
    - Current: `complexipy --max-complexity-allowed 15 package`
    - Change: `complexipy --max-complexity-allowed 15 --output-json package > /tmp/complexipy.json`
    - Impact: Complexity parsing becomes more reliable
 
-2. **gitleaks** - Add `--json` or `--report-format json` flag
+1. **gitleaks** - Add `--json` or `--report-format json` flag
+
    - Current: `gitleaks protect -v`
    - Change: `gitleaks protect --report-format json --report /tmp/gitleaks.json`
    - Impact: Security issues parsed correctly
@@ -61,9 +63,9 @@
 ### Priority 2: Implement JSON Parsers
 
 1. **SemgrepJSONParser** - For semgrep security scanning
-2. **PipAuditJSONParser** - For vulnerability tracking
-3. **ComplexipyJSONParser** - For complexity issues
-4. **GitleaksJSONParser** - For security leaks
+1. **PipAuditJSONParser** - For vulnerability tracking
+1. **ComplexipyJSONParser** - For complexity issues
+1. **GitleaksJSONParser** - For security leaks
 
 ### Priority 3: Consider Structured Text Formats
 
@@ -74,22 +76,24 @@
 ## Implementation Order
 
 1. ✅ **ruff-check** - Already done
-2. ✅ **zuban** (mypy) - Already done
-3. ✅ **bandit** - Already done
-4. 🔄 **complexipy** - Add JSON flag + parser
-5. 🔄 **gitleaks** - Add JSON flag + parser
-6. ⏳ **semgrep** - Implement parser
-7. ⏳ **pip-audit** - Implement parser
-8. ⏳ **refurb** - Consider GitHub format parser
+1. ✅ **zuban** (mypy) - Already done
+1. ✅ **bandit** - Already done
+1. 🔄 **complexipy** - Add JSON flag + parser
+1. 🔄 **gitleaks** - Add JSON flag + parser
+1. ⏳ **semgrep** - Implement parser
+1. ⏳ **pip-audit** - Implement parser
+1. ⏳ **refurb** - Consider GitHub format parser
 
 ## Current Parser Architecture Status
 
 **Completed JSON Parsers:**
+
 - ✅ RuffJSONParser
 - ✅ MypyJSONParser (zuban)
 - ✅ BanditJSONParser
 
 **Completed Regex Parsers:**
+
 - ✅ StructuredDataParser (check-yaml, check-toml, check-json)
 - ✅ CodespellRegexParser
 - ✅ RefurbRegexParser
@@ -97,6 +101,7 @@
 - ✅ ComplexityRegexParser
 
 **Next to Add:**
+
 - ComplexipyJSONParser
 - SemgrepJSONParser
 - PipAuditJSONParser
@@ -107,13 +112,14 @@
 We have **5 tools using JSON** (3 with parsers implemented) and **2 more tools that could easily be converted** to JSON (complexipy, gitleaks).
 
 **Immediate action items:**
+
 1. Add `--output-json` to complexipy command
-2. Add `--report-format json` to gitleaks command
-3. Implement JSON parsers for: complexipy, semgrep, pip-audit, gitleaks
+1. Add `--report-format json` to gitleaks command
+1. Implement JSON parsers for: complexipy, semgrep, pip-audit, gitleaks
 
 This would bring us to **9 tools using JSON** out of ~20 total tools, significantly improving parsing reliability.
 
----
+______________________________________________________________________
 
 *Generated: 2025-01-30*
 *Tools audited: 20*
