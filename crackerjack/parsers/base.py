@@ -90,7 +90,7 @@ class JSONParser(ABC):
         """
         ...
 
-    def parse(self, output: str) -> list[Issue]:
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
         """Parse JSON output string into Issue objects.
 
         This is a convenience method that handles JSON parsing and delegation
@@ -99,6 +99,7 @@ class JSONParser(ABC):
 
         Args:
             output: Raw JSON string output from tool
+            tool_name: Name of the tool (for logging, currently unused)
 
         Returns:
             List of Issue objects
@@ -115,7 +116,7 @@ class JSONParser(ABC):
 
             raise ParsingError(
                 f"Invalid JSON output: {e}",
-                tool_name=self.__class__.__name__.replace("Parser", ""),
+                tool_name=tool_name,
                 output=output,
             ) from e
 
