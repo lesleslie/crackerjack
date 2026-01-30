@@ -246,6 +246,9 @@ class PhaseCoordinator:
 
         success = self._run_fast_hooks_with_retry(options)
 
+        # Update issue counts from parsed JSON for accurate display
+        self._update_json_hook_issue_counts()
+
         if not success and getattr(options, "ai_fix", False):
             success = self._apply_ai_fix_for_fast_hooks(options, success)
 
@@ -1027,6 +1030,48 @@ class PhaseCoordinator:
             "total_issues_found": total_issues,
             "config_errors": config_errors,
         }
+
+    def _update_json_hook_issue_counts(self) -> None:
+        """Update HookResult.issues_count with actual parsed issue counts for JSON tools.
+
+        For JSON-based tools (ruff, mypy, bandit, etc.), HookResult.issues_count is 0
+        because we skip line-based extraction. This method parses the JSON output and
+        updates issues_count with the actual count for accurate display.
+        """
+        if not self._last_hook_results:
+            return
+
+        from crackerjack.parsers.factory import ParserFactory
+
+        parser_factory = ParserFactory()
+
+        for result in self._last_hook_results:
+            # Only update for JSON tools that have issues_count=0 but failed
+            if result.issues_count != 0 or result.status != "failed":
+                continue
+
+            # Check if output is JSON
+            if not result.output or not result.output.strip().startswith(("{", "[")):
+                continue
+
+            try:
+                # Parse JSON to get actual issue count
+                import json
+
+                data = json.loads(result.output)
+                if isinstance(data, list):
+                    # JSON array of issues
+                    result.issues_count = len(data)
+                elif isinstance(data, dict):
+                    # Some tools return dict with different structure
+                    # Check for common keys that contain issue lists
+                    if "results" in data and isinstance(data["results"], list):
+                        result.issues_count = len(data["results"])
+                    elif "issues" in data and isinstance(data["issues"], list):
+                        result.issues_count = len(data["issues"])
+            except (json.JSONDecodeError, KeyError, TypeError):
+                # If parsing fails, leave issues_count as is
+                pass
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
         name = self._strip_ansi(result.name)
