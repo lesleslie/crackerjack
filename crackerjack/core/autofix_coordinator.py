@@ -676,7 +676,9 @@ class AutofixCoordinator:
                     new_count = parsed_counts_by_hook[hook_name]
                     # Only update if we actually parsed something or hook failed
                     # Don't update passed hooks with no issues
-                    if new_count > 0 or (hasattr(result, "status") and result.status == "failed"):
+                    if new_count > 0 or (
+                        hasattr(result, "status") and result.status == "failed"
+                    ):
                         if old_count != new_count:
                             self.logger.debug(
                                 f"Updated issues_count for '{hook_name}': "
