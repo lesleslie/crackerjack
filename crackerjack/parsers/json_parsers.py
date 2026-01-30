@@ -399,11 +399,12 @@ class ComplexipyJSONParser(JSONParser):
         ]
     """
 
-    def parse(self, output: str) -> list[Issue]:
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
         """Parse complexipy output by extracting JSON file path and reading it.
 
         Args:
             output: Raw text output from complexipy (contains file path)
+            tool_name: Name of the tool (for logging, currently unused)
 
         Returns:
             List of Issue objects for functions exceeding complexity threshold
@@ -795,11 +796,12 @@ class GitleaksJSONParser(JSONParser):
         ]
     """
 
-    def parse(self, output: str) -> list[Issue]:
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
         """Parse gitleaks output by reading JSON from the report file.
 
         Args:
             output: Raw text output from gitleaks (may be empty or have summary)
+            tool_name: Name of the tool (for logging, currently unused)
 
         Returns:
             List of Issue objects for secret leaks
