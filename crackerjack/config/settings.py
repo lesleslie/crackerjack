@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings as Settings
 
 class CleaningSettings(Settings):
     clean: bool = True
+    strip_comments_only: bool = False
+    strip_docstrings_only: bool = False
     update_docs: bool = False
     force_update_docs: bool = False
     compress_docs: bool = False

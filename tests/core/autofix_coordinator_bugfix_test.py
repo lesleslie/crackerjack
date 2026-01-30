@@ -1,74 +1,15 @@
 """Tests for autofix_coordinator bug fixes - simplified version.
 
 This module tests the critical fixes made to the autofix_coordinator:
-1. Complexipy parser fix - handles actual output format with "Failed functions:" header
+1. Issue count extraction fix - complexipy/refurb/creosote skip validation (adapter does filtering)
 2. Iteration discrepancy fix - ensures consistent use of hook_results across iterations
 """
 
 import pytest
 from pathlib import Path
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
 from crackerjack.core.autofix_coordinator import AutofixCoordinator
-from crackerjack.agents.base import IssueType
-
-
-class TestComplexipyParserFix:
-    """Test the complexipy parser bug fix."""
-
-    @pytest.fixture
-    def coordinator(self):
-        """Create an AutofixCoordinator instance for testing."""
-        pkg_path = Path("/tmp/test")
-        return AutofixCoordinator(console=None, pkg_path=pkg_path)
-
-    def test_parse_complexity_output_finds_failed_functions_section(self, coordinator):
-        """Should find the 'Failed functions:' section in complexipy output."""
-        # Actual complexipy output format
-        raw_output = """Failed functions:
-  - crackerjack/file.py:
-    - function_one (complexity: 25)
-    - function_two (complexity: 30)"""
-
-        issues = coordinator._parse_complexity_output(raw_output, IssueType.COMPLEXITY)
-
-        # Should parse at least the section
-        assert isinstance(issues, list)
-
-    def test_parse_complexity_output_handles_empty_output(self, coordinator):
-        """Should handle empty output gracefully."""
-        issues = coordinator._parse_complexity_output("", IssueType.COMPLEXITY)
-        assert issues == []
-
-    def test_parse_complexity_output_handles_no_failed_section(self, coordinator):
-        """Should handle output without 'Failed functions:' section."""
-        raw_output = "All functions are within complexity limits."
-        issues = coordinator._parse_complexity_output(raw_output, IssueType.COMPLEXITY)
-        assert isinstance(issues, list)
-
-    def test_parse_complexity_output_extracts_file_paths(self, coordinator):
-        """Should extract file paths from the output."""
-        raw_output = """Failed functions:
-  - crackerjack/autofix_coordinator.py:
-    - complex_function (complexity: 35)"""
-
-        issues = coordinator._parse_complexity_output(raw_output, IssueType.COMPLEXITY)
-
-        # If issues found, should have file paths
-        if len(issues) > 0:
-            assert all(issue.file_path is not None for issue in issues)
-
-    def test_parse_complexity_output_extracts_function_names(self, coordinator):
-        """Should extract function names from the output."""
-        raw_output = """Failed functions:
-  - file.py:
-    - my_function (complexity: 40)"""
-
-        issues = coordinator._parse_complexity_output(raw_output, IssueType.COMPLEXITY)
-
-        # If issues found, should have function names in message
-        if len(issues) > 0:
-            assert all("complexity" in str(issue.message).lower() for issue in issues)
 
 
 class TestIterationDiscrepancyFix:
@@ -122,6 +63,85 @@ class TestIterationDiscrepancyFix:
         assert isinstance(issues, list)
 
 
+class TestIssueCountExtractionFix:
+    """Test the issue count extraction bug fix for filtered tools.
+
+    Background: Some tools output more data than the adapter ultimately returns
+    because the adapter applies filtering logic (thresholds, patterns, etc.).
+    The _extract_issue_count method should return None for these tools to skip
+    validation, since the raw output can't predict the filtered result.
+
+    Tools with filtering:
+    - complexipy: outputs ALL functions (6076), adapter filters by threshold (~9)
+    - refurb: outputs all lines, adapter filters for "[FURB" prefix
+    - creosote: outputs multiple sections, adapter filters for "unused" deps
+    """
+
+    @pytest.fixture
+    def coordinator(self):
+        """Create an AutofixCoordinator instance."""
+        pkg_path = Path("/tmp/test")
+        return AutofixCoordinator(console=None, pkg_path=pkg_path)
+
+    def test_complexipy_returns_none_to_skip_validation(self, coordinator):
+        """complexipy should return None because adapter does filtering."""
+        complexipy_output = '{"complexity": 20, "file_name": "test.py", "function_name": "test", "path": "test.py"}'
+
+        result = coordinator._extract_issue_count(complexipy_output, "complexipy")
+
+        assert result is None, (
+            "complexipy should return None because the adapter filters "
+            "by threshold, making raw output count unpredictable"
+        )
+
+    def test_refurb_returns_none_to_skip_validation(self, coordinator):
+        """refurb should return None because adapter does filtering."""
+        refurb_output = """file1.py:10: Some output
+file2.py:20: [FURB] This is a refurb issue
+file3.py:30: More output"""
+
+        result = coordinator._extract_issue_count(refurb_output, "refurb")
+
+        assert result is None, (
+            "refurb should return None because the adapter filters "
+            "for '[FURB' prefix, making raw output count unpredictable"
+        )
+
+    def test_creosote_returns_none_to_skip_validation(self, coordinator):
+        """creosote should return None because adapter does filtering."""
+        creosote_output = """Found dependencies: 10
+Unused dependencies: 3
+pkg1
+pkg2
+pkg3"""
+
+        result = coordinator._extract_issue_count(creosote_output, "creosote")
+
+        assert result is None, (
+            "creosote should return None because the adapter filters "
+            "for 'unused' section, making raw output count unpredictable"
+        )
+
+    def test_ruff_still_returns_count(self, coordinator):
+        """Tools without filtering should still return counts."""
+        ruff_output = '[{"message": "error1"}, {"message": "error2"}]'
+
+        result = coordinator._extract_issue_count(ruff_output, "ruff")
+
+        assert result == 2, "ruff should return the JSON array length"
+
+    def test_fallback_line_counting_still_works(self, coordinator):
+        """Fallback line counting should still work for unknown tools."""
+        # Text output with colons (looks like issues)
+        text_output = """file1.py:10: error message
+file2.py:20: another error
+file3.py:30: third error"""
+
+        result = coordinator._extract_issue_count(text_output, "unknown-tool")
+
+        assert result == 3, "Should count lines with colons"
+
+
 class TestBugFixIntegration:
     """Integration tests showing both fixes working together."""
 
@@ -130,30 +150,6 @@ class TestBugFixIntegration:
         """Create an AutofixCoordinator instance."""
         pkg_path = Path("/tmp/test")
         return AutofixCoordinator(console=None, pkg_path=pkg_path)
-
-    def test_complexipy_workflow_across_iterations(self, coordinator):
-        """Complexipy issues should work consistently across iterations."""
-        # Simulate complexipy output
-        complexipy_output = """Failed functions:
-  - crackerjack/file.py:
-    - complex_func (complexity: 45)"""
-
-        # Parse the output (this was fixed)
-        issues = coordinator._parse_complexity_output(
-            complexipy_output,
-            IssueType.COMPLEXITY
-        )
-
-        # Use in iteration workflow (this was also fixed)
-        mock_hook = Mock(to_issues=lambda: issues)
-        hook_results = [mock_hook]
-
-        iteration_0 = coordinator._get_iteration_issues(0, hook_results, "comprehensive")
-        iteration_1 = coordinator._get_iteration_issues(1, hook_results, "comprehensive")
-
-        # Both should return lists
-        assert isinstance(iteration_0, list)
-        assert isinstance(iteration_1, list)
 
     def test_issue_count_stability(self, coordinator):
         """Issue counts should remain stable across iterations."""

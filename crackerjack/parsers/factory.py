@@ -9,7 +9,7 @@ import logging
 
 from crackerjack.agents.base import Issue
 from crackerjack.models.tool_config import supports_json
-from crackerjack.parsers.base import JSONParser, RegexParser, ToolParser
+from crackerjack.parsers.base import JSONParser, RegexParser
 
 logger = logging.getLogger(__name__)
 
@@ -135,7 +135,7 @@ class ParserFactory:
         self._regex_parsers[tool_name] = parser_class
         logger.debug(f"Registered regex parser for '{tool_name}'")
 
-    def create_parser(self, tool_name: str) -> ToolParser:
+    def create_parser(self, tool_name: str) -> JSONParser | RegexParser:
         """Create appropriate parser for a tool.
 
         Strategy:
@@ -222,7 +222,7 @@ class ParserFactory:
         return stripped.startswith(("{", "["))
 
     def _parse_json_output(
-        self, parser: ToolParser, output: str, tool_name: str
+        self, parser: JSONParser | RegexParser, output: str, tool_name: str
     ) -> list[Issue]:
         """Parse JSON output.
 
@@ -268,7 +268,7 @@ class ParserFactory:
             ) from e
 
     def _parse_text_output(
-        self, parser: ToolParser, output: str, tool_name: str
+        self, parser: JSONParser | RegexParser, output: str, tool_name: str
     ) -> list[Issue]:
         """Parse text output.
 

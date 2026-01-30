@@ -28,6 +28,8 @@ if TYPE_CHECKING:
 @dataclass
 class CleaningConfig:
     clean: bool = True
+    strip_comments_only: bool = False
+    strip_docstrings_only: bool = False
     update_docs: bool = False
     force_update_docs: bool = False
     compress_docs: bool = False
@@ -46,6 +48,8 @@ class CleaningConfig:
     def from_settings(cls, settings: CleaningSettings) -> CleaningConfig:
         return cls(
             clean=settings.clean,
+            strip_comments_only=getattr(settings, "strip_comments_only", False),
+            strip_docstrings_only=getattr(settings, "strip_docstrings_only", False),
             update_docs=settings.update_docs,
             force_update_docs=settings.force_update_docs,
             compress_docs=settings.compress_docs,

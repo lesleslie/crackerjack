@@ -115,6 +115,7 @@ class PhaseCoordinator:
         )
         self.config_merge_service = config_merge_service
 
+        # Initialize code_cleaner with settings
         self.code_cleaner = CodeCleaner(
             console=self.console,
             base_directory=self.pkg_path,
@@ -124,6 +125,12 @@ class PhaseCoordinator:
             logger=None,
             security_logger=None,
             backup_service=None,
+            strip_comments_only=getattr(settings, "strip_comments_only", False)
+            if settings
+            else False,
+            strip_docstrings_only=getattr(settings, "strip_docstrings_only", False)
+            if settings
+            else False,
         )
 
         self._logger = logger or logging.getLogger(__name__)
