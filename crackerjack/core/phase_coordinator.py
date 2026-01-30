@@ -54,7 +54,6 @@ if t.TYPE_CHECKING:
         ParallelHookExecutor,
     )
 
-
 class PhaseCoordinator:
     def __init__(
         self,
@@ -245,9 +244,6 @@ class PhaseCoordinator:
         self.session.track_task("hooks_fast", "Fast quality checks")
 
         success = self._run_fast_hooks_with_retry(options)
-
-        # Update issue counts from parsed JSON for accurate display
-        self._update_json_hook_issue_counts()
 
         if not success and getattr(options, "ai_fix", False):
             success = self._apply_ai_fix_for_fast_hooks(options, success)
@@ -901,6 +897,10 @@ class PhaseCoordinator:
             elapsed_time=elapsed_time,
         )
         self._last_hook_summary = summary
+
+        # Update issue counts from parsed JSON before displaying
+        self._update_json_hook_issue_counts()
+
         self._report_hook_results(suite_name, self._last_hook_results, summary, attempt)
 
         if summary.get("failed", 0) == 0 == summary.get("errors", 0):

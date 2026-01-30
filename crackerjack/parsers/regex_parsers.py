@@ -407,11 +407,11 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     """
 
     # Create parser instances
-    codespell_parser = CodespellRegexParser()
-    refurb_parser = RefurbRegexParser()
-    ruff_format_parser = RuffFormatRegexParser()
-    complexity_parser = ComplexityRegexParser()
-    structured_data_parser = StructuredDataParser()
+    CodespellRegexParser()
+    RefurbRegexParser()
+    RuffFormatRegexParser()
+    ComplexityRegexParser()
+    StructuredDataParser()
 
     # Register for specific tool names
     factory.register_regex_parser("codespell", CodespellRegexParser)
