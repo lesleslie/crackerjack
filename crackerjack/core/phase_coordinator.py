@@ -54,6 +54,7 @@ if t.TYPE_CHECKING:
         ParallelHookExecutor,
     )
 
+
 class PhaseCoordinator:
     def __init__(
         self,
@@ -1043,7 +1044,7 @@ class PhaseCoordinator:
 
         from crackerjack.parsers.factory import ParserFactory
 
-        parser_factory = ParserFactory()
+        ParserFactory()
 
         for result in self._last_hook_results:
             # Only update for JSON tools that have issues_count=0 but failed

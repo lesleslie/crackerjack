@@ -90,6 +90,37 @@ class JSONParser(ABC):
         """
         ...
 
+    def parse(self, output: str) -> list[Issue]:
+        """Parse JSON output string into Issue objects.
+
+        This is a convenience method that handles JSON parsing and delegation
+        to parse_json(). Subclasses that need custom JSON extraction (like
+        reading from files) should override this method.
+
+        Args:
+            output: Raw JSON string output from tool
+
+        Returns:
+            List of Issue objects
+
+        Raises:
+            ParsingError: If JSON is invalid or parsing fails
+        """
+        import json
+
+        try:
+            data = json.loads(output)
+        except json.JSONDecodeError as e:
+            from crackerjack.parsers.factory import ParsingError
+
+            raise ParsingError(
+                f"Invalid JSON output: {e}",
+                tool_name=self.__class__.__name__.replace("Parser", ""),
+                output=output,
+            ) from e
+
+        return self.parse_json(data)
+
 
 class RegexParser(ABC):
     """Base class for regex-based parsers.
