@@ -663,8 +663,10 @@ class TestManager:
         )
 
     def _parse_metric_patterns(self, output: str, stats: dict[str, t.Any]) -> bool:
+        # Try pytest's short summary format: "123 passed, 45 failed, 6 errors"
         for metric in ("passed", "failed", "skipped", "error"):
-            metric_pattern = rf"(\d+)\s+{metric}"
+            # Match "123 metric" with word boundary to avoid partial matches
+            metric_pattern = rf"(\d+)\s+{metric}\b"
             metric_match = re.search(metric_pattern, output, re.IGNORECASE)
             if metric_match:
                 count = int(metric_match.group(1))
@@ -684,16 +686,19 @@ class TestManager:
             stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
 
     def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
+        # Try parsing the short summary line FIRST (most accurate)
+        if self._parse_metric_patterns(output, stats):
+            self._calculate_total(stats)
+            return
+
+        # Fallback to parsing test lines by token (less accurate)
         self._parse_test_lines_by_token(output, stats)
         self._calculate_total(stats)
 
         if stats["total"] != 0:
             return
 
-        if self._parse_metric_patterns(output, stats):
-            self._calculate_total(stats)
-            return
-
+        # Last resort: legacy pattern matching (least accurate)
         self._parse_legacy_patterns(output, stats)
         stats["total"] = (
             stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]

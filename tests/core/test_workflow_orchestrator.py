@@ -90,9 +90,8 @@ async def test_run_complete_workflow_success(
     """Test running a complete workflow successfully."""
     from crackerjack.config import CrackerjackSettings
 
-    # Setup mocks
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    # Use real settings instance instead of mock for nested attributes
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     mock_runtime = Mock()
@@ -134,9 +133,8 @@ async def test_run_complete_workflow_failure(
     """Test running a complete workflow with failure."""
     from crackerjack.config import CrackerjackSettings
 
-    # Setup mocks
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    # Use real settings instance instead of mock for nested attributes
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     mock_runtime = Mock()
@@ -164,8 +162,7 @@ def test_run_complete_workflow_sync(mock_phase_coord, mock_session_coord, mock_l
     """Test the sync version of run_complete_workflow."""
     from crackerjack.config import CrackerjackSettings
 
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     pipeline = WorkflowPipeline(settings=mock_settings)
@@ -187,8 +184,7 @@ def test_execute_workflow(mock_phase_coord, mock_session_coord, mock_load_settin
     """Test the execute_workflow method."""
     from crackerjack.config import CrackerjackSettings
 
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     pipeline = WorkflowPipeline(settings=mock_settings)
@@ -210,8 +206,7 @@ def test_initialize_workflow_session(mock_phase_coord, mock_session_coord, mock_
     """Test initializing workflow session."""
     from crackerjack.config import CrackerjackSettings
 
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     pipeline = WorkflowPipeline(settings=mock_settings)
@@ -229,8 +224,7 @@ def test_run_fast_hooks_phase(mock_phase_coord, mock_session_coord, mock_load_se
     """Test running fast hooks phase."""
     from crackerjack.config import CrackerjackSettings
 
-    mock_settings = Mock(spec=CrackerjackSettings)
-    mock_settings.execution.verbose = False
+    mock_settings = CrackerjackSettings()
     mock_load_settings.return_value = mock_settings
 
     pipeline = WorkflowPipeline(settings=mock_settings)

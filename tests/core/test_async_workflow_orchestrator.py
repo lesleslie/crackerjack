@@ -69,13 +69,13 @@ async def test_run_complete_workflow_async(
         session=mock_session,
         phases=mock_phases,
     )
-    
+
     # Mock the underlying pipeline's run_complete_workflow method
     pipeline._pipeline.run_complete_workflow = AsyncMock(return_value=True)
-    
+
     options = Mock()
     result = await pipeline.run_complete_workflow_async(options)
-    
+
     assert result is True
     pipeline._pipeline.run_complete_workflow.assert_called_once_with(options)
 
@@ -85,7 +85,7 @@ def test_run_complete_workflow_async_function():
     # This function creates an event loop and runs the workflow
     # Since it's difficult to test without a real workflow, we'll just ensure it doesn't crash
     # with basic parameters
-    
+
     # Note: This test is tricky to implement properly without mocking the entire workflow
     # For now, we'll skip it as it's a convenience function that wraps the main functionality
     pass

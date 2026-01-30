@@ -29,7 +29,7 @@ async def test_atomic_file_writer_initialization(temp_dir):
     """Test initialization of AtomicFileWriter."""
     target_path = temp_dir / "test.txt"
     writer = AtomicFileWriter(target_path)
-    
+
     assert writer.path == target_path
     assert writer.backup is True
     assert writer.temp_path is None
@@ -42,14 +42,14 @@ async def test_atomic_file_writer_full_cycle(temp_dir):
     """Test the full cycle of AtomicFileWriter."""
     target_path = temp_dir / "test.txt"
     content = "Hello, World!"
-    
+
     writer = AtomicFileWriter(target_path)
     await writer.initialize()
-    
+
     writer.write(content)
     await writer.commit()
     await writer.cleanup()
-    
+
     # Verify the file was written correctly
     assert target_path.exists()
     assert target_path.read_text() == content
@@ -60,14 +60,14 @@ async def test_atomic_file_writer_writelines(temp_dir):
     """Test writelines method of AtomicFileWriter."""
     target_path = temp_dir / "test.txt"
     lines = ["Line 1\n", "Line 2\n", "Line 3\n"]
-    
+
     writer = AtomicFileWriter(target_path)
     await writer.initialize()
-    
+
     writer.writelines(lines)
     await writer.commit()
     await writer.cleanup()
-    
+
     # Verify the file was written correctly
     assert target_path.exists()
     assert target_path.read_text() == "".join(lines)
@@ -78,15 +78,15 @@ async def test_atomic_file_writer_flush(temp_dir):
     """Test flush method of AtomicFileWriter."""
     target_path = temp_dir / "test.txt"
     content = "Hello, World!"
-    
+
     writer = AtomicFileWriter(target_path)
     await writer.initialize()
-    
+
     writer.write(content)
     writer.flush()  # This should not raise an exception
     await writer.commit()
     await writer.cleanup()
-    
+
     # Verify the file was written correctly
     assert target_path.exists()
     assert target_path.read_text() == content
@@ -97,9 +97,9 @@ async def test_locked_file_resource_initialization(temp_dir):
     """Test initialization of LockedFileResource."""
     file_path = temp_dir / "locked_file.txt"
     file_path.touch()  # Create the file
-    
+
     resource = LockedFileResource(file_path)
-    
+
     assert resource.path == file_path
     assert resource.mode == "r+"
     assert resource.timeout == 30.0
@@ -110,9 +110,9 @@ async def test_locked_file_resource_initialization(temp_dir):
 async def test_safe_directory_creator_initialization(temp_dir):
     """Test initialization of SafeDirectoryCreator."""
     dir_path = temp_dir / "new" / "subdir"
-    
+
     creator = SafeDirectoryCreator(dir_path)
-    
+
     assert creator.path == dir_path
     assert creator.cleanup_on_error is True
     assert creator._created_dirs == []
@@ -122,7 +122,7 @@ async def test_safe_directory_creator_initialization(temp_dir):
 async def test_batch_file_operations_initialization():
     """Test initialization of BatchFileOperations."""
     batch_ops = BatchFileOperations()
-    
+
     assert batch_ops.operations == []
     assert batch_ops.rollback_operations == []
     assert batch_ops.manager is not None
@@ -133,9 +133,9 @@ def test_batch_file_operations_add_write_operation():
     batch_ops = BatchFileOperations()
     path = Path("/fake/path.txt")
     content = "test content"
-    
+
     batch_ops.add_write_operation(path, content)
-    
+
     assert len(batch_ops.operations) == 1
     assert len(batch_ops.rollback_operations) == 1
 
@@ -145,9 +145,9 @@ def test_batch_file_operations_add_copy_operation():
     batch_ops = BatchFileOperations()
     source = Path("/fake/source.txt")
     dest = Path("/fake/dest.txt")
-    
+
     batch_ops.add_copy_operation(source, dest)
-    
+
     assert len(batch_ops.operations) == 1
     assert len(batch_ops.rollback_operations) == 1
 
@@ -157,9 +157,9 @@ def test_batch_file_operations_add_move_operation():
     batch_ops = BatchFileOperations()
     source = Path("/fake/source.txt")
     dest = Path("/fake/dest.txt")
-    
+
     batch_ops.add_move_operation(source, dest)
-    
+
     assert len(batch_ops.operations) == 1
     assert len(batch_ops.rollback_operations) == 1
 
@@ -168,9 +168,9 @@ def test_batch_file_operations_add_delete_operation():
     """Test adding a delete operation to BatchFileOperations."""
     batch_ops = BatchFileOperations()
     path = Path("/fake/path.txt")
-    
+
     batch_ops.add_delete_operation(path)
-    
+
     assert len(batch_ops.operations) == 1
     assert len(batch_ops.rollback_operations) == 1
 
@@ -180,9 +180,9 @@ async def test_safe_file_operations_safe_write_text(temp_dir):
     """Test safe_write_text method of SafeFileOperations."""
     file_path = temp_dir / "safe_write_test.txt"
     content = "Hello, Safe Write!"
-    
+
     await SafeFileOperations.safe_write_text(file_path, content)
-    
+
     assert file_path.exists()
     assert file_path.read_text() == content
 
@@ -192,11 +192,11 @@ async def test_safe_file_operations_safe_read_text(temp_dir):
     """Test safe_read_text method of SafeFileOperations."""
     file_path = temp_dir / "safe_read_test.txt"
     content = "Hello, Safe Read!"
-    
+
     file_path.write_text(content)
-    
+
     result = await SafeFileOperations.safe_read_text(file_path)
-    
+
     assert result == content
 
 
@@ -205,10 +205,10 @@ async def test_atomic_file_write_context_manager(temp_dir):
     """Test atomic_file_write context manager."""
     file_path = temp_dir / "atomic_context_test.txt"
     content = "Hello, Atomic Context!"
-    
+
     async with atomic_file_write(file_path) as writer:
         writer.write(content)
-    
+
     assert file_path.exists()
     assert file_path.read_text() == content
 

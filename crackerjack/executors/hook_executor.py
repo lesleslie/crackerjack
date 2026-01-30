@@ -14,6 +14,9 @@ from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
 from crackerjack.models.task import HookResult
 from crackerjack.services.security_logger import get_security_logger
+from crackerjack.utils.issue_detection import (
+    extract_issue_lines,
+)
 
 
 @dataclass
@@ -626,7 +629,7 @@ class HookExecutor:
             return []
 
         if error_output:
-            return [line.strip() for line in error_output.split("\n") if line.strip()]
+            return extract_issue_lines(error_output, tool_name=hook.name)
 
         return [f"Hook failed with code {result.returncode}"]
 

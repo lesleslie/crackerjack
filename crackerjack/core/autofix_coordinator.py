@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.services.cache import CrackerjackCache
+from crackerjack.utils.issue_detection import should_count_as_issue
 
 logger = logging.getLogger(__name__)
 
@@ -403,9 +404,14 @@ class AutofixCoordinator:
         hook_results: Sequence[object],
         stage: str = "fast",
     ) -> list[Issue]:
-        if iteration == 0:
-            return self._parse_hook_results_to_issues(hook_results)
-        return self._collect_current_issues(stage=stage)
+        self.logger.debug(
+            f"Iteration {iteration}: Parsing {len(hook_results)} hook results"
+        )
+        issues = self._parse_hook_results_to_issues(hook_results)
+        self.logger.info(
+            f"Iteration {iteration}: Extracted {len(issues)} issues from hook results"
+        )
+        return issues
 
     def _report_iteration_success(self, iteration: int) -> None:
         self.console.print(
@@ -673,11 +679,17 @@ class AutofixCoordinator:
 
         status = getattr(result, "status", "")
         if status.lower() != "failed":
+            self.logger.debug(f"Skipping hook with status '{status}' (not failed)")
             return []
 
         hook_name = getattr(result, "name", "")
         if not hook_name:
+            self.logger.warning("Hook result has no name attribute")
             return []
+
+        self.logger.debug(
+            f"Parsing failed hook result: name='{hook_name}', status='{status}'"
+        )
 
         raw_output = self._extract_raw_output(result)
         self._log_hook_parsing_start(hook_name, result, raw_output)
@@ -719,6 +731,14 @@ class AutofixCoordinator:
     def _collect_current_issues(self, stage: str = "fast") -> list[Issue]:
         pkg_dir = self._detect_package_directory()
         check_commands = self._build_check_commands(pkg_dir, stage=stage)
+        self.logger.debug(
+            f"Built {len(check_commands)} check commands for stage '{stage}'"
+        )
+        for cmd, hook_name, timeout in check_commands:
+            self.logger.debug(
+                f"  Check command: {cmd[:3]}... (hook={hook_name}, timeout={timeout}s)"
+            )
+
         all_issues, successful_checks = self._execute_check_commands(check_commands)
 
         if successful_checks == 0 and self.pkg_path.exists():
@@ -854,16 +874,32 @@ class AutofixCoordinator:
     ) -> list[Issue]:
         combined_output = stdout + stderr
 
+        self.logger.debug(
+            f"{hook_name}: returncode={process.returncode}, "
+            f"stdout_len={len(stdout)}, stderr_len={len(stderr)}, "
+            f"combined_len={len(combined_output)}"
+        )
+
         if process.returncode != 0 or combined_output:
             hook_issues = self._parse_hook_to_issues(hook_name, combined_output)
             if hook_issues:
-                self.logger.debug(f"{hook_name}: {len(hook_issues)} issues")
+                self.logger.debug(
+                    f"{hook_name}: Parsed {len(hook_issues)} issues from output"
+                )
+            else:
+                self.logger.debug(
+                    f"{hook_name}: Output present but no issues parsed (filtered out?)"
+                )
             return hook_issues
 
         return []
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
         issues: list[Issue] = []
+
+        self.logger.debug(
+            f"Parsing hook '{hook_name}': raw_output_lines={len(raw_output.split(chr(10)))}"
+        )
 
         hook_type_map: dict[str, IssueType] = {
             "zuban": IssueType.TYPE_ERROR,
@@ -891,30 +927,42 @@ class AutofixCoordinator:
             return issues
 
         if hook_name in ("zuban", "pyright", "mypy"):
+            self.logger.debug(f"Using type checker parser for '{hook_name}'")
             issues.extend(
                 self._parse_type_checker_output(hook_name, raw_output, issue_type)
             )
         elif hook_name in ("ruff", "ruff-check"):
+            self.logger.debug(f"Using ruff parser for '{hook_name}'")
             issues.extend(self._parse_ruff_output(raw_output))
         elif hook_name == "ruff-format":
+            self.logger.debug(f"Using ruff-format parser for '{hook_name}'")
             issues.extend(self._parse_ruff_format_output(raw_output, issue_type))
         elif hook_name == "codespell":
+            self.logger.debug(f"Using codespell parser for '{hook_name}'")
             issues.extend(self._parse_codespell_output(raw_output, issue_type))
         elif hook_name == "refurb":
+            self.logger.debug(f"Using refurb parser for '{hook_name}'")
             issues.extend(self._parse_refurb_output(raw_output, issue_type))
         elif hook_name == "complexipy":
+            self.logger.debug(f"Using complexipy parser for '{hook_name}'")
             issues.extend(self._parse_complexity_output(raw_output, issue_type))
         elif hook_name == "bandit":
+            self.logger.debug(f"Using bandit parser for '{hook_name}'")
             issues.extend(self._parse_security_output(raw_output, issue_type))
         elif hook_name in ("vulture", "skylos"):
+            self.logger.debug(f"Using dead code parser for '{hook_name}'")
             issues.extend(self._parse_dead_code_output(raw_output, issue_type))
         elif hook_name == "check-local-links":
+            self.logger.debug(f"Using local links parser for '{hook_name}'")
             issues.extend(self._parse_check_local_links_output(raw_output, issue_type))
         elif hook_name in ("check-yaml", "check-toml", "check-json"):
+            self.logger.debug(f"Using structured data parser for '{hook_name}'")
             issues.extend(self._parse_structured_data_output(raw_output, issue_type))
         else:
+            self.logger.debug(f"Using generic parser for '{hook_name}'")
             issues.extend(self._parse_generic_output(hook_name, raw_output, issue_type))
 
+        self.logger.debug(f"Hook '{hook_name}' produced {len(issues)} issues total")
         return issues
 
     def _parse_type_checker_output(
@@ -925,34 +973,36 @@ class AutofixCoordinator:
     ) -> list[Issue]:
         issues: list[Issue] = []
 
-        for line in raw_output.split("\n"):
+        lines = raw_output.split("\n")
+        self.logger.debug(f"{tool_name}: Processing {len(lines)} output lines")
+
+        lines_filtered = 0
+        lines_parsed = 0
+        lines_failed = 0
+
+        for line in lines:
             line = line.strip()
             if not self._should_parse_line(line):
+                lines_filtered += 1
                 continue
 
             issue = self._parse_type_checker_line(line, tool_name, issue_type)
             if issue:
                 issues.append(issue)
+                lines_parsed += 1
+            else:
+                lines_failed += 1
+
+        self.logger.debug(
+            f"{tool_name}: Parsed {lines_parsed} issues, "
+            f"filtered {lines_filtered} lines, "
+            f"failed to parse {lines_failed} lines"
+        )
 
         return issues
 
     def _should_parse_line(self, line: str) -> bool:
-        if not line:
-            return False
-
-        line_lower = line.lower()
-        if any(
-            pattern in line_lower
-            for pattern in (": note:", ": help:", "note: ", "help: ")
-        ):
-            return False
-
-        if line.startswith(("Found", "Checked", "N errors found", "errors in")):
-            return False
-
-        if line.strip().startswith(("===", "---", "Errors:")):
-            return False
-        return True
+        return should_count_as_issue(line)
 
     def _parse_type_checker_line(
         self,
@@ -1089,35 +1139,71 @@ class AutofixCoordinator:
     def _parse_complexity_output(
         self, raw_output: str, issue_type: IssueType
     ) -> list[Issue]:
+        """Parse complexipy output to extract complexity issues."""
         issues: list[Issue] = []
+        lines = raw_output.split("\n")
 
-        for line in raw_output.split("\n"):
-            line = line.strip()
-            if not line or "complexity" not in line.lower():
+        in_failed_section = False
+        current_file = ""
+
+        for line in lines:
+            line_stripped = line.strip()
+
+            if self._is_failed_section_start(line_stripped):
+                in_failed_section = True
                 continue
 
-            if "-" in line and ":" in line:
-                parts = line.split("-", 1)
-                if len(parts) == 2:
-                    location = parts[0].strip()
-                    message = parts[1].strip()
+            if self._is_failed_section_end(line_stripped, in_failed_section):
+                break
 
-                    file_path = (
-                        location.split(":")[0].strip() if ":" in location else location
-                    )
+            if self._is_file_marker(line_stripped, in_failed_section):
+                current_file = self._extract_file_from_marker(line_stripped)
+                continue
 
-                    issues.append(
-                        Issue(
-                            type=issue_type,
-                            severity=Priority.MEDIUM,
-                            message=message,
-                            file_path=file_path,
-                            line_number=None,
-                            stage="complexity",
-                        )
-                    )
+            if self._is_function_line(
+                line_stripped, in_failed_section, bool(current_file)
+            ):
+                issue = self._create_complexity_issue(
+                    line_stripped, current_file, issue_type
+                )
+                issues.append(issue)
 
         return issues
+
+    def _is_failed_section_start(self, line: str) -> bool:
+        """Check if line marks the start of the failed functions section."""
+        return line.startswith("Failed functions:")
+
+    def _is_failed_section_end(self, line: str, in_section: bool) -> bool:
+        """Check if line marks the end of the failed functions section."""
+        return in_section and (not line or line.startswith("─"))
+
+    def _is_file_marker(self, line: str, in_section: bool) -> bool:
+        """Check if line is a file path marker."""
+        return in_section and line.startswith("- ") and line.endswith(":")
+
+    def _extract_file_from_marker(self, line: str) -> str:
+        """Extract file path from a file marker line."""
+        remaining = line[2:].strip()  # Remove "- " prefix
+        return remaining[:-1].strip()  # Remove trailing ":"
+
+    def _is_function_line(self, line: str, in_section: bool, has_file: bool) -> bool:
+        """Check if line is a function with complexity issue."""
+        return in_section and has_file and not line.startswith("- ") and "::" in line
+
+    def _create_complexity_issue(
+        self, line: str, file_path: str, issue_type: IssueType
+    ) -> Issue:
+        """Create an Issue object for a complexity violation."""
+        message = f"Complexity exceeded for {line}"
+        return Issue(
+            type=issue_type,
+            severity=Priority.MEDIUM,
+            message=message,
+            file_path=file_path,
+            line_number=None,
+            stage="complexity",
+        )
 
     def _parse_security_output(
         self, raw_output: str, issue_type: IssueType
@@ -1252,10 +1338,6 @@ class AutofixCoordinator:
     def _parse_structured_data_output(
         self, raw_output: str, issue_type: IssueType
     ) -> list[Issue]:
-        """Parse output from check-yaml, check-toml, and check-json hooks.
-
-        These tools use format: '✗ filepath: error message'
-        """
         issues: list[Issue] = []
 
         for line in raw_output.split("\n"):
@@ -1270,17 +1352,11 @@ class AutofixCoordinator:
         return issues
 
     def _should_parse_structured_data_line(self, line: str) -> bool:
-        """Check if line is an error line (starts with ✗)."""
         return bool(line and line.startswith("✗"))
 
     def _parse_single_structured_data_line(
         self, line: str, issue_type: IssueType
     ) -> Issue | None:
-        """Parse a single error line from check-yaml/check-toml/check-json.
-
-        Format: '✗ filepath: error message'
-        Example: '✗ settings/crackerjack.yaml: could not determine a constructor'
-        """
         try:
             file_path, error_message = self._extract_structured_data_parts(line)
             if not file_path:
@@ -1291,7 +1367,7 @@ class AutofixCoordinator:
                 severity=Priority.MEDIUM,
                 message=error_message,
                 file_path=file_path,
-                line_number=None,  # File-level validation, no line numbers
+                line_number=None,
                 stage="structured-data",
             )
         except Exception as e:
@@ -1299,19 +1375,9 @@ class AutofixCoordinator:
             return None
 
     def _extract_structured_data_parts(self, line: str) -> tuple[str, str]:
-        """Extract file path and error message from structured data error line.
-
-        Args:
-            line: Format: '✗ filepath: error message'
-
-        Returns:
-            tuple: (file_path, error_message)
-        """
-        # Remove the ✗ prefix
         if line.startswith("✗"):
             line = line[1:].strip()
 
-        # Split on first colon to separate filepath from error
         if ":" not in line:
             return "", line
 
