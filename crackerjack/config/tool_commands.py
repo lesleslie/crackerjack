@@ -52,8 +52,6 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "mypy",
             "--config-file",
             "mypy.ini",
-            "--output",
-            "json",
             "--no-error-summary",
             f"./{package_name}",
         ],

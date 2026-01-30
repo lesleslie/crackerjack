@@ -405,6 +405,69 @@ class StructuredDataParser(RegexParser):
         return file_path.strip(), error_message.strip()
 
 
+class MypyRegexParser(RegexParser):
+    """Parse mypy/zuban output (text-based).
+
+    Example output:
+        path/to/file.py:10: error: message here
+        path/to/file.py:15: warning: message here
+    """
+
+    def parse_text(self, output: str) -> list[Issue]:
+        """Parse mypy text output.
+
+        Args:
+            output: Raw text output from mypy/zuban
+
+        Returns:
+            List of Issue objects
+        """
+        issues: list[Issue] = []
+
+        for line in output.split("\n"):
+            line = line.strip()
+            if not line or line.startswith(("Found", "Checked", "Success")):
+                continue
+
+            # Parse mypy format: file:line: severity: message
+            if ":" in line and "error" in line or "warning" in line or "note" in line:
+                try:
+                    parts = line.split(":", 3)
+                    if len(parts) >= 3:
+                        file_path = parts[0].strip()
+                        line_number = None
+                        if len(parts) > 1 and parts[1].strip().isdigit():
+                            line_number = int(parts[1].strip())
+
+                        # Extract message (everything after the severity)
+                        message = line
+                        if len(parts) >= 4:
+                            message = parts[3].strip()
+
+                        # Determine severity from message
+                        severity = Priority.MEDIUM
+                        if "error" in line.lower():
+                            severity = Priority.HIGH
+                        elif "warning" in line.lower():
+                            severity = Priority.MEDIUM
+
+                        issues.append(
+                            Issue(
+                                type=IssueType.TYPE_ERROR,
+                                severity=severity,
+                                message=message,
+                                file_path=file_path,
+                                line_number=line_number,
+                                stage="zuban",
+                            )
+                        )
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Failed to parse mypy line: {line} ({e})")
+
+        logger.debug(f"Parsed {len(issues)} issues from mypy/zuban")
+        return issues
+
+
 # Register parsers with factory
 def register_regex_parsers(factory: "ParserFactory") -> None:
     """Register all regex parsers with the parser factory.
@@ -425,6 +488,8 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexity", ComplexityRegexParser)
+    factory.register_regex_parser("mypy", MypyRegexParser)
+    factory.register_regex_parser("zuban", MypyRegexParser)
 
     # Register structured data parser for multiple tools
     factory.register_regex_parser("check-yaml", StructuredDataParser)
@@ -433,5 +498,5 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
 
     logger.info(
         "Registered regex parsers: codespell, refurb, ruff-format, complexity, "
-        "check-yaml, check-toml, check-json"
+        "mypy, zuban, check-yaml, check-toml, check-json"
     )
