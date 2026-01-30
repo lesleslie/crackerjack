@@ -472,6 +472,94 @@ class MypyRegexParser(RegexParser):
         return issues
 
 
+class CreosoteRegexParser(RegexParser):
+    """Parse creosote output (text-based, no JSON support).
+
+    Example output:
+        Found unused dependencies: dep1, dep2, dep3
+    Or:
+        The following dependencies are not being used:
+        - dep1
+        - dep2
+    Or:
+        unused-dependency (dep1)
+    """
+
+    def parse_text(self, output: str) -> list[Issue]:
+        """Parse creosote text output.
+
+        Args:
+            output: Raw text output from creosote
+
+        Returns:
+            List of Issue objects
+        """
+        issues: list[Issue] = []
+        lines = output.split("\n")
+
+        for line in lines:
+            line = line.strip()
+            if not line or line.startswith(("Checked", "Found", "All dependencies")):
+                continue
+
+            # Pattern 1: "Found unused dependencies: dep1, dep2"
+            if "Found unused dependencies:" in line:
+                deps_part = line.split(":", 1)[1].strip()
+                deps = [d.strip() for d in deps_part.split(",")]
+                for dep in deps:
+                    if dep:
+                        issues.append(
+                            Issue(
+                                type=IssueType.COMPLEXITY,
+                                severity=Priority.MEDIUM,
+                                message=f"Unused dependency: {dep}",
+                                file_path="pyproject.toml",
+                                line_number=None,
+                                stage="creosote",
+                            )
+                        )
+                continue
+
+            # Pattern 2: "- dep1" (in a list)
+            if line.startswith("- "):
+                dep = line[2:].strip()
+                if dep and not line.startswith(("---", "====")):
+                    issues.append(
+                        Issue(
+                            type=IssueType.COMPLEXITY,
+                            severity=Priority.MEDIUM,
+                            message=f"Unused dependency: {dep}",
+                            file_path="pyproject.toml",
+                            line_number=None,
+                            stage="creosote",
+                        )
+                    )
+                continue
+
+            # Pattern 3: "unused-dependency (dep1)"
+            if "unused-dependency" in line or "not being used" in line.lower():
+                # Extract dependency name from parentheses or text
+                import re
+
+                match = re.search(r"\(([^)]+)\)", line)
+                if match:
+                    dep = match.group(1)
+                    issues.append(
+                        Issue(
+                            type=IssueType.COMPLEXITY,
+                            severity=Priority.MEDIUM,
+                            message=f"Unused dependency: {dep}",
+                            file_path="pyproject.toml",
+                            line_number=None,
+                            stage="creosote",
+                        )
+                    )
+                continue
+
+        logger.debug(f"Parsed {len(issues)} issues from creosote")
+        return issues
+
+
 # Register parsers with factory
 def register_regex_parsers(factory: "ParserFactory") -> None:
     """Register all regex parsers with the parser factory.
@@ -485,6 +573,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     RefurbRegexParser()
     RuffFormatRegexParser()
     ComplexityRegexParser()
+    CreosoteRegexParser()
     StructuredDataParser()
 
     # Register for specific tool names
@@ -492,6 +581,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexity", ComplexityRegexParser)
+    factory.register_regex_parser("creosote", CreosoteRegexParser)
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
 
@@ -502,5 +592,5 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
 
     logger.info(
         "Registered regex parsers: codespell, refurb, ruff-format, complexity, "
-        "mypy, zuban, check-yaml, check-toml, check-json"
+        "creosote, mypy, zuban, check-yaml, check-toml, check-json"
     )
