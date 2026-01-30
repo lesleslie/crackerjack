@@ -60,13 +60,16 @@ hook_type_map: dict[str, IssueType] = {
 **Three-point registration pattern required** for hooks in crackerjack:
 
 1. **Command definition** (`tool_commands.py`) ✅
+
    - check-yaml command was registered here
 
-2. **Parser routing** (`autofix_coordinator.py`) ❌
+1. **Parser routing** (`autofix_coordinator.py`) ❌
+
    - check-yaml was NOT added to `hook_type_map`
    - No `elif` branch for check-yaml routing
 
-3. **Output parser** (`autofix_coordinator.py`) ❌
+1. **Output parser** (`autofix_coordinator.py`) ❌
+
    - No `_parse_yaml_output()` function existed
 
 The check-yaml hook was added to **#1** but not **#2** or **#3**.
@@ -201,6 +204,7 @@ ______________________________________________________________________
 **File**: `tests/unit/core/test_structured_data_parser.py`
 
 **Coverage**:
+
 - Line filtering (error vs success vs summary lines)
 - File path and error message extraction
 - Single error parsing (YAML, TOML, JSON)
@@ -215,6 +219,7 @@ ______________________________________________________________________
 **File**: `tests/regression/test_check_yaml_ai_fix_regression.py`
 
 **Coverage**:
+
 - **27 errors test**: Exact reproduction of original bug
 - **Iteration 1 test**: Ensures issues detected in first AI iteration
 - **Mixed hooks test**: YAML errors alongside other hook failures
@@ -268,18 +273,22 @@ ______________________________________________________________________
 This is the **third AI-fix parsing bug** discovered and fixed:
 
 1. **Case Sensitivity Bug** (2026-01-21)
+
    - HookResult used lowercase "failed" but parser checked uppercase "Failed"
    - Fixed: Changed parser to use case-insensitive comparison
 
-2. **Zuban Note Line Duplication** (2026-01-21)
+1. **Zuban Note Line Duplication** (2026-01-21)
+
    - Parser created issues for both error lines and `note:` lines
    - Fixed: Filter out `: note:` and `: help:` contextual lines
 
-3. **Ruff Output Format Bug** (2026-01-25)
+1. **Ruff Output Format Bug** (2026-01-25)
+
    - `ruff --fix` uses multi-line format that parser couldn't handle
    - Fixed: Use `--output-format concise` for parseable single-line output
 
-4. **Check-YAML Missing Registration** (2026-01-28) **[THIS FIX]**
+1. **Check-YAML Missing Registration** (2026-01-28) **[THIS FIX]**
+
    - check-yaml not in `hook_type_map`, causing 0 issues detection
    - Fixed: Added registration and parser implementation
 
@@ -290,12 +299,14 @@ ______________________________________________________________________
 ## Impact
 
 **Before Fix**:
+
 - ❌ AI-fix completely ineffective for YAML/TOML/JSON errors
 - ❌ Users saw "0 issues to fix" even with 27+ errors
 - ❌ No automated fixes for structured data validation errors
 - ❌ False confidence that issues were resolved
 
 **After Fix**:
+
 - ✅ All structured data errors detected in iteration 1
 - ✅ Accurate issue counts in AI-fix progress reporting
 - ✅ AI agents can attempt YAML/TOML/JSON fixes
@@ -306,14 +317,17 @@ ______________________________________________________________________
 ## Files Modified
 
 1. **`crackerjack/core/autofix_coordinator.py`**
+
    - Line 883-885: Added check-yaml/check-toml/check-json to `hook_type_map`
    - Line 913-914: Added routing logic for structured data hooks
    - Line 1252-1319: Implemented `_parse_structured_data_output()` and helpers
 
-2. **`tests/unit/core/test_structured_data_parser.py`** (NEW)
+1. **`tests/unit/core/test_structured_data_parser.py`** (NEW)
+
    - 24 unit tests covering all parser functionality
 
-3. **`tests/regression/test_check_yaml_ai_fix_regression.py`** (NEW)
+1. **`tests/regression/test_check_yaml_ai_fix_regression.py`** (NEW)
+
    - 4 regression tests preventing bug recurrence
 
 ______________________________________________________________________
@@ -325,13 +339,14 @@ ______________________________________________________________________
 to crackerjack, they must be registered in THREE places:
 
 1. `tool_commands.py` - Command definition (argv, tool name)
-2. `hook_type_map` - Parser routing (hook name → issue type)
-3. Parser function - Output format handling
+1. `hook_type_map` - Parser routing (hook name → issue type)
+1. Parser function - Output format handling
 
 Missing any registration point causes silent failures.
 `─────────────────────────────────────────────────`
 
 **Prevention Strategy**:
+
 - Use a registration checklist when adding new hooks
 - Add parser tests alongside command definition
 - Verify issue detection before considering hook "complete"
