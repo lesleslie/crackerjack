@@ -14,6 +14,7 @@ from crackerjack.parsers.base import RegexParser
 
 logger = logging.getLogger(__name__)
 
+
 class CodespellRegexParser(RegexParser):
     """Parse codespell output (text-based, no JSON support).
 
@@ -92,6 +93,7 @@ class CodespellRegexParser(RegexParser):
             return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
         return message_part.strip()
 
+
 class RefurbRegexParser(RegexParser):
     """Parse refurb output (text-based, no JSON support).
 
@@ -138,6 +140,7 @@ class RefurbRegexParser(RegexParser):
 
         logger.debug(f"Parsed {len(issues)} issues from refurb")
         return issues
+
 
 class RuffFormatRegexParser(RegexParser):
     """Parse ruff-format output (text-based, no JSON support).
@@ -189,6 +192,7 @@ class RuffFormatRegexParser(RegexParser):
 
         logger.debug(f"Parsed {len(issues)} issues from ruff-format")
         return issues
+
 
 class ComplexityRegexParser(RegexParser):
     """Parse complexipy output (text-based, no JSON support).
@@ -270,6 +274,7 @@ class ComplexityRegexParser(RegexParser):
             stage="complexity",
         )
 
+
 class GenericRegexParser(RegexParser):
     """Generic parser for tools without specific parsers.
 
@@ -311,6 +316,7 @@ class GenericRegexParser(RegexParser):
                 details=[output[:500]],
             )
         ]
+
 
 class StructuredDataParser(RegexParser):
     """Parse structured data tool output (check-yaml, check-toml, check-json).
@@ -397,6 +403,7 @@ class StructuredDataParser(RegexParser):
 
         file_path, error_message = line.split(":", 1)
         return file_path.strip(), error_message.strip()
+
 
 # Register parsers with factory
 def register_regex_parsers(factory: "ParserFactory") -> None:
