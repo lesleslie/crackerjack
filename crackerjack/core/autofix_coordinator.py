@@ -648,9 +648,41 @@ class AutofixCoordinator:
         issues: list[Issue] = []
         self.logger.debug(f"Parsing {len(hook_results)} hook results for issues")
 
+        # Track parsed counts per hook to update HookResult.issues_count
+        # This fixes the mismatch where hook executors count raw output lines
+        # but parsers return filtered actionable issues
+        parsed_counts_by_hook: dict[str, int] = {}
+
         for result in hook_results:
             hook_issues = self._parse_single_hook_result(result)
+
+            # Track how many issues we actually parsed for this hook
+            if hasattr(result, "name"):
+                hook_name = result.name
+                if hook_name not in parsed_counts_by_hook:
+                    parsed_counts_by_hook[hook_name] = 0
+                parsed_counts_by_hook[hook_name] += len(hook_issues)
+
             issues.extend(hook_issues)
+
+        # Update HookResult.issues_count to match parsed counts
+        # This ensures AI-fix reports accurate issue counts
+        # Only update if we actually parsed issues for this hook (count > 0 or hook failed)
+        for result in hook_results:
+            if hasattr(result, "name") and hasattr(result, "issues_count"):
+                hook_name = result.name
+                if hook_name in parsed_counts_by_hook:
+                    old_count = result.issues_count
+                    new_count = parsed_counts_by_hook[hook_name]
+                    # Only update if we actually parsed something or hook failed
+                    # Don't update passed hooks with no issues
+                    if new_count > 0 or (hasattr(result, "status") and result.status == "failed"):
+                        if old_count != new_count:
+                            self.logger.debug(
+                                f"Updated issues_count for '{hook_name}': "
+                                f"{old_count} → {new_count} (matched to parsed issues)"
+                            )
+                            result.issues_count = new_count
 
         seen: set[tuple[str | None, int | None, str, str]] = set()
         unique_issues: list[Issue] = []
@@ -691,23 +723,6 @@ class AutofixCoordinator:
         hook_name = getattr(result, "name", "")
         if not hook_name:
             self.logger.warning("Hook result has no name attribute")
-            return []
-
-        # Skip tools that do heavy filtering in their adapters
-        # These tools output large amounts of raw data that gets filtered down
-        # to a small subset by business logic (thresholds, patterns, etc.)
-        # AI agents cannot reliably fix these issues because:
-        # 1. The raw output doesn't match the filtered issues (count mismatch)
-        # 2. The filtering requires domain knowledge (complexity thresholds, etc)
-        # 3. These tools often require manual code review and architectural decisions
-        if hook_name in ("complexipy", "refurb", "creosote"):
-            self.logger.info(
-                f"Skipping '{hook_name}' for AI-fix: tool requires manual review "
-                f"due to complex filtering logic (thresholds, patterns, etc)"
-            )
-            self.console.print(
-                f"[dim]ℹ Skipping {hook_name} for AI-fix (requires manual review)[/dim]"
-            )
             return []
 
         self.logger.debug(
