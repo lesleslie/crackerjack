@@ -30,6 +30,10 @@ def parse_bump_option_with_flag_support(
             "--run-tests": "run_tests",
             "-x": "strip_code",
             "--strip-code": "strip_code",
+            "-xo": "strip_comments_only",
+            "--strip-comments-only": "strip_comments_only",
+            "-xd": "strip_docstrings_only",
+            "--strip-docstrings-only": "strip_docstrings_only",
             "--debug": "debug",
         }
 
@@ -582,6 +586,18 @@ CLI_OPTIONS = {
         "-x",
         "--strip-code",
         help="Remove docstrings, line comments, and unnecessary whitespace from source code with automatic backup protection (doesn't affect test files).",
+    ),
+    "strip_comments_only": typer.Option(
+        False,
+        "-xo",
+        "--strip-comments-only",
+        help="Remove only line comments (preserves docstrings and whitespace).",
+    ),
+    "strip_docstrings_only": typer.Option(
+        False,
+        "-xd",
+        "--strip-docstrings-only",
+        help="Remove only docstrings (preserves comments and whitespace).",
     ),
     "run_tests": typer.Option(
         False,

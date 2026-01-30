@@ -448,11 +448,15 @@ class ComplexipyJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         """Parse complexipy JSON data.
 
+        Note: This parser returns ALL functions from complexipy output without filtering.
+        The ComplexipyAdapter is responsible for filtering by max_complexity threshold.
+        This separation ensures the parser is stateless and the adapter handles config.
+
         Args:
             data: Parsed JSON data from complexipy
 
         Returns:
-            List of Issue objects for functions exceeding complexity threshold
+            List of Issue objects for all functions (no threshold filtering)
         """
         issues: list[Issue] = []
 
@@ -479,22 +483,30 @@ class ComplexipyJSONParser(JSONParser):
                     continue
 
                 complexity = item["complexity"]
-                if not isinstance(complexity, int) or complexity <= 15:
-                    # Only report functions exceeding threshold
+                if not isinstance(complexity, int):
+                    logger.warning(
+                        f"Skipping invalid complexity value: {complexity} (type: {type(complexity)})"
+                    )
                     continue
 
                 file_path = str(item["path"])
                 function_name = str(item["function_name"])
 
-                message = (
-                    f"Function '{function_name}' has complexity {complexity} "
-                    f"(exceeds threshold of 15)"
-                )
+                # Note: No threshold filtering here - adapter handles that
+                # Severity based on complexity level for prioritization
+                if complexity > 20:
+                    severity = Priority.HIGH
+                elif complexity > 15:
+                    severity = Priority.MEDIUM
+                else:
+                    severity = Priority.LOW
+
+                message = f"Function '{function_name}' has complexity {complexity}"
 
                 issues.append(
                     Issue(
                         type=IssueType.COMPLEXITY,
-                        severity=Priority.HIGH if complexity > 20 else Priority.MEDIUM,
+                        severity=severity,
                         message=message,
                         file_path=file_path,
                         line_number=None,  # complexipy doesn't provide line numbers
@@ -514,20 +526,21 @@ class ComplexipyJSONParser(JSONParser):
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
         """Get issue count from complexipy JSON data.
 
+        Note: Returns count of ALL functions, no threshold filtering.
+        The adapter is responsible for filtering by max_complexity threshold.
+
         Args:
             data: Parsed JSON data
 
         Returns:
-            Number of issues in the data
+            Number of functions in the data (all, not filtered)
         """
         if isinstance(data, list):
-            # Count only functions with complexity > 15
+            # Count all valid function entries (adapter will filter by threshold)
             return sum(
                 1
                 for item in data
-                if isinstance(item, dict)
-                and isinstance(item.get("complexity"), int)
-                and item["complexity"] > 15
+                if isinstance(item, dict) and isinstance(item.get("complexity"), int)
             )
         return 0
 

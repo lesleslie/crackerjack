@@ -693,6 +693,23 @@ class AutofixCoordinator:
             self.logger.warning("Hook result has no name attribute")
             return []
 
+        # Skip tools that do heavy filtering in their adapters
+        # These tools output large amounts of raw data that gets filtered down
+        # to a small subset by business logic (thresholds, patterns, etc.)
+        # AI agents cannot reliably fix these issues because:
+        # 1. The raw output doesn't match the filtered issues (count mismatch)
+        # 2. The filtering requires domain knowledge (complexity thresholds, etc)
+        # 3. These tools often require manual code review and architectural decisions
+        if hook_name in ("complexipy", "refurb", "creosote"):
+            self.logger.info(
+                f"Skipping '{hook_name}' for AI-fix: tool requires manual review "
+                f"due to complex filtering logic (thresholds, patterns, etc)"
+            )
+            self.console.print(
+                f"[dim]ℹ Skipping {hook_name} for AI-fix (requires manual review)[/dim]"
+            )
+            return []
+
         self.logger.debug(
             f"Parsing failed hook result: name='{hook_name}', status='{status}'"
         )
@@ -954,7 +971,22 @@ class AutofixCoordinator:
 
         Returns:
             Expected issue count, or None if unable to determine
+
+        Note:
+            Returns None for tools that do filtering in the adapter (like complexipy)
+            where the raw output can't be used to predict the final filtered count.
         """
+        # Tools that do filtering in the adapter - skip validation
+        # The adapter applies business logic (thresholds, filters) that can't be
+        # determined from the raw output alone.
+        if tool_name in ("complexipy", "refurb", "creosote"):
+            # These tools output more data than the adapter ultimately returns:
+            # - complexipy: outputs all functions (6076), adapter filters by threshold (~9)
+            # - refurb: outputs all lines, adapter filters for "[FURB" prefix
+            # - creosote: outputs multiple sections, adapter filters for "unused" deps
+            # We can't predict the filtered count from raw output
+            return None
+
         # Try parsing JSON to get count
         try:
             data = json.loads(output)

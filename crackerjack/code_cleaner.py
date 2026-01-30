@@ -408,6 +408,8 @@ class CodeCleaner(BaseModel):
     base_directory: Path | None = None
     security_logger: t.Any = None
     backup_service: t.Any = None
+    strip_comments_only: bool = False
+    strip_docstrings_only: bool = False
 
     def model_post_init(self, _: t.Any) -> None:
         if self.logger is None:
@@ -440,13 +442,41 @@ class CodeCleaner(BaseModel):
         if self.backup_service is None:
             self.backup_service = PackageBackupService()
 
+    def set_comments_only_mode(self) -> None:
+        """Set cleaner to remove only line comments."""
+        self.strip_comments_only = True
+        self.strip_docstrings_only = False
+
+    def set_docstrings_only_mode(self) -> None:
+        """Set cleaner to remove only docstrings."""
+        self.strip_comments_only = False
+        self.strip_docstrings_only = True
+
+    def set_full_cleaning_mode(self) -> None:
+        """Set cleaner to remove comments, docstrings, and whitespace (default)."""
+        self.strip_comments_only = False
+        self.strip_docstrings_only = False
+
     def clean_file(self, file_path: Path) -> CleaningResult:
-        cleaning_steps = [
-            self._create_line_comment_step(),
-            self._create_docstring_step(),
-            self._create_whitespace_step(),
-            self._create_formatting_step(),
-        ]
+        # Build cleaning steps based on configuration
+        cleaning_steps = []
+
+        if self.strip_comments_only:
+            # Only remove line comments
+            cleaning_steps.append(self._create_line_comment_step())
+        elif self.strip_docstrings_only:
+            # Only remove docstrings
+            cleaning_steps.append(self._create_docstring_step())
+        else:
+            # Default behavior: remove both comments and docstrings
+            cleaning_steps.extend(
+                [
+                    self._create_line_comment_step(),
+                    self._create_docstring_step(),
+                    self._create_whitespace_step(),
+                    self._create_formatting_step(),
+                ]
+            )
 
         result = self.pipeline.clean_file(file_path, cleaning_steps)
         return t.cast("CleaningResult", result)

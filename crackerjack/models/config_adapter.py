@@ -40,6 +40,8 @@ class OptionsAdapter:
                     "clean",
                     getattr(options, "strip_code", True),
                 ),
+                strip_comments_only=getattr(options, "strip_comments_only", False),
+                strip_docstrings_only=getattr(options, "strip_docstrings_only", False),
                 update_docs=getattr(options, "update_docs", False),
                 force_update_docs=getattr(options, "force_update_docs", False),
                 compress_docs=getattr(options, "compress_docs", False),
