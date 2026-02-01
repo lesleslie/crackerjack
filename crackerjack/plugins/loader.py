@@ -6,6 +6,7 @@ import typing as t
 from pathlib import Path
 
 from crackerjack.config.hooks import HookStage
+from crackerjack.models.protocols import PluginRegistryProtocol
 
 from .base import (
     PluginBase,
@@ -22,8 +23,8 @@ class PluginLoadError(Exception):
 
 
 class PluginLoader:
-    def __init__(self, registry: PluginRegistry | None = None) -> None:
-        self.registry = registry or get_plugin_registry()
+    def __init__(self, registry: PluginRegistryProtocol | None = None) -> None:
+        self.registry = t.cast(PluginRegistry, registry or get_plugin_registry())
         self.logger = logging.getLogger("crackerjack.plugin_loader")
 
     def load_plugin_from_file(self, plugin_file: Path) -> PluginBase:

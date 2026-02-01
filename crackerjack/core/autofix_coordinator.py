@@ -677,7 +677,8 @@ class AutofixCoordinator:
                     # Only update if we actually parsed something or hook failed
                     # Don't update passed hooks with no issues
                     if new_count > 0 or (
-                        hasattr(result, "status") and getattr(result, "status", "") == "failed"
+                        hasattr(result, "status")
+                        and getattr(result, "status", "") == "failed"
                     ):
                         if old_count != new_count:
                             self.logger.debug(

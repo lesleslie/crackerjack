@@ -397,6 +397,9 @@ class ComplexipyJSONParser(JSONParser):
                 "path": "path/to/example.py"
             }
         ]
+
+    Note: Complexipy does not provide line numbers in JSON output.
+    This parser attempts to extract them via AST analysis as a fallback.
     """
 
     def __init__(self, max_complexity: int = 15) -> None:
@@ -407,6 +410,90 @@ class ComplexipyJSONParser(JSONParser):
         """
         super().__init__()
         self.max_complexity = max_complexity
+        self._line_number_cache: dict[str, dict[str, int]] = {}
+
+    def _extract_line_number_tier1(
+        self, file_path: str, function_name: str
+    ) -> int | None:
+        """Extract line number by parsing the file with AST (Tier 1 fallback).
+
+        This is the first line of defense - try to find the function's line number
+        by parsing the Python file's AST. If this fails, the agent will use
+        Tier 2 (search by function name) or Tier 3 (full file analysis).
+
+        Args:
+            file_path: Path to the Python file
+            function_name: Name of the function to find (may include ClassName:: prefix)
+
+        Returns:
+            Line number if found, None otherwise
+        """
+        import ast
+        import os
+
+        # Check cache first
+        if file_path in self._line_number_cache:
+            if function_name in self._line_number_cache[file_path]:
+                return self._line_number_cache[file_path][function_name]
+
+        # File doesn't exist or isn't a Python file
+        if not os.path.exists(file_path):
+            logger.debug(f"File not found for line number extraction: {file_path}")
+            return None
+
+        if not file_path.endswith(".py"):
+            logger.debug(f"Not a Python file, skipping AST extraction: {file_path}")
+            return None
+
+        # Initialize cache entry for this file
+        if file_path not in self._line_number_cache:
+            self._line_number_cache[file_path] = {}
+
+        # Handle complexipy's ClassName::method_name format
+        search_names = [function_name]
+        if "::" in function_name:
+            # Split "ClassName::method_name" -> "method_name"
+            method_name = function_name.split("::")[-1]
+            search_names.insert(0, method_name)
+
+        try:
+            with open(file_path) as f:
+                content = f.read()
+
+            tree = ast.parse(content)
+
+            # Search for function definition by name (try all variants)
+            for search_name in search_names:
+                for node in ast.walk(tree):
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        if node.name == search_name:
+                            line_number = node.lineno
+                            # Cache under the original function_name
+                            self._line_number_cache[file_path][function_name] = (
+                                line_number
+                            )
+                            logger.debug(
+                                f"Found line number for '{function_name}' (searched as '{search_name}') "
+                                f"in {file_path}: {line_number}"
+                            )
+                            return line_number
+
+            logger.debug(
+                f"Function '{function_name}' not found in {file_path} "
+                f"(searched for: {search_names})"
+            )
+            return None
+
+        except (SyntaxError, OSError, UnicodeDecodeError) as e:
+            logger.debug(
+                f"Failed to extract line number for '{function_name}' in {file_path}: {e}"
+            )
+            return None
+        except Exception as e:
+            logger.warning(
+                f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"
+            )
+            return None
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         """Parse complexipy output by extracting JSON file path and reading it.
@@ -441,7 +528,9 @@ class ComplexipyJSONParser(JSONParser):
 
             # NOTE: Don't delete the JSON file - it may be reused across AI-fix iterations
             # The adapter is responsible for cleanup when done
-            logger.debug(f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)")
+            logger.debug(
+                f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)"
+            )
         except Exception as e:
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
             return []
@@ -499,6 +588,9 @@ class ComplexipyJSONParser(JSONParser):
                 file_path = str(item["path"])
                 function_name = str(item["function_name"])
 
+                # Tier 1: Try to extract line number via AST analysis
+                line_number = self._extract_line_number_tier1(file_path, function_name)
+
                 # Severity based on complexity level for prioritization
                 if complexity > self.max_complexity * 2:
                     severity = Priority.HIGH
@@ -509,19 +601,28 @@ class ComplexipyJSONParser(JSONParser):
 
                 message = f"Function '{function_name}' has complexity {complexity}"
 
+                # Build details with line number info
+                details = [
+                    f"complexity: {complexity}",
+                    f"function: {function_name}",
+                    f"threshold: >{self.max_complexity}",
+                ]
+                if line_number:
+                    details.append(f"line_number: {line_number} (extracted via AST)")
+                else:
+                    details.append(
+                        "line_number: None (agent will search by function name)"
+                    )
+
                 issues.append(
                     Issue(
                         type=IssueType.COMPLEXITY,
                         severity=severity,
                         message=message,
                         file_path=file_path,
-                        line_number=None,  # complexipy doesn't provide line numbers
+                        line_number=line_number,
                         stage="complexity",
-                        details=[
-                            f"complexity: {complexity}",
-                            f"function: {function_name}",
-                            f"threshold: >{self.max_complexity}",
-                        ],
+                        details=details,
                     )
                 )
             except Exception as e:
