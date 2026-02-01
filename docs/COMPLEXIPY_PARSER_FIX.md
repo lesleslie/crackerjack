@@ -3,6 +3,7 @@
 ## Problem
 
 AI-fix workflow showed confusing issue counts:
+
 - **Iteration 1**: "6037 issues to fix"
 - **Iteration 2-5**: "13 issues to fix"
 
@@ -13,11 +14,13 @@ AI-fix workflow showed confusing issue counts:
 The system had two code paths for parsing complexipy output:
 
 **Path 1: Adapter (used during quality checks)**
+
 - ComplexipyAdapter reads JSON file
 - Filters functions by `max_complexity` threshold (>15)
 - Returns ~9 high-complexity functions
 
 **Path 2: Parser (used during AI-fix)**
+
 - ComplexipyJSONParser reads JSON file
 - Returns ALL 6076 functions without filtering
 - Deletes JSON file after reading
@@ -26,6 +29,7 @@ The system had two code paths for parsing complexipy output:
 ### Why This Happened
 
 The comment in `ComplexipyJSONParser.parse_json()` said:
+
 ```python
 # Note: This parser returns ALL functions from complexipy output without filtering.
 # The ComplexipyAdapter is responsible for filtering by max_complexity threshold.
@@ -47,6 +51,7 @@ This assumption was **WRONG** because AI-fix calls the parser directly, not via 
 ### Changes to ComplexipyJSONParser
 
 **1. Added complexity threshold filtering**
+
 ```python
 def __init__(self, max_complexity: int = 15) -> None:
     """Initialize parser with complexity threshold.
@@ -59,6 +64,7 @@ def __init__(self, max_complexity: int = 15) -> None:
 ```
 
 **2. Filter in parse_json()**
+
 ```python
 # Filter by max_complexity threshold
 if complexity <= self.max_complexity:
@@ -69,6 +75,7 @@ if complexity <= self.max_complexity:
 ```
 
 **3. Don't delete JSON file**
+
 ```python
 # NOTE: Don't delete the JSON file - it may be reused across AI-fix iterations
 # The adapter is responsible for cleanup when done
@@ -76,6 +83,7 @@ logger.debug(f"Read complexipy JSON file: {json_path} ({len(data)} entries)")
 ```
 
 **4. Updated get_issue_count()**
+
 ```python
 # Count only functions exceeding the threshold
 return sum(
@@ -90,6 +98,7 @@ return sum(
 ### Testing
 
 **Manual test** (using actual JSON file):
+
 ```python
 # Before fix
 Total functions in JSON: 6076
@@ -104,6 +113,7 @@ Issues returned by parser: 9  # Only high-complexity functions!
 ## Impact
 
 ### Before Fix
+
 ```
 Iteration 1/5: 6037 issues to fix
 Complexipy JSON file not found: /Users/les/Projects/crackerjack/complexipy_results_2026_01_30__15-38-29.json
@@ -111,6 +121,7 @@ Iteration 2/5: 13 issues to fix
 ```
 
 ### After Fix
+
 ```
 Iteration 1/5: 13 issues to fix
 Iteration 2/5: 13 issues to fix
@@ -121,11 +132,13 @@ Iteration 3/5: 13 issues to fix
 ## Architectural Lesson
 
 **Single Source of Truth Principle Violation**:
+
 - Parser had filtering logic dependency on adapter
 - Two code paths (adapter vs parser) had different behavior
 - AI-fix used parser directly, bypassing adapter filtering
 
 **Correct Pattern**:
+
 - Each component should be self-contained
 - Parsers should apply their own filtering logic
 - No hidden dependencies between components
@@ -139,6 +152,7 @@ Iteration 3/5: 13 issues to fix
 ## Verification
 
 To verify the fix works:
+
 ```bash
 # Run AI-fix workflow
 python -m crackerjack run -v --comp --ai-fix
@@ -152,9 +166,9 @@ python -m crackerjack run -v --comp --ai-fix
 ## Future Improvements
 
 1. **Add parser tests**: Create unit tests for ComplexipyJSONParser
-2. **Audit other parsers**: Check if other parsers have similar adapter dependencies
-3. **Unified filtering**: Consider moving filtering logic to a shared utility
-4. **File lifecycle management**: Add proper cleanup strategy for JSON files
+1. **Audit other parsers**: Check if other parsers have similar adapter dependencies
+1. **Unified filtering**: Consider moving filtering logic to a shared utility
+1. **File lifecycle management**: Add proper cleanup strategy for JSON files
 
 ## Commit
 

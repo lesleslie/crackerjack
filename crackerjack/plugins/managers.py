@@ -4,7 +4,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from crackerjack.models.protocols import OptionsProtocol
+from crackerjack.models.protocols import OptionsProtocol, PluginRegistryProtocol
 
 from .base import PluginRegistry, PluginType, get_plugin_registry
 from .hooks import HookPluginBase, HookPluginRegistry, get_hook_plugin_registry
@@ -16,12 +16,12 @@ class PluginManager:
         self,
         console: Console,
         project_path: Path,
-        registry: PluginRegistry | None = None,
+        registry: PluginRegistryProtocol | None = None,
         hook_registry: HookPluginRegistry | None = None,
     ) -> None:
         self.console = console
         self.project_path = project_path
-        self.registry = registry or get_plugin_registry()
+        self.registry = t.cast(PluginRegistry, registry or get_plugin_registry())
         self.hook_registry = hook_registry or get_hook_plugin_registry()
 
         self.loader = PluginLoader(self.registry)

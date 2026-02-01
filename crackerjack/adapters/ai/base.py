@@ -296,9 +296,42 @@ class BaseCodeFixer(ABC):
         return False
 
     def _scan_ast_for_dangerous_imports(self, tree: ast.AST) -> None:
+        """Scan AST for dangerous imports and raise ValueError if found.
+
+        This is a security-critical validation that prevents AI-generated code
+        from importing dangerous modules (os, subprocess, sys) which could
+        execute arbitrary commands.
+
+        Args:
+            tree: AST parsed from code.
+
+        Raises:
+            ValueError: If dangerous import is detected.
+
+        Example:
+            ```python
+            try:
+                tree = ast.parse(code)
+                self._scan_ast_for_dangerous_imports(tree)
+            except ValueError as e:
+                return False, str(e)
+            ```
+        """
+        dangerous_imports = []
         for node in ast.walk(tree):
-            if isinstance(node, ast.Import) and self._is_dangerous_import(node):
-                pass
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    if alias.name in ("os", "subprocess", "sys"):
+                        # Check if this is actually unsafe (not in safe usage context)
+                        if not self._is_safe_usage(node):
+                            dangerous_imports.append(alias.name)
+
+        if dangerous_imports:
+            raise ValueError(
+                f"Dangerous imports detected: {', '.join(dangerous_imports)}. "
+                "AI-generated code cannot import os, subprocess, or sys modules "
+                "for security reasons."
+            )
 
     def _check_code_size_limit(self, code: str) -> tuple[bool, str]:
         assert self._settings is not None, "Settings not initialized"

@@ -3,16 +3,41 @@ import contextlib
 import logging
 import os
 from datetime import UTC, datetime
+from pathlib import Path
+from typing import Any
 
 from crackerjack.config.settings import CrackerjackSettings
+from crackerjack.models.protocols import AdapterFactoryProtocol
 from crackerjack.runtime import RuntimeHealthSnapshot
 
 logger = logging.getLogger(__name__)
 
 
 class CrackerjackServer:
-    def __init__(self, settings: CrackerjackSettings) -> None:
+    def __init__(
+        self,
+        settings: CrackerjackSettings,
+        adapter_factory: AdapterFactoryProtocol | None = None,
+    ) -> None:
+        """Initialize the Crackerjack MCP server.
+
+        Args:
+            settings: Server settings.
+            adapter_factory: Optional factory for creating adapters (injected for DI).
+
+        Example:
+            ```python
+            server = CrackerjackServer(settings, adapter_factory)
+            await server.start()
+            ```
+        """
         self.settings = settings
+        # Constructor injection with fallback for backward compatibility
+        if adapter_factory is None:
+            from crackerjack.adapters.factory import DefaultAdapterFactory
+
+            adapter_factory = DefaultAdapterFactory(settings, Path.cwd())
+        self.adapter_factory = adapter_factory
         self.running = False
         self.adapters: list = []
         self.start_time: datetime | None = None
@@ -92,66 +117,73 @@ class CrackerjackServer:
         adapter_name: str,
         enabled_names: list[str],
     ) -> None:
+        """Initialize an adapter via factory if enabled in settings.
+
+        Args:
+            setting_name: Name of the setting to check.
+            default_value: Default value if setting not present.
+            adapter_name: Name of the adapter to create.
+            enabled_names: List to track enabled adapter names.
+
+        Example:
+            ```python
+            await self._init_adapter_if_enabled("ruff_enabled", True, "Ruff", enabled_names)
+            assert "Ruff" in enabled_names
+            ```
+        """
         if getattr(self.settings, setting_name, default_value):
             try:
-                adapter_class = self._get_adapter_class(adapter_name)
-                if adapter_class:
-                    adapter = adapter_class()
-                    await adapter.init()
-                    self.adapters.append(adapter)
-                    enabled_names.append(adapter_name)
-                    logger.debug(f"{adapter_name} adapter initialized")
+                adapter = self.adapter_factory.create_adapter(adapter_name)
+                await adapter.init()
+                self.adapters.append(adapter)
+                enabled_names.append(adapter_name)
+                logger.debug(f"{adapter_name} adapter initialized via factory")
             except Exception as e:
                 logger.warning(f"Failed to initialize {adapter_name} adapter: {e}")
 
     async def _init_zuban_adapter(self, enabled_names: list[str]) -> None:
-        try:
-            from crackerjack.adapters.type.zuban import ZubanAdapter
+        """Initialize Zuban adapter via factory.
 
-            zuban = ZubanAdapter()
+        Args:
+            enabled_names: List to track enabled adapter names.
+
+        Example:
+            ```python
+            await self._init_zuban_adapter(enabled_names)
+            assert "Zuban" in enabled_names
+            ```
+        """
+        try:
+            zuban = self.adapter_factory.create_adapter("Zuban")
             await zuban.init()
             self.adapters.append(zuban)
             enabled_names.append("Zuban")
-            logger.debug("Zuban adapter initialized")
+            logger.debug("Zuban adapter initialized via factory")
         except Exception as e:
             logger.warning(f"Failed to initialize Zuban adapter: {e}")
 
     async def _init_claude_adapter(self, enabled_names: list[str]) -> None:
+        """Initialize Claude AI adapter via factory.
+
+        Args:
+            enabled_names: List to track enabled adapter names.
+
+        Example:
+            ```python
+            await self._init_claude_adapter(enabled_names)
+            assert "Claude AI" in enabled_names
+            ```
+        """
         ai_settings = getattr(self.settings, "ai", None)
         if ai_settings and getattr(ai_settings, "ai_agent", False):
             try:
-                from crackerjack.adapters.ai.claude import ClaudeCodeFixer
-
-                claude = ClaudeCodeFixer()
+                claude = self.adapter_factory.create_adapter("Claude AI", ai_settings)
                 await claude.init()
                 self.adapters.append(claude)
                 enabled_names.append("Claude AI")
-                logger.debug("Claude AI adapter initialized")
+                logger.debug("Claude AI adapter initialized via factory")
             except Exception as e:
                 logger.warning(f"Failed to initialize Claude AI adapter: {e}")
-
-    def _get_adapter_class(self, adapter_name: str):
-        if adapter_name == "Ruff":
-            from crackerjack.adapters.format.ruff import RuffAdapter
-
-            return RuffAdapter
-        if adapter_name == "Bandit":
-            from crackerjack.adapters.sast.bandit import BanditAdapter
-
-            return BanditAdapter
-        if adapter_name == "Semgrep":
-            from crackerjack.adapters.sast.semgrep import SemgrepAdapter
-
-            return SemgrepAdapter
-        if adapter_name == "Refurb":
-            from crackerjack.adapters.refactor.refurb import RefurbAdapter
-
-            return RefurbAdapter
-        if adapter_name == "Skylos":
-            from crackerjack.adapters.refactor.skylos import SkylosAdapter
-
-            return SkylosAdapter
-        return None
 
     def stop(self) -> None:
         logger.info("Stopping Crackerjack MCP server...")

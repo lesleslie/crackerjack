@@ -758,3 +758,240 @@ class TestRefactoringAgentValidation:
         result = agent._validate_dead_code_issue(issue)
 
         assert result is None  # Validation passed
+
+
+@pytest.mark.unit
+class TestRefactoringAgentThreeTierFallback:
+    """Test three-tier fallback strategy for complexity reduction.
+
+    Tests:
+    - Tier 1: Line number-based reduction
+    - Tier 2: Function name search
+    - Tier 3: Full file analysis
+    """
+
+    @pytest.fixture
+    def agent(self, tmp_path):
+        """Create RefactoringAgent instance."""
+        context = AgentContext(project_path=tmp_path)
+        with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
+            return RefactoringAgent(context)
+
+    def test_extract_function_name_from_simple_message(self, agent) -> None:
+        """Test extracting function name from simple message."""
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'my_function' has complexity 20",
+        )
+
+        func_name = agent._extract_function_name_from_issue(issue)
+
+        assert func_name == "my_function"
+
+    def test_extract_function_name_from_class_method_format(self, agent) -> None:
+        """Test extracting function name from ClassName::method format."""
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'MyClass::complex_method' has complexity 25",
+        )
+
+        func_name = agent._extract_function_name_from_issue(issue)
+
+        assert func_name == "complex_method"  # Class prefix removed
+
+    def test_extract_function_name_from_details(self, agent) -> None:
+        """Test extracting function name from issue details."""
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Complexity issue",
+            details=["complexity: 20", "function: MyClass::process_data"],
+        )
+
+        func_name = agent._extract_function_name_from_issue(issue)
+
+        assert func_name == "process_data"  # Class prefix removed
+
+    def test_extract_function_name_no_match(self, agent) -> None:
+        """Test extracting function name when no match found."""
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Some complexity issue without function name",
+        )
+
+        func_name = agent._extract_function_name_from_issue(issue)
+
+        assert func_name is None
+
+    async def test_reduce_complexity_tier1_with_line_number(self, agent, tmp_path) -> None:
+        """Test Tier 1: Reduction with specific line number."""
+        test_file = tmp_path / "tier1.py"
+        test_file.write_text("""
+def complex_function():
+    if x > 10:
+        if y < 5:
+            return True
+    return False
+""")
+
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'complex_function' has complexity 20",
+            file_path=str(test_file),
+            line_number=3,
+        )
+
+        with patch.object(
+            agent, "_process_complexity_reduction_with_line_number"
+        ) as mock_tier1:
+            mock_tier1.return_value = FixResult(
+                success=True, confidence=0.9, fixes_applied=["Reduced complexity"]
+            )
+
+            result = await agent._reduce_complexity(issue)
+
+            mock_tier1.assert_called_once()
+            assert result.success is True
+
+    async def test_reduce_complexity_tier2_by_function_name(self, agent, tmp_path) -> None:
+        """Test Tier 2: Reduction by searching for function name."""
+        test_file = tmp_path / "tier2.py"
+        test_file.write_text("""
+def target_function():
+    if x > 10:
+        if y < 5:
+            return True
+    return False
+""")
+
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'target_function' has complexity 18",
+            file_path=str(test_file),
+            line_number=None,  # No line number
+        )
+
+        with patch.object(
+            agent, "_process_complexity_reduction_by_function_name"
+        ) as mock_tier2:
+            mock_tier2.return_value = FixResult(
+                success=True, confidence=0.85, fixes_applied=["Reduced complexity"]
+            )
+
+            result = await agent._reduce_complexity(issue)
+
+            mock_tier2.assert_called_once_with(
+                Path(test_file), "target_function"
+            )
+            assert result.success is True
+
+    async def test_reduce_complexity_tier3_full_analysis(self, agent, tmp_path) -> None:
+        """Test Tier 3: Full file analysis as fallback."""
+        test_file = tmp_path / "tier3.py"
+        test_file.write_text("""
+def complex_function():
+    if x > 10:
+        if y < 5:
+            return True
+    return False
+""")
+
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Complex function",
+            file_path=str(test_file),
+            line_number=None,  # No line number
+        )
+
+        with patch.object(agent, "_process_complexity_reduction") as mock_tier3:
+            mock_tier3.return_value = FixResult(
+                success=True, confidence=0.8, fixes_applied=["Found and reduced complexity"]
+            )
+
+            result = await agent._reduce_complexity(issue)
+
+            mock_tier3.assert_called_once()
+            assert result.success is True
+
+    async def test_three_tier_fallback_chain(self, agent, tmp_path) -> None:
+        """Test that fallback chain works correctly: Tier 1 → Tier 2 → Tier 3."""
+        test_file = tmp_path / "fallback.py"
+        test_file.write_text("def func(): pass")
+
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'func' has complexity 20",
+            file_path=str(test_file),
+            line_number=None,  # Start with no line number
+        )
+
+        # Mock Tier 1 to fail (no line number)
+        # Mock Tier 2 to succeed
+        with patch.object(
+            agent, "_process_complexity_reduction_with_line_number"
+        ) as mock_tier1, patch.object(
+            agent, "_process_complexity_reduction_by_function_name"
+        ) as mock_tier2, patch.object(
+            agent, "_process_complexity_reduction"
+        ) as mock_tier3:
+            # Tier 1 not called (no line number)
+            # Tier 2 succeeds
+            mock_tier2.return_value = FixResult(
+                success=True, confidence=0.85, fixes_applied=["Fixed by name"]
+            )
+
+            result = await agent._reduce_complexity(issue)
+
+            mock_tier1.assert_not_called()  # Skip tier 1 (no line number)
+            mock_tier2.assert_called_once()  # Use tier 2
+            mock_tier3.assert_not_called()  # Don't reach tier 3
+            assert result.success is True
+
+    async def test_three_tier_all_fail_returns_error(self, agent, tmp_path) -> None:
+        """Test that all tiers failing returns appropriate error."""
+        test_file = tmp_path / "all_fail.py"
+        test_file.write_text("def func(): pass")
+
+        issue = Issue(
+            id="comp-001",
+            type=IssueType.COMPLEXITY,
+            severity=Priority.HIGH,
+            message="Function 'func' has complexity 20",
+            file_path=str(test_file),
+            line_number=None,  # No line number to force fallback
+        )
+
+        with patch.object(
+            agent, "_process_complexity_reduction_with_line_number"
+        ) as mock_tier1, patch.object(
+            agent, "_process_complexity_reduction_by_function_name"
+        ) as mock_tier2, patch.object(
+            agent, "_process_complexity_reduction"
+        ) as mock_tier3:
+            # Tier 2 raises exception (triggering fallback to Tier 3)
+            mock_tier2.side_effect = Exception("Function not found")
+            # Tier 3 also fails
+            mock_tier3.return_value = FixResult(
+                success=False, confidence=0.0, remaining_issues=["No complex functions found"]
+            )
+
+            result = await agent._reduce_complexity(issue)
+
+            # Should fall through to Tier 3
+            mock_tier3.assert_called_once()
+            assert result.success is False

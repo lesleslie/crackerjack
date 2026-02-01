@@ -14,9 +14,10 @@ from crackerjack.agents.base import (
     agent_registry,
 )
 from crackerjack.agents.error_middleware import agent_error_boundary
-from crackerjack.agents.tracker import get_agent_tracker
+from crackerjack.agents.tracker import AgentTracker, get_agent_tracker
+from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 from crackerjack.services.cache import CrackerjackCache
-from crackerjack.services.debug import get_ai_agent_debugger
+from crackerjack.services.debug import AIAgentDebugger, NoOpDebugger, get_ai_agent_debugger
 from crackerjack.services.logging import get_logger
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
@@ -56,14 +57,17 @@ class AgentCoordinator:
         self,
         context: AgentContext,
         cache: CrackerjackCache | None = None,
+        tracker: AgentTrackerProtocol | None = None,
+        debugger: DebuggerProtocol | None = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
         self.logger = get_logger(__name__)
         self._issue_cache: dict[str, FixResult] = {}
         self._collaboration_threshold = 0.7
-        self.tracker = get_agent_tracker()
-        self.debugger = get_ai_agent_debugger()
+        # Constructor injection with fallback to factory for backward compatibility
+        self.tracker: AgentTrackerProtocol = tracker or get_agent_tracker()
+        self.debugger: DebuggerProtocol = debugger or get_ai_agent_debugger()
         self.proactive_mode = True
         self.cache = cache or CrackerjackCache()
 
