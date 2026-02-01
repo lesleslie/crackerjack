@@ -670,21 +670,22 @@ class AutofixCoordinator:
         # Only update if we actually parsed issues for this hook (count > 0 or hook failed)
         for result in hook_results:
             if hasattr(result, "name") and hasattr(result, "issues_count"):
-                hook_name = result.name
+                hook_name = getattr(result, "name")
                 if hook_name in parsed_counts_by_hook:
-                    old_count = result.issues_count
+                    old_count = getattr(result, "issues_count", 0)
                     new_count = parsed_counts_by_hook[hook_name]
                     # Only update if we actually parsed something or hook failed
                     # Don't update passed hooks with no issues
                     if new_count > 0 or (
-                        hasattr(result, "status") and result.status == "failed"
+                        hasattr(result, "status") and getattr(result, "status", "") == "failed"
                     ):
                         if old_count != new_count:
                             self.logger.debug(
                                 f"Updated issues_count for '{hook_name}': "
                                 f"{old_count} → {new_count} (matched to parsed issues)"
                             )
-                            result.issues_count = new_count
+                            # Use setattr to avoid type checker errors on object type
+                            setattr(result, "issues_count", new_count)
 
         seen: set[tuple[str | None, int | None, str, str]] = set()
         unique_issues: list[Issue] = []
