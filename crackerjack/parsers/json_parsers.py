@@ -399,6 +399,15 @@ class ComplexipyJSONParser(JSONParser):
         ]
     """
 
+    def __init__(self, max_complexity: int = 15) -> None:
+        """Initialize parser with complexity threshold.
+
+        Args:
+            max_complexity: Only report functions with complexity > this value
+        """
+        super().__init__()
+        self.max_complexity = max_complexity
+
     def parse(self, output: str, tool_name: str) -> list[Issue]:
         """Parse complexipy output by extracting JSON file path and reading it.
 
@@ -430,14 +439,9 @@ class ComplexipyJSONParser(JSONParser):
                 json_content = f.read()
             data = json.loads(json_content)
 
-            # Clean up the temporary JSON file immediately after reading
-            try:
-                os.remove(json_path)
-                logger.debug(f"Cleaned up complexipy JSON file: {json_path}")
-            except Exception as e:
-                logger.warning(
-                    f"Failed to remove complexipy JSON file {json_path}: {e}"
-                )
+            # NOTE: Don't delete the JSON file - it may be reused across AI-fix iterations
+            # The adapter is responsible for cleanup when done
+            logger.debug(f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)")
         except Exception as e:
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
             return []
@@ -448,15 +452,11 @@ class ComplexipyJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         """Parse complexipy JSON data.
 
-        Note: This parser returns ALL functions from complexipy output without filtering.
-        The ComplexipyAdapter is responsible for filtering by max_complexity threshold.
-        This separation ensures the parser is stateless and the adapter handles config.
-
         Args:
             data: Parsed JSON data from complexipy
 
         Returns:
-            List of Issue objects for all functions (no threshold filtering)
+            List of Issue objects for functions exceeding max_complexity threshold
         """
         issues: list[Issue] = []
 
@@ -489,14 +489,20 @@ class ComplexipyJSONParser(JSONParser):
                     )
                     continue
 
+                # Filter by max_complexity threshold
+                if complexity <= self.max_complexity:
+                    logger.debug(
+                        f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"
+                    )
+                    continue
+
                 file_path = str(item["path"])
                 function_name = str(item["function_name"])
 
-                # Note: No threshold filtering here - adapter handles that
                 # Severity based on complexity level for prioritization
-                if complexity > 20:
+                if complexity > self.max_complexity * 2:
                     severity = Priority.HIGH
-                elif complexity > 15:
+                elif complexity > self.max_complexity:
                     severity = Priority.MEDIUM
                 else:
                     severity = Priority.LOW
@@ -514,33 +520,36 @@ class ComplexipyJSONParser(JSONParser):
                         details=[
                             f"complexity: {complexity}",
                             f"function: {function_name}",
+                            f"threshold: >{self.max_complexity}",
                         ],
                     )
                 )
             except Exception as e:
                 logger.error(f"Error parsing complexipy JSON item: {e}", exc_info=True)
 
-        logger.info(f"Parsed {len(issues)} issues from complexipy JSON output")
+        logger.info(
+            f"Parsed {len(issues)} issues from complexipy JSON output "
+            f"(filtered from {len(data)} total functions, threshold: >{self.max_complexity})"
+        )
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
         """Get issue count from complexipy JSON data.
 
-        Note: Returns count of ALL functions, no threshold filtering.
-        The adapter is responsible for filtering by max_complexity threshold.
-
         Args:
             data: Parsed JSON data
 
         Returns:
-            Number of functions in the data (all, not filtered)
+            Number of functions exceeding max_complexity threshold
         """
         if isinstance(data, list):
-            # Count all valid function entries (adapter will filter by threshold)
+            # Count only functions exceeding the threshold
             return sum(
                 1
                 for item in data
-                if isinstance(item, dict) and isinstance(item.get("complexity"), int)
+                if isinstance(item, dict)
+                and isinstance(item.get("complexity"), int)
+                and item["complexity"] > self.max_complexity
             )
         return 0
 
