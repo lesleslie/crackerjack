@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import json
@@ -40,7 +39,6 @@ def handle_health_check(
     if pkg_path is None:
         pkg_path = Path.cwd()
 
-
     if component == "adapters":
         category_health = _check_adapters(pkg_path)
         report = SystemHealthReport.from_category_health({"adapters": category_health})
@@ -51,7 +49,6 @@ def handle_health_check(
         category_health = _check_services(pkg_path)
         report = SystemHealthReport.from_category_health({"services": category_health})
     else:
-
         all_health = {}
         try:
             all_health["adapters"] = _check_adapters(pkg_path)
@@ -97,7 +94,6 @@ def handle_health_check(
 
         report = SystemHealthReport.from_category_health(all_health)
 
-
     if not quiet:
         if json_output:
             _output_json(console, report, verbose)
@@ -110,10 +106,8 @@ def handle_health_check(
 def _check_adapters(pkg_path: Path) -> ComponentHealth:
     results: dict[str, HealthCheckResult] = {}
 
-
     try:
         from crackerjack.adapters._qa_adapter_base import QAAdapterBase
-
 
         if hasattr(QAAdapterBase, "health_check"):
             results["adapter_base"] = HealthCheckResult.healthy(
@@ -127,7 +121,6 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
                 component_name="QAAdapterBase",
                 details={"has_protocol": False},
             )
-
 
         try:
             from crackerjack.adapters.factory import AdapterFactory
@@ -159,7 +152,6 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
 def _check_managers(pkg_path: Path) -> ComponentHealth:
     results: dict[str, HealthCheckResult] = {}
 
-
     try:
         from crackerjack.managers.hook_manager import HookManagerImpl
 
@@ -176,7 +168,6 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-
     try:
         from crackerjack.managers.test_manager import TestManager
 
@@ -192,7 +183,6 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
             component_name="TestManager",
             details={"error_type": type(e).__name__},
         )
-
 
     try:
         from crackerjack.managers.publish_manager import PublishManagerImpl
@@ -215,7 +205,6 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
 
 def _check_services(pkg_path: Path) -> ComponentHealth:
     results: dict[str, HealthCheckResult] = {}
-
 
     try:
         from crackerjack.services.git import GitService
@@ -243,7 +232,6 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-
     try:
         can_read = pkg_path.exists() and pkg_path.is_dir()
         if can_read:
@@ -270,7 +258,12 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
 
 
 def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -> None:
+    _print_overall_status(console, report)
+    _print_category_details(console, report, verbose)
+    _print_timestamp(console, report)
 
+
+def _print_overall_status(console: Console, report: SystemHealthReport) -> None:
     status_color = STATUS_COLORS[report.overall_status]
     console.print(
         f"\n[{status_color}]●[/] "
@@ -279,30 +272,53 @@ def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -
     console.print(f"📊 {report.summary}\n")
 
 
+def _print_category_details(
+    console: Console, report: SystemHealthReport, verbose: bool
+) -> None:
     for category_name, category_health in report.categories.items():
-        status_color = STATUS_COLORS[category_health.overall_status]
+        _print_single_category(console, category_name, category_health, verbose)
+
+
+def _print_single_category(
+    console: Console,
+    category_name: str,
+    category_health: ComponentHealth,
+    verbose: bool,
+) -> None:
+    status_color = STATUS_COLORS[category_health.overall_status]
+    console.print(
+        f"[{status_color}]●[/] "
+        f"{category_name.title()}: [{status_color}]{category_health.overall_status}[/] "
+        f"({category_health.healthy}/{category_health.total} healthy)"
+    )
+
+    if verbose and category_health.components:
+        _print_category_components(console, category_health.components, verbose)
+
+    console.print()
+
+
+def _print_category_components(
+    console: Console, components: dict, verbose: bool
+) -> None:
+    for comp_name, comp_result in components.items():
+        comp_color = STATUS_COLORS[comp_result.status]
         console.print(
-            f"[{status_color}]●[/] "
-            f"{category_name.title()}: [{status_color}]{category_health.overall_status}[/] "
-            f"({category_health.healthy}/{category_health.total} healthy)"
+            f"  [{comp_color}]→[/] {comp_name}: [{comp_color}]{comp_result.status}[/]"
         )
+        if comp_result.message:
+            console.print(f"     {comp_result.message}")
 
-        if verbose and category_health.components:
-            for comp_name, comp_result in category_health.components.items():
-                comp_color = STATUS_COLORS[comp_result.status]
-                console.print(
-                    f"  [{comp_color}]→[/] {comp_name}: [{comp_color}]{comp_result.status}[/]"
-                )
-                if comp_result.message:
-                    console.print(f"     {comp_result.message}")
-
-                if comp_result.details and verbose:
-                    for key, value in comp_result.details.items():
-                        console.print(f"     • {key}: {value}")
-
-        console.print()
+        if comp_result.details and verbose:
+            _print_component_details(console, comp_result.details)
 
 
+def _print_component_details(console: Console, details: dict) -> None:
+    for key, value in details.items():
+        console.print(f"     • {key}: {value}")
+
+
+def _print_timestamp(console: Console, report: SystemHealthReport) -> None:
     console.print(
         f"🕒 Checked at: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
     )
@@ -312,7 +328,6 @@ def _output_json(console: Console, report: SystemHealthReport, verbose: bool) ->
     data = report.to_dict()
 
     if not verbose:
-
         for category in data["categories"].values():
             category["components"] = {}
 

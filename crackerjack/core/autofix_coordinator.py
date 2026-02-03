@@ -652,43 +652,79 @@ class AutofixCoordinator:
     def _parse_hook_results_to_issues(
         self, hook_results: Sequence[object]
     ) -> list[Issue]:
-        issues: list[Issue] = []
         self.logger.debug(f"Parsing {len(hook_results)} hook results for issues")
 
+        issues, parsed_counts_by_hook = self._parse_all_hook_results(hook_results)
+        self._update_hook_issue_counts(hook_results, parsed_counts_by_hook)
+        unique_issues = self._deduplicate_issues(issues)
+
+        self._log_parsing_summary(len(issues), len(unique_issues))
+        return unique_issues
+
+    def _parse_all_hook_results(
+        self, hook_results: Sequence[object]
+    ) -> tuple[list[Issue], dict[str, int]]:
+        issues: list[Issue] = []
         parsed_counts_by_hook: dict[str, int] = {}
 
         for result in hook_results:
             hook_issues = self._parse_single_hook_result(result)
-
-            if hasattr(result, "name"):
-                hook_name = result.name
-                if hook_name not in parsed_counts_by_hook:
-                    parsed_counts_by_hook[hook_name] = 0
-                parsed_counts_by_hook[hook_name] += len(hook_issues)
-
+            self._track_hook_issue_count(result, hook_issues, parsed_counts_by_hook)
             issues.extend(hook_issues)
 
+        return issues, parsed_counts_by_hook
+
+    def _track_hook_issue_count(
+        self,
+        result: object,
+        hook_issues: list[Issue],
+        parsed_counts_by_hook: dict[str, int],
+    ) -> None:
+        if hasattr(result, "name"):
+            hook_name = result.name
+            if hook_name not in parsed_counts_by_hook:
+                parsed_counts_by_hook[hook_name] = 0
+            parsed_counts_by_hook[hook_name] += len(hook_issues)
+
+    def _update_hook_issue_counts(
+        self, hook_results: Sequence[object], parsed_counts_by_hook: dict[str, int]
+    ) -> None:
         for result in hook_results:
-            if hasattr(result, "name") and hasattr(result, "issues_count"):
-                hook_name = getattr(result, "name")
-                if hook_name in parsed_counts_by_hook:
-                    old_count = getattr(result, "issues_count", 0)
-                    new_count = parsed_counts_by_hook[hook_name]
+            if not (hasattr(result, "name") and hasattr(result, "issues_count")):
+                continue
 
-                    if new_count > 0 or (
-                        hasattr(result, "status")
-                        and getattr(result, "status", "") == "failed"
-                    ):
-                        if old_count != new_count:
-                            self.logger.debug(
-                                f"Updated issues_count for '{hook_name}': "
-                                f"{old_count} → {new_count} (matched to parsed issues)"
-                            )
+            hook_name = getattr(result, "name")
+            if hook_name not in parsed_counts_by_hook:
+                continue
 
-                            setattr(result, "issues_count", new_count)
+            old_count = getattr(result, "issues_count", 0)
+            new_count = parsed_counts_by_hook[hook_name]
 
+            if self._should_update_issue_count(result, new_count):
+                self._update_single_hook_count(result, hook_name, old_count, new_count)
+
+    def _should_update_issue_count(self, result: object, new_count: int) -> bool:
+        if new_count > 0:
+            return True
+
+        return hasattr(result, "status") and getattr(result, "status", "") == "failed"
+
+    def _update_single_hook_count(
+        self, result: object, hook_name: str, old_count: int, new_count: int
+    ) -> None:
+        if old_count == new_count:
+            return
+
+        self.logger.debug(
+            f"Updated issues_count for '{hook_name}': "
+            f"{old_count} → {new_count} (matched to parsed issues)"
+        )
+        setattr(result, "issues_count", new_count)
+
+    def _deduplicate_issues(self, issues: list[Issue]) -> list[Issue]:
         seen: set[tuple[str | None, int | None, str, str]] = set()
         unique_issues: list[Issue] = []
+
         for issue in issues:
             key = (
                 issue.file_path,
@@ -700,16 +736,15 @@ class AutofixCoordinator:
                 seen.add(key)
                 unique_issues.append(issue)
 
-        if len(issues) != len(unique_issues):
+        return unique_issues
+
+    def _log_parsing_summary(self, raw_count: int, unique_count: int) -> None:
+        if raw_count != unique_count:
             self.logger.info(
-                f"Deduplicated issues: {len(issues)} raw -> {len(unique_issues)} unique"
+                f"Deduplicated issues: {raw_count} raw -> {unique_count} unique"
             )
         else:
-            self.logger.info(
-                f"Total issues extracted from all hooks: {len(unique_issues)}"
-            )
-
-        return unique_issues
+            self.logger.info(f"Total issues extracted from all hooks: {unique_count}")
 
     def _parse_single_hook_result(self, result: object) -> list[Issue]:
         if not self._validate_hook_result(result):
@@ -961,25 +996,36 @@ class AutofixCoordinator:
         if tool_name in ("complexipy", "refurb", "creosote"):
             return None
 
-        try:
-            data = json.loads(output)
-            if tool_name in ("ruff", "ruff-check"):
-                return len(data) if isinstance(data, list) else None
-            elif tool_name == "bandit":
-                if isinstance(data, dict) and "results" in data:
-                    results = data["results"]
-                    return len(results) if isinstance(results, list) else None
-            elif tool_name in ("mypy", "zuban"):
-                return len(data) if isinstance(data, list) else None
-        except (json.JSONDecodeError, TypeError):
-            pass
+        json_count = _extract_issue_count_from_json(output, tool_name)
+        if json_count is not None:
+            return json_count
 
-        lines = output.split("\n")
-        issue_lines = [
-            line
-            for line in lines
-            if line.strip()
-            and ":" in line
-            and not line.strip().startswith(("#", "─", "Found"))
-        ]
-        return len(issue_lines) if issue_lines else None
+        return _extract_issue_count_from_text_lines(output)
+
+
+def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
+    try:
+        data = json.loads(output)
+        if tool_name in ("ruff", "ruff-check"):
+            return len(data) if isinstance(data, list) else None
+        if tool_name == "bandit":
+            if isinstance(data, dict) and "results" in data:
+                results = data["results"]
+                return len(results) if isinstance(results, list) else None
+        if tool_name in ("mypy", "zuban"):
+            return len(data) if isinstance(data, list) else None
+    except (json.JSONDecodeError, TypeError):
+        pass
+    return None
+
+
+def _extract_issue_count_from_text_lines(output: str) -> int | None:
+    lines = output.split("\n")
+    issue_lines = [
+        line
+        for line in lines
+        if line.strip()
+        and ":" in line
+        and not line.strip().startswith(("#", "─", "Found"))
+    ]
+    return len(issue_lines) if issue_lines else None

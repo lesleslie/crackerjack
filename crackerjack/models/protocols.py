@@ -837,6 +837,10 @@ class AsyncCommandExecutorProtocol(t.Protocol):
 class CoverageBadgeServiceProtocol(t.Protocol):
     def update_badge(self, coverage_percentage: float) -> bool: ...
 
+    def should_update_badge(self, coverage_percent: float) -> bool: ...
+
+    def update_readme_coverage_badge(self, coverage_percent: float) -> bool: ...
+
 
 @t.runtime_checkable
 class ParallelHookExecutorProtocol(t.Protocol):
@@ -853,6 +857,14 @@ class HookExecutorProtocol(t.Protocol):
         self,
         strategy: t.Any,
     ) -> t.Any: ...
+
+    def set_progress_callbacks(
+        self,
+        *,
+        started_cb: t.Callable[[int, int], None] | None = None,
+        completed_cb: t.Callable[[int, int], None] | None = None,
+        total: int | None = None,
+    ) -> None: ...
 
 
 @t.runtime_checkable

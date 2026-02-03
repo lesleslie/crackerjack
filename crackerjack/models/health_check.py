@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -15,7 +14,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class HealthCheckResult:
-
     status: t.Literal["healthy", "degraded", "unhealthy"]
     message: str
     details: dict[str, t.Any] = field(default_factory=dict)
@@ -88,17 +86,13 @@ class HealthCheckResult:
 
 @t.runtime_checkable
 class HealthCheckProtocol(t.Protocol):
+    def health_check(self) -> HealthCheckResult: ...
 
-    def health_check(self) -> HealthCheckResult:
-        ...
-
-    def is_healthy(self) -> bool:
-        ...
+    def is_healthy(self) -> bool: ...
 
 
 @dataclass
 class ComponentHealth:
-
     category: str
     overall_status: t.Literal["healthy", "degraded", "unhealthy"]
     total: int
@@ -133,7 +127,6 @@ class ComponentHealth:
         unhealthy = sum(1 for r in results.values() if r.status == "unhealthy")
         total = len(results)
 
-
         if unhealthy > 0:
             overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
         elif degraded > 0:
@@ -158,7 +151,6 @@ class ComponentHealth:
 
 @dataclass
 class SystemHealthReport:
-
     overall_status: t.Literal["healthy", "degraded", "unhealthy"]
     categories: dict[str, ComponentHealth] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -182,14 +174,12 @@ class SystemHealthReport:
         category_health: Mapping[str, ComponentHealth],
         metadata: dict[str, t.Any] | None = None,
     ) -> SystemHealthReport:
-
         if any(h.overall_status == "unhealthy" for h in category_health.values()):
             overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
         elif any(h.overall_status == "degraded" for h in category_health.values()):
             overall_status = "degraded"
         else:
             overall_status = "healthy"
-
 
         total_components = sum(h.total for h in category_health.values())
         total_healthy = sum(h.healthy for h in category_health.values())
@@ -231,7 +221,6 @@ def health_check_wrapper(
     try:
         result = check_func()
 
-
         if result is None:
             return HealthCheckResult.unhealthy(
                 message="Health check returned None (not implemented)",
@@ -242,7 +231,6 @@ def health_check_wrapper(
                 },
                 check_duration_ms=(time.time() - start_time) * 1000,
             )
-
 
         if not result.component_name:
             return HealthCheckResult(

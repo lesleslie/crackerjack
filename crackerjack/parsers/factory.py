@@ -157,8 +157,8 @@ class ParserFactory:
     ) -> list[Issue]:
         if isinstance(parser, RegexParser):
             return parser.parse_text(output)
-        else:
-            return parser.parse(output, tool_name)
+
+        return parser.parse(output, tool_name)
 
     def _validate_issue_count(
         self,

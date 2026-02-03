@@ -12,12 +12,9 @@ def preserve_signature[F: t.Callable[..., t.Any]](
     wrapper: F,
 ) -> t.Callable[[t.Callable[..., t.Any]], F]:
     def decorator(func: t.Callable[..., t.Any]) -> F:
-
         func_is_async = is_async_function(func)
 
-
         wrapped_func = wrapper(func)
-
 
         wrapped_is_async = is_async_function(wrapped_func)
 

@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -16,7 +15,6 @@ logger = logging.getLogger(__name__)
 
 
 class HealthCheckMixin:
-
     tool_name: str = ""
     """Name of the tool this adapter wraps."""
 
@@ -33,22 +31,18 @@ class HealthCheckMixin:
         component_name = self.__class__.__name__
         issues = []
 
-
         tool_available = self._check_tool_available()
         if not tool_available:
             issues.append(f"Tool '{self.tool_name}' not found in PATH")
-
 
         config_valid = self._check_configuration()
         if not config_valid:
             issues.append("Configuration is invalid or missing")
 
-
         if self.pkg_path:
             path_accessible = self._check_package_path()
             if not path_accessible:
                 issues.append(f"Package path not accessible: {self.pkg_path}")
-
 
         check_duration_ms = (time.time() - start_time) * 1000
 
@@ -65,7 +59,6 @@ class HealthCheckMixin:
                 check_duration_ms=check_duration_ms,
             )
         elif not tool_available:
-
             return HealthCheckResult.unhealthy(
                 message=f"Adapter '{component_name}' is unhealthy: {'; '.join(issues)}",
                 component_name=component_name,
@@ -76,19 +69,18 @@ class HealthCheckMixin:
                 },
                 check_duration_ms=check_duration_ms,
             )
-        else:
 
-            return HealthCheckResult.degraded(
-                message=f"Adapter '{component_name}' is degraded: {'; '.join(issues)}",
-                component_name=component_name,
-                details={
-                    "tool_name": self.tool_name,
-                    "tool_available": tool_available,
-                    "config_valid": config_valid,
-                    "issues": issues,
-                },
-                check_duration_ms=check_duration_ms,
-            )
+        return HealthCheckResult.degraded(
+            message=f"Adapter '{component_name}' is degraded: {'; '.join(issues)}",
+            component_name=component_name,
+            details={
+                "tool_name": self.tool_name,
+                "tool_available": tool_available,
+                "config_valid": config_valid,
+                "issues": issues,
+            },
+            check_duration_ms=check_duration_ms,
+        )
 
     def is_healthy(self) -> bool:
         result = self.health_check()
@@ -101,10 +93,8 @@ class HealthCheckMixin:
         return shutil.which(self.tool_name) is not None
 
     def _check_configuration(self) -> bool:
-
         if self.config is None:
             return True
-
 
         try:
             _ = self.config.name
