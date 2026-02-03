@@ -78,32 +78,45 @@ class RefurbRegexParser(RegexParser):
 
         for line in output.split("\n"):
             line = line.strip()
-            if not line or line.startswith(("Found", "Checked")):
+            if not self._should_parse_refurb_line(line):
                 continue
 
-            if "FURB" in line and ":" in line:
-                parts = line.split(":", 2)
-                if len(parts) >= 2:
-                    try:
-                        file_path = parts[0].strip()
-                        line_number = int(parts[1].strip())
-                        message = parts[2].strip() if len(parts) > 2 else line
-
-                        issues.append(
-                            Issue(
-                                type=IssueType.COMPLEXITY,
-                                severity=Priority.MEDIUM,
-                                message=message,
-                                file_path=file_path,
-                                line_number=line_number,
-                                stage="refurb",
-                            )
-                        )
-                    except (ValueError, IndexError) as e:
-                        logger.debug(f"Failed to parse refurb line: {line} ({e})")
+            issue = self._parse_refurb_line(line)
+            if issue:
+                issues.append(issue)
 
         logger.debug(f"Parsed {len(issues)} issues from refurb")
         return issues
+
+    def _should_parse_refurb_line(self, line: str) -> bool:
+        return bool(
+            line
+            and "FURB" in line
+            and ":" in line
+            and not line.startswith(("Found", "Checked"))
+        )
+
+    def _parse_refurb_line(self, line: str) -> Issue | None:
+        parts = line.split(":", 2)
+        if len(parts) < 2:
+            return None
+
+        try:
+            file_path = parts[0].strip()
+            line_number = int(parts[1].strip())
+            message = parts[2].strip() if len(parts) > 2 else line
+
+            return Issue(
+                type=IssueType.COMPLEXITY,
+                severity=Priority.MEDIUM,
+                message=message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="refurb",
+            )
+        except (ValueError, IndexError) as e:
+            logger.debug(f"Failed to parse refurb line: {line} ({e})")
+            return None
 
 
 class RuffFormatRegexParser(RegexParser):
@@ -279,107 +292,126 @@ class MypyRegexParser(RegexParser):
 
         for line in output.split("\n"):
             line = line.strip()
-            if not line or line.startswith(("Found", "Checked", "Success")):
+            if not self._should_parse_mypy_line(line):
                 continue
 
-            if ":" in line and "error" in line or "warning" in line or "note" in line:
-                try:
-                    parts = line.split(":", 3)
-                    if len(parts) >= 3:
-                        file_path = parts[0].strip()
-                        line_number = None
-                        if len(parts) > 1 and parts[1].strip().isdigit():
-                            line_number = int(parts[1].strip())
-
-                        message = line
-                        if len(parts) >= 4:
-                            message = parts[3].strip()
-
-                        severity = Priority.MEDIUM
-                        if "error" in line.lower():
-                            severity = Priority.HIGH
-                        elif "warning" in line.lower():
-                            severity = Priority.MEDIUM
-
-                        issues.append(
-                            Issue(
-                                type=IssueType.TYPE_ERROR,
-                                severity=severity,
-                                message=message,
-                                file_path=file_path,
-                                line_number=line_number,
-                                stage="zuban",
-                            )
-                        )
-                except (ValueError, IndexError) as e:
-                    logger.debug(f"Failed to parse mypy line: {line} ({e})")
+            issue = self._parse_mypy_line(line)
+            if issue:
+                issues.append(issue)
 
         logger.debug(f"Parsed {len(issues)} issues from mypy/zuban")
         return issues
+
+    def _should_parse_mypy_line(self, line: str) -> bool:
+        if not line:
+            return False
+        if line.startswith(("Found", "Checked", "Success")):
+            return False
+        return bool(
+            ":" in line and ("error" in line or "warning" in line or "note" in line)
+        )
+
+    def _parse_mypy_line(self, line: str) -> Issue | None:
+        try:
+            parts = line.split(":", 3)
+            if len(parts) < 3:
+                return None
+
+            file_path = parts[0].strip()
+            line_number = self._extract_mypy_line_number(parts)
+            message = self._extract_mypy_message(parts, line)
+            severity = self._extract_mypy_severity(line)
+
+            return Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=severity,
+                message=message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="zuban",
+            )
+        except (ValueError, IndexError) as e:
+            logger.debug(f"Failed to parse mypy line: {line} ({e})")
+            return None
+
+    def _extract_mypy_line_number(self, parts: list[str]) -> int | None:
+        if len(parts) > 1 and parts[1].strip().isdigit():
+            return int(parts[1].strip())
+        return None
+
+    def _extract_mypy_message(self, parts: list[str], full_line: str) -> str:
+        if len(parts) >= 4:
+            return parts[3].strip()
+        return full_line
+
+    def _extract_mypy_severity(self, line: str) -> Priority:
+        if "error" in line.lower():
+            return Priority.HIGH
+        return Priority.MEDIUM
 
 
 class CreosoteRegexParser(RegexParser):
     def parse_text(self, output: str) -> list[Issue]:
         issues: list[Issue] = []
-        lines = output.split("\n")
 
-        for line in lines:
+        for line in output.split("\n"):
             line = line.strip()
-            if not line or line.startswith(("Checked", "Found", "All dependencies")):
+            if not self._should_parse_creosote_line(line):
                 continue
 
-            if "Found unused dependencies:" in line:
-                deps_part = line.split(":", 1)[1].strip()
-                deps = [d.strip() for d in deps_part.split(",")]
-                for dep in deps:
-                    if dep:
-                        issues.append(
-                            Issue(
-                                type=IssueType.COMPLEXITY,
-                                severity=Priority.MEDIUM,
-                                message=f"Unused dependency: {dep}",
-                                file_path="pyproject.toml",
-                                line_number=None,
-                                stage="creosote",
-                            )
-                        )
-                continue
-
-            if line.startswith("- "):
-                dep = line[2:].strip()
-                if dep and not line.startswith(("---", "====")):
-                    issues.append(
-                        Issue(
-                            type=IssueType.COMPLEXITY,
-                            severity=Priority.MEDIUM,
-                            message=f"Unused dependency: {dep}",
-                            file_path="pyproject.toml",
-                            line_number=None,
-                            stage="creosote",
-                        )
-                    )
-                continue
-
-            if "unused-dependency" in line or "not being used" in line.lower():
-                import re
-
-                match = re.search(r"\(([^)]+)\)", line)
-                if match:
-                    dep = match.group(1)
-                    issues.append(
-                        Issue(
-                            type=IssueType.COMPLEXITY,
-                            severity=Priority.MEDIUM,
-                            message=f"Unused dependency: {dep}",
-                            file_path="pyproject.toml",
-                            line_number=None,
-                            stage="creosote",
-                        )
-                    )
-                continue
+            line_issues = self._parse_creosote_line(line)
+            issues.extend(line_issues)
 
         logger.debug(f"Parsed {len(issues)} issues from creosote")
         return issues
+
+    def _should_parse_creosote_line(self, line: str) -> bool:
+        if not line:
+            return False
+        if line.startswith(("Checked", "Found", "All dependencies")):
+            return False
+        return True
+
+    def _parse_creosote_line(self, line: str) -> list[Issue]:
+        if "Found unused dependencies:" in line:
+            return self._parse_unused_dependencies_list(line)
+        if line.startswith("- "):
+            return self._parse_bulleted_dependency(line)
+        if "unused-dependency" in line or "not being used" in line.lower():
+            return self._parse_inline_dependency(line)
+        return []
+
+    def _parse_unused_dependencies_list(self, line: str) -> list[Issue]:
+        deps_part = line.split(":", 1)[1].strip()
+        deps = [d.strip() for d in deps_part.split(",")]
+        return [self._create_creosote_issue(dep) for dep in deps if dep]
+
+    def _parse_bulleted_dependency(self, line: str) -> list[Issue]:
+        if line.startswith(("---", "====")):
+            return []
+        dep = line[2:].strip()
+        if dep:
+            return [self._create_creosote_issue(dep)]
+        return []
+
+    def _parse_inline_dependency(self, line: str) -> list[Issue]:
+        import re
+
+        match = re.search(r"\(([^)]+)\)", line)
+        if match:
+            dep = match.group(1)
+            return [self._create_creosote_issue(dep)]
+        return []
+
+    def _create_creosote_issue(self, dep: str) -> Issue:
+        return Issue(
+            type=IssueType.COMPLEXITY,
+            severity=Priority.MEDIUM,
+            message=f"Unused dependency: {dep}",
+            file_path="pyproject.toml",
+            line_number=None,
+            stage="creosote",
+        )
 
 
 def register_regex_parsers(factory: "ParserFactory") -> None:

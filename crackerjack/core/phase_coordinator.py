@@ -1055,25 +1055,44 @@ class PhaseCoordinator:
         ParserFactory()
 
         for result in self._last_hook_results:
-            if result.issues_count != 0 or result.status != "failed":
+            if not self._should_update_hook_count(result):
                 continue
 
-            if not result.output or not result.output.strip().startswith(("{", "[")):
-                continue
+            self._try_update_count_from_json(result)
 
-            try:
-                import json
+    def _should_update_hook_count(self, result: HookResult) -> bool:
+        if result.issues_count != 0 or result.status != "failed":
+            return False
 
-                data = json.loads(result.output)
-                if isinstance(data, list):
-                    result.issues_count = len(data)
-                elif isinstance(data, dict):
-                    if "results" in data and isinstance(data["results"], list):
-                        result.issues_count = len(data["results"])
-                    elif "issues" in data and isinstance(data["issues"], list):
-                        result.issues_count = len(data["issues"])
-            except (json.JSONDecodeError, KeyError, TypeError):
-                pass
+        if not result.output or not result.output.strip().startswith(("{", "[")):
+            return False
+
+        return True
+
+    def _try_update_count_from_json(self, result: HookResult) -> None:
+        try:
+            import json
+
+            data = json.loads(result.output)
+            count = self._extract_count_from_json_data(data)
+            if count is not None:
+                result.issues_count = count
+        except (json.JSONDecodeError, KeyError, TypeError):
+            pass
+
+    def _extract_count_from_json_data(self, data: object) -> int | None:
+        if isinstance(data, list):
+            return len(data)
+        if isinstance(data, dict):
+            return self._extract_count_from_json_dict(data)
+        return None
+
+    def _extract_count_from_json_dict(self, data: dict) -> int | None:
+        if "results" in data and isinstance(data["results"], list):
+            return len(data["results"])
+        if "issues" in data and isinstance(data["issues"], list):
+            return len(data["issues"])
+        return None
 
     def _print_plain_hook_result(self, result: HookResult) -> None:
         name = self._strip_ansi(result.name)

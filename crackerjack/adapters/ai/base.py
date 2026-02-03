@@ -296,14 +296,27 @@ class BaseCodeFixer(ABC):
         return False
 
     def _scan_ast_for_dangerous_imports(self, tree: ast.AST) -> None:
+        dangerous_imports = self._collect_dangerous_imports(tree)
+        self._raise_if_dangerous_imports_found(dangerous_imports)
+
+    def _collect_dangerous_imports(self, tree: ast.AST) -> list[str]:
         dangerous_imports = []
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
-                for alias in node.names:
-                    if alias.name in ("os", "subprocess", "sys"):
-                        if not self._is_safe_usage(node):
-                            dangerous_imports.append(alias.name)
+                dangerous_imports.extend(
+                    self._check_import_node_for_dangerous_modules(node)
+                )
+        return dangerous_imports
 
+    def _check_import_node_for_dangerous_modules(self, node: ast.Import) -> list[str]:
+        dangerous = []
+        for alias in node.names:
+            if alias.name in ("os", "subprocess", "sys"):
+                if not self._is_safe_usage(node):
+                    dangerous.append(alias.name)
+        return dangerous
+
+    def _raise_if_dangerous_imports_found(self, dangerous_imports: list[str]) -> None:
         if dangerous_imports:
             raise ValueError(
                 f"Dangerous imports detected: {', '.join(dangerous_imports)}. "
@@ -401,12 +414,12 @@ Respond with ONLY the JSON, no additional text."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
-            return content[json_start: json_end].strip()
+            return content[json_start:json_end].strip()
 
         if "```" in content:
             json_start = content.find("```") + 3
             json_end = content.find("```", json_start)
-            return content[json_start: json_end].strip()
+            return content[json_start:json_end].strip()
 
         return content.strip()
 

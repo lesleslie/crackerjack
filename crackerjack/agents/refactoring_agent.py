@@ -412,35 +412,10 @@ class RefactoringAgent(SubAgent):
 
         try:
             tree = ast.parse(content)
-
-            target_function = None
-            for node in ast.walk(tree):
-                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                    if node.name == function_name:
-                        complexity = (
-                            self._complexity_analyzer._estimate_function_complexity(
-                                ast.get_source_segment(content, node) or ""
-                            )
-                        )
-
-                        if complexity > 15:
-                            target_function = {
-                                "name": node.name,
-                                "line_start": node.lineno,
-                                "line_end": node.end_lineno or node.lineno,
-                                "complexity": complexity,
-                                "node": node,
-                            }
-                        break
+            target_function = self._find_function_by_name(tree, content, function_name)
 
             if not target_function:
-                return FixResult(
-                    success=True,
-                    confidence=0.6,
-                    recommendations=[
-                        f"Function '{function_name}' not found or complexity <= 15"
-                    ],
-                )
+                return self._create_function_not_found_result(function_name)
 
             return await self._apply_and_save_refactoring(
                 file_path, content, [target_function]
@@ -448,6 +423,42 @@ class RefactoringAgent(SubAgent):
 
         except Exception:
             raise
+
+    def _find_function_by_name(
+        self, tree: ast.AST, content: str, function_name: str
+    ) -> dict[str, t.Any] | None:
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                if node.name == function_name:
+                    return self._build_function_dict(node, content)
+        return None
+
+    def _build_function_dict(
+        self, node: ast.FunctionDef | ast.AsyncFunctionDef, content: str
+    ) -> dict[str, t.Any] | None:
+        complexity = self._complexity_analyzer._estimate_function_complexity(
+            ast.get_source_segment(content, node) or ""
+        )
+
+        if complexity <= 15:
+            return None
+
+        return {
+            "name": node.name,
+            "line_start": node.lineno,
+            "line_end": node.end_lineno or node.lineno,
+            "complexity": complexity,
+            "node": node,
+        }
+
+    def _create_function_not_found_result(self, function_name: str) -> FixResult:
+        return FixResult(
+            success=True,
+            confidence=0.6,
+            recommendations=[
+                f"Function '{function_name}' not found or complexity <= 15"
+            ],
+        )
 
     async def _remove_dead_code(self, issue: Issue) -> FixResult:
         validation_result = self._validate_dead_code_issue(issue)

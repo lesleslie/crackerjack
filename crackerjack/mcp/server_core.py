@@ -209,57 +209,66 @@ def handle_mcp_server_command(
     http_port: int | None = None,
 ) -> None:
     if stop or restart:
-        console.print("[yellow]Stopping MCP servers...[/ yellow]")
-
-        pid_file = Path(".oneiric_cache") / "server.pid"
-        pid = read_pid_file(pid_file)
-
-        if pid is None:
-            console.print("[dim]No MCP servers were running (no PID file)[/ dim]")
-        else:
-            try:
-                os.kill(pid, signal.SIGTERM)
-                console.print(
-                    f"[yellow]Sent SIGTERM to MCP server (PID: {pid})[/ yellow]"
-                )
-
-                for _ in range(20):
-                    time.sleep(0.1)
-                    try:
-                        os.kill(pid, 0)
-                    except ProcessLookupError:
-                        console.print(
-                            "[green]✅ MCP servers stopped gracefully[/ green]"
-                        )
-                        break
-                else:
-                    console.print(
-                        "[yellow]Server did not stop gracefully, forcing...[/ yellow]"
-                    )
-                    os.kill(pid, signal.SIGKILL)
-                    time.sleep(0.5)
-                    console.print("[green]✅ MCP servers stopped (forced)[/ green]")
-
-            except ProcessLookupError:
-                console.print("[dim]MCP server was not running[/ dim]")
-            except PermissionError:
-                console.print(
-                    f"[red]Permission denied stopping MCP server (PID: {pid})[/ red]"
-                )
-            except Exception as e:
-                console.print(f"[red]Error stopping MCP server: {e}[/ red]")
-
+        _stop_mcp_servers()
         if stop:
             return
-
         time.sleep(2)
 
     if start or restart:
-        console.print("[green]Starting MCP server...[/ green]")
+        _start_mcp_server(http_mode, http_port)
+
+
+def _stop_mcp_servers() -> None:
+    console.print("[yellow]Stopping MCP servers...[/ yellow]")
+
+    pid_file = Path(".oneiric_cache") / "server.pid"
+    pid = read_pid_file(pid_file)
+
+    if pid is None:
+        console.print("[dim]No MCP servers were running (no PID file)[/ dim]")
+        return
+
+    _terminate_mcp_process(pid)
+
+
+def _terminate_mcp_process(pid: int) -> None:
+    try:
+        os.kill(pid, signal.SIGTERM)
+        console.print(f"[yellow]Sent SIGTERM to MCP server (PID: {pid})[/ yellow]")
+        _wait_for_process_termination(pid)
+    except ProcessLookupError:
+        console.print("[dim]MCP server was not running[/ dim]")
+    except PermissionError:
+        console.print(f"[red]Permission denied stopping MCP server (PID: {pid})[/ red]")
+    except Exception as e:
+        console.print(f"[red]Error stopping MCP server: {e}[/ red]")
+
+
+def _wait_for_process_termination(pid: int) -> None:
+    for _ in range(20):
+        time.sleep(0.1)
         try:
-            main(".", http_mode, http_port)
-        except Exception as e:
-            console.print(f"[red]Failed to start MCP server: {e}[/ red]")
+            os.kill(pid, 0)
+        except ProcessLookupError:
+            console.print("[green]✅ MCP servers stopped gracefully[/ green]")
+            return
+
+    _force_kill_process(pid)
+
+
+def _force_kill_process(pid: int) -> None:
+    console.print("[yellow]Server did not stop gracefully, forcing...[/ yellow]")
+    os.kill(pid, signal.SIGKILL)
+    time.sleep(0.5)
+    console.print("[green]✅ MCP servers stopped (forced)[/ green]")
+
+
+def _start_mcp_server(http_mode: bool, http_port: int | None) -> None:
+    console.print("[green]Starting MCP server...[/ green]")
+    try:
+        main(".", http_mode, http_port)
+    except Exception as e:
+        console.print(f"[red]Failed to start MCP server: {e}[/ red]")
 
 
 def _initialize_context(context: MCPServerContext) -> None:

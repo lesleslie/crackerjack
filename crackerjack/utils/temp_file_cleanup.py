@@ -1,6 +1,7 @@
 import glob
 import logging
-import os
+from contextlib import suppress
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +24,7 @@ def cleanup_temp_files() -> int:
         files = glob.glob(pattern)
         for file_path in files:
             try:
-                os.remove(file_path)
+                Path(file_path).unlink()
                 cleaned_count += 1
                 logger.debug(f"Cleaned up temporary file: {file_path}")
             except FileNotFoundError:
@@ -46,10 +47,8 @@ def get_temp_file_size() -> int:
 
         files = glob.glob(pattern)
         for file_path in files:
-            try:
-                total_size += os.path.getsize(file_path)
-            except (FileNotFoundError, OSError):
-                pass
+            with suppress(FileNotFoundError, OSError):
+                total_size += Path(file_path).stat().st_size
 
     return total_size
 
@@ -65,9 +64,10 @@ def cleanup_old_complexipy_files(max_age_hours: int = 24) -> int:
 
     for file_path in glob.glob(pattern):
         try:
-            file_age = current_time - os.path.getmtime(file_path)
+            path = Path(file_path)
+            file_age = current_time - path.stat().st_mtime
             if file_age > max_age_seconds:
-                os.remove(file_path)
+                path.unlink()
                 cleaned_count += 1
                 logger.debug(f"Cleaned up old complexipy file: {file_path}")
         except (FileNotFoundError, OSError) as e:
