@@ -6,7 +6,7 @@ commits, pushes, and branch operations.
 
 import subprocess
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -19,14 +19,14 @@ class TestGitServiceInitialization:
 
     def test_initialization_with_default_path(self) -> None:
         """Test GitService initializes with current working directory."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             service = GitService(console=Mock(), pkg_path=None)
 
             assert service.pkg_path == Path.cwd()
 
     def test_initialization_with_custom_path(self, tmp_path) -> None:
         """Test GitService initializes with custom path."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             service = GitService(console=Mock(), pkg_path=tmp_path)
 
             assert service.pkg_path == tmp_path
@@ -39,7 +39,7 @@ class TestGitServiceRepositoryDetection:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -81,7 +81,7 @@ class TestGitServiceFileOperations:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -187,7 +187,7 @@ class TestGitServiceCommit:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -263,7 +263,7 @@ class TestGitServicePush:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -327,7 +327,7 @@ class TestGitServiceBranch:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -393,7 +393,7 @@ class TestGitServiceCommitMessages:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     def test_get_commit_message_suggestions_empty(self, service) -> None:
@@ -457,7 +457,7 @@ class TestGitServiceFilteredFiles:
         (tmp_path / "file2.md").write_text("# markdown file")
         (tmp_path / "file3.py").write_text("# another python file")
 
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -519,7 +519,7 @@ class TestGitServiceCommitOperations:
     @pytest.fixture
     def service(self, tmp_path):
         """Create GitService instance for testing."""
-        with patch("crackerjack.services.git.Console"):
+        with patch("crackerjack.services.git.CrackerjackConsole"):
             return GitService(console=Mock(), pkg_path=tmp_path)
 
     @patch("crackerjack.services.git.execute_secure_subprocess")
@@ -583,3 +583,179 @@ class TestFailedGitResult:
         assert result.stdout == ""
         assert "Git security validation failed" in result.stderr
         assert error in result.stderr
+
+
+@pytest.mark.unit
+class TestGitServiceEdgeCases:
+    """Test edge cases for git operations."""
+
+    @pytest.fixture
+    def service(self, tmp_path):
+        """Create GitService instance for testing."""
+        with patch("crackerjack.services.git.CrackerjackConsole"):
+            return GitService(console=Mock(), pkg_path=tmp_path)
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_permission_denied_on_add(self, mock_execute, service, tmp_path) -> None:
+        """Test handling of permission denied when adding files."""
+        # Create file without read permissions
+        test_file = tmp_path / "secret.txt"
+        test_file.write_text("content")
+        test_file.chmod(0o000)
+
+        try:
+            mock_execute.return_value = subprocess.CompletedProcess(
+                args=["git", "add"],
+                returncode=128,
+                stdout="",
+                stderr="fatal: open('secret.txt'): Permission denied",
+            )
+
+            result = service.add_files(["secret.txt"])
+
+            assert result is False
+        finally:
+            test_file.chmod(0o644)
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_symlink_in_changed_files(self, mock_execute, service, tmp_path) -> None:
+        """Test that symlinks are properly handled in changed files."""
+        # Create actual file and symlink
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="link.txt\n", stderr="",
+        )
+
+        files = service.get_staged_files()
+
+        assert len(files) == 1
+        assert "link.txt" in files
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_broken_symlink_in_repo(self, mock_execute, service, tmp_path) -> None:
+        """Test handling of broken symlinks in repository."""
+        # Create broken symlink
+        broken_link = tmp_path / "broken.txt"
+        broken_link.symlink_to(tmp_path / "nonexistent.txt")
+
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="broken.txt\n", stderr="",
+        )
+
+        files = service.get_changed_files()
+
+        # Should detect the broken symlink
+        assert "broken.txt" in files
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_disk_full_on_commit(self, mock_execute, service) -> None:
+        """Test handling of disk full error during commit."""
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=["git", "commit"],
+            returncode=128,
+            stdout="",
+            stderr="error: unable to write new_index file\nNo space left on device",
+        )
+
+        result = service.commit("Test commit")
+
+        assert result is False
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_corrupt_git_repository(self, mock_execute, service) -> None:
+        """Test handling of corrupt git repository."""
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=["git", "status"],
+            returncode=128,
+            stdout="",
+            stderr="fatal: bad object HEAD",
+        )
+
+        # Should handle gracefully
+        is_repo = service.is_git_repo()
+        assert is_repo is False
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_race_condition_on_push(self, mock_execute, service) -> None:
+        """Test handling of concurrent push operations."""
+        # Simulate race condition: another push happened first
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=["git", "push"],
+            returncode=1,
+            stdout="",
+            stderr="To prevent you from losing history, non-fast-forward updates were rejected",
+        )
+
+        result = service.push()
+
+        assert result is False
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_get_changed_files_with_mixed_symlinks_and_files(
+        self, mock_execute, service, tmp_path
+    ) -> None:
+        """Test getting changed files with mix of symlinks and regular files."""
+        # Create mix of files
+        (tmp_path / "file1.py").write_text("# python file")
+        (tmp_path / "file2.md").write_text("# markdown")
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("content")
+        (tmp_path / "link.txt").symlink_to(actual_file)
+
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="file1.py\nfile2.md\nlink.txt\n", stderr="",
+        )
+
+        files = service.get_changed_files()
+
+        # Should handle all types
+        assert len(files) == 3
+        assert "file1.py" in files
+        assert "file2.md" in files
+        assert "link.txt" in files
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_submodule_in_changed_files(self, mock_execute, service) -> None:
+        """Test that git submodules are handled correctly."""
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="submodule/\n", stderr="",
+        )
+
+        files = service.get_changed_files()
+
+        # Should detect submodule (with trailing slash)
+        assert len(files) == 1
+        assert "submodule/" in files
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_commit_with_special_characters_in_message(self, mock_execute, service) -> None:
+        """Test commit with special characters in commit message."""
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=["git", "commit"],
+            returncode=0,
+            stdout="[main abc123] Fix: handle émojis 🎉 and spëcial çhars",
+            stderr="",
+        )
+
+        message = "Fix: handle émojis 🎉 and spëcial çhars"
+        result = service.commit(message)
+
+        assert result is True
+
+    @patch("crackerjack.services.git.execute_secure_subprocess")
+    def test_handles_large_number_of_changed_files(self, mock_execute, service) -> None:
+        """Test handling of large number of changed files (performance edge case)."""
+        # Simulate 1000 changed files
+        files_list = "\n".join([f"file{i}.py" for i in range(1000)])
+        mock_execute.return_value = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=files_list, stderr="",
+        )
+
+        files = service.get_changed_files()
+
+        # Should handle large lists
+        assert len(files) == 1000

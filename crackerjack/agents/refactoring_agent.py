@@ -140,12 +140,6 @@ class RefactoringAgent(SubAgent):
         if "detect_agent_needs" in issue.message:
             return await self._apply_known_complexity_fix(file_path, issue)
 
-        # Three-tier fallback strategy:
-        # Tier 1: Use line_number if available (from parser AST extraction)
-        # Tier 2: Search for function by name if line_number is None
-        # Tier 3: Full file AST analysis
-
-        # Tier 1: Check if parser provided a line number
         if issue.line_number is not None:
             self.log(
                 f"Tier 1: Using line number {issue.line_number} from parser for complexity reduction"
@@ -157,7 +151,6 @@ class RefactoringAgent(SubAgent):
             except Exception as e:
                 self.log(f"Tier 1 failed: {e}, falling back to Tier 2")
 
-        # Tier 2: Extract function name from issue and search for it
         function_name = self._extract_function_name_from_issue(issue)
         if function_name:
             self.log(f"Tier 2: Searching for function '{function_name}' by name")
@@ -168,7 +161,6 @@ class RefactoringAgent(SubAgent):
             except Exception as e:
                 self.log(f"Tier 2 failed: {e}, falling back to Tier 3")
 
-        # Tier 3: Full file analysis (original behavior)
         self.log("Tier 3: Performing full file complexity analysis")
         try:
             return await self._process_complexity_reduction(file_path)
@@ -344,37 +336,24 @@ class RefactoringAgent(SubAgent):
         )
 
     def _extract_function_name_from_issue(self, issue: Issue) -> str | None:
-        """Extract function name from complexity issue message.
-
-        Handles complexipy's ClassName::method_name format.
-
-        Args:
-            issue: The complexity issue
-
-        Returns:
-            Function name if found, None otherwise
-        """
         import re
 
-        # Pattern: "Function 'ClassName::method_name' has complexity X"
         match = re.search(r"Function\s+'([\w:]+)'", issue.message)
         if match:
             full_name = match.group(1)
-            # Handle ClassName::method_name format
+
             if "::" in full_name:
                 return full_name.split("::")[-1]
             return full_name
 
-        # Pattern: "function_name - Complexity: X"
         match = re.search(r"^(\w+)\s+-", issue.message)
         if match:
             return match.group(1)
 
-        # Check details for function name
         for detail in issue.details:
             if detail.startswith("function:"):
                 func_name = detail.split(":", 1)[1].strip()
-                # Handle ClassName::method_name format
+
                 if "::" in func_name:
                     return func_name.split("::")[-1]
                 return func_name
@@ -384,17 +363,6 @@ class RefactoringAgent(SubAgent):
     async def _process_complexity_reduction_with_line_number(
         self, file_path: Path, line_number: int
     ) -> FixResult:
-        """Process complexity reduction for a specific line number (Tier 1).
-
-        This is the most precise method when we have the exact line number.
-
-        Args:
-            file_path: Path to the file
-            line_number: Line number where the function starts
-
-        Returns:
-            FixResult with the outcome
-        """
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -405,12 +373,10 @@ class RefactoringAgent(SubAgent):
 
         tree = ast.parse(content)
 
-        # Find the function at the given line number
         complex_functions = self._complexity_analyzer.find_complex_functions(
             tree, content
         )
 
-        # Filter to only the function at or near the given line number
         target_functions = [
             f
             for f in complex_functions
@@ -420,7 +386,6 @@ class RefactoringAgent(SubAgent):
         ]
 
         if not target_functions:
-            # Fallback: find all complex functions in the file
             target_functions = complex_functions
 
         if not target_functions:
@@ -437,18 +402,6 @@ class RefactoringAgent(SubAgent):
     async def _process_complexity_reduction_by_function_name(
         self, file_path: Path, function_name: str
     ) -> FixResult:
-        """Process complexity reduction by searching for function name (Tier 2).
-
-        This method searches for a function by name in the AST when we don't
-        have a line number.
-
-        Args:
-            file_path: Path to the file
-            function_name: Name of the function to refactor
-
-        Returns:
-            FixResult with the outcome
-        """
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -460,19 +413,17 @@ class RefactoringAgent(SubAgent):
         try:
             tree = ast.parse(content)
 
-            # Find the specific function by name
             target_function = None
             for node in ast.walk(tree):
                 if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                     if node.name == function_name:
-                        # Analyze this specific function's complexity
                         complexity = (
                             self._complexity_analyzer._estimate_function_complexity(
                                 ast.get_source_segment(content, node) or ""
                             )
                         )
 
-                        if complexity > 15:  # Threshold
+                        if complexity > 15:
                             target_function = {
                                 "name": node.name,
                                 "line_start": node.lineno,
@@ -496,7 +447,6 @@ class RefactoringAgent(SubAgent):
             )
 
         except Exception:
-            # Fall through to Tier 3 (full file analysis)
             raise
 
     async def _remove_dead_code(self, issue: Issue) -> FixResult:

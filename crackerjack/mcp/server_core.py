@@ -1,5 +1,5 @@
 import os
-import subprocess
+import signal
 import time
 import typing as t
 from contextlib import suppress
@@ -12,6 +12,7 @@ from rich.console import Console
 
 from crackerjack.runtime import (
     RuntimeHealthSnapshot,
+    read_pid_file,
     write_pid_file,
     write_runtime_health,
 )
@@ -210,22 +211,48 @@ def handle_mcp_server_command(
     if stop or restart:
         console.print("[yellow]Stopping MCP servers...[/ yellow]")
 
-        try:
-            result = subprocess.run(
-                ["pkill", "-f", "crackerjack-mcp-server"],
-                check=False,
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            if result.returncode == 0:
-                console.print("[green]✅ MCP servers stopped[/ green]")
-            else:
-                console.print("[dim]No MCP servers were running[/ dim]")
-        except subprocess.TimeoutExpired:
-            console.print("[red]Timeout stopping MCP servers[/ red]")
-        except Exception as e:
-            console.print(f"[red]Error stopping MCP servers: {e}[/ red]")
+        # Use PID file tracking for secure process management
+        pid_file = Path(".oneiric_cache") / "server.pid"
+        pid = read_pid_file(pid_file)
+
+        if pid is None:
+            console.print("[dim]No MCP servers were running (no PID file)[/ dim]")
+        else:
+            try:
+                # Try graceful shutdown with SIGTERM first
+                os.kill(pid, signal.SIGTERM)
+                console.print(
+                    f"[yellow]Sent SIGTERM to MCP server (PID: {pid})[/ yellow]"
+                )
+
+                # Wait up to 2 seconds for graceful shutdown
+                for _ in range(20):
+                    time.sleep(0.1)
+                    try:
+                        os.kill(pid, 0)  # Check if process exists
+                    except ProcessLookupError:
+                        # Process has stopped
+                        console.print(
+                            "[green]✅ MCP servers stopped gracefully[/ green]"
+                        )
+                        break
+                else:
+                    # Process still running after timeout, force kill
+                    console.print(
+                        "[yellow]Server did not stop gracefully, forcing...[/ yellow]"
+                    )
+                    os.kill(pid, signal.SIGKILL)
+                    time.sleep(0.5)
+                    console.print("[green]✅ MCP servers stopped (forced)[/ green]")
+
+            except ProcessLookupError:
+                console.print("[dim]MCP server was not running[/ dim]")
+            except PermissionError:
+                console.print(
+                    f"[red]Permission denied stopping MCP server (PID: {pid})[/ red]"
+                )
+            except Exception as e:
+                console.print(f"[red]Error stopping MCP server: {e}[/ red]")
 
         if stop:
             return

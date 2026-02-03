@@ -4,7 +4,6 @@ import os
 import typing as t
 from pathlib import Path
 
-from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
 
 if t.TYPE_CHECKING:
@@ -14,10 +13,16 @@ if t.TYPE_CHECKING:
         ConfigTemplateService,
     )
 
-console = CrackerjackConsole()
 
+def setup_ai_agent_env(
+    ai_agent: bool,
+    debug_mode: bool = False,
+    console: ConsoleInterface | None = None,
+) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
 
-def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
+        console = CrackerjackConsole()
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 
@@ -80,13 +85,15 @@ def handle_standard_mode(
         if getattr(settings.documentation, "auto_cleanup_on_publish", True):
             options.cleanup_docs = True
 
-    runner = CrackerjackCLIFacade(console=console)
+    runner = CrackerjackCLIFacade()
     runner.process(options)  # type: ignore[arg-type]
 
 
 def handle_config_updates(options: Options) -> None:
+    from crackerjack.core.console import CrackerjackConsole
     from crackerjack.services.config_template import ConfigTemplateService
 
+    console = CrackerjackConsole()
     pkg_path = Path.cwd()
     config_service = ConfigTemplateService(console, pkg_path)
 

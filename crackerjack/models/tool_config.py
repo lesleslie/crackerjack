@@ -1,16 +1,8 @@
-"""Tool configuration for output parsing.
-
-This module defines the configuration for each quality tool, including whether
-they support JSON output and what command-line flags are needed.
-"""
-
 from dataclasses import dataclass
 from enum import Enum
 
 
 class OutputFormat(str, Enum):
-    """Output format type for a tool."""
-
     JSON = "json"
     TEXT = "text"
     CUSTOM = "custom"
@@ -18,17 +10,6 @@ class OutputFormat(str, Enum):
 
 @dataclass(frozen=True)
 class ToolConfig:
-    """Configuration for a quality tool's output parsing.
-
-    Attributes:
-        name: Tool name (e.g., "ruff", "mypy")
-        supports_json: Whether the tool supports JSON output format
-        json_flag: Command-line flag to enable JSON output (e.g., "--output-format=json")
-        output_format: Preferred output format for this tool
-        fallback_to_regex: Whether to use regex parser if JSON fails
-        required_json_fields: Set of required fields for JSON validation
-    """
-
     name: str
     supports_json: bool
     json_flag: str | None = None
@@ -37,18 +18,6 @@ class ToolConfig:
     required_json_fields: frozenset[str] = frozenset()
 
 
-# Tool configuration registry
-#
-# This registry defines which tools support JSON output and how to invoke them.
-# When adding new tools, check their documentation for JSON output support.
-#
-# Common JSON output flags:
-# - ruff: --output-format=json
-# - mypy: --output=json
-# - bandit: -f json
-# - pylint: --output-format=json
-# - codespell: (no JSON support)
-# - refurb: (no JSON support)
 TOOL_CONFIGS: dict[str, ToolConfig] = {
     "ruff": ToolConfig(
         name="ruff",
@@ -150,38 +119,14 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
 
 
 def get_tool_config(tool_name: str) -> ToolConfig | None:
-    """Get configuration for a tool.
-
-    Args:
-        tool_name: Name of the tool (e.g., "ruff", "mypy")
-
-    Returns:
-        ToolConfig if found, None otherwise
-    """
     return TOOL_CONFIGS.get(tool_name)
 
 
 def supports_json(tool_name: str) -> bool:
-    """Check if a tool supports JSON output.
-
-    Args:
-        tool_name: Name of the tool
-
-    Returns:
-        True if tool supports JSON output, False otherwise
-    """
     config = get_tool_config(tool_name)
     return config.supports_json if config else False
 
 
 def get_json_flag(tool_name: str) -> str | None:
-    """Get the JSON output flag for a tool.
-
-    Args:
-        tool_name: Name of the tool
-
-    Returns:
-        JSON flag string (e.g., "--output-format=json") or None if not supported
-    """
     config = get_tool_config(tool_name)
     return config.json_flag if config else None

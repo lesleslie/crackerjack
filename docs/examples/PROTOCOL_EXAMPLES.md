@@ -4,18 +4,18 @@
 **Last Updated**: 2025-01-31
 **Target Audience**: Developers implementing protocol-based code
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Simple Protocol Implementation](#simple-protocol-implementation)
-2. [Protocol Composition](#protocol-composition)
-3. [Dependency Injection Patterns](#dependency-injection-patterns)
-4. [Testing with Protocol Mocks](#testing-with-protocol-mocks)
-5. [Common Patterns](#common-patterns)
-6. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
+1. [Protocol Composition](#protocol-composition)
+1. [Dependency Injection Patterns](#dependency-injection-patterns)
+1. [Testing with Protocol Mocks](#testing-with-protocol-mocks)
+1. [Common Patterns](#common-patterns)
+1. [Anti-Patterns to Avoid](#anti-patterns-to-avoid)
 
----
+______________________________________________________________________
 
 ## Simple Protocol Implementation
 
@@ -209,7 +209,7 @@ def use_service_with_context() -> None:
     # Automatically cleaned up
 ```
 
----
+______________________________________________________________________
 
 ## Protocol Composition
 
@@ -369,7 +369,7 @@ def verify_protocols() -> None:
         service.cleanup()
 ```
 
----
+______________________________________________________________________
 
 ## Dependency Injection Patterns
 
@@ -595,7 +595,7 @@ class SessionCoordinatorWithOptionalDeps:
         return True
 ```
 
----
+______________________________________________________________________
 
 ## Testing with Protocol Mocks
 
@@ -742,7 +742,7 @@ def test_with_fixtures(mock_service: ServiceProtocol, mock_console: ConsoleMock)
     # Cleanup happens automatically
 ```
 
----
+______________________________________________________________________
 
 ## Common Patterns
 
@@ -1052,7 +1052,7 @@ class AgentCoordinatorImpl:
         return self._agents.get(issue_type)
 ```
 
----
+______________________________________________________________________
 
 ## Anti-Patterns to Avoid
 
@@ -1192,7 +1192,7 @@ finally:
     service.cleanup()
 ```
 
----
+______________________________________________________________________
 
 **End of Protocol Usage Examples**
 
@@ -1201,7 +1201,7 @@ finally:
 **Last Updated**: 2025-01-31
 **Maintainer**: Crackerjack Documentation Team
 
----
+______________________________________________________________________
 
 ## Additional Resources
 

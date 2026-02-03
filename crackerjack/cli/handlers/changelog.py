@@ -1,9 +1,8 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from crackerjack.models.protocols import ConsoleInterface
 
-console = Console()
 if t.TYPE_CHECKING:
     from crackerjack.services.changelog_automation import ChangelogGenerator
     from crackerjack.services.git import GitService
@@ -28,6 +27,7 @@ def handle_changelog_dry_run(
     generator: "ChangelogGenerator",
     changelog_since: str | None,
     options: t.Any,
+    console: ConsoleInterface,
 ) -> bool:
     console.print("🔍 [bold blue]Previewing changelog generation...[/bold blue]")
     entries = generator.generate_changelog_entries(changelog_since)
@@ -46,6 +46,7 @@ def handle_changelog_generation(
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,
+    console: ConsoleInterface,
 ) -> bool:
     console.print("📝 [bold blue]Generating changelog...[/bold blue]")
 
@@ -76,6 +77,7 @@ def determine_changelog_version(
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,
+    console: ConsoleInterface,
 ) -> str:
     if getattr(options, "auto_version", False) and not changelog_version:
         try:
@@ -119,7 +121,13 @@ def handle_changelog_commands(
     changelog_version: str | None,
     changelog_since: str | None,
     options: t.Any,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not (generate_changelog or changelog_dry_run):
         return True
 
@@ -127,7 +135,9 @@ def handle_changelog_commands(
     changelog_path = services["pkg_path"] / "CHANGELOG.md"
 
     if changelog_dry_run:
-        return handle_changelog_dry_run(services["generator"], changelog_since, options)
+        return handle_changelog_dry_run(
+            services["generator"], changelog_since, options, console
+        )
 
     if generate_changelog:
         return handle_changelog_generation(
@@ -136,6 +146,7 @@ def handle_changelog_commands(
             changelog_version,
             changelog_since,
             options,
+            console,
         )
 
     return should_continue_after_changelog(options)
@@ -146,7 +157,13 @@ def handle_version_analysis(
     version_since: str | None,
     accept_version: bool,
     options: t.Any,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not auto_version:
         return True
 

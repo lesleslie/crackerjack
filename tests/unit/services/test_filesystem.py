@@ -681,3 +681,140 @@ class TestFileSystemServiceErrorHandling:
         # Should have recovery suggestion
         assert exc_info.value.recovery is not None
         assert "check" in exc_info.value.recovery.lower()
+
+
+@pytest.mark.unit
+class TestFileSystemServiceSymlinkOperations:
+    """Test symbolic link handling."""
+
+    @pytest.fixture
+    def service(self):
+        """Create FileSystemService instance."""
+        return FileSystemService()
+
+    def test_read_file_through_symlink(self, service, tmp_path) -> None:
+        """Test reading a file through a symbolic link."""
+        # Create actual file
+        actual_file = tmp_path / "actual.txt"
+        content = "Hello, World!"
+        actual_file.write_text(content)
+
+        # Create symlink
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        # Read through symlink
+        result = service.read_file(symlink)
+        assert result == content
+
+    def test_write_file_through_symlink(self, service, tmp_path) -> None:
+        """Test writing to a file through a symbolic link."""
+        # Create actual file
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("old content")
+
+        # Create symlink
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        # Write through symlink
+        service.write_file(symlink, "new content")
+
+        # Both should reflect the change
+        assert service.read_file(symlink) == "new content"
+        assert service.read_file(actual_file) == "new content"
+
+    def test_symlink_to_nonexistent_raises_error(self, service, tmp_path) -> None:
+        """Test reading broken symlink raises FileError."""
+        # Create symlink to non-existent file
+        symlink = tmp_path / "broken.txt"
+        symlink.symlink_to(tmp_path / "nonexistent.txt")
+
+        with pytest.raises(FileError) as exc_info:
+            service.read_file(symlink)
+
+        assert "does not exist" in str(exc_info.value)
+
+    def test_copy_symlink_copies_target_content(self, service, tmp_path) -> None:
+        """Test that copying symlink copies the target file's content."""
+        # Create actual file and symlink
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        # Copy symlink (shutil.copy2 follows symlinks)
+        copy_path = tmp_path / "copy.txt"
+        service.copy_file(symlink, copy_path)
+
+        # Copy should be a regular file with the content
+        assert not copy_path.is_symlink()
+        assert service.read_file(copy_path) == "content"
+
+    def test_glob_follows_symlinks(self, service, tmp_path) -> None:
+        """Test that glob operations handle symlinks correctly."""
+        # Create directory with file
+        subdir = tmp_path / "subdir"
+        subdir.mkdir()
+        actual_file = subdir / "file.txt"
+        actual_file.write_text("content")
+
+        # Create symlink to directory
+        link_dir = tmp_path / "linkdir"
+        link_dir.symlink_to(subdir)
+
+        # Glob through symlink should find files (use path parameter)
+        results = service.glob("*.txt", path=link_dir)
+        assert len(results) == 1
+        # Results should be absolute paths
+        assert any("file.txt" in str(r) for r in results)
+
+    def test_symlink_cycle_detection(self, service, tmp_path) -> None:
+        """Test that symlink cycles are handled gracefully."""
+        # Create circular symlinks
+        link1 = tmp_path / "link1"
+        link2 = tmp_path / "link2"
+        link1.symlink_to(link2)
+        link2.symlink_to(link1)
+
+        # Circular symlinks don't "exist" in the traditional sense
+        # (they point to nothing resolvable)
+        assert service.exists(link1) is False
+
+        # glob should not hang on circular symlinks
+        results = service.glob("*", path=tmp_path)
+        # Should find both symlink files themselves
+        assert len(results) >= 2
+        assert any("link1" in str(r) for r in results)
+        assert any("link2" in str(r) for r in results)
+
+    def test_remove_symlink_removes_link_not_target(self, service, tmp_path) -> None:
+        """Test that removing symlink removes link, not target file."""
+        # Create actual file and symlink
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        # Remove symlink
+        service.remove_file(symlink)
+
+        # Symlink should be gone
+        assert not symlink.exists()
+
+        # Target should still exist
+        assert actual_file.exists()
+        assert service.read_file(actual_file) == "content"
+
+    def test_get_file_size_through_symlink(self, service, tmp_path) -> None:
+        """Test getting file size through symbolic link."""
+        # Create actual file and symlink
+        actual_file = tmp_path / "actual.txt"
+        actual_file.write_text("content")
+        symlink = tmp_path / "link.txt"
+        symlink.symlink_to(actual_file)
+
+        # get_file_size should follow symlink
+        size = service.get_file_size(symlink)
+        assert size > 0
+        assert size == len("content")

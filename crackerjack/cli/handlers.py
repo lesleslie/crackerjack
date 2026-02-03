@@ -4,11 +4,10 @@ import os
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
+from crackerjack.models.protocols import ConsoleInterface
 
 from .options import Options
 
-console = Console()
 logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
@@ -18,7 +17,15 @@ if t.TYPE_CHECKING:
     )
 
 
-def setup_ai_agent_env(ai_agent: bool, debug_mode: bool = False) -> None:
+def setup_ai_agent_env(
+    ai_agent: bool,
+    debug_mode: bool = False,
+    console: ConsoleInterface | None = None,
+) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
     if debug_mode:
         os.environ["CRACKERJACK_DEBUG"] = "1"
 

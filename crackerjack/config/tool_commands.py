@@ -152,8 +152,8 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "check",
             "--output-format",
             "json",
-            "--fix",  # Auto-fix issues
-            "--unsafe-fixes",  # Allow unsafe fixes like F841 (unused variables)
+            "--fix",
+            "--unsafe-fixes",
             f"./{package_name}",
         ],
         "ruff-format": [

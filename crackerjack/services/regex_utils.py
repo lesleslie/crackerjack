@@ -67,24 +67,6 @@ def test_pattern_immediately(
     return results
 
 
-def print_pattern_test_report(results: dict[str, t.Any]) -> None:
-    if results["description"]:
-        pass
-
-    if results["errors"]:
-        for _error in results["errors"]:
-            pass
-
-    if results["warnings"]:
-        for _warning in results["warnings"]:
-            pass
-
-    for test in results["test_results"]:
-        "✅ PASS" if test["passed"] else "❌ FAIL"
-        if not test["passed"]:
-            pass
-
-
 def quick_pattern_test(
     pattern: str,
     replacement: str,
@@ -92,7 +74,6 @@ def quick_pattern_test(
     description: str = "",
 ) -> bool:
     results = test_pattern_immediately(pattern, replacement, test_cases, description)
-    print_pattern_test_report(results)
     passed: bool = results["all_passed"]
     return passed
 

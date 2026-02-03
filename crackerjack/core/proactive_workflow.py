@@ -55,8 +55,15 @@ class ProactiveWorkflowPipeline:
         self.logger.info("Assessing codebase architecture")
 
         if not self._architect_agent_coordinator:
+            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.services.debug import get_ai_agent_debugger
+
             agent_context = AgentContext(project_path=self.project_path)
-            self._architect_agent_coordinator = AgentCoordinator(agent_context)
+            self._architect_agent_coordinator = AgentCoordinator(
+                agent_context,
+                tracker=get_agent_tracker(),
+                debugger=get_ai_agent_debugger(),
+            )
             self._architect_agent_coordinator.initialize_agents()
 
         test_issues = await self._identify_potential_issues()

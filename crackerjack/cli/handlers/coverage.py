@@ -1,12 +1,13 @@
 import typing as t
 from pathlib import Path
 
-from crackerjack.core.console import CrackerjackConsole
-
-console = CrackerjackConsole()
+from crackerjack.models.protocols import ConsoleInterface
 
 
-def display_coverage_info(coverage_info: dict[str, t.Any]) -> None:
+def display_coverage_info(
+    coverage_info: dict[str, t.Any],
+    console: ConsoleInterface,
+) -> None:
     coverage_percent = coverage_info.get("coverage_percent", 0.0)
     coverage_source = coverage_info.get("source", "unknown")
 
@@ -22,13 +23,19 @@ def display_coverage_info(coverage_info: dict[str, t.Any]) -> None:
         console.print(f"[dim]{status_message}[/dim]")
 
 
-def display_coverage_report(test_manager: t.Any) -> None:
+def display_coverage_report(
+    test_manager: t.Any,
+    console: ConsoleInterface,
+) -> None:
     coverage_report = test_manager.get_coverage_report()
     if coverage_report:
         console.print(f"[cyan]Details:[/cyan] {coverage_report}")
 
 
-def display_ratchet_status(test_manager: t.Any) -> None:
+def display_ratchet_status(
+    test_manager: t.Any,
+    console: ConsoleInterface,
+) -> None:
     from contextlib import suppress
 
     with suppress(Exception):
@@ -43,7 +50,16 @@ def display_ratchet_status(test_manager: t.Any) -> None:
                 console.print(f"[green]Milestones Achieved:[/green] {len(milestones)}")
 
 
-def handle_coverage_status(coverage_status: bool, options: t.Any) -> bool:
+def handle_coverage_status(
+    coverage_status: bool,
+    options: t.Any,
+    console: ConsoleInterface | None = None,
+) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not coverage_status:
         return True
 
@@ -58,11 +74,11 @@ def handle_coverage_status(coverage_status: bool, options: t.Any) -> bool:
         console.print("=" * 50)
 
         coverage_info = test_manager.get_coverage()
-        display_coverage_info(coverage_info)
+        display_coverage_info(coverage_info, console)
 
-        display_coverage_report(test_manager)
+        display_coverage_report(test_manager, console)
 
-        display_ratchet_status(test_manager)
+        display_ratchet_status(test_manager, console)
 
         console.print()
         return False

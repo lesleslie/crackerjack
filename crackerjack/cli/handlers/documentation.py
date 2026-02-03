@@ -1,12 +1,10 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from crackerjack.models.protocols import ConsoleInterface
 
 
-def generate_documentation(doc_service: t.Any) -> bool:
+def generate_documentation(doc_service: t.Any, console: ConsoleInterface) -> bool:
     console.print("📖 [bold blue]Generating API documentation...[/bold blue]")
     success = doc_service.generate_full_api_documentation()
     if success:
@@ -18,7 +16,10 @@ def generate_documentation(doc_service: t.Any) -> bool:
     return False
 
 
-def validate_documentation_files(doc_service: t.Any) -> None:
+def validate_documentation_files(
+    doc_service: t.Any,
+    console: ConsoleInterface,
+) -> None:
     console.print("🔍 [bold blue]Validating documentation...[/bold blue]")
     doc_paths = [Path("docs"), Path("README.md"), Path("CHANGELOG.md")]
     existing_docs = [p for p in doc_paths if p.exists()]
@@ -42,7 +43,13 @@ def handle_documentation_commands(
     generate_docs: bool,
     validate_docs: bool,
     options: t.Any,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not (generate_docs or validate_docs):
         return True
 
@@ -51,11 +58,11 @@ def handle_documentation_commands(
     pkg_path = Path.cwd()
     doc_service = DocumentationServiceImpl(pkg_path=pkg_path)
 
-    if generate_docs and not generate_documentation(doc_service):
+    if generate_docs and not generate_documentation(doc_service, console):
         return False
 
     if validate_docs:
-        validate_documentation_files(doc_service)
+        validate_documentation_files(doc_service, console)
 
     return any(
         [
@@ -183,7 +190,9 @@ def build_mkdocs_site(
     )
 
 
-def handle_mkdocs_build_result(site: t.Any, mkdocs_serve: bool) -> None:
+def handle_mkdocs_build_result(
+    site: t.Any, mkdocs_serve: bool, console: ConsoleInterface
+) -> None:
     if site:
         console.print(
             f"[green]✅[/green] MkDocs site generated successfully at: {site.build_path}",
@@ -206,7 +215,13 @@ def handle_mkdocs_integration(
     mkdocs_serve: bool,
     mkdocs_theme: str,
     mkdocs_output: str | None,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not mkdocs_integration:
         return True
 
@@ -224,7 +239,7 @@ def handle_mkdocs_integration(
 
         build_mkdocs_site(builder, docs_content, output_dir, mkdocs_serve)
         site = None
-        handle_mkdocs_build_result(site, mkdocs_serve)
+        handle_mkdocs_build_result(site, mkdocs_serve, console)
 
         return False
 

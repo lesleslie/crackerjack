@@ -5,22 +5,22 @@
 **Target Audience**: New developers joining crackerjack
 **Prerequisites**: Python 3.13+, basic type hints knowledge
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Quick Start: What Are Protocols?](#quick-start-what-are-protocols)
-2. [Why Protocol-Based Architecture?](#why-protocol-based-architecture)
-3. [Protocol Hierarchy and Organization](#protocol-hierarchy-and-organization)
-4. [Core Protocols Explained](#core-protocols-explained)
-5. [Service Protocols](#service-protocols)
-6. [Usage Patterns](#usage-patterns)
-7. [Implementation Guide](#implementation-guide)
-8. [Common Pitfalls and Solutions](#common-pitfalls-and-solutions)
-9. [Best Practices](#best-practices)
-10. [Complete Protocol Reference](#complete-protocol-reference)
+1. [Why Protocol-Based Architecture?](#why-protocol-based-architecture)
+1. [Protocol Hierarchy and Organization](#protocol-hierarchy-and-organization)
+1. [Core Protocols Explained](#core-protocols-explained)
+1. [Service Protocols](#service-protocols)
+1. [Usage Patterns](#usage-patterns)
+1. [Implementation Guide](#implementation-guide)
+1. [Common Pitfalls and Solutions](#common-pitfalls-and-solutions)
+1. [Best Practices](#best-practices)
+1. [Complete Protocol Reference](#complete-protocol-reference)
 
----
+______________________________________________________________________
 
 ## Quick Start: What Are Protocols?
 
@@ -43,14 +43,17 @@ class ServiceProtocol(Protocol):
 ### Key Characteristics
 
 1. **Duck Typing with Type Safety**
+
    - "If it walks like a duck and quacks like a duck, it's a duck"
    - Protocols verify the "walking" and "quacking" at type-check time
 
-2. **No Inheritance Required**
+1. **No Inheritance Required**
+
    - Classes implement protocols by having matching methods
    - No explicit inheritance needed: `class MyService(ServiceProtocol)`
 
-3. **Structural Subtyping**
+1. **Structural Subtyping**
+
    - Based on structure (methods/attributes), not names
    - Two classes with same methods implement same protocol
 
@@ -69,7 +72,7 @@ console: ConsoleInterface = MyConsole()  # ✅ Valid
 console.print("Hello, protocols!")
 ```
 
----
+______________________________________________________________________
 
 ## Why Protocol-Based Architecture?
 
@@ -156,10 +159,11 @@ def process_tests(manager: TestManagerProtocol) -> None:
 | Use case | APIs, testing | Frameworks, enforcement |
 
 **When to use which**:
+
 - ✅ **Protocol**: Library APIs, dependency injection, testing
 - ✅ **ABC**: Framework enforcement, class hierarchies
 
----
+______________________________________________________________________
 
 ## Protocol Hierarchy and Organization
 
@@ -241,6 +245,7 @@ Standalone Protocols (no inheritance)
 ### Protocol Categories
 
 #### 1. **Core Infrastructure** (5 protocols)
+
 Foundational interfaces used throughout crackerjack.
 
 - `ServiceProtocol` - Base lifecycle for all services
@@ -250,56 +255,70 @@ Foundational interfaces used throughout crackerjack.
 - `FileSystemInterface` - File operations
 
 #### 2. **Service Extensions** (23 protocols)
+
 Domain-specific services inheriting from `ServiceProtocol`.
 
 **Testing & Quality**:
+
 - `TestManagerProtocol` - Test execution
 - `CoverageRatchetProtocol` - Coverage tracking
 - `CoverageRatchetServiceProtocol` - Coverage enforcement
 
 **Configuration**:
+
 - `UnifiedConfigurationServiceProtocol` - Config management
 - `ConfigIntegrityServiceProtocol` - Config validation
 - `ConfigMergeServiceProtocol` - Config merging
 
 **Security**:
+
 - `SecurityServiceProtocol` - Security checks
 
 **Development**:
+
 - `InitializationServiceProtocol` - Project setup
 - `SmartSchedulingServiceProtocol` - Task scheduling
 
 **Monitoring**:
+
 - `DebugServiceProtocol` - Debug logging
 - `HealthMetricsServiceProtocol` - Health tracking
 - `QualityIntelligenceProtocol` - Quality analytics
 
 **File Operations**:
+
 - `EnhancedFileSystemServiceProtocol` - Async file ops
 - `SmartFileFilterProtocol` - File filtering
 - `SafeFileModifierProtocol` - Safe file editing
 
 **Documentation**:
+
 - `DocumentationServiceProtocol` - Documentation generation
 
 **Performance**:
+
 - `PerformanceBenchmarkServiceProtocol` - Benchmarking
 
 **Publishing**:
+
 - `CoverageBadgeServiceProtocol` - Badge generation
 
 **Process Management**:
+
 - `ServerManagerProtocol` - Process management
 - `ServiceWatchdogProtocol` - Service monitoring
 - `LogManagementProtocol` - Structured logging
 
 **AI Agents**:
+
 - `AgentCoordinatorProtocol` - AI agent orchestration
 
 **Circuit Breaker**:
+
 - `BoundedStatusOperationsProtocol` - Circuit breaker pattern
 
 #### 3. **Quality Assurance** (5 protocols)
+
 QA tool orchestration and execution.
 
 - `QAAdapterProtocol` - QA tool base (18 adapters implement this)
@@ -309,6 +328,7 @@ QA tool orchestration and execution.
 - `HookOrchestratorProtocol` - Hook orchestration
 
 #### 4. **Hook Management** (4 protocols)
+
 Hook execution and locking.
 
 - `HookManager` - Hook execution
@@ -317,6 +337,7 @@ Hook execution and locking.
 - `PublishManager` - Publishing operations
 
 #### 5. **Performance & Monitoring** (8 protocols)
+
 Performance tracking and optimization.
 
 - `PerformanceMonitorProtocol` - Performance tracking
@@ -329,6 +350,7 @@ Performance tracking and optimization.
 - `PerformanceBenchmarkProtocol` - Benchmarking
 
 #### 6. **Documentation System** (4 protocols)
+
 Documentation generation and validation.
 
 - `APIExtractorProtocol` - API extraction
@@ -337,6 +359,7 @@ Documentation generation and validation.
 - `DocumentationCleanupProtocol` - Doc cleanup
 
 #### 7. **Agent System** (3 protocols)
+
 AI agent tracking and debugging.
 
 - `AgentTrackerProtocol` - Agent tracking
@@ -344,12 +367,14 @@ AI agent tracking and debugging.
 - `TimeoutManagerProtocol` - Timeout management
 
 #### 8. **Git Operations** (2 protocols)
+
 Version control operations.
 
 - `GitInterface` - Git operations
 - `GitServiceProtocol` - Git service
 
 #### 9. **Utility Protocols** (7 protocols)
+
 Helper protocols for various tasks.
 
 - `LoggerProtocol` - Logging interface
@@ -362,7 +387,7 @@ Helper protocols for various tasks.
 
 **Total**: 61 protocols
 
----
+______________________________________________________________________
 
 ## Core Protocols Explained
 
@@ -371,6 +396,7 @@ Helper protocols for various tasks.
 **Purpose**: Base interface for all long-lived services in crackerjack.
 
 **Lifecycle Management**:
+
 ```python
 ServiceProtocol Lifecycle:
 ┌─────────────┐
@@ -479,11 +505,12 @@ def use_service(service: ServiceProtocol) -> None:
 ```
 
 **Common Implementations**:
+
 - `TestManager` - Test execution service
 - `CoverageRatchet` - Coverage tracking service
 - `SecurityService` - Security checking service
 
----
+______________________________________________________________________
 
 ### 2. TestManagerProtocol
 
@@ -526,7 +553,7 @@ def run_test_suite(test_manager: TestManagerProtocol, options: OptionsProtocol) 
         console.print(f"[green]Coverage: {coverage['percent']}%[/green]")
 ```
 
----
+______________________________________________________________________
 
 ### 3. ConsoleInterface
 
@@ -550,6 +577,7 @@ class ConsoleInterface(t.Protocol):
 **Implementations**:
 
 1. **CrackerjackConsole** (Rich-based)
+
    ```python
    from rich.console import Console
 
@@ -561,7 +589,8 @@ class ConsoleInterface(t.Protocol):
            self.console.print(*args, **kwargs)
    ```
 
-2. **MockConsole** (Testing)
+1. **MockConsole** (Testing)
+
    ```python
    class MockConsole:
        def __init__(self) -> None:
@@ -589,7 +618,7 @@ display_results(mock_console, results)
 assert len(mock_console.outputs) == 2
 ```
 
----
+______________________________________________________________________
 
 ### 4. OptionsProtocol
 
@@ -645,7 +674,7 @@ def execute_workflow(options: OptionsProtocol) -> None:
         agent_coordinator.handle_issues(failures)
 ```
 
----
+______________________________________________________________________
 
 ### 5. FileSystemInterface
 
@@ -715,7 +744,7 @@ process_file(mock_fs, "/test.txt")
 assert mock_fs.read_file("/test.txt") == "HELLO"
 ```
 
----
+______________________________________________________________________
 
 ## Service Protocols
 
@@ -726,6 +755,7 @@ Service protocols extend `ServiceProtocol` with domain-specific functionality.
 **Purpose**: Test execution and coverage management.
 
 **Key Methods**:
+
 - `run_tests(options)` - Execute test suite
 - `get_test_failures()` - Get failed test names
 - `validate_test_environment()` - Check environment
@@ -735,13 +765,14 @@ Service protocols extend `ServiceProtocol` with domain-specific functionality.
 
 **Example Implementation**: `TestManager` in `/crackerjack/managers/test_manager.py`
 
----
+______________________________________________________________________
 
 ### CoverageRatchetProtocol
 
 **Purpose**: Enforce coverage never decreases (ratchet system).
 
 **Key Methods**:
+
 - `get_baseline_coverage()` - Get current baseline
 - `update_baseline_coverage(new_coverage)` - Update baseline
 - `is_coverage_regression(current_coverage)` - Check for regression
@@ -750,6 +781,7 @@ Service protocols extend `ServiceProtocol` with domain-specific functionality.
 **When to Use**: Need to enforce coverage standards
 
 **Example**:
+
 ```python
 def check_coverage(ratchet: CoverageRatchetProtocol, current: float) -> None:
     """Check coverage against ratchet."""
@@ -758,13 +790,14 @@ def check_coverage(ratchet: CoverageRatchetProtocol, current: float) -> None:
         raise ValueError(f"Coverage regression! {current}% < {baseline}%")
 ```
 
----
+______________________________________________________________________
 
 ### SecurityServiceProtocol
 
 **Purpose**: Security checks and validation.
 
 **Key Methods**:
+
 - `validate_file_safety(path)` - Check if file is safe to modify
 - `check_hardcoded_secrets(content)` - Find hardcoded secrets
 - `is_safe_subprocess_call(cmd)` - Check subprocess safety
@@ -773,6 +806,7 @@ def check_coverage(ratchet: CoverageRatchetProtocol, current: float) -> None:
 **When to Use**: Need security validation before operations
 
 **Example**:
+
 ```python
 def safe_edit_file(security: SecurityServiceProtocol, path: str, content: str) -> None:
     """Safely edit file with security checks."""
@@ -786,13 +820,14 @@ def safe_edit_file(security: SecurityServiceProtocol, path: str, content: str) -
     # Edit file
 ```
 
----
+______________________________________________________________________
 
 ### QAAdapterProtocol
 
 **Purpose**: Base interface for QA tool adapters (ruff, mypy, pytest, etc.).
 
 **Key Methods**:
+
 - `async init()` - Initialize adapter (load config, setup tool)
 - `async check(files, config)` - Run QA checks
 - `async validate_config(config)` - Validate configuration
@@ -802,6 +837,7 @@ def safe_edit_file(security: SecurityServiceProtocol, path: str, content: str) -
 **When to Use**: Implementing a new QA tool adapter
 
 **Example**:
+
 ```python
 class MyQAAdapter:
     """Custom QA tool adapter."""
@@ -829,13 +865,14 @@ class MyQAAdapter:
 ```
 
 **Common Implementations**:
+
 - `RuffAdapter` - Ruff linting/formatting
 - `MypyAdapter` - Type checking
 - `PytestAdapter` - Test execution
 - `BanditAdapter` - Security linting
 - [18 total adapters]
 
----
+______________________________________________________________________
 
 ## Usage Patterns
 
@@ -844,6 +881,7 @@ class MyQAAdapter:
 **Concept**: Inject dependencies via protocols, not concrete classes.
 
 **Benefits**:
+
 - Easy testing (inject mocks)
 - Loose coupling (swap implementations)
 - Type safety (enforced by type checker)
@@ -910,13 +948,14 @@ def test_session_coordinator() -> None:
     assert len(mock_console.outputs) > 0
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 2: Protocol Compliance Checking
 
 **Concept**: Verify objects implement protocols at runtime.
 
 **When to Use**:
+
 - Accepting user-provided objects
 - Plugin systems
 - Runtime validation
@@ -941,7 +980,7 @@ def register_service(service: Any) -> None:
     services.append(service)
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 3: Protocol Composition
 
@@ -980,7 +1019,7 @@ assert isinstance(service, TestManagerProtocol)
 assert isinstance(service, CoverageRatchetProtocol)
 ```
 
----
+______________________________________________________________________
 
 ### Pattern 4: Mock Protocol Implementation
 
@@ -1043,7 +1082,7 @@ def test_workflow_with_mock() -> None:
     assert mock.get_test_failures() == ["test_example", "test_another"]
 ```
 
----
+______________________________________________________________________
 
 ## Implementation Guide
 
@@ -1138,7 +1177,7 @@ verified = verify_service(my_service)
 verified.initialize()
 ```
 
----
+______________________________________________________________________
 
 ## Common Pitfalls and Solutions
 
@@ -1187,7 +1226,7 @@ def test_protocol_compliance() -> None:
     assert callable(service.health_check)
 ```
 
----
+______________________________________________________________________
 
 ### Pitfall 2: Wrong Method Signatures
 
@@ -1215,7 +1254,7 @@ class GoodService:
         return True
 ```
 
----
+______________________________________________________________________
 
 ### Pitfall 3: Not Calling `initialize()`
 
@@ -1260,7 +1299,7 @@ with ServiceContext(service) as s:
     s.do_work()  # Automatically initialized/cleaned up
 ```
 
----
+______________________________________________________________________
 
 ### Pitfall 4: Importing Concrete Classes
 
@@ -1289,11 +1328,12 @@ def run_tests(manager: TestManagerProtocol) -> None:
 ```
 
 **Benefits**:
+
 - Can swap implementations without changing calling code
 - Easy testing with mocks
 - Loose coupling
 
----
+______________________________________________________________________
 
 ## Best Practices
 
@@ -1343,7 +1383,7 @@ def __init__(
     self.test_manager = test_manager
 ```
 
----
+______________________________________________________________________
 
 ### DON'T: Import Concrete Classes
 
@@ -1385,68 +1425,78 @@ def __init__(self, console: ConsoleInterface):
     self.console = console
 ```
 
----
+______________________________________________________________________
 
 ## Complete Protocol Reference
 
 ### Core Protocols (5)
 
 #### ServiceProtocol
+
 **Purpose**: Base lifecycle for all services
 **Methods**: 11 (initialize, cleanup, health_check, shutdown, metrics, etc.)
 **Inheritance**: Base for 23 service protocols
 **Implementation Guide**: See [Core Protocols Explained](#core-protocols-explained)
 
 #### CommandRunner
+
 **Purpose**: Subprocess execution
 **Methods**: 1 (execute_command)
 **Usage**: Running external commands
 
 #### OptionsProtocol
+
 **Purpose**: CLI options container
 **Attributes**: 50+ (commit, test, verbose, etc.)
 **Usage**: Passing configuration
 
 #### ConsoleInterface
+
 **Purpose**: Console output abstraction
 **Methods**: 3 (print, input, aprint)
 **Implementations**: CrackerjackConsole, MockConsole
 
 #### FileSystemInterface
+
 **Purpose**: File operations
 **Methods**: 4 (read_file, write_file, exists, mkdir)
 **Usage**: File I/O abstraction
 
----
+______________________________________________________________________
 
 ### Service Protocols (23)
 
 #### TestManagerProtocol
+
 **Purpose**: Test execution and coverage
 **Methods**: 4 (run_tests, get_test_failures, validate_test_environment, get_coverage)
 **Extends**: ServiceProtocol
 **Implementation**: `TestManager` in `/crackerjack/managers/test_manager.py`
 
 #### CoverageRatchetProtocol
+
 **Purpose**: Coverage enforcement (ratchet system)
 **Methods**: 7 (get_baseline_coverage, update_baseline_coverage, etc.)
 **Extends**: ServiceProtocol
 
 #### SecurityServiceProtocol
+
 **Purpose**: Security checks and validation
 **Methods**: 6 (validate_file_safety, check_hardcoded_secrets, etc.)
 **Extends**: ServiceProtocol
 
 #### QAAdapterProtocol
+
 **Purpose**: Base for QA tool adapters
 **Methods**: 6 (async init, async check, async validate_config, etc.)
 **Extends**: None (base protocol)
 **Implementations**: 18 adapters (RuffAdapter, MypyAdapter, etc.)
 
 #### [Additional Service Protocols]
+
 See protocol source: `/crackerjack/models/protocols.py`
 
----
+______________________________________________________________________
 
 ### Quick Reference Card
 
@@ -1468,7 +1518,7 @@ Lifecycle Pattern:
       service.cleanup()
 ```
 
----
+______________________________________________________________________
 
 ## Getting Help
 
@@ -1490,14 +1540,14 @@ Lifecycle Pattern:
 - Issues? Report protocol documentation gaps
 - Contributions? Follow protocol documentation templates
 
----
+______________________________________________________________________
 
 **Version**: 1.0
 **Status**: ✅ Complete
 **Next Review**: 2025-02-28
 **Maintainer**: Crackerjack Documentation Team
 
----
+______________________________________________________________________
 
 ## Appendix A: Protocol Categories Summary
 
@@ -1514,7 +1564,7 @@ Lifecycle Pattern:
 | Utility Protocols | 7 | Helper utilities |
 | **Total** | **61** | **Complete protocol system** |
 
----
+______________________________________________________________________
 
 ## Appendix B: Protocol Implementation Checklist
 
@@ -1531,7 +1581,7 @@ When implementing a protocol, ensure:
 - [ ] Runtime compliance check passes
 - [ ] Type checker validates implementation
 
----
+______________________________________________________________________
 
 ## Appendix C: Protocol Testing Checklist
 
@@ -1547,6 +1597,6 @@ When testing protocol implementations:
 - [ ] Integration tests pass
 - [ ] Documentation examples work
 
----
+______________________________________________________________________
 
 **End of Protocol Reference Guide**

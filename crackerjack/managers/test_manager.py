@@ -463,7 +463,7 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-
+        """Handle test execution failure."""
         combined_output = stdout + "\n" + stderr
         clean_output = self._strip_ansi_codes(combined_output)
         stats = self._parse_test_statistics(clean_output, already_clean=True)
@@ -472,49 +472,53 @@ class TestManager:
         if self._should_render_test_panel(stats):
             self._render_test_results_panel(stats, workers, success=False)
 
-
         if clean_output.strip():
-
-            failure_lines = self._extract_failure_lines(clean_output)
-            if failure_lines:
-                self._last_test_failures = failure_lines
-                self._render_banner("Key Test Failures", line_style="red")
-
-                for _failure in failure_lines:
-                    self.console.print(f"  {_failure}")
-            else:
-                self._last_test_failures = []
+            self._handle_failure_with_output(clean_output)
         else:
+            self._handle_failure_without_output(options, duration, workers)
 
-            border_line = "-" * getattr(options, "column_width", 70)
-            self.console.print("\n🧪 TESTS Failed test execution")
-            self.console.print(border_line)
-
-            self.console.print(
-                " [yellow]This may indicate a timeout or critical error[/yellow]",
-            )
-            self.console.print(
-                f" [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]",
-            )
-
-            timeout = self.command_builder.get_test_timeout(options)
-            timeout_threshold = timeout * 0.9
-            if duration > timeout_threshold:
-                self.console.print(
-                    f" [yellow]⚠️ Execution time ({duration:.1f}s) was very close to timeout ({timeout}s), may have timed out[/yellow]",
-                )
-            self.console.print(
-                " [red]Workflow failed: Test workflow execution failed[/red]",
-            )
-            self.console.print(border_line)
-            self._last_test_failures = []
-
-
-        if (options.verbose or getattr(options, "ai_debug", False)) and clean_output.strip():
-
+        if options.verbose or getattr(options, "ai_debug", False):
             self._render_formatted_output(clean_output, options, already_clean=True)
 
         return False
+
+    def _handle_failure_with_output(self, clean_output: str) -> None:
+        """Handle test failure when there is output available."""
+        failure_lines = self._extract_failure_lines(clean_output)
+        if failure_lines:
+            self._last_test_failures = failure_lines
+            self._render_banner("Key Test Failures", line_style="red")
+            for _failure in failure_lines:
+                self.console.print(f"  {_failure}")
+        else:
+            self._last_test_failures = []
+
+    def _handle_failure_without_output(
+        self, options: OptionsProtocol, duration: float, workers: int | str
+    ) -> None:
+        """Handle test failure when there is no output (timeout/critical error)."""
+        border_line = "-" * getattr(options, "column_width", 70)
+        self.console.print("\n🧪 TESTS Failed test execution")
+        self.console.print(border_line)
+        self.console.print(
+            " [yellow]This may indicate a timeout or critical error[/yellow]",
+        )
+        self.console.print(
+            f" [yellow]Duration: {duration:.1f}s, Workers: {workers}[/yellow]",
+        )
+
+        timeout = self.command_builder.get_test_timeout(options)
+        timeout_threshold = timeout * 0.9
+        if duration > timeout_threshold:
+            self.console.print(
+                f" [yellow]⚠️ Execution time ({duration:.1f}s) was very close to timeout ({timeout}s), may have timed out[/yellow]",
+            )
+
+        self.console.print(
+            " [red]Workflow failed: Test workflow execution failed[/red]",
+        )
+        self.console.print(border_line)
+        self._last_test_failures = []
 
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         duration = time.time() - start_time
@@ -663,9 +667,9 @@ class TestManager:
         )
 
     def _parse_metric_patterns(self, output: str, stats: dict[str, t.Any]) -> bool:
-        # Try pytest's short summary format: "123 passed, 45 failed, 6 errors"
+
         for metric in ("passed", "failed", "skipped", "error"):
-            # Match "123 metric" with word boundary to avoid partial matches
+
             metric_pattern = rf"(\d+)\s+{metric}\b"
             metric_match = re.search(metric_pattern, output, re.IGNORECASE)
             if metric_match:
@@ -686,19 +690,19 @@ class TestManager:
             stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
 
     def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
-        # Try parsing the short summary line FIRST (most accurate)
+
         if self._parse_metric_patterns(output, stats):
             self._calculate_total(stats)
             return
 
-        # Fallback to parsing test lines by token (less accurate)
+
         self._parse_test_lines_by_token(output, stats)
         self._calculate_total(stats)
 
         if stats["total"] != 0:
             return
 
-        # Last resort: legacy pattern matching (least accurate)
+
         self._parse_legacy_patterns(output, stats)
         stats["total"] = (
             stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
@@ -1322,48 +1326,58 @@ class TestManager:
         return True
 
     def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
-
+        """Extract structured test failures from pytest output."""
         failures: list[TestFailure] = []
         lines = output.split("\n")
 
-        current_failure = None
-        in_traceback = False
-        in_captured = False
-        capture_type = None
+        parsing_state = {
+            "current_failure": None,
+            "in_traceback": False,
+            "in_captured": False,
+            "capture_type": None,
+        }
 
         for i, line in enumerate(lines):
             result = self._parse_failure_line(
-                line, lines, i, current_failure, in_traceback, in_captured, capture_type,
+                line,
+                lines,
+                i,
+                parsing_state["current_failure"],
+                parsing_state["in_traceback"],
+                parsing_state["in_captured"],
+                parsing_state["capture_type"],
             )
-
 
             if result.get("stop_parsing"):
                 break
 
+            parsing_state = self._update_parsing_state(result, parsing_state)
+            if result.get("skip_line"):
+                continue
 
             if result.get("new_failure"):
-                if current_failure:
-                    failures.append(current_failure)
-                current_failure = result["new_failure"]
-                in_traceback = True
-                in_captured = False
-                capture_type = None
-            elif result.get("skip_line"):
-                continue
-            else:
+                if parsing_state["current_failure"]:
+                    failures.append(parsing_state["current_failure"])
+                parsing_state["current_failure"] = result["new_failure"]
+                parsing_state["in_traceback"] = True
+                parsing_state["in_captured"] = False
+                parsing_state["capture_type"] = None
 
-                in_traceback = result.get("in_traceback", in_traceback)
-                in_captured = result.get("in_captured", in_captured)
-                capture_type = result.get("capture_type", capture_type)
-
-
-        if current_failure:
-            failures.append(current_failure)
-
+        if parsing_state["current_failure"]:
+            failures.append(parsing_state["current_failure"])
 
         self._enrich_failures_from_short_summary(failures, output)
-
         return failures
+
+    def _update_parsing_state(
+        self, result: dict[str, t.Any], state: dict[str, t.Any]
+    ) -> dict[str, t.Any]:
+        """Update parsing state based on parse result."""
+        if not result.get("new_failure") and not result.get("skip_line"):
+            state["in_traceback"] = result.get("in_traceback", state["in_traceback"])
+            state["in_captured"] = result.get("in_captured", state["in_captured"])
+            state["capture_type"] = result.get("capture_type", state["capture_type"])
+        return state
 
     def _enrich_failures_from_short_summary(
         self, failures: list["TestFailure"], output: str,

@@ -5,15 +5,11 @@ from pathlib import Path
 from crackerjack.config import CrackerjackSettings
 from crackerjack.config.hooks import HookConfigLoader
 from crackerjack.core.console import CrackerjackConsole
-from crackerjack.executors.hook_executor import HookExecutor
-from crackerjack.executors.lsp_aware_hook_executor import LSPAwareHookExecutor
-from crackerjack.executors.progress_hook_executor import ProgressHookExecutor
+from crackerjack.models.protocols import (
+    GitServiceProtocol,
+    HookExecutorProtocol,
+)
 from crackerjack.models.task import HookResult
-
-try:
-    from crackerjack.services.git import GitService  # type: ignore
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    GitService = None  # type: ignore
 
 try:
     from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
@@ -37,14 +33,16 @@ else:
 
 
 class HookManagerImpl:
-    executor: HookExecutor | LSPAwareHookExecutor | ProgressHookExecutor
+    executor: HookExecutorProtocol
     _settings: CrackerjackSettings | None
 
-    def _setup_git_service(self, use_incremental: bool, pkg_path: Path):
-        git_service = None
-        if use_incremental and GitService is not None:
-            git_service = GitService(self.console, pkg_path)
-        return git_service
+    def _setup_git_service(
+        self,
+        use_incremental: bool,
+        pkg_path: Path,
+        git_service: GitServiceProtocol | None,
+    ) -> GitServiceProtocol | None:
+        return git_service if use_incremental else None
 
     def _setup_executor(
         self,
@@ -57,7 +55,12 @@ class HookManagerImpl:
         use_incremental: bool,
         git_service: t.Any,
     ) -> None:
+        # Import concrete implementations locally to maintain protocol compliance
         if enable_lsp_optimization:
+            from crackerjack.executors.lsp_aware_hook_executor import (
+                LSPAwareHookExecutor,
+            )
+
             self.executor = LSPAwareHookExecutor(
                 self.console,
                 pkg_path,
@@ -68,15 +71,10 @@ class HookManagerImpl:
                 use_incremental=use_incremental,
                 git_service=git_service,
             )
-        elif not debug and not use_incremental and git_service is None:
-            self.executor = HookExecutor(  # type: ignore[assignment]
-                self.console,
-                pkg_path,
-                verbose,
-                quiet,
-            )
         else:
-            self.executor = HookExecutor(  # type: ignore[assignment]
+            from crackerjack.executors.hook_executor import HookExecutor
+
+            self.executor = HookExecutor(
                 self.console,
                 pkg_path,
                 verbose,
@@ -230,7 +228,7 @@ class HookManagerImpl:
 
         self.console = console or CrackerjackConsole()
 
-        git_service = self._setup_git_service(use_incremental, pkg_path)
+        git_service = self._setup_git_service(use_incremental, pkg_path, None)
 
         self._setup_executor(
             pkg_path,

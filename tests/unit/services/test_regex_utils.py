@@ -118,32 +118,11 @@ class TestTestPatternImmediately:
         assert len(result["warnings"]) == 2
 
 
-class TestPrintPatternTestReport:
-    """Test print_pattern_test_report() function."""
-
-    def test_function_runs_without_error(self) -> None:
-        """Test that print function runs without error (no-op)."""
-        results = {
-            "description": "Test pattern",
-            "errors": ["Error 1"],
-            "warnings": ["Warning 1"],
-            "test_results": [
-                {"passed": True, "input": "test", "expected": "test", "actual": "test"}
-            ],
-        }
-
-        # Should not raise any errors
-        regex_utils.print_pattern_test_report(results)
-
-
 class TestQuickPatternTest:
     """Test quick_pattern_test() function."""
 
-    @patch("crackerjack.services.regex_utils.print_pattern_test_report")
     @patch("crackerjack.services.regex_utils.test_pattern_immediately")
-    def test_returns_true_when_all_pass(
-        self, mock_test: Mock, mock_print: Mock
-    ) -> None:
+    def test_returns_true_when_all_pass(self, mock_test: Mock) -> None:
         """Test returns True when all tests pass."""
         mock_test.return_value = {"all_passed": True}
 
@@ -155,13 +134,9 @@ class TestQuickPatternTest:
 
         assert result is True
         mock_test.assert_called_once()
-        mock_print.assert_called_once()
 
-    @patch("crackerjack.services.regex_utils.print_pattern_test_report")
     @patch("crackerjack.services.regex_utils.test_pattern_immediately")
-    def test_returns_false_when_some_fail(
-        self, mock_test: Mock, mock_print: Mock
-    ) -> None:
+    def test_returns_false_when_some_fail(self, mock_test: Mock) -> None:
         """Test returns False when some tests fail."""
         mock_test.return_value = {"all_passed": False}
 

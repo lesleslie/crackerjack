@@ -223,163 +223,205 @@ def run(
     diff_config: str | None = CLI_OPTIONS["diff_config"],
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
 ) -> None:
+    """Main entry point for crackerjack CLI.
+
+    This function orchestrates the entire crackerjack workflow, including:
+    - Settings initialization and logging configuration
+    - Temporary file cleanup
+    - Provider selection (if requested)
+    - Options creation and configuration
+    - AI agent setup (if enabled)
+    - Command processing and execution
+    """
     settings = load_settings(CrackerjackSettings)
+    _print_banner()
 
-    console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
-
-    # Clean up temporary files from previous runs
     if not dry_run:
-        try:
-            from crackerjack.utils.temp_file_cleanup import cleanup_temp_files
-
-            cleaned = cleanup_temp_files()
-            if cleaned > 0 and settings.execution.verbose:
-                console.print(
-                    f"[dim]Cleaned up {cleaned} temporary file(s) from previous runs[/dim]"
-                )
-        except Exception as e:
-            logger.warning(f"Failed to cleanup temporary files: {e}")
+        _cleanup_temp_files(settings)
 
     if select_provider:
-        import asyncio
-
-        from crackerjack.cli.handlers.provider_selection import handle_select_provider
-
-        asyncio.run(handle_select_provider())
+        _handle_provider_selection()
         return
 
-    options = create_options(
-        commit,
-        interactive,
-        no_config_updates,
-        verbose,
-        debug,
-        publish,
-        bump,
-        benchmark,
-        test_workers,
-        test_timeout,
-        skip_hooks,
-        fast,
-        comp,
-        fast_iteration,
-        tool,
-        changed_only,
-        all_files,
-        create_pr,
-        experimental_hooks,
-        enable_pyrefly,
-        enable_ty,
-        start_zuban_lsp,
-        stop_zuban_lsp,
-        restart_zuban_lsp,
-        no_zuban_lsp,
-        zuban_lsp_port,
-        zuban_lsp_mode,
-        zuban_lsp_timeout,
-        enable_lsp_hooks,
-        no_git_tags,
-        skip_version_check,
-        dev,
-        max_iterations,
-        coverage_status,
-        coverage_goal,
-        no_coverage_ratchet,
-        boost_coverage,
-        disable_global_locks,
-        global_lock_timeout,
-        global_lock_cleanup,
-        global_lock_dir,
-        quick,
-        thorough,
-        clear_cache,
-        cleanup_docs,
-        docs_dry_run,
-        cleanup_configs,
-        configs_dry_run,
-        cleanup_git,
-        update_docs,
-        cache_stats,
-        generate_docs,
-        docs_format,
-        validate_docs,
-        generate_changelog,
-        changelog_version,
-        changelog_since,
-        changelog_dry_run,
-        auto_version,
-        version_since,
-        accept_version,
-        smart_commit,
-        heatmap,
-        heatmap_type,
-        heatmap_output,
-        anomaly_detection,
-        anomaly_sensitivity,
-        anomaly_report,
-        predictive_analytics,
-        prediction_periods,
-        analytics_dashboard,
-        advanced_optimizer,
-        advanced_profile,
-        advanced_report,
-        mkdocs_integration,
-        mkdocs_serve,
-        mkdocs_theme,
-        mkdocs_output,
-        contextual_ai,
-        ai_recommendations,
-        ai_help_query,
-        check_config_updates,
-        apply_config_updates,
-        diff_config,
-        config_interactive,
-        refresh_cache,
-        strip_code=strip_code,
-        run_tests=run_tests,
-        xcode_tests=xcode_tests,
-        xcode_project=xcode_project,
-        xcode_scheme=xcode_scheme,
-        xcode_configuration=xcode_configuration,
-        xcode_destination=xcode_destination,
-        ai_fix=ai_fix,
-        dry_run=dry_run,
-        full_release=full_release,
-        show_progress=show_progress,
-        advanced_monitor=advanced_monitor,
-        coverage_report=coverage_report,
-        clean_releases=clean_releases,
-    )
-
-    options.index = index
-    options.search = search
-    options.semantic_stats = semantic_stats
-    options.remove_from_index = remove_from_index
-
-    ai_fix, verbose = setup_debug_and_verbose_flags(
-        ai_fix,
-        ai_debug,
-        debug,
-        verbose,
-        options,
-    )
-    setup_ai_agent_env(ai_fix, ai_debug or debug)
-
-    def _configure_logger_verbosity(debug: bool) -> None:
-        if debug:
-            os.environ["ACB_LOG_LEVEL"] = "DEBUG"
-            os.environ["CRACKERJACK_DEBUG"] = "1"
-
-            if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
-                del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
-            os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
-
-    _configure_logger_verbosity(debug=debug)
+    options = _create_and_configure_options(locals())
+    options = _setup_ai_options(locals(), options)
+    _configure_logging(debug)
 
     if not _process_all_commands(locals(), options):
         return
 
-    if interactive:
+    _execute_workflow_mode(options, job_id=job_id)
+
+
+def _print_banner() -> None:
+    """Print crackerjack version banner."""
+    console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
+
+
+def _cleanup_temp_files(settings: CrackerjackSettings) -> None:
+    """Clean up temporary files from previous runs."""
+    try:
+        from crackerjack.utils.temp_file_cleanup import cleanup_temp_files
+
+        cleaned = cleanup_temp_files()
+        if cleaned > 0 and settings.execution.verbose:
+            console.print(
+                f"[dim]Cleaned up {cleaned} temporary file(s) from previous runs[/dim]"
+            )
+    except Exception as e:
+        logger.warning(f"Failed to cleanup temporary files: {e}")
+
+
+def _handle_provider_selection() -> None:
+    """Handle LLM provider selection interactive mode."""
+    import asyncio
+
+    from crackerjack.cli.handlers.provider_selection import handle_select_provider
+
+    asyncio.run(handle_select_provider())
+
+
+def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
+    """Create Options object and apply index/search configuration."""
+    options = create_options(
+        commit=local_vars["commit"],
+        interactive=local_vars["interactive"],
+        no_config_updates=local_vars["no_config_updates"],
+        verbose=local_vars["verbose"],
+        debug=local_vars["debug"],
+        publish=local_vars["publish"],
+        bump=local_vars["bump"],
+        benchmark=local_vars["benchmark"],
+        test_workers=local_vars["test_workers"],
+        test_timeout=local_vars["test_timeout"],
+        skip_hooks=local_vars["skip_hooks"],
+        fast=local_vars["fast"],
+        comp=local_vars["comp"],
+        fast_iteration=local_vars["fast_iteration"],
+        tool=local_vars["tool"],
+        changed_only=local_vars["changed_only"],
+        all_files=local_vars["all_files"],
+        create_pr=local_vars["create_pr"],
+        experimental_hooks=local_vars["experimental_hooks"],
+        enable_pyrefly=local_vars["enable_pyrefly"],
+        enable_ty=local_vars["enable_ty"],
+        start_zuban_lsp=local_vars["start_zuban_lsp"],
+        stop_zuban_lsp=local_vars["stop_zuban_lsp"],
+        restart_zuban_lsp=local_vars["restart_zuban_lsp"],
+        no_zuban_lsp=local_vars["no_zuban_lsp"],
+        zuban_lsp_port=local_vars["zuban_lsp_port"],
+        zuban_lsp_mode=local_vars["zuban_lsp_mode"],
+        zuban_lsp_timeout=local_vars["zuban_lsp_timeout"],
+        enable_lsp_hooks=local_vars["enable_lsp_hooks"],
+        no_git_tags=local_vars["no_git_tags"],
+        skip_version_check=local_vars["skip_version_check"],
+        dev=local_vars["dev"],
+        max_iterations=local_vars["max_iterations"],
+        coverage_status=local_vars["coverage_status"],
+        coverage_goal=local_vars["coverage_goal"],
+        no_coverage_ratchet=local_vars["no_coverage_ratchet"],
+        boost_coverage=local_vars["boost_coverage"],
+        disable_global_locks=local_vars["disable_global_locks"],
+        global_lock_timeout=local_vars["global_lock_timeout"],
+        global_lock_cleanup=local_vars["global_lock_cleanup"],
+        global_lock_dir=local_vars["global_lock_dir"],
+        quick=local_vars["quick"],
+        thorough=local_vars["thorough"],
+        clear_cache=local_vars["clear_cache"],
+        cleanup_docs=local_vars["cleanup_docs"],
+        docs_dry_run=local_vars["docs_dry_run"],
+        cleanup_configs=local_vars["cleanup_configs"],
+        configs_dry_run=local_vars["configs_dry_run"],
+        cleanup_git=local_vars["cleanup_git"],
+        update_docs=local_vars["update_docs"],
+        cache_stats=local_vars["cache_stats"],
+        generate_docs=local_vars["generate_docs"],
+        docs_format=local_vars["docs_format"],
+        validate_docs=local_vars["validate_docs"],
+        generate_changelog=local_vars["generate_changelog"],
+        changelog_version=local_vars["changelog_version"],
+        changelog_since=local_vars["changelog_since"],
+        changelog_dry_run=local_vars["changelog_dry_run"],
+        auto_version=local_vars["auto_version"],
+        version_since=local_vars["version_since"],
+        accept_version=local_vars["accept_version"],
+        smart_commit=local_vars["smart_commit"],
+        heatmap=local_vars["heatmap"],
+        heatmap_type=local_vars["heatmap_type"],
+        heatmap_output=local_vars["heatmap_output"],
+        anomaly_detection=local_vars["anomaly_detection"],
+        anomaly_sensitivity=local_vars["anomaly_sensitivity"],
+        anomaly_report=local_vars["anomaly_report"],
+        predictive_analytics=local_vars["predictive_analytics"],
+        prediction_periods=local_vars["prediction_periods"],
+        analytics_dashboard=local_vars["analytics_dashboard"],
+        advanced_optimizer=local_vars["advanced_optimizer"],
+        advanced_profile=local_vars["advanced_profile"],
+        advanced_report=local_vars["advanced_report"],
+        mkdocs_integration=local_vars["mkdocs_integration"],
+        mkdocs_serve=local_vars["mkdocs_serve"],
+        mkdocs_theme=local_vars["mkdocs_theme"],
+        mkdocs_output=local_vars["mkdocs_output"],
+        contextual_ai=local_vars["contextual_ai"],
+        ai_recommendations=local_vars["ai_recommendations"],
+        ai_help_query=local_vars["ai_help_query"],
+        check_config_updates=local_vars["check_config_updates"],
+        apply_config_updates=local_vars["apply_config_updates"],
+        diff_config=local_vars["diff_config"],
+        config_interactive=local_vars["config_interactive"],
+        refresh_cache=local_vars["refresh_cache"],
+        strip_code=local_vars["strip_code"],
+        run_tests=local_vars["run_tests"],
+        xcode_tests=local_vars["xcode_tests"],
+        xcode_project=local_vars["xcode_project"],
+        xcode_scheme=local_vars["xcode_scheme"],
+        xcode_configuration=local_vars["xcode_configuration"],
+        xcode_destination=local_vars["xcode_destination"],
+        ai_fix=local_vars["ai_fix"],
+        dry_run=local_vars["dry_run"],
+        full_release=local_vars["full_release"],
+        show_progress=local_vars["show_progress"],
+        advanced_monitor=local_vars["advanced_monitor"],
+        coverage_report=local_vars["coverage_report"],
+        clean_releases=local_vars["clean_releases"],
+    )
+
+    # Apply index/search options
+    options.index = local_vars["index"]
+    options.search = local_vars["search"]
+    options.semantic_stats = local_vars["semantic_stats"]
+    options.remove_from_index = local_vars["remove_from_index"]
+
+    return options
+
+
+def _setup_ai_options(local_vars: dict[str, t.Any], options: "Options") -> "Options":
+    """Configure AI-related options and environment."""
+    ai_fix, verbose = setup_debug_and_verbose_flags(
+        local_vars["ai_fix"],
+        local_vars["ai_debug"],
+        local_vars["debug"],
+        local_vars["verbose"],
+        options,
+    )
+    setup_ai_agent_env(ai_fix, local_vars["ai_debug"] or local_vars["debug"])
+    return options
+
+
+def _configure_logging(debug: bool) -> None:
+    """Configure logging verbosity based on debug flag."""
+    if debug:
+        os.environ["ACB_LOG_LEVEL"] = "DEBUG"
+        os.environ["CRACKERJACK_DEBUG"] = "1"
+
+        if "ACB_DISABLE_STRUCTURED_STDERR" in os.environ:
+            del os.environ["ACB_DISABLE_STRUCTURED_STDERR"]
+        os.environ["ACB_FORCE_STRUCTURED_STDERR"] = "1"
+
+
+def _execute_workflow_mode(options: "Options", job_id: str | None = None) -> None:
+    """Execute workflow in interactive or standard mode."""
+    if options.interactive:
         handle_interactive_mode(options)
     else:
         handle_standard_mode(options, job_id=job_id)
