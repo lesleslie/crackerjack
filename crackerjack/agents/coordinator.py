@@ -14,10 +14,8 @@ from crackerjack.agents.base import (
     agent_registry,
 )
 from crackerjack.agents.error_middleware import agent_error_boundary
-from crackerjack.agents.tracker import AgentTracker, get_agent_tracker
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 from crackerjack.services.cache import CrackerjackCache
-from crackerjack.services.debug import AIAgentDebugger, NoOpDebugger, get_ai_agent_debugger
 from crackerjack.services.logging import get_logger
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
@@ -56,18 +54,19 @@ class AgentCoordinator:
     def __init__(
         self,
         context: AgentContext,
+        tracker: AgentTrackerProtocol,
+        debugger: DebuggerProtocol,
         cache: CrackerjackCache | None = None,
-        tracker: AgentTrackerProtocol | None = None,
-        debugger: DebuggerProtocol | None = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
         self.logger = get_logger(__name__)
         self._issue_cache: dict[str, FixResult] = {}
         self._collaboration_threshold = 0.7
-        # Constructor injection with fallback to factory for backward compatibility
-        self.tracker: AgentTrackerProtocol = tracker or get_agent_tracker()
-        self.debugger: DebuggerProtocol = debugger or get_ai_agent_debugger()
+
+        # Pure dependency injection - no factory fallbacks
+        self.tracker = tracker
+        self.debugger = debugger
         self.proactive_mode = True
         self.cache = cache or CrackerjackCache()
 
@@ -122,15 +121,29 @@ class AgentCoordinator:
     ) -> FixResult:
         self.logger.info(f"Handling {len(issues)} {issue_type.value} issues")
 
-        preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
-        specialist_agents = []
+        specialist_agents = await self._find_specialist_agents(issue_type)
+        if not specialist_agents:
+            return self._create_no_agents_result(issue_type)
 
+        tasks = await self._create_issue_tasks(specialist_agents, issues)
+        if not tasks:
+            return FixResult(success=False, confidence=0.0)
+
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+        return self._merge_fix_results(results)
+
+    async def _find_specialist_agents(self, issue_type: IssueType) -> list[SubAgent]:
+        """Find specialist agents for the given issue type."""
+        preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
+
+        # Try preferred agents first
         specialist_agents = [
             agent
             for agent in self.agents
             if agent.__class__.__name__ in preferred_agent_names
         ]
 
+        # Fall back to any agent that supports the type
         if not specialist_agents:
             specialist_agents = [
                 agent
@@ -138,26 +151,33 @@ class AgentCoordinator:
                 if issue_type in agent.get_supported_types()
             ]
 
-        if not specialist_agents:
-            self.logger.warning(f"No specialist agents for {issue_type.value}")
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"No agents for {issue_type.value} issues"],
-            )
+        return specialist_agents
 
+    def _create_no_agents_result(self, issue_type: IssueType) -> FixResult:
+        """Create result when no specialist agents are found."""
+        self.logger.warning(f"No specialist agents for {issue_type.value}")
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"No agents for {issue_type.value} issues"],
+        )
+
+    async def _create_issue_tasks(
+        self,
+        specialist_agents: list[SubAgent],
+        issues: list[Issue],
+    ) -> list[t.Coroutine[t.Any, t.Any, FixResult]]:
+        """Create async tasks for handling issues with specialist agents."""
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         for issue in issues:
             best_specialist = await self._find_best_specialist(specialist_agents, issue)
             if best_specialist:
                 task = self._handle_with_single_agent(best_specialist, issue)
                 tasks.append(task)
+        return tasks
 
-        if not tasks:
-            return FixResult(success=False, confidence=0.0)
-
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-
+    def _merge_fix_results(self, results: list[t.Any]) -> FixResult:
+        """Merge multiple fix results into a combined result."""
         combined_result = FixResult(success=True, confidence=1.0)
         for result in results:
             if isinstance(result, FixResult):
@@ -166,7 +186,6 @@ class AgentCoordinator:
                 self.logger.error(f"Agent task failed: {result}")
                 combined_result.success = False
                 combined_result.remaining_issues.append(f"Agent failed: {result}")
-
         return combined_result
 
     async def _find_best_specialist(

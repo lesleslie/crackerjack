@@ -1,10 +1,3 @@
-"""JSON-based parsers for quality tools.
-
-This module implements JSON parsers for tools that support structured output.
-These parsers are more reliable than regex-based parsers because they work
-with structured data that's part of the tool's API contract.
-"""
-
 import json
 import logging
 
@@ -16,39 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 class RuffJSONParser(JSONParser):
-    """Parse ruff JSON output.
-
-    Ruff JSON format documentation:
-    https://docs.astral.sh/ruff/settings/#output_format
-
-    Example output:
-    [
-        {
-            "filename": "path/to/file.py",
-            "location": {"row": 10, "column": 5},
-            "end_location": {"row": 10, "column": 42},
-            "code": "UP017",
-            "message": "Use `datetime.UTC` alias",
-            "fix": {"applicability": "automatic", "edits": [...]},
-            "url": "https://docs.astral.sh/ruff/rules/upcase-datetime-alias",
-            "parent": null
-        }
-    ]
-    """
-
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse ruff JSON output into Issue objects.
-
-        Args:
-            data: Parsed JSON data (should be a list of issue objects)
-
-        Returns:
-            List of Issue objects
-
-        Raises:
-            TypeError: If data is not a list
-            KeyError: If required fields are missing from issue objects
-        """
         if not isinstance(data, list):
             logger.warning(f"Expected list from ruff, got {type(data)}")
             return []
@@ -57,7 +18,6 @@ class RuffJSONParser(JSONParser):
 
         for item in data:
             try:
-                # Validate required fields
                 if not isinstance(item, dict):
                     logger.warning(
                         f"Skipping non-dict item in ruff output: {type(item)}"
@@ -92,7 +52,6 @@ class RuffJSONParser(JSONParser):
                 issue_type = self._get_issue_type(code)
                 severity = self._get_severity(code)
 
-                # Build details list
                 details = [f"code: {code}"]
                 if "fix" in item:
                     details.append("fixable: True")
@@ -120,25 +79,9 @@ class RuffJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from ruff JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         return len(data) if isinstance(data, list) else 0
 
     def _get_issue_type(self, code: str) -> IssueType:
-        """Map ruff error code to IssueType.
-
-        Args:
-            code: Ruff error code (e.g., "UP017", "C901")
-
-        Returns:
-            Corresponding IssueType
-        """
         if code.startswith("C9"):
             return IssueType.COMPLEXITY
         if code.startswith("S"):
@@ -150,14 +93,6 @@ class RuffJSONParser(JSONParser):
         return IssueType.FORMATTING
 
     def _get_severity(self, code: str) -> Priority:
-        """Map ruff error code to Priority level.
-
-        Args:
-            code: Ruff error code
-
-        Returns:
-            Corresponding Priority level
-        """
         if code.startswith(("C9", "S")):
             return Priority.HIGH
         if code.startswith("F4"):
@@ -166,33 +101,7 @@ class RuffJSONParser(JSONParser):
 
 
 class MypyJSONParser(JSONParser):
-    """Parse mypy JSON output.
-
-    Mypy JSON format documentation:
-    http://mypy-lang.readthedocs.io/en/stable/command_line.html#output-format
-
-    Example output:
-    [
-        {
-            "file": "path/to/file.py",
-            "line": 10,
-            "column": 5,
-            "message": "Incompatible return value type",
-            "severity": "error",
-            "code": "error"
-        }
-    ]
-    """
-
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse mypy JSON output into Issue objects.
-
-        Args:
-            data: Parsed JSON data (should be a list of issue objects)
-
-        Returns:
-            List of Issue objects
-        """
         if not isinstance(data, list):
             logger.warning(f"Expected list from mypy, got {type(data)}")
             return []
@@ -207,7 +116,6 @@ class MypyJSONParser(JSONParser):
                     )
                     continue
 
-                # Validate required fields
                 required_fields = ["file", "line", "message"]
                 if not all(k in item for k in required_fields):
                     missing = required_fields - item.keys()
@@ -246,49 +154,11 @@ class MypyJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from mypy JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         return len(data) if isinstance(data, list) else 0
 
 
 class BanditJSONParser(JSONParser):
-    """Parse bandit JSON output.
-
-    Bandit JSON format documentation:
-    https://bandit.readthedocs.io/en/latest/formatter.html#json-formatter
-
-    Example output:
-    {
-        "metrics": {...},
-        "results": [
-            {
-                "filename": "path/to/file.py",
-                "line_number": 42,
-                "issue_text": "Description of security issue",
-                "issue_severity": "HIGH",
-                "test_id": "B201",
-                "test_name": "flask_debug_true"
-            }
-        ],
-        "generated_at": "2025-01-29T12:34:56Z"
-    }
-    """
-
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse bandit JSON output into Issue objects.
-
-        Args:
-            data: Parsed JSON data (should be a dict with 'results' key)
-
-        Returns:
-            List of Issue objects
-        """
         if not isinstance(data, dict) or "results" not in data:
             logger.warning(
                 f"Expected dict with 'results' from bandit, got {type(data)}"
@@ -310,7 +180,6 @@ class BanditJSONParser(JSONParser):
                     )
                     continue
 
-                # Validate required fields
                 required_fields = ["filename", "issue_text", "line_number"]
                 if not all(k in item for k in required_fields):
                     missing = required_fields - item.keys()
@@ -350,28 +219,12 @@ class BanditJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from bandit JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         if isinstance(data, dict) and "results" in data:
             results = data["results"]
             return len(results) if isinstance(results, list) else 0
         return 0
 
     def _map_severity(self, severity_str: str) -> Priority:
-        """Map bandit severity string to Priority enum.
-
-        Args:
-            severity_str: Bandit severity string (HIGH, MEDIUM, LOW)
-
-        Returns:
-            Corresponding Priority value
-        """
         mapping = {
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
@@ -381,33 +234,7 @@ class BanditJSONParser(JSONParser):
 
 
 class ComplexipyJSONParser(JSONParser):
-    """Parse complexipy JSON output.
-
-    Complexipy saves JSON to a file and prints text output to stdout.
-    The stdout contains the file path like:
-        Results saved at
-        /path/to/complexipy_results_YYYY_MM_DD__HH-MM-SS.json
-
-    Example JSON content:
-        [
-            {
-                "complexity": 20,
-                "file_name": "example.py",
-                "function_name": "my_function",
-                "path": "path/to/example.py"
-            }
-        ]
-
-    Note: Complexipy does not provide line numbers in JSON output.
-    This parser attempts to extract them via AST analysis as a fallback.
-    """
-
     def __init__(self, max_complexity: int = 15) -> None:
-        """Initialize parser with complexity threshold.
-
-        Args:
-            max_complexity: Only report functions with complexity > this value
-        """
         super().__init__()
         self.max_complexity = max_complexity
         self._line_number_cache: dict[str, dict[str, int]] = {}
@@ -415,28 +242,13 @@ class ComplexipyJSONParser(JSONParser):
     def _extract_line_number_tier1(
         self, file_path: str, function_name: str
     ) -> int | None:
-        """Extract line number by parsing the file with AST (Tier 1 fallback).
-
-        This is the first line of defense - try to find the function's line number
-        by parsing the Python file's AST. If this fails, the agent will use
-        Tier 2 (search by function name) or Tier 3 (full file analysis).
-
-        Args:
-            file_path: Path to the Python file
-            function_name: Name of the function to find (may include ClassName:: prefix)
-
-        Returns:
-            Line number if found, None otherwise
-        """
         import ast
         import os
 
-        # Check cache first
         if file_path in self._line_number_cache:
             if function_name in self._line_number_cache[file_path]:
                 return self._line_number_cache[file_path][function_name]
 
-        # File doesn't exist or isn't a Python file
         if not os.path.exists(file_path):
             logger.debug(f"File not found for line number extraction: {file_path}")
             return None
@@ -445,14 +257,11 @@ class ComplexipyJSONParser(JSONParser):
             logger.debug(f"Not a Python file, skipping AST extraction: {file_path}")
             return None
 
-        # Initialize cache entry for this file
         if file_path not in self._line_number_cache:
             self._line_number_cache[file_path] = {}
 
-        # Handle complexipy's ClassName::method_name format
         search_names = [function_name]
         if "::" in function_name:
-            # Split "ClassName::method_name" -> "method_name"
             method_name = function_name.split("::")[-1]
             search_names.insert(0, method_name)
 
@@ -462,13 +271,12 @@ class ComplexipyJSONParser(JSONParser):
 
             tree = ast.parse(content)
 
-            # Search for function definition by name (try all variants)
             for search_name in search_names:
                 for node in ast.walk(tree):
                     if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                         if node.name == search_name:
                             line_number = node.lineno
-                            # Cache under the original function_name
+
                             self._line_number_cache[file_path][function_name] = (
                                 line_number
                             )
@@ -496,19 +304,9 @@ class ComplexipyJSONParser(JSONParser):
             return None
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        """Parse complexipy output by extracting JSON file path and reading it.
-
-        Args:
-            output: Raw text output from complexipy (contains file path)
-            tool_name: Name of the tool (for logging, currently unused)
-
-        Returns:
-            List of Issue objects for functions exceeding complexity threshold
-        """
         import os
         import re
 
-        # Extract file path from output
         match = re.search(r"Results saved at\s+(.+?\.json)", output)
         if not match:
             logger.warning("Could not find complexipy JSON file path in output")
@@ -516,7 +314,6 @@ class ComplexipyJSONParser(JSONParser):
 
         json_path = match.group(1).strip()
 
-        # Read JSON from file
         if not os.path.exists(json_path):
             logger.warning(f"Complexipy JSON file not found: {json_path}")
             return []
@@ -526,8 +323,6 @@ class ComplexipyJSONParser(JSONParser):
                 json_content = f.read()
             data = json.loads(json_content)
 
-            # NOTE: Don't delete the JSON file - it may be reused across AI-fix iterations
-            # The adapter is responsible for cleanup when done
             logger.debug(
                 f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)"
             )
@@ -535,21 +330,11 @@ class ComplexipyJSONParser(JSONParser):
             logger.error(f"Error reading/parsing complexipy JSON file: {e}")
             return []
 
-        # Parse the JSON data
         return self.parse_json(data)
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse complexipy JSON data.
-
-        Args:
-            data: Parsed JSON data from complexipy
-
-        Returns:
-            List of Issue objects for functions exceeding max_complexity threshold
-        """
         issues: list[Issue] = []
 
-        # complexipy outputs a list directly
         if not isinstance(data, list):
             logger.warning(f"Complexipy JSON data is not a list: {type(data)}")
             return issues
@@ -562,7 +347,6 @@ class ComplexipyJSONParser(JSONParser):
                     )
                     continue
 
-                # Validate required fields
                 required_fields = ["complexity", "file_name", "function_name", "path"]
                 if not all(k in item for k in required_fields):
                     missing = required_fields - item.keys()
@@ -578,7 +362,6 @@ class ComplexipyJSONParser(JSONParser):
                     )
                     continue
 
-                # Filter by max_complexity threshold
                 if complexity <= self.max_complexity:
                     logger.debug(
                         f"Skipping function with complexity {complexity} <= threshold {self.max_complexity}"
@@ -588,10 +371,8 @@ class ComplexipyJSONParser(JSONParser):
                 file_path = str(item["path"])
                 function_name = str(item["function_name"])
 
-                # Tier 1: Try to extract line number via AST analysis
                 line_number = self._extract_line_number_tier1(file_path, function_name)
 
-                # Severity based on complexity level for prioritization
                 if complexity > self.max_complexity * 2:
                     severity = Priority.HIGH
                 elif complexity > self.max_complexity:
@@ -601,7 +382,6 @@ class ComplexipyJSONParser(JSONParser):
 
                 message = f"Function '{function_name}' has complexity {complexity}"
 
-                # Build details with line number info
                 details = [
                     f"complexity: {complexity}",
                     f"function: {function_name}",
@@ -635,16 +415,7 @@ class ComplexipyJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from complexipy JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of functions exceeding max_complexity threshold
-        """
         if isinstance(data, list):
-            # Count only functions exceeding the threshold
             return sum(
                 1
                 for item in data
@@ -656,30 +427,7 @@ class ComplexipyJSONParser(JSONParser):
 
 
 class SemgrepJSONParser(JSONParser):
-    """Parse semgrep JSON output.
-
-    Example output:
-        {
-            "results": [
-                {
-                    "check_id": "python.flask.security.xss...",
-                    "path": "path/to/file.py",
-                    "start": {"line": 10},
-                    "extra": {"message": "Possible XSS...", "severity": "ERROR"}
-                }
-            ]
-        }
-    """
-
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse semgrep JSON data.
-
-        Args:
-            data: Parsed JSON data from semgrep
-
-        Returns:
-            List of Issue objects for security findings
-        """
         issues: list[Issue] = []
 
         if not isinstance(data, dict):
@@ -699,13 +447,11 @@ class SemgrepJSONParser(JSONParser):
                     )
                     continue
 
-                # Extract path
                 path = str(item.get("path", ""))
                 if not path:
                     logger.warning("Skipping semgrep item without path")
                     continue
 
-                # Extract line number
                 start = item.get("start")
                 if isinstance(start, dict):
                     line_number = start.get("line")
@@ -716,7 +462,6 @@ class SemgrepJSONParser(JSONParser):
                 else:
                     line_number = None
 
-                # Extract message and metadata
                 extra = item.get("extra", {})
                 if not isinstance(extra, dict):
                     extra = {}
@@ -745,28 +490,12 @@ class SemgrepJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from semgrep JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         if isinstance(data, dict) and "results" in data:
             results = data["results"]
             return len(results) if isinstance(results, list) else 0
         return 0
 
     def _map_severity(self, severity_str: str) -> Priority:
-        """Map semgrep severity string to Priority enum.
-
-        Args:
-            severity_str: Semgrep severity string (ERROR, WARNING, INFO)
-
-        Returns:
-            Corresponding Priority value
-        """
         mapping = {
             "ERROR": Priority.CRITICAL,
             "WARNING": Priority.HIGH,
@@ -776,34 +505,7 @@ class SemgrepJSONParser(JSONParser):
 
 
 class PipAuditJSONParser(JSONParser):
-    """Parse pip-audit JSON output.
-
-    Example output:
-        {
-            "dependencies": [
-                {
-                    "name": "package",
-                    "vulns": [
-                        {
-                            "id": "CVE-2025-12345",
-                            "description": "Description",
-                            "severity": "HIGH"
-                        }
-                    ]
-                }
-            ]
-        }
-    """
-
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse pip-audit JSON data.
-
-        Args:
-            data: Parsed JSON data from pip-audit
-
-        Returns:
-            List of Issue objects for vulnerability findings
-        """
         issues: list[Issue] = []
 
         if not isinstance(data, dict):
@@ -847,7 +549,7 @@ class PipAuditJSONParser(JSONParser):
                             type=IssueType.SECURITY,
                             severity=severity,
                             message=message,
-                            file_path=None,  # Dependency-level issue
+                            file_path=None,
                             line_number=None,
                             stage="pip-audit",
                             details=[
@@ -864,14 +566,6 @@ class PipAuditJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from pip-audit JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         if isinstance(data, dict) and "dependencies" in data:
             dependencies = data["dependencies"]
             if isinstance(dependencies, list):
@@ -885,14 +579,6 @@ class PipAuditJSONParser(JSONParser):
         return 0
 
     def _map_severity(self, severity_str: str) -> Priority:
-        """Map pip-audit severity string to Priority enum.
-
-        Args:
-            severity_str: pip-audit severity string (HIGH, MEDIUM, LOW)
-
-        Returns:
-            Corresponding Priority value
-        """
         mapping = {
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
@@ -902,39 +588,11 @@ class PipAuditJSONParser(JSONParser):
 
 
 class GitleaksJSONParser(JSONParser):
-    """Parse gitleaks JSON output.
-
-    Gitleaks saves JSON to a file specified by --report flag.
-    The command line specifies: --report /tmp/gitleaks-report.json
-
-    Example JSON content:
-        [
-            {
-                "Description": "AWS Access Key",
-                "File": "path/to/file.py",
-                "StartLine": 10,
-                "RuleID": "aws-access-key",
-                "Severity": "HIGH"
-            }
-        ]
-    """
-
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        """Parse gitleaks output by reading JSON from the report file.
-
-        Args:
-            output: Raw text output from gitleaks (may be empty or have summary)
-            tool_name: Name of the tool (for logging, currently unused)
-
-        Returns:
-            List of Issue objects for secret leaks
-        """
         import os
 
-        # Gitleaks writes to fixed path from command line
         json_path = "/tmp/gitleaks-report.json"
 
-        # Read JSON from file
         if not os.path.exists(json_path):
             logger.debug(
                 f"Gitleaks JSON file not found: {json_path} (may be no leaks found)"
@@ -946,7 +604,6 @@ class GitleaksJSONParser(JSONParser):
                 json_content = f.read()
             data = json.loads(json_content)
 
-            # Clean up the temporary JSON file immediately after reading
             try:
                 os.remove(json_path)
                 logger.debug(f"Cleaned up gitleaks JSON file: {json_path}")
@@ -956,21 +613,11 @@ class GitleaksJSONParser(JSONParser):
             logger.error(f"Error reading/parsing gitleaks JSON file: {e}")
             return []
 
-        # Parse the JSON data
         return self.parse_json(data)
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
-        """Parse gitleaks JSON data.
-
-        Args:
-            data: Parsed JSON data from gitleaks
-
-        Returns:
-            List of Issue objects for secret leaks
-        """
         issues: list[Issue] = []
 
-        # gitleaks outputs a list directly
         if not isinstance(data, list):
             logger.warning(f"Gitleaks JSON data is not a list: {type(data)}")
             return issues
@@ -983,7 +630,6 @@ class GitleaksJSONParser(JSONParser):
                     )
                     continue
 
-                # Extract fields (gitleaks uses PascalCase)
                 description = str(item.get("Description", "Secret detected"))
                 file_path = str(item.get("File", ""))
                 line_number = item.get("StartLine")
@@ -1021,27 +667,11 @@ class GitleaksJSONParser(JSONParser):
         return issues
 
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
-        """Get issue count from gitleaks JSON data.
-
-        Args:
-            data: Parsed JSON data
-
-        Returns:
-            Number of issues in the data
-        """
         if isinstance(data, list):
             return len(data)
         return 0
 
     def _map_severity(self, severity_str: str) -> Priority:
-        """Map gitleaks severity string to Priority enum.
-
-        Args:
-            severity_str: Gitleaks severity string (HIGH, MEDIUM, LOW)
-
-        Returns:
-            Corresponding Priority value
-        """
         mapping = {
             "HIGH": Priority.CRITICAL,
             "MEDIUM": Priority.HIGH,
@@ -1050,16 +680,7 @@ class GitleaksJSONParser(JSONParser):
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
 
-# Register parsers with factory
 def register_json_parsers(factory: ParserFactory) -> None:
-    """Register all JSON parsers with the parser factory.
-
-    This function is called during module initialization to register
-    all JSON parsers with the factory.
-
-    Args:
-        factory: ParserFactory instance to register parsers with
-    """
     factory.register_json_parser("ruff", RuffJSONParser)
     factory.register_json_parser("ruff-check", RuffJSONParser)
     factory.register_json_parser("mypy", MypyJSONParser)

@@ -1,18 +1,22 @@
 from pathlib import Path
 from textwrap import dedent
 
-from rich.console import Console
-
-console = Console()
-
 from rich.panel import Panel
 from rich.table import Table
 
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.semantic_models import SearchQuery, SemanticConfig
 from crackerjack.services.vector_store import VectorStore
 
 
-def handle_semantic_index(file_path: str) -> None:
+def handle_semantic_index(
+    file_path: str,
+    console: ConsoleInterface | None = None,
+) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
     try:
         console.print(f"[cyan]Indexing file for semantic search:[/cyan] {file_path}")
 
@@ -71,7 +75,14 @@ def handle_semantic_index(file_path: str) -> None:
         )
 
 
-def handle_semantic_search(query: str) -> None:
+def handle_semantic_search(
+    query: str,
+    console: ConsoleInterface | None = None,
+) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
     try:
         console.print(f"[cyan]Performing semantic search for:[/cyan] {query}")
 
@@ -156,7 +167,11 @@ def handle_semantic_search(query: str) -> None:
         )
 
 
-def handle_semantic_stats() -> None:
+def handle_semantic_stats(console: ConsoleInterface | None = None) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
     try:
         console.print("[cyan]Retrieving semantic search index statistics...[/cyan]")
 
@@ -213,7 +228,14 @@ def handle_semantic_stats() -> None:
         )
 
 
-def handle_remove_from_semantic_index(file_path: str) -> None:
+def handle_remove_from_semantic_index(
+    file_path: str,
+    console: ConsoleInterface | None = None,
+) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
     try:
         console.print(
             f"[cyan]Removing file from semantic search index:[/cyan] {file_path}",

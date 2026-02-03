@@ -159,7 +159,7 @@ class MetricsCollector:
         try:
             yield conn
             conn.commit()
-        except Exception:
+        except sqlite3.Error:
             conn.rollback()
             raise
         finally:
@@ -392,11 +392,11 @@ class MetricsCollector:
                     selected_strategy,
                     COUNT(*) as usage_count,
                     AVG(effectiveness_score) as avg_effectiveness,
-                    AVG(
+                    AVG((
                         SELECT iteration_count
                         FROM orchestration_executions o
                         WHERE o.job_id=sd.job_id
-                    ) as avg_iterations_needed
+                    )) as avg_iterations_needed
                 FROM strategy_decisions sd
                 WHERE effectiveness_score IS NOT NULL
                 GROUP BY selected_strategy

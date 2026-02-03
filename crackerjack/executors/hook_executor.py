@@ -562,9 +562,8 @@ class HookExecutor:
         if status == "failed" and not issues_found:
             output_text = (result.stdout + result.stderr).strip()
             if output_text:
-                # Skip line-based extraction for JSON output - JSON parsers handle this
                 if output_text.startswith(("{", "[")):
-                    return []  # JSON parsers will extract actual issues
+                    return []
 
                 error_lines = [
                     line.strip() for line in output_text.split("\n") if line.strip()
@@ -632,10 +631,8 @@ class HookExecutor:
         if hook.is_formatting and "files were modified by this hook" in error_output:
             return []
 
-        # Skip line-based extraction for JSON output - JSON tools handle their own parsing
-        # The parser factory will parse JSON and extract actual issues
         if error_output and error_output.strip().startswith(("{", "[")):
-            return []  # JSON parsers handle this separately
+            return []
 
         if error_output:
             return extract_issue_lines(error_output, tool_name=hook.name)

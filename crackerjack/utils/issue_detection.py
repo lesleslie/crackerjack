@@ -14,7 +14,6 @@ def should_count_as_issue(
 
     line_stripped = line.strip()
 
-    # Skip JSON output - tools using JSON are parsed separately
     if line_stripped.startswith(("[", "{")):
         logger.debug(f"Skipping JSON output line from {tool_name}")
         return False

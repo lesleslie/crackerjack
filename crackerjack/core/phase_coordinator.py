@@ -115,7 +115,6 @@ class PhaseCoordinator:
         )
         self.config_merge_service = config_merge_service
 
-        # Initialize code_cleaner with settings
         self.code_cleaner = CodeCleaner(
             console=self.console,
             base_directory=self.pkg_path,
@@ -441,7 +440,16 @@ class PhaseCoordinator:
             subprocess_timeout=300,
         )
         cache = CrackerjackCache()
-        coordinator = AgentCoordinator(context=context, cache=cache)
+        # Remove factory fallbacks - use explicit dependency injection
+        from crackerjack.agents.tracker import get_agent_tracker
+        from crackerjack.services.debug import get_ai_agent_debugger
+
+        coordinator = AgentCoordinator(
+            context=context,
+            tracker=get_agent_tracker(),
+            debugger=get_ai_agent_debugger(),
+            cache=cache,
+        )
 
         issues = [
             Issue(
@@ -906,7 +914,6 @@ class PhaseCoordinator:
         )
         self._last_hook_summary = summary
 
-        # Update issue counts from parsed JSON before displaying
         self._update_json_hook_issue_counts()
 
         self._report_hook_results(suite_name, self._last_hook_results, summary, attempt)
@@ -1040,12 +1047,6 @@ class PhaseCoordinator:
         }
 
     def _update_json_hook_issue_counts(self) -> None:
-        """Update HookResult.issues_count with actual parsed issue counts for JSON tools.
-
-        For JSON-based tools (ruff, mypy, bandit, etc.), HookResult.issues_count is 0
-        because we skip line-based extraction. This method parses the JSON output and
-        updates issues_count with the actual count for accurate display.
-        """
         if not self._last_hook_results:
             return
 
@@ -1054,31 +1055,24 @@ class PhaseCoordinator:
         ParserFactory()
 
         for result in self._last_hook_results:
-            # Only update for JSON tools that have issues_count=0 but failed
             if result.issues_count != 0 or result.status != "failed":
                 continue
 
-            # Check if output is JSON
             if not result.output or not result.output.strip().startswith(("{", "[")):
                 continue
 
             try:
-                # Parse JSON to get actual issue count
                 import json
 
                 data = json.loads(result.output)
                 if isinstance(data, list):
-                    # JSON array of issues
                     result.issues_count = len(data)
                 elif isinstance(data, dict):
-                    # Some tools return dict with different structure
-                    # Check for common keys that contain issue lists
                     if "results" in data and isinstance(data["results"], list):
                         result.issues_count = len(data["results"])
                     elif "issues" in data and isinstance(data["issues"], list):
                         result.issues_count = len(data["issues"])
             except (json.JSONDecodeError, KeyError, TypeError):
-                # If parsing fails, leave issues_count as is
                 pass
 
     def _print_plain_hook_result(self, result: HookResult) -> None:

@@ -1,0 +1,516 @@
+"""Comprehensive tests for error scenarios and edge cases."""
+
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
+
+from crackerjack.errors import (
+    ConfigurationError,
+    CrackerjackError,
+    ErrorCode,
+    HookExecutionError,
+    QCError,
+    adapter_registry,
+)
+from crackerjack.models.qa_results import QAResultStatus
+
+
+class TestCrackerjackErrorBase:
+    """Test base CrackerjackError functionality."""
+
+    def test_error_creation(self):
+        """Test CrackerjackError can be created."""
+        error = CrackerjackError("Test error message")
+        assert str(error) == "Test error message"
+        assert error.message == "Test error message"
+
+    def test_error_with_details(self):
+        """Test CrackerjackError with details."""
+        details = {"file": "test.py", "line": 10}
+        error = CrackerjackError("Test error", details=details)
+        assert error.details == details
+
+    def test_error_to_dict(self):
+        """Test CrackerjackError to_dict conversion."""
+        error = CrackerjackError("Test error", details={"key": "value"})
+        error_dict = error.to_dict()
+        assert "message" in error_dict
+        assert error_dict["message"] == "Test error"
+        assert "details" in error_dict
+        assert error_dict["details"] == {"key": "value"}
+
+    def test_error_code_assignment(self):
+        """Test error code can be assigned."""
+        error = CrackerjackError("Test error", error_code=ErrorCode.CONFIGURATION_ERROR)
+        assert error.error_code == ErrorCode.CONFIGURATION_ERROR
+
+
+class TestErrorCodeEnum:
+    """Test ErrorCode enum values."""
+
+    def test_error_code_values(self):
+        """Test ErrorCode enum has expected values."""
+        assert ErrorCode.CONFIGURATION_ERROR == "configuration_error"
+        assert ErrorCode.HOOK_EXECUTION_ERROR == "hook_execution_error"
+        assert ErrorCode.QC_ERROR == "qc_error"
+        assert ErrorCode.UNKNOWN_ERROR == "unknown_error"
+
+    def test_error_code_comparison(self):
+        """Test ErrorCode comparison works."""
+        code1 = ErrorCode.CONFIGURATION_ERROR
+        code2 = ErrorCode.HOOK_EXECUTION_ERROR
+        assert code1 != code2
+        assert code1 == ErrorCode.CONFIGURATION_ERROR
+
+
+class TestConfigurationError:
+    """Test ConfigurationError specific functionality."""
+
+    def test_configuration_error_creation(self):
+        """Test ConfigurationError creation."""
+        error = ConfigurationError("Config file not found")
+        assert isinstance(error, CrackerjackError)
+        assert "Config file not found" in str(error)
+
+    def test_configuration_error_with_file_path(self):
+        """Test ConfigurationError with file path details."""
+        file_path = "/path/to/config.yaml"
+        error = ConfigurationError(
+            "Invalid configuration", details={"file": file_path}
+        )
+        assert error.details["file"] == file_path
+
+    def test_configuration_error_missing_field(self):
+        """Test ConfigurationError for missing field."""
+        error = ConfigurationError(
+            "Missing required field", details={"field": "timeout_seconds"}
+        )
+        assert "field" in error.details
+
+
+class TestHookExecutionError:
+    """Test HookExecutionError specific functionality."""
+
+    def test_hook_execution_error_creation(self):
+        """Test HookExecutionError creation."""
+        error = HookExecutionError("Hook failed to execute")
+        assert isinstance(error, CrackerjackError)
+        assert "Hook failed to execute" in str(error)
+
+    def test_hook_execution_error_with_hook_name(self):
+        """Test HookExecutionError with hook name."""
+        error = HookExecutionError(
+            "Pre-commit hook failed", details={"hook": "pre-commit"}
+        )
+        assert error.details["hook"] == "pre-commit"
+
+    def test_hook_execution_error_with_exit_code(self):
+        """Test HookExecutionError with exit code."""
+        error = HookExecutionError(
+            "Hook exited with error", details={"exit_code": 1}
+        )
+        assert error.details["exit_code"] == 1
+
+    def test_hook_execution_error_with_output(self):
+        """Test HookExecutionError with command output."""
+        output = "Error: Test failed\nLine 1: Syntax error"
+        error = HookExecutionError(
+            "Hook produced errors", details={"output": output}
+        )
+        assert "output" in error.details
+
+
+class TestQCError:
+    """Test QCError specific functionality."""
+
+    def test_qc_error_creation(self):
+        """Test QCError creation."""
+        error = QCError("Quality check failed")
+        assert isinstance(error, CrackerjackError)
+        assert "Quality check failed" in str(error)
+
+    def test_qc_error_with_check_name(self):
+        """Test QCError with check name."""
+        error = QCError("Check timed out", details={"check": "ruff"})
+        assert error.details["check"] == "ruff"
+
+    def test_qc_error_with_timeout(self):
+        """Test QCError for timeout."""
+        error = QCError(
+            "Check exceeded timeout", details={"timeout_seconds": 30}
+        )
+        assert error.details["timeout_seconds"] == 30
+
+    def test_qc_error_with_return_code(self):
+        """Test QCError with return code."""
+        error = QCError("Check failed", details={"return_code": 1})
+        assert error.details["return_code"] == 1
+
+
+class TestAdapterRegistry:
+    """Test adapter registry functionality."""
+
+    def test_adapter_registry_exists(self):
+        """Test adapter_registry is available."""
+        assert adapter_registry is not None
+
+    def test_adapter_registry_type(self):
+        """Test adapter_registry is a dict."""
+        assert isinstance(adapter_registry, dict)
+
+
+class TestErrorHandlingInQAOrchestrator:
+    """Test error handling in QA Orchestrator."""
+
+    def test_orchestrator_handles_invalid_stage(self):
+        """Test orchestrator raises error for invalid stage."""
+        from crackerjack.services.quality.qa_orchestrator import (
+            QAOrchestrator,
+            QAOrchestratorConfig,
+        )
+
+        config = QAOrchestratorConfig()
+        orchestrator = QAOrchestrator(config=config)
+
+        with pytest.raises(ValueError, match="Invalid stage"):
+            # This should raise ValueError
+            import asyncio
+
+            asyncio.run(orchestrator.run_checks(stage="invalid_stage"))
+
+    def test_orchestrator_handles_missing_adapter(self):
+        """Test orchestrator handles missing adapter gracefully."""
+        from crackerjack.models.qa_config import QACheckConfig
+        from crackerjack.services.quality.qa_orchestrator import (
+            QAOrchestrator,
+            QAOrchestratorConfig,
+        )
+
+        config = QAOrchestratorConfig(
+            fast_checks=[
+                QACheckConfig(
+                    check_name="nonexistent_adapter",
+                    enabled=True,
+                    is_formatter=False,
+                )
+            ]
+        )
+        orchestrator = QAOrchestrator(config=config)
+
+        # Should not raise, should handle missing adapter gracefully
+        import asyncio
+
+        results = asyncio.run(orchestrator.run_checks(stage="fast"))
+        assert isinstance(results, list)
+
+
+class TestErrorHandlingInTestManager:
+    """Test error handling in TestManager."""
+
+    def test_manager_handles_invalid_path(self):
+        """Test TestManager handles invalid path."""
+        from crackerjack.managers.test_manager import TestManager
+
+        # Should not raise exception
+        manager = TestManager(pkg_path=Path("/nonexistent/path"))
+        assert manager is not None
+
+    def test_manager_handles_none_console(self):
+        """Test TestManager handles None console."""
+        from crackerjack.managers.test_manager import TestManager
+
+        # Should create default console
+        manager = TestManager(console=None)
+        assert manager.console is not None
+
+    def test_manager_handles_cleanup_error(self):
+        """Test TestManager handles cleanup errors gracefully."""
+        from crackerjack.managers.test_manager import TestManager
+
+        manager = TestManager()
+
+        # Create a resource with failing cleanup
+        class BadResource:
+            def cleanup(self):
+                raise Exception("Cleanup failed")
+
+        resource = BadResource()
+        manager.register_resource(resource)
+
+        # Should handle exception gracefully
+        try:
+            manager.cleanup()
+        except Exception:
+            pytest.fail("Cleanup should handle exceptions gracefully")
+
+
+class TestErrorPropagation:
+    """Test error propagation through layers."""
+
+    def test_error_propagates_from_adapter(self):
+        """Test errors propagate from adapter correctly."""
+        from unittest.mock import AsyncMock
+
+        adapter = AsyncMock()
+        adapter.run_check = AsyncMock(side_effect=Exception("Adapter error"))
+
+        # Error should propagate
+        import asyncio
+
+        with pytest.raises(Exception, match="Adapter error"):
+            asyncio.run(adapter.run_check(files=[]))
+
+    def test_error_wrapping(self):
+        """Test errors are wrapped appropriately."""
+        inner_error = ValueError("Inner error")
+        outer_error = CrackerjackError(
+            "Outer error", details={"inner": str(inner_error)}
+        )
+        assert "Inner error" in outer_error.details["inner"]
+
+
+class TestRecoveryFromErrors:
+    """Test error recovery scenarios."""
+
+    def test_retry_after_error(self):
+        """Test system can retry after error."""
+        from crackerjack.managers.test_manager import TestManager
+
+        manager = TestManager()
+        manager.record_error(Exception("Test error"))
+        metrics = manager.metrics()
+        assert metrics["errors"] == 1
+
+        # Should be able to continue after error
+        manager.increment_requests()
+        metrics = manager.metrics()
+        assert metrics["requests"] == 1
+
+    def test_partial_failure_recovery(self):
+        """Test system recovers from partial failures."""
+        from crackerjack.models.qa_results import QAResult
+
+        # Mix of passed and failed results
+        results = [
+            QAResult(
+                check_name="check1",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+            QAResult(
+                check_name="check2",
+                status=QAResultStatus.FAILED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=["Error"],
+            ),
+            QAResult(
+                check_name="check3",
+                status=QAResultStatus.PASSED,
+                duration_seconds=1.0,
+                output="",
+                files_checked=[],
+                issues_found=[],
+            ),
+        ]
+
+        # Should be able to process all results
+        passed_count = sum(1 for r in results if r.status == QAResultStatus.PASSED)
+        failed_count = sum(1 for r in results if r.status == QAResultStatus.FAILED)
+
+        assert passed_count == 2
+        assert failed_count == 1
+
+
+class TestEdgeCases:
+    """Test edge case scenarios."""
+
+    def test_empty_error_message(self):
+        """Test error with empty message."""
+        error = CrackerjackError("")
+        assert str(error) == ""
+
+    def test_error_with_none_details(self):
+        """Test error with None details."""
+        error = CrackerjackError("Test", details=None)
+        error_dict = error.to_dict()
+        assert "details" in error_dict
+
+    def test_error_with_empty_details(self):
+        """Test error with empty details dict."""
+        error = CrackerjackError("Test", details={})
+        error_dict = error.to_dict()
+        assert error_dict["details"] == {}
+
+    def test_multiple_errors_in_sequence(self):
+        """Test handling multiple errors in sequence."""
+        from crackerjack.managers.test_manager import TestManager
+
+        manager = TestManager()
+        errors = [
+            Exception("Error 1"),
+            Exception("Error 2"),
+            Exception("Error 3"),
+        ]
+
+        for error in errors:
+            manager.record_error(error)
+
+        metrics = manager.metrics()
+        assert metrics["errors"] == 3
+
+    def test_concurrent_error_recording(self):
+        """Test concurrent error recording."""
+        from crackerjack.managers.test_manager import TestManager
+
+        manager = TestManager()
+
+        # Simulate concurrent error recording
+        for _ in range(10):
+            manager.record_error(Exception("Concurrent error"))
+
+        metrics = manager.metrics()
+        assert metrics["errors"] == 10
+
+
+class TestErrorMessageFormatting:
+    """Test error message formatting."""
+
+    def test_error_with_multiline_message(self):
+        """Test error with multiline message."""
+        message = """Error occurred on line 10
+File: test.py
+Details: Syntax error"""
+        error = CrackerjackError(message)
+        assert message in str(error)
+
+    def test_error_with_special_characters(self):
+        """Test error with special characters."""
+        message = "Error: '<test>' & \"data\""
+        error = CrackerjackError(message)
+        assert message in str(error)
+
+    def test_error_with_unicode(self):
+        """Test error with unicode characters."""
+        message = "Error: ✓ ✗ →"
+        error = CrackerjackError(message)
+        assert message in str(error)
+
+
+class TestErrorContext:
+    """Test error context information."""
+
+    def test_error_with_file_context(self):
+        """Test error includes file context."""
+        error = CrackerjackError(
+            "File error",
+            details={"file": "test.py", "line": 42, "function": "process"},
+        )
+        assert error.details["file"] == "test.py"
+        assert error.details["line"] == 42
+        assert error.details["function"] == "process"
+
+    def test_error_with_timestamp(self):
+        """Test error includes timestamp."""
+        from datetime import datetime
+
+        timestamp = datetime.now().isoformat()
+        error = CrackerjackError("Timed error", details={"timestamp": timestamp})
+        assert error.details["timestamp"] == timestamp
+
+    def test_error_with_traceback(self):
+        """Test error includes traceback information."""
+        traceback = "Traceback (most recent call last):\n  File 'test.py'"
+        error = CrackerjackError("Exception", details={"traceback": traceback})
+        assert "traceback" in error.details
+
+
+class TestValidationErrors:
+    """Test validation-related errors."""
+
+    def test_invalid_configuration_error(self):
+        """Test invalid configuration error."""
+        error = ConfigurationError(
+            "Invalid timeout value", details={"timeout": -1}
+        )
+        assert error.details["timeout"] == -1
+
+    def test_missing_configuration_error(self):
+        """Test missing configuration error."""
+        error = ConfigurationError(
+            "Missing required config", details={"missing_keys": ["api_key", "endpoint"]}
+        )
+        assert "api_key" in error.details["missing_keys"]
+        assert "endpoint" in error.details["missing_keys"]
+
+    def test_type_validation_error(self):
+        """Test type validation error."""
+        error = ConfigurationError(
+            "Invalid type", details={"expected": "int", "got": "str", "value": "abc"}
+        )
+        assert error.details["expected"] == "int"
+        assert error.details["got"] == "str"
+
+
+class TestErrorSerialization:
+    """Test error serialization for transmission."""
+
+    def test_error_json_serialization(self):
+        """Test error can be serialized to JSON."""
+        import json
+
+        error = CrackerjackError(
+            "Test error", details={"key": "value", "number": 42}
+        )
+        error_dict = error.to_dict()
+
+        # Should be JSON serializable
+        json_str = json.dumps(error_dict)
+        assert isinstance(json_str, str)
+
+        # Should deserialize back correctly
+        loaded = json.loads(json_str)
+        assert loaded["message"] == "Test error"
+        assert loaded["details"]["key"] == "value"
+        assert loaded["details"]["number"] == 42
+
+
+class TestErrorInDifferentContexts:
+    """Test errors in different execution contexts."""
+
+    def test_error_in_async_context(self):
+        """Test error handling in async context."""
+        import asyncio
+
+        async def failing_function():
+            raise CrackerjackError("Async error")
+
+        async def run():
+            with pytest.raises(CrackerjackError, match="Async error"):
+                await failing_function()
+
+        asyncio.run(run())
+
+    def test_error_in_threaded_context(self):
+        """Test error handling in threaded context."""
+        import threading
+
+        error_container = []
+
+        def thread_function():
+            try:
+                raise CrackerjackError("Thread error")
+            except CrackerjackError as e:
+                error_container.append(e)
+
+        thread = threading.Thread(target=thread_function)
+        thread.start()
+        thread.join()
+
+        assert len(error_container) == 1
+        assert "Thread error" in str(error_container[0])

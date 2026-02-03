@@ -1,16 +1,19 @@
 import typing as t
 
-from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.services.cache import CrackerjackCache
 
-console = Console()
 
+def handle_clear_cache(console: ConsoleInterface | None = None) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
 
-def handle_clear_cache() -> None:
+        console = CrackerjackConsole()
+
     try:
         cache = CrackerjackCache()
 
@@ -40,7 +43,12 @@ def handle_clear_cache() -> None:
         console.print(f"\n❌ Error clearing cache: {e}", style="bold red")
 
 
-def handle_cache_stats() -> None:
+def handle_cache_stats(console: ConsoleInterface | None = None) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     try:
         cache = CrackerjackCache()
         stats = cache.get_cache_stats()
@@ -52,8 +60,8 @@ def handle_cache_stats() -> None:
         console.print()
         console.print(Panel(main_table, border_style="blue"))
 
-        _display_performance_insights(totals)
-        _display_cache_directory_info(cache)
+        _display_performance_insights(totals, console)
+        _display_cache_directory_info(cache, console)
 
     except Exception as e:
         console.print(f"\n❌ Error retrieving cache stats: {e}", style="bold red")
@@ -126,7 +134,9 @@ def _add_cache_totals_row(table: Table, totals: dict[str, t.Any]) -> None:
     )
 
 
-def _display_performance_insights(totals: dict[str, t.Any]) -> None:
+def _display_performance_insights(
+    totals: dict[str, t.Any], console: ConsoleInterface
+) -> None:
     overall_hit_rate = (
         (totals["hits"] / (totals["hits"] + totals["misses"]) * 100)
         if (totals["hits"] + totals["misses"]) > 0
@@ -165,7 +175,9 @@ def _generate_performance_insights(hit_rate: float, total_size: float) -> list[s
     return insights
 
 
-def _display_cache_directory_info(cache: CrackerjackCache) -> None:
+def _display_cache_directory_info(
+    cache: CrackerjackCache, console: ConsoleInterface
+) -> None:
     if not (cache.enable_disk_cache and cache.cache_dir):
         return
 
@@ -178,13 +190,22 @@ def _display_cache_directory_info(cache: CrackerjackCache) -> None:
     console.print(cache_dir_info)
 
 
-def _handle_cache_commands(clear_cache: bool, cache_stats: bool) -> bool:
+def _handle_cache_commands(
+    clear_cache: bool,
+    cache_stats: bool,
+    console: ConsoleInterface | None = None,
+) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if clear_cache:
-        handle_clear_cache()
+        handle_clear_cache(console)
         return True
 
     if cache_stats:
-        handle_cache_stats()
+        handle_cache_stats(console)
         return True
 
     return False

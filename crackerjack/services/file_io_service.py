@@ -17,8 +17,8 @@ class FileIOService:
         except UnicodeDecodeError:
             logger.error(f"Failed to decode file as {encoding}: {path}")
             raise
-        except Exception as e:
-            logger.error(f"Error reading file {path}: {e}")
+        except OSError as e:
+            logger.error(f"OS error reading file {path}: {e}")
             raise
 
     @staticmethod
@@ -36,7 +36,7 @@ class FileIOService:
 
             async with aiofiles.open(file_path, "w", encoding=encoding) as f:
                 await f.write(content)
-        except Exception as e:
+        except (OSError, UnicodeEncodeError) as e:
             logger.error(f"Error writing to file {path}: {e}")
             raise
 
@@ -51,8 +51,8 @@ class FileIOService:
         except UnicodeDecodeError:
             logger.error(f"Failed to decode file as {encoding}: {path}")
             raise
-        except Exception as e:
-            logger.error(f"Error reading file {path}: {e}")
+        except OSError as e:
+            logger.error(f"OS error reading file {path}: {e}")
             raise
 
     @staticmethod
@@ -70,7 +70,7 @@ class FileIOService:
 
             with file_path.open("w", encoding=encoding) as f:
                 f.write(content)
-        except Exception as e:
+        except (OSError, UnicodeEncodeError) as e:
             logger.error(f"Error writing to file {path}: {e}")
             raise
 

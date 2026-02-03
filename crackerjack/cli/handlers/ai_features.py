@@ -1,16 +1,20 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from crackerjack.models.protocols import ConsoleInterface
 
 
 def handle_contextual_ai(
     contextual_ai: bool,
     ai_recommendations: int,
     ai_help_query: str | None,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not contextual_ai and not ai_help_query:
         return True
 

@@ -3,7 +3,6 @@ import signal
 import sys
 import time
 import typing as t
-from pathlib import Path
 
 from mcp_common.ui import ServerPanels
 from rich.console import Console
@@ -39,7 +38,6 @@ def find_mcp_server_processes() -> list[dict[str, t.Any]]:
 
 def _parse_mcp_processes(stdout: str) -> list[dict[str, t.Any]]:
     processes: list[dict[str, t.Any]] = []
-    str(Path.cwd())
 
     for line in stdout.splitlines():
         if _is_mcp_server_process(line):

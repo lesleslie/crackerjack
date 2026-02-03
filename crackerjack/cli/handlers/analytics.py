@@ -1,16 +1,14 @@
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-console = Console()
+from crackerjack.models.protocols import ConsoleInterface
 
 
 def _generate_heatmap_by_type(
     generator: t.Any,
     heatmap_type: str,
     project_root: Path,
-    console: t.Any,
+    console: ConsoleInterface,
 ) -> t.Any | None:
     if heatmap_type == "error_frequency":
         return generator.generate_error_frequency_heatmap()
@@ -30,7 +28,7 @@ def _save_heatmap_output(
     heatmap_data: t.Any,
     heatmap_output: str | None,
     heatmap_type: str,
-    console: t.Any,
+    console: ConsoleInterface,
 ) -> bool:
     if heatmap_output:
         output_path = Path(heatmap_output)
@@ -59,7 +57,13 @@ def handle_heatmap_generation(
     heatmap: bool,
     heatmap_type: str,
     heatmap_output: str | None,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not heatmap:
         return True
 
@@ -103,7 +107,10 @@ def handle_heatmap_generation(
         return False
 
 
-def generate_anomaly_sample_data(detector: t.Any) -> None:
+def generate_anomaly_sample_data(
+    detector: t.Any,
+    console: ConsoleInterface,
+) -> None:
     from datetime import datetime, timedelta
 
     base_time = datetime.now() - timedelta(hours=24)
@@ -150,6 +157,7 @@ def get_sample_metric_value(metric_type: str) -> float:
 def display_anomaly_results(
     anomalies: list[t.Any],
     baselines: dict[str, t.Any],
+    console: ConsoleInterface,
 ) -> None:
     console.print("[cyan]📊[/cyan] Analysis complete:")
 
@@ -179,6 +187,7 @@ def save_anomaly_report(
     baselines: dict[str, t.Any],
     anomaly_sensitivity: float,
     anomaly_report: str,
+    console: ConsoleInterface,
 ) -> None:
     import json
     from datetime import datetime
@@ -216,24 +225,30 @@ def handle_anomaly_detection(
     anomaly_detection: bool,
     anomaly_sensitivity: float,
     anomaly_report: str | None,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not anomaly_detection:
         return True
 
-    from crackerjack.services.quality.anomaly_detector import AnomalyDetector
+    from crackerjack.services.anomaly_detector import AnomalyDetector
 
     console.print("[cyan]🔍[/cyan] Running ML-based anomaly detection...")
 
     try:
         detector = AnomalyDetector(sensitivity=anomaly_sensitivity)
 
-        generate_anomaly_sample_data(detector)
+        generate_anomaly_sample_data(detector, console)
 
         anomalies = detector.get_anomalies()
 
         baselines = detector.get_baseline_summary()
 
-        display_anomaly_results(anomalies, baselines)
+        display_anomaly_results(anomalies, baselines, console)
 
         if anomaly_report:
             save_anomaly_report(
@@ -241,6 +256,7 @@ def handle_anomaly_detection(
                 baselines,
                 anomaly_sensitivity,
                 anomaly_report,
+                console,
             )
 
         return False
@@ -251,7 +267,10 @@ def handle_anomaly_detection(
         return False
 
 
-def generate_predictive_sample_data(engine: t.Any) -> list[str]:
+def generate_predictive_sample_data(
+    engine: t.Any,
+    console: ConsoleInterface,
+) -> list[str]:
     import random
     from datetime import datetime, timedelta
 
@@ -322,7 +341,10 @@ def generate_predictions_summary(
     return predictions_summary
 
 
-def display_trend_analysis(predictions_summary: dict[str, t.Any]) -> None:
+def display_trend_analysis(
+    predictions_summary: dict[str, t.Any],
+    console: ConsoleInterface,
+) -> None:
     console.print("\n[green]📈[/green] Trend Analysis Summary:")
 
     for metric_type, data in predictions_summary.items():
@@ -359,6 +381,7 @@ def save_analytics_dashboard(
     metric_types: list[str],
     prediction_periods: int,
     analytics_dashboard: str,
+    console: ConsoleInterface,
 ) -> None:
     import json
     from datetime import datetime
@@ -387,7 +410,13 @@ def handle_predictive_analytics(
     predictive_analytics: bool,
     prediction_periods: int,
     analytics_dashboard: str | None,
+    console: ConsoleInterface | None = None,
 ) -> bool:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     if not predictive_analytics:
         return True
 
@@ -400,7 +429,7 @@ def handle_predictive_analytics(
     try:
         engine = PredictiveAnalyticsEngine()
 
-        metric_types = generate_predictive_sample_data(engine)
+        metric_types = generate_predictive_sample_data(engine, console)
 
         console.print(
             f"[blue]🔮[/blue] Generating {prediction_periods} period predictions...",
@@ -413,7 +442,7 @@ def handle_predictive_analytics(
         )
         trend_summary = engine.get_trend_summary()
 
-        display_trend_analysis(predictions_summary)
+        display_trend_analysis(predictions_summary, console)
 
         if analytics_dashboard:
             save_analytics_dashboard(
@@ -422,6 +451,7 @@ def handle_predictive_analytics(
                 metric_types,
                 prediction_periods,
                 analytics_dashboard,
+                console,
             )
 
         return False

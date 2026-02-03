@@ -4,7 +4,6 @@ import logging
 import os
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import AdapterFactoryProtocol
@@ -19,20 +18,8 @@ class CrackerjackServer:
         settings: CrackerjackSettings,
         adapter_factory: AdapterFactoryProtocol | None = None,
     ) -> None:
-        """Initialize the Crackerjack MCP server.
-
-        Args:
-            settings: Server settings.
-            adapter_factory: Optional factory for creating adapters (injected for DI).
-
-        Example:
-            ```python
-            server = CrackerjackServer(settings, adapter_factory)
-            await server.start()
-            ```
-        """
         self.settings = settings
-        # Constructor injection with fallback for backward compatibility
+
         if adapter_factory is None:
             from crackerjack.adapters.factory import DefaultAdapterFactory
 
@@ -117,20 +104,6 @@ class CrackerjackServer:
         adapter_name: str,
         enabled_names: list[str],
     ) -> None:
-        """Initialize an adapter via factory if enabled in settings.
-
-        Args:
-            setting_name: Name of the setting to check.
-            default_value: Default value if setting not present.
-            adapter_name: Name of the adapter to create.
-            enabled_names: List to track enabled adapter names.
-
-        Example:
-            ```python
-            await self._init_adapter_if_enabled("ruff_enabled", True, "Ruff", enabled_names)
-            assert "Ruff" in enabled_names
-            ```
-        """
         if getattr(self.settings, setting_name, default_value):
             try:
                 adapter = self.adapter_factory.create_adapter(adapter_name)
@@ -142,17 +115,6 @@ class CrackerjackServer:
                 logger.warning(f"Failed to initialize {adapter_name} adapter: {e}")
 
     async def _init_zuban_adapter(self, enabled_names: list[str]) -> None:
-        """Initialize Zuban adapter via factory.
-
-        Args:
-            enabled_names: List to track enabled adapter names.
-
-        Example:
-            ```python
-            await self._init_zuban_adapter(enabled_names)
-            assert "Zuban" in enabled_names
-            ```
-        """
         try:
             zuban = self.adapter_factory.create_adapter("Zuban")
             await zuban.init()
@@ -163,17 +125,6 @@ class CrackerjackServer:
             logger.warning(f"Failed to initialize Zuban adapter: {e}")
 
     async def _init_claude_adapter(self, enabled_names: list[str]) -> None:
-        """Initialize Claude AI adapter via factory.
-
-        Args:
-            enabled_names: List to track enabled adapter names.
-
-        Example:
-            ```python
-            await self._init_claude_adapter(enabled_names)
-            assert "Claude AI" in enabled_names
-            ```
-        """
         ai_settings = getattr(self.settings, "ai", None)
         if ai_settings and getattr(ai_settings, "ai_agent", False):
             try:

@@ -6,15 +6,14 @@ import signal
 import time
 
 from mcp_common.cli.health import RuntimeHealthSnapshot as MCPRuntimeHealthSnapshot
-from rich.console import Console
 
 from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.runtime import (
     read_runtime_health,
 )
 
 logger = logging.getLogger(__name__)
-console = Console()
 
 
 def start_handler() -> None:
@@ -23,7 +22,12 @@ def start_handler() -> None:
     mcp_main(".", http_mode=False, http_port=None)
 
 
-def stop_handler(pid: int) -> None:
+def stop_handler(pid: int, console: ConsoleInterface | None = None) -> None:
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
+
     try:
         os.kill(pid, 0)
     except ProcessLookupError:

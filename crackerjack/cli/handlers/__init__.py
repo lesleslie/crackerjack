@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from .main_handlers import (
-    console,
     handle_config_updates,
     handle_interactive_mode,
     handle_standard_mode,
@@ -13,7 +12,6 @@ from .main_handlers import (
 logger = logging.getLogger(__name__)
 
 __all__ = [
-    "console",
     "handle_config_updates",
     "handle_interactive_mode",
     "handle_standard_mode",

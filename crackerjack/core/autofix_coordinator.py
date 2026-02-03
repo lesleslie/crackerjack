@@ -41,7 +41,7 @@ class AutofixCoordinator:
         self.logger = logger or logging.getLogger("crackerjack.autofix")  # type: ignore[assignment]
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
-        self._parser_factory = ParserFactory()  # Create parser factory instance
+        self._parser_factory = ParserFactory()
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
@@ -340,8 +340,15 @@ class AutofixCoordinator:
             coordinator = self._coordinator_factory(context, cache)
         else:
             from crackerjack.agents.coordinator import AgentCoordinator
+            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.services.debug import get_ai_agent_debugger
 
-            coordinator = AgentCoordinator(context=context, cache=cache)
+            coordinator = AgentCoordinator(
+                context=context,
+                tracker=get_agent_tracker(),
+                debugger=get_ai_agent_debugger(),
+                cache=cache,
+            )
 
         previous_issue_count = float("inf")
         no_progress_count = 0
@@ -648,15 +655,11 @@ class AutofixCoordinator:
         issues: list[Issue] = []
         self.logger.debug(f"Parsing {len(hook_results)} hook results for issues")
 
-        # Track parsed counts per hook to update HookResult.issues_count
-        # This fixes the mismatch where hook executors count raw output lines
-        # but parsers return filtered actionable issues
         parsed_counts_by_hook: dict[str, int] = {}
 
         for result in hook_results:
             hook_issues = self._parse_single_hook_result(result)
 
-            # Track how many issues we actually parsed for this hook
             if hasattr(result, "name"):
                 hook_name = result.name
                 if hook_name not in parsed_counts_by_hook:
@@ -665,17 +668,13 @@ class AutofixCoordinator:
 
             issues.extend(hook_issues)
 
-        # Update HookResult.issues_count to match parsed counts
-        # This ensures AI-fix reports accurate issue counts
-        # Only update if we actually parsed issues for this hook (count > 0 or hook failed)
         for result in hook_results:
             if hasattr(result, "name") and hasattr(result, "issues_count"):
                 hook_name = getattr(result, "name")
                 if hook_name in parsed_counts_by_hook:
                     old_count = getattr(result, "issues_count", 0)
                     new_count = parsed_counts_by_hook[hook_name]
-                    # Only update if we actually parsed something or hook failed
-                    # Don't update passed hooks with no issues
+
                     if new_count > 0 or (
                         hasattr(result, "status")
                         and getattr(result, "status", "") == "failed"
@@ -685,20 +684,17 @@ class AutofixCoordinator:
                                 f"Updated issues_count for '{hook_name}': "
                                 f"{old_count} → {new_count} (matched to parsed issues)"
                             )
-                            # Use setattr to avoid type checker errors on object type
+
                             setattr(result, "issues_count", new_count)
 
         seen: set[tuple[str | None, int | None, str, str]] = set()
         unique_issues: list[Issue] = []
         for issue in issues:
-            # More specific deduplication key to avoid false positives
-            # Include: file_path, line_number, stage (tool name), and full message
-            # This prevents legitimate issues from being incorrectly deduplicated
             key = (
                 issue.file_path,
                 issue.line_number,
-                issue.stage,  # Tool name (e.g., "mypy", "ruff-check")
-                issue.message,  # Full message, not truncated
+                issue.stage,
+                issue.message,
             )
             if key not in seen:
                 seen.add(key)
@@ -937,30 +933,13 @@ class AutofixCoordinator:
         return []
 
     def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
-        """Parse hook output using JSON parser with validation.
-
-        This method now uses the ParserFactory which automatically selects
-        the appropriate parser (JSON or regex) based on tool capabilities.
-
-        Args:
-            hook_name: Name of the hook
-            raw_output: Raw tool output (JSON or text)
-
-        Returns:
-            List of parsed Issue objects
-
-        Raises:
-            ParsingError: If parsing fails or validation fails
-        """
         self.logger.debug(
             f"Parsing hook '{hook_name}': "
             f"raw_output_lines={len(raw_output.split(chr(10)))}"
         )
 
-        # Extract expected issue count from output for validation
         expected_count = self._extract_issue_count(raw_output, hook_name)
 
-        # Parse with validation using the factory
         try:
             issues = self._parser_factory.parse_with_validation(
                 tool_name=hook_name,
@@ -975,38 +954,13 @@ class AutofixCoordinator:
 
         except ParsingError as e:
             self.logger.error(f"Parsing failed for '{hook_name}': {e}")
-            # Re-raise to fail fast - don't silently continue with wrong data
+
             raise
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
-        """Extract expected issue count from tool output.
-
-        This attempts to parse the tool's output to determine how many issues
-        it reported, for validation purposes.
-
-        Args:
-            output: Raw tool output
-            tool_name: Name of the tool
-
-        Returns:
-            Expected issue count, or None if unable to determine
-
-        Note:
-            Returns None for tools that do filtering in the adapter (like complexipy)
-            where the raw output can't be used to predict the final filtered count.
-        """
-        # Tools that do filtering in the adapter - skip validation
-        # The adapter applies business logic (thresholds, filters) that can't be
-        # determined from the raw output alone.
         if tool_name in ("complexipy", "refurb", "creosote"):
-            # These tools output more data than the adapter ultimately returns:
-            # - complexipy: outputs all functions (6076), adapter filters by threshold (~9)
-            # - refurb: outputs all lines, adapter filters for "[FURB" prefix
-            # - creosote: outputs multiple sections, adapter filters for "unused" deps
-            # We can't predict the filtered count from raw output
             return None
 
-        # Try parsing JSON to get count
         try:
             data = json.loads(output)
             if tool_name in ("ruff", "ruff-check"):
@@ -1020,7 +974,6 @@ class AutofixCoordinator:
         except (json.JSONDecodeError, TypeError):
             pass
 
-        # Fallback: count lines that look like issues
         lines = output.split("\n")
         issue_lines = [
             line

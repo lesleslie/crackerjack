@@ -2,29 +2,44 @@ import asyncio
 import typing as t
 from pathlib import Path
 
-from rich.console import Console
-
-from crackerjack.config.hooks import HookConfigLoader
-from crackerjack.executors.async_hook_executor import AsyncHookExecutor
+from crackerjack.models.protocols import (
+    AsyncHookExecutorProtocol,
+    ConsoleInterface,
+    HookConfigLoaderProtocol,
+)
 from crackerjack.models.task import HookResult
 
 
 class AsyncHookManager:
     def __init__(
         self,
-        console: Console,
+        console: ConsoleInterface,
         pkg_path: Path,
+        async_executor: AsyncHookExecutorProtocol | None = None,
+        config_loader: HookConfigLoaderProtocol | None = None,
         max_concurrent: int = 3,
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
-        self.async_executor = AsyncHookExecutor(
-            console,
-            pkg_path,
-            max_concurrent=max_concurrent,
-            quiet=True,
-        )
-        self.config_loader = HookConfigLoader()
+
+        # Lazy import to maintain protocol compliance
+        if async_executor is None:
+            from crackerjack.executors.async_hook_executor import AsyncHookExecutor
+
+            async_executor = AsyncHookExecutor(
+                console,
+                pkg_path,
+                max_concurrent=max_concurrent,
+                quiet=True,
+            )
+
+        if config_loader is None:
+            from crackerjack.config.hooks import HookConfigLoader
+
+            config_loader = HookConfigLoader()
+
+        self.async_executor = async_executor
+        self.config_loader = config_loader
         self._config_path: Path | None = None
 
     def set_config_path(self, config_path: Path) -> None:

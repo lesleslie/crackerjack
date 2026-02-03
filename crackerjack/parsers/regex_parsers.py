@@ -1,12 +1,3 @@
-"""Regex-based parsers for tools without JSON support.
-
-This module implements regex parsers for tools that don't support JSON output.
-These parsers are used as fallback when JSON is not available.
-
-Note: For tools that DO support JSON (ruff, mypy, bandit), use the JSON parsers
-in json_parsers.py instead.
-"""
-
 import logging
 from typing import TYPE_CHECKING
 
@@ -20,21 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class CodespellRegexParser(RegexParser):
-    """Parse codespell output (text-based, no JSON support).
-
-    Example output:
-        tests/test_file.py:10: the ==> the
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse codespell text output.
-
-        Args:
-            output: Raw text output from codespell
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
 
         for line in output.split("\n"):
@@ -53,11 +30,9 @@ class CodespellRegexParser(RegexParser):
         return issues
 
     def _should_parse_codespell_line(self, line: str) -> bool:
-        """Check if line should be parsed."""
         return bool(line and "==>" in line)
 
     def _parse_single_codespell_line(self, line: str) -> Issue | None:
-        """Parse a single codespell line."""
         if ":" not in line:
             return None
 
@@ -91,7 +66,6 @@ class CodespellRegexParser(RegexParser):
         )
 
     def _format_codespell_message(self, message_part: str) -> str:
-        """Format codespell message."""
         if "==>" in message_part:
             wrong_word, suggestions = message_part.split("==>", 1)
             return f"Spelling: '{wrong_word.strip()}' should be '{suggestions.strip()}'"
@@ -99,21 +73,7 @@ class CodespellRegexParser(RegexParser):
 
 
 class RefurbRegexParser(RegexParser):
-    """Parse refurb output (text-based, no JSON support).
-
-    Example output:
-        path/to/file.py:10:5: FURB101: Remove unnecessary noqa comment
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse refurb text output.
-
-        Args:
-            output: Raw text output from refurb
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
 
         for line in output.split("\n"):
@@ -147,23 +107,7 @@ class RefurbRegexParser(RegexParser):
 
 
 class RuffFormatRegexParser(RegexParser):
-    """Parse ruff-format output (text-based, no JSON support).
-
-    Example output:
-        Would reformat 5 files
-        or
-        1 file would be reformatted
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse ruff-format text output.
-
-        Args:
-            output: Raw text output from ruff-format
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
 
         if "would be reformatted" in output or "Failed to format" in output:
@@ -199,23 +143,7 @@ class RuffFormatRegexParser(RegexParser):
 
 
 class ComplexityRegexParser(RegexParser):
-    """Parse complexipy output (text-based, no JSON support).
-
-    Example output:
-        Failed functions:
-        - src/file.py:
-            function_name :: 25
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse complexipy text output.
-
-        Args:
-            output: Raw text output from complexipy
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
         lines = output.split("\n")
 
@@ -246,28 +174,22 @@ class ComplexityRegexParser(RegexParser):
         return issues
 
     def _is_failed_section_start(self, line: str) -> bool:
-        """Check if line marks the start of the failed functions section."""
         return line.startswith("Failed functions:")
 
     def _is_failed_section_end(self, line: str, in_section: bool) -> bool:
-        """Check if line marks the end of the failed functions section."""
         return in_section and (not line or line.startswith("─"))
 
     def _is_file_marker(self, line: str, in_section: bool) -> bool:
-        """Check if line is a file path marker."""
         return in_section and line.startswith("- ") and line.endswith(":")
 
     def _extract_file_from_marker(self, line: str) -> str:
-        """Extract file path from a file marker line."""
-        remaining = line[2:].strip()  # Remove "- " prefix
-        return remaining[:-1].strip()  # Remove trailing ":"
+        remaining = line[2:].strip()
+        return remaining[:-1].strip()
 
     def _is_function_line(self, line: str, in_section: bool, has_file: bool) -> bool:
-        """Check if line is a function with complexity issue."""
         return in_section and has_file and not line.startswith("- ") and "::" in line
 
     def _create_complexity_issue(self, line: str, file_path: str) -> Issue:
-        """Create an Issue object for a complexity violation."""
         message = f"Complexity exceeded for {line}"
         return Issue(
             type=IssueType.COMPLEXITY,
@@ -280,32 +202,13 @@ class ComplexityRegexParser(RegexParser):
 
 
 class GenericRegexParser(RegexParser):
-    """Generic parser for tools without specific parsers.
-
-    This parser creates a single Issue from the raw output.
-    """
-
     def __init__(
         self, tool_name: str, issue_type: IssueType = IssueType.FORMATTING
     ) -> None:
-        """Initialize generic parser.
-
-        Args:
-            tool_name: Name of the tool
-            issue_type: Type of issue to create
-        """
         self.tool_name = tool_name
         self.issue_type = issue_type
 
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse text output generically.
-
-        Args:
-            output: Raw text output
-
-        Returns:
-            List with a single Issue object
-        """
         if not output or not output.strip():
             return []
 
@@ -323,22 +226,7 @@ class GenericRegexParser(RegexParser):
 
 
 class StructuredDataParser(RegexParser):
-    """Parse structured data tool output (check-yaml, check-toml, check-json).
-
-    These tools use a simple format:
-    - ✓ file.ext: Valid YAML (success)
-    - ✗ file.ext: error message (failure)
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse structured data tool output.
-
-        Args:
-            output: Raw text output from check-yaml/check-toml/check-json
-
-        Returns:
-            List of Issue objects for each error line
-        """
         issues: list[Issue] = []
 
         for line in output.split("\n"):
@@ -354,25 +242,9 @@ class StructuredDataParser(RegexParser):
         return issues
 
     def _should_parse_structured_data_line(self, line: str) -> bool:
-        """Check if line should be parsed as an error.
-
-        Args:
-            line: Line to check
-
-        Returns:
-            True if line is an error, False otherwise
-        """
         return bool(line and line.startswith("✗"))
 
     def _parse_single_structured_data_line(self, line: str) -> Issue | None:
-        """Parse a single structured data error line.
-
-        Args:
-            line: Error line (e.g., "✗ config.yml: error message")
-
-        Returns:
-            Issue object or None if parsing fails
-        """
         try:
             file_path, error_message = self._extract_structured_data_parts(line)
             if not file_path:
@@ -391,14 +263,6 @@ class StructuredDataParser(RegexParser):
             return None
 
     def _extract_structured_data_parts(self, line: str) -> tuple[str, str]:
-        """Extract file path and error message from structured data line.
-
-        Args:
-            line: Line like "✗ file.ext: error message"
-
-        Returns:
-            Tuple of (file_path, error_message)
-        """
         if line.startswith("✗"):
             line = line[1:].strip()
 
@@ -410,22 +274,7 @@ class StructuredDataParser(RegexParser):
 
 
 class MypyRegexParser(RegexParser):
-    """Parse mypy/zuban output (text-based).
-
-    Example output:
-        path/to/file.py:10: error: message here
-        path/to/file.py:15: warning: message here
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse mypy text output.
-
-        Args:
-            output: Raw text output from mypy/zuban
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
 
         for line in output.split("\n"):
@@ -433,7 +282,6 @@ class MypyRegexParser(RegexParser):
             if not line or line.startswith(("Found", "Checked", "Success")):
                 continue
 
-            # Parse mypy format: file:line: severity: message
             if ":" in line and "error" in line or "warning" in line or "note" in line:
                 try:
                     parts = line.split(":", 3)
@@ -443,12 +291,10 @@ class MypyRegexParser(RegexParser):
                         if len(parts) > 1 and parts[1].strip().isdigit():
                             line_number = int(parts[1].strip())
 
-                        # Extract message (everything after the severity)
                         message = line
                         if len(parts) >= 4:
                             message = parts[3].strip()
 
-                        # Determine severity from message
                         severity = Priority.MEDIUM
                         if "error" in line.lower():
                             severity = Priority.HIGH
@@ -473,27 +319,7 @@ class MypyRegexParser(RegexParser):
 
 
 class CreosoteRegexParser(RegexParser):
-    """Parse creosote output (text-based, no JSON support).
-
-    Example output:
-        Found unused dependencies: dep1, dep2, dep3
-    Or:
-        The following dependencies are not being used:
-        - dep1
-        - dep2
-    Or:
-        unused-dependency (dep1)
-    """
-
     def parse_text(self, output: str) -> list[Issue]:
-        """Parse creosote text output.
-
-        Args:
-            output: Raw text output from creosote
-
-        Returns:
-            List of Issue objects
-        """
         issues: list[Issue] = []
         lines = output.split("\n")
 
@@ -502,7 +328,6 @@ class CreosoteRegexParser(RegexParser):
             if not line or line.startswith(("Checked", "Found", "All dependencies")):
                 continue
 
-            # Pattern 1: "Found unused dependencies: dep1, dep2"
             if "Found unused dependencies:" in line:
                 deps_part = line.split(":", 1)[1].strip()
                 deps = [d.strip() for d in deps_part.split(",")]
@@ -520,7 +345,6 @@ class CreosoteRegexParser(RegexParser):
                         )
                 continue
 
-            # Pattern 2: "- dep1" (in a list)
             if line.startswith("- "):
                 dep = line[2:].strip()
                 if dep and not line.startswith(("---", "====")):
@@ -536,9 +360,7 @@ class CreosoteRegexParser(RegexParser):
                     )
                 continue
 
-            # Pattern 3: "unused-dependency (dep1)"
             if "unused-dependency" in line or "not being used" in line.lower():
-                # Extract dependency name from parentheses or text
                 import re
 
                 match = re.search(r"\(([^)]+)\)", line)
@@ -560,15 +382,7 @@ class CreosoteRegexParser(RegexParser):
         return issues
 
 
-# Register parsers with factory
 def register_regex_parsers(factory: "ParserFactory") -> None:
-    """Register all regex parsers with the parser factory.
-
-    Args:
-        factory: ParserFactory instance to register parsers with
-    """
-
-    # Create parser instances
     CodespellRegexParser()
     RefurbRegexParser()
     RuffFormatRegexParser()
@@ -576,7 +390,6 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     CreosoteRegexParser()
     StructuredDataParser()
 
-    # Register for specific tool names
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
@@ -585,7 +398,6 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
 
-    # Register structured data parser for multiple tools
     factory.register_regex_parser("check-yaml", StructuredDataParser)
     factory.register_regex_parser("check-toml", StructuredDataParser)
     factory.register_regex_parser("check-json", StructuredDataParser)
