@@ -496,3 +496,21 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
         """Cleanup a resource (no-op for config merge)."""
         pass
 
+    # Additional ServiceProtocol methods (metric tracking)
+    def get_custom_metric(self, name: str) -> t.Any:
+        """Get a custom metric value."""
+        return None
+
+    def increment_requests(self) -> None:
+        """Increment request counter (no-op for config merge)."""
+        pass
+
+    def record_error(self, error: Exception) -> None:
+        """Record an error (no-op for config merge)."""
+        pass
+
+    def set_custom_metric(self, name: str, value: t.Any) -> None:
+        """Set a custom metric value (no-op for config merge)."""
+        pass
+
+
