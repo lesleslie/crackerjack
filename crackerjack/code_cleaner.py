@@ -1184,7 +1184,7 @@ class CodeCleaner(BaseModel):
             return '"' in line or "'" in line or "#" in line
 
         def _process_line_for_comment_removal(self, line: str) -> str:
-            result_chars = []
+            result_chars: list[str] = []
             string_state = {"in_string": False, "quote_char": None}
 
             for i, char in enumerate(line):

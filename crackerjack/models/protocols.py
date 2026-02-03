@@ -8,6 +8,7 @@ from crackerjack.config.settings import CrackerjackSettings
 
 if t.TYPE_CHECKING:
     from crackerjack.agents.base import FixResult, Issue
+    from crackerjack.models.qa_config import QACheckConfig
     from crackerjack.models.qa_results import QAResult
 
 
@@ -655,7 +656,18 @@ class EnhancedFileSystemServiceProtocol(ServiceProtocol, t.Protocol):
 
 @t.runtime_checkable
 class AdapterProtocol(t.Protocol):
+    @property
+    def adapter_name(self) -> str: ...
+
     async def init(self) -> None: ...
+
+    async def check(
+        self,
+        files: list[Path] | None = None,
+        config: "QACheckConfig | None" = None,
+    ) -> "QAResult": ...
+
+    async def health_check(self) -> dict[str, t.Any]: ...
 
 
 QAAdapterProtocol = AdapterProtocol
@@ -827,13 +839,19 @@ class VersionAnalyzerProtocol(t.Protocol):
     def display_recommendation(self, recommendation: t.Any) -> None: ...
 
 
+if t.TYPE_CHECKING:
+    from crackerjack.config.hooks import HookDefinition
+    from crackerjack.models.results import ExecutionResult
+
+
 @t.runtime_checkable
 class AsyncCommandExecutorProtocol(t.Protocol):
-    async def execute(
+    async def execute_command(
         self,
         command: list[str],
-        timeout: int = 300,
-    ) -> t.Any: ...
+        cwd: Path | None = None,
+        timeout: int = 60,
+    ) -> ExecutionResult: ...
 
 
 @t.runtime_checkable
@@ -845,13 +863,18 @@ class CoverageBadgeServiceProtocol(t.Protocol):
     def update_readme_coverage_badge(self, coverage_percent: float) -> bool: ...
 
 
+if t.TYPE_CHECKING:
+    from crackerjack.config.hooks import HookDefinition
+    from crackerjack.models.results import ExecutionResult, ParallelExecutionResult
+
+
 @t.runtime_checkable
 class ParallelHookExecutorProtocol(t.Protocol):
     async def execute_hooks_parallel(
         self,
-        hooks: list[t.Any],
-        max_workers: int = 4,
-    ) -> list[t.Any]: ...
+        hooks: "list[HookDefinition]",
+        hook_runner: t.Callable[["HookDefinition"], t.Awaitable["ExecutionResult"]],
+    ) -> "ParallelExecutionResult": ...
 
 
 @t.runtime_checkable
@@ -891,7 +914,7 @@ class HookConfigLoaderProtocol(t.Protocol):
 class PerformanceCacheProtocol(t.Protocol):
     def get(self, key: str) -> t.Any | None: ...
 
-    def set(self, key: str, value: t.Any) -> None: ...
+    def set(self, key: str, value: t.Any, ttl_seconds: int = 0) -> None: ...
 
 
 @t.runtime_checkable

@@ -32,22 +32,24 @@ def get_git_tracked_files(pattern: str | None = None) -> list[Path]:
 
 def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[Path]:
     if not use_git:
-        files = []
+        files: list[Path] = []
         for ext in extensions:
             files.extend(Path.cwd().rglob(f"*{ext}"))
         return [f for f in files if f.is_file()]
 
-    files = []
+    # Use git to find files first
+    git_files: list[Path] = []
     for ext in extensions:
         pattern = f"*{ext}"
-        git_files = get_git_tracked_files(pattern)
-        if git_files:
-            files.extend(git_files)
+        found = get_git_tracked_files(pattern)
+        if found:
+            git_files.extend(found)
 
-    if files:
-        return files
+    if git_files:
+        return git_files
 
-    result = []
+    # Fallback to filesystem search
+    result: list[Path] = []
     for ext in extensions:
         result.extend(Path.cwd().rglob(f"*{ext}"))
     return [f for f in result if f.is_file()]
