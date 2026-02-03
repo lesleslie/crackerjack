@@ -606,6 +606,53 @@ def run_tests(
     raise typer.Exit(result.returncode)
 
 
+@app.command("health")
+def health_command(
+    component: str | None = typer.Option(
+        None,
+        "--component",
+        "-c",
+        help="Specific component to check (adapters, managers, services, all)",
+    ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Output results as JSON",
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Show detailed health information",
+    ),
+    quiet: bool = typer.Option(
+        False,
+        "--quiet",
+        "-q",
+        help="Only show exit code (no output)",
+    ),
+) -> t.Never:
+    """Check health of Crackerjack components.
+
+    Exit codes:
+        0: All components healthy
+        1: Some components degraded
+        2: Some components unhealthy
+    """
+    from pathlib import Path
+    from crackerjack.cli.handlers.health import handle_health_check
+
+    pkg_path = Path.cwd()
+    exit_code = handle_health_check(
+        component=component,
+        json_output=json_output,
+        verbose=verbose,
+        quiet=quiet,
+        pkg_path=pkg_path,
+    )
+    raise typer.Exit(exit_code)
+
+
 @app.command()
 def qa_health() -> t.Never:
     from crackerjack.server import CrackerjackServer
