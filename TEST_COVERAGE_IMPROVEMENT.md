@@ -226,7 +226,7 @@ These tests provide a solid foundation for reaching 80% coverage. The configurat
 ### Estimated Coverage Increase
 Based on the modules covered:
 - Config system: ~15% increase
-- CLI layer: ~10% increase  
+- CLI layer: ~10% increase
 - API layer: ~8% increase
 - Skills/agents: ~7% increase
 - Adapters: ~5% increase

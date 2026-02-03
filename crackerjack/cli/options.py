@@ -1041,11 +1041,5 @@ def create_options(
     coverage_report: bool | None = None,
     clean_releases: bool | None = None,
 ) -> Options:
-    """Create Options object from CLI parameters.
-
-    This function simplifies the mapping from CLI arguments to the Options
-    dataclass by using dictionary unpacking instead of explicit parameter mapping.
-    """
-    # Get all local variables (the function parameters)
     local_vars = locals()
     return Options(**local_vars)
