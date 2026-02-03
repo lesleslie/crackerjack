@@ -2,6 +2,7 @@ import typing as t
 
 from crackerjack.config import load_settings
 from crackerjack.config.settings import AISettings
+from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
 
 from .base import AgentContext, FixResult, Issue
 from .claude_code_bridge import ClaudeCodeBridge
@@ -15,10 +16,12 @@ class EnhancedAgentCoordinator(AgentCoordinator):
     def __init__(
         self,
         context: AgentContext,
+        tracker: AgentTrackerProtocol,
+        debugger: DebuggerProtocol,
         cache: t.Any = None,
         enable_external_agents: bool = True,
     ) -> None:
-        super().__init__(context, cache)
+        super().__init__(context, tracker, debugger, cache)
 
         ai_settings = load_settings(AISettings)
         if ai_settings.ai_provider == "qwen":
