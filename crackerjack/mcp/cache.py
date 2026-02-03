@@ -320,7 +320,7 @@ class ErrorCache:
                 self.fix_results = []
 
     def _save_patterns(self) -> None:
-        with suppress(OSError, json.JSONEncodeError):
+        with suppress(OSError, json.JSONDecodeError):
             patterns_data = {
                 pid: pattern.to_dict() for pid, pattern in self.patterns.items()
             }
@@ -328,7 +328,7 @@ class ErrorCache:
                 json.dump(patterns_data, f, indent=2)
 
     def _save_fixes(self) -> None:
-        with suppress(OSError, json.JSONEncodeError):
+        with suppress(OSError, json.JSONDecodeError):
             fixes_data = [result.to_dict() for result in self.fix_results]
             with self.fixes_file.open("w") as f:
                 json.dump(fixes_data, f, indent=2)
