@@ -401,12 +401,12 @@ Respond with ONLY the JSON, no additional text."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         if "```" in content:
             json_start = content.find("```") + 3
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         return content.strip()
 

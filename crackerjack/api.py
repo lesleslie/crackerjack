@@ -6,7 +6,6 @@ from crackerjack.core.console import CrackerjackConsole
 from crackerjack.models.protocols import ConsoleInterface
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
-
 from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI, InteractiveWorkflowOptions
 from .models.config import WorkflowOptions

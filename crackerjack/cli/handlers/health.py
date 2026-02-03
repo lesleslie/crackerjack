@@ -1,8 +1,3 @@
-"""Health check CLI handler for Crackerjack.
-
-This module provides the CLI command for checking the health of all
-Crackerjack components: adapters, managers, and services.
-"""
 
 from __future__ import annotations
 
@@ -19,7 +14,6 @@ from crackerjack.models.health_check import (
     SystemHealthReport,
 )
 
-
 if t.TYPE_CHECKING:
     pass
 
@@ -27,7 +21,6 @@ if t.TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-# Health check status colors
 STATUS_COLORS = {
     "healthy": "green",
     "degraded": "yellow",
@@ -42,24 +35,12 @@ def handle_health_check(
     quiet: bool = False,
     pkg_path: Path | None = None,
 ) -> int:
-    """Handle the health check CLI command.
-
-    Args:
-        component: Specific component to check (adapters, managers, services, all)
-        json_output: Output results as JSON
-        verbose: Show detailed health information
-        quiet: Only show exit code (no output)
-        pkg_path: Package path to check
-
-    Returns:
-        int: Exit code (0=healthy, 1=degraded, 2=unhealthy)
-    """
     console = Console()
 
     if pkg_path is None:
         pkg_path = Path.cwd()
 
-    # Determine which components to check
+
     if component == "adapters":
         category_health = _check_adapters(pkg_path)
         report = SystemHealthReport.from_category_health({"adapters": category_health})
@@ -70,7 +51,7 @@ def handle_health_check(
         category_health = _check_services(pkg_path)
         report = SystemHealthReport.from_category_health({"services": category_health})
     else:
-        # Check all components
+
         all_health = {}
         try:
             all_health["adapters"] = _check_adapters(pkg_path)
@@ -116,7 +97,7 @@ def handle_health_check(
 
         report = SystemHealthReport.from_category_health(all_health)
 
-    # Output results
+
     if not quiet:
         if json_output:
             _output_json(console, report, verbose)
@@ -127,21 +108,13 @@ def handle_health_check(
 
 
 def _check_adapters(pkg_path: Path) -> ComponentHealth:
-    """Check health of all QA adapters.
-
-    Args:
-        pkg_path: Package path
-
-    Returns:
-        ComponentHealth: Aggregated adapter health
-    """
     results: dict[str, HealthCheckResult] = {}
 
-    # Import adapter registry
+
     try:
         from crackerjack.adapters._qa_adapter_base import QAAdapterBase
 
-        # Check if adapter base class has health check protocol
+
         if hasattr(QAAdapterBase, "health_check"):
             results["adapter_base"] = HealthCheckResult.healthy(
                 message="Adapter base class implements health_check",
@@ -155,7 +128,7 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
                 details={"has_protocol": False},
             )
 
-        # Try to get list of available adapters
+
         try:
             from crackerjack.adapters.factory import AdapterFactory
 
@@ -184,17 +157,9 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
 
 
 def _check_managers(pkg_path: Path) -> ComponentHealth:
-    """Check health of all managers.
-
-    Args:
-        pkg_path: Package path
-
-    Returns:
-        ComponentHealth: Aggregated manager health
-    """
     results: dict[str, HealthCheckResult] = {}
 
-    # Check HookManager
+
     try:
         from crackerjack.managers.hook_manager import HookManagerImpl
 
@@ -211,7 +176,7 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    # Check TestManager
+
     try:
         from crackerjack.managers.test_manager import TestManager
 
@@ -228,7 +193,7 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    # Check PublishManager
+
     try:
         from crackerjack.managers.publish_manager import PublishManagerImpl
 
@@ -249,17 +214,9 @@ def _check_managers(pkg_path: Path) -> ComponentHealth:
 
 
 def _check_services(pkg_path: Path) -> ComponentHealth:
-    """Check health of all services.
-
-    Args:
-        pkg_path: Package path
-
-    Returns:
-        ComponentHealth: Aggregated service health
-    """
     results: dict[str, HealthCheckResult] = {}
 
-    # Check GitService
+
     try:
         from crackerjack.services.git import GitService
 
@@ -286,10 +243,8 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
             details={"error_type": type(e).__name__},
         )
 
-    # Check EnhancedFileSystemService
-    try:
-        from crackerjack.services.enhanced_filesystem import EnhancedFileSystemService
 
+    try:
         can_read = pkg_path.exists() and pkg_path.is_dir()
         if can_read:
             results["filesystem_service"] = HealthCheckResult.healthy(
@@ -315,14 +270,7 @@ def _check_services(pkg_path: Path) -> ComponentHealth:
 
 
 def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -> None:
-    """Output health report as a formatted table.
 
-    Args:
-        console: Rich console instance
-        report: Health report to display
-        verbose: Show detailed information
-    """
-    # Overall status
     status_color = STATUS_COLORS[report.overall_status]
     console.print(
         f"\n[{status_color}]●[/] "
@@ -330,7 +278,7 @@ def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -
     )
     console.print(f"📊 {report.summary}\n")
 
-    # Category breakdown
+
     for category_name, category_health in report.categories.items():
         status_color = STATUS_COLORS[category_health.overall_status]
         console.print(
@@ -354,24 +302,17 @@ def _output_table(console: Console, report: SystemHealthReport, verbose: bool) -
 
         console.print()
 
-    # Timestamp
+
     console.print(
         f"🕒 Checked at: {report.timestamp.strftime('%Y-%m-%d %H:%M:%S UTC')}\n"
     )
 
 
 def _output_json(console: Console, report: SystemHealthReport, verbose: bool) -> None:
-    """Output health report as JSON.
-
-    Args:
-        console: Rich console instance
-        report: Health report to display
-        verbose: Include detailed information
-    """
     data = report.to_dict()
 
     if not verbose:
-        # Remove component details in non-verbose mode
+
         for category in data["categories"].values():
             category["components"] = {}
 

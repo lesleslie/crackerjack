@@ -143,11 +143,6 @@ class ZubanLSPService:
         return self.process.poll() is None
 
     def _check_tcp_health(self) -> bool:
-        """Check TCP health by attempting a socket connection to the LSP port.
-
-        Falls back to stdio health check if TCP connection fails,
-        since zuban may be running in stdio mode even when TCP is requested.
-        """
         if not self.process:
             return False
 

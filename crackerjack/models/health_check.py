@@ -1,8 +1,3 @@
-"""Health check models and protocols for Crackerjack components.
-
-This module provides standardized health check interfaces and result models
-for all system components: adapters, managers, and services.
-"""
 
 from __future__ import annotations
 
@@ -20,16 +15,6 @@ logger = logging.getLogger(__name__)
 
 @dataclass(frozen=True)
 class HealthCheckResult:
-    """Result of a health check for a single component.
-
-    Attributes:
-        status: Health status - "healthy", "degraded", or "unhealthy"
-        message: Human-readable status message
-        details: Additional diagnostic information
-        timestamp: When the health check was performed
-        component_name: Name of the component checked
-        check_duration_ms: How long the check took (optional)
-    """
 
     status: t.Literal["healthy", "degraded", "unhealthy"]
     message: str
@@ -39,7 +24,6 @@ class HealthCheckResult:
     check_duration_ms: float | None = None
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "status": self.status,
             "message": self.message,
@@ -57,7 +41,6 @@ class HealthCheckResult:
         details: dict[str, t.Any] | None = None,
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
-        """Create a healthy result."""
         return cls(
             status="healthy",
             message=message,
@@ -74,7 +57,6 @@ class HealthCheckResult:
         details: dict[str, t.Any] | None = None,
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
-        """Create a degraded result."""
         return cls(
             status="degraded",
             message=message,
@@ -91,7 +73,6 @@ class HealthCheckResult:
         details: dict[str, t.Any] | None = None,
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
-        """Create an unhealthy result."""
         return cls(
             status="unhealthy",
             message=message,
@@ -102,73 +83,21 @@ class HealthCheckResult:
 
     @property
     def exit_code(self) -> int:
-        """Get the appropriate exit code for this health status."""
         return {"healthy": 0, "degraded": 1, "unhealthy": 2}[self.status]
 
 
 @t.runtime_checkable
 class HealthCheckProtocol(t.Protocol):
-    """Protocol for components that can perform health checks.
-
-    Any component (adapter, manager, service) that wants to report its health
-    should implement this protocol.
-    """
 
     def health_check(self) -> HealthCheckResult:
-        """Perform a health check and return the result.
-
-        Returns:
-            HealthCheckResult: The health status of the component
-
-        Example:
-            >>> def health_check(self) -> HealthCheckResult:
-            ...     try:
-            ...         # Check component health
-            ...         if self.is_healthy():
-            ...             return HealthCheckResult.healthy(
-            ...                 message="Component is operational",
-            ...                 component_name=self.__class__.__name__
-            ...             )
-            ...         else:
-            ...             return HealthCheckResult.unhealthy(
-            ...                 message="Component is not operational",
-            ...                 component_name=self.__class__.__name__
-            ...             )
-            ...     except Exception as e:
-            ...         return HealthCheckResult.unhealthy(
-            ...             message=f"Health check failed: {e}",
-            ...             component_name=self.__class__.__name__,
-            ...             details={"error": str(e)}
-            ...         )
-        """
         ...
 
     def is_healthy(self) -> bool:
-        """Quick check if component is healthy (no details).
-
-        This is a simpler version of health_check() for fast checks.
-        Returns True if healthy, False otherwise.
-
-        Returns:
-            bool: True if healthy, False otherwise
-        """
         ...
 
 
 @dataclass
 class ComponentHealth:
-    """Aggregated health status for a group of components.
-
-    Attributes:
-        category: Component category (adapters, managers, services)
-        overall_status: Overall health status across all components
-        total: Total number of components checked
-        healthy: Number of healthy components
-        degraded: Number of degraded components
-        unhealthy: Number of unhealthy components
-        components: Individual component results
-        timestamp: When the health check was performed
-    """
 
     category: str
     overall_status: t.Literal["healthy", "degraded", "unhealthy"]
@@ -180,7 +109,6 @@ class ComponentHealth:
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "category": self.category,
             "overall_status": self.overall_status,
@@ -200,21 +128,12 @@ class ComponentHealth:
         category: str,
         results: Mapping[str, HealthCheckResult],
     ) -> ComponentHealth:
-        """Create aggregated health from individual results.
-
-        Args:
-            category: Component category name
-            results: Mapping of component names to health results
-
-        Returns:
-            ComponentHealth: Aggregated health status
-        """
         healthy = sum(1 for r in results.values() if r.status == "healthy")
         degraded = sum(1 for r in results.values() if r.status == "degraded")
         unhealthy = sum(1 for r in results.values() if r.status == "unhealthy")
         total = len(results)
 
-        # Determine overall status
+
         if unhealthy > 0:
             overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
         elif degraded > 0:
@@ -234,21 +153,11 @@ class ComponentHealth:
 
     @property
     def exit_code(self) -> int:
-        """Get the appropriate exit code for this overall status."""
         return {"healthy": 0, "degraded": 1, "unhealthy": 2}[self.overall_status]
 
 
 @dataclass
 class SystemHealthReport:
-    """Complete system health report across all component categories.
-
-    Attributes:
-        overall_status: Overall system health status
-        categories: Health status by category
-        timestamp: When the report was generated
-        summary: Human-readable summary
-        metadata: Additional metadata (version, environment, etc.)
-    """
 
     overall_status: t.Literal["healthy", "degraded", "unhealthy"]
     categories: dict[str, ComponentHealth] = field(default_factory=dict)
@@ -257,7 +166,6 @@ class SystemHealthReport:
     metadata: dict[str, t.Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, t.Any]:
-        """Convert to dictionary for JSON serialization."""
         return {
             "overall_status": self.overall_status,
             "categories": {
@@ -274,16 +182,7 @@ class SystemHealthReport:
         category_health: Mapping[str, ComponentHealth],
         metadata: dict[str, t.Any] | None = None,
     ) -> SystemHealthReport:
-        """Create system health report from category health data.
 
-        Args:
-            category_health: Mapping of category names to health data
-            metadata: Optional metadata to include
-
-        Returns:
-            SystemHealthReport: Complete system health report
-        """
-        # Determine overall status
         if any(h.overall_status == "unhealthy" for h in category_health.values()):
             overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
         elif any(h.overall_status == "degraded" for h in category_health.values()):
@@ -291,7 +190,7 @@ class SystemHealthReport:
         else:
             overall_status = "healthy"
 
-        # Generate summary
+
         total_components = sum(h.total for h in category_health.values())
         total_healthy = sum(h.healthy for h in category_health.values())
         total_degraded = sum(h.degraded for h in category_health.values())
@@ -319,7 +218,6 @@ class SystemHealthReport:
 
     @property
     def exit_code(self) -> int:
-        """Get the appropriate exit code for the overall system status."""
         return {"healthy": 0, "degraded": 1, "unhealthy": 2}[self.overall_status]
 
 
@@ -327,32 +225,16 @@ def health_check_wrapper(
     component_name: str,
     check_func: t.Callable[[], HealthCheckResult | None],
 ) -> HealthCheckResult:
-    """Wrapper for health check functions with error handling.
-
-    Args:
-        component_name: Name of the component being checked
-        check_func: Function that performs the health check
-
-    Returns:
-        HealthCheckResult: Result of the health check, or unhealthy if exception
-
-    Example:
-        >>> def check_my_component() -> HealthCheckResult:
-        ...     # Perform health check logic
-        ...     return HealthCheckResult.healthy(...)
-        >>>
-        >>> result = health_check_wrapper("MyComponent", check_my_component)
-    """
     import time
 
     start_time = time.time()
     try:
         result = check_func()
 
-        # Handle case where check_func returns None
+
         if result is None:
             return HealthCheckResult.unhealthy(
-                message=f"Health check returned None (not implemented)",
+                message="Health check returned None (not implemented)",
                 component_name=component_name,
                 details={
                     "error": "health_check method returned None",
@@ -361,7 +243,7 @@ def health_check_wrapper(
                 check_duration_ms=(time.time() - start_time) * 1000,
             )
 
-        # Ensure component_name is set
+
         if not result.component_name:
             return HealthCheckResult(
                 status=result.status,
