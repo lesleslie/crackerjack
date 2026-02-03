@@ -67,7 +67,7 @@ def _create_validation_results(file_path: str) -> dict[str, t.Any]:
         "recommendations": [],
     }
 
-    compliance_checks = [
+    compliance_checks: list[dict[str, t.Any]] = [
         {
             "check": "complexity_compliance",
             "status": "requires_analysis",

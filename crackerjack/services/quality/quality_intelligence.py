@@ -442,7 +442,11 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
             if 0 in (np.var(values1), np.var(values2)):
                 return None
 
-            correlation, p_value = stats.pearsonr(values1, values2)
+            # scipy.stats.pearsonr returns tuple of (correlation, p_value)
+            # Type stubs may be imprecise, so we cast to the correct types
+            result = stats.pearsonr(values1, values2)
+            correlation = t.cast(float, result[0])
+            p_value = t.cast(float, result[1])
         except (ValueError, RuntimeWarning):
             return None
 

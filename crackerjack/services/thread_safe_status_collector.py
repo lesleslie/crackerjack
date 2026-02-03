@@ -187,12 +187,12 @@ class ThreadSafeStatusCollector:
 
             mcp_task = asyncio.create_task(asyncio.to_thread(find_mcp_server_processes))
 
-            mcp_processes = await asyncio.wait_for(
+            mcp_processes_result = await asyncio.wait_for(
                 asyncio.gather(mcp_task),
                 timeout=10.0,
             )
 
-            mcp_processes = mcp_processes[0]
+            mcp_processes: list[t.Any] = mcp_processes_result[0]
 
             services_data = {
                 "mcp_server": {
