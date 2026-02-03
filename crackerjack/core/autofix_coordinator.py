@@ -1006,16 +1006,27 @@ class AutofixCoordinator:
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:
         data = json.loads(output)
-        if tool_name in ("ruff", "ruff-check"):
-            return len(data) if isinstance(data, list) else None
-        if tool_name == "bandit":
-            if isinstance(data, dict) and "results" in data:
-                results = data["results"]
-                return len(results) if isinstance(results, list) else None
-        if tool_name in ("mypy", "zuban"):
-            return len(data) if isinstance(data, list) else None
+        return _count_issues_for_tool(data, tool_name)
     except (json.JSONDecodeError, TypeError):
-        pass
+        return None
+
+
+def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
+    if tool_name in ("ruff", "ruff-check", "mypy", "zuban"):
+        return _count_list_data(data)
+    if tool_name == "bandit":
+        return _count_bandit_results(data)
+    return None
+
+
+def _count_list_data(data: object) -> int | None:
+    return len(data) if isinstance(data, list) else None
+
+
+def _count_bandit_results(data: object) -> int | None:
+    if isinstance(data, dict) and "results" in data:
+        results = data["results"]
+        return len(results) if isinstance(results, list) else None
     return None
 
 
