@@ -84,6 +84,7 @@ class ParserFactory:
         if tool_name in self._parser_cache:
             return self._parser_cache[tool_name]
 
+        parser: JSONParser | RegexParser
         if supports_json(tool_name) and tool_name in self._json_parsers:
             logger.debug(f"Using JSON parser for '{tool_name}'")
             parser = self._json_parsers[tool_name]()

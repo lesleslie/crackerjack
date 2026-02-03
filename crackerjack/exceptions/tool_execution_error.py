@@ -30,7 +30,7 @@ class ToolExecutionError(Exception):
         super().__init__(message)
 
     def format_rich(self, console: Console | None = None) -> Panel:
-        content_parts = []
+        content_parts: list[str] = []
 
         content_parts.extend(
             (

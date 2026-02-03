@@ -313,6 +313,27 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
 
         self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)
 
+    def initialize(self) -> None:
+        """Initialize the executor (no-op for thread pool executor)."""
+        pass
+
+    def cleanup(self) -> None:
+        """Cleanup resources (no-op, use shutdown instead)."""
+        pass
+
+    def health_check(self) -> bool:
+        """Check if the executor is healthy."""
+        return True
+
+    async def execute(
+        self,
+        command: list[str],
+        timeout: int = 300,
+    ) -> t.Any:
+        """Execute a command asynchronously (protocol compliance method)."""
+        result = await self.execute_command(command, timeout=timeout)
+        return result
+
     def shutdown(self) -> None:
         if hasattr(self, "_thread_pool"):
             self._thread_pool.shutdown(wait=True)
