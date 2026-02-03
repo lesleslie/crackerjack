@@ -325,7 +325,7 @@ class SystemHealthReport:
 
 def health_check_wrapper(
     component_name: str,
-    check_func: t.Callable[[], HealthCheckResult],
+    check_func: t.Callable[[], HealthCheckResult | None],
 ) -> HealthCheckResult:
     """Wrapper for health check functions with error handling.
 
@@ -348,6 +348,19 @@ def health_check_wrapper(
     start_time = time.time()
     try:
         result = check_func()
+
+        # Handle case where check_func returns None
+        if result is None:
+            return HealthCheckResult.unhealthy(
+                message=f"Health check returned None (not implemented)",
+                component_name=component_name,
+                details={
+                    "error": "health_check method returned None",
+                    "suggestion": "Implement health_check() method to return HealthCheckResult",
+                },
+                check_duration_ms=(time.time() - start_time) * 1000,
+            )
+
         # Ensure component_name is set
         if not result.component_name:
             return HealthCheckResult(

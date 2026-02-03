@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import logging
 import shutil
 import tarfile
@@ -308,7 +309,9 @@ class DocumentationCleanup:
                         content = file_path.read_bytes()
                         total_size += len(content)
 
-                        checksum = hashlib.sha256(content, usedforsecurity=False).hexdigest()
+                        checksum = hashlib.sha256(
+                            content, usedforsecurity=False
+                        ).hexdigest()
                         file_checksums[file_path.name] = checksum
 
                         tar.add(file_path, arcname=file_path.name)
