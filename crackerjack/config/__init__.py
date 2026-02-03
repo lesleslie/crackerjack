@@ -44,8 +44,6 @@ def get_console_width() -> int:
 
 settings_instance = load_settings(CrackerjackSettings)
 
-# TODO(Phase 3): Legacy logger registration removed in Phase 2
-
 
 def register_services() -> None:
     logger.info("register_services skipped (legacy DI removed)")

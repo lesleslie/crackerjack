@@ -344,7 +344,6 @@ def register_core_tools(mcp_app: t.Any) -> None:
         if validation_error:
             return validation_error
 
-        # TODO(Phase 3): Replace with Oneiric workflow execution
         return '{"error": "Workflow orchestration removed in Phase 2 (legacy runtime removal). Will be reimplemented in Phase 3 (Oneiric integration).", "success": false}'
 
 

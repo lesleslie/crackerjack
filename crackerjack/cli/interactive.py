@@ -77,7 +77,6 @@ class InteractiveTask:
 class InteractiveWorkflowManager:
     def __init__(self, console: Console, orchestrator: object | None = None) -> None:
         self.console = console
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.orchestrator = orchestrator
         self.tasks: dict[str, InteractiveTask] = {}
         self.current_task: InteractiveTask | None = None
@@ -193,7 +192,6 @@ class InteractiveWorkflowManager:
         self.current_task = task
         task.start()
         try:
-            # TODO(Phase 3): Replace with Oneiric workflow execution
             if self.orchestrator is None:
                 msg = (
                     "Workflow orchestration removed in Phase 2 (legacy runtime removal). "
@@ -410,7 +408,6 @@ class InteractiveCLI:
     def __init__(self, pkg_version: str, console: Console | None = None) -> None:
         self.pkg_version = pkg_version
         self.console = console or Console()
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.orchestrator = None
         self.workflow_manager = InteractiveWorkflowManager(
             self.console,

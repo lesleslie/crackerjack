@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from crackerjack.decorators.utils import (
+from crackerjack.decorators.helpers import (
     format_exception_chain,
     get_function_context,
     is_async_function,

@@ -7,7 +7,6 @@ from crackerjack.models.protocols import ConsoleInterface
 
 from .code_cleaner import CleaningResult, CodeCleaner, PackageCleaningResult
 
-# TODO(Phase 3): Replace with Oneiric workflow integration
 from .errors import CrackerjackError, ErrorCode
 from .interactive import InteractiveCLI, InteractiveWorkflowOptions
 from .models.config import WorkflowOptions
@@ -53,7 +52,6 @@ class CrackerjackAPI:
         self.console = console or CrackerjackConsole()
         self.verbose = verbose
 
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.orchestrator: object | None = None
         self.container: t.Any = None
 
@@ -405,15 +403,12 @@ class CrackerjackAPI:
         return Options(**kwargs)
 
     def _extract_test_passed_count(self) -> int:
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         return 0
 
     def _extract_test_failed_count(self) -> int:
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         return 0
 
     def _extract_coverage_percentage(self) -> float:
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         return 0.0
 
     def _extract_current_version(self) -> str:
