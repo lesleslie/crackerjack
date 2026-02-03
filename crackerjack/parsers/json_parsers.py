@@ -266,9 +266,12 @@ class ComplexipyJSONParser(JSONParser):
         return None
 
     def _is_valid_file_for_ast_extraction(self, file_path: str) -> bool:
-        import os
+        from pathlib import Path
 
-        if not os.path.exists(file_path):
+        path = Path(file_path)
+        if not path.exists():
+
+        if not Path(file_path).exists():
             logger.debug(f"File not found for line number extraction: {file_path}")
             return False
 
@@ -295,8 +298,8 @@ class ComplexipyJSONParser(JSONParser):
         import ast
 
         try:
-            with open(file_path) as f:
-                content = f.read()
+            content = Path(file_path).read_text()
+                # Removed
 
             tree = ast.parse(content)
 
@@ -336,7 +339,7 @@ class ComplexipyJSONParser(JSONParser):
         return None
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        import os
+        from pathlib import Path
         import re
 
         match = re.search(r"Results saved at\s+(.+?\.json)", output)
@@ -346,13 +349,13 @@ class ComplexipyJSONParser(JSONParser):
 
         json_path = match.group(1).strip()
 
-        if not os.path.exists(json_path):
+        if not Path(json_path).exists():
             logger.warning(f"Complexipy JSON file not found: {json_path}")
             return []
 
         try:
-            with open(json_path) as f:
-                json_content = f.read()
+            json_content = Path(json_path).read_text()
+                # Removed
             data = json.loads(json_content)
 
             logger.debug(
@@ -643,23 +646,23 @@ class PipAuditJSONParser(JSONParser):
 
 class GitleaksJSONParser(JSONParser):
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        import os
+        from pathlib import Path
 
         json_path = "/tmp/gitleaks-report.json"
 
-        if not os.path.exists(json_path):
+        if not Path(json_path).exists():
             logger.debug(
                 f"Gitleaks JSON file not found: {json_path} (may be no leaks found)"
             )
             return []
 
         try:
-            with open(json_path) as f:
-                json_content = f.read()
+            json_content = Path(json_path).read_text()
+                # Removed
             data = json.loads(json_content)
 
             try:
-                os.remove(json_path)
+                Path(json_path).unlink()
                 logger.debug(f"Cleaned up gitleaks JSON file: {json_path}")
             except Exception as e:
                 logger.warning(f"Failed to remove gitleaks JSON file {json_path}: {e}")
