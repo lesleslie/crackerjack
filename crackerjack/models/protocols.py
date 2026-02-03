@@ -795,8 +795,9 @@ class ReflectionLoopProtocol(t.Protocol):
 class ChangelogGeneratorProtocol(t.Protocol):
     def generate_changelog_from_commits(
         self,
+        changelog_path: Path,
+        version: str,
         since_version: str | None = None,
-        preview: bool = True,
     ) -> bool: ...
 
     def update_changelog(
