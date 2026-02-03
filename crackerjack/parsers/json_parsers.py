@@ -299,7 +299,7 @@ class ComplexipyJSONParser(JSONParser):
 
         try:
             content = Path(file_path).read_text()
-                # Removed
+
 
             tree = ast.parse(content)
 
@@ -355,7 +355,7 @@ class ComplexipyJSONParser(JSONParser):
 
         try:
             json_content = Path(json_path).read_text()
-                # Removed
+
             data = json.loads(json_content)
 
             logger.debug(
@@ -658,7 +658,7 @@ class GitleaksJSONParser(JSONParser):
 
         try:
             json_content = Path(json_path).read_text()
-                # Removed
+
             data = json.loads(json_content)
 
             try:
