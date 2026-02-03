@@ -116,6 +116,18 @@ class SecureStatusFormatter(SecureStatusFormatterProtocol, ServiceProtocol):
         sanitized = self._apply_all_sanitization_steps(sanitized, verbosity)
         return self._add_security_metadata(sanitized, verbosity)
 
+    def format(self, status: t.Any) -> str:
+        """Format status as string (protocol compliance).
+
+        Converts the dict result from format_status to JSON string.
+        """
+        import json
+
+        if isinstance(status, dict):
+            result = self.format_status(status)
+            return json.dumps(result, indent=2, default=str)
+        return str(status)
+
     def _log_status_access(
         self,
         status_data: dict[str, t.Any],

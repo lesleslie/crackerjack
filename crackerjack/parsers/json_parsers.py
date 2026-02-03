@@ -326,7 +326,7 @@ class ComplexipyJSONParser(JSONParser):
             )
             return None
 
-    def _find_function_in_ast(self, tree: ast.AST, search_name: str) -> int | None:
+    def _find_function_in_ast(self, tree: object, search_name: str) -> int | None:
         import ast
 
         for node in ast.walk(tree):
