@@ -462,3 +462,37 @@ class ConfigMergeService(ConfigMergeServiceProtocol):
                 for key, val in value.items()
             }
         return value
+
+    # ServiceProtocol methods
+    def initialize(self) -> None:
+        """Initialize the service (no-op for config merge)."""
+        pass
+
+    def cleanup(self) -> None:
+        """Cleanup resources (no-op for config merge)."""
+        pass
+
+    def health_check(self) -> bool:
+        """Check if service is healthy."""
+        return True
+
+    def shutdown(self) -> None:
+        """Shutdown the service (no-op for config merge)."""
+        pass
+
+    def metrics(self) -> dict[str, t.Any]:
+        """Return service metrics."""
+        return {"service": "ConfigMergeService", "healthy": True}
+
+    def is_healthy(self) -> bool:
+        """Check if service is healthy."""
+        return True
+
+    def register_resource(self, resource: t.Any) -> None:
+        """Register a resource (no-op for config merge)."""
+        pass
+
+    def cleanup_resource(self, resource: t.Any) -> None:
+        """Cleanup a resource (no-op for config merge)."""
+        pass
+

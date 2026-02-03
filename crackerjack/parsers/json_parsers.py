@@ -297,7 +297,6 @@ class ComplexipyJSONParser(JSONParser):
         try:
             content = Path(file_path).read_text()
 
-
             tree = ast.parse(content)
 
             for search_name in search_names:
@@ -336,8 +335,8 @@ class ComplexipyJSONParser(JSONParser):
         return None
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        from pathlib import Path
         import re
+        from pathlib import Path
 
         match = re.search(r"Results saved at\s+(.+?\.json)", output)
         if not match:

@@ -11,6 +11,12 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.models.task import HookResult
 
+if t.TYPE_CHECKING:
+    from crackerjack.executors.hook_executor import HookExecutor
+    from crackerjack.executors.lsp_aware_hook_executor import (
+        LSPAwareHookExecutor,
+    )
+
 try:
     from crackerjack.orchestration.config import OrchestrationConfig  # type: ignore
 except ModuleNotFoundError:  # pragma: no cover - optional dependency

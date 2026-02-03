@@ -713,10 +713,13 @@ def get_ai_agent_debugger() -> DebuggerProtocol:
         verbose_mode = os.environ.get("AI_AGENT_VERBOSE", "0") == "1"
 
         if debug_enabled:
-            _ai_agent_debugger = t.cast(DebuggerProtocol, AIAgentDebugger(
-                enabled=debug_enabled,
-                verbose=verbose_mode,
-            ))
+            _ai_agent_debugger = t.cast(
+                DebuggerProtocol,
+                AIAgentDebugger(
+                    enabled=debug_enabled,
+                    verbose=verbose_mode,
+                ),
+            )
         else:
             _ai_agent_debugger = t.cast(DebuggerProtocol, NoOpDebugger())
     return t.cast(DebuggerProtocol, _ai_agent_debugger)

@@ -55,6 +55,7 @@ def handle_changelog_generation(
         changelog_version,
         changelog_since,
         options,
+        console,
     )
 
     success = services["generator"].generate_changelog_from_commits(

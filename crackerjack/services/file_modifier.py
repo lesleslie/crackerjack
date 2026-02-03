@@ -94,14 +94,19 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         import asyncio
 
         try:
-            loop = asyncio.get_running_loop()
+            asyncio.get_running_loop()
 
             asyncio.create_task(
-                self.apply_fix(str(file_path), new_content, dry_run=False, create_backup=True)
+                self.apply_fix(
+                    str(file_path), new_content, dry_run=False, create_backup=True
+                )
             )
         except RuntimeError:
-
-            asyncio.run(self.apply_fix(str(file_path), new_content, dry_run=False, create_backup=True))
+            asyncio.run(
+                self.apply_fix(
+                    str(file_path), new_content, dry_run=False, create_backup=True
+                )
+            )
 
     async def _apply_fix(
         self,
