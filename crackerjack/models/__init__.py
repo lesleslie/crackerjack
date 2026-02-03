@@ -10,6 +10,13 @@ from .config import (
     TestConfig,
     WorkflowOptions,
 )
+from .health_check import (
+    ComponentHealth,
+    HealthCheckProtocol,
+    HealthCheckResult,
+    SystemHealthReport,
+    health_check_wrapper,
+)
 from .protocols import OptionsProtocol, QAAdapterProtocol, QAOrchestratorProtocol
 from .qa_config import QACheckConfig, QAOrchestratorConfig
 from .qa_results import QACheckType, QAResult, QAResultStatus
@@ -19,9 +26,12 @@ __all__ = [
     "AIConfig",
     "CleaningConfig",
     "CleanupConfig",
+    "ComponentHealth",
     "ExecutionConfig",
     "GitConfig",
     "HookConfig",
+    "HealthCheckProtocol",
+    "HealthCheckResult",
     "HookResult",
     "OptionsProtocol",
     "ProgressConfig",
@@ -34,7 +44,9 @@ __all__ = [
     "QAResult",
     "QAResultStatus",
     "SessionTracker",
+    "SystemHealthReport",
     "TaskStatus",
     "TestConfig",
     "WorkflowOptions",
+    "health_check_wrapper",
 ]

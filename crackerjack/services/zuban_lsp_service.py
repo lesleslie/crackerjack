@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import socket
 import subprocess
 import time
 import typing as t
@@ -142,9 +143,22 @@ class ZubanLSPService:
         return self.process.poll() is None
 
     def _check_tcp_health(self) -> bool:
-        # TODO: Implement TCP health check when zuban supports TCP mode
+        """Check TCP health by attempting a socket connection to the LSP port.
 
-        return self._check_stdio_health()
+        Falls back to stdio health check if TCP connection fails,
+        since zuban may be running in stdio mode even when TCP is requested.
+        """
+        if not self.process:
+            return False
+
+        try:
+            test_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            test_socket.settimeout(1.0)
+            result = test_socket.connect_ex(("127.0.0.1", self.port))
+            test_socket.close()
+            return result == 0
+        except OSError:
+            return self._check_stdio_health()
 
     async def restart(self) -> bool:
         self.console.print("[cyan]🔄 Restarting Zuban LSP server...[/cyan]")

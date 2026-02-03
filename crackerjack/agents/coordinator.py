@@ -64,7 +64,6 @@ class AgentCoordinator:
         self._issue_cache: dict[str, FixResult] = {}
         self._collaboration_threshold = 0.7
 
-        # Pure dependency injection - no factory fallbacks
         self.tracker = tracker
         self.debugger = debugger
         self.proactive_mode = True
@@ -133,17 +132,14 @@ class AgentCoordinator:
         return self._merge_fix_results(results)
 
     async def _find_specialist_agents(self, issue_type: IssueType) -> list[SubAgent]:
-        """Find specialist agents for the given issue type."""
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
 
-        # Try preferred agents first
         specialist_agents = [
             agent
             for agent in self.agents
             if agent.__class__.__name__ in preferred_agent_names
         ]
 
-        # Fall back to any agent that supports the type
         if not specialist_agents:
             specialist_agents = [
                 agent
@@ -154,7 +150,6 @@ class AgentCoordinator:
         return specialist_agents
 
     def _create_no_agents_result(self, issue_type: IssueType) -> FixResult:
-        """Create result when no specialist agents are found."""
         self.logger.warning(f"No specialist agents for {issue_type.value}")
         return FixResult(
             success=False,
@@ -167,7 +162,6 @@ class AgentCoordinator:
         specialist_agents: list[SubAgent],
         issues: list[Issue],
     ) -> list[t.Coroutine[t.Any, t.Any, FixResult]]:
-        """Create async tasks for handling issues with specialist agents."""
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
         for issue in issues:
             best_specialist = await self._find_best_specialist(specialist_agents, issue)
@@ -177,7 +171,6 @@ class AgentCoordinator:
         return tasks
 
     def _merge_fix_results(self, results: list[t.Any]) -> FixResult:
-        """Merge multiple fix results into a combined result."""
         combined_result = FixResult(success=True, confidence=1.0)
         for result in results:
             if isinstance(result, FixResult):

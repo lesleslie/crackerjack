@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import configparser
+import hashlib
 import json
 import logging
 import shutil
@@ -356,10 +357,23 @@ class ConfigCleanupService:
 
             backup_archive = backup_dir / "backup.tar.gz"
 
+            file_checksums: dict[str, str] = {}
+            total_size = 0
+
             with tarfile.open(backup_archive, "w: gz") as tar:
                 for file_path in files:
                     if file_path.exists():
+                        content = file_path.read_bytes()
+                        total_size += len(content)
+
+                        checksum = hashlib.sha256(
+                            content, usedforsecurity=False
+                        ).hexdigest()
+                        file_checksums[file_path.name] = checksum
+
                         tar.add(file_path, arcname=file_path.name)
+
+            overall_checksum = self._calculate_backup_checksum(file_checksums)
 
             metadata = BackupMetadata(
                 backup_id=backup_id,
@@ -367,9 +381,9 @@ class ConfigCleanupService:
                 package_directory=self.pkg_path,
                 backup_directory=backup_dir,
                 total_files=len(files),
-                total_size=sum(f.stat().st_size for f in files if f.exists()),
-                checksum="",  # TODO: Generate proper checksum
-                file_checksums={},  # TODO: Generate file checksums
+                total_size=total_size,
+                checksum=overall_checksum,
+                file_checksums=file_checksums,
             )
 
             self.console.print(
@@ -390,6 +404,15 @@ class ConfigCleanupService:
             logger.exception(f"Backup creation failed: {e}")
             self.console.print(f"[red]❌[/red] Backup creation failed: {e}")
             return None
+
+    def _calculate_backup_checksum(self, file_checksums: dict[str, str]) -> str:
+        """Calculate overall backup checksum from file checksums.
+
+        Matches the algorithm in PackageBackupService._calculate_backup_checksum.
+        """
+        sorted_items = sorted(file_checksums.items())
+        combined = "".join(f"{path}: {checksum}" for path, checksum in sorted_items)
+        return hashlib.sha256(combined.encode(), usedforsecurity=False).hexdigest()
 
     def _merge_all_configs(
         self,

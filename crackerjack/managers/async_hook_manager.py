@@ -22,7 +22,6 @@ class AsyncHookManager:
         self.console = console
         self.pkg_path = pkg_path
 
-        # Lazy import to maintain protocol compliance
         if async_executor is None:
             from crackerjack.executors.async_hook_executor import AsyncHookExecutor
 

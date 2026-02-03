@@ -223,16 +223,6 @@ def run(
     diff_config: str | None = CLI_OPTIONS["diff_config"],
     config_interactive: bool = CLI_OPTIONS["config_interactive"],
 ) -> None:
-    """Main entry point for crackerjack CLI.
-
-    This function orchestrates the entire crackerjack workflow, including:
-    - Settings initialization and logging configuration
-    - Temporary file cleanup
-    - Provider selection (if requested)
-    - Options creation and configuration
-    - AI agent setup (if enabled)
-    - Command processing and execution
-    """
     settings = load_settings(CrackerjackSettings)
     _print_banner()
 
@@ -254,12 +244,10 @@ def run(
 
 
 def _print_banner() -> None:
-    """Print crackerjack version banner."""
     console.print(f"[cyan]Crackerjack[/cyan] [dim]v{__version__}[/dim]")
 
 
 def _cleanup_temp_files(settings: CrackerjackSettings) -> None:
-    """Clean up temporary files from previous runs."""
     try:
         from crackerjack.utils.temp_file_cleanup import cleanup_temp_files
 
@@ -273,7 +261,6 @@ def _cleanup_temp_files(settings: CrackerjackSettings) -> None:
 
 
 def _handle_provider_selection() -> None:
-    """Handle LLM provider selection interactive mode."""
     import asyncio
 
     from crackerjack.cli.handlers.provider_selection import handle_select_provider
@@ -282,7 +269,6 @@ def _handle_provider_selection() -> None:
 
 
 def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
-    """Create Options object and apply index/search configuration."""
     options = create_options(
         commit=local_vars["commit"],
         interactive=local_vars["interactive"],
@@ -386,7 +372,6 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
         clean_releases=local_vars["clean_releases"],
     )
 
-    # Apply index/search options
     options.index = local_vars["index"]
     options.search = local_vars["search"]
     options.semantic_stats = local_vars["semantic_stats"]
@@ -396,7 +381,6 @@ def _create_and_configure_options(local_vars: dict[str, t.Any]) -> "Options":
 
 
 def _setup_ai_options(local_vars: dict[str, t.Any], options: "Options") -> "Options":
-    """Configure AI-related options and environment."""
     ai_fix, verbose = setup_debug_and_verbose_flags(
         local_vars["ai_fix"],
         local_vars["ai_debug"],
@@ -409,7 +393,6 @@ def _setup_ai_options(local_vars: dict[str, t.Any], options: "Options") -> "Opti
 
 
 def _configure_logging(debug: bool) -> None:
-    """Configure logging verbosity based on debug flag."""
     if debug:
         os.environ["ACB_LOG_LEVEL"] = "DEBUG"
         os.environ["CRACKERJACK_DEBUG"] = "1"
@@ -420,7 +403,6 @@ def _configure_logging(debug: bool) -> None:
 
 
 def _execute_workflow_mode(options: "Options", job_id: str | None = None) -> None:
-    """Execute workflow in interactive or standard mode."""
     if options.interactive:
         handle_interactive_mode(options)
     else:

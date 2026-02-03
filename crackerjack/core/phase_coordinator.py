@@ -440,7 +440,7 @@ class PhaseCoordinator:
             subprocess_timeout=300,
         )
         cache = CrackerjackCache()
-        # Remove factory fallbacks - use explicit dependency injection
+
         from crackerjack.agents.tracker import get_agent_tracker
         from crackerjack.services.debug import get_ai_agent_debugger
 

@@ -463,7 +463,6 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        """Handle test execution failure."""
         combined_output = stdout + "\n" + stderr
         clean_output = self._strip_ansi_codes(combined_output)
         stats = self._parse_test_statistics(clean_output, already_clean=True)
@@ -483,7 +482,6 @@ class TestManager:
         return False
 
     def _handle_failure_with_output(self, clean_output: str) -> None:
-        """Handle test failure when there is output available."""
         failure_lines = self._extract_failure_lines(clean_output)
         if failure_lines:
             self._last_test_failures = failure_lines
@@ -496,7 +494,6 @@ class TestManager:
     def _handle_failure_without_output(
         self, options: OptionsProtocol, duration: float, workers: int | str
     ) -> None:
-        """Handle test failure when there is no output (timeout/critical error)."""
         border_line = "-" * getattr(options, "column_width", 70)
         self.console.print("\n🧪 TESTS Failed test execution")
         self.console.print(border_line)
@@ -1326,7 +1323,6 @@ class TestManager:
         return True
 
     def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
-        """Extract structured test failures from pytest output."""
         failures: list[TestFailure] = []
         lines = output.split("\n")
 
@@ -1372,7 +1368,6 @@ class TestManager:
     def _update_parsing_state(
         self, result: dict[str, t.Any], state: dict[str, t.Any]
     ) -> dict[str, t.Any]:
-        """Update parsing state based on parse result."""
         if not result.get("new_failure") and not result.get("skip_line"):
             state["in_traceback"] = result.get("in_traceback", state["in_traceback"])
             state["in_captured"] = result.get("in_captured", state["in_captured"])

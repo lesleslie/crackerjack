@@ -843,8 +843,6 @@ class ParallelHookExecutorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class HookExecutorProtocol(t.Protocol):
-    """Protocol for synchronous hook execution."""
-
     def execute_strategy(
         self,
         strategy: t.Any,
@@ -853,8 +851,6 @@ class HookExecutorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class AsyncHookExecutorProtocol(t.Protocol):
-    """Protocol for asynchronous hook execution."""
-
     async def execute_strategy(
         self,
         strategy: t.Any,
@@ -863,8 +859,6 @@ class AsyncHookExecutorProtocol(t.Protocol):
 
 @t.runtime_checkable
 class HookConfigLoaderProtocol(t.Protocol):
-    """Protocol for loading hook configurations."""
-
     def load_strategy(
         self,
         name: str,

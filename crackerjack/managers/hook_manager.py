@@ -55,7 +55,6 @@ class HookManagerImpl:
         use_incremental: bool,
         git_service: t.Any,
     ) -> None:
-        # Import concrete implementations locally to maintain protocol compliance
         if enable_lsp_optimization:
             from crackerjack.executors.lsp_aware_hook_executor import (
                 LSPAwareHookExecutor,
