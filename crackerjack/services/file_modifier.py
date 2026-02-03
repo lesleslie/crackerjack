@@ -91,20 +91,16 @@ class SafeFileModifier(SafeFileModifierProtocol, ServiceProtocol):
         return await self._apply_fix(file_path, fixed_content, dry_run, create_backup)
 
     def modify_file(self, file_path: Path, new_content: str) -> None:
-        """Modify file synchronously (protocol compliance).
-
-        This is a synchronous wrapper around the async apply_fix method.
-        """
         import asyncio
 
         try:
             loop = asyncio.get_running_loop()
-            # If we're in an async context, create a task
+
             asyncio.create_task(
                 self.apply_fix(str(file_path), new_content, dry_run=False, create_backup=True)
             )
         except RuntimeError:
-            # No running loop, run in new loop
+
             asyncio.run(self.apply_fix(str(file_path), new_content, dry_run=False, create_backup=True))
 
     async def _apply_fix(
