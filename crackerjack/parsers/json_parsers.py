@@ -293,6 +293,7 @@ class ComplexipyJSONParser(JSONParser):
         self, file_path: str, function_name: str, search_names: list[str]
     ) -> int | None:
         import ast
+        from pathlib import Path
 
         try:
             content = Path(file_path).read_text()
