@@ -268,9 +268,6 @@ class ComplexipyJSONParser(JSONParser):
     def _is_valid_file_for_ast_extraction(self, file_path: str) -> bool:
         from pathlib import Path
 
-        path = Path(file_path)
-        if not path.exists():
-
         if not Path(file_path).exists():
             logger.debug(f"File not found for line number extraction: {file_path}")
             return False

@@ -96,7 +96,7 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return VersionAnalyzer(self._git_service)  # type: ignore[arg-type]
+            return t.cast(VersionAnalyzerProtocol, VersionAnalyzer(self._git_service))
         except Exception:
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 
