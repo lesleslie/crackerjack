@@ -1326,7 +1326,7 @@ class TestManager:
         failures: list[TestFailure] = []
         lines = output.split("\n")
 
-        parsing_state = {
+        parsing_state: dict[str, t.Any] = {
             "current_failure": None,
             "in_traceback": False,
             "in_captured": False,
@@ -1338,10 +1338,10 @@ class TestManager:
                 line,
                 lines,
                 i,
-                parsing_state["current_failure"],
-                parsing_state["in_traceback"],
-                parsing_state["in_captured"],
-                parsing_state["capture_type"],
+                t.cast("TestFailure | None", parsing_state["current_failure"]),
+                t.cast(bool, parsing_state["in_traceback"]),
+                t.cast(bool, parsing_state["in_captured"]),
+                t.cast("str | None", parsing_state["capture_type"]),
             )
 
             if result.get("stop_parsing"):
@@ -1352,15 +1352,17 @@ class TestManager:
                 continue
 
             if result.get("new_failure"):
-                if parsing_state["current_failure"]:
-                    failures.append(parsing_state["current_failure"])
+                current = t.cast("TestFailure | None", parsing_state["current_failure"])
+                if current:
+                    failures.append(current)
                 parsing_state["current_failure"] = result["new_failure"]
                 parsing_state["in_traceback"] = True
                 parsing_state["in_captured"] = False
                 parsing_state["capture_type"] = None
 
-        if parsing_state["current_failure"]:
-            failures.append(parsing_state["current_failure"])
+        current = t.cast("TestFailure | None", parsing_state["current_failure"])
+        if current:
+            failures.append(current)
 
         self._enrich_failures_from_short_summary(failures, output)
         return failures

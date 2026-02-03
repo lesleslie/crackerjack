@@ -123,18 +123,17 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
             )
 
         try:
-            from crackerjack.adapters.factory import AdapterFactory
+            from crackerjack.adapters.factory import DefaultAdapterFactory
 
-            available_adapters = AdapterFactory.list_available()
             results["adapter_factory"] = HealthCheckResult.healthy(
-                message=f"Found {len(available_adapters)} available adapters",
-                component_name="AdapterFactory",
-                details={"adapter_count": len(available_adapters)},
+                message="DefaultAdapterFactory is available",
+                component_name="DefaultAdapterFactory",
+                details={"has_factory": True},
             )
         except Exception as e:
             results["adapter_factory"] = HealthCheckResult.degraded(
-                message=f"Could not list adapters: {e!s}",
-                component_name="AdapterFactory",
+                message=f"Could not import factory: {e!s}",
+                component_name="DefaultAdapterFactory",
                 details={"error": str(e)},
             )
 

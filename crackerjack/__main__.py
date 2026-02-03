@@ -53,6 +53,9 @@ from crackerjack.cli.semantic_handlers import (
 from crackerjack.config import CrackerjackSettings, load_settings
 from crackerjack.config.mcp_settings_adapter import CrackerjackMCPSettings
 
+if t.TYPE_CHECKING:
+    from crackerjack.cli.options import Options
+
 mcp_settings = CrackerjackMCPSettings.load_for_crackerjack()
 
 factory = MCPServerCLIFactory(

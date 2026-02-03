@@ -409,3 +409,34 @@ class GitService(GitInterface):
         except Exception as e:
             self.console.print(f"[red]❌[/red] Error during reset: {e}")
             return False
+
+    def get_changed_files_since(self, since: str, project_root: Path) -> list[str]:
+        """Get list of files changed since a given commit/ref."""
+        try:
+            result = self._run_git_command(
+                ["diff", "--name-only", since, "HEAD"],
+            )
+            if result.returncode == 0:
+                return [
+                    str(project_root / f)
+                    for f in result.stdout.strip().split("\n")
+                    if f.strip()
+                ]
+            return []
+        except Exception:
+            return []
+
+    def get_unstaged_files(self) -> list[str]:
+        """Get list of unstaged files."""
+        try:
+            result = self._run_git_command(["diff", "--name-only"])
+            if result.returncode == 0:
+                return [
+                    str(self.pkg_path / f)
+                    for f in result.stdout.strip().split("\n")
+                    if f.strip()
+                ]
+            return []
+        except Exception:
+            return []
+

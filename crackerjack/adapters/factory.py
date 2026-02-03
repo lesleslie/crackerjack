@@ -58,6 +58,6 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         if adapter_name == "Claude AI":
             from crackerjack.adapters.ai.claude import ClaudeCodeFixer
 
-            return t.cast(AdapterProtocol, ClaudeCodeFixer(settings))
+            return t.cast(AdapterProtocol, ClaudeCodeFixer())
 
         raise ValueError(f"Unknown adapter: {adapter_name}")

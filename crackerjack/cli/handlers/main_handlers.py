@@ -8,9 +8,9 @@ from crackerjack.models.protocols import ConsoleInterface
 
 if t.TYPE_CHECKING:
     from crackerjack.cli.options import Options
-    from crackerjack.models.config import ConfigUpdateInfo
     from crackerjack.services.config_template import (
         ConfigTemplateService,
+        ConfigUpdateInfo,
     )
 
 
