@@ -406,10 +406,6 @@ class ConfigCleanupService:
             return None
 
     def _calculate_backup_checksum(self, file_checksums: dict[str, str]) -> str:
-        """Calculate overall backup checksum from file checksums.
-
-        Matches the algorithm in PackageBackupService._calculate_backup_checksum.
-        """
         sorted_items = sorted(file_checksums.items())
         combined = "".join(f"{path}: {checksum}" for path, checksum in sorted_items)
         return hashlib.sha256(combined.encode(), usedforsecurity=False).hexdigest()

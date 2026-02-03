@@ -632,14 +632,8 @@ def health_command(
         help="Only show exit code (no output)",
     ),
 ) -> t.Never:
-    """Check health of Crackerjack components.
-
-    Exit codes:
-        0: All components healthy
-        1: Some components degraded
-        2: Some components unhealthy
-    """
     from pathlib import Path
+
     from crackerjack.cli.handlers.health import handle_health_check
 
     pkg_path = Path.cwd()
