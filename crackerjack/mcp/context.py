@@ -150,7 +150,6 @@ class MCPServerContext:
         register_global_resource_manager(self.resource_manager)
 
         self.console: Console | None = None
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.cli_runner: object | None = None
         self.state_manager: StateManager | None = None
         self.error_cache: ErrorCache | None = None
@@ -263,7 +262,6 @@ class MCPServerContext:
         self.progress_dir.mkdir(exist_ok=True)
 
     async def _initialize_components(self) -> None:
-        # TODO(Phase 3): Replace with Oneiric workflow integration
         self.cli_runner = None
 
         self.state_manager = StateManager(
