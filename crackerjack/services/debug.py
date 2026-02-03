@@ -12,6 +12,8 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from crackerjack.models.protocols import DebuggerProtocol
+
 from .log_manager import get_log_manager
 from .logging import get_logger
 
@@ -704,20 +706,20 @@ class NoOpDebugger:
 _ai_agent_debugger: AIAgentDebugger | NoOpDebugger | None = None
 
 
-def get_ai_agent_debugger() -> AIAgentDebugger | NoOpDebugger:
+def get_ai_agent_debugger() -> DebuggerProtocol:
     global _ai_agent_debugger
     if _ai_agent_debugger is None:
         debug_enabled = os.environ.get("AI_AGENT_DEBUG", "0") == "1"
         verbose_mode = os.environ.get("AI_AGENT_VERBOSE", "0") == "1"
 
         if debug_enabled:
-            _ai_agent_debugger = AIAgentDebugger(
+            _ai_agent_debugger = t.cast(DebuggerProtocol, AIAgentDebugger(
                 enabled=debug_enabled,
                 verbose=verbose_mode,
-            )
+            ))
         else:
-            _ai_agent_debugger = NoOpDebugger()
-    return _ai_agent_debugger
+            _ai_agent_debugger = t.cast(DebuggerProtocol, NoOpDebugger())
+    return t.cast(DebuggerProtocol, _ai_agent_debugger)
 
 
 def enable_ai_agent_debugging(verbose: bool = False) -> AIAgentDebugger:
