@@ -1,5 +1,61 @@
 ______________________________________________________________________
 
+## [0.51.0] - 2026-02-03
+
+### Added
+
+- Phase 3 - Code quality and architecture improvements
+- phase-4: Complete quality improvements and health check system
+
+### Changed
+
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core functionality
+- Update core, deps, tests
+- Update core, docs, tests
+- Update core, docs, tests
+- Update docs, tests
+
+### Fixed
+
+- Add missing parse() method to JSONParser base class
+- ai-fix: Update HookResult.issues_count to match parsed issues
+- complexipy: Filter parser output by complexity threshold
+- Correct method signatures and zuban parser configuration
+- decorators: Fix preserve_signature and get_function_context issues
+- gitleaks: Correct --report flag to --report-path
+- parser: Resolve type checking and attribute errors
+- parsers: Add missing CreosoteRegexParser for AI-fix support
+- Prevent JSON lines from being counted as issues
+- protocols: Add missing methods to FileSystemService and GitInterface
+- protocols: Add more missing protocol methods for zuban compliance
+- Resolve JSON parsing duplication in HookResult initialization
+- test: Resolve import errors and remove obsolete TODO comments
+- Update HookResult.issues_count with actual parsed JSON issue count
+- Update JSON issue counts before display and enable unsafe fixes
+- zuban: Add metric tracking methods to ConfigMergeService
+- zuban: Add ServiceProtocol methods to SecurityService and DocumentationServiceImpl
+- zuban: Fix 14 more type errors via parallel agents (78→29, 63% reduction)
+- zuban: Fix 30 type checking errors (78→48, 38% reduction)
+- zuban: Fix 5 more type errors (78→43, 45% reduction)
+- zuban: Fix 7 more errors via agents (78→22, 72% reduction)
+- zuban: Fix protocol signature and type compatibility issues
+- zuban: Fix protocol signatures and return types
+- zuban: Use getattr/setattr to avoid type checker errors
+
+### Documentation
+
+- Add complexipy parser fix documentation
+- session: Add comprehensive checkpoint report - 2025-01-30
+
+### Testing
+
+- Add comprehensive tests for tool skipping in AI-fix
+
 ## [0.50.6] - 2026-01-29
 
 ### Changed
