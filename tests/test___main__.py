@@ -1,9 +1,9 @@
 import pytest
 
-from crackerjack.__main__ import main
-
 
 def test_main_basic() -> None:
+    """Test basic functionality of main."""
+    from crackerjack.__main__ import main
     import inspect
 
     assert callable(main), "Function should be callable"

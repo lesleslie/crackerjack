@@ -93,51 +93,6 @@ class TestExecutor:
         )
 
     def _pre_collect_tests(self, original_cmd: list[str]) -> int:
-
-
-        collect_cmd = [
-            "uv",
-            "run",
-            "python",
-            "-m",
-            "pytest",
-            "--collect-only",
-            "-qq",
-        ]
-
-
-        test_path_found = False
-        for i, arg in enumerate(original_cmd):
-            if not arg.startswith("-") and (
-                arg.startswith("tests") or arg == "." or arg.endswith(".py")
-            ):
-
-                collect_cmd.extend(original_cmd[i:])
-                test_path_found = True
-                break
-
-
-        if not test_path_found:
-            collect_cmd.append("tests" if (self.pkg_path / "tests").exists() else ".")
-
-        with suppress(Exception):
-            result = subprocess.run(
-                collect_cmd,
-                check=False, cwd=self._detect_target_project_dir(collect_cmd),
-                capture_output=True,
-                text=True,
-                timeout=120,
-                env=self._setup_test_environment(),
-            )
-
-
-            if result.stdout:
-
-
-                match = re.search(r"collected\s+(\d+)\s+(?:item|test)s?", result.stdout)
-                if match:
-                    return int(match.group(1))
-
         return 0
 
     def _execute_with_live_progress(
@@ -145,6 +100,10 @@ class TestExecutor:
     ) -> subprocess.CompletedProcess[str]:
         if progress is None:
             progress = self._initialize_progress()
+
+
+        if self._should_try_xdist_fallback(cmd):
+            return self._run_with_xdist_fallback(cmd, progress, None, timeout)
 
         with Live(
             progress.format_progress(), console=self.console, transient=True,
@@ -191,11 +150,139 @@ class TestExecutor:
     ) -> subprocess.CompletedProcess[str]:
         if progress is None:
             progress = self._initialize_progress()
-        env = self._setup_coverage_env()
 
+
+        if self._should_try_xdist_fallback(cmd):
+            return self._run_with_xdist_fallback(cmd, progress, progress_callback, timeout)
+
+        env = self._setup_coverage_env()
         return self._execute_test_process_with_progress(
             cmd, env, progress, progress_callback, timeout,
         )
+
+    def _should_try_xdist_fallback(self, cmd: list[str]) -> bool:
+        try:
+            from crackerjack.config import load_settings
+            from crackerjack.config.settings import CrackerjackSettings
+
+            settings = load_settings(CrackerjackSettings)
+            has_n_flag = "-n" in cmd
+            worker_count = self._get_optimal_worker_count_from_cmd(cmd) if has_n_flag else 1
+
+
+            self.console.print(
+                f"[dim]DEBUG: xdist_fallback_to_sequential={settings.testing.xdist_fallback_to_sequential}, "
+                f"has_n_flag={has_n_flag}, worker_count={worker_count}[/dim]"
+            )
+
+            return (
+                settings.testing.xdist_fallback_to_sequential
+                and has_n_flag
+                and worker_count > 1
+            )
+        except Exception as e:
+            self.console.print(f"[yellow]DEBUG: Exception in _should_try_xdist_fallback: {e}[/yellow]")
+            return False
+
+    def _get_optimal_worker_count_from_cmd(self, cmd: list[str]) -> int:
+        from contextlib import suppress
+
+        with suppress(Exception):
+            if "-n" in cmd:
+                idx = cmd.index("-n")
+                if idx + 1 < len(cmd):
+                    workers_arg = cmd[idx + 1]
+                    if workers_arg == "auto":
+                        return 4
+                    with suppress(ValueError):
+                        return int(workers_arg)
+        return 1
+
+    def _run_with_xdist_fallback(
+        self,
+        cmd: list[str],
+        progress: TestProgress,
+        progress_callback: t.Callable[[dict[str, t.Any]], None],
+        timeout: int,
+    ) -> subprocess.CompletedProcess[str]:
+        from crackerjack.config import load_settings
+        from crackerjack.config.settings import CrackerjackSettings
+
+        settings = load_settings(CrackerjackSettings)
+        xdist_timeout = settings.testing.xdist_timeout_seconds
+
+        self.console.print(
+            f"[dim]Trying parallel execution with {xdist_timeout}s timeout (will fall back to sequential if xdist hangs)...[/dim]",
+        )
+
+
+        env = self._setup_coverage_env()
+        parallel_result = self._execute_test_process_with_progress(
+            cmd, env, progress, progress_callback, xdist_timeout,
+        )
+
+
+        self.console.print(
+            f"[dim]DEBUG: parallel_result.returncode={parallel_result.returncode}, "
+            f"_did_xdist_timeout={self._did_xdist_timeout(parallel_result, progress)}[/dim]"
+        )
+
+        if parallel_result.returncode < 0 or self._did_xdist_timeout(parallel_result, progress):
+            self.console.print(
+                "[yellow]⚠️ Parallel execution timed out or failed, falling back to sequential...[/yellow]",
+            )
+
+
+            sequential_cmd = self._remove_xdist_from_cmd(cmd)
+            self.console.print(f"[dim]DEBUG: sequential_cmd={sequential_cmd}[/dim]")
+            return self._execute_test_process_with_progress(
+                sequential_cmd, env, progress, progress_callback, timeout,
+            )
+
+        return parallel_result
+
+    def _did_xdist_timeout(
+        self, result: subprocess.CompletedProcess, progress: TestProgress,
+    ) -> bool:
+
+        if result.returncode < 0:
+            completed = progress.passed + progress.failed + progress.skipped + progress.errors
+            if completed == 0:
+                return True
+
+
+        error_indicators = [
+            "worker crashed",
+            "workers did not finish",
+            "xdist",
+            "timeout",
+            "hung",
+        ]
+
+        combined_output = (result.stdout or "") + (result.stderr or "")
+        combined_lower = combined_output.lower()
+
+        return any(indicator in combined_lower for indicator in error_indicators)
+
+    def _remove_xdist_from_cmd(self, cmd: list[str]) -> list[str]:
+        new_cmd = []
+        skip_next = False
+
+        for arg in cmd:
+            if skip_next:
+                skip_next = False
+                continue
+
+            if arg == "-n":
+                skip_next = True
+                continue
+
+            if arg.startswith("--dist="):
+                continue
+
+            new_cmd.append(arg)
+
+        return new_cmd
 
 
     def _initialize_progress(self) -> TestProgress:

@@ -214,7 +214,7 @@ class ConfigCleanupService:
             with tempfile.TemporaryDirectory() as temp_dir:
                 temp_path = Path(temp_dir)
 
-                with tarfile.open(backup_archive, "r: gz") as tar:
+                with tarfile.open(str(backup_archive), "r|gz") as tar:
                     tar.extractall(temp_path)
 
                 restored = 0
@@ -360,7 +360,7 @@ class ConfigCleanupService:
             file_checksums: dict[str, str] = {}
             total_size = 0
 
-            with tarfile.open(backup_archive, "w: gz") as tar:
+            with tarfile.open(str(backup_archive), "w|gz") as tar:
                 for file_path in files:
                     if file_path.exists():
                         content = file_path.read_bytes()

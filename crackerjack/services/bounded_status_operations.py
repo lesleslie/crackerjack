@@ -5,7 +5,7 @@ import time
 import typing as t
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from threading import RLock
 
 import psutil
@@ -18,7 +18,7 @@ from crackerjack.models.protocols import (
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
 
-class OperationState(str, Enum):
+class OperationState(StrEnum):
     CLOSED = "closed"
     OPEN = "open"
     HALF_OPEN = "half_open"

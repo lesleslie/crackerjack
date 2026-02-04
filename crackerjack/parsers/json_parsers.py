@@ -1,5 +1,6 @@
 import json
 import logging
+import typing as t
 
 from crackerjack.agents.base import Issue, IssueType, Priority
 from crackerjack.parsers.base import JSONParser
@@ -326,10 +327,10 @@ class ComplexipyJSONParser(JSONParser):
             )
             return None
 
-    def _find_function_in_ast(self, tree: object, search_name: str) -> int | None:
+    def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
         import ast
 
-        for node in ast.walk(tree):
+        for node in ast.walk(t.cast(ast.AST, tree)):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name == search_name:
                     return node.lineno

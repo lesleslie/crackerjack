@@ -9,7 +9,7 @@ from crackerjack.services.input_validator import (
 )
 
 if t.TYPE_CHECKING:
-    from crackerjack.core.workflow_orchestrator import WorkflowOrchestrator
+    from crackerjack.core.workflow_orchestrator import WorkflowPipeline
 
 
 async def create_task_with_subagent(
@@ -165,7 +165,7 @@ def _configure_stage_options(stage: str) -> CrackerjackSettings:
 
 
 def _execute_stage(
-    orchestrator: "WorkflowOrchestrator",
+    orchestrator: "WorkflowPipeline",
     stage: str,
     settings: CrackerjackSettings,
 ) -> bool:
@@ -308,7 +308,7 @@ from crackerjack.services.git import GitService
 from crackerjack.services.initialization import InitializationService
 
 
-def _execute_init_stage(orchestrator: "WorkflowOrchestrator") -> bool:
+def _execute_init_stage(orchestrator: "WorkflowPipeline") -> bool:
     try:
         from pathlib import Path
 

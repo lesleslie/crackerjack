@@ -5,19 +5,19 @@ import secrets
 import time
 import typing as t
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from .security_logger import SecurityEventLevel, SecurityEventType, get_security_logger
 
 
-class AccessLevel(str, Enum):
+class AccessLevel(StrEnum):
     PUBLIC = "public"
     INTERNAL = "internal"
     ADMIN = "admin"
     DEBUG = "debug"
 
 
-class AuthenticationMethod(str, Enum):
+class AuthenticationMethod(StrEnum):
     API_KEY = "api_key"  # nosec B105
     JWT_TOKEN = "jwt_token"  # nosec B105
     HMAC_SIGNATURE = "hmac_signature"  # nosec B105

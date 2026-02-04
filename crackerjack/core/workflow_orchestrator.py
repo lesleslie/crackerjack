@@ -138,6 +138,22 @@ class WorkflowPipeline:
     def _log_workflow_startup_info(self, options: t.Any) -> None:
         pass
 
+    def run_fast_hooks_only(self, options: t.Any) -> bool:
+        return self.phases.run_fast_hooks_only(options)
+
+    def run_comprehensive_hooks_only(self, options: t.Any) -> bool:
+        return self.phases.run_comprehensive_hooks_only(options)
+
+    def run_testing_phase(self, options: t.Any) -> bool:
+        method = getattr(self.phases, "run_testing_phase")
+        result = method(options)
+        return t.cast(bool, result)
+
+    def run_cleaning_phase(self, options: t.Any) -> bool:
+        method = getattr(self.phases, "run_cleaning_phase")
+        result = method(options)
+        return t.cast(bool, result)
+
 
 def _workflow_result_success(result: dict[str, t.Any]) -> bool:
     results = result.get("results") if isinstance(result, dict) else None

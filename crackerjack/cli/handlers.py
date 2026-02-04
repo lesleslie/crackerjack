@@ -4,6 +4,8 @@ import os
 import typing as t
 from pathlib import Path
 
+from rich.console import Console
+
 from crackerjack.models.protocols import ConsoleInterface
 
 from .options import Options
@@ -74,8 +76,13 @@ def handle_mcp_server() -> None:
     start_mcp_main(project_path)
 
 
-def handle_watchdog_mode() -> None:
+def handle_watchdog_mode(console: ConsoleInterface | None = None) -> None:
     from crackerjack.mcp.service_watchdog import main as start_watchdog
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     try:
         asyncio.run(start_watchdog())
@@ -83,11 +90,16 @@ def handle_watchdog_mode() -> None:
         console.print("\n[yellow]🛑 Watchdog stopped[/ yellow]")
 
 
-def handle_stop_mcp_server() -> None:
+def handle_stop_mcp_server(console: ConsoleInterface | None = None) -> None:
     from crackerjack.services.server_manager import (
         list_server_status,
         stop_all_servers,
     )
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     console.print("[bold red]🛑 Stopping MCP Servers[/ bold red]")
 
@@ -100,8 +112,13 @@ def handle_stop_mcp_server() -> None:
         raise SystemExit(1)
 
 
-def handle_restart_mcp_server() -> None:
+def handle_restart_mcp_server(console: ConsoleInterface | None = None) -> None:
     from crackerjack.services.server_manager import restart_mcp_server
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     if restart_mcp_server():
         console.print("\n[bold green]✅ MCP server restart completed[/ bold green]")
@@ -110,10 +127,19 @@ def handle_restart_mcp_server() -> None:
         raise SystemExit(1)
 
 
-def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
+def handle_start_zuban_lsp(
+    port: int = 8677,
+    mode: str = "tcp",
+    console: Console | None = None,
+) -> None:
     from crackerjack.services.zuban_lsp_service import (
         create_zuban_lsp_service,
     )
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     console.print("[bold cyan]🚀 Starting Zuban LSP Server[/bold cyan]")
 
@@ -137,8 +163,13 @@ def handle_start_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
         console.print("\n[yellow]🛑 Zuban LSP startup interrupted[/yellow]")
 
 
-def handle_stop_zuban_lsp() -> None:
+def handle_stop_zuban_lsp(console: ConsoleInterface | None = None) -> None:
     from crackerjack.services.server_manager import stop_zuban_lsp
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     console.print("[bold red]🛑 Stopping Zuban LSP Server[/bold red]")
 
@@ -151,8 +182,17 @@ def handle_stop_zuban_lsp() -> None:
         raise SystemExit(1)
 
 
-def handle_restart_zuban_lsp(port: int = 8677, mode: str = "tcp") -> None:
+def handle_restart_zuban_lsp(
+    port: int = 8677,
+    mode: str = "tcp",
+    console: ConsoleInterface | None = None,
+) -> None:
     from crackerjack.services.server_manager import restart_zuban_lsp
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     if restart_zuban_lsp():
         console.print(
@@ -185,8 +225,16 @@ def handle_standard_mode(
     )
 
 
-def handle_config_updates(options: Options) -> None:
+def handle_config_updates(
+    options: Options,
+    console: Console | None = None,
+) -> None:
     from crackerjack.services.config_template import ConfigTemplateService
+
+    if console is None:
+        from crackerjack.core.console import CrackerjackConsole
+
+        console = CrackerjackConsole()
 
     pkg_path = Path.cwd()
     config_service = ConfigTemplateService(console, pkg_path)

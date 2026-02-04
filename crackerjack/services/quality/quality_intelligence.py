@@ -2,7 +2,7 @@ import json
 import typing as t
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 import numpy as np
@@ -24,7 +24,7 @@ except (ImportError, SyntaxError):
     SCIPY_AVAILABLE = False
 
 
-class AnomalyType(str, Enum):
+class AnomalyType(StrEnum):
     SPIKE = "spike"
     DROP = "drop"
     DRIFT = "drift"
@@ -32,7 +32,7 @@ class AnomalyType(str, Enum):
     OUTLIER = "outlier"
 
 
-class PatternType(str, Enum):
+class PatternType(StrEnum):
     CYCLIC = "cyclic"
     SEASONAL = "seasonal"
     CORRELATION = "correlation"
@@ -442,8 +442,6 @@ class QualityIntelligenceService(QualityIntelligenceProtocol):
             if 0 in (np.var(values1), np.var(values2)):
                 return None
 
-            # scipy.stats.pearsonr returns tuple of (correlation, p_value)
-            # Type stubs may be imprecise, so we cast to the correct types
             result = stats.pearsonr(values1, values2)
             correlation = t.cast(float, result[0])
             p_value = t.cast(float, result[1])

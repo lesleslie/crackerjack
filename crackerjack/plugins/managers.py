@@ -24,7 +24,9 @@ class PluginManager:
         self.registry = t.cast(PluginRegistry, registry or get_plugin_registry())
         self.hook_registry = hook_registry or get_hook_plugin_registry()
 
-        self.loader = PluginLoader(self.registry)
+        self.loader = PluginLoader(
+            t.cast("PluginRegistryProtocol | None", self.registry)
+        )
         self.discovery = PluginDiscovery(self.loader)
         self.logger = logging.getLogger("crackerjack.plugin_manager")
 

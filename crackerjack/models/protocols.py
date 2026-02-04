@@ -261,7 +261,7 @@ class GitInterface(t.Protocol):
             self, since: str, project_root: Path
         ) -> list[str]: ...
 
-        def get_unstaged_files(self, project_root: Path) -> list[Path]: ...
+        def get_unstaged_files(self) -> list[str]: ...
 
         def push_with_tags(self) -> bool: ...
 
@@ -702,6 +702,8 @@ class AdapterFactoryProtocol(t.Protocol):
 
 @t.runtime_checkable
 class DebuggerProtocol(t.Protocol):
+    enabled: bool
+
     @contextlib.contextmanager
     def debug_operation(self, operation: str, **kwargs: t.Any) -> t.Iterator[str]: ...
 
@@ -841,7 +843,6 @@ class VersionAnalyzerProtocol(t.Protocol):
 
 if t.TYPE_CHECKING:
     from crackerjack.config.hooks import HookDefinition
-    from crackerjack.models.results import ExecutionResult
 
 
 @t.runtime_checkable
@@ -851,7 +852,7 @@ class AsyncCommandExecutorProtocol(t.Protocol):
         command: list[str],
         cwd: Path | None = None,
         timeout: int = 60,
-    ) -> ExecutionResult: ...
+    ) -> "ExecutionResult": ...
 
 
 @t.runtime_checkable

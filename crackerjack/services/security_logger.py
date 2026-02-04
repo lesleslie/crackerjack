@@ -3,13 +3,13 @@ import logging
 import os
 import time
 import typing as t
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from pydantic import BaseModel
 
 
-class SecurityEventType(str, Enum):
+class SecurityEventType(StrEnum):
     PATH_TRAVERSAL_ATTEMPT = "path_traversal_attempt"
     FILE_SIZE_EXCEEDED = "file_size_exceeded"
     DANGEROUS_PATH_DETECTED = "dangerous_path_detected"
@@ -86,7 +86,7 @@ class SecurityEventType(str, Enum):
     INVALID_INPUT = "invalid_input"
 
 
-class SecurityEventLevel(str, Enum):
+class SecurityEventLevel(StrEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"

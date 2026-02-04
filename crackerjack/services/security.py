@@ -235,53 +235,38 @@ class SecurityService(SecurityServiceProtocol):
         command = cmd[0].split("/")[-1]
         return command not in dangerous_commands
 
-    # ServiceProtocol methods
     def initialize(self) -> None:
-        """Initialize the service (no-op for security service)."""
         pass
 
     def cleanup(self) -> None:
-        """Cleanup resources (no-op for security service)."""
         pass
 
     def health_check(self) -> bool:
-        """Check if service is healthy."""
         return True
 
     def shutdown(self) -> None:
-        """Shutdown the service (no-op for security service)."""
         pass
 
     def metrics(self) -> dict[str, t.Any]:
-        """Return service metrics."""
         return {"service": "SecurityService", "healthy": True}
 
     def is_healthy(self) -> bool:
-        """Check if service is healthy."""
         return True
 
     def register_resource(self, resource: t.Any) -> None:
-        """Register a resource (no-op for security service)."""
         pass
 
     def cleanup_resource(self, resource: t.Any) -> None:
-        """Cleanup a resource (no-op for security service)."""
         pass
 
-    # Metric tracking methods
     def get_custom_metric(self, name: str) -> t.Any:
-        """Get a custom metric value."""
         return None
 
     def increment_requests(self) -> None:
-        """Increment request counter (no-op for security service)."""
         pass
 
     def record_error(self, error: Exception) -> None:
-        """Record an error (no-op for security service)."""
         pass
 
     def set_custom_metric(self, name: str, value: t.Any) -> None:
-        """Set a custom metric value (no-op for security service)."""
         pass
-

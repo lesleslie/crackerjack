@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import Any
 from uuid import UUID
@@ -9,7 +9,7 @@ from uuid import UUID
 from pydantic import BaseModel, Field
 
 
-class QAResultStatus(str, Enum):
+class QAResultStatus(StrEnum):
     SUCCESS = "success"
     FAILURE = "failure"
     WARNING = "warning"
@@ -17,7 +17,7 @@ class QAResultStatus(str, Enum):
     ERROR = "error"
 
 
-class QACheckType(str, Enum):
+class QACheckType(StrEnum):
     LINT = "lint"
     FORMAT = "format"
     TYPE = "type"
