@@ -4,11 +4,11 @@ import time
 import typing as t
 import uuid
 from dataclasses import asdict, dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 
-class StageStatus(str, Enum):
+class StageStatus(StrEnum):
     PENDING = "pending"
     RUNNING = "running"
     COMPLETED = "completed"
@@ -16,7 +16,7 @@ class StageStatus(str, Enum):
     ERROR = "error"
 
 
-class Priority(str, Enum):
+class Priority(StrEnum):
     CRITICAL = "critical"
     HIGH = "high"
     MEDIUM = "medium"

@@ -123,8 +123,6 @@ def _check_adapters(pkg_path: Path) -> ComponentHealth:
             )
 
         try:
-            from crackerjack.adapters.factory import DefaultAdapterFactory
-
             results["adapter_factory"] = HealthCheckResult.healthy(
                 message="DefaultAdapterFactory is available",
                 component_name="DefaultAdapterFactory",

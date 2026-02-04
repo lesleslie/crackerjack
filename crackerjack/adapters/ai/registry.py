@@ -1,13 +1,13 @@
 import logging
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
 
 logger = logging.getLogger(__name__)
 
 
-class ProviderID(str, Enum):
+class ProviderID(StrEnum):
     CLAUDE = "claude"
     QWEN = "qwen"
     OLLAMA = "ollama"

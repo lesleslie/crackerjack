@@ -1,5 +1,5 @@
 import typing as t
-from enum import Enum
+from enum import StrEnum
 
 import click
 import typer
@@ -54,7 +54,7 @@ def parse_bump_option_with_flag_support(
     return value
 
 
-class BumpOption(str, Enum):
+class BumpOption(StrEnum):
     patch = "patch"
     minor = "minor"
     major = "major"

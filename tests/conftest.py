@@ -106,8 +106,12 @@ def reset_hook_lock_manager_singleton():
     HookLockManager starts fresh for each test, preventing state leakage
     from other tests. The singleton pattern is preserved but the instance
     is reset between tests.
+
+    NOTE: Import of HookLockManager is lazy (inside fixture) to avoid
+    expensive import chain during test collection. The import triggers
+    crackerjack.api which takes ~4 seconds to load.
     """
-    # Import here to avoid circular imports
+    # Lazy import here to avoid circular imports and reduce collection time
     from crackerjack.executors.hook_lock_manager import HookLockManager
 
     # Get existing instance if any and cancel its heartbeat tasks to prevent resource leaks

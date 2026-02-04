@@ -2,7 +2,7 @@ import json
 import typing as t
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from crackerjack.services.cache import CrackerjackCache
@@ -12,14 +12,14 @@ from crackerjack.services.quality.quality_baseline import (
 )
 
 
-class TrendDirection(str, Enum):
+class TrendDirection(StrEnum):
     IMPROVING = "improving"
     DECLINING = "declining"
     STABLE = "stable"
     VOLATILE = "volatile"
 
 
-class AlertSeverity(str, Enum):
+class AlertSeverity(StrEnum):
     INFO = "info"
     WARNING = "warning"
     CRITICAL = "critical"

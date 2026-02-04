@@ -714,14 +714,14 @@ def get_ai_agent_debugger() -> DebuggerProtocol:
 
         if debug_enabled:
             _ai_agent_debugger = t.cast(
-                DebuggerProtocol,
+                AIAgentDebugger | NoOpDebugger,
                 AIAgentDebugger(
                     enabled=debug_enabled,
                     verbose=verbose_mode,
                 ),
             )
         else:
-            _ai_agent_debugger = t.cast(DebuggerProtocol, NoOpDebugger())
+            _ai_agent_debugger = t.cast(AIAgentDebugger | NoOpDebugger, NoOpDebugger())
     return t.cast(DebuggerProtocol, _ai_agent_debugger)
 
 

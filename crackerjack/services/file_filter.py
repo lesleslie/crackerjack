@@ -63,7 +63,8 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
         return [Path(f) for f in files_str]
 
     def get_unstaged_files(self) -> list[Path]:
-        return self._git_service.get_unstaged_files(self.project_root)
+        files_str = self._git_service.get_unstaged_files()
+        return [Path(f) for f in files_str]
 
     def filter_by_pattern(self, files: list[Path], pattern: str) -> list[Path]:
         return [

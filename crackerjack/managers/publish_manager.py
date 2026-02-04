@@ -15,6 +15,9 @@ from crackerjack.models.protocols import (
     VersionAnalyzerProtocol,
 )
 
+if t.TYPE_CHECKING:
+    from crackerjack.services.git import GitService
+
 
 class _NullGitService:
     def is_git_repo(self) -> bool:
@@ -96,7 +99,10 @@ class PublishManagerImpl:
         try:
             from crackerjack.services.version_analyzer import VersionAnalyzer
 
-            return t.cast(VersionAnalyzerProtocol, VersionAnalyzer(self._git_service))
+            return t.cast(
+                VersionAnalyzerProtocol,
+                VersionAnalyzer(t.cast("GitService", self._git_service)),
+            )
         except Exception:
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 

@@ -356,19 +356,46 @@ class TestCommandBuilder:
         return False
 
     def _add_worker_count_options(self, cmd: list[str], workers: str | int) -> None:
+        dist_mode = self.settings.testing.xdist_dist_mode
+
         if workers == "auto":
-            cmd.extend(["-n", "auto", "--dist=loadfile"])
-            if self.console:
-                self.console.print(
-                    "[cyan]🚀 Tests running with auto-detected workers (--dist=loadfile)[/cyan]",
-                )
+            self._add_auto_workers(cmd, dist_mode)
         elif isinstance(workers, int) and workers > 1:
-            cmd.extend(["-n", str(workers), "--dist=loadfile"])
-            if self.console:
-                self.console.print(
-                    f"[cyan]🚀 Tests running with {workers} workers (--dist=loadfile)[/cyan]",
-                )
-        elif self.console:
+            self._add_explicit_workers(cmd, workers, dist_mode)
+        else:
+            self._print_sequential_message()
+
+    def _add_auto_workers(self, cmd: list[str], dist_mode: str) -> None:
+        if dist_mode != "no":
+            cmd.extend(["-n", "auto", f"--dist={dist_mode}"])
+            self._print_worker_message("auto-detected workers", dist_mode)
+        else:
+            cmd.extend(["-n", "auto"])
+            self._print_worker_message("auto-detected workers")
+
+    def _add_explicit_workers(self, cmd: list[str], workers: int, dist_mode: str) -> None:
+        if dist_mode != "no":
+            cmd.extend(["-n", str(workers), f"--dist={dist_mode}"])
+            self._print_worker_message(f"{workers} workers", dist_mode)
+        else:
+            cmd.extend(["-n", str(workers)])
+            self._print_worker_message(f"{workers} workers")
+
+    def _print_worker_message(self, worker_count: str, dist_mode: str | None = None) -> None:
+        if not self.console:
+            return
+
+        if dist_mode:
+            self.console.print(
+                f"[cyan]🚀 Tests running with {worker_count} (--dist={dist_mode})[/cyan]",
+            )
+        else:
+            self.console.print(
+                f"[cyan]🚀 Tests running with {worker_count}[/cyan]",
+            )
+
+    def _print_sequential_message(self) -> None:
+        if self.console:
             self.console.print("[cyan]🧪 Tests running sequentially[/cyan]")
 
     def _add_benchmark_options(self, cmd: list[str], options: OptionsProtocol) -> None:
@@ -445,6 +472,6 @@ class TestCommandBuilder:
             "-m",
             "pytest",
             "--collect-only",
-
+            "--no-cov",
             "tests" if (self.pkg_path / "tests").exists() else ".",
         ]

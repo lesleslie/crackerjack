@@ -68,6 +68,10 @@ class QACheckConfig(BaseModel):
     def is_comprehensive_stage(self) -> bool:
         return self.stage == "comprehensive"
 
+    @property
+    def name(self) -> str:
+        return self.check_name
+
 
 class QAOrchestratorConfig(BaseModel):
     project_root: Path = Field(

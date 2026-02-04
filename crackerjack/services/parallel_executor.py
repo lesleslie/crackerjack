@@ -5,7 +5,7 @@ import time
 import typing as t
 from contextlib import suppress
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 
-class ExecutionStrategy(str, Enum):
+class ExecutionStrategy(StrEnum):
     SEQUENTIAL = "sequential"
     PARALLEL_SAFE = "parallel_safe"
     PARALLEL_AGGRESSIVE = "parallel_aggressive"
@@ -157,10 +157,12 @@ class ParallelHookExecutor(ParallelHookExecutorProtocol, ServiceProtocol):
                 lambda h: h.name in {"check-yaml", "check-json", "check-toml"},
             ),
             (
-                lambda h: not h.is_formatting
-                and h.security_level == SecurityLevel.MEDIUM,
-                lambda h: not h.is_formatting
-                and h.security_level == SecurityLevel.MEDIUM,
+                lambda h: (
+                    not h.is_formatting and h.security_level == SecurityLevel.MEDIUM
+                ),
+                lambda h: (
+                    not h.is_formatting and h.security_level == SecurityLevel.MEDIUM
+                ),
             ),
         ]
 
@@ -314,15 +316,12 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         self._thread_pool = ThreadPoolExecutor(max_workers=max_workers)
 
     def initialize(self) -> None:
-        """Initialize the executor (no-op for thread pool executor)."""
         pass
 
     def cleanup(self) -> None:
-        """Cleanup resources (no-op, use shutdown instead)."""
         pass
 
     def health_check(self) -> bool:
-        """Check if the executor is healthy."""
         return True
 
     async def execute(
@@ -330,7 +329,6 @@ class AsyncCommandExecutor(AsyncCommandExecutorProtocol, ServiceProtocol):
         command: list[str],
         timeout: int = 300,
     ) -> t.Any:
-        """Execute a command asynchronously (protocol compliance method)."""
         result = await self.execute_command(command, timeout=timeout)
         return result
 

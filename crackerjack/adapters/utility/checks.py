@@ -4,7 +4,7 @@ import asyncio
 import logging
 import subprocess
 import typing as t
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 from uuid import UUID
 
@@ -28,7 +28,7 @@ MODULE_STATUS = AdapterStatus.STABLE
 logger = logging.getLogger(__name__)
 
 
-class UtilityCheckType(str, Enum):
+class UtilityCheckType(StrEnum):
     TEXT_PATTERN = "text_pattern"
     SYNTAX_VALIDATION = "syntax_validation"
     SIZE_CHECK = "size_check"

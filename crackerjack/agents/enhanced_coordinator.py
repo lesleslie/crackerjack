@@ -246,11 +246,15 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
 def create_enhanced_coordinator(
     context: AgentContext,
+    tracker: AgentTrackerProtocol,
+    debugger: DebuggerProtocol,
     cache: t.Any = None,
     enable_external_agents: bool = True,
 ) -> EnhancedAgentCoordinator:
     return EnhancedAgentCoordinator(
         context=context,
+        tracker=tracker,
+        debugger=debugger,
         cache=cache,
         enable_external_agents=enable_external_agents,
     )

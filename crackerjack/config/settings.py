@@ -37,6 +37,9 @@ class TestSettings(Settings):
     xcode_scheme: str = "MdInjectApp"
     xcode_configuration: str = "Debug"
     xcode_destination: str = "platform=macOS"
+    xdist_dist_mode: t.Literal["loadfile", "each", "loadscope", "no"] = "loadfile"
+    xdist_timeout_seconds: int = 60
+    xdist_fallback_to_sequential: bool = True
 
 
 class PublishSettings(Settings):
@@ -166,7 +169,7 @@ class AdapterTimeouts(Settings):
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
     pip_audit_timeout: int = 120
-    creosote_timeout: int = 120
+    creosote_timeout: int = 300
     complexipy_timeout: int = 60
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60

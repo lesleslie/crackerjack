@@ -37,7 +37,6 @@ def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[
             files.extend(Path.cwd().rglob(f"*{ext}"))
         return [f for f in files if f.is_file()]
 
-    # Use git to find files first
     git_files: list[Path] = []
     for ext in extensions:
         pattern = f"*{ext}"
@@ -48,7 +47,6 @@ def get_files_by_extension(extensions: list[str], use_git: bool = True) -> list[
     if git_files:
         return git_files
 
-    # Fallback to filesystem search
     result: list[Path] = []
     for ext in extensions:
         result.extend(Path.cwd().rglob(f"*{ext}"))

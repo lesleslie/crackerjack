@@ -15,7 +15,10 @@ from crackerjack.config.hooks import (
     HookStrategy,
     RetryPolicy,
 )
-from crackerjack.models.protocols import HookLockManagerProtocol
+from crackerjack.models.protocols import (
+    ConsoleInterface,
+    HookLockManagerProtocol,
+)
 from crackerjack.models.task import HookResult
 from crackerjack.services.logging import LoggingContext
 
@@ -64,7 +67,7 @@ class AsyncHookExecutionResult:
 class AsyncHookExecutor:
     def __init__(
         self,
-        console: Console,
+        console: "Console | ConsoleInterface",
         pkg_path: Path,
         max_concurrent: int = 4,
         timeout: int = 300,

@@ -2,7 +2,7 @@ import tempfile
 import time
 import typing as t
 from contextlib import suppress
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from crackerjack.models.protocols import SecureStatusFormatterProtocol, ServiceProtocol
@@ -11,7 +11,7 @@ from .regex_patterns import SAFE_PATTERNS, CompiledPatternCache, sanitize_intern
 from .security_logger import get_security_logger
 
 
-class StatusVerbosity(str, Enum):
+class StatusVerbosity(StrEnum):
     MINIMAL = "minimal"
     STANDARD = "standard"
     DETAILED = "detailed"
