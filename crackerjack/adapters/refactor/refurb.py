@@ -18,6 +18,7 @@ from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
+    from crackerjack.services.file_filter import SmartFileFilter
 
 
 MODULE_ID = UUID("0f3546f6-4e29-4d9d-98f8-43c6f3c21a4e")
@@ -40,11 +41,19 @@ class RefurbSettings(ToolAdapterSettings):
 class RefurbAdapter(BaseToolAdapter):
     settings: RefurbSettings | None = None
 
-    def __init__(self, settings: RefurbSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: RefurbSettings | None = None,
+        file_filter: SmartFileFilter | None = None,
+    ) -> None:
         super().__init__(settings=settings)
+        self.file_filter = file_filter
         logger.debug(
             "RefurbAdapter initialized",
-            extra={"has_settings": settings is not None},
+            extra={
+                "has_settings": settings is not None,
+                "has_file_filter": file_filter is not None,
+            },
         )
 
     async def init(self) -> None:
@@ -82,7 +91,7 @@ class RefurbAdapter(BaseToolAdapter):
 
     def build_command(
         self,
-        files: list[Path],
+        files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
@@ -108,16 +117,24 @@ class RefurbAdapter(BaseToolAdapter):
         if self.settings.explain:
             cmd.append("--explain")
 
-        cmd.extend([str(f) for f in files])
+        if files is None and self.file_filter:
+            files = self.file_filter.get_files_for_qa_scan(
+                package_dir=Path.cwd(),
+                force_incremental=getattr(self.settings, "incremental_mode", False),
+            )
+
+        files_to_scan = files if files is not None else []
+        cmd.extend([str(f) for f in files_to_scan])
 
         logger.info(
             "Built Refurb command",
             extra={
-                "file_count": len(files),
+                "file_count": len(files_to_scan),
                 "enable_all": self.settings.enable_all,
                 "enable_checks_count": len(self.settings.enable_checks),
                 "disable_checks_count": len(self.settings.disable_checks),
                 "explain": self.settings.explain,
+                "incremental_mode": self.file_filter is not None,
             },
         )
         return cmd

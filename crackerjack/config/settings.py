@@ -27,6 +27,7 @@ class TestSettings(Settings):
     benchmark: bool = False
     test_workers: int = 0
     test_timeout: int = 0
+    incremental_tests: bool = True
     auto_detect_workers: bool = True
     max_workers: int = 8
     min_workers: int = 2
@@ -235,6 +236,30 @@ class DocUpdateSettings(Settings):
     max_tokens: int = 4096
 
 
+class IncrementalQASettings(Settings):
+    enabled: bool = True
+    full_scan_threshold: int = 50
+    base_branch: str = "main"
+    force_incremental: bool = False
+    force_full: bool = False
+
+
+class FileChunkingSettings(Settings):
+    enabled: bool = False
+    chunk_size: int = 50
+    overlap_percentage: int = 10
+
+
+class FastHooksSettings(Settings):
+    """Settings for incremental fast hooks (only process changed files)."""
+
+    incremental: bool = True
+    full_scan_threshold: int = 50
+    base_branch: str = "main"
+    force_incremental: bool = False
+    force_full: bool = False
+
+
 class CrackerjackSettings(Settings):
     console: ConsoleSettings = ConsoleSettings()
     cleaning: CleaningSettings = CleaningSettings()
@@ -255,6 +280,9 @@ class CrackerjackSettings(Settings):
     config_cleanup: ConfigCleanupSettings = ConfigCleanupSettings()
     git_cleanup: GitCleanupSettings = GitCleanupSettings()
     doc_updates: DocUpdateSettings = DocUpdateSettings()
+    incremental_qa: IncrementalQASettings = IncrementalQASettings()
+    file_chunking: FileChunkingSettings = FileChunkingSettings()
+    fast_hooks: FastHooksSettings = FastHooksSettings()
     enable_orchestration: bool = True
     orchestration_mode: str = "oneiric"
     enable_caching: bool = True

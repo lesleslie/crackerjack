@@ -145,12 +145,15 @@ class Options(BaseModel):
 
     strip_code: bool | None = None
     run_tests: bool = False
+    incremental_tests: bool = True
+    fast_hooks_incremental: bool = True
     xcode_tests: bool = False
     xcode_project: str = "app/MdInjectApp/MdInjectApp.xcodeproj"
     xcode_scheme: str = "MdInjectApp"
     xcode_configuration: str = "Debug"
     xcode_destination: str = "platform=macOS"
     ai_fix: bool | None = None
+    ai_fix_show_agent_bars: bool = False
     select_provider: bool = False
     dry_run: bool = False
     full_release: str | None = None
@@ -608,6 +611,22 @@ CLI_OPTIONS = {
             "and timeout handling."
         ),
     ),
+    "incremental_tests": typer.Option(
+        True,
+        "--incremental-tests/--full-tests",
+        help=(
+            "Use incremental test execution via snob (default: enabled). "
+            "Only runs tests affected by recent changes."
+        ),
+    ),
+    "fast_hooks_incremental": typer.Option(
+        True,
+        "--fast-hooks-incremental/--fast-hooks-full",
+        help=(
+            "Use incremental fast hooks (default: enabled). "
+            "Only processes changed files for formatting and linting."
+        ),
+    ),
     "xcode_tests": typer.Option(
         False,
         "--xcode-tests",
@@ -641,6 +660,16 @@ CLI_OPTIONS = {
             "Iteratively fixes code issues using Claude AI. "
             "Requires ANTHROPIC_API_KEY environment variable. "
             "Max 10 iterations, stops when all hooks pass."
+        ),
+    ),
+    "ai_fix_show_agent_bars": typer.Option(
+        False,
+        "--ai-show-agent-bars",
+        help=(
+            "Show per-agent progress bars during AI-fix (default: disabled). "
+            "Displays parallel progress for each specialized agent "
+            "(RefactoringAgent, SecurityAgent, etc.). "
+            "Use with --ai-fix flag for detailed progress tracking."
         ),
     ),
     "ai_fix_max_iterations": typer.Option(

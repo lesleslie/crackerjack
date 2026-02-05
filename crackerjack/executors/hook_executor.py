@@ -67,6 +67,7 @@ class HookExecutor:
         debug: bool = False,
         use_incremental: bool = False,
         git_service: t.Any | None = None,
+        file_filter: t.Any | None = None,  # SmartFileFilter
     ) -> None:
         self.console = console
         self.pkg_path = pkg_path
@@ -75,6 +76,7 @@ class HookExecutor:
         self.debug = debug
         self.use_incremental = use_incremental
         self.git_service = git_service
+        self.file_filter = file_filter  # Use SmartFileFilter for incremental hooks
 
         self._progress_callback: t.Callable[[int, int], None] | None = None
         self._progress_start_callback: t.Callable[[int, int], None] | None = None
@@ -310,9 +312,33 @@ class HookExecutor:
             return self._create_error_result(hook, start_time, e)
 
     def _get_changed_files_for_hook(self, hook: HookDefinition) -> list[Path] | None:
+        """Get changed files for this hook using SmartFileFilter (preferred) or git_service (fallback)."""
         if not self.use_incremental or not hook.accepts_file_paths:
             return None
 
+        # Preferred: Use SmartFileFilter (new infrastructure)
+        if self.file_filter:
+            try:
+                from crackerjack.services.file_filter import SmartFileFilter
+
+                if isinstance(self.file_filter, SmartFileFilter):
+                    all_changed_files = self.file_filter.get_files_for_qa_scan(
+                        package_dir=self.pkg_path,
+                        force_incremental=True,
+                    )
+
+                    # Filter by file type based on hook
+                    filtered_files = self._filter_files_by_hook_type(
+                        all_changed_files, hook.name
+                    )
+
+                    if filtered_files:
+                        return filtered_files
+            except Exception:
+                # Fall back to git_service if SmartFileFilter fails
+                pass
+
+        # Fallback: Use git_service (old infrastructure)
         if not self.git_service:
             return None
 
@@ -342,6 +368,33 @@ class HookExecutor:
         changed_files = self.git_service.get_changed_files_by_extension(extensions)
 
         return changed_files or None
+
+    def _filter_files_by_hook_type(
+        self, files: list[Path], hook_name: str
+    ) -> list[Path]:
+        """Filter files based on hook type (Python, Markdown, JSON, etc.)."""
+        extension_map = {
+            "ruff-check": [".py"],
+            "ruff-format": [".py"],
+            "mdformat": [".md"],
+            "check-yaml": [".yaml", ".yml"],
+            "check-toml": [".toml"],
+            "check-json": [".json"],
+            "check-ast": [".py"],
+            "format-json": [".json"],
+            "codespell": [".py", ".md", ".txt", ".rst"],
+            "trailing-whitespace": [],  # All files
+            "end-of-file-fixer": [],  # All files
+        }
+
+        extensions = extension_map.get(hook_name, [])
+
+        # Empty list = all files
+        if not extensions:
+            return files
+
+        # Filter by extension
+        return [f for f in files if f.suffix in extensions]
 
     def _run_hook_subprocess(
         self,
@@ -733,7 +786,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 

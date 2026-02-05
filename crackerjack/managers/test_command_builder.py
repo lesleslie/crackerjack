@@ -1,3 +1,4 @@
+import logging
 import os
 from pathlib import Path
 
@@ -6,6 +7,8 @@ from rich.console import Console
 
 from crackerjack.config.settings import CrackerjackSettings
 from crackerjack.models.protocols import OptionsProtocol
+
+logger = logging.getLogger(__name__)
 
 
 def parse_pytest_addopts(addopts: str | list) -> list[str]:
@@ -49,15 +52,120 @@ class TestCommandBuilder:
         self.console = console
         self.settings = settings
 
+    def _get_incremental_tests(self, options: OptionsProtocol) -> list[Path] | None:
+        """Get test files affected by recent changes using snob.
+
+        Uses git diff to find changed files, then snob to determine which tests
+        are affected based on dependency graph analysis.
+
+        Args:
+            options: Command options
+
+        Returns:
+            List of test file paths to run, or None if no incremental filtering
+        """
+        # Check if incremental testing is enabled
+        if not getattr(options, "incremental_tests", True):
+            return None
+
+        try:
+            import subprocess
+
+            # Get files changed in last 10 commits
+            result = subprocess.run(
+                ["git", "diff", "--name-only", "HEAD~10"],
+                capture_output=True,
+                text=True,
+                check=False,  # Don't fail if not in git repo
+            )
+
+            if result.returncode != 0:
+                logger.debug("Not in git repo or no git changes, skipping incremental")
+                return None
+
+            changed_files = result.stdout.strip().split("\n")
+            logger.debug(f"Found {len(changed_files)} changed files")
+
+            # Filter to Python files only
+            changed_py_files = [
+                f for f in changed_files
+                if f.endswith(".py") and not f.startswith("tests/")
+            ]
+
+            if not changed_py_files:
+                logger.info("No Python files changed in recent commits")
+                return []
+
+            logger.debug(f"Changed Python files: {changed_py_files}")
+
+            # Use snob to find relevant tests
+            snob_input = "\n".join(changed_py_files)
+            snob_result = subprocess.run(
+                ["snob"],
+                input=snob_input,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+            if snob_result.returncode != 0:
+                logger.warning(f"snob failed: {snob_result.stderr}, falling back to full test run")
+                return None
+
+            relevant_tests = snob_result.stdout.strip().split("\n")
+            relevant_tests = [Path(t) for t in relevant_tests if t and t != ""]
+
+            if not relevant_tests or not relevant_tests[0]:
+                logger.info("No tests affected by changes (snob found none)")
+                return []
+
+            logger.info(
+                f"snob found {len(relevant_tests)} tests affected by "
+                f"{len(changed_py_files)} changed files"
+            )
+
+            return relevant_tests
+
+        except FileNotFoundError:
+            logger.warning("snob not found, falling back to full test run")
+            return None
+        except Exception as e:
+            logger.warning(f"Incremental test selection failed: {e}, falling back to full run")
+            return None
+
     def build_command(self, options: OptionsProtocol) -> list[str]:
         cmd = ["uv", "run", "python", "-m", "pytest"]
 
+        # Try incremental test selection with snob
+        incremental_tests = self._get_incremental_tests(options)
+
+        if incremental_tests is not None:
+            # Incremental mode: use only affected tests
+            if not incremental_tests:
+                # No tests affected, skip test run
+                self.console.print(
+                    "[cyan]✓ No tests affected by recent changes, skipping test run[/cyan]"
+                )
+                # Return a dummy command that does nothing
+                return ["pytest", "--collect-only", "--co-quiet"]
+            else:
+                # Run only affected tests
+                self.console.print(
+                    f"[cyan]Running {len(incremental_tests)} tests affected by changes "
+                    f"(snob)[/cyan]"
+                )
+                cmd.extend([str(t) for t in incremental_tests])
+
+        # Continue with normal command building
         self._add_coverage_options(cmd, options)
         self._add_worker_options(cmd, options)
         self._add_benchmark_options(cmd, options)
         self._add_timeout_options(cmd, options)
         self._add_verbosity_options(cmd, options)
-        self._add_test_path(cmd)
+
+        # Only add test path if not using incremental tests
+        if incremental_tests is None:
+            self._add_test_path(cmd)
 
         return cmd
 

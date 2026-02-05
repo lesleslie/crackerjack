@@ -181,7 +181,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=600,
+        timeout=180,  # Reduced from 600s (10min) to 180s (3min)
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=True,
@@ -244,7 +244,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="skylos",
         command=[],
-        timeout=600,
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -253,7 +253,7 @@ COMPREHENSIVE_HOOKS = [
     HookDefinition(
         name="refurb",
         command=[],
-        timeout=480,
+        timeout=180,
         stage=HookStage.COMPREHENSIVE,
         manual_stage=True,
         security_level=SecurityLevel.MEDIUM,
@@ -304,7 +304,7 @@ FAST_STRATEGY = HookStrategy(
     timeout=300,
     retry_policy=RetryPolicy.NONE,
     parallel=True,
-    max_workers=2,
+    max_workers=6,  # Match COMPREHENSIVE_STRATEGY (75% of 8 CPU cores)
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(
@@ -313,7 +313,7 @@ COMPREHENSIVE_STRATEGY = HookStrategy(
     timeout=1800,
     retry_policy=RetryPolicy.NONE,
     parallel=True,
-    max_workers=2,
+    max_workers=6,
 )
 
 
