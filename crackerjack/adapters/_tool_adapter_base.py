@@ -420,7 +420,6 @@ class BaseToolAdapter(QAAdapterBase):
             version_output = stdout_bytes.decode("utf-8", errors="replace")
             version = version_output.strip().split("\n")[0]
 
-            # Cache the version for subsequent calls
             self._tool_version = version
             return version
 

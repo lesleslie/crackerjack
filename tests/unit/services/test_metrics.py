@@ -830,13 +830,13 @@ class TestAgentSuccessRate:
         # Insert sample data
         with sqlite3.connect(temp_db_path) as conn:
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-1", "RefactoringAgent", "COMPLEXITY", True, 0.9, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-2", "RefactoringAgent", "COMPLEXITY", True, 0.85, datetime.now()),
@@ -853,14 +853,14 @@ class TestAgentSuccessRate:
             # 3 successes, 2 failures
             for i in range(3):
                 conn.execute(
-                    """INSERT INTO agent_executions 
+                    """INSERT INTO agent_executions
                        (job_id, agent_name, issue_type, success, confidence, timestamp)
                        VALUES (?, ?, ?, ?, ?, ?)""",
                     (f"job-success-{i}", "TestAgent", "TEST_FAILURE", True, 0.8, datetime.now()),
                 )
             for i in range(2):
                 conn.execute(
-                    """INSERT INTO agent_executions 
+                    """INSERT INTO agent_executions
                        (job_id, agent_name, issue_type, success, confidence, timestamp)
                        VALUES (?, ?, ?, ?, ?, ?)""",
                     (f"job-fail-{i}", "TestAgent", "TEST_FAILURE", False, 0.5, datetime.now()),
@@ -876,19 +876,19 @@ class TestAgentSuccessRate:
         with sqlite3.connect(temp_db_path) as conn:
             # Same agent, different issue types
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-1", "RefactoringAgent", "COMPLEXITY", True, 0.9, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-2", "RefactoringAgent", "COMPLEXITY", False, 0.7, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-3", "RefactoringAgent", "DEAD_CODE", True, 0.85, datetime.now()),
@@ -929,7 +929,7 @@ class TestProviderAvailability:
             # Insert recent successful requests
             for i in range(5):
                 conn.execute(
-                    """INSERT INTO provider_performance 
+                    """INSERT INTO provider_performance
                        (provider_id, success, latency_ms, timestamp)
                        VALUES (?, ?, ?, ?)""",
                     ("claude", True, 50.0 + i * 10, now - timedelta(minutes=i)),
@@ -947,14 +947,14 @@ class TestProviderAvailability:
             # 7 successes, 3 failures
             for i in range(7):
                 conn.execute(
-                    """INSERT INTO provider_performance 
+                    """INSERT INTO provider_performance
                        (provider_id, success, latency_ms, timestamp)
                        VALUES (?, ?, ?, ?)""",
                     ("qwen", True, 100.0, now - timedelta(minutes=i)),
                 )
             for i in range(3):
                 conn.execute(
-                    """INSERT INTO provider_performance 
+                    """INSERT INTO provider_performance
                        (provider_id, success, latency_ms, error_message, timestamp)
                        VALUES (?, ?, ?, ?, ?)""",
                     ("qwen", False, None, "API error", now - timedelta(minutes=7 + i)),
@@ -971,14 +971,14 @@ class TestProviderAvailability:
         with sqlite3.connect(temp_db_path) as conn:
             # Recent: 2 hours ago (within 24h window)
             conn.execute(
-                """INSERT INTO provider_performance 
+                """INSERT INTO provider_performance
                    (provider_id, success, latency_ms, timestamp)
                    VALUES (?, ?, ?, ?)""",
                 ("ollama", True, 200.0, now - timedelta(hours=2)),
             )
             # Old: 25 hours ago (outside 24h window)
             conn.execute(
-                """INSERT INTO provider_performance 
+                """INSERT INTO provider_performance
                    (provider_id, success, latency_ms, timestamp)
                    VALUES (?, ?, ?, ?)""",
                 ("ollama", False, None, now - timedelta(hours=25)),
@@ -1002,14 +1002,14 @@ class TestProviderAvailability:
         with sqlite3.connect(temp_db_path) as conn:
             # Within 1 hour
             conn.execute(
-                """INSERT INTO provider_performance 
+                """INSERT INTO provider_performance
                    (provider_id, success, latency_ms, timestamp)
                    VALUES (?, ?, ?, ?)""",
                 ("claude", True, 50.0, now - timedelta(minutes=30)),
             )
             # Outside 1 hour but within 24 hours
             conn.execute(
-                """INSERT INTO provider_performance 
+                """INSERT INTO provider_performance
                    (provider_id, success, latency_ms, timestamp)
                    VALUES (?, ?, ?, ?)""",
                 ("claude", False, None, now - timedelta(hours=2)),
@@ -1034,13 +1034,13 @@ class TestAgentConfidenceDistribution:
         with sqlite3.connect(temp_db_path) as conn:
             # Low confidence (< 0.5)
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-1", "TestAgent", "TEST_FAILURE", True, 0.3, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-2", "TestAgent", "TEST_FAILURE", False, 0.4, datetime.now()),
@@ -1048,13 +1048,13 @@ class TestAgentConfidenceDistribution:
 
             # Medium confidence (0.5 - 0.8)
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-3", "TestAgent", "TEST_FAILURE", True, 0.6, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-4", "TestAgent", "TEST_FAILURE", True, 0.75, datetime.now()),
@@ -1062,13 +1062,13 @@ class TestAgentConfidenceDistribution:
 
             # High confidence (>= 0.8)
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-5", "TestAgent", "TEST_FAILURE", True, 0.9, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-6", "TestAgent", "TEST_FAILURE", True, 0.95, datetime.now()),
@@ -1088,7 +1088,7 @@ class TestAgentConfidenceDistribution:
             # Only high confidence executions
             for i in range(3):
                 conn.execute(
-                    """INSERT INTO agent_executions 
+                    """INSERT INTO agent_executions
                        (job_id, agent_name, issue_type, success, confidence, timestamp)
                        VALUES (?, ?, ?, ?, ?, ?)""",
                     (f"job-{i}", "RefactoringAgent", "COMPLEXITY", True, 0.85 + i * 0.01, datetime.now()),
@@ -1108,13 +1108,13 @@ class TestAgentConfidenceDistribution:
         with sqlite3.connect(temp_db_path) as conn:
             # One with confidence, one without
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-1", "TestAgent", "TEST_FAILURE", True, 0.8, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-2", "TestAgent", "TEST_FAILURE", False, None, datetime.now()),
@@ -1141,13 +1141,13 @@ class TestAgentConfidenceDistribution:
         with sqlite3.connect(temp_db_path) as conn:
             # Exactly at boundaries: 0.5 (medium), 0.8 (high)
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-1", "TestAgent", "TEST", True, 0.5, datetime.now()),
             )
             conn.execute(
-                """INSERT INTO agent_executions 
+                """INSERT INTO agent_executions
                    (job_id, agent_name, issue_type, success, confidence, timestamp)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 ("job-2", "TestAgent", "TEST", True, 0.8, datetime.now()),

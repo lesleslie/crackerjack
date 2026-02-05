@@ -379,6 +379,11 @@ class CreosoteRegexParser(RegexParser):
             return self._parse_bulleted_dependency(line)
         if "unused-dependency" in line or "not being used" in line.lower():
             return self._parse_inline_dependency(line)
+
+        if line and not line.startswith(
+            ("Checked", "Found", "All dependencies", "---", "====")
+        ):
+            return [self._create_creosote_issue(line)]
         return []
 
     def _parse_unused_dependencies_list(self, line: str) -> list[Issue]:
@@ -405,7 +410,7 @@ class CreosoteRegexParser(RegexParser):
 
     def _create_creosote_issue(self, dep: str) -> Issue:
         return Issue(
-            type=IssueType.COMPLEXITY,
+            type=IssueType.DEPENDENCY,
             severity=Priority.MEDIUM,
             message=f"Unused dependency: {dep}",
             file_path="pyproject.toml",

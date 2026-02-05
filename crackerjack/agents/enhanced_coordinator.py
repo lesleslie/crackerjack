@@ -12,12 +12,6 @@ from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedAgentCoordinator(AgentCoordinator):
-    """Enhanced coordinator with AI provider fallback chain.
-
-    This coordinator automatically falls back through multiple AI providers
-    (Claude → Qwen → Ollama) to ensure 99%+ availability for AI-fix operations.
-    """
-
     claude_bridge: ClaudeCodeBridge | QwenCodeBridge
     provider_chain: ProviderChain | None = None
 
@@ -33,11 +27,11 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
         ai_settings = load_settings(AISettings)
 
-        # Initialize provider chain with prioritized providers
-        provider_ids = ai_settings.ai_providers
+        from crackerjack.adapters.ai.registry import ProviderID
+
+        provider_ids = [ProviderID(p) for p in ai_settings.ai_providers]
         self.provider_chain = ProviderChain(provider_ids)
 
-        # Legacy bridge initialization (for backward compatibility)
         # TODO: Deprecate in future version, use provider_chain directly
         if ai_settings.ai_provider == "qwen":
             self.claude_bridge = QwenCodeBridge(context)

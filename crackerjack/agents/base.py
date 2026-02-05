@@ -30,6 +30,7 @@ class IssueType(Enum):
     COVERAGE_IMPROVEMENT = "coverage_improvement"
     REGEX_VALIDATION = "regex_validation"
     SEMANTIC_CONTEXT = "semantic_context"
+    WARNING = "warning"
 
 
 @dataclass
@@ -89,10 +90,37 @@ class AgentContext:
         except Exception:
             return None
 
+    async def async_get_file_content(self, file_path: str | Path) -> str | None:
+        from crackerjack.services.async_file_io import async_read_file
+
+        try:
+            path = Path(file_path)
+            if not path.is_file():
+                return None
+            if path.stat().st_size > self.max_file_size:
+                return None
+            return await async_read_file(path)
+        except Exception:
+            return None
+
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
         try:
             path = Path(file_path)
             path.write_text(content, encoding="utf-8")
+            return True
+        except Exception:
+            return False
+
+    async def async_write_file_content(
+        self,
+        file_path: str | Path,
+        content: str,
+    ) -> bool:
+        from crackerjack.services.async_file_io import async_write_file
+
+        try:
+            path = Path(file_path)
+            await async_write_file(path, content)
             return True
         except Exception:
             return False

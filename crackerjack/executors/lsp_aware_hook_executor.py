@@ -27,7 +27,7 @@ class LSPAwareHookExecutor(HookExecutor):
         use_tool_proxy: bool = True,
         use_incremental: bool = False,
         git_service: t.Any | None = None,
-        file_filter: t.Any | None = None,  # SmartFileFilter
+        file_filter: t.Any | None = None,
     ) -> None:
         super().__init__(
             console,
@@ -37,7 +37,7 @@ class LSPAwareHookExecutor(HookExecutor):
             debug,
             use_incremental,
             git_service,
-            file_filter,  # Pass SmartFileFilter to parent
+            file_filter,
         )
         self.lsp_client = LSPClient()
         self.use_tool_proxy = use_tool_proxy and ToolProxy is not None

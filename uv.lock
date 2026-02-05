@@ -570,7 +570,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "fastmcp" },
     { name = "hatchling" },
-    { name = "hypothesis" },
     { name = "keyring" },
     { name = "linkcheckmd" },
     { name = "mcp" },
@@ -580,12 +579,9 @@ dependencies = [
     { name = "nltk" },
     { name = "numpy" },
     { name = "oneiric" },
-    { name = "onnxruntime" },
     { name = "pip-audit" },
-    { name = "psutil" },
     { name = "pydantic" },
     { name = "pyleak" },
-    { name = "pyright" },
     { name = "pyscn" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -642,7 +638,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.124.2" },
     { name = "fastmcp", specifier = ">=2.13.2" },
     { name = "hatchling", specifier = ">=1.28.0" },
-    { name = "hypothesis", specifier = ">=6.148.7" },
     { name = "keyring", specifier = ">=25.7.0" },
     { name = "linkcheckmd", specifier = ">=1.4.0" },
     { name = "mcp", specifier = ">=1.23.3" },
@@ -652,12 +647,9 @@ requires-dist = [
     { name = "nltk", specifier = ">=3.9.2" },
     { name = "numpy", specifier = ">=2.3.5" },
     { name = "oneiric", specifier = ">=0.3.2" },
-    { name = "onnxruntime", specifier = ">=1.23.2" },
     { name = "pip-audit", specifier = ">=2.10.0" },
-    { name = "psutil", specifier = ">=7.1.3" },
     { name = "pydantic", specifier = ">=2.12.5" },
     { name = "pyleak", specifier = ">=0.1.14" },
-    { name = "pyright", specifier = ">=1.1.407" },
     { name = "pyscn", specifier = "==1.5.0" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
@@ -1574,18 +1566,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/02/e7/94f8232d4a74cc99514c13a9f995811485a6903d48e5d952771ef6322e30/hyperframe-6.1.0.tar.gz", hash = "sha256:f630908a00854a7adeabd6382b43923a4c4cd4b821fcb527e6ab9e15382a3b08", size = 26566, upload-time = "2025-01-22T21:41:49.302Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/48/30/47d0bf6072f7252e6521f3447ccfa40b421b6824517f82854703d0f5a98b/hyperframe-6.1.0-py3-none-any.whl", hash = "sha256:b03380493a519fce58ea5af42e4a42317bf9bd425596f7a0835ffce80f1a42e5", size = 13007, upload-time = "2025-01-22T21:41:47.295Z" },
-]
-
-[[package]]
-name = "hypothesis"
-version = "6.151.5"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "sortedcontainers" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/4e/d7/c40dcd401cc360d8d084e584ffb7ab17255fde22e2b9cf2b53bf25aed629/hypothesis-6.151.5.tar.gz", hash = "sha256:ae3a0622f9693e6b19c697777c2c266c02801f9769ab7c2c37b7ec83d4743783", size = 475923, upload-time = "2026-02-03T19:33:55.845Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/c0/d9/53a8b53e75279a953fae608bd01025d9afcf393406c0da1dda1b7f5693c5/hypothesis-6.151.5-py3-none-any.whl", hash = "sha256:c0e15c91fa0e67bc0295551ef5041bebad42753b7977a610cd7a6ec1ad04ef13", size = 543338, upload-time = "2026-02-03T19:33:54.583Z" },
 ]
 
 [[package]]
@@ -2552,15 +2532,6 @@ wheels = [
 ]
 
 [[package]]
-name = "nodeenv"
-version = "1.10.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/24/bf/d1bda4f6168e0b2e9e5958945e01910052158313224ada5ce1fb2e1113b8/nodeenv-1.10.0.tar.gz", hash = "sha256:996c191ad80897d076bdfba80a41994c2b47c68e224c542b48feba42ba00f8bb", size = 55611, upload-time = "2025-12-20T14:08:54.006Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/88/b2/d0896bdcdc8d28a7fc5717c305f1a861c26e18c05047949fb371034d98bd/nodeenv-1.10.0-py2.py3-none-any.whl", hash = "sha256:5bb13e3eed2923615535339b3c620e76779af4cb4c6a90deccc9e36b274d3827", size = 23438, upload-time = "2025-12-20T14:08:52.782Z" },
-]
-
-[[package]]
 name = "numpy"
 version = "2.4.2"
 source = { registry = "https://pypi.org/simple" }
@@ -3317,19 +3288,6 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/0f/49/4cea918a08f02817aabae639e3d0ac046fef9f9180518a3ad394e22da148/pyreadline3-3.5.4.tar.gz", hash = "sha256:8d57d53039a1c75adba8e50dd3d992b28143480816187ea5efbd5c78e6c885b7", size = 99839, upload-time = "2024-09-19T02:40:10.062Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/5a/dc/491b7661614ab97483abf2056be1deee4dc2490ecbf7bff9ab5cdbac86e1/pyreadline3-3.5.4-py3-none-any.whl", hash = "sha256:eaf8e6cc3c49bcccf145fc6067ba8643d1df34d604a1ec0eccbf7a18e6d3fae6", size = 83178, upload-time = "2024-09-19T02:40:08.598Z" },
-]
-
-[[package]]
-name = "pyright"
-version = "1.1.408"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "nodeenv" },
-    { name = "typing-extensions" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/74/b2/5db700e52554b8f025faa9c3c624c59f1f6c8841ba81ab97641b54322f16/pyright-1.1.408.tar.gz", hash = "sha256:f28f2321f96852fa50b5829ea492f6adb0e6954568d1caa3f3af3a5f555eb684", size = 4400578, upload-time = "2026-01-08T08:07:38.795Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/0c/82/a2c93e32800940d9573fb28c346772a14778b84ba7524e691b324620ab89/pyright-1.1.408-py3-none-any.whl", hash = "sha256:090b32865f4fdb1e0e6cd82bf5618480d48eecd2eb2e70f960982a3d9a4c17c1", size = 6399144, upload-time = "2026-01-08T08:07:37.082Z" },
 ]
 
 [[package]]

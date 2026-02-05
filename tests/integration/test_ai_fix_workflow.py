@@ -216,6 +216,89 @@ dependencies = [
         assert "pytest-snob" not in written_content
         assert "pytest>=7.0.0" in written_content  # Other deps preserved
 
+    @pytest.mark.asyncio
+    async def test_type_error_routes_to_refactoring_agent(self, mock_context, temp_db_path):
+        """Test that TYPE_ERROR issues route to RefactoringAgent with high confidence.
+
+        This test verifies the fix for the TYPE_ERROR routing bug where ArchitectAgent
+        was being selected instead of RefactoringAgent. The test ensures:
+
+        1. TYPE_ERROR issues are assigned to RefactoringAgent (not ArchitectAgent)
+        2. RefactoringAgent reports confidence >= 0.7 (above AI-fix threshold)
+        3. ArchitectAgent reports low confidence (0.1) for TYPE_ERROR (fallback only)
+        4. The coordinator's agent selection prefers RefactoringAgent
+        """
+        import crackerjack.services.metrics as metrics_module
+        from crackerjack.agents.architect_agent import ArchitectAgent
+
+        original_collector = metrics_module._metrics_collector
+        metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
+
+        try:
+            # Setup: Create test code with missing return type
+            test_code = """def process_data(data):
+    result = []
+    for item in data:
+        result.append(item.upper())
+    return result
+"""
+            mock_context.get_file_content.return_value = test_code
+            mock_context.write_file_content.return_value = True
+
+            # Create TYPE_ERROR issue (missing return type annotation)
+            issue = Issue(
+                type=IssueType.TYPE_ERROR,
+                severity=Priority.MEDIUM,
+                message="Function 'process_data' has missing return type annotation",
+                file_path="test_file.py",
+                line_number=1,
+            )
+
+            # Step 1: Verify RefactoringAgent can handle TYPE_ERROR with high confidence
+            refactor_agent = RefactoringAgent(mock_context)
+            refactor_confidence = await refactor_agent.can_handle(issue)
+
+            assert refactor_confidence >= 0.7, (
+                f"RefactoringAgent should have high confidence (>=0.7) for TYPE_ERROR, "
+                f"got {refactor_confidence}. This indicates the TYPE_ERROR routing is broken."
+            )
+
+            # Step 2: Verify ArchitectAgent has LOW confidence (fallback only)
+            architect_agent = ArchitectAgent(mock_context)
+            architect_confidence = await architect_agent.can_handle(issue)
+
+            assert architect_confidence == 0.1, (
+                f"ArchitectAgent should have low confidence (0.1) for TYPE_ERROR to act as "
+                f"fallback, got {architect_confidence}. ArchitectAgent should delegate to "
+                f"RefactoringAgent for TYPE_ERROR issues."
+            )
+
+            # Step 3: Verify RefactoringAgent wins over ArchitectAgent
+            assert refactor_confidence > architect_confidence, (
+                f"RefactoringAgent ({refactor_confidence}) should have higher confidence than "
+                f"ArchitectAgent ({arch_confidence}) for TYPE_ERROR issues. This ensures "
+                f"RefactoringAgent is selected first in the coordinator's agent selection."
+            )
+
+            # Step 4: Verify the fix is actually applied
+            result = await refactor_agent.analyze_and_fix(issue)
+
+            assert result.success is True, (
+                f"RefactoringAgent should successfully fix TYPE_ERROR issues. "
+                f"Failed with: {result.remaining_issues}"
+            )
+
+            assert result.confidence >= 0.7, (
+                f"Fix result should have high confidence (>=0.7), got {result.confidence}"
+            )
+
+            assert "type annotation" in " ".join(result.fixes_applied).lower() or len(result.fixes_applied) > 0, (
+                f"Fix should apply type annotation changes. Fixes applied: {result.fixes_applied}"
+            )
+
+        finally:
+            metrics_module._metrics_collector = original_collector
+
 
 class TestEnhancedCoordinatorIntegration:
     """Integration tests for EnhancedAgentCoordinator with ProviderChain."""
@@ -238,10 +321,10 @@ class TestEnhancedCoordinatorIntegration:
     @pytest.mark.asyncio
     async def test_coordinator_tracks_agent_executions(self, mock_context, temp_db_path):
         """Test that coordinator tracks agent executions in metrics."""
-        from crackerjack.services.metrics import _metrics_collector
+        import crackerjack.services.metrics as metrics_module
 
-        original_collector = _metrics_collector
-        _metrics_collector = MetricsCollector(db_path=temp_db_path)
+        original_collector = metrics_module._metrics_collector
+        metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
 
         try:
             tracker = MagicMock()
@@ -304,7 +387,7 @@ class TestEnhancedCoordinatorIntegration:
             assert execution["confidence"] == 0.85
 
         finally:
-            _metrics_collector = original_collector
+            metrics_module._metrics_collector = original_collector
 
 
 class TestEndToEndWorkflow:
@@ -313,10 +396,10 @@ class TestEndToEndWorkflow:
     @pytest.mark.asyncio
     async def test_complete_fix_workflow_type_error(self, mock_context, temp_db_path):
         """Test complete workflow: issue → agent → fix → metrics."""
-        from crackerjack.services.metrics import _metrics_collector
+        import crackerjack.services.metrics as metrics_module
 
-        original_collector = _metrics_collector
-        _metrics_collector = MetricsCollector(db_path=temp_db_path)
+        original_collector = metrics_module._metrics_collector
+        metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
 
         try:
             # Setup: Create coordinator and issue
@@ -375,22 +458,22 @@ class TestEndToEndWorkflow:
             assert execution["issue_type"] == "TYPE_ERROR"
 
             # Verify query methods work
-            success_rate = _metrics_collector.get_agent_success_rate("RefactoringAgent")
+            success_rate = metrics_module._metrics_collector.get_agent_success_rate("RefactoringAgent")
             assert success_rate == 1.0  # Only one execution, successful
 
-            distribution = _metrics_collector.get_agent_confidence_distribution("RefactoringAgent")
+            distribution = metrics_module._metrics_collector.get_agent_confidence_distribution("RefactoringAgent")
             assert "high" in distribution or "medium" in distribution
 
         finally:
-            _metrics_collector = original_collector
+            metrics_module._metrics_collector = original_collector
 
     @pytest.mark.asyncio
     async def test_multiple_agents_different_issues(self, mock_context, temp_db_path):
         """Test workflow with multiple agents handling different issue types."""
-        from crackerjack.services.metrics import _metrics_collector
+        import crackerjack.services.metrics as metrics_module
 
-        original_collector = _metrics_collector
-        _metrics_collector = MetricsCollector(db_path=temp_db_path)
+        original_collector = metrics_module._metrics_collector
+        metrics_module._metrics_collector = MetricsCollector(db_path=temp_db_path)
 
         try:
             tracker = MagicMock()
@@ -468,14 +551,14 @@ dependencies = [
             assert executions[1]["issue_type"] == "DEPENDENCY"
 
             # Verify per-agent success rates
-            refactor_rate = _metrics_collector.get_agent_success_rate("RefactoringAgent")
-            dep_rate = _metrics_collector.get_agent_success_rate("DependencyAgent")
+            refactor_rate = metrics_module._metrics_collector.get_agent_success_rate("RefactoringAgent")
+            dep_rate = metrics_module._metrics_collector.get_agent_success_rate("DependencyAgent")
 
             assert refactor_rate == 1.0
             assert dep_rate == 1.0
 
         finally:
-            _metrics_collector = original_collector
+            metrics_module._metrics_collector = original_collector
 
 
 class TestProviderChainFallbackScenarios:

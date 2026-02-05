@@ -38,6 +38,8 @@ except Exception:  # pragma: no cover - optional legacy module
     GitOperationCache = t.Any  # type: ignore[assignment]
 
 if t.TYPE_CHECKING:
+    from crackerjack.agents.base import AgentContext
+    from crackerjack.agents.coordinator import AgentCoordinator
     from crackerjack.models.protocols import (
         ConfigMergeServiceProtocol,
         FileSystemInterface,
@@ -49,6 +51,7 @@ if t.TYPE_CHECKING:
         TestManagerProtocol,
     )
     from crackerjack.models.task import HookResult
+    from crackerjack.services.cache import CrackerjackCache
     from crackerjack.services.parallel_executor import (
         AsyncCommandExecutor,
         ParallelHookExecutor,
@@ -158,6 +161,27 @@ class PhaseCoordinator:
     @logger.setter
     def logger(self, value: logging.Logger) -> None:
         self._logger = value
+
+    def _create_enhanced_coordinator_factory(
+        self,
+    ) -> t.Callable[[AgentContext, CrackerjackCache], AgentCoordinator]:
+
+        def factory(context: AgentContext, cache: CrackerjackCache) -> AgentCoordinator:
+            from crackerjack.agents.enhanced_coordinator import (
+                EnhancedAgentCoordinator,
+            )
+            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.services.debug import get_ai_agent_debugger
+
+            return EnhancedAgentCoordinator(
+                context=context,
+                tracker=get_agent_tracker(),
+                debugger=get_ai_agent_debugger(),
+                cache=cache,
+                enable_external_agents=True,
+            )
+
+        return factory
 
     @staticmethod
     def _strip_ansi(text: str) -> str:
@@ -321,6 +345,7 @@ class PhaseCoordinator:
             console=self.console,  # type: ignore[arg-type]
             pkg_path=self.pkg_path,
             max_iterations=getattr(options, "ai_fix_max_iterations", None),
+            coordinator_factory=self._create_enhanced_coordinator_factory(),
         )
 
         ai_fix_success = autofix_coordinator.apply_fast_stage_fixes(

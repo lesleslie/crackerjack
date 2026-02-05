@@ -196,34 +196,16 @@ class SmartFileFilter(SmartFileFilterProtocol, ServiceProtocol):
             return []
 
     def should_include(self, file_path: Path) -> bool:
-        """Check if a file should be included in processing.
 
-        Args:
-            file_path: Path to check
-
-        Returns:
-            True if file should be included, False otherwise
-        """
-        # Exclude test files by default
         if any(part.startswith("test_") or part == "tests" for part in file_path.parts):
             return False
 
-        # Exclude hidden files
         if any(part.startswith(".") for part in file_path.parts):
             return False
 
-        # Include regular Python files
         return file_path.suffix == ".py"
 
     def filter_files(self, files: list[Path]) -> list[Path]:
-        """Filter a list of files to only include those that should be processed.
-
-        Args:
-            files: List of file paths to filter
-
-        Returns:
-            Filtered list of file paths
-        """
         return [f for f in files if self.should_include(f)]
 
     def should_use_incremental_scan(

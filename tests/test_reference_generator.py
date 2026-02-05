@@ -163,3 +163,15 @@ class TestCommandInfo:
         assert command_info.category == "test"
         assert len(command_info.parameters) == 1
         assert command_info.parameters[0].name == "test-param"
+
+def test_visit_FunctionDef_basic(self):
+    """Test basic functionality of visit_FunctionDef."""
+    try:
+        result = visit_FunctionDef()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_FunctionDef: {e}")

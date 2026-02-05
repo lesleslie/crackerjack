@@ -2,6 +2,7 @@ from typing import Any
 
 from . import (
     architect_agent,
+    dependency_agent,
     documentation_agent,
     dry_agent,
     formatting_agent,
@@ -29,6 +30,7 @@ __all__ = [
     "SubAgent",
     "agent_error_boundary",
     "architect_agent",
+    "dependency_agent",
     "documentation_agent",
     "dry_agent",
     "formatting_agent",
@@ -47,6 +49,7 @@ __all__ = [
 def __getattr__(name: str) -> Any:
     agent_modules = {
         "architect_agent",
+        "dependency_agent",
         "documentation_agent",
         "dry_agent",
         "formatting_agent",

@@ -33,7 +33,7 @@ class CreosoteSettings(ToolAdapterSettings):
     config_file: Path | None = None
     exclude_deps: list[str] = Field(default_factory=list)
     paths: list[Path] = Field(default_factory=list)
-    output_format: str = "porcelain"  # Use porcelain format for reliable parsing
+    output_format: str = "porcelain"
 
 
 class CreosoteAdapter(BaseToolAdapter):
@@ -97,7 +97,6 @@ class CreosoteAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
-        # Add format flag for reliable parsing
         if self.settings.output_format:
             cmd.extend(["--format", self.settings.output_format])
 
@@ -157,16 +156,18 @@ class CreosoteAdapter(BaseToolAdapter):
         lines = result.raw_output.strip().split("\n")
         logger.debug("Parsing Creosote output", extra={"line_count": len(lines)})
 
-        config_file = self.settings.config_file if self.settings else Path("pyproject.toml")
+        config_file = (
+            self.settings.config_file if self.settings else Path("pyproject.toml")
+        )
 
-        # Porcelain format: one dependency name per line
         for line in lines:
             dep_name = line.strip()
             if dep_name:
-                # Skip header lines or empty lines
                 if dep_name.startswith("Found") or "bloat" in dep_name.lower():
                     continue
-                issue = self._create_issue_for_dependency(dep_name, config_file or Path("pyproject.toml"))
+                issue = self._create_issue_for_dependency(
+                    dep_name, config_file or Path("pyproject.toml")
+                )
                 issues.append(issue)
 
         logger.info(
@@ -197,6 +198,13 @@ class CreosoteAdapter(BaseToolAdapter):
                 "config_file": "pyproject.toml",
                 "exclude_deps": [
                     "pytest",
+                    "pytest-snob",
+                    "pytest-asyncio",
+                    "pytest-cov",
+                    "pytest-mock",
+                    "pytest-benchmark",
+                    "pytest-timeout",
+                    "pytest-xdist",
                     "black",
                     "ruff",
                     "mypy",

@@ -21,7 +21,6 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         self.pkg_path = pkg_path or Path.cwd()
 
     def _is_ai_agent_enabled(self) -> bool:
-        """Check if AI agent mode is enabled (--ai-fix flag)."""
         return os.environ.get("AI_AGENT") == "1"
 
     def _enable_tool_native_fixes(
@@ -29,17 +28,10 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         adapter_name: str,
         settings: t.Any | None,
     ) -> t.Any:
-        """Enable tool-native --fix options when AI agent mode is active.
-
-        This implements the architectural improvement where tools run their
-        own fix options FIRST, then report only issues that couldn't be fixed.
-        """
         if not self._is_ai_agent_enabled():
             return settings
 
-        # Enable fix mode for adapters that support it
         if adapter_name == "Ruff" and settings is not None:
-            # Enable both check and format fix modes
             if hasattr(settings, "fix_enabled"):
                 settings.fix_enabled = True
                 logger.info("Tool-native fixes enabled for Ruff (fix_enabled=True)")
@@ -51,7 +43,7 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
         adapter_name: str,
         settings: t.Any | None = None,
     ) -> AdapterProtocol:
-        # Enable tool-native fixes when AI agent mode is active
+
         settings = self._enable_tool_native_fixes(adapter_name, settings)
 
         if adapter_name == "Ruff":
