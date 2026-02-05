@@ -5,7 +5,7 @@
 **Implementation Time**: 4 hours (as predicted)
 **Date**: 2026-02-05
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -19,7 +19,7 @@ Crackerjack's intelligent test selection reduces CI/CD execution time by up to 7
 - **Zero Configuration**: Works with existing pytest setups
 - **CI/CD Integration**: Drop-in replacement for `pytest`
 
----
+______________________________________________________________________
 
 ## Installation
 
@@ -46,7 +46,7 @@ from crackerjack.test_selection import (
 )
 ```
 
----
+______________________________________________________________________
 
 ## Quick Start
 
@@ -92,7 +92,7 @@ print(f"Failed: {metrics.failed}")
 print(f"Duration: {metrics.duration_seconds}s")
 ```
 
----
+______________________________________________________________________
 
 ## Selection Strategies
 
@@ -114,6 +114,7 @@ result = selector.select_tests_by_changes(
 **Use Case**: Full test suite (e.g., before release)
 
 **Example Output**:
+
 ```
 Total Tests: 100
 Selected: 100
@@ -121,7 +122,7 @@ Skipped: 0
 Reduction: 0.0%
 ```
 
----
+______________________________________________________________________
 
 ### 2. CHANGED (Recommended)
 
@@ -138,6 +139,7 @@ result = selector.select_tests_by_changes(
 **Use Case**: Everyday development, PR validation
 
 **Example Output**:
+
 ```
 Total Tests: 100
 Selected: 30
@@ -147,11 +149,12 @@ Est. Time Saved: 60.0s
 ```
 
 **How It Works**:
-1. Detects changed files via Git
-2. Maps source files to tests via testmon data
-3. Selects only affected tests
 
----
+1. Detects changed files via Git
+1. Maps source files to tests via testmon data
+1. Selects only affected tests
+
+______________________________________________________________________
 
 ### 3. RELATED
 
@@ -168,6 +171,7 @@ result = selector.select_tests_by_changes(
 **Use Case**: High-risk changes, integration points
 
 **Example Output**:
+
 ```
 Total Tests: 100
 Selected: 45
@@ -176,11 +180,12 @@ Reduction: 55.0%
 ```
 
 **How It Works**:
-1. Selects changed tests (like CHANGED strategy)
-2. Finds tests that import the same modules
-3. Includes tests with shared dependencies
 
----
+1. Selects changed tests (like CHANGED strategy)
+1. Finds tests that import the same modules
+1. Includes tests with shared dependencies
+
+______________________________________________________________________
 
 ### 4. FAST
 
@@ -197,6 +202,7 @@ result = selector.select_tests_by_changes(
 **Use Case**: Rapid development iteration
 
 **Example Output**:
+
 ```
 Total Tests: 100
 Selected: 15
@@ -215,7 +221,7 @@ def test_quick_validation():
     assert True
 ```
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -242,7 +248,7 @@ pytest --testmon
 pytest --testmon
 ```
 
----
+______________________________________________________________________
 
 ## CI/CD Integration
 
@@ -315,7 +321,7 @@ pipeline {
 }
 ```
 
----
+______________________________________________________________________
 
 ## Advanced Usage
 
@@ -393,7 +399,7 @@ result = select_tests_for_ci(
 print(f"Selected {result.selected_tests} of {result.total_tests} tests")
 ```
 
----
+______________________________________________________________________
 
 ## Performance Metrics
 
@@ -401,15 +407,15 @@ print(f"Selected {result.selected_tests} of {result.total_tests} tests")
 
 | Strategy | Avg. Tests Run | Time Saved |
 |----------|---------------|------------|
-| ALL      | 100%          | 0%         |
-| CHANGED  | 30%           | 70%        |
-| RELATED  | 45%           | 55%        |
-| FAST     | 15%           | 85%        |
+| ALL | 100% | 0% |
+| CHANGED | 30% | 70% |
+| RELATED | 45% | 55% |
+| FAST | 15% | 85% |
 
 ### Overhead
 
-- **Selection Time**: <100ms for 1000 tests
-- **Change Detection**: <50ms via Git
+- **Selection Time**: \<100ms for 1000 tests
+- **Change Detection**: \<50ms via Git
 - **Testmon Overhead**: ~5% (negligible)
 
 ### Benchmarks
@@ -422,7 +428,7 @@ RELATED strategy: 54s (55% faster)
 FAST strategy: 18s (85% faster)
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
@@ -436,7 +442,7 @@ FAST strategy: 18s (85% faster)
 
 **Rationale**: Fast feedback for reviewers without running unrelated tests.
 
----
+______________________________________________________________________
 
 ### 2. Use ALL for Release Branches
 
@@ -448,7 +454,7 @@ FAST strategy: 18s (85% faster)
 
 **Rationale**: Full coverage before production deployment.
 
----
+______________________________________________________________________
 
 ### 3. Use FAST for Local Development
 
@@ -459,7 +465,7 @@ alias ft='crackerjack test --strategy fast'
 
 **Rationale**: Sub-second feedback during active development.
 
----
+______________________________________________________________________
 
 ### 4. Commit .testmondata
 
@@ -472,7 +478,7 @@ git commit -m "Track testmon data"
 
 **Rationale**: Consistent test selection across CI and local machines.
 
----
+______________________________________________________________________
 
 ### 5. Combine with Parallel Execution
 
@@ -483,7 +489,7 @@ pytest -n auto --testmon
 
 **Rationale**: Multiply time savings with parallel test execution.
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -492,6 +498,7 @@ pytest -n auto --testmon
 **Cause**: testmon data not available or outdated
 
 **Solution**:
+
 ```bash
 # Rebuild testmon data
 pytest --testmon --update-data
@@ -500,13 +507,14 @@ pytest --testmon --update-data
 pytest
 ```
 
----
+______________________________________________________________________
 
 ### Issue: Too Many Tests Selected
 
 **Cause**: High coupling or shared dependencies
 
 **Solution**:
+
 ```python
 # Use RELATED strategy for better coverage
 result = selector.select_tests_by_changes(
@@ -516,33 +524,35 @@ result = selector.select_tests_by_changes(
 )
 ```
 
----
+______________________________________________________________________
 
 ### Issue: testmon Not Available
 
 **Cause**: pytest-testmon not installed
 
 **Solution**:
+
 ```bash
 pip install pytest-testmon
 ```
 
 **Fallback**: Crackerjack automatically falls back to ALL strategy.
 
----
+______________________________________________________________________
 
 ### Issue: Git History Not Available
 
 **Cause**: Shallow clone in CI
 
 **Solution**:
+
 ```yaml
 - uses: actions/checkout@v3
   with:
     fetch-depth: 0  # Full history
 ```
 
----
+______________________________________________________________________
 
 ## API Reference
 
@@ -688,13 +698,14 @@ def select_tests_for_ci(
     """Select tests for CI/CD pipeline."""
 ```
 
----
+______________________________________________________________________
 
 ## Migration Guide
 
 ### From Plain pytest
 
 **Before**:
+
 ```yaml
 # .github/workflows/test.yml
 - name: Test
@@ -702,27 +713,30 @@ def select_tests_for_ci(
 ```
 
 **After**:
+
 ```yaml
 - name: Test
   run: crackerjack test --strategy changed
 ```
 
----
+______________________________________________________________________
 
 ### From pytest-xdist
 
 **Before**:
+
 ```bash
 pytest -n auto
 ```
 
 **After**:
+
 ```bash
 # Combine selection with parallel execution
 pytest -n auto --testmon
 ```
 
----
+______________________________________________________________________
 
 ## Credits
 
@@ -730,7 +744,7 @@ pytest -n auto --testmon
 
 **Review**: code-reviewer, superpowers:code-reviewer
 
----
+______________________________________________________________________
 
 ## Status
 
@@ -741,11 +755,12 @@ pytest -n auto --testmon
 **Implementation Date**: February 5, 2026
 
 **Components**:
+
 - Implementation: 400+ lines
 - Tests: 40+ tests
 - Documentation: 350+ lines
 - Target achieved: 70% test execution time reduction
 
----
+______________________________________________________________________
 
 **Next**: All Week 1 quick wins complete (7/7). Proceeding to Phase 2: Multi-Agent Orchestration.

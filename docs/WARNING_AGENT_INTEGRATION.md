@@ -210,6 +210,7 @@ python -m crackerjack run --run-tests --ai-fix
 **Symptom**: Warnings not being processed
 
 **Solution**: Check routing configuration:
+
 ```python
 # Verify in coordinator.py
 assert IssueType.WARNING in ISSUE_TYPE_TO_AGENTS
@@ -221,6 +222,7 @@ assert "WarningSuppressionAgent" in ISSUE_TYPE_TO_AGENTS[IssueType.WARNING]
 **Symptom**: Important warnings being skipped
 
 **Solution**: Update pattern database:
+
 ```python
 # Remove from skip list or change category
 "my-warning": {
@@ -235,6 +237,7 @@ assert "WarningSuppressionAgent" in ISSUE_TYPE_TO_AGENTS[IssueType.WARNING]
 **Symptom**: Auto-fix causes test failures
 
 **Solution**: Disable specific fix pattern:
+
 ```python
 # Comment out or remove pattern
 # "deprecated-pytest-import": { ... },
@@ -243,10 +246,10 @@ assert "WarningSuppressionAgent" in ISSUE_TYPE_TO_AGENTS[IssueType.WARNING]
 ## Future Enhancements
 
 1. **Machine Learning**: Learn which warnings to skip/fix from history
-2. **Custom Patterns**: User-defined warning patterns via config
-3. **Warning Analytics**: Track warning trends over time
-4. **CI Integration**: Warning gates in CI/CD pipelines
-5. **IDE Plugin**: Real-time warning detection in editor
+1. **Custom Patterns**: User-defined warning patterns via config
+1. **Warning Analytics**: Track warning trends over time
+1. **CI Integration**: Warning gates in CI/CD pipelines
+1. **IDE Plugin**: Real-time warning detection in editor
 
 ## Related Documentation
 

@@ -30,11 +30,14 @@ class TestEnvironmentAgent(SubAgent):
 
     def _get_safe_modifier(self) -> SafeCodeModifier:
         if self._safe_modifier is None:
-            from crackerjack.services.safe_code_modifier import get_safe_code_modifier
+            from crackerjack.services.safe_code_modifier import SafeCodeModifier
             from rich.console import Console
 
             console = Console()
-            self._safe_modifier = get_safe_code_modifier(console, self.context.project_path)
+            self._safe_modifier = SafeCodeModifier(
+                console=console,
+                project_path=self.context.project_path,
+            )
 
         return self._safe_modifier
 

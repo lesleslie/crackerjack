@@ -4,20 +4,20 @@
 **Status**: Production Ready
 **Last Updated**: 2026-02-05
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Quick Start](#quick-start)
-3. [Usage Examples](#usage-examples)
-4. [Configuration](#configuration)
-5. [Agent Reference](#agent-reference)
-6. [Performance](#performance)
-7. [Troubleshooting](#troubleshooting)
-8. [Advanced Usage](#advanced-usage)
+1. [Quick Start](#quick-start)
+1. [Usage Examples](#usage-examples)
+1. [Configuration](#configuration)
+1. [Agent Reference](#agent-reference)
+1. [Performance](#performance)
+1. [Troubleshooting](#troubleshooting)
+1. [Advanced Usage](#advanced-usage)
 
----
+______________________________________________________________________
 
 ## Overview
 
@@ -55,7 +55,7 @@ The BatchProcessor can handle 17 different issue types:
 
 **Overall Fix Rate**: 60-80% automatic (depending on issue mix)
 
----
+______________________________________________________________________
 
 ## Quick Start
 
@@ -152,7 +152,7 @@ async def fix_pytest_failures():
 asyncio.run(fix_pytest_failures())
 ```
 
----
+______________________________________________________________________
 
 ## Usage Examples
 
@@ -228,7 +228,7 @@ result = await processor.process_batch(
 # Use when debugging or when issues depend on each other
 ```
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -270,20 +270,21 @@ result = await processor.process_batch(
 )
 ```
 
----
+______________________________________________________________________
 
 ## Agent Reference
 
 ### Agent Selection Process
 
 1. **Issue Type Mapping**: Each issue type maps to one or more agents
-2. **Confidence Check**: Agent checks if it can handle the issue (≥0.7 confidence)
-3. **Priority Order**: Agents tried in priority order (first match wins)
-4. **Retry Logic**: If agent fails, try next agent or retry with same agent
+1. **Confidence Check**: Agent checks if it can handle the issue (≥0.7 confidence)
+1. **Priority Order**: Agents tried in priority order (first match wins)
+1. **Retry Logic**: If agent fails, try next agent or retry with same agent
 
 ### Agent Capabilities
 
 #### ImportOptimizationAgent
+
 - **Handles**: Missing imports, circular imports, unused imports
 - **Confidence**: 0.85
 - **Success Rate**: 90%
@@ -293,6 +294,7 @@ result = await processor.process_batch(
   - Reorganize imports (stdlib, third-party, local)
 
 #### TestSpecialistAgent
+
 - **Handles**: Missing fixtures, test configuration, pytest errors
 - **Confidence**: 1.00 (high confidence)
 - **Success Rate**: 85%
@@ -302,6 +304,7 @@ result = await processor.process_batch(
   - Fix test discovery issues
 
 #### TestCreationAgent
+
 - **Handles**: Test failures, missing test coverage, test organization
 - **Confidence**: 0.70-0.90
 - **Success Rate**: 80%
@@ -312,6 +315,7 @@ result = await processor.process_batch(
   - Improve test coverage
 
 #### FormattingAgent
+
 - **Handles**: Style violations, formatting issues
 - **Confidence**: 0.80
 - **Success Rate**: 95%
@@ -321,6 +325,7 @@ result = await processor.process_batch(
   - Fix trailing whitespace
 
 #### SecurityAgent
+
 - **Handles**: Security vulnerabilities, unsafe operations
 - **Confidence**: 0.80
 - **Success Rate**: 85%
@@ -330,6 +335,7 @@ result = await processor.process_batch(
   - Add security best practices
 
 #### PerformanceAgent
+
 - **Handles**: Performance issues, O(n²) algorithms
 - **Confidence**: 0.75
 - **Success Rate**: 75%
@@ -339,6 +345,7 @@ result = await processor.process_batch(
   - Reduce complexity
 
 #### DRYAgent
+
 - **Handles**: Code duplication
 - **Confidence**: 0.80
 - **Success Rate**: 80%
@@ -348,6 +355,7 @@ result = await processor.process_batch(
   - Eliminate duplication
 
 #### DeadCodeRemovalAgent
+
 - **Handles**: Unused code, dead imports
 - **Confidence**: 0.90
 - **Success Rate**: 90%
@@ -357,6 +365,7 @@ result = await processor.process_batch(
   - Remove unused variables
 
 #### RefactoringAgent
+
 - **Handles**: Complexity, type errors, architectural issues
 - **Confidence**: 0.70-0.90
 - **Success Rate**: 70%
@@ -366,6 +375,7 @@ result = await processor.process_batch(
   - Improve architecture
 
 #### DocumentationAgent
+
 - **Handles**: Missing documentation, docstring issues
 - **Confidence**: 0.80
 - **Success Rate**: 80%
@@ -394,7 +404,7 @@ result = await processor.process_batch(
 | REGEX_VALIDATION | SecurityAgent | - | - |
 | SEMANTIC_CONTEXT | SemanticAgent | - | - |
 
----
+______________________________________________________________________
 
 ## Performance
 
@@ -413,9 +423,9 @@ result = await processor.process_batch(
 ### Performance Tips
 
 1. **Enable Parallelism** (default): 3x faster for 5+ issues
-2. **Adjust `max_parallel`**: Increase for large batches
-3. **Use Async I/O**: 3x speedup from async file operations
-4. **Limit Retry Attempts**: More retries = longer duration
+1. **Adjust `max_parallel`**: Increase for large batches
+1. **Use Async I/O**: 3x speedup from async file operations
+1. **Limit Retry Attempts**: More retries = longer duration
 
 ### Resource Usage
 
@@ -423,7 +433,7 @@ result = await processor.process_batch(
 **CPU**: 200-300% during processing (2-3 cores utilized)
 **I/O**: Parallel file reads/writes (async I/O pool)
 
----
+______________________________________________________________________
 
 ## Troubleshooting
 
@@ -432,6 +442,7 @@ result = await processor.process_batch(
 #### Issue 1: "Unknown agent" error
 
 **Symptom**:
+
 ```
 Unknown agent: DependencyAgent
 ```
@@ -445,11 +456,13 @@ Unknown agent: DependencyAgent
 **Symptom**: Takes >60s for 10 issues
 
 **Possible Causes**:
+
 1. Sync I/O blocking (should use async I/O)
-2. Low `max_parallel` setting
-3. TestCreationAgent slowness (pytest discovery)
+1. Low `max_parallel` setting
+1. TestCreationAgent slowness (pytest discovery)
 
 **Solutions**:
+
 ```python
 # Use async I/O
 content = await context.async_get_file_content(file_path)
@@ -460,16 +473,18 @@ processor = get_batch_processor(context, console, max_parallel=5)
 # Skip slow agents if needed
 ```
 
-#### Issue 3: Low fix rate (<50%)
+#### Issue 3: Low fix rate (\<50%)
 
 **Symptom**: Most issues skipped or failed
 
 **Possible Causes**:
+
 1. Issue type not supported
-2. Agent confidence too low
-3. Files don't exist (test issues)
+1. Agent confidence too low
+1. Files don't exist (test issues)
 
 **Solutions**:
+
 - Check issue types are supported
 - Verify file paths are correct
 - Review agent logs for confidence scores
@@ -478,6 +493,7 @@ processor = get_batch_processor(context, console, max_parallel=5)
 #### Issue 4: Import errors in agents
 
 **Symptom**:
+
 ```
 ImportError: cannot import name 'async_file_io'
 ```
@@ -502,11 +518,11 @@ result = await processor.process_batch(issues=issues)
 ### Getting Help
 
 1. **Check logs**: Look for error messages in console output
-2. **Review agent**: Check which agent was used (`agent_used` field)
-3. **Verify confidence**: Low confidence means agent unsure
-4. **Manual fix**: If agent fails, fix manually and create issue
+1. **Review agent**: Check which agent was used (`agent_used` field)
+1. **Verify confidence**: Low confidence means agent unsure
+1. **Manual fix**: If agent fails, fix manually and create issue
 
----
+______________________________________________________________________
 
 ## Advanced Usage
 
@@ -577,27 +593,27 @@ def on_result(result: BatchIssueResult):
 await process_with_callback(issues, on_result)
 ```
 
----
+______________________________________________________________________
 
 ## Best Practices
 
 ### DO ✅
 
 1. **Use parallel mode** for 5+ independent issues
-2. **Set appropriate max_retries** (1-2 is usually enough)
-3. **Review results** after batch processing
-4. **Test on subset** before running on large batch
-5. **Use async I/O** for better performance
+1. **Set appropriate max_retries** (1-2 is usually enough)
+1. **Review results** after batch processing
+1. **Test on subset** before running on large batch
+1. **Use async I/O** for better performance
 
 ### DON'T ❌
 
 1. **Don't use parallel mode** for dependent issues
-2. **Don't set max_retries too high** (wastes time)
-3. **Don't ignore failed issues** (review and fix manually)
-4. **Don't batch unrelated issues** (group by type)
-5. **Don't skip validation** (test after fixing)
+1. **Don't set max_retries too high** (wastes time)
+1. **Don't ignore failed issues** (review and fix manually)
+1. **Don't batch unrelated issues** (group by type)
+1. **Don't skip validation** (test after fixing)
 
----
+______________________________________________________________________
 
 ## FAQ
 
@@ -625,7 +641,7 @@ A: Yes! Implement `SubAgent` protocol and register in coordinator.
 
 A: Pytest discovery is expensive. Caching is planned for future version.
 
----
+______________________________________________________________________
 
 ## Changelog
 
@@ -638,7 +654,7 @@ A: Pytest discovery is expensive. Caching is planned for future version.
 - ✅ Comprehensive metrics and reporting
 - ✅ DependencyAgent support
 
----
+______________________________________________________________________
 
 ## Support
 

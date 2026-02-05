@@ -2,14 +2,48 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
+_io_executor_lock = threading.Lock()
+_io_executor: ThreadPoolExecutor | None = None
 
-_IO_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="async_io_")
+
+def get_io_executor() -> ThreadPoolExecutor:
+    """Get or create the I/O thread pool executor.
+
+    Executor size is configurable via settings.
+
+    Returns:
+        ThreadPoolExecutor instance with configured worker count
+    """
+    global _io_executor
+
+    if _io_executor is None:
+        with _io_executor_lock:
+            if _io_executor is None:  # Double-check
+                try:
+                    from crackerjack.config import CrackerjackSettings
+
+                    settings = CrackerjackSettings()
+                    max_workers = settings.max_parallel_hooks
+                except Exception:
+                    # Fallback to default if settings not available
+                    max_workers = 4
+                    logger.warning(
+                        "Could not load max_parallel_hooks from settings, using default: 4"
+                    )
+
+                _io_executor = ThreadPoolExecutor(
+                    max_workers=max_workers,
+                    thread_name_prefix="async_io_",
+                )
+
+    return _io_executor
 
 
 async def async_read_file(file_path: Path) -> str:
@@ -17,7 +51,7 @@ async def async_read_file(file_path: Path) -> str:
 
     try:
         content = await loop.run_in_executor(
-            _IO_EXECUTOR,
+            get_io_executor(),
             file_path.read_text,
         )
         return content
@@ -34,7 +68,7 @@ async def async_write_file(
 
     try:
         await loop.run_in_executor(
-            _IO_EXECUTOR,
+            get_io_executor(),
             partial(file_path.write_text, content),
         )
     except Exception as e:
@@ -59,7 +93,10 @@ async def async_write_files_batch(
 
 
 def shutdown_io_executor() -> None:
-    _IO_EXECUTOR.shutdown(wait=True)
+    global _io_executor
+    if _io_executor is not None:
+        _io_executor.shutdown(wait=True)
+        _io_executor = None
 
 
 __all__ = [

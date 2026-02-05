@@ -165,12 +165,14 @@ ISSUE_TYPE_TO_AGENTS = {
 ### 1. Deprecated Pytest Imports
 
 **Before**:
+
 ```python
 from pytest import deprecated_call
 from pytest.helpers import sysprog
 ```
 
 **After**:
+
 ```python
 import pytest
 from _pytest.pytester import Sysproc
@@ -179,12 +181,14 @@ from _pytest.pytester import Sysproc
 ### 2. Deprecated Assertion Style
 
 **Before**:
+
 ```python
 assert spam in ("eggs", "ham")
 assert frobnicate() == 42
 ```
 
 **After**:
+
 ```python
 assert spam in ("eggs", "ham")  # Keep modern assertions
 assert frobnicate() == 42
@@ -193,6 +197,7 @@ assert frobnicate() == 42
 ### 3. Fixture Scope Mismatch
 
 **Before**:
+
 ```python
 @pytest.fixture
 def db_session():
@@ -201,6 +206,7 @@ def db_session():
 ```
 
 **After**:
+
 ```python
 @pytest.fixture(scope="session")
 def db_session():
@@ -211,11 +217,13 @@ def db_session():
 ### 4. Import Warnings
 
 **Before**:
+
 ```python
 from collections.abc import Mapping  # Old location
 ```
 
 **After**:
+
 ```python
 from typing import Mapping  # Current location
 ```
@@ -245,53 +253,62 @@ warning_suppression:
 ## Implementation Steps
 
 ### Phase 1: Core Agent (Week 9)
+
 1. Create WarningSuppressionAgent class
-2. Implement warning pattern database
-3. Add categorization logic
-4. Create skip list configuration
+1. Implement warning pattern database
+1. Add categorization logic
+1. Create skip list configuration
 
 ### Phase 2: Parser Integration (Week 9)
+
 1. Extend TestResultParser to capture warnings
-2. Create Warning issues from pytest output
-3. Add to ISSUE_TYPE_TO_AGENTS routing
+1. Create Warning issues from pytest output
+1. Add to ISSUE_TYPE_TO_AGENTS routing
 
 ### Phase 3: Fix Strategies (Week 10)
+
 1. Implement automatic fix strategies:
    - Deprecated imports
    - Fixture scopes
    - Assertion styles
-2. Add manual fix suggestions
-3. Create fix verification
+1. Add manual fix suggestions
+1. Create fix verification
 
 ### Phase 4: Validation (Week 10)
+
 1. Test on crackerjack test suite
-2. Measure warning reduction
-3. Validate no false positives
+1. Measure warning reduction
+1. Validate no false positives
 
 ## Success Metrics
 
 ### Baseline (Current)
+
 - Pytest warnings: Unknown (need to measure)
 - Warning types: Unknown
 - Fix rate: 0%
 
 ### Target (Post-Implementation)
+
 - Pytest warnings: Categorized and documented
 - Fix rate for auto-fixable: 80%+
-- False positive rate: <5%
+- False positive rate: \<5%
 - Test suite speed: Same or faster (no regressions)
 
 ## Risks & Mitigations
 
 ### Risk 1: Over-Aggressive Fixing
+
 **Risk**: Auto-fixing warnings that should be reviewed
 **Mitigation**: Start with conservative auto-fix list, require manual review for deprecations
 
 ### Risk 2: False Positives in Skip List
+
 **Risk**: Skipping important warnings due to overly broad patterns
 **Mitigation**: Use specific regex patterns, audit skip list quarterly
 
 ### Risk 3: Breaking Tests
+
 **Risk**: Fixing warnings introduces test failures
 **Mitigation**: Run test suite after each fix, rollback on failure
 
@@ -329,19 +346,22 @@ python -m crackerjack run-tests --fix-warnings
 ## Testing Strategy
 
 ### Unit Tests
+
 1. Test warning categorization
-2. Test pattern matching
-3. Test fix strategies
+1. Test pattern matching
+1. Test fix strategies
 
 ### Integration Tests
+
 1. Run on crackerjack test suite
-2. Measure warning reduction
-3. Validate no test breakage
+1. Measure warning reduction
+1. Validate no test breakage
 
 ### Regression Tests
+
 1. Test that skipped warnings don't reappear
-2. Test that fixed warnings don't recur
-3. Test that manual warnings are tracked
+1. Test that fixed warnings don't recur
+1. Test that manual warnings are tracked
 
 ## Documentation
 
@@ -373,11 +393,12 @@ See `docs/BATCHPROCESSOR_USER_GUIDE.md` for configuration.
 ## Future Enhancements
 
 ### Phase 5+: Advanced Features
+
 1. **Machine Learning**: Learn which warnings should be skipped vs fixed
-2. **Warning Analytics**: Track warning trends over time
-3. **Custom Patterns**: User-defined warning patterns
-4. **IDE Integration**: Real-time warning detection in IDEs
-5. **CI Integration**: Warning gates in CI/CD pipelines
+1. **Warning Analytics**: Track warning trends over time
+1. **Custom Patterns**: User-defined warning patterns
+1. **IDE Integration**: Real-time warning detection in IDEs
+1. **CI Integration**: Warning gates in CI/CD pipelines
 
 ## Related Issues
 
@@ -393,4 +414,6 @@ The WarningSuppressionAgent fills an important gap in the AI-fix ecosystem by in
 **Estimated Development Time**: 2 weeks (Phases 1-4)
 **Expected Impact**: 80%+ reduction in pytest warnings with minimal false positives
 **Risk Level**: Low (conservative defaults, manual review for critical changes)
+
+```
 ```
