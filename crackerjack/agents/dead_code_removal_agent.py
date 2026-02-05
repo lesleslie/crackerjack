@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 
 from crackerjack.agents.base import (
@@ -146,7 +147,7 @@ class DeadCodeRemovalAgent(SubAgent):
     def _is_test_file(self, file_path: Path) -> bool:
         path_str = str(file_path)
         return any(
-            x in path_str for x in ["/test_", "/tests/", "conftest.py", "_test.py"]
+            x in path_str for x in ("/test_", "/tests/", "conftest.py", "_test.py")
         )
 
     def _parse_dead_code_issue(self, issue: Issue) -> tuple[str, str, int] | None:
@@ -242,9 +243,9 @@ class DeadCodeRemovalAgent(SubAgent):
 
         for i in range(line_number, min(len(lines), line_number + 5)):
             line = lines[i].strip()
-            if line.startswith('"""') or line.startswith("'''"):
+            if line.startswith(('"""', "'''")):
                 return True
-            if line.startswith('r"""') or line.startswith("r'''"):
+            if line.startswith(('r"""', "r'''")):
                 return True
 
         return False
@@ -259,7 +260,7 @@ class DeadCodeRemovalAgent(SubAgent):
         return False
 
     def _is_recently_modified(self, content: str, line_number: int) -> bool:
-        try:
+        with suppress(Exception):
             import subprocess
 
             file_path = self.context.project_path
@@ -280,9 +281,6 @@ class DeadCodeRemovalAgent(SubAgent):
             if result.returncode == 0:
                 blame_output = result.stdout
                 return "(not committed)" not in blame_output.lower()
-
-        except Exception:
-            pass
 
         return False
 
@@ -325,7 +323,7 @@ class DeadCodeRemovalAgent(SubAgent):
 
             if code_type == "import":
                 new_lines = self._remove_import_line(lines, name)
-            elif code_type in ["function", "method"]:
+            elif code_type in ("function", "method"):
                 new_lines = self._remove_function(lines, line_number)
             elif code_type == "class":
                 new_lines = self._remove_class(lines, line_number)

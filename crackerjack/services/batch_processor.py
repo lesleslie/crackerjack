@@ -13,8 +13,6 @@ from crackerjack.agents.base import (
     SubAgent,
 )
 
-# Agent registry: maps agent names to factory functions
-# This avoids repetitive if/elif chains and enables O(1) lookup
 _AGENT_REGISTRY: dict[str, t.Callable[[AgentContext], SubAgent]] = {
     "TestEnvironmentAgent": lambda ctx: __import__(
         "crackerjack.agents.test_environment_agent", fromlist=["TestEnvironmentAgent"]
@@ -126,20 +124,6 @@ class BatchProcessor:
         self._agents: dict[str, SubAgent] = {}
 
     def _get_agent(self, agent_name: str) -> SubAgent:
-        """Get or create agent instance by name.
-
-        Uses registry pattern for O(1) lookup and easy extensibility.
-        Complexity: 3 (was 14 before refactoring).
-
-        Args:
-            agent_name: Name of agent to retrieve
-
-        Returns:
-            Agent instance
-
-        Raises:
-            ValueError: If agent_name is not in registry
-        """
         if agent_name not in self._agents:
             if agent_name not in _AGENT_REGISTRY:
                 logger.warning(f"Unknown agent: {agent_name}")

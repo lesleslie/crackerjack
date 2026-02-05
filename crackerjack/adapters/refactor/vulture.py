@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import re
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -207,7 +208,7 @@ class VultureAdapter(BaseToolAdapter):
 
         pyproject_path = cwd / "pyproject.toml"
         if pyproject_path.exists():
-            try:
+            with suppress(Exception):
                 import tomllib
 
                 with pyproject_path.open("rb") as f:
@@ -217,10 +218,8 @@ class VultureAdapter(BaseToolAdapter):
                     package_name = str(data["project"]["name"]).replace("-", "_")
                     if (cwd / package_name).exists():
                         return package_name
-            except Exception:
-                pass
 
-        for name in ["crackerjack", "src", "app"]:
+        for name in ("crackerjack", "src", "app"):
             if (cwd / name).exists():
                 return name
 

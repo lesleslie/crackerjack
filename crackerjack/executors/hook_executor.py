@@ -316,7 +316,7 @@ class HookExecutor:
             return None
 
         if self.file_filter:
-            try:
+            with suppress(Exception):
                 from crackerjack.services.file_filter import SmartFileFilter
 
                 if isinstance(self.file_filter, SmartFileFilter):
@@ -331,8 +331,6 @@ class HookExecutor:
 
                     if filtered_files:
                         return filtered_files
-            except Exception:
-                pass
 
         if not self.git_service:
             return None
@@ -778,7 +776,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 

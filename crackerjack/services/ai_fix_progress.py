@@ -1,4 +1,6 @@
 import logging
+from contextlib import suppress
+from pathlib import Path
 from typing import Any
 
 from alive_progress import alive_bar, config_handler
@@ -93,10 +95,8 @@ class AIFixProgressManager:
 
         self.iteration_bar = self.iteration_bar.__enter__()
 
-        try:
+        with suppress(Exception):
             self.iteration_bar(0)
-        except Exception:
-            pass
 
         self._update_iteration_display(iteration, issue_count, 0)
 
@@ -113,7 +113,7 @@ class AIFixProgressManager:
             if not self.issue_history or self.issue_history[-1] != issues_remaining:
                 self.issue_history.append(issues_remaining)
 
-        if len(self.issue_history) > 0:
+        if self.issue_history:
             initial_issues = self.issue_history[0]
             issues_fixed = initial_issues - issues_remaining
             reduction_pct = (
@@ -123,10 +123,8 @@ class AIFixProgressManager:
             reduction_pct = 0
 
         if self.iteration_bar:
-            try:
+            with suppress(Exception):
                 self.iteration_bar(reduction_pct)
-            except Exception:
-                pass
 
         self._update_iteration_display(iteration, issues_remaining, no_progress_count)
 
@@ -134,10 +132,8 @@ class AIFixProgressManager:
         if not self.enabled or not self.iteration_bar:
             return
 
-        try:
+        with suppress(Exception):
             self.iteration_bar(100)
-        except Exception:
-            pass
 
         self.iteration_bar = None
 
@@ -182,10 +178,8 @@ class AIFixProgressManager:
             pct = 100
 
         if agent_name in self.agent_bars:
-            try:
+            with suppress(Exception):
                 self.agent_bars[agent_name](pct)
-            except Exception:
-                pass
 
         if current_file or current_issue_type:
             self._print_current_operation(agent_name, current_file, current_issue_type)
@@ -194,11 +188,9 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        for agent_name, bar in self.agent_bars.items():
-            try:
+        for bar in self.agent_bars.values():
+            with suppress(Exception):
                 bar(100)
-            except Exception:
-                pass
 
         self.agent_bars.clear()
         self.current_operation = ""
@@ -216,16 +208,12 @@ class AIFixProgressManager:
 
         short_file = ""
         if current_file:
-            import os
-
             short_file = current_file
 
-            try:
-                cwd = os.getcwd()
+            with suppress(Exception):
+                cwd = str(Path.cwd())
                 if current_file.startswith(cwd):
                     short_file = "." + current_file[len(cwd) :]
-            except Exception:
-                pass
 
             if len(short_file) > 50:
                 short_file = "..." + short_file[-47:]

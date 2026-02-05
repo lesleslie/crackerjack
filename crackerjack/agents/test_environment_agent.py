@@ -64,20 +64,20 @@ class TestEnvironmentAgent(SubAgent):
 
         if any(
             x in message_lower
-            for x in ["importerror", "modulenotfounderror", "no module named"]
+            for x in ("importerror", "modulenotfounderror", "no module named")
         ):
             return 0.9
 
 
         if "pytest" in message_lower and any(
             x in message_lower
-            for x in ["config", "ini", "pyproject", "plugin"]
+            for x in ("config", "ini", "pyproject", "plugin")
         ):
             return 0.7
 
 
         if "test" in message_lower and any(
-            x in message_lower for x in ["not found", "collected", "discovery"]
+            x in message_lower for x in ("not found", "collected", "discovery")
         ):
             return 0.7
 
@@ -99,7 +99,7 @@ class TestEnvironmentAgent(SubAgent):
 
         if any(
             x in message_lower
-            for x in ["importerror", "modulenotfounderror", "no module named"]
+            for x in ("importerror", "modulenotfounderror", "no module named")
         ):
             return await self._fix_import_error(issue)
 
@@ -331,7 +331,7 @@ def {fixture_name}():
 
             import_index = 0
             for i, line in enumerate(lines):
-                if line.startswith("import ") or line.startswith("from "):
+                if line.startswith(("import ", "from ")):
                     import_index = i
                 elif line.startswith("# ") and i > 0:
 

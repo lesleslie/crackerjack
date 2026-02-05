@@ -83,8 +83,7 @@ class WarningSuppressionAgent(SubAgent):
             return await self._fix_warning(issue)
         elif category == WarningCategory.FIX_MANUAL:
             return self._suggest_manual_fix(issue)
-        else:
-            return await self._fix_blocker(issue)
+        return await self._fix_blocker(issue)
 
     def _categorize_warning(self, issue: Issue) -> WarningCategory:
         for config in WARNING_PATTERNS.values():
@@ -152,22 +151,15 @@ class WarningSuppressionAgent(SubAgent):
         )
 
     def _apply_fix(self, content: str, issue: Issue) -> tuple[str, str]:
-        """Apply warning fixes using centralized regex patterns.
-
-        Uses crackerjack.services.patterns for validated, tested regex patterns
-        instead of raw regex strings.
-        """
         from crackerjack.services.patterns import SAFE_PATTERNS
 
         message_lower = issue.message.lower()
 
-        # Fix deprecated pytest.helpers imports
         if "pytest.helpers" in message_lower:
             fixed = SAFE_PATTERNS["fix_pytest_helpers_import"].apply(content)
             if fixed != content:
                 return fixed, "Replaced deprecated pytest.helpers import"
 
-        # Fix deprecated Mapping imports
         if "collections.abc" in message_lower and "mapping" in message_lower:
             fixed = SAFE_PATTERNS["fix_deprecated_mapping_import"].apply(content)
             if fixed != content:

@@ -125,7 +125,7 @@ class RefactoringAgent(SubAgent):
 
         if any(
             x in message_lower
-            for x in ["-> None", "-> Any", "needs annotation", "has no type"]
+            for x in ("-> None", "-> Any", "needs annotation", "has no type")
         ):
             return 0.8
 
@@ -134,14 +134,14 @@ class RefactoringAgent(SubAgent):
 
         if any(
             x in message_lower
-            for x in [
+            for x in (
                 "incompatible",
                 "assignment",
                 "cannot be assigned",
                 "type mismatch",
                 "invalid",
                 "undefined",
-            ]
+            )
         ):
             return 0.0
 

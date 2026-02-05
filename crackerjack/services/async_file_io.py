@@ -5,6 +5,7 @@ import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from functools import partial
+from itertools import starmap
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -14,25 +15,17 @@ _io_executor: ThreadPoolExecutor | None = None
 
 
 def get_io_executor() -> ThreadPoolExecutor:
-    """Get or create the I/O thread pool executor.
-
-    Executor size is configurable via settings.
-
-    Returns:
-        ThreadPoolExecutor instance with configured worker count
-    """
     global _io_executor
 
     if _io_executor is None:
         with _io_executor_lock:
-            if _io_executor is None:  # Double-check
+            if _io_executor is None:
                 try:
                     from crackerjack.config import CrackerjackSettings
 
                     settings = CrackerjackSettings()
                     max_workers = settings.max_parallel_hooks
                 except Exception:
-                    # Fallback to default if settings not available
                     max_workers = 4
                     logger.warning(
                         "Could not load max_parallel_hooks from settings, using default: 4"
@@ -88,7 +81,7 @@ async def async_write_files_batch(
     file_writes: list[tuple[Path, str]],
 ) -> None:
 
-    tasks = [async_write_file(fp, content) for fp, content in file_writes]
+    tasks = list(starmap(async_write_file, file_writes))
     await asyncio.gather(*tasks)
 
 

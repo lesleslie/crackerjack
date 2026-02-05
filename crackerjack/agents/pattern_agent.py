@@ -117,7 +117,7 @@ class PatternAgent(SubAgent):
                     and not node.handlers[0].name
                 ):
                     handler_body = node.handlers[0].body
-                    if len(handler_body) == 0 or (
+                    if not handler_body or (
                         len(handler_body) == 1 and isinstance(handler_body[0], ast.Pass)
                     ):
                         suppress_call = ast.Call(
@@ -174,7 +174,7 @@ class PatternAgent(SubAgent):
                     and isinstance(node.func.value, ast.Name)
                     and node.func.value.id == "os"
                     and node.func.attr == "getcwd"
-                    and len(node.args) == 0
+                    and not node.args
                 ):
                     return ast.Call(
                         func=ast.Attribute(
