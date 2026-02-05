@@ -3,23 +3,24 @@
 **Version**: 1.0
 **Last Updated**: 2026-02-05
 
----
+______________________________________________________________________
 
 ## Table of Contents
 
 1. [Common Errors](#common-errors)
-2. [Performance Issues](#performance-issues)
-3. [Agent-Specific Issues](#agent-specific-issues)
-4. [Debugging Techniques](#debugging-techniques)
-5. [Getting Help](#getting-help)
+1. [Performance Issues](#performance-issues)
+1. [Agent-Specific Issues](#agent-specific-issues)
+1. [Debugging Techniques](#debugging-techniques)
+1. [Getting Help](#getting-help)
 
----
+______________________________________________________________________
 
 ## Common Errors
 
 ### Error 1: "Unknown agent"
 
 **Symptom**:
+
 ```
 ValueError: Unknown agent: DependencyAgent
 ```
@@ -27,9 +28,10 @@ ValueError: Unknown agent: DependencyAgent
 **Cause**: Agent not registered in `BatchProcessor._get_agent()` method
 
 **Solution**:
+
 1. Check if agent exists: `crackerjack/agents/<agent>_name.py`
-2. Verify agent is imported in batch_processor.py
-3. Add agent to `_get_agent()` method:
+1. Verify agent is imported in batch_processor.py
+1. Add agent to `_get_agent()` method:
 
 ```python
 elif agent_name == "DependencyAgent":
@@ -39,11 +41,12 @@ elif agent_name == "DependencyAgent":
 
 **Status**: ✅ Fixed in version 1.0
 
----
+______________________________________________________________________
 
 ### Error 2: "No module named 'async_file_io'"
 
 **Symptom**:
+
 ```
 ImportError: cannot import name 'async_read_file' from 'crackerjack.services.async_file_io'
 ```
@@ -51,19 +54,22 @@ ImportError: cannot import name 'async_read_file' from 'crackerjack.services.asy
 **Cause**: `async_file_io.py` not found or not in Python path
 
 **Solution**:
+
 1. Verify file exists: `crackerjack/services/async_file_io.py`
-2. Check it's importable:
+1. Check it's importable:
+
 ```bash
 python -c "from crackerjack.services.async_file_io import async_read_file; print('OK')"
 ```
 
 **Status**: ✅ Included in distribution
 
----
+______________________________________________________________________
 
 ### Error 3: "AttributeError: 'BatchIssueResult' object has no attribute 'results'"
 
 **Symptom**:
+
 ```
 AttributeError: 'BatchIssueResult' object has no attribute 'results'
 ```
@@ -74,9 +80,9 @@ AttributeError: 'BatchIssueResult' object has no attribute 'results'
 
 **Status**: ✅ Fixed in version 1.0
 
----
+______________________________________________________________________
 
-### Error 4: Low Fix Rate (<50%)
+### Error 4: Low Fix Rate (\<50%)
 
 **Symptom**: Most issues marked as skipped or failed
 
@@ -85,6 +91,7 @@ AttributeError: 'BatchIssueResult' object has no attribute 'results'
 #### Cause 4A: Issue Type Not Supported
 
 **Diagnosis**:
+
 ```python
 # Check issue type
 print(issue.type)  # Should be in IssueType enum
@@ -99,6 +106,7 @@ print(ISSUE_TYPE_TO_AGENTS.get(issue.type, []))
 #### Cause 4B: Agent Confidence Too Low
 
 **Diagnosis**:
+
 ```python
 # Enable logging
 import logging
@@ -112,12 +120,14 @@ for agent_name in ISSUE_TYPE_TO_AGENTS.get(issue.type, []):
 ```
 
 **Solution**:
+
 - Confidence < 0.7: Agent won't attempt fix
 - This is expected behavior - agent unsure it can fix
 
 #### Cause 4C: Files Don't Exist
 
 **Diagnosis**:
+
 ```python
 # Check file paths
 for issue in issues:
@@ -128,7 +138,7 @@ for issue in issues:
 
 **Solution**: Ensure file paths are correct before processing
 
----
+______________________________________________________________________
 
 ### Error 5: Batch Processing Hangs
 
@@ -141,6 +151,7 @@ for issue in issues:
 **Diagnosis**: Check if agent is doing blocking I/O
 
 **Solution**: Use async I/O methods:
+
 ```python
 # Instead of:
 content = context.get_file_content(file_path)
@@ -154,17 +165,19 @@ content = await context.async_get_file_content(file_path)
 **Diagnosis**: Agent stuck in loop
 
 **Solution**:
-1. Enable debug logging
-2. Check agent logs for repeated patterns
-3. Report bug if found
 
----
+1. Enable debug logging
+1. Check agent logs for repeated patterns
+1. Report bug if found
+
+______________________________________________________________________
 
 ## Performance Issues
 
 ### Issue 1: Slow Processing (>60s for 10 issues)
 
 **Diagnosis**:
+
 ```python
 print(f"Duration: {result.duration_seconds:.1f}s")
 print(f"Issues: {result.total_issues}")
@@ -210,13 +223,14 @@ issues = [i for i in issues if i.type != IssueType.TEST_FAILURE]
 
 **Expected Improvement**: 2-3x speedup for mixed issues
 
----
+______________________________________________________________________
 
 ### Issue 2: Memory Usage Too High
 
 **Symptom**: >500MB memory usage during processing
 
 **Diagnosis**:
+
 ```python
 import psutil
 import os
@@ -249,7 +263,7 @@ MAX_FILE_SIZE = 1_000_000  # 1MB
 issues = [i for i in issues if Path(i.file_path).stat().st_size < MAX_FILE_SIZE]
 ```
 
----
+______________________________________________________________________
 
 ## Agent-Specific Issues
 
@@ -260,12 +274,13 @@ issues = [i for i in issues if Path(i.file_path).stat().st_size < MAX_FILE_SIZE]
 **Symptom**: Agent says it fixed import, but import still missing
 
 **Diagnosis**:
+
 1. Check if file was actually modified
-2. Verify import was added to correct location
+1. Verify import was added to correct location
 
 **Solution**: Agent adds imports alphabetically. Check file manually.
 
----
+______________________________________________________________________
 
 ### TestSpecialistAgent
 
@@ -274,6 +289,7 @@ issues = [i for i in issues if Path(i.file_path).stat().st_size < MAX_FILE_SIZE]
 **Symptom**: Agent says fixture created, but still not found
 
 **Diagnosis**:
+
 ```bash
 # Check if conftest.py exists
 ls -la tests/conftest.py
@@ -283,16 +299,18 @@ grep -n "def tmp_path" tests/conftest.py
 ```
 
 **Possible Causes**:
+
 1. Wrong conftest.py location
-2. Fixture name mismatch
-3. Pytest not discovering tests
+1. Fixture name mismatch
+1. Pytest not discovering tests
 
 **Solution**:
+
 - Ensure conftest.py in tests/ directory
 - Verify fixture name matches test usage
 - Run `pytest --collect-only` to check discovery
 
----
+______________________________________________________________________
 
 ### TestCreationAgent
 
@@ -305,11 +323,12 @@ grep -n "def tmp_path" tests/conftest.py
 **Current Status**: ⚠️ Known limitation, caching planned for v1.1
 
 **Workaround**:
+
 - Process test failures separately
 - Limit number of test issues per batch
 - Use sequential mode for better visibility
 
----
+______________________________________________________________________
 
 ### DeadCodeRemovalAgent
 
@@ -318,6 +337,7 @@ grep -n "def tmp_path" tests/conftest.py
 **Symptom**: Agent reports success, but code still there
 
 **Diagnosis**:
+
 ```bash
 # Check if vulture detected it
 python -m vulture crackerjack/
@@ -327,13 +347,14 @@ python -m vulture crackerjack/
 ```
 
 **Possible Causes**:
+
 1. Decorator protection (agent won't remove decorated code)
-2. Low confidence (<80%)
-3. In __all__ exports (public API)
+1. Low confidence (\<80%)
+1. In __all__ exports (public API)
 
 **Solution**: This is safety behavior - remove manually if needed
 
----
+______________________________________________________________________
 
 ## Debugging Techniques
 
@@ -418,7 +439,7 @@ result = await processor.process_batch(issues=issues)
 pathlib.Path.read_text = original_read_text
 ```
 
----
+______________________________________________________________________
 
 ## Getting Help
 
@@ -427,10 +448,10 @@ pathlib.Path.read_text = original_read_text
 When reporting issues, collect:
 
 1. **Error Message**: Full traceback
-2. **Issue Details**: Issue type, file path, message
-3. **Configuration**: max_retries, parallel setting
-4. **Environment**: Python version, OS
-5. **Logs**: Debug logging output
+1. **Issue Details**: Issue type, file path, message
+1. **Configuration**: max_retries, parallel setting
+1. **Environment**: Python version, OS
+1. **Logs**: Debug logging output
 
 ### Minimum Reproducible Example
 
@@ -472,19 +493,22 @@ asyncio.run(main())
 ### Where to Get Help
 
 1. **Documentation**:
+
    - User Guide: `docs/BATCHPROCESSOR_USER_GUIDE.md`
    - Implementation Status: `docs/IMPLEMENTATION_STATUS.md`
 
-2. **Source Code**:
+1. **Source Code**:
+
    - BatchProcessor: `crackerjack/services/batch_processor.py`
    - Agent Base: `crackerjack/agents/base.py`
    - Coordinator: `crackerjack/agents/coordinator.py`
 
-3. **Tests**:
+1. **Tests**:
+
    - Validation: `test_batch_processor_validation.py`
    - Comprehensive: `test_comprehensive_batch_processor.py`
 
-4. **Issues**: GitHub repository issue tracker
+1. **Issues**: GitHub repository issue tracker
 
 ### Common Solutions Quick Reference
 
@@ -499,7 +523,7 @@ asyncio.run(main())
 | Code not removed | Safety feature (decorators, exports) |
 | Processing hangs | Check for blocking operations |
 
----
+______________________________________________________________________
 
 **Status**: Production Ready ✅
 **Last Reviewed**: 2026-02-05

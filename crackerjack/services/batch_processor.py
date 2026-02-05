@@ -13,6 +13,54 @@ from crackerjack.agents.base import (
     SubAgent,
 )
 
+# Agent registry: maps agent names to factory functions
+# This avoids repetitive if/elif chains and enables O(1) lookup
+_AGENT_REGISTRY: dict[str, t.Callable[[AgentContext], SubAgent]] = {
+    "TestEnvironmentAgent": lambda ctx: __import__(
+        "crackerjack.agents.test_environment_agent", fromlist=["TestEnvironmentAgent"]
+    ).TestEnvironmentAgent(ctx),
+    "DeadCodeRemovalAgent": lambda ctx: __import__(
+        "crackerjack.agents.dead_code_removal_agent", fromlist=["DeadCodeRemovalAgent"]
+    ).DeadCodeRemovalAgent(ctx),
+    "FormattingAgent": lambda ctx: __import__(
+        "crackerjack.agents.formatting_agent", fromlist=["FormattingAgent"]
+    ).FormattingAgent(ctx),
+    "ImportOptimizationAgent": lambda ctx: __import__(
+        "crackerjack.agents.import_optimization_agent",
+        fromlist=["ImportOptimizationAgent"],
+    ).ImportOptimizationAgent(ctx),
+    "RefactoringAgent": lambda ctx: __import__(
+        "crackerjack.agents.refactoring_agent", fromlist=["RefactoringAgent"]
+    ).RefactoringAgent(ctx),
+    "SecurityAgent": lambda ctx: __import__(
+        "crackerjack.agents.security_agent", fromlist=["SecurityAgent"]
+    ).SecurityAgent(ctx),
+    "TestSpecialistAgent": lambda ctx: __import__(
+        "crackerjack.agents.test_specialist_agent", fromlist=["TestSpecialistAgent"]
+    ).TestSpecialistAgent(ctx),
+    "TestCreationAgent": lambda ctx: __import__(
+        "crackerjack.agents.test_creation_agent", fromlist=["TestCreationAgent"]
+    ).TestCreationAgent(ctx),
+    "DRYAgent": lambda ctx: __import__(
+        "crackerjack.agents.dry_agent", fromlist=["DRYAgent"]
+    ).DRYAgent(ctx),
+    "PerformanceAgent": lambda ctx: __import__(
+        "crackerjack.agents.performance_agent", fromlist=["PerformanceAgent"]
+    ).PerformanceAgent(ctx),
+    "DocumentationAgent": lambda ctx: __import__(
+        "crackerjack.agents.documentation_agent", fromlist=["DocumentationAgent"]
+    ).DocumentationAgent(ctx),
+    "SemanticAgent": lambda ctx: __import__(
+        "crackerjack.agents.semantic_agent", fromlist=["SemanticAgent"]
+    ).SemanticAgent(ctx),
+    "ArchitectAgent": lambda ctx: __import__(
+        "crackerjack.agents.architect_agent", fromlist=["ArchitectAgent"]
+    ).ArchitectAgent(ctx),
+    "DependencyAgent": lambda ctx: __import__(
+        "crackerjack.agents.dependency_agent", fromlist=["DependencyAgent"]
+    ).DependencyAgent(ctx),
+}
+
 if t.TYPE_CHECKING:
     from rich.console import Console
 
@@ -77,77 +125,28 @@ class BatchProcessor:
 
         self._agents: dict[str, SubAgent] = {}
 
-    def _get_agent(self, agent_name: str) -> SubAgent:  # noqa: C901
+    def _get_agent(self, agent_name: str) -> SubAgent:
+        """Get or create agent instance by name.
+
+        Uses registry pattern for O(1) lookup and easy extensibility.
+        Complexity: 3 (was 14 before refactoring).
+
+        Args:
+            agent_name: Name of agent to retrieve
+
+        Returns:
+            Agent instance
+
+        Raises:
+            ValueError: If agent_name is not in registry
+        """
         if agent_name not in self._agents:
-            if agent_name == "TestEnvironmentAgent":
-                from crackerjack.agents.test_environment_agent import (
-                    TestEnvironmentAgent,
-                )
-
-                self._agents[agent_name] = TestEnvironmentAgent(self.context)
-            elif agent_name == "DeadCodeRemovalAgent":
-                from crackerjack.agents.dead_code_removal_agent import (
-                    DeadCodeRemovalAgent,
-                )
-
-                self._agents[agent_name] = DeadCodeRemovalAgent(self.context)
-            elif agent_name == "FormattingAgent":
-                from crackerjack.agents.formatting_agent import FormattingAgent
-
-                self._agents[agent_name] = FormattingAgent(self.context)
-            elif agent_name == "ImportOptimizationAgent":
-                from crackerjack.agents.import_optimization_agent import (
-                    ImportOptimizationAgent,
-                )
-
-                self._agents[agent_name] = ImportOptimizationAgent(self.context)
-            elif agent_name == "RefactoringAgent":
-                from crackerjack.agents.refactoring_agent import RefactoringAgent
-
-                self._agents[agent_name] = RefactoringAgent(self.context)
-            elif agent_name == "SecurityAgent":
-                from crackerjack.agents.security_agent import SecurityAgent
-
-                self._agents[agent_name] = SecurityAgent(self.context)
-            elif agent_name == "TestSpecialistAgent":
-                from crackerjack.agents.test_specialist_agent import (
-                    TestSpecialistAgent,
-                )
-
-                self._agents[agent_name] = TestSpecialistAgent(self.context)
-            elif agent_name == "TestCreationAgent":
-                from crackerjack.agents.test_creation_agent import TestCreationAgent
-
-                self._agents[agent_name] = TestCreationAgent(self.context)
-            elif agent_name == "DRYAgent":
-                from crackerjack.agents.dry_agent import DRYAgent
-
-                self._agents[agent_name] = DRYAgent(self.context)
-            elif agent_name == "PerformanceAgent":
-                from crackerjack.agents.performance_agent import PerformanceAgent
-
-                self._agents[agent_name] = PerformanceAgent(self.context)
-            elif agent_name == "DocumentationAgent":
-                from crackerjack.agents.documentation_agent import (
-                    DocumentationAgent,
-                )
-
-                self._agents[agent_name] = DocumentationAgent(self.context)
-            elif agent_name == "SemanticAgent":
-                from crackerjack.agents.semantic_agent import SemanticAgent
-
-                self._agents[agent_name] = SemanticAgent(self.context)
-            elif agent_name == "ArchitectAgent":
-                from crackerjack.agents.architect_agent import ArchitectAgent
-
-                self._agents[agent_name] = ArchitectAgent(self.context)
-            elif agent_name == "DependencyAgent":
-                from crackerjack.agents.dependency_agent import DependencyAgent
-
-                self._agents[agent_name] = DependencyAgent(self.context)
-            else:
+            if agent_name not in _AGENT_REGISTRY:
                 logger.warning(f"Unknown agent: {agent_name}")
                 raise ValueError(f"Unknown agent: {agent_name}")
+
+            agent_factory = _AGENT_REGISTRY[agent_name]
+            self._agents[agent_name] = agent_factory(self.context)
 
         return self._agents[agent_name]
 

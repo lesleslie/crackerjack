@@ -348,18 +348,32 @@ class BaseCodeFixer(ABC):
         return error_msg
 
     def _sanitize_prompt_input(self, user_input: str) -> str:
+        """Sanitize user input to prevent prompt injection.
+
+        Filters out prompt injection patterns and limits input length.
+        """
         sanitized = user_input
 
+        # Prompt injection patterns (case-insensitive)
         injection_patterns = [
-            r"(?i)(ignore previous|disregard previous|forget previous)",
-            r"(?i)(system:|assistant:|user:)",
-            r"(?i)(you are now|act as|pretend to be)",
+            r"ignore (previous|above|instructions)",
+            r"disregard.*instructions",
+            r"forget (previous|above|instructions)",
+            r"new (task|instructions):",
+            r"system:",
+            r"assistant:",
+            r"user:",
+            r"you are now|act as|pretend to be",
         ]
 
         for pattern in injection_patterns:
-            sanitized = re.sub(pattern, "[FILTERED]", sanitized)
+            sanitized = re.sub(pattern, "[FILTERED]", sanitized, flags=re.IGNORECASE)
 
-        return sanitized.replace("```", "'''")
+        # Prevent code fence injection
+        sanitized = sanitized.replace("```", "'''")
+
+        # Length limit (5000 chars) to prevent token overflow attacks
+        return sanitized[:5000]
 
     def _build_fix_prompt(
         self,

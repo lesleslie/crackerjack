@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
+import os
 import shutil
 import subprocess
 import typing as t
@@ -15,6 +17,9 @@ if t.TYPE_CHECKING:
 
 
 logger = logging.getLogger(__name__)
+
+# Per-file locks to prevent concurrent backup corruption
+_backup_locks: dict[str, asyncio.Lock] = {}
 
 
 class ValidationSeverity(StrEnum):
@@ -194,35 +199,52 @@ class SafeCodeModifier:
         return True
 
     async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
+        """Create backup with file locking to prevent concurrent corruption.
+
+        Uses per-file asyncio locks to ensure only one backup operation
+        can run on a given file at a time, while allowing parallel backups
+        of different files.
+        """
+        lock_key = str(file_path)
+
+        # Get or create lock for this file
+        if lock_key not in _backup_locks:
+            _backup_locks[lock_key] = asyncio.Lock()
+
         try:
             from crackerjack.services.async_file_io import (
                 async_read_file,
                 async_write_file,
             )
 
-            content = await async_read_file(file_path)
+            # Acquire lock before backup operation
+            async with _backup_locks[lock_key]:
+                content = await async_read_file(file_path)
 
-            file_hash = hashlib.sha256(content.encode()).hexdigest()
+                file_hash = hashlib.sha256(content.encode()).hexdigest()
 
-            sequence = self._backup_sequences.get(file_path, 0) + 1
-            self._backup_sequences[file_path] = sequence
+                sequence = self._backup_sequences.get(file_path, 0) + 1
+                self._backup_sequences[file_path] = sequence
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_name = (
-                f"{file_path.stem}.bak.{timestamp}.{sequence}{file_path.suffix}"
-            )
-            backup_path = file_path.parent / backup_name
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_name = (
+                    f"{file_path.stem}.bak.{timestamp}.{sequence}{file_path.suffix}"
+                )
+                backup_path = file_path.parent / backup_name
 
-            await async_write_file(backup_path, content)
+                await async_write_file(backup_path, content)
 
-            return BackupMetadata(
-                original_path=file_path,
-                backup_path=backup_path,
-                timestamp=datetime.now(),
-                hash=file_hash,
-                size=len(content),
-                sequence=sequence,
-            )
+                # Set secure permissions (owner read/write only)
+                os.chmod(backup_path, 0o600)
+
+                return BackupMetadata(
+                    original_path=file_path,
+                    backup_path=backup_path,
+                    timestamp=datetime.now(),
+                    hash=file_hash,
+                    size=len(content),
+                    sequence=sequence,
+                )
 
         except Exception as e:
             logger.error(f"Failed to create backup: {e}")
@@ -397,31 +419,10 @@ class SafeCodeModifier:
             logger.warning(f"Failed to cleanup old backups: {e}")
 
 
-_instance: SafeCodeModifier | None = None
-
-
-def get_safe_code_modifier(
-    console: Console,
-    project_path: Path,
-    max_backups: int = 5,
-) -> SafeCodeModifier:
-    global _instance
-
-    if _instance is None:
-        _instance = SafeCodeModifier(
-            console=console,
-            project_path=project_path,
-            max_backups=max_backups,
-        )
-
-    return _instance
-
-
 __all__ = [
     "SafeCodeModifier",
     "BackupMetadata",
     "ValidationResult",
     "ValidationIssue",
     "ValidationSeverity",
-    "get_safe_code_modifier",
 ]

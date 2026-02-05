@@ -117,4 +117,38 @@ PATTERNS: dict[str, ValidatedPattern] = {
             ("--verbose", "--verbose"),
         ],
     ),
+    "fix_pytest_helpers_import": ValidatedPattern(
+        name="fix_pytest_helpers_import",
+        pattern=r"from pytest\.helpers import (\w+)",
+        replacement=r"from _pytest.pytester import \1",
+        description="Replace deprecated pytest.helpers imports with _pytest.pytester",
+        test_cases=[
+            (
+                "from pytest.helpers import sysprog",
+                "from _pytest.pytester import sysprog",
+            ),
+            (
+                "from pytest.helpers import LineMatcher",
+                "from _pytest.pytester import LineMatcher",
+            ),
+            ("import pytest", "import pytest"),
+        ],
+    ),
+    "fix_deprecated_mapping_import": ValidatedPattern(
+        name="fix_deprecated_mapping_import",
+        pattern=r"from collections\.abc import Mapping",
+        replacement=r"from typing import Mapping",
+        description="Replace deprecated Mapping import location with typing module",
+        test_cases=[
+            (
+                "from collections.abc import Mapping",
+                "from typing import Mapping",
+            ),
+            ("from typing import Mapping", "from typing import Mapping"),
+            (
+                "from collections.abc import Sequence",
+                "from collections.abc import Sequence",
+            ),
+        ],
+    ),
 }
