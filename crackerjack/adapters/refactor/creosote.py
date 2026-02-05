@@ -33,6 +33,7 @@ class CreosoteSettings(ToolAdapterSettings):
     config_file: Path | None = None
     exclude_deps: list[str] = Field(default_factory=list)
     paths: list[Path] = Field(default_factory=list)
+    output_format: str = "porcelain"  # Use porcelain format for reliable parsing
 
 
 class CreosoteAdapter(BaseToolAdapter):
@@ -96,6 +97,10 @@ class CreosoteAdapter(BaseToolAdapter):
 
         cmd = [self.tool_name]
 
+        # Add format flag for reliable parsing
+        if self.settings.output_format:
+            cmd.extend(["--format", self.settings.output_format])
+
         if self.settings.config_file and self.settings.config_file.exists():
             cmd.extend(["--deps-file", str(self.settings.config_file)])
 
@@ -150,29 +155,19 @@ class CreosoteAdapter(BaseToolAdapter):
 
         issues = []
         lines = result.raw_output.strip().split("\n")
-        logger.debug("Parsing Creosote text output", extra={"line_count": len(lines)})
+        logger.debug("Parsing Creosote output", extra={"line_count": len(lines)})
 
-        parsing_unused = False
-        config_file = (
-            self.settings.config_file if self.settings else Path("pyproject.toml")
-        )
+        config_file = self.settings.config_file if self.settings else Path("pyproject.toml")
 
+        # Porcelain format: one dependency name per line
         for line in lines:
-            line = line.strip()
-
-            if self._is_unused_deps_section_start(line):
-                parsing_unused = True
-                continue
-
-            if not line:
-                parsing_unused = False
-                continue
-
-            if parsing_unused and line:
-                dep_name = self._process_dependency_line(line)
-                if dep_name:
-                    issue = self._create_issue_for_dependency(dep_name, config_file)
-                    issues.append(issue)
+            dep_name = line.strip()
+            if dep_name:
+                # Skip header lines or empty lines
+                if dep_name.startswith("Found") or "bloat" in dep_name.lower():
+                    continue
+                issue = self._create_issue_for_dependency(dep_name, config_file or Path("pyproject.toml"))
+                issues.append(issue)
 
         logger.info(
             "Parsed Creosote output",

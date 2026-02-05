@@ -995,3 +995,166 @@ def complex_function():
             # Should fall through to Tier 3
             mock_tier3.assert_called_once()
             assert result.success is False
+
+
+@pytest.mark.unit
+@pytest.mark.asyncio
+class TestRefactoringAgentTypeErrors:
+    """Test TYPE_ERROR handling in RefactoringAgent."""
+
+    @pytest.fixture
+    def agent(self, tmp_path):
+        """Create RefactoringAgent for testing."""
+        context = AgentContext(project_path=tmp_path)
+        with patch("crackerjack.agents.refactoring_agent.create_semantic_enhancer"):
+            return RefactoringAgent(context)
+
+    def test_get_supported_types_includes_type_error(self, agent) -> None:
+        """Test that TYPE_ERROR is in supported types."""
+        supported = agent.get_supported_types()
+        assert IssueType.TYPE_ERROR in supported
+
+    async def test_can_handle_type_error_missing_return_type(self, agent) -> None:
+        """Test can_handle returns high confidence for missing return type."""
+        issue = Issue(
+            id="type-001",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="Function 'foo' missing return type",
+            file_path=None,
+            line_number=10,
+        )
+
+        confidence = await agent.can_handle(issue)
+        assert confidence == 0.9  # High confidence for missing return type
+
+    async def test_can_handle_type_error_needs_annotation(self, agent) -> None:
+        """Test can_handle returns medium confidence for type annotation."""
+        issue = Issue(
+            id="type-002",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.LOW,
+            message="Parameter 'x' needs type annotation",
+            file_path=None,
+            line_number=5,
+        )
+
+        confidence = await agent.can_handle(issue)
+        # Returns 0.7 for parameter type annotations (lower than return type)
+        assert confidence == 0.7
+
+    async def test_can_handle_type_error_incompatible(self, agent) -> None:
+        """Test can_handle returns 0.0 for incompatible types."""
+        issue = Issue(
+            id="type-003",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="Type mismatch: cannot assign 'str' to 'int'",
+            file_path=None,
+            line_number=15,
+        )
+
+        confidence = await agent.can_handle(issue)
+        assert confidence == 0.0  # Too complex for auto-fix
+
+    async def test_is_fixable_type_error_missing_return(self, agent) -> None:
+        """Test _is_fixable_type_error detects missing return types."""
+        issue = Issue(
+            id="type-004",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="missing return type",
+            file_path=None,
+            line_number=0,
+        )
+
+        confidence = await agent._is_fixable_type_error(issue)
+        assert confidence == 0.9
+
+    async def test_is_fixable_type_error_incompatible(self, agent) -> None:
+        """Test _is_fixable_type_error rejects incompatible types."""
+        issue = Issue(
+            id="type-005",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.HIGH,
+            message="incompatible types",
+            file_path=None,
+            line_number=0,
+        )
+
+        confidence = await agent._is_fixable_type_error(issue)
+        assert confidence == 0.0
+
+    async def test_fix_type_error_adds_return_type(self, agent, tmp_path) -> None:
+        """Test _fix_type_error adds -> None to functions."""
+        test_file = tmp_path / "test_type_fix.py"
+        test_file.write_text("""
+def foo():
+    pass
+
+def bar():  # No type annotation
+    return 42
+""")
+
+        issue = Issue(
+            id="type-006",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="Missing return type",
+            file_path=str(test_file),
+            line_number=2,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        assert result.success is True
+        assert result.confidence > 0.8
+        assert len(result.files_modified) == 1
+
+        # Verify the file was modified
+        content = test_file.read_text()
+        assert "def foo() -> None:" in content
+        assert "def bar() -> None:" in content  # Also gets -> None added
+
+    async def test_fix_type_error_skips_properties(self, agent, tmp_path) -> None:
+        """Test _fix_type_error doesn't add -> None to @property methods."""
+        test_file = tmp_path / "test_property.py"
+        test_file.write_text("""
+class MyClass:
+    @property
+    def my_property(self):
+        return 42
+""")
+
+        issue = Issue(
+            id="type-007",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.LOW,
+            message="Missing return type",
+            file_path=str(test_file),
+            line_number=3,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        # Properties should not get -> None added
+        content = test_file.read_text()
+        assert "@property" in content
+        assert "def my_property(self):" in content
+        # No -> None should be added
+
+    async def test_fix_type_error_no_file_path(self, agent) -> None:
+        """Test _fix_type_error handles missing file path gracefully."""
+        issue = Issue(
+            id="type-008",
+            type=IssueType.TYPE_ERROR,
+            severity=Priority.MEDIUM,
+            message="Missing return type",
+            file_path=None,
+            line_number=0,
+        )
+
+        result = await agent._fix_type_error(issue)
+
+        assert result.success is False
+        assert "No file path provided" in result.remaining_issues

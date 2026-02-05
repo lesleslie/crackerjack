@@ -1,6 +1,7 @@
 import asyncio
 import hashlib
 import inspect
+import time
 import typing as t
 from collections import defaultdict
 from datetime import datetime
@@ -58,6 +59,7 @@ class AgentCoordinator:
         tracker: AgentTrackerProtocol,
         debugger: DebuggerProtocol,
         cache: CrackerjackCache | None = None,
+        job_id: str | None = None,
     ) -> None:
         self.context = context
         self.agents: list[SubAgent] = []
@@ -69,6 +71,21 @@ class AgentCoordinator:
         self.debugger = debugger
         self.proactive_mode = True
         self.cache = cache or CrackerjackCache()
+
+        # Track job ID for metrics correlation
+        self.job_id = job_id or self._generate_job_id()
+
+    def _generate_job_id(self) -> str:
+        """Generate a unique job ID for metrics tracking.
+
+        Returns:
+            A unique job identifier based on timestamp and random data
+        """
+        import uuid
+
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        unique_id = str(uuid.uuid4())[:8]
+        return f"job_{timestamp}_{unique_id}"
 
     def initialize_agents(self) -> None:
         self.agents = agent_registry.create_all(self.context)
@@ -325,7 +342,13 @@ class AgentCoordinator:
             metadata={"issue_type": issue.type.value, "severity": issue.severity.value},
         )
 
+        # Track execution time
+        start_time = time.time()
+
         result = await self._execute_agent(agent, issue)
+
+        execution_time_ms = (time.time() - start_time) * 1000
+
         if result.success:
             self.logger.info(f"{agent.name} successfully fixed issue")
         else:
@@ -343,6 +366,15 @@ class AgentCoordinator:
                 "remaining_issues": len(result.remaining_issues),
             },
             metadata={"fix_applied": result.success},
+        )
+
+        # Track metrics for analysis
+        await self._track_agent_execution(
+            job_id=self.job_id,
+            agent_name=agent.name,
+            issue_type=issue.type.value,
+            result=result,
+            execution_time_ms=execution_time_ms,
         )
 
         return result
@@ -415,6 +447,7 @@ class AgentCoordinator:
         agent_name: str,
         issue_type: str,
         result: FixResult,
+        execution_time_ms: float | None = None,
     ) -> None:
         """Persist agent execution metrics for analysis.
 
@@ -423,6 +456,7 @@ class AgentCoordinator:
             agent_name: Name of the agent that executed
             issue_type: Type of issue that was processed
             result: The fix result from the agent
+            execution_time_ms: Execution time in milliseconds
         """
         try:
             # Lazy import to avoid circular dependency
@@ -434,8 +468,8 @@ class AgentCoordinator:
                 """
                 INSERT INTO agent_executions
                 (job_id, agent_name, issue_type, success, confidence,
-                 fixes_applied, files_modified, remaining_issues, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 fixes_applied, files_modified, remaining_issues, execution_time_ms, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     job_id,
@@ -446,6 +480,7 @@ class AgentCoordinator:
                     len(result.fixes_applied),
                     len(result.files_modified),
                     len(result.remaining_issues),
+                    execution_time_ms,
                     datetime.now(),
                 ),
             )
