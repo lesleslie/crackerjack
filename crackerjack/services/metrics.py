@@ -140,6 +140,31 @@ class MetricsCollector:
                     most_effective_strategy TEXT -- NEW
                 );
 
+                -- Agent execution tracking table (NEW for AI-fix coverage)
+                CREATE TABLE IF NOT EXISTS agent_executions (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL,
+                    agent_name TEXT NOT NULL,
+                    issue_type TEXT NOT NULL,
+                    success BOOLEAN NOT NULL,
+                    confidence REAL,
+                    fixes_applied INTEGER DEFAULT 0,
+                    files_modified INTEGER DEFAULT 0,
+                    remaining_issues INTEGER DEFAULT 0,
+                    timestamp TIMESTAMP NOT NULL,
+                    FOREIGN KEY (job_id) REFERENCES jobs(job_id)
+                );
+
+                -- Provider performance tracking table (NEW for AI-fix coverage)
+                CREATE TABLE IF NOT EXISTS provider_performance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    provider_id TEXT NOT NULL,
+                    success BOOLEAN NOT NULL,
+                    latency_ms REAL,
+                    error_message TEXT,
+                    timestamp TIMESTAMP NOT NULL
+                );
+
                 --Create indexes for performance
                 CREATE INDEX IF NOT EXISTS idx_jobs_start_time ON jobs(start_time);
                 CREATE INDEX IF NOT EXISTS idx_errors_job_id ON errors(job_id);
@@ -150,6 +175,10 @@ class MetricsCollector:
                 CREATE INDEX IF NOT EXISTS idx_strategy_decisions_job_id ON strategy_decisions(job_id);
                 CREATE INDEX IF NOT EXISTS idx_individual_tests_job_id ON individual_test_executions(job_id);
                 CREATE INDEX IF NOT EXISTS idx_strategy_decisions_strategy ON strategy_decisions(selected_strategy);
+                CREATE INDEX IF NOT EXISTS idx_agent_executions_job_id ON agent_executions(job_id);
+                CREATE INDEX IF NOT EXISTS idx_agent_executions_agent ON agent_executions(agent_name);
+                CREATE INDEX IF NOT EXISTS idx_provider_performance_provider ON provider_performance(provider_id);
+                CREATE INDEX IF NOT EXISTS idx_provider_performance_timestamp ON provider_performance(timestamp);
             """)
 
     @contextmanager
@@ -575,6 +604,100 @@ class MetricsCollector:
                 },
                 "common_errors": [dict[str, t.Any](row) for row in common_errors],
             }
+
+    def get_agent_success_rate(
+        self, agent_name: str, issue_type: str | None = None
+    ) -> float:
+        """Get success rate for agent (optionally filtered by issue type).
+
+        Args:
+            agent_name: Name of the agent to query
+            issue_type: Optional issue type filter
+
+        Returns:
+            Success rate as float (0.0 to 1.0)
+        """
+        query = """
+            SELECT COUNT(*) FILTER (WHERE success = TRUE) AS successes,
+                   COUNT(*) AS total
+            FROM agent_executions
+            WHERE agent_name = ?
+        """
+        params: list[t.Any] = [agent_name]
+
+        if issue_type:
+            query += " AND issue_type = ?"
+            params.append(issue_type)
+
+        with self._get_connection() as conn:
+            result = conn.execute(query, params).fetchone()
+
+        if not result or result[1] == 0:
+            return 0.0
+
+        return result[0] / result[1]
+
+    def get_provider_availability(
+        self, provider_id: str, hours: int = 24
+    ) -> float:
+        """Get provider availability percentage (last N hours).
+
+        Args:
+            provider_id: Provider to query (e.g., 'claude', 'qwen', 'ollama')
+            hours: Number of hours to look back (default: 24)
+
+        Returns:
+            Availability percentage as float (0.0 to 1.0)
+        """
+        from datetime import timedelta
+
+        cutoff = datetime.now() - timedelta(hours=hours)
+
+        with self._get_connection() as conn:
+            result = conn.execute(
+                """
+                SELECT COUNT(*) FILTER (WHERE success = TRUE) AS successes,
+                       COUNT(*) AS total
+                FROM provider_performance
+                WHERE provider_id = ? AND timestamp >= ?
+                """,
+                (provider_id, cutoff),
+            ).fetchone()
+
+        if not result or result[1] == 0:
+            return 0.0
+
+        return result[0] / result[1]
+
+    def get_agent_confidence_distribution(
+        self, agent_name: str
+    ) -> dict[str, int]:
+        """Get confidence distribution for agent.
+
+        Args:
+            agent_name: Name of the agent to query
+
+        Returns:
+            Dictionary with confidence levels (low, medium, high) and counts
+        """
+        with self._get_connection() as conn:
+            results = conn.execute(
+                """
+                SELECT
+                    CASE
+                        WHEN confidence < 0.5 THEN 'low'
+                        WHEN confidence < 0.8 THEN 'medium'
+                        ELSE 'high'
+                    END AS confidence_level,
+                    COUNT(*) AS count
+                FROM agent_executions
+                WHERE agent_name = ? AND confidence IS NOT NULL
+                GROUP BY confidence_level
+                """,
+                (agent_name,),
+            ).fetchall()
+
+        return {row[0]: row[1] for row in results}
 
 
 _metrics_collector: MetricsCollector | None = None

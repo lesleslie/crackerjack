@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import typing as t
 from collections import defaultdict
+from datetime import datetime
 from itertools import starmap
 
 from crackerjack.agents.base import (
@@ -407,6 +408,50 @@ class AgentCoordinator:
             except (TypeError, ValueError):
                 return None
         return None
+
+    async def _track_agent_execution(
+        self,
+        job_id: str,
+        agent_name: str,
+        issue_type: str,
+        result: FixResult,
+    ) -> None:
+        """Persist agent execution metrics for analysis.
+
+        Args:
+            job_id: The job identifier
+            agent_name: Name of the agent that executed
+            issue_type: Type of issue that was processed
+            result: The fix result from the agent
+        """
+        try:
+            # Lazy import to avoid circular dependency
+            from crackerjack.services.metrics import get_metrics
+
+            metrics = get_metrics()
+
+            metrics.execute(
+                """
+                INSERT INTO agent_executions
+                (job_id, agent_name, issue_type, success, confidence,
+                 fixes_applied, files_modified, remaining_issues, timestamp)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    job_id,
+                    agent_name,
+                    issue_type,
+                    result.success,
+                    result.confidence,
+                    len(result.fixes_applied),
+                    len(result.files_modified),
+                    len(result.remaining_issues),
+                    datetime.now(),
+                ),
+            )
+        except Exception as e:
+            # Don't fail the workflow if metrics tracking fails
+            self.logger.debug(f"Failed to track agent execution: {e}")
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:
         if not self.agents:
