@@ -62,10 +62,22 @@ class AISettings(Settings):
     max_iterations: int = 5
     autofix: bool = True
     ai_agent_autofix: bool = False
+
+    # Provider priority list (ordered preference for fallback chain)
+    # Uses the first available provider in this list
+    ai_providers: list[t.Literal["claude", "qwen", "ollama"]] = [
+        "claude",
+        "qwen",
+        "ollama",
+    ]
+
+    # Legacy single provider (deprecated, use ai_providers instead)
+    # Kept for backward compatibility
     ai_provider: t.Literal["claude", "qwen", "ollama"] = "claude"
 
-    ollama_base_url: str = "http://localhost: 11434"
-    ollama_model: str = "qwen2.5-coder: 7b"
+    # Ollama configuration
+    ollama_base_url: str = "http://localhost:11434"
+    ollama_model: str = "qwen2.5-coder:7b"
     ollama_timeout: int = 300
 
 

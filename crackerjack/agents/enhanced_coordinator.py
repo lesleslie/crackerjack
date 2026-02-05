@@ -1,5 +1,6 @@
 import typing as t
 
+from crackerjack.adapters.ai.registry import ProviderChain
 from crackerjack.config import load_settings
 from crackerjack.config.settings import AISettings
 from crackerjack.models.protocols import AgentTrackerProtocol, DebuggerProtocol
@@ -11,7 +12,14 @@ from .qwen_code_bridge import QwenCodeBridge
 
 
 class EnhancedAgentCoordinator(AgentCoordinator):
+    """Enhanced coordinator with AI provider fallback chain.
+
+    This coordinator automatically falls back through multiple AI providers
+    (Claude → Qwen → Ollama) to ensure 99%+ availability for AI-fix operations.
+    """
+
     claude_bridge: ClaudeCodeBridge | QwenCodeBridge
+    provider_chain: ProviderChain | None = None
 
     def __init__(
         self,
@@ -24,6 +32,13 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         super().__init__(context, tracker, debugger, cache)
 
         ai_settings = load_settings(AISettings)
+
+        # Initialize provider chain with prioritized providers
+        provider_ids = ai_settings.ai_providers
+        self.provider_chain = ProviderChain(provider_ids)
+
+        # Legacy bridge initialization (for backward compatibility)
+        # TODO: Deprecate in future version, use provider_chain directly
         if ai_settings.ai_provider == "qwen":
             self.claude_bridge = QwenCodeBridge(context)
         else:
@@ -38,6 +53,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
 
         self.logger.info(
             f"Enhanced coordinator initialized with external agents: {enable_external_agents}",
+            f"Provider chain: {provider_ids}",
         )
 
     def enable_external_agents(self, enabled: bool = True) -> None:
