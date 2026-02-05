@@ -52,8 +52,7 @@ class EnhancedAgentCoordinator(AgentCoordinator):
         }
 
         self.logger.info(
-            f"Enhanced coordinator initialized with external agents: {enable_external_agents}",
-            f"Provider chain: {provider_ids}",
+            f"Enhanced coordinator initialized with external agents: {enable_external_agents}, Provider chain: {provider_ids}"
         )
 
     def enable_external_agents(self, enabled: bool = True) -> None:

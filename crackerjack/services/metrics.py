@@ -151,6 +151,7 @@ class MetricsCollector:
                     fixes_applied INTEGER DEFAULT 0,
                     files_modified INTEGER DEFAULT 0,
                     remaining_issues INTEGER DEFAULT 0,
+                    execution_time_ms REAL,
                     timestamp TIMESTAMP NOT NULL,
                     FOREIGN KEY (job_id) REFERENCES jobs(job_id)
                 );
@@ -699,6 +700,19 @@ class MetricsCollector:
 
         return {row[0]: row[1] for row in results}
 
+    def execute(self, query: str, params: tuple[Any, ...] = ()) -> sqlite3.Cursor:
+        """Execute a SQL query with parameters.
+
+        Args:
+            query: SQL query string
+            params: Query parameters
+
+        Returns:
+            Cursor with query results
+        """
+        with self._get_connection() as conn:
+            return conn.execute(query, params)
+
 
 _metrics_collector: MetricsCollector | None = None
 
@@ -708,3 +722,9 @@ def get_metrics_collector() -> MetricsCollector:
     if _metrics_collector is None:
         _metrics_collector = MetricsCollector()
     return _metrics_collector
+
+
+# Alias for backwards compatibility
+def get_metrics() -> MetricsCollector:
+    """Alias for get_metrics_collector for backwards compatibility."""
+    return get_metrics_collector()

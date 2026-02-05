@@ -55,7 +55,7 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         name="Ollama (Local)",
         description="Free local models, complete privacy, requires installation",
         requires_api_key=False,
-        default_model="qwen2.5-coder: 7b",
+        default_model="qwen2.5-coder:7b",
         setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
@@ -63,6 +63,28 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
 
 
 class ProviderFactory:
+    @staticmethod
+    def _parse_provider_id(provider_id: ProviderID | str) -> ProviderID:
+        """Parse provider ID from string or enum.
+
+        Args:
+            provider_id: Provider ID as string or enum
+
+        Returns:
+            ProviderID enum value
+
+        Raises:
+            ValueError: If provider_id is unknown
+        """
+        if isinstance(provider_id, str):
+            try:
+                return ProviderID(provider_id.lower())
+            except ValueError:
+                available = [p.value for p in ProviderID]
+                msg = f"Unknown provider: {provider_id}. Available: {available}"
+                raise ValueError(msg) from None
+        return provider_id
+
     @staticmethod
     def create_provider(
         provider_id: ProviderID | str,
@@ -72,13 +94,7 @@ class ProviderFactory:
             msg = "Settings must be loaded from configuration, not passed to create_provider"
             raise TypeError(msg)
 
-        if isinstance(provider_id, str):
-            try:
-                provider_id = ProviderID(provider_id.lower())
-            except ValueError:
-                available = [p.value for p in ProviderID]
-                msg = f"Unknown provider: {provider_id}. Available: {available}"
-                raise ValueError(msg) from None
+        provider_id = ProviderFactory._parse_provider_id(provider_id)
 
         from crackerjack.adapters.ai.claude import ClaudeCodeFixer
         from crackerjack.adapters.ai.ollama import OllamaCodeFixer
@@ -98,13 +114,7 @@ class ProviderFactory:
 
     @staticmethod
     def get_provider_info(provider_id: ProviderID | str) -> ProviderInfo:
-        if isinstance(provider_id, str):
-            try:
-                provider_id = ProviderID(provider_id.lower())
-            except ValueError:
-                available = [p.value for p in ProviderID]
-                msg = f"Unknown provider: {provider_id}. Available: {available}"
-                raise ValueError(msg) from None
+        provider_id = ProviderFactory._parse_provider_id(provider_id)
 
         if provider_id not in PROVIDER_INFO:
             msg = f"Provider info not found: {provider_id}"
@@ -136,23 +146,23 @@ class ProviderChain:
             provider_ids: Ordered list of provider IDs (highest priority first)
 
         Raises:
-            ValueError: If provider_ids is empty or contains unknown providers
+            ValueError: If provider_ids is empty, contains duplicates, or unknown providers
         """
         if not provider_ids:
             msg = "Provider chain requires at least one provider"
             raise ValueError(msg)
 
-        # Convert strings to ProviderID enums
+        # Convert strings to ProviderID enums and check for duplicates
         self.provider_ids: list[ProviderID] = []
+        seen: set[ProviderID] = set()
+
         for pid in provider_ids:
-            if isinstance(pid, str):
-                try:
-                    pid = ProviderID(pid.lower())
-                except ValueError:
-                    available = [p.value for p in ProviderID]
-                    msg = f"Unknown provider: {pid}. Available: {available}"
-                    raise ValueError(msg) from None
-            self.provider_ids.append(pid)
+            parsed_pid = ProviderFactory._parse_provider_id(pid)
+            if parsed_pid in seen:
+                msg = f"Duplicate provider in chain: {parsed_pid.value}"
+                raise ValueError(msg)
+            seen.add(parsed_pid)
+            self.provider_ids.append(parsed_pid)
 
         # Cache provider instances to avoid repeated creation
         self._provider_cache: dict[ProviderID, BaseCodeFixer] = {}
