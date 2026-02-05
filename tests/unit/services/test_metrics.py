@@ -768,3 +768,394 @@ class TestMetricsEdgeCases:
             result = cursor.fetchone()
             assert result is not None
             assert result["job_id"] == malicious_job_id
+
+
+class TestAgentExecutionsTracking:
+    """Tests for agent execution tracking (AI-fix coverage)."""
+
+    def test_agent_executions_table_created(self, temp_db_path: Path) -> None:
+        """Test that agent_executions table is created."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='agent_executions'"
+            )
+            result = cursor.fetchone()
+
+            assert result is not None
+            assert result["name"] == "agent_executions"
+
+    def test_provider_performance_table_created(self, temp_db_path: Path) -> None:
+        """Test that provider_performance table is created."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name='provider_performance'"
+            )
+            result = cursor.fetchone()
+
+            assert result is not None
+            assert result["name"] == "provider_performance"
+
+    def test_new_indexes_created(self, temp_db_path: Path) -> None:
+        """Test that new indexes for agent/provider tracking are created."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
+            cursor.execute("SELECT name FROM sqlite_master WHERE type='index' ORDER BY name")
+            indexes = [row[0] for row in cursor.fetchall()]
+
+            # Verify new indexes exist
+            assert "idx_agent_executions_job_id" in indexes
+            assert "idx_agent_executions_agent" in indexes
+            assert "idx_provider_performance_provider" in indexes
+            assert "idx_provider_performance_timestamp" in indexes
+
+
+class TestAgentSuccessRate:
+    """Tests for get_agent_success_rate query method."""
+
+    def test_success_rate_all_successful(self, temp_db_path: Path) -> None:
+        """Test success rate calculation when all executions succeed."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        # Insert sample data
+        with sqlite3.connect(temp_db_path) as conn:
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-1", "RefactoringAgent", "COMPLEXITY", True, 0.9, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-2", "RefactoringAgent", "COMPLEXITY", True, 0.85, datetime.now()),
+            )
+
+        success_rate = collector.get_agent_success_rate("RefactoringAgent")
+        assert success_rate == 1.0
+
+    def test_success_rate_mixed_results(self, temp_db_path: Path) -> None:
+        """Test success rate with mixed success/failure."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # 3 successes, 2 failures
+            for i in range(3):
+                conn.execute(
+                    """INSERT INTO agent_executions 
+                       (job_id, agent_name, issue_type, success, confidence, timestamp)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (f"job-success-{i}", "TestAgent", "TEST_FAILURE", True, 0.8, datetime.now()),
+                )
+            for i in range(2):
+                conn.execute(
+                    """INSERT INTO agent_executions 
+                       (job_id, agent_name, issue_type, success, confidence, timestamp)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (f"job-fail-{i}", "TestAgent", "TEST_FAILURE", False, 0.5, datetime.now()),
+                )
+
+        success_rate = collector.get_agent_success_rate("TestAgent")
+        assert success_rate == 0.6  # 3/5 = 0.6
+
+    def test_success_rate_filtered_by_issue_type(self, temp_db_path: Path) -> None:
+        """Test success rate filtered by issue type."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # Same agent, different issue types
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-1", "RefactoringAgent", "COMPLEXITY", True, 0.9, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-2", "RefactoringAgent", "COMPLEXITY", False, 0.7, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-3", "RefactoringAgent", "DEAD_CODE", True, 0.85, datetime.now()),
+            )
+
+        # Filtered by COMPLEXITY: 1 success, 1 failure = 0.5
+        complexity_rate = collector.get_agent_success_rate("RefactoringAgent", "COMPLEXITY")
+        assert complexity_rate == 0.5
+
+        # All issue types: 2 successes, 1 failure = 0.666...
+        overall_rate = collector.get_agent_success_rate("RefactoringAgent")
+        assert overall_rate == 2.0 / 3.0
+
+    def test_success_rate_no_executions(self, temp_db_path: Path) -> None:
+        """Test success rate when agent has no executions."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        success_rate = collector.get_agent_success_rate("NonExistentAgent")
+        assert success_rate == 0.0
+
+    def test_success_rate_unknown_agent(self, temp_db_path: Path) -> None:
+        """Test success rate for agent that doesn't exist."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        success_rate = collector.get_agent_success_rate("UnknownAgent")
+        assert success_rate == 0.0
+
+
+class TestProviderAvailability:
+    """Tests for get_provider_availability query method."""
+
+    def test_provider_availability_all_successful(self, temp_db_path: Path) -> None:
+        """Test provider availability when all requests succeed."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        now = datetime.now()
+        with sqlite3.connect(temp_db_path) as conn:
+            # Insert recent successful requests
+            for i in range(5):
+                conn.execute(
+                    """INSERT INTO provider_performance 
+                       (provider_id, success, latency_ms, timestamp)
+                       VALUES (?, ?, ?, ?)""",
+                    ("claude", True, 50.0 + i * 10, now - timedelta(minutes=i)),
+                )
+
+        availability = collector.get_provider_availability("claude", hours=1)
+        assert availability == 1.0
+
+    def test_provider_availability_with_failures(self, temp_db_path: Path) -> None:
+        """Test provider availability with some failures."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        now = datetime.now()
+        with sqlite3.connect(temp_db_path) as conn:
+            # 7 successes, 3 failures
+            for i in range(7):
+                conn.execute(
+                    """INSERT INTO provider_performance 
+                       (provider_id, success, latency_ms, timestamp)
+                       VALUES (?, ?, ?, ?)""",
+                    ("qwen", True, 100.0, now - timedelta(minutes=i)),
+                )
+            for i in range(3):
+                conn.execute(
+                    """INSERT INTO provider_performance 
+                       (provider_id, success, latency_ms, error_message, timestamp)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    ("qwen", False, None, "API error", now - timedelta(minutes=7 + i)),
+                )
+
+        availability = collector.get_provider_availability("qwen", hours=1)
+        assert availability == 0.7  # 7/10
+
+    def test_provider_availability_time_filtering(self, temp_db_path: Path) -> None:
+        """Test that time filtering works correctly."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        now = datetime.now()
+        with sqlite3.connect(temp_db_path) as conn:
+            # Recent: 2 hours ago (within 24h window)
+            conn.execute(
+                """INSERT INTO provider_performance 
+                   (provider_id, success, latency_ms, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                ("ollama", True, 200.0, now - timedelta(hours=2)),
+            )
+            # Old: 25 hours ago (outside 24h window)
+            conn.execute(
+                """INSERT INTO provider_performance 
+                   (provider_id, success, latency_ms, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                ("ollama", False, None, now - timedelta(hours=25)),
+            )
+
+        availability = collector.get_provider_availability("ollama", hours=24)
+        assert availability == 1.0  # Only recent request counted
+
+    def test_provider_availability_no_data(self, temp_db_path: Path) -> None:
+        """Test provider availability when no data exists."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        availability = collector.get_provider_availability("claude", hours=24)
+        assert availability == 0.0
+
+    def test_provider_availability_custom_time_window(self, temp_db_path: Path) -> None:
+        """Test provider availability with custom time window."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        now = datetime.now()
+        with sqlite3.connect(temp_db_path) as conn:
+            # Within 1 hour
+            conn.execute(
+                """INSERT INTO provider_performance 
+                   (provider_id, success, latency_ms, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                ("claude", True, 50.0, now - timedelta(minutes=30)),
+            )
+            # Outside 1 hour but within 24 hours
+            conn.execute(
+                """INSERT INTO provider_performance 
+                   (provider_id, success, latency_ms, timestamp)
+                   VALUES (?, ?, ?, ?)""",
+                ("claude", False, None, now - timedelta(hours=2)),
+            )
+
+        # 1-hour window: 100% (only recent request)
+        availability_1h = collector.get_provider_availability("claude", hours=1)
+        assert availability_1h == 1.0
+
+        # 24-hour window: 50% (both requests)
+        availability_24h = collector.get_provider_availability("claude", hours=24)
+        assert availability_24h == 0.5
+
+
+class TestAgentConfidenceDistribution:
+    """Tests for get_agent_confidence_distribution query method."""
+
+    def test_confidence_distribution_all_levels(self, temp_db_path: Path) -> None:
+        """Test confidence distribution across all levels."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # Low confidence (< 0.5)
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-1", "TestAgent", "TEST_FAILURE", True, 0.3, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-2", "TestAgent", "TEST_FAILURE", False, 0.4, datetime.now()),
+            )
+
+            # Medium confidence (0.5 - 0.8)
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-3", "TestAgent", "TEST_FAILURE", True, 0.6, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-4", "TestAgent", "TEST_FAILURE", True, 0.75, datetime.now()),
+            )
+
+            # High confidence (>= 0.8)
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-5", "TestAgent", "TEST_FAILURE", True, 0.9, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-6", "TestAgent", "TEST_FAILURE", True, 0.95, datetime.now()),
+            )
+
+        distribution = collector.get_agent_confidence_distribution("TestAgent")
+
+        assert distribution["low"] == 2
+        assert distribution["medium"] == 2
+        assert distribution["high"] == 2
+
+    def test_confidence_distribution_missing_levels(self, temp_db_path: Path) -> None:
+        """Test confidence distribution when some levels have no data."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # Only high confidence executions
+            for i in range(3):
+                conn.execute(
+                    """INSERT INTO agent_executions 
+                       (job_id, agent_name, issue_type, success, confidence, timestamp)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (f"job-{i}", "RefactoringAgent", "COMPLEXITY", True, 0.85 + i * 0.01, datetime.now()),
+                )
+
+        distribution = collector.get_agent_confidence_distribution("RefactoringAgent")
+
+        assert "high" in distribution
+        assert distribution["high"] == 3
+        assert "low" not in distribution  # Level not in result
+        assert "medium" not in distribution  # Level not in result
+
+    def test_confidence_distribution_null_values(self, temp_db_path: Path) -> None:
+        """Test that null confidence values are excluded."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # One with confidence, one without
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-1", "TestAgent", "TEST_FAILURE", True, 0.8, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-2", "TestAgent", "TEST_FAILURE", False, None, datetime.now()),
+            )
+
+        distribution = collector.get_agent_confidence_distribution("TestAgent")
+
+        # Only the non-null confidence should be counted
+        assert len(distribution) == 1
+        assert distribution.get("high") == 1
+
+    def test_confidence_distribution_empty_result(self, temp_db_path: Path) -> None:
+        """Test confidence distribution when agent has no executions."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        distribution = collector.get_agent_confidence_distribution("UnknownAgent")
+
+        assert distribution == {}
+
+    def test_confidence_distribution_boundary_values(self, temp_db_path: Path) -> None:
+        """Test confidence distribution at boundary values."""
+        collector = MetricsCollector(db_path=temp_db_path)
+
+        with sqlite3.connect(temp_db_path) as conn:
+            # Exactly at boundaries: 0.5 (medium), 0.8 (high)
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-1", "TestAgent", "TEST", True, 0.5, datetime.now()),
+            )
+            conn.execute(
+                """INSERT INTO agent_executions 
+                   (job_id, agent_name, issue_type, success, confidence, timestamp)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                ("job-2", "TestAgent", "TEST", True, 0.8, datetime.now()),
+            )
+
+        distribution = collector.get_agent_confidence_distribution("TestAgent")
+
+        # 0.5 is medium (not < 0.5, so goes to medium branch)
+        assert distribution.get("medium") == 1
+        # 0.8 is high (not < 0.8, so goes to else/high branch)
+        assert distribution.get("high") == 1
