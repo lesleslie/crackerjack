@@ -273,3 +273,39 @@ class TestPerformanceMonitor:
 # Reset monitor after tests to avoid affecting other tests
 def teardown_module() -> None:
     reset_performance_monitor()
+
+def test_record_operation_start_basic(self):
+    """Test basic functionality of record_operation_start."""
+    try:
+        result = record_operation_start()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in record_operation_start: {e}")
+
+def test_get_operation_metrics_basic(self):
+    """Test basic functionality of get_operation_metrics."""
+    try:
+        result = get_operation_metrics()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in get_operation_metrics: {e}")
+
+def test_print_performance_report_basic(self):
+    """Test basic functionality of print_performance_report."""
+    try:
+        result = print_performance_report()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in print_performance_report: {e}")

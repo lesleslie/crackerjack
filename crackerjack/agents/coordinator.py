@@ -22,7 +22,10 @@ from crackerjack.services.logging import get_logger
 
 ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"],
-    IssueType.TYPE_ERROR: ["ArchitectAgent"],
+    IssueType.TYPE_ERROR: [
+        "RefactoringAgent",
+        "ArchitectAgent",
+    ],
     IssueType.SECURITY: ["SecurityAgent", "ArchitectAgent"],
     IssueType.TEST_FAILURE: [
         "TestSpecialistAgent",
@@ -37,11 +40,15 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
     ],
     IssueType.COMPLEXITY: ["RefactoringAgent", "ArchitectAgent"],
     IssueType.DEAD_CODE: [
+        "DeadCodeRemovalAgent",
         "RefactoringAgent",
-        "ImportOptimizationAgent",
         "ArchitectAgent",
     ],
-    IssueType.DEPENDENCY: ["TestCreationAgent", "ArchitectAgent"],
+    IssueType.DEPENDENCY: [
+        "DependencyAgent",
+        "TestCreationAgent",
+        "ArchitectAgent",
+    ],
     IssueType.DRY_VIOLATION: ["DRYAgent", "ArchitectAgent"],
     IssueType.PERFORMANCE: ["PerformanceAgent", "ArchitectAgent"],
     IssueType.DOCUMENTATION: ["DocumentationAgent", "ArchitectAgent"],
@@ -72,15 +79,9 @@ class AgentCoordinator:
         self.proactive_mode = True
         self.cache = cache or CrackerjackCache()
 
-        # Track job ID for metrics correlation
         self.job_id = job_id or self._generate_job_id()
 
     def _generate_job_id(self) -> str:
-        """Generate a unique job ID for metrics tracking.
-
-        Returns:
-            A unique job identifier based on timestamp and random data
-        """
         import uuid
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -342,7 +343,6 @@ class AgentCoordinator:
             metadata={"issue_type": issue.type.value, "severity": issue.severity.value},
         )
 
-        # Track execution time
         start_time = time.time()
 
         result = await self._execute_agent(agent, issue)
@@ -368,7 +368,6 @@ class AgentCoordinator:
             metadata={"fix_applied": result.success},
         )
 
-        # Track metrics for analysis
         await self._track_agent_execution(
             job_id=self.job_id,
             agent_name=agent.name,
@@ -449,17 +448,7 @@ class AgentCoordinator:
         result: FixResult,
         execution_time_ms: float | None = None,
     ) -> None:
-        """Persist agent execution metrics for analysis.
-
-        Args:
-            job_id: The job identifier
-            agent_name: Name of the agent that executed
-            issue_type: Type of issue that was processed
-            result: The fix result from the agent
-            execution_time_ms: Execution time in milliseconds
-        """
         try:
-            # Lazy import to avoid circular dependency
             from crackerjack.services.metrics import get_metrics
 
             metrics = get_metrics()
@@ -485,7 +474,6 @@ class AgentCoordinator:
                 ),
             )
         except Exception as e:
-            # Don't fail the workflow if metrics tracking fails
             self.logger.debug(f"Failed to track agent execution: {e}")
 
     def get_agent_capabilities(self) -> dict[str, dict[str, t.Any]]:

@@ -112,37 +112,26 @@ class RefactoringAgent(SubAgent):
         )
 
     async def _is_fixable_type_error(self, issue: Issue) -> float:
-        """Check if type error is automatically fixable.
-
-        Only handles simple cases:
-        - Missing return type annotations
-        - Simple type annotation additions
-        - Optional/Union simplifications
-
-        Returns:
-            Confidence score (0.0-1.0) for fixability
-        """
         if not issue.message:
             return 0.0
 
         message_lower = issue.message.lower()
 
-        # Missing return type - high confidence
-        if "missing return type" in message_lower or "needs return type" in message_lower:
+        if (
+            "missing return type" in message_lower
+            or "needs return type" in message_lower
+        ):
             return 0.9
 
-        # Missing type annotation
         if any(
             x in message_lower
             for x in ["-> None", "-> Any", "needs annotation", "has no type"]
         ):
             return 0.8
 
-        # Simple annotation additions
         if "parameter" in message_lower and "type annotation" in message_lower:
             return 0.7
 
-        # Too complex for auto-fix
         if any(
             x in message_lower
             for x in [
@@ -159,17 +148,6 @@ class RefactoringAgent(SubAgent):
         return 0.0
 
     async def _fix_type_error(self, issue: Issue) -> FixResult:
-        """Fix simple type errors automatically.
-
-        Only handles safe, simple cases like missing type annotations.
-        Complex type errors are left for manual review.
-
-        Args:
-            issue: The type error issue to fix
-
-        Returns:
-            FixResult with success status and details
-        """
         confidence = await self._is_fixable_type_error(issue)
         if confidence == 0.0:
             return FixResult(
@@ -196,28 +174,22 @@ class RefactoringAgent(SubAgent):
                 remaining_issues=["Could not read file"],
             )
 
-        # Parse the file to add type annotations
         try:
             tree = ast.parse(content)
             lines = content.splitlines(keepends=True)
 
-            # Add missing return type annotations
             fixed = False
             for node in ast.walk(tree):
                 if isinstance(node, ast.FunctionDef):
-                    # Check if function has return type annotation
                     if node.returns is None and not any(
                         decorator.id == "property"
                         for decorator in node.decorator_list
                         if isinstance(decorator, ast.Name)
                     ):
-                        # Add -> None to functions without explicit return
                         func_line = node.lineno - 1
                         if func_line < len(lines):
-                            # Find the colon after function definition
                             line = lines[func_line]
                             if ":" in line and "->" not in line:
-                                # Simple heuristic: add -> None before colon
                                 lines[func_line] = line.replace(":", " -> None:", 1)
                                 fixed = True
 

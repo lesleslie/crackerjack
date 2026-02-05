@@ -5,41 +5,46 @@ provider performance tracking.
 """
 
 import pytest
+from pydantic import SecretStr
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from crackerjack.adapters.ai.base import BaseCodeFixer
-from crackerjack.adapters.ai.registry import ProviderChain, ProviderID
-from crackerjack.adapters.ai.claude import ClaudeCodeFixer
-from crackerjack.adapters.ai.qwen import QwenCodeFixer
-from crackerjack.adapters.ai.ollama import OllamaCodeFixer
+from crackerjack.adapters.ai.registry import ProviderChain, ProviderID, ProviderFactory
+from crackerjack.adapters.ai.claude import ClaudeCodeFixer, ClaudeCodeFixerSettings
+from crackerjack.adapters.ai.qwen import QwenCodeFixer, QwenCodeFixerSettings
+from crackerjack.adapters.ai.ollama import OllamaCodeFixer, OllamaCodeFixerSettings
 
 
 @pytest.fixture
 def mock_claude_provider():
-    """Mock Claude provider."""
+    """Mock Claude provider with properly typed settings."""
     provider = MagicMock(spec=ClaudeCodeFixer)
-    provider._settings = MagicMock()
-    provider._settings.anthropic_api_key = MagicMock()
-    provider._settings.anthropic_api_key.get_secret_value.return_value = "sk-ant-key123456789"
+    # Use model_construct to bypass validation for testing
+    provider._settings = ClaudeCodeFixerSettings.model_construct(
+        anthropic_api_key=SecretStr("sk-ant-key123456789")
+    )
     return provider
 
 
 @pytest.fixture
 def mock_qwen_provider():
-    """Mock Qwen provider."""
+    """Mock Qwen provider with properly typed settings."""
     provider = MagicMock(spec=QwenCodeFixer)
-    provider._settings = MagicMock()
-    provider._settings.dashscope_api_key = MagicMock()
-    provider._settings.dashscope_api_key.get_secret_value.return_value = "sk-dash-key123456789"
+    # Use model_construct to bypass validation for testing
+    provider._settings = QwenCodeFixerSettings.model_construct(
+        qwen_api_key=SecretStr("sk-dash-key123456789")
+    )
     return provider
 
 
 @pytest.fixture
 def mock_ollama_provider():
-    """Mock Ollama provider."""
+    """Mock Ollama provider with properly typed settings."""
     provider = MagicMock(spec=OllamaCodeFixer)
-    provider._settings = MagicMock()
-    provider._settings.base_url = "http://localhost:11434"
+    # Use model_construct to bypass validation for testing
+    provider._settings = OllamaCodeFixerSettings.model_construct(
+        base_url="http://localhost:11434"
+    )
     return provider
 
 
@@ -98,7 +103,9 @@ class TestProviderChain:
         chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
 
         # Mock Claude as unavailable (no API key)
-        mock_claude_provider._settings.anthropic_api_key.get_secret_value.return_value = ""
+        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
+            anthropic_api_key=SecretStr("")
+        )
         chain._provider_cache = {
             ProviderID.CLAUDE: mock_claude_provider,
             ProviderID.QWEN: mock_qwen_provider,
@@ -126,8 +133,12 @@ class TestProviderChain:
         chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN])
 
         # Mock both as unavailable
-        mock_claude_provider._settings.anthropic_api_key.get_secret_value.return_value = ""
-        mock_qwen_provider._settings.dashscope_api_key.get_secret_value.return_value = ""
+        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
+            anthropic_api_key=SecretStr("")
+        )
+        mock_qwen_provider._settings = QwenCodeFixerSettings.model_construct(
+            qwen_api_key=SecretStr("")
+        )
         chain._provider_cache = {
             ProviderID.CLAUDE: mock_claude_provider,
             ProviderID.QWEN: mock_qwen_provider,
@@ -141,16 +152,18 @@ class TestProviderChain:
         """Test that provider instances are cached."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        # First call creates and caches
+        # Mock the factory method, not the instance method
         with patch.object(
-            ProviderChain, "_get_or_create_provider", return_value=mock_claude_provider
+            ProviderFactory, "create_provider", return_value=mock_claude_provider
         ) as mock_create:
+            # Call _get_or_create_provider twice
             provider1 = chain._get_or_create_provider(ProviderID.CLAUDE)
             provider2 = chain._get_or_create_provider(ProviderID.CLAUDE)
 
-            # Should only call create once due to caching
+            # Should only call factory once due to caching
             assert mock_create.call_count == 1
             assert provider1 == provider2
+            assert provider1 is mock_claude_provider
 
     @pytest.mark.asyncio
     async def test_check_provider_availability_no_settings(self):
@@ -184,8 +197,8 @@ class TestProviderChain:
         chain = ProviderChain([ProviderID.CLAUDE])
 
         # Test with placeholder key
-        mock_claude_provider._settings.anthropic_api_key.get_secret_value.return_value = (
-            "placeholder-key"
+        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
+            anthropic_api_key=SecretStr("placeholder-key")
         )
 
         available = await chain._check_provider_availability(mock_claude_provider)
@@ -199,7 +212,9 @@ class TestProviderChain:
         """Test Claude availability check with too-short API key."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        mock_claude_provider._settings.anthropic_api_key.get_secret_value.return_value = "short"
+        mock_claude_provider._settings = ClaudeCodeFixerSettings.model_construct(
+            anthropic_api_key=SecretStr("short")
+        )
 
         available = await chain._check_provider_availability(mock_claude_provider)
 
@@ -210,16 +225,26 @@ class TestProviderChain:
         """Test Ollama availability check with server running."""
         chain = ProviderChain([ProviderID.OLLAMA])
 
-        with patch("aiohttp.ClientSession") as mock_session:
-            mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_session.return_value.__aenter__.return_value.get.return_value.__aenter__ = AsyncMock(
-                return_value=mock_response
-            )
+        # Import aiohttp here so we can patch it
+        import aiohttp
 
-            available = await chain._check_provider_availability(mock_ollama_provider)
+        # Create properly configured mocks
+        mock_response = AsyncMock()
+        mock_response.status = 200
 
-            assert available is True
+        mock_get_resp = AsyncMock()
+        mock_get_resp.__aenter__.return_value = mock_response
+
+        mock_session = AsyncMock()
+        mock_session.__aenter__.return_value = mock_session
+        mock_session.get = MagicMock(return_value=mock_get_resp)
+
+        # Patch ClientSession and ClientTimeout
+        with patch.object(aiohttp, "ClientSession", return_value=mock_session):
+            with patch.object(aiohttp, "ClientTimeout", lambda total: None):
+                available = await chain._check_provider_availability(mock_ollama_provider)
+
+        assert available is True
 
     @pytest.mark.asyncio
     async def test_check_provider_availability_ollama_server_not_running(
@@ -228,22 +253,30 @@ class TestProviderChain:
         """Test Ollama availability check with server not running."""
         chain = ProviderChain([ProviderID.OLLAMA])
 
-        with patch("aiohttp.ClientSession") as mock_session:
-            # Simulate connection error
-            mock_session.return_value.__aenter__.return_value.get.side_effect = Exception(
-                "Connection refused"
-            )
+        # Import aiohttp here so we can patch it
+        import aiohttp
 
-            available = await chain._check_provider_availability(mock_ollama_provider)
+        # Create mock session that raises exception
+        async def mock_get_with_error(*args, **kwargs):
+            raise Exception("Connection refused")
 
-            assert available is False
+        mock_session = AsyncMock()
+        mock_session.__aenter__.return_value = mock_session
+        mock_session.get = mock_get_with_error
+
+        # Patch ClientSession and ClientTimeout
+        with patch.object(aiohttp, "ClientSession", return_value=mock_session):
+            with patch.object(aiohttp, "ClientTimeout", lambda total: None):
+                available = await chain._check_provider_availability(mock_ollama_provider)
+
+        assert available is False
 
     def test_track_provider_selection_success(self, mock_claude_provider):
         """Test tracking successful provider selection."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        # Mock metrics database
-        with patch("crackerjack.adapters.ai.registry.get_metrics") as mock_get_metrics:
+        # Mock metrics database - patch from the metrics module
+        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
             mock_metrics = MagicMock()
             mock_get_metrics.return_value = mock_metrics
 
@@ -260,7 +293,7 @@ class TestProviderChain:
         """Test tracking failed provider selection."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        with patch("crackerjack.adapters.ai.registry.get_metrics") as mock_get_metrics:
+        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
             mock_metrics = MagicMock()
             mock_get_metrics.return_value = mock_metrics
 
@@ -280,7 +313,7 @@ class TestProviderChain:
         """Test that metrics tracking failures don't crash the provider chain."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
-        with patch("crackerjack.adapters.ai.registry.get_metrics") as mock_get_metrics:
+        with patch("crackerjack.services.metrics.get_metrics") as mock_get_metrics:
             # Simulate metrics database failure
             mock_get_metrics.side_effect = Exception("Database connection failed")
 
@@ -292,20 +325,20 @@ class TestProviderChain:
         """Test that provider instances are cached across multiple calls."""
         chain = ProviderChain([ProviderID.CLAUDE])
 
+        # Mock the factory to return our provider and track calls
         with patch.object(
-            ProviderChain, "_get_or_create_provider", return_value=mock_claude_provider
+            ProviderFactory, "create_provider", return_value=mock_claude_provider
         ) as mock_create:
-            # First call
-            await chain.get_available_provider()
-
-            # Create new chain instance to test caching
-            chain2 = ProviderChain([ProviderID.CLAUDE])
-            chain2._provider_cache = chain._provider_cache
-
-            await chain2.get_available_provider()
-
-            # Should use cached instance
+            # First call - should create provider
+            provider1, _ = await chain.get_available_provider()
             assert mock_create.call_count == 1
+
+            # Second call on same chain - should use cached provider
+            provider2, _ = await chain.get_available_provider()
+            assert mock_create.call_count == 1  # Still 1, not 2
+
+            # Verify both calls returned the same provider instance
+            assert provider1 is provider2
 
     @pytest.mark.asyncio
     async def test_priority_order_respected(self, mock_claude_provider, mock_qwen_provider):

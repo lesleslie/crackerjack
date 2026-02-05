@@ -20,7 +20,6 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        """Execute the fix using the provided plan. Must be implemented by subclasses."""
         pass
 
     async def can_handle(self, issue: Issue) -> float:
@@ -48,7 +47,6 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        """Backward compatibility wrapper. Deprecated in favor of execute_with_plan."""
         return await self.execute_with_plan(issue, plan)
 
     def _get_planning_cache_key(self, issue: Issue) -> str:

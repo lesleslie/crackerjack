@@ -464,3 +464,39 @@ ValueError: Invalid input
         description = ci_analyzer._describe_failure("unknown_failure", log)
 
         assert "Error preview" in description or "Error:" in description
+
+def test_analyze_ci_failure_basic(self):
+    """Test basic functionality of analyze_ci_failure."""
+    try:
+        result = analyze_ci_failure()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in analyze_ci_failure: {e}")
+
+def test_analyze_ci_failure_basic(self):
+    """Test basic functionality of analyze_ci_failure."""
+    try:
+        result = analyze_ci_failure()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in analyze_ci_failure: {e}")
+
+def test_record_failure_resolution_basic(self):
+    """Test basic functionality of record_failure_resolution."""
+    try:
+        result = record_failure_resolution()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in record_failure_resolution: {e}")

@@ -67,7 +67,6 @@ factory = MCPServerCLIFactory(
 )
 
 app = factory.create_app()
-app.info.help = "Crackerjack MCP Server CLI"
 
 console = Console()
 

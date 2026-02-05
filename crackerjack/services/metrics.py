@@ -609,15 +609,6 @@ class MetricsCollector:
     def get_agent_success_rate(
         self, agent_name: str, issue_type: str | None = None
     ) -> float:
-        """Get success rate for agent (optionally filtered by issue type).
-
-        Args:
-            agent_name: Name of the agent to query
-            issue_type: Optional issue type filter
-
-        Returns:
-            Success rate as float (0.0 to 1.0)
-        """
         query = """
             SELECT COUNT(*) FILTER (WHERE success = TRUE) AS successes,
                    COUNT(*) AS total
@@ -638,18 +629,7 @@ class MetricsCollector:
 
         return result[0] / result[1]
 
-    def get_provider_availability(
-        self, provider_id: str, hours: int = 24
-    ) -> float:
-        """Get provider availability percentage (last N hours).
-
-        Args:
-            provider_id: Provider to query (e.g., 'claude', 'qwen', 'ollama')
-            hours: Number of hours to look back (default: 24)
-
-        Returns:
-            Availability percentage as float (0.0 to 1.0)
-        """
+    def get_provider_availability(self, provider_id: str, hours: int = 24) -> float:
         from datetime import timedelta
 
         cutoff = datetime.now() - timedelta(hours=hours)
@@ -670,17 +650,7 @@ class MetricsCollector:
 
         return result[0] / result[1]
 
-    def get_agent_confidence_distribution(
-        self, agent_name: str
-    ) -> dict[str, int]:
-        """Get confidence distribution for agent.
-
-        Args:
-            agent_name: Name of the agent to query
-
-        Returns:
-            Dictionary with confidence levels (low, medium, high) and counts
-        """
+    def get_agent_confidence_distribution(self, agent_name: str) -> dict[str, int]:
         with self._get_connection() as conn:
             results = conn.execute(
                 """
@@ -701,15 +671,6 @@ class MetricsCollector:
         return {row[0]: row[1] for row in results}
 
     def execute(self, query: str, params: tuple[Any, ...] = ()) -> sqlite3.Cursor:
-        """Execute a SQL query with parameters.
-
-        Args:
-            query: SQL query string
-            params: Query parameters
-
-        Returns:
-            Cursor with query results
-        """
         with self._get_connection() as conn:
             return conn.execute(query, params)
 
@@ -724,7 +685,5 @@ def get_metrics_collector() -> MetricsCollector:
     return _metrics_collector
 
 
-# Alias for backwards compatibility
 def get_metrics() -> MetricsCollector:
-    """Alias for get_metrics_collector for backwards compatibility."""
     return get_metrics_collector()

@@ -1,6 +1,6 @@
-import asyncio
 import logging
 import time
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -9,6 +9,45 @@ from typing import Any
 from crackerjack.adapters.ai.base import BaseCodeFixer
 
 logger = logging.getLogger(__name__)
+
+"""AI Provider Registry and Fallback Chain.
+
+This module provides a robust provider selection system with automatic fallback,
+ensuring 99%+ availability for AI-fix operations through multiple providers
+(Claude, Qwen, Ollama).
+
+Key Components:
+    - ProviderID: Enum of supported AI providers (claude, qwen, ollama)
+    - ProviderFactory: Creates provider instances with validation
+    - ProviderChain: Manages fallback chain with priority-based selection
+    - ProviderInfo: Metadata about each provider (cost, setup, requirements)
+
+Usage:
+    >>> chain = ProviderChain(["claude", "qwen", "ollama"])
+    >>> provider, provider_id = await chain.get_available_provider()
+    >>> print(f"Using {provider_id}")
+    Using claude
+
+Provider Priority:
+    1. Claude (Anthropic) - Highest quality, paid API
+    2. Qwen (Alibaba) - Good quality, low-cost API
+    3. Ollama - Free local models, requires installation
+
+Availability Checking:
+    - Validates API keys before attempting to use provider
+    - Checks Ollama server is running
+    - Tracks performance metrics for each provider
+
+Error Handling:
+    - Falls back to next provider on expected errors (ConnectionError, TimeoutError, ValueError)
+    - Logs unexpected errors at ERROR level
+    - Raises RuntimeError only when all providers fail
+
+Metrics:
+    - Tracks provider selection success/failure
+    - Records latency for each provider attempt
+    - Stores error messages for debugging
+"""
 
 
 class ProviderID(StrEnum):
@@ -55,7 +94,7 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
         name="Ollama (Local)",
         description="Free local models, complete privacy, requires installation",
         requires_api_key=False,
-        default_model="qwen2.5-coder:7b",
+        default_model="qwen2.5-coder: 7b",
         setup_url="https://ollama.com/download",
         cost_tier="free",
     ),
@@ -65,17 +104,6 @@ PROVIDER_INFO: dict[ProviderID, ProviderInfo] = {
 class ProviderFactory:
     @staticmethod
     def _parse_provider_id(provider_id: ProviderID | str) -> ProviderID:
-        """Parse provider ID from string or enum.
-
-        Args:
-            provider_id: Provider ID as string or enum
-
-        Returns:
-            ProviderID enum value
-
-        Raises:
-            ValueError: If provider_id is unknown
-        """
         if isinstance(provider_id, str):
             try:
                 return ProviderID(provider_id.lower())
@@ -128,31 +156,11 @@ class ProviderFactory:
 
 
 class ProviderChain:
-    """Manages fallback chain of AI providers with availability checking.
-
-    This class implements a priority-based provider selection system with automatic
-    fallback, ensuring 99%+ availability for AI-fix operations.
-
-    Example:
-        chain = ProviderChain([ProviderID.CLAUDE, ProviderID.QWEN, ProviderID.OLLAMA])
-        provider, provider_id = await chain.get_available_provider()
-        # Uses Claude if available, falls back to Qwen, then Ollama
-    """
-
-    def __init__(self, provider_ids: list[ProviderID | str]) -> None:
-        """Initialize provider chain with prioritized list.
-
-        Args:
-            provider_ids: Ordered list of provider IDs (highest priority first)
-
-        Raises:
-            ValueError: If provider_ids is empty, contains duplicates, or unknown providers
-        """
+    def __init__(self, provider_ids: Sequence[ProviderID | str]) -> None:
         if not provider_ids:
             msg = "Provider chain requires at least one provider"
             raise ValueError(msg)
 
-        # Convert strings to ProviderID enums and check for duplicates
         self.provider_ids: list[ProviderID] = []
         seen: set[ProviderID] = set()
 
@@ -164,54 +172,56 @@ class ProviderChain:
             seen.add(parsed_pid)
             self.provider_ids.append(parsed_pid)
 
-        # Cache provider instances to avoid repeated creation
         self._provider_cache: dict[ProviderID, BaseCodeFixer] = {}
 
-        # Metrics database (will be initialized on first use)
         self._metrics: Any = None
 
     async def get_available_provider(self) -> tuple[BaseCodeFixer, ProviderID]:
-        """Return first available provider in priority order.
-
-        Tries each provider in order, checking availability before returning.
-        Tracks performance metrics for each attempt.
-
-        Returns:
-            (provider, provider_id): The first available provider and its ID
-
-        Raises:
-            RuntimeError: If all providers are unavailable or failed
-        """
         last_error: Exception | None = None
 
-        for provider_id in self.provider_ids:
+        for idx, provider_id in enumerate(self.provider_ids):
             start_time = time.time()
             try:
                 provider = self._get_or_create_provider(provider_id)
 
-                # Verify provider is actually available
                 if await self._check_provider_availability(provider):
                     latency_ms = (time.time() - start_time) * 1000
 
-                    # Track successful provider selection
                     self._track_provider_selection(
                         provider_id, success=True, latency_ms=latency_ms
                     )
 
-                    logger.info(f"Using AI provider: {provider_id.value}")
+                    logger.debug(
+                        "Provider selected",
+                        extra={
+                            "provider_id": provider_id.value,
+                            "latency_ms": latency_ms,
+                            "chain_position": idx,
+                            "total_providers": len(self.provider_ids),
+                        },
+                    )
                     return provider, provider_id
 
-                logger.warning(f"Provider {provider_id.value} not available, trying next")
+                logger.debug(
+                    "Provider not available, trying next",
+                    extra={
+                        "provider_id": provider_id.value,
+                        "chain_position": idx,
+                        "reason": "availability_check_failed",
+                    },
+                )
                 latency_ms = (time.time() - start_time) * 1000
                 self._track_provider_selection(
-                    provider_id, success=False, latency_ms=latency_ms, error="Not available"
+                    provider_id,
+                    success=False,
+                    latency_ms=latency_ms,
+                    error="Not available",
                 )
 
-            except Exception as e:
+            except (ConnectionError, TimeoutError, ValueError, RuntimeError) as e:
                 last_error = e
                 latency_ms = (time.time() - start_time) * 1000
 
-                # Track failed provider
                 self._track_provider_selection(
                     provider_id,
                     success=False,
@@ -219,41 +229,56 @@ class ProviderChain:
                     error=str(e),
                 )
 
-                logger.warning(f"Provider {provider_id.value} failed: {e}")
+                logger.debug(
+                    "Provider failed (expected error)",
+                    extra={
+                        "provider_id": provider_id.value,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "latency_ms": latency_ms,
+                        "chain_position": idx,
+                    },
+                )
+                continue
+            except Exception as e:
+                last_error = e
+                latency_ms = (time.time() - start_time) * 1000
+
+                self._track_provider_selection(
+                    provider_id,
+                    success=False,
+                    latency_ms=latency_ms,
+                    error=f"Unexpected: {str(e)}",
+                )
+
+                logger.debug(
+                    "Provider had unexpected error",
+                    extra={
+                        "provider_id": provider_id.value,
+                        "error_type": type(e).__name__,
+                        "error_message": str(e),
+                        "latency_ms": latency_ms,
+                        "chain_position": idx,
+                    },
+                    exc_info=True,
+                )
                 continue
 
-        # All providers failed
         msg = "All AI providers unavailable or failed"
         if last_error:
             msg += f" (last error: {last_error})"
         raise RuntimeError(msg) from last_error
 
     def _get_or_create_provider(self, provider_id: ProviderID) -> BaseCodeFixer:
-        """Get cached provider or create new instance.
-
-        Args:
-            provider_id: The provider identifier
-
-        Returns:
-            Cached or newly created provider instance
-        """
         if provider_id not in self._provider_cache:
-            self._provider_cache[provider_id] = ProviderFactory.create_provider(provider_id)
+            self._provider_cache[provider_id] = ProviderFactory.create_provider(
+                provider_id
+            )
         return self._provider_cache[provider_id]
 
     async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
-        """Check if provider is actually available (API key, server running, etc.).
-
-        Args:
-            provider: The provider instance to check
-
-        Returns:
-            True if provider is available, False otherwise
-        """
         try:
-            # Check if provider has settings attribute
             if not hasattr(provider, "_settings"):
-                # No settings to check, assume available
                 return True
 
             from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
@@ -262,27 +287,23 @@ class ProviderChain:
 
             settings = provider._settings
 
-            # Check API key for cloud providers
             if isinstance(settings, (ClaudeCodeFixerSettings, QwenCodeFixerSettings)):
-                # Get API key based on settings type
                 if isinstance(settings, ClaudeCodeFixerSettings):
                     key = (
                         settings.anthropic_api_key.get_secret_value()
                         if settings.anthropic_api_key
                         else None
                     )
-                else:  # QwenCodeFixerSettings
+                else:
                     key = (
-                        settings.dashscope_api_key.get_secret_value()
-                        if settings.dashscope_api_key
+                        settings.qwen_api_key.get_secret_value()
+                        if settings.qwen_api_key
                         else None
                     )
 
-                # Check if key is present and not a placeholder
                 if not key or key.startswith("placeholder") or len(key) < 10:
                     return False
 
-            # Check Ollama server is running
             if isinstance(settings, OllamaCodeFixerSettings):
                 import aiohttp
 
@@ -309,16 +330,7 @@ class ProviderChain:
         latency_ms: float,
         error: str | None = None,
     ) -> None:
-        """Track provider selection for metrics analysis.
-
-        Args:
-            provider_id: The provider being tracked
-            success: Whether the provider was available
-            latency_ms: Time taken to check availability
-            error: Error message if failed
-        """
         try:
-            # Lazy import to avoid circular dependency
             from crackerjack.services.metrics import get_metrics
 
             if self._metrics is None:
@@ -333,5 +345,4 @@ class ProviderChain:
                 (provider_id.value, success, latency_ms, error, datetime.now()),
             )
         except Exception as e:
-            # Don't fail the provider chain if metrics tracking fails
             logger.debug(f"Failed to track provider selection: {e}")

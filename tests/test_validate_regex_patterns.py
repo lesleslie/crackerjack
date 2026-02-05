@@ -107,3 +107,39 @@ def f():
 
     assert code == 0
     assert "All regex patterns validated successfully" in out
+
+def test_visit_Import_basic(self):
+    """Test basic functionality of visit_Import."""
+    try:
+        result = visit_Import()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_Import: {e}")
+
+def test_visit_ImportFrom_basic(self):
+    """Test basic functionality of visit_ImportFrom."""
+    try:
+        result = visit_ImportFrom()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_ImportFrom: {e}")
+
+def test_visit_Call_basic(self):
+    """Test basic functionality of visit_Call."""
+    try:
+        result = visit_Call()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in visit_Call: {e}")

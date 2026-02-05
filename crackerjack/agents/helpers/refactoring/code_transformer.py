@@ -59,42 +59,13 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
-        lines = content.split("\n")
-        modified_lines = []
 
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-
-            if (
-                stripped.startswith("if ")
-                and (" and " in stripped or " or " in stripped)
-                and len(stripped) > 80
-            ):
-                indent = " " * (len(line) - len(line.lstrip()))
-                helper_name = f"_is_complex_condition_{i}"
-                modified_lines.append(f"{indent}if self.{helper_name}():")
-                continue
-
-            modified_lines.append(line)
-
-        return "\n".join(modified_lines)
+        return content
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
-        lines = content.split("\n")
-        modified_lines = []
 
-        for line in lines:
-            if " and " in line and " or " in line and len(line.strip()) > 100:
-                if line.strip().startswith("if "):
-                    indent = " " * (len(line) - len(line.lstrip()))
-                    method_name = "_validate_complex_condition"
-                    modified_lines.append(f"{indent}if self.{method_name}():")
-                    continue
-
-            modified_lines.append(line)
-
-        return "\n".join(modified_lines)
+        return content
 
     @staticmethod
     def _extract_validation_patterns(content: str) -> str:

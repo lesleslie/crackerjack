@@ -181,7 +181,7 @@ FAST_HOOKS = [
         name="mdformat",
         command=[],
         is_formatting=True,
-        timeout=180,  # Reduced from 600s (10min) to 180s (3min)
+        timeout=180,
         retry_on_failure=True,
         security_level=SecurityLevel.LOW,
         accepts_file_paths=True,
@@ -304,7 +304,7 @@ FAST_STRATEGY = HookStrategy(
     timeout=300,
     retry_policy=RetryPolicy.NONE,
     parallel=True,
-    max_workers=6,  # Match COMPREHENSIVE_STRATEGY (75% of 8 CPU cores)
+    max_workers=6,
 )
 
 COMPREHENSIVE_STRATEGY = HookStrategy(

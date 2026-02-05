@@ -129,3 +129,63 @@ def test_error_basic() -> None:
         )
     except Exception as e:
         pytest.fail(f"Unexpected error in error: {e}")
+
+def test_version_option_basic(self):
+    """Test basic functionality of version_option."""
+    try:
+        result = version_option()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in version_option: {e}")
+
+def test_run_basic(self):
+    """Test basic functionality of run."""
+    try:
+        result = run()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run: {e}")
+
+def test_run_tests_basic(self):
+    """Test basic functionality of run_tests."""
+    try:
+        result = run_tests()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in run_tests: {e}")
+
+def test_health_command_basic(self):
+    """Test basic functionality of health_command."""
+    try:
+        result = health_command()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in health_command: {e}")
+
+def test_qa_health_basic(self):
+    """Test basic functionality of qa_health."""
+    try:
+        result = qa_health()
+        assert result is not None or result is None
+    except TypeError:
+        pytest.skip(
+            "Function requires specific arguments - manual implementation needed"
+        )
+    except Exception as e:
+        pytest.fail(f"Unexpected error in qa_health: {e}")

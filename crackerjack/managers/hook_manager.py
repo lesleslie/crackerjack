@@ -60,7 +60,7 @@ class HookManagerImpl:
         enable_tool_proxy: bool,
         use_incremental: bool,
         git_service: t.Any,
-        file_filter: t.Any | None = None,  # SmartFileFilter
+        file_filter: t.Any | None = None,
     ) -> None:
         if enable_lsp_optimization:
             from crackerjack.executors.lsp_aware_hook_executor import (
@@ -76,7 +76,7 @@ class HookManagerImpl:
                 use_tool_proxy=enable_tool_proxy,
                 use_incremental=use_incremental,
                 git_service=git_service,
-                file_filter=file_filter,  # Pass SmartFileFilter
+                file_filter=file_filter,
             )
         else:
             from crackerjack.executors.hook_executor import HookExecutor
@@ -89,7 +89,7 @@ class HookManagerImpl:
                 debug=debug,
                 use_incremental=use_incremental,
                 git_service=git_service,
-                file_filter=file_filter,  # Pass SmartFileFilter
+                file_filter=file_filter,
             )
 
     def _load_from_project_config(
@@ -229,7 +229,7 @@ class HookManagerImpl:
         cache_backend: str = "memory",
         console: t.Any = None,
         settings: CrackerjackSettings | None = None,
-        file_filter: t.Any | None = None,  # SmartFileFilter
+        file_filter: t.Any | None = None,
     ) -> None:
         self.pkg_path = pkg_path
         self.debug = debug
@@ -239,7 +239,6 @@ class HookManagerImpl:
 
         git_service = self._setup_git_service(use_incremental, pkg_path, None)
 
-        # Setup SmartFileFilter for incremental hooks
         if file_filter is None and use_incremental and git_service:
             from crackerjack.services.file_filter import SmartFileFilter
 
