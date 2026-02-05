@@ -60,6 +60,7 @@ class HookManagerImpl:
         enable_tool_proxy: bool,
         use_incremental: bool,
         git_service: t.Any,
+        file_filter: t.Any | None = None,  # SmartFileFilter
     ) -> None:
         if enable_lsp_optimization:
             from crackerjack.executors.lsp_aware_hook_executor import (
@@ -75,6 +76,7 @@ class HookManagerImpl:
                 use_tool_proxy=enable_tool_proxy,
                 use_incremental=use_incremental,
                 git_service=git_service,
+                file_filter=file_filter,  # Pass SmartFileFilter
             )
         else:
             from crackerjack.executors.hook_executor import HookExecutor
@@ -87,6 +89,7 @@ class HookManagerImpl:
                 debug=debug,
                 use_incremental=use_incremental,
                 git_service=git_service,
+                file_filter=file_filter,  # Pass SmartFileFilter
             )
 
     def _load_from_project_config(
@@ -226,6 +229,7 @@ class HookManagerImpl:
         cache_backend: str = "memory",
         console: t.Any = None,
         settings: CrackerjackSettings | None = None,
+        file_filter: t.Any | None = None,  # SmartFileFilter
     ) -> None:
         self.pkg_path = pkg_path
         self.debug = debug
@@ -234,6 +238,15 @@ class HookManagerImpl:
         self.console = console or CrackerjackConsole()
 
         git_service = self._setup_git_service(use_incremental, pkg_path, None)
+
+        # Setup SmartFileFilter for incremental hooks
+        if file_filter is None and use_incremental and git_service:
+            from crackerjack.services.file_filter import SmartFileFilter
+
+            file_filter = SmartFileFilter(
+                git_service=git_service,
+                project_root=pkg_path,
+            )
 
         self._setup_executor(
             pkg_path,
@@ -244,6 +257,7 @@ class HookManagerImpl:
             enable_tool_proxy,
             use_incremental,
             git_service,
+            file_filter,
         )
 
         self.config_loader = HookConfigLoader()

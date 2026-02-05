@@ -17,6 +17,7 @@ from crackerjack.models.qa_results import QACheckType
 
 if t.TYPE_CHECKING:
     from crackerjack.models.qa_config import QACheckConfig
+    from crackerjack.services.file_filter import SmartFileFilter
 
 
 MODULE_ID = UUID("445401b8-b273-47f1-9015-22e721757d46")
@@ -36,11 +37,19 @@ class SkylosSettings(ToolAdapterSettings):
 class SkylosAdapter(BaseToolAdapter):
     settings: SkylosSettings | None = None
 
-    def __init__(self, settings: SkylosSettings | None = None) -> None:
+    def __init__(
+        self,
+        settings: SkylosSettings | None = None,
+        file_filter: SmartFileFilter | None = None,
+    ) -> None:
         super().__init__(settings=settings)
+        self.file_filter = file_filter
         logger.debug(
             "SkylosAdapter initialized",
-            extra={"has_settings": settings is not None},
+            extra={
+                "has_settings": settings is not None,
+                "has_file_filter": file_filter is not None,
+            },
         )
 
     async def init(self) -> None:
@@ -75,7 +84,7 @@ class SkylosAdapter(BaseToolAdapter):
 
     def build_command(
         self,
-        files: list[Path],
+        files: list[Path] | None = None,
         config: QACheckConfig | None = None,
     ) -> list[str]:
         if not self.settings:
@@ -89,11 +98,17 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
+        if files is None and self.file_filter:
+            files = self.file_filter.get_files_for_qa_scan(
+                package_dir=Path.cwd(),
+                force_incremental=getattr(self.settings, "incremental_mode", False),
+            )
+
         if files:
             cmd.extend([str(f) for f in files])
             target = " ".join(str(f) for f in files)
         else:
-            target = self._determine_scan_target(files)
+            target = self._determine_scan_target(files or [])
             cmd.append(target)
 
         logger.info(
@@ -102,6 +117,7 @@ class SkylosAdapter(BaseToolAdapter):
                 "file_count": len(files) if files else 1,
                 "confidence_threshold": self.settings.confidence_threshold,
                 "target_directory": target,
+                "incremental_mode": self.file_filter is not None,
             },
         )
         return cmd

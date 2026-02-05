@@ -14,6 +14,15 @@ class ProactiveAgent(SubAgent):
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
         pass
 
+    @abstractmethod
+    async def execute_with_plan(
+        self,
+        issue: Issue,
+        plan: dict[str, t.Any],
+    ) -> FixResult:
+        """Execute the fix using the provided plan. Must be implemented by subclasses."""
+        pass
+
     async def can_handle(self, issue: Issue) -> float:
         return 0.7 if issue.type in self.get_supported_types() else 0.0
 
@@ -27,7 +36,7 @@ class ProactiveAgent(SubAgent):
             self._planning_cache[cache_key] = plan
             self.log(f"Created new plan for {cache_key}")
 
-        result = await self._execute_with_plan(issue, plan)
+        result = await self.execute_with_plan(issue, plan)
 
         if result.success and result.confidence >= 0.8:
             self._cache_successful_pattern(issue, plan, result)
@@ -39,7 +48,8 @@ class ProactiveAgent(SubAgent):
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
-        return await self.analyze_and_fix(issue)
+        """Backward compatibility wrapper. Deprecated in favor of execute_with_plan."""
+        return await self.execute_with_plan(issue, plan)
 
     def _get_planning_cache_key(self, issue: Issue) -> str:
         return f"{issue.type.value}: {issue.file_path}: {issue.line_number}"

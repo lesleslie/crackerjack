@@ -517,7 +517,7 @@ _async_executor: AsyncCommandExecutor | None = None
 
 
 def get_parallel_executor(
-    max_workers: int = 3,
+    max_workers: int = 6,
     strategy: ExecutionStrategy = ExecutionStrategy.PARALLEL_SAFE,
 ) -> ParallelHookExecutor:
     global _parallel_executor

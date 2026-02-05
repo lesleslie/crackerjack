@@ -16,8 +16,9 @@ if TYPE_CHECKING:
         LoggerProtocol,
     )
 
-from crackerjack.agents.base import AgentContext, FixResult, Issue
+from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
 from crackerjack.parsers.factory import ParserFactory, ParsingError
+from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,8 @@ class AutofixCoordinator:
             [AgentContext, CrackerjackCache], "AgentCoordinatorProtocol"
         ]
         | None = None,
+        enable_fancy_progress: bool = True,
+        enable_agent_bars: bool = False,
     ) -> None:
         self.console = console or Console()
         self.pkg_path = pkg_path or Path.cwd()
@@ -42,6 +45,13 @@ class AutofixCoordinator:
         self._max_iterations = max_iterations
         self._coordinator_factory = coordinator_factory
         self._parser_factory = ParserFactory()
+
+        # Initialize progress manager
+        self.progress_manager = AIFixProgressManager(
+            console=self.console,
+            enabled=enable_fancy_progress,
+            enable_agent_bars=enable_agent_bars,
+        )
 
     def apply_autofix_for_hooks(self, mode: str, hook_results: list[object]) -> bool:
         try:
@@ -328,7 +338,7 @@ class AutofixCoordinator:
     def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
-        max_iterations = self._get_max_iterations()
+        self._get_max_iterations()
 
         context = AgentContext(
             project_path=self.pkg_path,
@@ -350,41 +360,75 @@ class AutofixCoordinator:
                 cache=cache,
             )
 
+        # Start progress session
+        initial_issues = self._parse_hook_results_to_issues(hook_results)
+        self.progress_manager.start_fix_session(
+            stage=stage,
+            initial_issue_count=len(initial_issues),
+        )
+
         previous_issue_count = float("inf")
         no_progress_count = 0
 
-        for iteration in range(max_iterations):
-            issues = self._get_iteration_issues(iteration, hook_results, stage)
-            current_issue_count = len(issues)
+        # Simplified: Keep iterating while making progress, stop after 3 iterations with no fixes
+        iteration = 0
+        try:
+            while True:
+                issues = self._get_iteration_issues(iteration, hook_results, stage)
+                current_issue_count = len(issues)
 
-            if current_issue_count == 0:
-                result = self._handle_zero_issues_case(iteration, stage)
-                if result is not None:
-                    return result
+                # Start iteration progress bar
+                self.progress_manager.start_iteration(iteration, current_issue_count)
 
-            if self._should_stop_on_convergence(
-                current_issue_count,
-                previous_issue_count,
-                no_progress_count,
-            ):
-                return False
+                if current_issue_count == 0:
+                    result = self._handle_zero_issues_case(iteration, stage)
+                    if result is not None:
+                        # End iteration bar before returning
+                        self.progress_manager.end_iteration()
+                        self.progress_manager.finish_session(success=True)
+                        return result
 
-            no_progress_count = self._update_progress_count(
-                current_issue_count,
-                previous_issue_count,
-                no_progress_count,
+                if self._should_stop_on_convergence(
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                ):
+                    # End iteration bar before returning
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                no_progress_count = self._update_progress_count(
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                )
+
+                # Update progress with current state
+                self.progress_manager.update_iteration_progress(
+                    iteration,
+                    current_issue_count,
+                    no_progress_count,
+                )
+
+                if not self._run_ai_fix_iteration(coordinator, issues):
+                    # End iteration bar before returning
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                # End iteration bar
+                self.progress_manager.end_iteration()
+
+                previous_issue_count = current_issue_count
+                iteration += 1
+        except Exception:
+            # Ensure progress bars are cleaned up on error
+            self.progress_manager.end_iteration()
+            self.progress_manager.finish_session(
+                success=False, message="Error during AI fixing"
             )
-
-            self._report_iteration_progress(
-                iteration, max_iterations, current_issue_count
-            )
-
-            if not self._run_ai_fix_iteration(coordinator, issues):
-                return False
-
-            previous_issue_count = current_issue_count
-
-        return self._report_max_iterations_reached(max_iterations, stage)
+            raise
 
     def _handle_zero_issues_case(
         self, iteration: int, stage: str = "fast"
@@ -464,17 +508,16 @@ class AutofixCoordinator:
     def _report_iteration_progress(
         self,
         iteration: int,
-        max_iterations: int,
         issue_count: int,
     ) -> None:
         issue_word = "issue" if issue_count == 1 else "issues"
         self.console.print(
-            f"[cyan]→ Iteration {iteration + 1}/{max_iterations}: "
+            f"[cyan]→ Iteration {iteration + 1}: "
             f"{issue_count} {issue_word} to fix[/cyan]"
         )
         self.console.print()
         self.logger.info(
-            f"Iteration {iteration + 1}/{max_iterations}: {issue_count} {issue_word} to fix"
+            f"Iteration {iteration + 1}: {issue_count} {issue_word} to fix"
         )
 
     def _run_ai_fix_iteration(
@@ -483,24 +526,56 @@ class AutofixCoordinator:
         issues: list[Issue],
     ) -> bool:
         self.logger.info(
-            f"Starting AI agent fixing iteration with {len(issues)} issues"
+            f"🤖 Starting AI agent fixing iteration with {len(issues)} issues"
         )
 
-        for i, issue in enumerate(issues[:3]):
+        # Detailed issue logging
+        self.logger.info("📋 Sending issues to agents:")
+        for i, issue in enumerate(issues[:5]):
             self.logger.info(
-                f"  Issue {i + 1}: {issue.type.value} in {issue.file_path}:{issue.line_number} - {issue.message[:100]}..."
+                f"  [{i}] type={issue.type.value:12s} | "
+                f"file={issue.file_path}:{issue.line_number} | "
+                f"msg={issue.message[:60]}..."
             )
-        if len(issues) > 3:
-            self.logger.info(f"  ... and {len(issues) - 3} more issues")
+        if len(issues) > 5:
+            self.logger.info(
+                f"  ... and {len(issues) - 5} more issues (total: {len(issues)})"
+            )
 
+        # Invoke agent
+        self.logger.info("🔧 Invoking coordinator.handle_issues()...")
         fix_result = self._execute_ai_fix(coordinator, issues)
+
         if fix_result is None:
-            self.logger.warning("AI agent fixing iteration failed")
+            self.logger.error("❌ AI agent fixing iteration failed - returned None")
             return False
 
+        # Log detailed results
         self.logger.info(
-            f"AI agent fixing iteration completed with {len(fix_result.remaining_issues)} remaining issues"
+            f"✅ AI agent fixing iteration completed:\n"
+            f"   - Success: {fix_result.success}\n"
+            f"   - Confidence: {fix_result.confidence:.2f}\n"
+            f"   - Fixes applied: {len(fix_result.fixes_applied)}\n"
+            f"   - Files modified: {len(fix_result.files_modified)}\n"
+            f"   - Remaining issues: {len(fix_result.remaining_issues)}"
         )
+
+        # Log what fixes were applied
+        if fix_result.fixes_applied:
+            self.logger.info("🔨 Fixes applied:")
+            for i, fix in enumerate(fix_result.fixes_applied[:5]):
+                self.logger.info(f"  [{i}] {fix[:100]}")
+            if len(fix_result.fixes_applied) > 5:
+                self.logger.info(
+                    f"  ... and {len(fix_result.fixes_applied) - 5} more fixes"
+                )
+
+        # Log files modified
+        if fix_result.files_modified:
+            self.logger.info(
+                f"📝 Files modified: {', '.join(fix_result.files_modified)}"
+            )
+
         return self._process_fix_result(fix_result)
 
     def _execute_ai_fix(
@@ -509,7 +584,10 @@ class AutofixCoordinator:
         issues: list[Issue],
     ) -> FixResult | None:
         try:
-            self.logger.info("Initiating AI agent coordination for issue resolution")
+            self.logger.info("🚀 Initiating AI agent coordination for issue resolution")
+
+            # Validate file paths before sending to agents
+            self._validate_issue_file_paths(issues)
 
             try:
                 asyncio.get_running_loop()
@@ -519,11 +597,37 @@ class AutofixCoordinator:
                 self.logger.debug("Creating new event loop for AI agent fixing")
                 result = asyncio.run(coordinator.handle_issues(issues))
 
-            self.logger.info("AI agent coordination completed")
+            self.logger.info("✅ AI agent coordination completed")
             return result
         except Exception:
-            self.logger.exception("AI agent handling failed")
+            self.logger.exception("❌ AI agent handling failed")
             return None
+
+    def _validate_issue_file_paths(self, issues: list[Issue]) -> None:
+        """Validate that file paths in issues exist.
+
+        Args:
+            issues: List of Issue objects to validate
+        """
+        self.logger.debug("🔍 Validating file paths for issues...")
+
+        missing_files = []
+        for issue in issues:
+            if issue.file_path:
+                file_path = Path(issue.file_path)
+                if not file_path.exists():
+                    missing_files.append(str(issue.file_path))
+                    self.logger.warning(
+                        f"⚠️ File not found: {issue.file_path} (issue: {issue.id})"
+                    )
+
+        if missing_files:
+            self.logger.error(
+                f"❌ {len(missing_files)} issues reference non-existent files: "
+                f"{', '.join(missing_files[:3])}"
+            )
+            if len(missing_files) > 3:
+                self.logger.error(f"  ... and {len(missing_files) - 3} more files")
 
     def _run_in_threaded_loop(
         self,
@@ -973,7 +1077,12 @@ class AutofixCoordinator:
             f"raw_output_lines={len(raw_output.split(chr(10)))}"
         )
 
+        # Log raw output sample for debugging
+        output_preview = raw_output[:500] if raw_output else "(empty)"
+        self.logger.debug(f"Raw output preview from '{hook_name}':\n{output_preview!r}")
+
         expected_count = self._extract_issue_count(raw_output, hook_name)
+        self.logger.info(f"Parsing '{hook_name}': expected_count={expected_count}")
 
         try:
             issues = self._parser_factory.parse_with_validation(
@@ -985,11 +1094,20 @@ class AutofixCoordinator:
             self.logger.info(
                 f"Successfully parsed {len(issues)} issues from '{hook_name}'"
             )
+
+            # Log structure of parsed issues for debugging
+            if issues:
+                self._log_parsed_issues(hook_name, issues)
+                self._validate_parsed_issues(issues)
+            else:
+                self.logger.warning(
+                    f"❌ No issues parsed from '{hook_name}' despite expected_count={expected_count}"
+                )
+
             return issues
 
         except ParsingError as e:
             self.logger.error(f"Parsing failed for '{hook_name}': {e}")
-
             raise
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
@@ -1001,6 +1119,73 @@ class AutofixCoordinator:
             return json_count
 
         return _extract_issue_count_from_text_lines(output)
+
+    def _log_parsed_issues(self, hook_name: str, issues: list[Issue]) -> None:
+        """Log the structure of parsed issues for debugging.
+
+        Args:
+            hook_name: Name of the hook that produced these issues
+            issues: List of parsed Issue objects
+        """
+        self.logger.info(f"📋 Issue structure from '{hook_name}':")
+        for i, issue in enumerate(issues[:5]):  # Log first 5
+            self.logger.info(
+                f"  [{i}] type={issue.type.value}, "
+                f"severity={issue.severity.value}, "
+                f"file={issue.file_path}:{issue.line_number}, "
+                f"msg={issue.message[:80]!r}"
+            )
+
+        if len(issues) > 5:
+            self.logger.info(f"  ... and {len(issues) - 5} more issues")
+
+    def _validate_parsed_issues(self, issues: list[Issue]) -> None:
+        """Validate that parsed issues have all required fields.
+
+        Args:
+            issues: List of parsed Issue objects
+
+        Raises:
+            ValueError: If any issue is missing required fields
+        """
+        for i, issue in enumerate(issues):
+            errors = []
+
+            # Check required fields
+            if not hasattr(issue, "type") or issue.type is None:
+                errors.append("missing type")
+            elif not isinstance(issue.type, IssueType):
+                errors.append(f"invalid type: {type(issue.type)}")
+
+            if not hasattr(issue, "severity") or issue.severity is None:
+                errors.append("missing severity")
+            elif not isinstance(issue.severity, Priority):
+                errors.append(f"invalid severity: {type(issue.severity)}")
+
+            if not hasattr(issue, "message") or not issue.message:
+                errors.append("missing or empty message")
+
+            if not issue.file_path:
+                errors.append("missing file_path")
+
+            # Log warnings for non-critical issues
+            if issue.line_number is None:
+                self.logger.debug(
+                    f"⚠️ Issue {issue.id} has no line_number (file={issue.file_path})"
+                )
+
+            # Report errors
+            if errors:
+                self.logger.error(
+                    f"❌ Issue {i} ({issue.id}) has validation errors: {', '.join(errors)}"
+                )
+                self.logger.error(
+                    f"   Issue object: type={getattr(issue, 'type', None)}, "
+                    f"severity={getattr(issue, 'severity', None)}, "
+                    f"message={getattr(issue, 'message', None)}, "
+                    f"file_path={getattr(issue, 'file_path', None)}"
+                )
+                raise ValueError(f"Invalid issue object: {errors}")
 
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:

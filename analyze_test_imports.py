@@ -4,9 +4,10 @@ import re
 from pathlib import Path
 
 
-def analyze_test_imports(tests_dir: Path = Path("tests")) -> dict[str, list[tuple[int, str]]]:
+def analyze_test_imports(
+    tests_dir: Path = Path("tests"),
+) -> dict[str, list[tuple[int, str]]]:
     expensive_imports = {}
-
 
     patterns = [
         r"^from crackerjack\.(?!models\.protocols|config)(\S+)",
@@ -20,14 +21,14 @@ def analyze_test_imports(tests_dir: Path = Path("tests")) -> dict[str, list[tupl
             for line_num, line in enumerate(f, start=1):
                 line = line.strip()
 
-
                 if not line.startswith(("from crackerjack.", "import crackerjack.")):
                     continue
 
-
-                if any(safe in line for safe in ["models.protocols", "import CrackerjackSettings"]):
+                if any(
+                    safe in line
+                    for safe in ["models.protocols", "import CrackerjackSettings"]
+                ):
                     continue
-
 
                 for pattern in patterns:
                     if re.match(pattern, line):
@@ -51,19 +52,40 @@ def categorize_by_cost(imports: dict) -> dict[str, list[str]]:
 
     for file_path, import_list in imports.items():
         for line_num, import_stmt in import_list:
-            module = import_stmt.split("from ")[1].split(" import")[0] if " from " in import_stmt else import_stmt.split("import ")[1]
+            module = (
+                import_stmt.split("from ")[1].split(" import")[0]
+                if " from " in import_stmt
+                else import_stmt.split("import ")[1]
+            )
 
-            if any(expensive in module for expensive in ["__main__", "crackerjack.api"]):
+            if any(
+                expensive in module for expensive in ["__main__", "crackerjack.api"]
+            ):
                 if file_path not in cost_categories["critical"]:
                     cost_categories["critical"].append(file_path)
-            elif any(high in module for high in ["core.", "agents.", "executors.", "managers."]):
-                if file_path not in cost_categories["high"] and file_path not in cost_categories["critical"]:
+            elif any(
+                high in module
+                for high in ["core.", "agents.", "executors.", "managers."]
+            ):
+                if (
+                    file_path not in cost_categories["high"]
+                    and file_path not in cost_categories["critical"]
+                ):
                     cost_categories["high"].append(file_path)
             elif any(medium in module for medium in ["services.", "adapters."]):
-                if file_path not in cost_categories["medium"] and file_path not in cost_categories["high"] and file_path not in cost_categories["critical"]:
+                if (
+                    file_path not in cost_categories["medium"]
+                    and file_path not in cost_categories["high"]
+                    and file_path not in cost_categories["critical"]
+                ):
                     cost_categories["medium"].append(file_path)
             else:
-                if file_path not in cost_categories["low"] and file_path not in cost_categories["medium"] and file_path not in cost_categories["high"] and file_path not in cost_categories["critical"]:
+                if (
+                    file_path not in cost_categories["low"]
+                    and file_path not in cost_categories["medium"]
+                    and file_path not in cost_categories["high"]
+                    and file_path not in cost_categories["critical"]
+                ):
                     cost_categories["low"].append(file_path)
 
     return cost_categories
@@ -89,7 +111,6 @@ def main() -> None:
         if files:
             print(f"## {category.upper()} PRIORITY ({len(files)} files)")
             for file_path in sorted(set(files)):
-
                 file_imports = imports.get(file_path, [])
                 print(f"\n{file_path}:")
                 for line_num, import_stmt in file_imports:

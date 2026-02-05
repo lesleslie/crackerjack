@@ -1,43 +1,47 @@
 import typing as t
 
 from .base import FixResult, Issue, IssueType, agent_registry
+from .formatting_agent import FormattingAgent
+from .import_optimization_agent import ImportOptimizationAgent
 from .proactive_agent import ProactiveAgent
+from .refactoring_agent import RefactoringAgent
+from .security_agent import SecurityAgent
 
 
 class ArchitectAgent(ProactiveAgent):
+    def __init__(self, context) -> None:
+        super().__init__(context)
+        # Initialize specialist agents for delegation
+        self._refactoring_agent = RefactoringAgent(context)
+        self._formatting_agent = FormattingAgent(context)
+        self._import_agent = ImportOptimizationAgent(context)
+        self._security_agent = SecurityAgent(context)
+
     def get_supported_types(self) -> set[IssueType]:
+        # Reduced scope - only handle issues that don't have specialized agents
         return {
-            IssueType.COMPLEXITY,
-            IssueType.DRY_VIOLATION,
-            IssueType.PERFORMANCE,
-            IssueType.SECURITY,
-            IssueType.DEAD_CODE,
-            IssueType.IMPORT_ERROR,
-            IssueType.TYPE_ERROR,
-            IssueType.TEST_FAILURE,
-            IssueType.FORMATTING,
+            IssueType.TYPE_ERROR,  # Only type errors, delegate others
             IssueType.DEPENDENCY,
             IssueType.DOCUMENTATION,
             IssueType.TEST_ORGANIZATION,
         }
 
     async def can_handle(self, issue: Issue) -> float:
-        if issue.type == IssueType.COMPLEXITY:
-            return 0.9
+        # VERY LOW confidence - let specialists handle issues first
+        # Only act as fallback when no one else can handle
+        if issue.type == IssueType.TYPE_ERROR:
+            return 0.1  # Let RefactoringAgent handle it
 
-        if issue.type == IssueType.DRY_VIOLATION:
-            return 0.85
+        if issue.type == IssueType.DEPENDENCY:
+            return 0.1
 
-        if issue.type == IssueType.PERFORMANCE:
-            return 0.8
+        if issue.type == IssueType.DOCUMENTATION:
+            return 0.1
 
-        if issue.type == IssueType.SECURITY:
-            return 0.75
+        if issue.type == IssueType.TEST_ORGANIZATION:
+            return 0.1
 
-        if issue.type in {IssueType.FORMATTING, IssueType.IMPORT_ERROR}:
-            return 0.4
-
-        return 0.6
+        return 0.0  # Don't claim to handle types we've delegated
 
     async def plan_before_action(self, issue: Issue) -> dict[str, t.Any]:
         if await self._needs_external_specialist(issue):
@@ -178,60 +182,125 @@ class ArchitectAgent(ProactiveAgent):
             "check_pattern_compliance",
         ]
 
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        return await self.analyze_and_fix_proactively(issue)
-
-    async def _execute_with_plan(
+    async def execute_with_plan(
         self,
         issue: Issue,
         plan: dict[str, t.Any],
     ) -> FixResult:
+        """Execute the fix using the provided plan.
+
+        This is called by analyze_and_fix_proactively() for issue types
+        that ArchitectAgent handles directly (TYPE_ERROR, DEPENDENCY, etc.).
+        """
         strategy = plan.get("strategy", "internal_pattern_based")
 
         if strategy == "external_specialist_guided":
-            return await self._execute_specialist_guided_fix(issue, plan)
-        return await self._execute_pattern_based_fix(issue, plan)
+            # This should have been delegated in analyze_and_fix()
+            self.log(
+                f"Warning: execute_with_plan() called for specialist issue {issue.type.value}"
+            )
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    f"Issue type {issue.type.value} should be delegated to specialist"
+                ],
+            )
 
-    async def _execute_specialist_guided_fix(
-        self,
-        issue: Issue,
-        plan: dict[str, t.Any],
-    ) -> FixResult:
+        # Handle internal pattern-based fixes for types we support
+        if issue.type == IssueType.TYPE_ERROR:
+            return await self._fix_type_error_with_plan(issue, plan)
+
+        if issue.type == IssueType.DEPENDENCY:
+            return await self._fix_dependency_with_plan(issue, plan)
+
+        if issue.type == IssueType.DOCUMENTATION:
+            return await self._fix_documentation_with_plan(issue, plan)
+
+        if issue.type == IssueType.TEST_ORGANIZATION:
+            return await self._fix_test_organization_with_plan(issue, plan)
+
+        # Unknown type for proactive handling
         return FixResult(
-            success=True,
-            confidence=0.9,
-            fixes_applied=[
-                f"Applied {plan.get('approach', 'specialist')} approach",
-                f"Used patterns: {', '.join(plan.get('patterns', []))}",
-                "Followed architect agent guidance",
+            success=False,
+            confidence=0.0,
+            remaining_issues=[
+                f"ArchitectAgent does not handle {issue.type.value} proactively"
             ],
-            remaining_issues=[],
-            recommendations=[
-                f"Validate with: {', '.join(plan.get('validation', []))}",
-                "Consider running full test suite",
-            ],
-            files_modified=[issue.file_path] if issue.file_path else [],
         )
 
-    async def _execute_pattern_based_fix(
-        self,
-        issue: Issue,
-        plan: dict[str, t.Any],
+    async def _fix_type_error_with_plan(
+        self, issue: Issue, plan: dict[str, t.Any]
     ) -> FixResult:
-        patterns = plan.get("patterns", [])
-        approach = plan.get("approach", "standard")
-
+        """Handle type errors using the plan."""
+        # For now, return a failure - type errors need careful analysis
+        self.log(f"Type error fixing not yet implemented: {issue.message}")
         return FixResult(
-            success=True,
-            confidence=0.75,
-            fixes_applied=[
-                f"Applied {approach} approach",
-                f"Used cached patterns: {', '.join(patterns)}",
-            ],
-            remaining_issues=[],
-            recommendations=["Consider validating with crackerjack quality checks"],
-            files_modified=[issue.file_path] if issue.file_path else [],
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Type error: {issue.message}"],
         )
+
+    async def _fix_dependency_with_plan(
+        self, issue: Issue, plan: dict[str, t.Any]
+    ) -> FixResult:
+        """Handle dependency issues using the plan."""
+        # For now, return a failure - dependency issues need careful analysis
+        self.log(f"Dependency fixing not yet implemented: {issue.message}")
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Dependency issue: {issue.message}"],
+        )
+
+    async def _fix_documentation_with_plan(
+        self, issue: Issue, plan: dict[str, t.Any]
+    ) -> FixResult:
+        """Handle documentation issues using the plan."""
+        # For now, return a failure - documentation issues need careful analysis
+        self.log(f"Documentation fixing not yet implemented: {issue.message}")
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Documentation issue: {issue.message}"],
+        )
+
+    async def _fix_test_organization_with_plan(
+        self, issue: Issue, plan: dict[str, t.Any]
+    ) -> FixResult:
+        """Handle test organization issues using the plan."""
+        # For now, return a failure - test organization needs careful analysis
+        self.log(f"Test organization fixing not yet implemented: {issue.message}")
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=[f"Test organization issue: {issue.message}"],
+        )
+
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        # Delegate to specialized agents based on issue type
+        if issue.type in {
+            IssueType.COMPLEXITY,
+            IssueType.DRY_VIOLATION,
+            IssueType.DEAD_CODE,
+        }:
+            self.log(f"Delegating to RefactoringAgent for {issue.type.value}")
+            return await self._refactoring_agent.analyze_and_fix(issue)
+
+        if issue.type == IssueType.FORMATTING:
+            self.log(f"Delegating to FormattingAgent for {issue.type.value}")
+            return await self._formatting_agent.analyze_and_fix(issue)
+
+        if issue.type == IssueType.IMPORT_ERROR:
+            self.log(f"Delegating to ImportOptimizationAgent for {issue.type.value}")
+            return await self._import_agent.analyze_and_fix(issue)
+
+        if issue.type == IssueType.SECURITY:
+            self.log(f"Delegating to SecurityAgent for {issue.type.value}")
+            return await self._security_agent.analyze_and_fix(issue)
+
+        # For types we still handle, use proactive approach
+        return await self.analyze_and_fix_proactively(issue)
 
 
 agent_registry.register(ArchitectAgent)
