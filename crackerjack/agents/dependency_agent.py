@@ -249,12 +249,21 @@ class DependencyAgent(SubAgent):
                 # Check if it's actually this dependency (not just contains the name)
                 # e.g., "pytest" should not match "pytest-snob"
                 line_stripped = line.strip()
+
+                # Match: "dep_name>=", "dep_name=", 'dep_name>=', etc.
+                # This handles version specifiers correctly
                 if (
-                    f'"{dep_name}"' in line
-                    or f"'{dep_name}'" in line
-                    or f'"{dep_name}\'' in line
-                    or f"'{dep_name}\"" in line
-                    or line_stripped.startswith(dep_name)
+                    f'"{dep_name}>=' in line
+                    or f"'{dep_name}>=" in line
+                    or f'"{dep_name}="' in line
+                    or f"'{dep_name}='" in line
+                    or f'"{dep_name}~' in line
+                    or f"'{dep_name}~" in line
+                    or f'"{dep_name}^' in line
+                    or f"'{dep_name}^" in line
+                    or f'"{dep_name}"' in line  # Exact match without version
+                    or f"'{dep_name}'" in line  # Exact match without version
+                    or line_stripped.startswith(dep_name)  # Unquoted dependency
                 ):
                     removed = True
                     continue  # Skip this line (remove the dependency)
