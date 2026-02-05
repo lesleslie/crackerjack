@@ -104,7 +104,16 @@ class TestProviderChain:
             ProviderID.QWEN: mock_qwen_provider,
         }
 
-        provider, provider_id = await chain.get_available_provider()
+        # Create a mock that returns False for Claude, True for Qwen
+        async def mock_availability(provider):
+            if provider == mock_claude_provider:
+                return False
+            if provider == mock_qwen_provider:
+                return True
+            return False
+
+        with patch.object(chain, "_check_provider_availability", side_effect=mock_availability):
+            provider, provider_id = await chain.get_available_provider()
 
         assert provider_id == ProviderID.QWEN
         assert provider == mock_qwen_provider
@@ -124,8 +133,9 @@ class TestProviderChain:
             ProviderID.QWEN: mock_qwen_provider,
         }
 
-        with pytest.raises(RuntimeError, match="All AI providers unavailable"):
-            await chain.get_available_provider()
+        with patch.object(chain, "_check_provider_availability", return_value=False):
+            with pytest.raises(RuntimeError, match="All AI providers unavailable"):
+                await chain.get_available_provider()
 
     def test_get_or_create_provider_caches_instances(self, mock_claude_provider):
         """Test that provider instances are cached."""
