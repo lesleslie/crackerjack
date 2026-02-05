@@ -18,25 +18,27 @@ class ArchitectAgent(ProactiveAgent):
         self._security_agent = SecurityAgent(context)
 
     def get_supported_types(self) -> set[IssueType]:
-        # Reduced scope - only handle issues that don't have specialized agents
+        """Return issue types handled by this agent.
+
+        ArchitectAgent has reduced scope - only handles issues that don't have
+        specialized agents. DEPENDENCY and DOCUMENTATION are delegated to
+        specialized agents (DependencyAgent and DocumentationAgent).
+        """
         return {
-            IssueType.TYPE_ERROR,  # Only type errors, delegate others
-            IssueType.DEPENDENCY,
-            IssueType.DOCUMENTATION,
+            IssueType.TYPE_ERROR,  # Delegates to RefactoringAgent
+            # IssueType.DEPENDENCY,  # Delegated to DependencyAgent
+            # IssueType.DOCUMENTATION,  # Delegated to DocumentationAgent
             IssueType.TEST_ORGANIZATION,
         }
 
     async def can_handle(self, issue: Issue) -> float:
-        # VERY LOW confidence - let specialists handle issues first
-        # Only act as fallback when no one else can handle
+        """Check if we can handle this issue.
+
+        VERY LOW confidence - let specialists handle issues first.
+        Only act as fallback when no one else can handle.
+        """
         if issue.type == IssueType.TYPE_ERROR:
             return 0.1  # Let RefactoringAgent handle it
-
-        if issue.type == IssueType.DEPENDENCY:
-            return 0.1
-
-        if issue.type == IssueType.DOCUMENTATION:
-            return 0.1
 
         if issue.type == IssueType.TEST_ORGANIZATION:
             return 0.1
