@@ -196,12 +196,12 @@ async def test_get_tool_version():
     adapter = ConcreteToolAdapter()
 
     mock_process = AsyncMock()
-    mock_process.communicate.return_value = (b"1.0.0", b"")
+    mock_process.communicate.return_value = (b"0.1.0", b"")
 
     with patch('asyncio.create_subprocess_exec', return_value=mock_process):
         version = await adapter.get_tool_version()
-        assert version == "1.0.0"
-        assert adapter._tool_version == "1.0.0"
+        assert version == "0.1.0"
+        assert adapter._tool_version == "0.1.0"
 
 
 @pytest.mark.asyncio
