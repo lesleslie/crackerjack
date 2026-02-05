@@ -217,4 +217,3 @@ class TestAsyncFileIO:
         assert results == {}
 
         await async_write_files_batch([])  # Should not raise
-

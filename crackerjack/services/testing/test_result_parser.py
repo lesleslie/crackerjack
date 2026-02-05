@@ -97,7 +97,7 @@ class TestResultParser:
 
 
         for test in data.get("tests", []):
-            if test.get("outcome") in ["failed", "error"]:
+            if test.get("outcome") in ("failed", "error"):
                 failure = self._parse_json_test(test)
                 if failure:
                     failures.append(failure)
@@ -234,7 +234,7 @@ class TestResultParser:
 
         if any(
             x in section_lower
-            for x in ["importerror", "modulenotfounderror", "no module named"]
+            for x in ("importerror", "modulenotfounderror", "no module named")
         ):
             match = re.search(r"(?:No module named|import).*?'(\w+)'", section)
             module_name = match.group(1) if match else "unknown"
@@ -351,10 +351,9 @@ class TestResultParser:
 
         if "error at teardown" in section_lower or "teardown error" in section_lower:
             return "teardown"
-        elif "error at setup" in section_lower or "setup error" in section_lower:
+        if "error at setup" in section_lower or "setup error" in section_lower:
             return "setup"
-        else:
-            return "call"
+        return "call"
 
     def _parse_json_test(self, test_data: dict) -> TestFailure | None:
         try:
@@ -368,7 +367,7 @@ class TestResultParser:
 
 
             stage = "call"
-            for key in ["setup", "call", "teardown"]:
+            for key in ("setup", "call", "teardown"):
                 if key in test_data:
                     stage = key
                     break

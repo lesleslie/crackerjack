@@ -18,7 +18,7 @@ if t.TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
-# Per-file locks to prevent concurrent backup corruption
+
 _backup_locks: dict[str, asyncio.Lock] = {}
 
 
@@ -199,15 +199,8 @@ class SafeCodeModifier:
         return True
 
     async def _backup_file(self, file_path: Path) -> BackupMetadata | None:
-        """Create backup with file locking to prevent concurrent corruption.
-
-        Uses per-file asyncio locks to ensure only one backup operation
-        can run on a given file at a time, while allowing parallel backups
-        of different files.
-        """
         lock_key = str(file_path)
 
-        # Get or create lock for this file
         if lock_key not in _backup_locks:
             _backup_locks[lock_key] = asyncio.Lock()
 
@@ -217,7 +210,6 @@ class SafeCodeModifier:
                 async_write_file,
             )
 
-            # Acquire lock before backup operation
             async with _backup_locks[lock_key]:
                 content = await async_read_file(file_path)
 
@@ -234,7 +226,6 @@ class SafeCodeModifier:
 
                 await async_write_file(backup_path, content)
 
-                # Set secure permissions (owner read/write only)
                 os.chmod(backup_path, 0o600)
 
                 return BackupMetadata(

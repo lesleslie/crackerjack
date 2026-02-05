@@ -348,13 +348,8 @@ class BaseCodeFixer(ABC):
         return error_msg
 
     def _sanitize_prompt_input(self, user_input: str) -> str:
-        """Sanitize user input to prevent prompt injection.
-
-        Filters out prompt injection patterns and limits input length.
-        """
         sanitized = user_input
 
-        # Prompt injection patterns (case-insensitive)
         injection_patterns = [
             r"ignore (previous|above|instructions)",
             r"disregard.*instructions",
@@ -369,10 +364,8 @@ class BaseCodeFixer(ABC):
         for pattern in injection_patterns:
             sanitized = re.sub(pattern, "[FILTERED]", sanitized, flags=re.IGNORECASE)
 
-        # Prevent code fence injection
         sanitized = sanitized.replace("```", "'''")
 
-        # Length limit (5000 chars) to prevent token overflow attacks
         return sanitized[:5000]
 
     def _build_fix_prompt(
@@ -428,12 +421,12 @@ Respond with ONLY the JSON, no additional text."""
         if "```json" in content:
             json_start = content.find("```json") + 7
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         if "```" in content:
             json_start = content.find("```") + 3
             json_end = content.find("```", json_start)
-            return content[json_start:json_end].strip()
+            return content[json_start: json_end].strip()
 
         return content.strip()
 

@@ -248,7 +248,7 @@ class ProviderChain:
                     provider_id,
                     success=False,
                     latency_ms=latency_ms,
-                    error=f"Unexpected: {str(e)}",
+                    error=f"Unexpected: {e}",
                 )
 
                 logger.debug(

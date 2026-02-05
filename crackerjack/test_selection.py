@@ -136,7 +136,7 @@ class TestSelector:
 
 
         if strategy == TestSelectionStrategy.ALL:
-            selected = list(test_files)
+            selected = test_files.copy()
         elif strategy == TestSelectionStrategy.CHANGED:
             selected = self._select_changed_tests(test_files, changed_files, test_mapping)
         elif strategy == TestSelectionStrategy.RELATED:
@@ -144,7 +144,7 @@ class TestSelector:
         elif strategy == TestSelectionStrategy.FAST:
             selected = self._select_fast_tests(test_files, test_mapping)
         else:
-            selected = list(test_files)
+            selected = test_files.copy()
 
         selection_time = (datetime.now(UTC) - started).total_seconds()
 
@@ -229,7 +229,7 @@ class TestSelector:
                 fast_tests.append(test_file)
 
 
-        return fast_tests if fast_tests else list(test_files)
+        return fast_tests or test_files.copy()
 
     def run_pytest_with_selection(
         self,
@@ -410,8 +410,8 @@ def select_tests_for_ci(
     changed_files = selector.detect_changed_files()
 
 
-    test_files = list(Path(".").rglob("test_*.py"))
-    test_files.extend(Path(".").rglob("tests/test_*.py"))
+    test_files = list(Path().rglob("test_*.py"))
+    test_files.extend(Path().rglob("tests/test_*.py"))
 
 
     result = selector.select_tests_by_changes(test_files, changed_files, strategy)

@@ -3,23 +3,27 @@
 ## ✅ Completed Fixes
 
 ### 1. HIGH 1: Backup File Permissions ✅ COMPLETE
+
 **File**: `crackerjack/services/safe_code_modifier.py`
 **Lines**: 5, 219
 
 **Changes**:
+
 - Added `import os` to imports
 - Added `os.chmod(backup_path, 0o600)` after backup write
 - Ensures backup files are owner-read/write only
 
 **Security Impact**: **HIGH** - Prevents unauthorized access to sensitive backup files
 
----
+______________________________________________________________________
 
 ### 2. MED 4: Configurable Thread Pool ✅ COMPLETE
+
 **File**: `crackerjack/services/async_file_io.py`
 **Lines**: 5-46
 
 **Changes**:
+
 - Removed fixed `_IO_EXECUTOR` constant
 - Added `_io_executor_lock` and `_io_executor` global with thread safety
 - Created `get_io_executor()` function that:
@@ -31,95 +35,111 @@
 
 **Flexibility Impact**: **MEDIUM** - Thread pool size now adapts to system configuration
 
----
+______________________________________________________________________
 
 ## ⏳ Remaining Fixes
 
 ### HIGH 2: Remove Global Singleton Pattern
+
 **Status**: Ready to implement
 **File**: `crackerjack/services/safe_code_modifier.py:400-417`
 **Effort**: 2-3 hours
 
 **Action Required**:
+
 1. Find all callers of `get_safe_code_modifier()`
-2. Replace with direct instantiation
-3. Remove singleton code (lines 400-417)
+1. Replace with direct instantiation
+1. Remove singleton code (lines 400-417)
 
 **Command to find callers**:
+
 ```bash
 grep -r "get_safe_code_modifier" crackerjack/
 ```
 
----
+______________________________________________________________________
 
-### HIGH 3: Simplify _get_agent() Method
+### HIGH 3: Simplify \_get_agent() Method
+
 **Status**: Ready to implement
 **File**: `crackerjack/services/batch_processor.py:80-152`
 **Effort**: 1-2 hours
 
 **Action Required**:
+
 - Convert 73-line if/elif chain to registry pattern
 - Reduce complexity from 14 to 3
 
----
+______________________________________________________________________
 
 ### MED 1: Add Prompt Input Sanitization
+
 **Status**: Ready to implement
 **File**: `crackerjack/adapters/ai/base.py`
 **Effort**: 1 hour
 
 **Action Required**:
+
 - Add `_sanitize_prompt_input()` method
 - Filter prompt injection patterns
 - Apply to all user inputs before LLM calls
 
----
+______________________________________________________________________
 
 ### MED 2: Add File Locking for Concurrent Backups
+
 **Status**: Ready to implement
 **File**: `crackerjack/services/safe_code_modifier.py:196`
 **Effort**: 1 hour
 
 **Action Required**:
+
 - Add asyncio.Lock for file-level locking
 - Prevent concurrent backup corruption
 
----
+______________________________________________________________________
 
 ### MED 3: Centralize Regex Patterns
+
 **Status**: Ready to implement
 **Files**:
+
 - `crackerjack/decorators/patterns.py` (add patterns)
 - `crackerjack/agents/warning_suppression_agent.py` (update usage)
-**Effort**: 30 minutes
+  **Effort**: 30 minutes
 
 **Action Required**:
+
 - Add warning fix patterns to SAFE_PATTERNS
 - Update WarningSuppressionAgent to use centralized patterns
 
----
+______________________________________________________________________
 
 ### MED 5: Add Async I/O Test Suite
+
 **Status**: Ready to implement
 **File**: `tests/services/test_async_file_io.py` (new file)
 **Effort**: 2 hours
 
 **Action Required**:
+
 - Create comprehensive test file
 - Test read/write/batch operations
 - Test error handling and concurrency
 
----
+______________________________________________________________________
 
 ## Quick Start for Remaining Fixes
 
 ### 1. Find Singleton Callers
+
 ```bash
 cd /Users/les/Projects/crackerjack
 grep -rn "get_safe_code_modifier" --include="*.py" .
 ```
 
 ### 2. Test Current Changes
+
 ```bash
 # Test backup permissions
 python -c "
@@ -148,6 +168,7 @@ print('✅ Configurable thread pool working')
 ```
 
 ### 3. Run Quality Checks
+
 ```bash
 # Check complexity
 ruff check . --select=C901
@@ -156,7 +177,7 @@ ruff check . --select=C901
 python -m crackerjack run --fast
 ```
 
----
+______________________________________________________________________
 
 ## Summary
 
@@ -168,13 +189,14 @@ python -m crackerjack run --fast
 **Estimated Remaining**: 6-7 hours
 
 **Next Actions**:
+
 1. Run grep to find singleton callers
-2. Implement remaining high-priority fixes (singleton + _get_agent)
-3. Add medium-priority security fixes (prompt sanitization + file locking)
-4. Complete medium-priority enhancements (regex centralization + tests)
+1. Implement remaining high-priority fixes (singleton + \_get_agent)
+1. Add medium-priority security fixes (prompt sanitization + file locking)
+1. Complete medium-priority enhancements (regex centralization + tests)
 
 All fixes are well-documented with clear implementation paths in `docs/REMEDIATION_PLAN_2026-02-05.md`.
 
----
+______________________________________________________________________
 
 **Status**: ✅ On track - Security and flexibility improvements complete

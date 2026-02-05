@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import typing as t
+from contextlib import suppress
 from pathlib import Path
 from uuid import UUID
 
@@ -90,8 +91,7 @@ class PyrightAdapter(BaseToolAdapter):
             cmd.append("--outputjson")
 
         if self.settings.type_checking_mode == "strict":
-            cmd.append("--level")
-            cmd.append("strict")
+            cmd.extend(("--level", "strict"))
         elif self.settings.type_checking_mode == "off":
             cmd.append("--skipunannotated")
 
@@ -257,7 +257,7 @@ class PyrightAdapter(BaseToolAdapter):
 
         pyproject_path = current_dir / "pyproject.toml"
         if pyproject_path.exists():
-            try:
+            with suppress(Exception):
                 import tomllib
 
                 with pyproject_path.open("rb") as f:
@@ -267,8 +267,6 @@ class PyrightAdapter(BaseToolAdapter):
                     package_name = str(data["project"]["name"]).replace("-", "_")
                     if (current_dir / package_name).exists():
                         package_dir = package_name
-            except Exception:
-                pass
 
         return QACheckConfig(
             check_id=MODULE_ID,
