@@ -99,7 +99,7 @@ class HookLockManager:
                 acquisition_time = time.time() - start_time
                 self.logger.info(
                     f"Hook-specific lock acquired for {hook_name} after"
-                    f" {acquisition_time: .2f}s",
+                    f" {acquisition_time:.2f}s",
                 )
 
                 self._track_lock_usage(hook_name, acquisition_time)
@@ -114,7 +114,7 @@ class HookLockManager:
                     self._track_lock_execution(hook_name, execution_time, total_time)
                     self.logger.debug(
                         f"Hook-specific lock released for {hook_name} after"
-                        f" {total_time: .2f}s total",
+                        f" {total_time:.2f}s total",
                     )
 
             finally:
@@ -125,7 +125,7 @@ class HookLockManager:
             wait_time = time.time() - start_time
             self.logger.exception(
                 f"Hook-specific lock acquisition timeout for {hook_name} after"
-                f" {wait_time: .2f}s "
+                f" {wait_time:.2f}s "
                 f"(timeout: {timeout}s, total failures: "
                 f"{self._timeout_failures[hook_name]})",
             )
@@ -164,7 +164,7 @@ class HookLockManager:
 
             acquisition_time = time.time() - start_time
             self.logger.info(
-                f"Global lock acquired for {hook_name} after {acquisition_time: .2f}s",
+                f"Global lock acquired for {hook_name} after {acquisition_time:.2f}s",
             )
 
             try:
@@ -204,8 +204,8 @@ class HookLockManager:
             exec_list.pop(0)
 
         self.logger.debug(
-            f"Hook {hook_name} execution: {execution_time: .2f}s "
-            f"(total with lock: {total_time: .2f}s)",
+            f"Hook {hook_name} execution: {execution_time:.2f}s "
+            f"(total with lock: {total_time:.2f}s)",
         )
 
     async def _acquire_global_lock_file(self, hook_name: str, lock_path: Path) -> None:
@@ -221,7 +221,7 @@ class HookLockManager:
 
                     self.logger.debug(
                         f"Global lock exists for {hook_name}, retrying in "
-                        f"{wait_time: .2f}s",
+                        f"{wait_time:.2f}s",
                     )
                     await asyncio.sleep(wait_time)
                 else:
@@ -394,7 +394,7 @@ class HookLockManager:
 
             if age_hours > self._global_config.stale_lock_hours:
                 self.logger.warning(
-                    f"Removing stale lock for {hook_name} (age: {age_hours: .2f}h)",
+                    f"Removing stale lock for {hook_name} (age: {age_hours:.2f}h)",
                 )
                 lock_path.unlink()
                 self._stale_locks_cleaned[hook_name] += 1
@@ -592,7 +592,7 @@ class HookLockManager:
                 hook_name = lock_file.stem
                 self._stale_locks_cleaned[hook_name] += 1
                 self.logger.info(
-                    f"Cleaned stale lock: {lock_file} (age: {heartbeat_age_hours: .2f}h)",
+                    f"Cleaned stale lock: {lock_file} (age: {heartbeat_age_hours:.2f}h)",
                 )
                 return 1
 

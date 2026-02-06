@@ -776,7 +776,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -918,7 +918,7 @@ class HookExecutor:
             name=hook.name,
             status="timeout",
             duration=duration,
-            issues_found=[f"Hook timed out after {duration: .1f}s"],
+            issues_found=[f"Hook timed out after {duration:.1f}s"],
             issues_count=1,
             stage=hook.stage.value,
             exit_code=124,

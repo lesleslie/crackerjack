@@ -276,6 +276,33 @@ class ProviderChain:
             )
         return self._provider_cache[provider_id]
 
+    def _track_provider_selection(
+        self,
+        provider_id: ProviderID,
+        success: bool,
+        latency_ms: float,
+        error: str | None = None,
+    ) -> None:
+        try:
+            from crackerjack.services.metrics import get_metrics
+
+            if self._metrics is None:
+                self._metrics = get_metrics()
+
+            self._metrics.execute(
+                """
+                INSERT INTO provider_performance
+                (provider_id, success, latency_ms, error_message, timestamp)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                (provider_id.value, success, latency_ms, error, datetime.now()),
+            )
+        except Exception as e:
+            logger.debug(f"Failed to track provider selection: {e}")
+
+    async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
+        self._process_general_1()
+
     async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
         try:
             if not hasattr(provider, "_settings"):
@@ -323,26 +350,7 @@ class ProviderChain:
             logger.debug(f"Provider availability check failed: {e}")
             return False
 
-    def _track_provider_selection(
-        self,
-        provider_id: ProviderID,
-        success: bool,
-        latency_ms: float,
-        error: str | None = None,
-    ) -> None:
-        try:
-            from crackerjack.services.metrics import get_metrics
-
-            if self._metrics is None:
-                self._metrics = get_metrics()
-
-            self._metrics.execute(
-                """
-                INSERT INTO provider_performance
-                (provider_id, success, latency_ms, error_message, timestamp)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (provider_id.value, success, latency_ms, error, datetime.now()),
-            )
-        except Exception as e:
-            logger.debug(f"Failed to track provider selection: {e}")
+    async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
+        self._process_general_1()
+        self._handle_conditional_2()
+        self._handle_conditional_3()

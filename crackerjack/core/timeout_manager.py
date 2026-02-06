@@ -100,7 +100,7 @@ class TimeoutError(Exception):
         self.elapsed = elapsed
         super().__init__(
             f"Operation '{operation}' timed out after {timeout}s "
-            f"(elapsed: {elapsed: .1f}s)",
+            f"(elapsed: {elapsed:.1f}s)",
         )
 
 
@@ -158,7 +158,7 @@ class AsyncTimeoutManager:
 
         if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
             logger.warning(
-                f"Operation {operation} {error_type} ({elapsed: .1f}s), continuing gracefully",
+                f"Operation {operation} {error_type} ({elapsed:.1f}s), continuing gracefully",
             )
             return elapsed
 
@@ -372,7 +372,7 @@ class AsyncTimeoutManager:
 
             if strategy == TimeoutStrategy.GRACEFUL_DEGRADATION:
                 logger.warning(
-                    f"Operation {operation} timed out ({elapsed: .1f}s), returning None",
+                    f"Operation {operation} timed out ({elapsed:.1f}s), returning None",
                 )
                 return None
 
@@ -485,7 +485,7 @@ class AsyncTimeoutManager:
 
     def _record_failure(self, operation: str, elapsed: float) -> None:
         logger.warning(
-            f"Operation '{operation}' failed after {elapsed: .1f}s "
+            f"Operation '{operation}' failed after {elapsed:.1f}s "
             f"(timeout: {self.get_timeout(operation)}s)",
         )
 

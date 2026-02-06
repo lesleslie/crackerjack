@@ -71,7 +71,7 @@ class LazyLoader:
                     self._value = self._factory()
                     self._loaded = True
                     load_time = time.time() - start_time
-                    self._logger.debug(f"Loaded {self._name} in {load_time: .3f}s")
+                    self._logger.debug(f"Loaded {self._name} in {load_time:.3f}s")
 
                     MemoryOptimizer.get_instance().notify_lazy_load(self._name)
 
@@ -202,7 +202,7 @@ class MemoryProfiler:
         self._start_memory = self._get_memory_usage()
         self._peak_memory = self._start_memory
         self._measurements.clear()
-        self._logger.debug(f"Started memory profiling at {self._start_memory: .2f} MB")
+        self._logger.debug(f"Started memory profiling at {self._start_memory:.2f} MB")
 
     def record_checkpoint(self, name: str = "") -> float:
         current_memory = self._get_memory_usage()
@@ -212,7 +212,7 @@ class MemoryProfiler:
         self._measurements.append((timestamp, current_memory))
 
         if name:
-            self._logger.debug(f"Memory checkpoint '{name}': {current_memory: .2f} MB")
+            self._logger.debug(f"Memory checkpoint '{name}': {current_memory:.2f} MB")
 
         return current_memory
 
@@ -332,7 +332,7 @@ class MemoryOptimizer:
 
         if memory_freed > 1.0:
             self._logger.info(
-                f"Memory cleanup freed {memory_freed: .2f} MB ({collected} objects)",
+                f"Memory cleanup freed {memory_freed:.2f} MB ({collected} objects)",
             )
 
     def _cleanup_lazy_objects(self) -> None:
@@ -389,7 +389,7 @@ def memory_optimized(func: t.Callable[..., t.Any]) -> t.Callable[..., t.Any]:
             memory_delta = after_memory - before_memory
             if memory_delta > 10.0:
                 optimizer._logger.warning(
-                    f"Function {func.__name__} increased memory by {memory_delta: .2f} MB",
+                    f"Function {func.__name__} increased memory by {memory_delta:.2f} MB",
                 )
 
             return result

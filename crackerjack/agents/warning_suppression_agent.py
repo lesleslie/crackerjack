@@ -88,7 +88,10 @@ class WarningSuppressionAgent(SubAgent):
     def _categorize_warning(self, issue: Issue) -> WarningCategory:
         for config in WARNING_PATTERNS.values():
             if re.search(config["pattern"], issue.message):
-                return config["category"]
+                category = config["category"]
+                if isinstance(category, str):
+                    category = WarningCategory(category)
+                return category
 
         return WarningCategory.FIX_MANUAL
 

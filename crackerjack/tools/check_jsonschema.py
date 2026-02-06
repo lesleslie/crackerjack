@@ -91,6 +91,8 @@ def validate_json_against_schema(
     json_file: Path,
     schema_path: Path,
 ) -> tuple[bool, str | None]:
+    import jsonschema
+
     try:
         schema = load_schema(schema_path)
         if not schema:
@@ -98,8 +100,6 @@ def validate_json_against_schema(
 
         with json_file.open(encoding="utf-8") as f:
             data = json.load(f)
-
-        import jsonschema
 
         validator_class = jsonschema.Draft7Validator
         if hasattr(validator_class, "check_schema"):

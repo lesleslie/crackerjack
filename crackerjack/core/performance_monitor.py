@@ -293,11 +293,11 @@ class AsyncPerformanceMonitor:
         console.print("=" * 60)
 
         summary = self.get_summary_stats()
-        console.print(f"⏱️ Uptime: {summary['uptime_seconds']: .1f}s")
+        console.print(f"⏱️ Uptime: {summary['uptime_seconds']:.1f}s")
         console.print(f"📊 Total Operations: {summary['total_operations']}")
-        console.print(f"✅ Success Rate: {summary['overall_success_rate']: .1f}%")
-        console.print(f"⏰ Timeout Rate: {summary['timeout_rate']: .1f}%")
-        console.print(f"🚀 Operations/min: {summary['operations_per_minute']: .1f}")
+        console.print(f"✅ Success Rate: {summary['overall_success_rate']:.1f}%")
+        console.print(f"⏰ Timeout Rate: {summary['timeout_rate']:.1f}%")
+        console.print(f"🚀 Operations/min: {summary['operations_per_minute']:.1f}")
 
         if self.metrics:
             console.print("\n[bold]Operation Metrics: [/bold]")
@@ -314,9 +314,9 @@ class AsyncPerformanceMonitor:
                     table.add_row(
                         name,
                         str(metrics.total_calls),
-                        f"{metrics.success_rate: .1f}%",
-                        f"{metrics.average_time: .2f}s",
-                        f"{metrics.recent_average_time: .2f}s",
+                        f"{metrics.success_rate:.1f}%",
+                        f"{metrics.average_time:.2f}s",
+                        f"{metrics.recent_average_time:.2f}s",
                         str(metrics.timeout_calls),
                     )
 
@@ -329,7 +329,7 @@ class AsyncPerformanceMonitor:
                 severity_emoji = "🔴" if alert["severity"] == "critical" else "🟡"
                 console.print(
                     f"{severity_emoji} {alert['operation']}: {alert['type']} "
-                    f"{alert['current_value']: .1f} (threshold: {alert['threshold']: .1f})",
+                    f"{alert['current_value']:.1f} (threshold: {alert['threshold']:.1f})",
                 )
 
         recent_timeouts = self.get_recent_timeout_events(5)
@@ -337,8 +337,8 @@ class AsyncPerformanceMonitor:
             console.print("\n[bold yellow]⏰ Recent Timeouts: [/bold yellow]")
             for timeout in recent_timeouts:
                 console.print(
-                    f" • {timeout.operation}: {timeout.actual_duration: .1f}s "
-                    f"(expected: {timeout.expected_timeout: .1f}s)",
+                    f" • {timeout.operation}: {timeout.actual_duration:.1f}s "
+                    f"(expected: {timeout.expected_timeout:.1f}s)",
                 )
 
 

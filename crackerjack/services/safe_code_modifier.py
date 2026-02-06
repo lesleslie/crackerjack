@@ -305,46 +305,7 @@ class SafeCodeModifier:
         return ValidationResult(success=len(issues) == 0, issues=issues)
 
     async def _validate_quality(self, file_path: Path) -> ValidationResult:
-        issues: list[ValidationIssue] = []
-
-        try:
-            result = subprocess.run(
-                ["ruff", "check", str(file_path)],
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-
-            if result.returncode != 0:
-                for line in result.stdout.strip().split("\n"):
-                    if not line:
-                        continue
-
-                    parts = line.split(":", 4)
-                    if len(parts) >= 4:
-                        try:
-                            line_number = int(parts[1])
-                            message = parts[3].strip()
-
-                            issues.append(
-                                ValidationIssue(
-                                    severity=ValidationSeverity.WARNING,
-                                    message=message,
-                                    file_path=file_path,
-                                    line_number=line_number,
-                                )
-                            )
-                        except (ValueError, IndexError):
-                            continue
-
-        except subprocess.TimeoutExpired:
-            logger.warning(f"Ruff check timeout for {file_path}")
-        except FileNotFoundError:
-            logger.debug("Ruff not installed, skipping quality check")
-        except Exception as e:
-            logger.warning(f"Ruff check failed: {e}")
-
-        return ValidationResult(success=True, issues=issues)
+        self._process_general_1()
 
     async def _run_smoke_test(self, command: list[str]) -> bool:
         try:
@@ -408,6 +369,52 @@ class SafeCodeModifier:
 
         except Exception as e:
             logger.warning(f"Failed to cleanup old backups: {e}")
+
+    async def _validate_quality(self, file_path: Path) -> ValidationResult:
+        issues: list[ValidationIssue] = []
+
+        try:
+            result = subprocess.run(
+                ["ruff", "check", str(file_path)],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+
+            if result.returncode != 0:
+                for line in result.stdout.strip().split("\n"):
+                    if not line:
+                        continue
+
+                    parts = line.split(":", 4)
+                    if len(parts) >= 4:
+                        try:
+                            line_number = int(parts[1])
+                            message = parts[3].strip()
+
+                            issues.append(
+                                ValidationIssue(
+                                    severity=ValidationSeverity.WARNING,
+                                    message=message,
+                                    file_path=file_path,
+                                    line_number=line_number,
+                                )
+                            )
+                        except (ValueError, IndexError):
+                            continue
+
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Ruff check timeout for {file_path}")
+        except FileNotFoundError:
+            logger.debug("Ruff not installed, skipping quality check")
+        except Exception as e:
+            logger.warning(f"Ruff check failed: {e}")
+
+        return ValidationResult(success=True, issues=issues)
+
+    async def _validate_quality(self, file_path: Path) -> ValidationResult:
+        self._process_general_1()
+        self._process_loop_2()
 
 
 __all__ = [

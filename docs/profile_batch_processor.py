@@ -17,9 +17,12 @@ from crackerjack.services.batch_processor import get_batch_processor
 def create_test_issues(count: int = 10) -> list[Issue]:
     issues = []
 
-
     issue_templates = [
-        (IssueType.IMPORT_ERROR, "ModuleNotFoundError: No module named 'test_mod'", "test.py"),
+        (
+            IssueType.IMPORT_ERROR,
+            "ModuleNotFoundError: No module named 'test_mod'",
+            "test.py",
+        ),
         (IssueType.IMPORT_ERROR, "ImportError: cannot import 'utils'", "app.py"),
         (IssueType.TEST_FAILURE, "fixture 'tmp_path' not found", "conftest.py"),
         (IssueType.FORMATTING, "Line too long (120 > 100 characters)", "module.py"),
@@ -59,7 +62,6 @@ async def profile_batch_processing(
     console.print("")
 
     if use_profiler:
-
         profiler = cProfile.Profile()
         profiler.enable()
 
@@ -77,7 +79,6 @@ async def profile_batch_processing(
     if use_profiler:
         profiler.disable()
 
-
         console.print("\n[bold]Profiler Results[/bold]")
 
         s = StringIO()
@@ -85,7 +86,6 @@ async def profile_batch_processing(
         ps.print_stats(20)
 
         console.print(s.getvalue())
-
 
     console.print("\n[bold]Performance Summary[/bold]")
     console.print(f"Duration: {duration:.2f}s")
@@ -99,21 +99,20 @@ async def compare_parallel_vs_sequential(issue_count: int = 10) -> None:
     console = Console()
 
     console.print("\n" + "=" * 80)
-    console.print("[bold cyan]Performance Comparison: Parallel vs Sequential[/bold cyan]")
+    console.print(
+        "[bold cyan]Performance Comparison: Parallel vs Sequential[/bold cyan]"
+    )
     console.print("=" * 80)
-
 
     console.print("\n[bold]Testing Parallel Processing...[/bold]")
     parallel_time = await profile_batch_processing(
         issue_count=issue_count, parallel=True, use_profiler=False
     )
 
-
     console.print("\n[bold]Testing Sequential Processing...[/bold]")
     sequential_time = await profile_batch_processing(
         issue_count=issue_count, parallel=False, use_profiler=False
     )
-
 
     speedup = sequential_time / parallel_time
 
@@ -137,7 +136,6 @@ async def identify_bottlenecks() -> None:
     console.print("[bold cyan]Bottleneck Analysis[/bold cyan]")
     console.print("=" * 80)
 
-
     await profile_batch_processing(issue_count=5, parallel=True, use_profiler=True)
 
     console.print("\n[bold]Key Areas to Investigate:[/bold]")
@@ -155,18 +153,14 @@ async def main() -> None:
     console.print("[bold cyan]BatchProcessor Performance Profiling[/bold cyan]")
     console.print("=" * 80)
 
-
     console.print("\n[bold]Running Baseline Test (5 issues)...[/bold]")
     baseline_time = await profile_batch_processing(
         issue_count=5, parallel=True, use_profiler=False
     )
 
-
     await identify_bottlenecks()
 
-
     await compare_parallel_vs_sequential(issue_count=10)
-
 
     console.print("\n" + "=" * 80)
     console.print("[bold]Performance Optimization Recommendations[/bold]")
@@ -175,9 +169,13 @@ async def main() -> None:
     if baseline_time < 15:
         console.print("[green]✓ Performance is excellent (<15s for 5 issues)[/green]")
     elif baseline_time < 30:
-        console.print("[yellow]⚠ Performance is acceptable (<30s for 5 issues)[/yellow]")
+        console.print(
+            "[yellow]⚠ Performance is acceptable (<30s for 5 issues)[/yellow]"
+        )
     else:
-        console.print("[red]✗ Performance needs improvement (>{:0f}s for 5 issues)[/red]")
+        console.print(
+            "[red]✗ Performance needs improvement (>{:0f}s for 5 issues)[/red]"
+        )
 
     console.print("\n[bold]Potential Optimizations:[/bold]")
     console.print("1. Agent pooling (reuse initialized agents)")

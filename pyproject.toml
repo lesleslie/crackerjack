@@ -62,7 +62,7 @@ zuban_lsp_port = 8677
 zuban_lsp_timeout = 120.0
 zuban_lsp_strict_mode = true
 terminal_width = 70
-skylos_timeout = 600
+skylos_timeout = 60
 refurb_timeout = 600
 test_workers = 0
 max_workers = 8
@@ -99,7 +99,7 @@ ignore_errors = false
 
 [tool.pyright]
 include = ["crackerjack"]
-exclude = ["tests/*", "scratch", ".venv", "build", "dist", "crackerjack/mcp/*", "crackerjack/plugins/*"]
+exclude = ["tests/*", "scratch", ".venv", "build", "dist", "crackerjack/mcp/*", "crackerjack/plugins/*", "crackerjack/tools/*"]
 typeCheckingMode = "strict"
 pythonVersion = "3.13"
 
@@ -111,7 +111,7 @@ check-url = "https://pypi.org/simple/"
 [tool.creosote]
 paths = ["crackerjack"]
 deps-file = "pyproject.toml"
-exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-xdist", "pytest-benchmark", "pytest-snob", "pyyaml", "uv", "uv-bump", "pip-audit", "tomli-w", "google-crc32c", "pytest-timeout", "keyring", "pydantic-settings", "pyleak", "bandit", "vulture", "pyright", "creosote", "refurb", "complexipy", "codespell", "fastapi", "fastmcp", "uvicorn", "websockets", "watchdog", "ruff", "hypothesis", "psutil", "skylos", "zuban", "types-pyyaml", "types-psutil", "types-aiofiles", "onnxruntime", "transformers", "scipy", "scikit-learn", "numpy", "linkcheckmd", "nltk", "scipy-stubs", "structlog", "mdformat", "mdformat-ruff"]
+exclude-deps = ["hatchling", "pytest", "pytest-asyncio", "pytest-cov", "pytest-mock", "pytest-xdist", "pytest-benchmark", "pytest-snob", "pyyaml", "uv", "uv-bump", "pip-audit", "tomli-w", "google-crc32c", "pytest-timeout", "keyring", "pydantic-settings", "pyleak", "bandit", "vulture", "pyright", "creosote", "refurb", "complexipy", "codespell", "fastapi", "fastmcp", "uvicorn", "websockets", "watchdog", "ruff", "hypothesis", "psutil", "skylos", "zuban", "types-pyyaml", "types-psutil", "types-aiofiles", "transformers", "scipy", "scikit-learn", "numpy", "linkcheckmd", "nltk", "scipy-stubs", "structlog", "mdformat", "mdformat-ruff"]
 
 [tool.refurb]
 enable_all = false

@@ -30,7 +30,7 @@ class TestRuffJSONParser:
             },
             {
                 "filename": "mahavishnu/core/backup_recovery.py",
-                "location": {"row": 3, "column": 1},
+                "location": {"row": 3, "column":1},
                 "code": "I001",
                 "message": "Import block is un-sorted or un-formatted"
             },

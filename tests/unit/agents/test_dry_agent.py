@@ -312,7 +312,7 @@ class TestDRYAgentFixApplication:
         content = "path = Path(str_path)\n"
         violation = {
             "type": "path_conversion_pattern",
-            "instances": [{"line_number": 1}],
+            "instances": [{"line_number":1}],
         }
 
         with patch.object(agent, "_fix_path_conversion_pattern") as mock_fix:
@@ -429,7 +429,7 @@ def func3():
 
     def test_is_line_inside_function(self, agent) -> None:
         """Test checking if line is inside function."""
-        current_function = {"indent_level": 0}
+        current_function = {"indent_level":0}
 
         # Line with greater indent is inside
         assert agent._is_line_inside_function(current_function, 4, "return True") is True

@@ -1,4 +1,3 @@
-
 import re
 from dataclasses import dataclass
 from enum import StrEnum
@@ -7,7 +6,6 @@ from crackerjack.agents.base import Issue, IssueType, Priority
 
 
 class WarningCategory(StrEnum):
-
     SKIP = "skip"
     FIX_AUTOMATIC = "fix_automatic"
     FIX_MANUAL = "fix_manual"
@@ -16,7 +14,6 @@ class WarningCategory(StrEnum):
 
 @dataclass
 class WarningPattern:
-
     pattern: str
     category: WarningCategory
     reason: str
@@ -24,7 +21,6 @@ class WarningPattern:
 
 
 WARNING_PATTERNS: dict[str, WarningPattern] = {
-
     "pytest-benchmark": WarningPattern(
         pattern=r"PytestBenchmarkWarning",
         category=WarningCategory.SKIP,
@@ -43,8 +39,6 @@ WARNING_PATTERNS: dict[str, WarningPattern] = {
         reason="Benchmark classes with __init__ are expected",
         example="tests/benchmarks/test_benchmark.py: 10: cannot collect 'TestBench'",
     ),
-
-
     "deprecated-pytest-import": WarningPattern(
         pattern=r"DeprecationWarning:.*pytest\.helpers\.",
         category=WarningCategory.FIX_AUTOMATIC,
@@ -69,8 +63,6 @@ WARNING_PATTERNS: dict[str, WarningPattern] = {
         reason="Add explicit scope to fixture",
         example="test_foo.py: 20: fixture 'db' scope mismatch",
     ),
-
-
     "pending-deprecation": WarningPattern(
         pattern=r"PendingDeprecationWarning",
         category=WarningCategory.FIX_MANUAL,
@@ -83,8 +75,6 @@ WARNING_PATTERNS: dict[str, WarningPattern] = {
         reason="Experimental APIs may change",
         example="UserWarning: Using experimental API",
     ),
-
-
     "config-error": WarningPattern(
         pattern=r"PytestConfigWarning",
         category=WarningCategory.BLOCKER,
@@ -97,7 +87,6 @@ WARNING_PATTERNS: dict[str, WarningPattern] = {
 def parse_pytest_warnings(test_output: str) -> list[Issue]:
     issues = []
 
-
     warning_pattern = re.compile(
         r"^(?P<file>[^:]+):(?P<line>\d+):\s*(?P<type>\w+Warning):\s*(?P<message>.+)$",
         re.MULTILINE,
@@ -108,7 +97,6 @@ def parse_pytest_warnings(test_output: str) -> list[Issue]:
         line_number = int(match.group("line"))
         warning_type = match.group("type")
         message = f"{warning_type}: {match.group('message').strip()}"
-
 
         if "Config" in warning_type or "Error" in warning_type:
             severity = Priority.HIGH
@@ -134,7 +122,6 @@ def categorize_warning(issue: Issue) -> tuple[WarningCategory, str]:
         if re.search(config.pattern, issue.message):
             return config.category, pattern_name
 
-
     return WarningCategory.FIX_MANUAL, "unknown"
 
 
@@ -159,7 +146,6 @@ def print_warning_summary(issues: list[Issue]) -> None:
     total = len(issues)
     print(f"\n📊 Warning Summary: {total} warnings detected\n")
 
-
     skip_count = len(categorized[WarningCategory.SKIP])
     print(f"  ✅ SKIP: {skip_count}")
     for issue in categorized[WarningCategory.SKIP][:3]:
@@ -170,7 +156,6 @@ def print_warning_summary(issues: list[Issue]) -> None:
     if skip_count > 3:
         print(f"     ... and {skip_count - 3} more")
 
-
     autofix_count = len(categorized[WarningCategory.FIX_AUTOMATIC])
     print(f"\n  🔧 AUTO-FIX: {autofix_count}")
     for issue in categorized[WarningCategory.FIX_AUTOMATIC][:3]:
@@ -179,12 +164,10 @@ def print_warning_summary(issues: list[Issue]) -> None:
     if autofix_count > 3:
         print(f"     ... and {autofix_count - 3} more")
 
-
     manual_count = len(categorized[WarningCategory.FIX_MANUAL])
     print(f"\n  👁 MANUAL: {manual_count}")
     for issue in categorized[WarningCategory.FIX_MANUAL]:
         print(f"     - {issue.file_path}:{issue.line_number}: {issue.message}")
-
 
     blocker_count = len(categorized[WarningCategory.BLOCKER])
     if blocker_count > 0:
@@ -194,7 +177,6 @@ def print_warning_summary(issues: list[Issue]) -> None:
 
 
 if __name__ == "__main__":
-
     example_output = """
 tests/test_benchmarks.py: 10: PytestBenchmarkWarning: internal warning
 tests/test_benchmarks.py: 20: PytestBenchmarkWarning: internal warning

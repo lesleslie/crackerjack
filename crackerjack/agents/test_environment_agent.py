@@ -231,59 +231,6 @@ def {fixture_name}():
     # TODO: Implement fixture logic
     return None"""
 
-    async def _add_fixture_parameter(
-        self, test_file_path: Path, fixture_name: str
-    ) -> bool:
-        try:
-            content = self.context.get_file_content(test_file_path)
-            if not content:
-                return False
-
-
-            lines: list[str] = content.split("\n")
-            modified_lines: list[str] = []
-
-            for i, line in enumerate(lines):
-                modified_lines.append(line)
-
-
-                if re.match(r"^\s*def\s+test_\w+\s*\(", line):
-
-                    j = i
-                    while j < len(lines):
-                        if ")" in lines[j]:
-
-                            indent_match = re.match(r"^\s*", lines[j])
-                            indent = indent_match.group(0) if indent_match else "    "
-
-
-                            modified_lines[-1] = lines[j].replace(
-                                ")",
-                                f", {fixture_name}:",
-                            )
-
-
-                            if not lines[j].rstrip().endswith(")"):
-                                modified_lines.append(f"{indent})")
-
-                            break
-                        j += 1
-
-                    break
-
-            new_content = "\n".join(modified_lines)
-
-
-            modifier = self._get_safe_modifier()
-            return await modifier.apply_content_with_validation(
-                file_path=test_file_path,
-                new_content=new_content,
-                context=f"Add fixture parameter '{fixture_name}' to test",
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to add fixture parameter: {e}")
-            return False
 
     async def _fix_import_error(self, issue: Issue) -> FixResult:
 
@@ -385,6 +332,61 @@ def {fixture_name}():
 
             pyproject_path = project_root / "pyproject.toml"
             config_content = """[tool.pytest.ini_options]
+
+    async def _add_fixture_parameter(
+        self, test_file_path: Path, fixture_name: str
+    ) -> bool:
+        try:
+            content = self.context.get_file_content(test_file_path)
+            if not content:
+                return False
+
+
+            lines: list[str] = content.split("\n")
+            modified_lines: list[str] = []
+
+
+            for i, line in enumerate(lines):
+                modified_lines.append(line)
+
+
+                if re.match(r"^\s*def\s+test_\w+\s*\(", line):
+
+                    j = i
+                    while j < len(lines):
+                        if ")" in lines[j]:
+
+                            indent_match = re.match(r"^\s*", lines[j])
+                            indent = indent_match.group(0) if indent_match else "    "
+
+
+                            modified_lines[-1] = lines[j].replace(
+                                ")",
+                                f", {fixture_name}:",
+                            )
+
+
+                            if not lines[j].rstrip().endswith(")"):
+                                modified_lines.append(f"{indent})")
+
+                            break
+                        j += 1
+
+                    break
+
+            new_content = "\n".join(modified_lines)
+
+
+            modifier = self._get_safe_modifier()
+            return await modifier.apply_content_with_validation(
+                file_path=test_file_path,
+                new_content=new_content,
+                context=f"Add fixture parameter '{fixture_name}' to test",
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to add fixture parameter: {e}")
+            return False
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]

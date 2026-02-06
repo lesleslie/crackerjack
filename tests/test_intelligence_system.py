@@ -168,7 +168,7 @@ class TestIntelligentAgentSystem:
         system = await get_intelligent_agent_system()
 
         with patch.object(system, "registry") as mock_registry:
-            mock_registry.get_agent_stats.return_value = {"total_agents": 5}
+            mock_registry.get_agent_stats.return_value = {"total_agents":5}
 
             with patch.object(system, "orchestrator") as mock_orchestrator:
                 mock_orchestrator.get_execution_stats.return_value = {

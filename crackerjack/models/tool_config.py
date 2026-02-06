@@ -39,6 +39,12 @@ TOOL_CONFIGS: dict[str, ToolConfig] = {
         output_format=OutputFormat.TEXT,
         fallback_to_regex=True,
     ),
+    "pyscn": ToolConfig(
+        name="pyscn",
+        supports_json=False,
+        output_format=OutputFormat.TEXT,
+        fallback_to_regex=True,
+    ),
     "mypy": ToolConfig(
         name="mypy",
         supports_json=True,

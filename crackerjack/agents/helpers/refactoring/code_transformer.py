@@ -59,13 +59,57 @@ class CodeTransformer:
 
     @staticmethod
     def _extract_nested_conditions(content: str) -> str:
+        """Extract nested if statements into early returns."""
 
-        return content
+        lines = content.split("\n")
+        modified_lines = []
+        i = 0
+
+        while i < len(lines):
+            line = lines[i]
+            stripped = line.strip()
+
+            # Look for nested pattern: if condition:\n    if nested:\n        action
+            if (
+                stripped.startswith("if ")
+                and len(stripped) > 50  # Only process long conditionals
+            ):
+                # Find the matching action block
+                action_indent = len(line) - len(line.lstrip()) + 4
+                j = i + 1
+                action_start = -1
+
+                while j < len(lines):
+                    check_indent = len(lines[j]) - len(lines[j].lstrip())
+                    if (
+                        check_indent == action_indent
+                        and lines[j].strip()
+                        and not lines[j].strip().startswith(("else", "elif", "finally"))
+                    ):
+                        action_start = j
+                        break
+                    j += 1
+
+                if action_start > 0:
+                    # Extract to early return
+                    "\n".join(lines[i:action_start])
+                    action_body = "\n".join(lines[action_start : action_start + 5])
+
+                    # Create early return
+                    early_return = f"{line.lstrip()}\n{action_body.strip()}\n    return"
+                    modified_lines.append(early_return)
+                    i = action_start + 4
+                    continue
+
+            modified_lines.append(line)
+            i += 1
+
+        return "\n".join(modified_lines)
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
-
-        return content
+        self._process_general_1()
+        self._process_loop_2()
 
     @staticmethod
     def _extract_validation_patterns(content: str) -> str:
@@ -173,7 +217,9 @@ class CodeTransformer:
                 self._create_section(current_section, section_type, len(sections)),
             )
 
-        return [s for s in sections if len(s["content"].split("\n")) >= 5]
+        # Only filter out very small sections (< 3 lines)
+        # But keep sections that are significant enough to extract
+        return [s for s in sections if len(s["content"].split("\n")) >= 3]
 
     @staticmethod
     def _should_start_new_section(
@@ -327,3 +373,31 @@ class CodeTransformer:
             if line.strip() and len(line) - len(line.lstrip()) <= class_indent:
                 return i
         return len(lines)
+
+    def _simplify_boolean_expressions(content: str) -> str:
+        self._process_general_1()
+        self._process_loop_2()
+
+    def _simplify_boolean_expressions(content: str) -> str:
+        """Extract complex boolean expressions into named variables."""
+
+        # Pattern: if (condition1 and condition2 and condition3) or condition4
+        lines = content.split("\n")
+        modified_lines = []
+
+        for i, line in enumerate(lines):
+            # Look for long boolean expressions with multiple and/or
+            if " and " in line and line.count(" and ") >= 2:
+                # Count and/or operators
+                op_count = line.count(" and ") + line.count(" or ")
+                if op_count >= 2:
+                    # Suggest extraction (this is a simplified version)
+                    if ":    #" in line or "return " in line:
+                        modified_lines.append(
+                            f"    # TODO: Extract complex boolean ({op_count} operators)"
+                        )
+                    modified_lines.append(line)
+            else:
+                modified_lines.append(line)
+
+        return "\n".join(modified_lines)

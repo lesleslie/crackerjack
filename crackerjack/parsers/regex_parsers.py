@@ -89,22 +89,25 @@ class RefurbRegexParser(RegexParser):
         return issues
 
     def _should_parse_refurb_line(self, line: str) -> bool:
-        return bool(
-            line
-            and "FURB" in line
-            and ":" in line
-            and not line.startswith(("Found", "Checked"))
-        )
+        # More permissive: check for file pattern, not just "FURB" literal
+        if not line:
+            return False
+        if line.startswith(
+            ("Found", "Checked", "Success", "Running", "🔍", "✅", "❌", "⚠️")
+        ):
+            return False
+        # Look for file:line:column pattern
+        return ".py:" in line and len(line.split(":")) >= 3
 
     def _parse_refurb_line(self, line: str) -> Issue | None:
-        parts = line.split(":", 2)
-        if len(parts) < 2:
+        parts = line.split(":", 3)
+        if len(parts) < 3:
             return None
 
         try:
             file_path = parts[0].strip()
             line_number = int(parts[1].strip())
-            message = parts[2].strip() if len(parts) > 2 else line
+            message = parts[3].strip() if len(parts) > 3 else line
 
             return Issue(
                 type=IssueType.COMPLEXITY,
@@ -116,6 +119,87 @@ class RefurbRegexParser(RegexParser):
             )
         except (ValueError, IndexError) as e:
             logger.debug(f"Failed to parse refurb line: {line} ({e})")
+            return None
+
+
+class PyscnRegexParser(RegexParser):
+    """Parser for pyscn (Python source code analyzer) output.
+
+    Expected output format:
+        file.py:line:column: message
+    Example:
+        crackerjack/services/ai/embeddings.py:247:5: EmbeddingService.generate_embeddings_batch is too complex (11 > 10)
+    """
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_pyscn_line(line):
+                continue
+
+            issue = self._parse_pyscn_line(line)
+            if issue:
+                issues.append(issue)
+
+        logger.debug(f"Parsed {len(issues)} issues from pyscn")
+        return issues
+
+    def _should_parse_pyscn_line(self, line: str) -> bool:
+        """Check if line should be parsed as a pyscn issue."""
+        if not line or not line.strip():
+            return False
+        # Skip header/footer lines and error messages
+        skip_prefixes = (
+            "🔍",
+            "❌",
+            "✅",
+            "⚠️",  # Emojis
+            "Running",
+            "Usage:",
+            "Available Commands",
+            "Flags:",
+            "Found",
+            "Error:",
+            "error:",
+            "Warning:",  # Messages
+            "Checking",
+            "Analyzing",  # Progress
+        )
+        if line.startswith(skip_prefixes):
+            return False
+        # Look for file:line:column pattern with .py extension
+        return ".py:" in line and len(line.split(":")) >= 4
+
+    def _parse_pyscn_line(self, line: str) -> Issue | None:
+        """Parse a pyscn output line into an Issue."""
+        parts = line.split(":", 3)
+        if len(parts) < 4:
+            return None
+
+        try:
+            file_path = parts[0].strip()
+            line_number = int(parts[1].strip())
+            message = parts[3].strip()
+
+            # Determine severity based on message content
+            severity = Priority.MEDIUM
+            if "too complex" in message.lower():
+                severity = Priority.HIGH
+            elif "clone" in message.lower():
+                severity = Priority.LOW
+
+            return Issue(
+                type=IssueType.COMPLEXITY,
+                severity=severity,
+                message=message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="pyscn",
+            )
+        except (ValueError, IndexError) as e:
+            logger.debug(f"Failed to parse pyscn line: {line} ({e})")
             return None
 
 
@@ -422,6 +506,7 @@ class CreosoteRegexParser(RegexParser):
 def register_regex_parsers(factory: "ParserFactory") -> None:
     CodespellRegexParser()
     RefurbRegexParser()
+    PyscnRegexParser()
     RuffFormatRegexParser()
     ComplexityRegexParser()
     CreosoteRegexParser()
@@ -429,17 +514,90 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
 
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
+    factory.register_regex_parser("pyscn", PyscnRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
-    factory.register_regex_parser("complexity", ComplexityRegexParser)
+    factory.register_regex_parser("complexipy", ComplexityRegexParser)
     factory.register_regex_parser("creosote", CreosoteRegexParser)
     factory.register_regex_parser("mypy", MypyRegexParser)
     factory.register_regex_parser("zuban", MypyRegexParser)
+    factory.register_regex_parser("skylos", SkylosRegexParser)
 
     factory.register_regex_parser("check-yaml", StructuredDataParser)
     factory.register_regex_parser("check-toml", StructuredDataParser)
     factory.register_regex_parser("check-json", StructuredDataParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, ruff-format, complexity, "
+        "Registered regex parsers: codespell, refurb, pyscn, ruff-format, complexipy, "
         "creosote, mypy, zuban, check-yaml, check-toml, check-json"
     )
+
+
+class SkylosRegexParser(RegexParser):
+    """Parser for skylos (Rust-based dead code detector) output.
+
+    Expected output format:
+        ERROR - filepath: error message
+    Example:
+        ERROR - /path/to/file.py: '(' was never closed (<unknown>, line 260)
+    """
+
+    def parse_text(self, output: str) -> list[Issue]:
+        issues: list[Issue] = []
+
+        for line in output.split("\n"):
+            line = line.strip()
+            if not self._should_parse_skylos_line(line):
+                continue
+
+            try:
+                issue = self._parse_skylos_line(line)
+                if issue:
+                    issues.append(issue)
+            except Exception as e:
+                logger.debug(f"Failed to parse skylos line: {line} ({e})")
+
+        logger.debug(f"Parsed {len(issues)} issues from skylos")
+        return issues
+
+    def _should_parse_skylos_line(self, line: str) -> bool:
+        return bool(line and "ERROR" in line and "-" in line and ":" in line)
+
+    def _parse_skylos_line(self, line: str) -> Issue | None:
+        # Format: timestamp - ERROR - filepath: error message (details)
+        # Example: 2026-02-06 01:23:14,333 - ERROR - /path/to/file.py: '(' was never closed (<unknown>, line 260)
+
+        # Find the ERROR - part
+        error_idx = line.find(" - ERROR - ")
+        if error_idx == -1:
+            return None
+
+        # Extract everything after " - ERROR - "
+        error_part = line[error_idx + 11 :].strip()
+
+        if ":" not in error_part:
+            return None
+
+        # Extract file path and message
+        file_end = error_part.find(":")
+        file_path = error_part[:file_end].strip()
+        message = error_part[file_end + 1 :].strip()
+
+        # Try to extract line number from message
+        # Format: error message (<unknown>, line 260)
+        line_number = None
+        if "line " in message:
+            import re
+
+            match = re.search(r"line (\d+)", message)
+            if match:
+                line_number = int(match.group(1))
+
+        return Issue(
+            type=IssueType.DEAD_CODE,
+            severity=Priority.MEDIUM,
+            message=message[:200],  # Truncate long messages
+            file_path=file_path,
+            line_number=line_number,
+            details=[line],
+            stage="skylos",
+        )

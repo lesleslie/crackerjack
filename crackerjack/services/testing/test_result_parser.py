@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 
-from crackerjack.agents.base import Issue, IssueType
+from crackerjack.agents.base import Issue, IssueType, Priority
 
 if t.TYPE_CHECKING:
     pass
@@ -47,16 +47,17 @@ class TestFailure:
     def to_issue(self) -> Issue:
         return Issue(
             type=IssueType.TEST_FAILURE,
+            severity=Priority.HIGH,
             message=f"{self.error_type.value}: {self.error_message}",
             file_path=str(self.file_path),
             line_number=self.line_number,
             stage="pytest",
-            metadata={
-                "test_name": self.test_name,
-                "error_type": self.error_type.value,
-                "traceback": "\n".join(self.traceback),
-                "stage": self.stage,
-            },
+            details=[
+                f"test_name: {self.test_name}",
+                f"error_type: {self.error_type.value}",
+                f"traceback: {'\n'.join(self.traceback)}",
+                f"stage: {self.stage}",
+            ],
         )
 
 
@@ -116,8 +117,8 @@ class TestResultParser:
 
         section_pattern = r"_{20,}\s+(.+?)\s+_{20,}"
 
-        sections = []
-        current_section = []
+        sections: list[str] = []
+        current_section: list[str] = []
 
         lines = output.split("\n")
         in_failure = False
@@ -220,113 +221,7 @@ class TestResultParser:
         return Path("unknown.py"), None
 
     def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
-        section_lower = section.lower()
-
-
-        if "fixture" in section_lower and "not found" in section_lower:
-            match = re.search(r"fixture '(\w+)' not found", section)
-            fixture_name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.FIXTURE_ERROR,
-                f"Fixture '{fixture_name}' not found",
-            )
-
-
-        if any(
-            x in section_lower
-            for x in ("importerror", "modulenotfounderror", "no module named")
-        ):
-            match = re.search(r"(?:No module named|import).*?'(\w+)'", section)
-            module_name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.IMPORT_ERROR,
-                f"Cannot import module '{module_name}'",
-            )
-
-
-        if "mockspec" in section_lower or ("spec" in section_lower and "mock" in section_lower):
-            return (
-                TestErrorType.MOCK_SPEC_ERROR,
-                "Mock specification error",
-            )
-
-
-        if "attributeerror" in section_lower:
-            match = re.search(r"AttributeError: (.+)", section)
-            message = match.group(1) if match else "has no attribute"
-            return (
-                TestErrorType.ATTRIBUTE_ERROR,
-                message,
-            )
-
-
-        if "validationerror" in section_lower or "validation error" in section_lower:
-            match = re.search(r"(?:ValidationError|validation error): (.+)", section)
-            message = match.group(1) if match else "Validation failed"
-            return (
-                TestErrorType.PYDANTIC_VALIDATION,
-                message,
-            )
-
-
-        if "typeerror" in section_lower or "type error" in section_lower:
-            match = re.search(r"TypeError: (.+)", section)
-            message = match.group(1) if match else "Type mismatch"
-            return (
-                TestErrorType.TYPE_ERROR,
-                message,
-            )
-
-
-        if "assertionerror" in section_lower or "assert" in section_lower:
-
-            match = re.search(r"AssertionError: (.+)", section)
-            if match:
-                return (
-                    TestErrorType.ASSERTION_ERROR,
-                    match.group(1),
-                )
-
-
-            if "assert " in section and " ==" in section:
-                return (
-                    TestErrorType.ASSERTION_ERROR,
-                    "Assertion failed: values are not equal",
-                )
-
-            return (
-                TestErrorType.ASSERTION_ERROR,
-                "Assertion failed",
-            )
-
-
-        if re.search(r"['\"/]test/path['\"]", section):
-            return (
-                TestErrorType.HARDCODED_PATH,
-                "Hardcoded test path detected",
-            )
-
-
-        if "name '(.+?)' is not defined" in section or "is not defined" in section_lower:
-            match = re.search(r"name '(\w+)' is not defined", section)
-            name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.MISSING_IMPORT,
-                f"Name '{name}' is not defined",
-            )
-
-
-        match = re.search(r"(\w+Error): (.+)", section)
-        if match:
-            return (
-                TestErrorType.RUNTIME_ERROR,
-                f"{match.group(1)}: {match.group(2)}",
-            )
-
-        return (
-            TestErrorType.UNKNOWN,
-            "Unknown test failure",
-        )
+        self._process_general_1()
 
     def _extract_traceback(self, section: str) -> list[str]:
         traceback_lines = []
@@ -356,6 +251,43 @@ class TestResultParser:
         return "call"
 
     def _parse_json_test(self, test_data: dict) -> TestFailure | None:
+        self._process_general_1()
+
+    def _build_error_patterns(self) -> dict[TestErrorType, list[str]]:
+        return {
+            TestErrorType.FIXTURE_ERROR: [
+                r"fixture '(\w+)' not found",
+                r"FixtureError",
+                r"cannot find fixture",
+            ],
+            TestErrorType.IMPORT_ERROR: [
+                r"ImportError",
+                r"ModuleNotFoundError",
+                r"No module named '?(\w+)'?",
+            ],
+            TestErrorType.ASSERTION_ERROR: [
+                r"AssertionError",
+                r"assert .+ ==",
+            ],
+            TestErrorType.ATTRIBUTE_ERROR: [
+                r"AttributeError: .+ has no attribute",
+            ],
+            TestErrorType.MOCK_SPEC_ERROR: [
+                r"MockSpec",
+                r"spec.*Mock",
+            ],
+            TestErrorType.PYDANTIC_VALIDATION: [
+                r"ValidationError",
+                r"validation error",
+            ],
+            TestErrorType.TYPE_ERROR: [
+                r"TypeError",
+            ],
+        }
+
+
+
+    def _parse_json_test(self, test_data: dict) -> TestFailure | None:
         try:
             test_name = test_data.get("nodeid", "")
             if not test_name:
@@ -367,6 +299,7 @@ class TestResultParser:
 
 
             stage = "call"
+
             for key in ("setup", "call", "teardown"):
                 if key in test_data:
                     stage = key
@@ -404,39 +337,135 @@ class TestResultParser:
             logger.warning(f"Failed to parse JSON test data: {e}")
             return None
 
-    def _build_error_patterns(self) -> dict[TestErrorType, list[str]]:
-        return {
-            TestErrorType.FIXTURE_ERROR: [
-                r"fixture '(\w+)' not found",
-                r"FixtureError",
-                r"cannot find fixture",
-            ],
-            TestErrorType.IMPORT_ERROR: [
-                r"ImportError",
-                r"ModuleNotFoundError",
-                r"No module named '?(\w+)'?",
-            ],
-            TestErrorType.ASSERTION_ERROR: [
-                r"AssertionError",
-                r"assert .+ ==",
-            ],
-            TestErrorType.ATTRIBUTE_ERROR: [
-                r"AttributeError: .+ has no attribute",
-            ],
-            TestErrorType.MOCK_SPEC_ERROR: [
-                r"MockSpec",
-                r"spec.*Mock",
-            ],
-            TestErrorType.PYDANTIC_VALIDATION: [
-                r"ValidationError",
-                r"validation error",
-            ],
-            TestErrorType.TYPE_ERROR: [
-                r"TypeError",
-            ],
-        }
+    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
+        section_lower = section.lower()
 
 
+
+        if "fixture" in section_lower and "not found" in section_lower:
+            match = re.search(r"fixture '(\w+)' not found", section)
+            fixture_name = match.group(1) if match else "unknown"
+            return (
+                TestErrorType.FIXTURE_ERROR,
+                f"Fixture '{fixture_name}' not found",
+            )
+
+
+        if any(
+            x in section_lower
+
+            for x in ("importerror", "modulenotfounderror", "no module named")
+        ):
+            match = re.search(r"(?:No module named|import).*?'(\w+)'", section)
+            module_name = match.group(1) if match else "unknown"
+            return (
+                TestErrorType.IMPORT_ERROR,
+                f"Cannot import module '{module_name}'",
+            )
+
+
+
+        if "mockspec" in section_lower or ("spec" in section_lower and "mock" in section_lower):
+            return (
+                TestErrorType.MOCK_SPEC_ERROR,
+                "Mock specification error",
+            )
+
+
+        if "attributeerror" in section_lower:
+            match = re.search(r"AttributeError: (.+)", section)
+            message = match.group(1) if match else "has no attribute"
+            return (
+                TestErrorType.ATTRIBUTE_ERROR,
+                message,
+            )
+
+
+
+        if "validationerror" in section_lower or "validation error" in section_lower:
+            match = re.search(r"(?:ValidationError|validation error): (.+)", section)
+            message = match.group(1) if match else "Validation failed"
+            return (
+                TestErrorType.PYDANTIC_VALIDATION,
+                message,
+            )
+
+
+
+        if "typeerror" in section_lower or "type error" in section_lower:
+            match = re.search(r"TypeError: (.+)", section)
+            message = match.group(1) if match else "Type mismatch"
+            return (
+                TestErrorType.TYPE_ERROR,
+                message,
+            )
+
+
+
+        if "assertionerror" in section_lower or "assert" in section_lower:
+
+            match = re.search(r"AssertionError: (.+)", section)
+            if match:
+                return (
+                    TestErrorType.ASSERTION_ERROR,
+                    match.group(1),
+                )
+
+
+            if "assert " in section and " ==" in section:
+                return (
+                    TestErrorType.ASSERTION_ERROR,
+                    "Assertion failed: values are not equal",
+                )
+
+            return (
+                TestErrorType.ASSERTION_ERROR,
+                "Assertion failed",
+            )
+
+
+        if re.search(r"['\"/]test/path['\"]", section):
+            return (
+                TestErrorType.HARDCODED_PATH,
+                "Hardcoded test path detected",
+            )
+
+
+
+        if "name '(.+?)' is not defined" in section or "is not defined" in section_lower:
+            match = re.search(r"name '(\w+)' is not defined", section)
+            name = match.group(1) if match else "unknown"
+            return (
+                TestErrorType.MISSING_IMPORT,
+                f"Name '{name}' is not defined",
+            )
+
+
+        match = re.search(r"(\w+Error): (.+)", section)
+        if match:
+            return (
+                TestErrorType.RUNTIME_ERROR,
+                f"{match.group(1)}: {match.group(2)}",
+            )
+
+        return (
+            TestErrorType.UNKNOWN,
+            "Unknown test failure",
+        )
+
+    def _parse_json_test(self, test_data: dict) -> TestFailure | None:
+        self._process_general_1()
+        self._process_loop_2()
+
+    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
+        self._process_general_1()
+        self._handle_conditional_2()
+        self._process_loop_3()
+        self._handle_conditional_4()
+        self._handle_conditional_5()
+        self._handle_conditional_6()
+        self._handle_conditional_7()
+        self._handle_conditional_8()
 _default_parser: TestResultParser | None = None
 
 

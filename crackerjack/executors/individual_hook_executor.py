@@ -714,7 +714,7 @@ class IndividualHookExecutor:
             self.console.print(f"🚨 Total Errors: {total_errors}")
         if total_warnings > 0:
             self.console.print(f"⚠️ Total Warnings: {total_warnings}")
-        self.console.print(f"⏱️ Total Duration: {total_duration: .1f}s")
+        self.console.print(f"⏱️ Total Duration: {total_duration:.1f}s")
 
         if failed > 0:
             self.console.print("\n[bold red]Failed Hooks: [/ bold red]")

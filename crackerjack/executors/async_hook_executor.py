@@ -451,7 +451,7 @@ class AsyncHookExecutor:
             name=hook.name,
             status="timeout",
             duration=duration,
-            issues_found=[f"Hook timed out after {duration: .1f}s"],
+            issues_found=[f"Hook timed out after {duration:.1f}s"],
             issues_count=1,
             stage=hook.stage.value,
             exit_code=124,
@@ -937,5 +937,5 @@ class AsyncHookExecutor:
         if success:
             self.console.print(
                 f"[green]✅[/ green] {strategy.name.title()} hooks passed: {len(results)} / {len(results)} "
-                f"(async, {performance_gain: .1f} % faster)",
+                f"(async, {performance_gain:.1f} % faster)",
             )

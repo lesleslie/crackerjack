@@ -43,6 +43,112 @@ class DependencyAgent(SubAgent):
 
         return 0.0
 
+    def _extract_dependency_name(self, message: str) -> str | None:
+        if not message:
+            return None
+
+        clean_message = re.sub(r"\x1b\[[0-9;]*m", "", message)
+        clean_message = re.sub(r"\[\\[0-9]{1,3}m", "", clean_message)
+
+        if "Found dependencies in pyproject.toml:" in clean_message:
+            return None
+        if "Oh no, bloated venv!" in clean_message:
+            return None
+
+        match = re.search(
+            r"unused dependency:\s*([a-zA-Z0-9_-]+)$", clean_message, re.IGNORECASE
+        )
+        if match:
+            return match.group(1)
+
+        match = re.search(
+            r"dependency\s+['\"]([^'\"]+)['\"]\s+is\s+unused",
+            clean_message,
+            re.IGNORECASE,
+        )
+        if match:
+            return match.group(1)
+
+        match = re.search(
+            r"^([a-zA-Z0-9_-]+)\s+is\s+unused", clean_message, re.IGNORECASE
+        )
+        if match:
+            return match.group(1)
+
+        match = re.search(
+            r"unused dependencies found:\s*([a-zA-Z0-9_-]+)",
+            clean_message,
+            re.IGNORECASE,
+        )
+        if match:
+            return match.group(1)
+
+        match = re.search(r"^([a-zA-Z0-9_-]+)$", clean_message.strip())
+        if match:
+            if "-" in match.group(1) or match.group(1).islower():
+                return match.group(1)
+
+        return None
+
+    def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
+        self._process_general_1()
+
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        self._process_general_1()
+
+    def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
+        lines = content.splitlines(keepends=True)
+        in_dependencies = False
+        removed = False
+
+        new_lines = []
+
+        for line in lines:
+            if "dependencies" in line and "=" in line:
+                in_dependencies = True
+                new_lines.append(line)
+                continue
+
+            if in_dependencies and line.strip().startswith("["):
+                pass
+
+            if (
+                in_dependencies
+                and line.strip().startswith("[")
+                and "dependencies" not in line
+            ):
+                in_dependencies = False
+
+            if (
+                in_dependencies
+                and dep_name in line
+                and not line.strip().startswith("#")
+            ):
+                line_stripped = line.strip()
+
+                if (
+                    f'"{dep_name}>=' in line
+                    or f"'{dep_name}>=" in line
+                    or f'"{dep_name}="' in line
+                    or f"'{dep_name}='" in line
+                    or f'"{dep_name}~' in line
+                    or f"'{dep_name}~" in line
+                    or f'"{dep_name}^' in line
+                    or f"'{dep_name}^" in line
+                    or f'"{dep_name}"' in line
+                    or f"'{dep_name}'" in line
+                    or line_stripped.startswith(dep_name)
+                ):
+                    removed = True
+                    continue
+
+            new_lines.append(line)
+
+        if removed:
+            return "".join(new_lines)
+
+        return None
+
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         if not issue.file_path:
             return FixResult(
@@ -151,104 +257,15 @@ class DependencyAgent(SubAgent):
                 remaining_issues=[f"Failed to parse pyproject.toml: {e}"],
             )
 
-    def _extract_dependency_name(self, message: str) -> str | None:
-        if not message:
-            return None
-
-        clean_message = re.sub(r"\x1b\[[0-9;]*m", "", message)
-        clean_message = re.sub(r"\[\\[0-9]{1,3}m", "", clean_message)
-
-        if "Found dependencies in pyproject.toml:" in clean_message:
-            return None
-        if "Oh no, bloated venv!" in clean_message:
-            return None
-
-        match = re.search(
-            r"unused dependency:\s*([a-zA-Z0-9_-]+)$", clean_message, re.IGNORECASE
-        )
-        if match:
-            return match.group(1)
-
-        match = re.search(
-            r"dependency\s+['\"]([^'\"]+)['\"]\s+is\s+unused",
-            clean_message,
-            re.IGNORECASE,
-        )
-        if match:
-            return match.group(1)
-
-        match = re.search(
-            r"^([a-zA-Z0-9_-]+)\s+is\s+unused", clean_message, re.IGNORECASE
-        )
-        if match:
-            return match.group(1)
-
-        match = re.search(
-            r"unused dependencies found:\s*([a-zA-Z0-9_-]+)",
-            clean_message,
-            re.IGNORECASE,
-        )
-        if match:
-            return match.group(1)
-
-        match = re.search(r"^([a-zA-Z0-9_-]+)$", clean_message.strip())
-        if match:
-            if "-" in match.group(1) or match.group(1).islower():
-                return match.group(1)
-
-        return None
-
     def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
-        lines = content.splitlines(keepends=True)
-        in_dependencies = False
-        removed = False
+        self._process_general_1()
+        self._process_loop_2()
+        self._handle_conditional_3()
 
-        new_lines = []
-        for line in lines:
-            if "dependencies" in line and "=" in line:
-                in_dependencies = True
-                new_lines.append(line)
-                continue
-
-            if in_dependencies and line.strip().startswith("["):
-                pass
-
-            if (
-                in_dependencies
-                and line.strip().startswith("[")
-                and "dependencies" not in line
-            ):
-                in_dependencies = False
-
-            if (
-                in_dependencies
-                and dep_name in line
-                and not line.strip().startswith("#")
-            ):
-                line_stripped = line.strip()
-
-                if (
-                    f'"{dep_name}>=' in line
-                    or f"'{dep_name}>=" in line
-                    or f'"{dep_name}="' in line
-                    or f"'{dep_name}='" in line
-                    or f'"{dep_name}~' in line
-                    or f"'{dep_name}~" in line
-                    or f'"{dep_name}^' in line
-                    or f"'{dep_name}^" in line
-                    or f'"{dep_name}"' in line
-                    or f"'{dep_name}'" in line
-                    or line_stripped.startswith(dep_name)
-                ):
-                    removed = True
-                    continue
-
-            new_lines.append(line)
-
-        if removed:
-            return "".join(new_lines)
-
-        return None
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        self._process_general_1()
+        self._handle_conditional_2()
+        self._handle_conditional_3()
 
 
 agent_registry.register(DependencyAgent)

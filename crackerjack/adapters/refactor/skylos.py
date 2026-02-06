@@ -98,6 +98,9 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
+        # CRITICAL: Exclude tests to prevent circular import hangs
+        cmd.extend(["--exclude-folder", "tests"])
+
         if files is None and self.file_filter:
             files = self.file_filter.get_files_for_qa_scan(
                 package_dir=Path.cwd(),
@@ -117,6 +120,7 @@ class SkylosAdapter(BaseToolAdapter):
                 "file_count": len(files) if files else 1,
                 "confidence_threshold": self.settings.confidence_threshold,
                 "target_directory": target,
+                "exclude_folders": ["tests"],
                 "incremental_mode": self.file_filter is not None,
             },
         )
@@ -298,7 +302,7 @@ class SkylosAdapter(BaseToolAdapter):
         conf_start = message_part.find("(confidence:") + len("(confidence:")
         conf_end = message_part.find(")", conf_start)
         if conf_end != -1:
-            return message_part[conf_start: conf_end].strip()
+            return message_part[conf_start:conf_end].strip()
 
         return "unknown"
 

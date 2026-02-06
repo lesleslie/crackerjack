@@ -104,11 +104,26 @@ class AgentContext:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
+        import logging
+
+        logger = logging.getLogger(__name__)
         try:
             path = Path(file_path)
             path.write_text(content, encoding="utf-8")
+
+            # VERIFY: Read back and confirm content was written correctly
+            written_content = path.read_text(encoding="utf-8")
+            if written_content != content:
+                logger.error(
+                    f"Write verification failed for {file_path}: "
+                    f"written content differs from expected content"
+                )
+                return False
+
+            logger.debug(f"Successfully wrote {file_path} ({len(content)} chars)")
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to write {file_path}: {e}")
             return False
 
     async def async_write_file_content(
@@ -116,13 +131,28 @@ class AgentContext:
         file_path: str | Path,
         content: str,
     ) -> bool:
+        import logging
+
+        logger = logging.getLogger(__name__)
         from crackerjack.services.async_file_io import async_write_file
 
         try:
             path = Path(file_path)
             await async_write_file(path, content)
+
+            # VERIFY: Read back and confirm content was written correctly
+            written_content = await async_read_file(path)
+            if written_content != content:
+                logger.error(
+                    f"Async write verification failed for {file_path}: "
+                    f"written content differs from expected content"
+                )
+                return False
+
+            logger.debug(f"Successfully wrote {file_path} ({len(content)} chars)")
             return True
-        except Exception:
+        except Exception as e:
+            logger.error(f"Failed to async-write {file_path}: {e}")
             return False
 
 

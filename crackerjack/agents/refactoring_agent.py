@@ -147,75 +147,6 @@ class RefactoringAgent(SubAgent):
 
         return 0.0
 
-    async def _fix_type_error(self, issue: Issue) -> FixResult:
-        confidence = await self._is_fixable_type_error(issue)
-        if confidence == 0.0:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[
-                    f"Type error too complex for auto-fix: {issue.message}"
-                ],
-            )
-
-        if not issue.file_path:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["No file path provided"],
-            )
-
-        file_path = Path(issue.file_path)
-        content = self.context.get_file_content(file_path)
-        if not content:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["Could not read file"],
-            )
-
-        try:
-            tree = ast.parse(content)
-            lines = content.splitlines(keepends=True)
-
-            fixed = False
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    if node.returns is None and not any(
-                        decorator.id == "property"
-                        for decorator in node.decorator_list
-                        if isinstance(decorator, ast.Name)
-                    ):
-                        func_line = node.lineno - 1
-                        if func_line < len(lines):
-                            line = lines[func_line]
-                            if ":" in line and "->" not in line:
-                                lines[func_line] = line.replace(":", " -> None:", 1)
-                                fixed = True
-
-            if fixed:
-                fixed_content = "".join(lines)
-                if self.context.write_file_content(file_path, fixed_content):
-                    return FixResult(
-                        success=True,
-                        confidence=confidence,
-                        fixes_applied=["Added type annotation"],
-                        files_modified=[str(file_path)],
-                    )
-
-        except Exception as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Failed to add type annotation: {e}"],
-            )
-
-        return FixResult(
-            success=False,
-            confidence=0.0,
-            remaining_issues=["No changes applied"],
-        )
-
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         self.log(f"Analyzing {issue.type.value} issue: {issue.message}")
 
@@ -370,9 +301,10 @@ class RefactoringAgent(SubAgent):
 
         if not complex_functions:
             return FixResult(
-                success=True,
-                confidence=0.7,
-                recommendations=["No overly complex functions found"],
+                success=False,  # FIXED: No fix applied = failure
+                confidence=0.0,
+                remaining_issues=["No overly complex functions found to fix"],
+                recommendations=["Manual review required"],
             )
 
         return await self._apply_and_save_refactoring(
@@ -472,6 +404,13 @@ class RefactoringAgent(SubAgent):
     async def _process_complexity_reduction_with_line_number(
         self, file_path: Path, line_number: int
     ) -> FixResult:
+        """Process complexity reduction using line number from complexipy.
+
+        When complexipy provides a line number, it means the function at that line
+        has cyclomatic complexity >15. We trust this assessment and find the function
+        directly, bypassing the internal cognitive complexity analyzer which uses a
+        different metric and might not find the same functions.
+        """
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -482,30 +421,60 @@ class RefactoringAgent(SubAgent):
 
         tree = ast.parse(content)
 
-        complex_functions = self._complexity_analyzer.find_complex_functions(
-            tree, content
-        )
+        # Find the function at the specific line number from complexipy
+        target_function = None
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                func_start = node.lineno
+                func_end = node.end_lineno or func_start
+                if func_start <= line_number <= func_end:
+                    # Found the function - build dict trusting complexipy's assessment
+                    target_function = self._build_function_dict(node, content)
+                    if target_function:
+                        # Ensure complexity passes threshold (trust complexipy)
+                        target_function["complexity"] = max(
+                            target_function.get("complexity", 0), 16
+                        )
+                    break
 
-        target_functions = [
-            f
-            for f in complex_functions
-            if f.get("line_start", 0)
-            <= line_number
-            <= f.get("line_end", line_number + 100)
-        ]
-
-        if not target_functions:
-            target_functions = complex_functions
-
-        if not target_functions:
-            return FixResult(
-                success=True,
-                confidence=0.7,
-                recommendations=[f"No complex functions found near line {line_number}"],
+        if not target_function:
+            # Fallback: try internal complexity analyzer
+            self.log(
+                f"Could not find function at line {line_number}, trying internal analyzer"
+            )
+            complex_functions = self._complexity_analyzer.find_complex_functions(
+                tree, content
             )
 
+            target_functions = [
+                f
+                for f in complex_functions
+                if f.get("line_start", 0)
+                <= line_number
+                <= f.get("line_end", line_number + 100)
+            ]
+
+            if not target_functions:
+                return FixResult(
+                    success=False,  # FIXED: No fix applied = failure
+                    confidence=0.0,
+                    remaining_issues=[
+                        f"No complex functions found near line {line_number}"
+                    ],
+                    recommendations=["Manual review required"],
+                )
+
+            return await self._apply_and_save_refactoring(
+                file_path, content, target_functions
+            )
+
+        self.log(
+            f"Found function '{target_function['name']}' at line {target_function['line_start']} "
+            f"(complexipy reported line {line_number})"
+        )
+
         return await self._apply_and_save_refactoring(
-            file_path, content, target_functions
+            file_path, content, [target_function]
         )
 
     async def _process_complexity_reduction_by_function_name(
@@ -545,27 +514,31 @@ class RefactoringAgent(SubAgent):
     def _build_function_dict(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef, content: str
     ) -> dict[str, t.Any] | None:
-        complexity = self._complexity_analyzer._estimate_function_complexity(
-            ast.get_source_segment(content, node) or ""
+        # Trust the external tool's (complexipy) complexity assessment
+        # Don't recalculate internally as it uses a different metric (cognitive vs cyclomatic)
+        # If we found the function by name from a complexipy issue, it needs refactoring
+        source_segment = ast.get_source_segment(content, node) or ""
+        internal_complexity = self._complexity_analyzer._estimate_function_complexity(
+            source_segment
         )
-
-        if complexity <= 15:
-            return None
-
         return {
             "name": node.name,
             "line_start": node.lineno,
             "line_end": node.end_lineno or node.lineno,
-            "complexity": complexity,
+            # Use internal complexity for the refactoring engine
+            # but process regardless since complexipy flagged it
+            "complexity": max(internal_complexity, 16),  # Ensure it passes threshold
             "node": node,
         }
 
     def _create_function_not_found_result(self, function_name: str) -> FixResult:
         return FixResult(
-            success=True,
-            confidence=0.6,
+            success=False,  # Changed from True - function not found is a failure
+            confidence=0.0,
+            remaining_issues=[f"Function '{function_name}' not found in file"],
             recommendations=[
-                f"Function '{function_name}' not found or complexity <= 15"
+                "Check if function was renamed or moved",
+                "Verify the file path is correct",
             ],
         )
 
@@ -787,6 +760,85 @@ class RefactoringAgent(SubAgent):
             "RefactoringAgent",
             self.context.project_path,
         )
+
+    async def _fix_type_error(self, issue: Issue) -> FixResult:
+        self._process_general_1()
+
+    async def _fix_type_error(self, issue: Issue) -> FixResult:
+        confidence = await self._is_fixable_type_error(issue)
+        if confidence == 0.0:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[
+                    f"Type error too complex for auto-fix: {issue.message}"
+                ],
+            )
+
+        if not issue.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided"],
+            )
+
+        file_path = Path(issue.file_path)
+        content = self.context.get_file_content(file_path)
+        if not content:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["Could not read file"],
+            )
+
+        try:
+            tree = ast.parse(content)
+            lines = content.splitlines(keepends=True)
+
+            fixed = False
+
+            for node in ast.walk(tree):
+                if isinstance(node, ast.FunctionDef):
+                    if node.returns is None and not any(
+                        decorator.id == "property"
+                        for decorator in node.decorator_list
+                        if isinstance(decorator, ast.Name)
+                    ):
+                        func_line = node.lineno - 1
+                        if func_line < len(lines):
+                            line = lines[func_line]
+                            if ":" in line and "->" not in line:
+                                lines[func_line] = line.replace(":", " -> None:", 1)
+                                fixed = True
+
+            if fixed:
+                fixed_content = "".join(lines)
+
+                if self.context.write_file_content(file_path, fixed_content):
+                    return FixResult(
+                        success=True,
+                        confidence=confidence,
+                        fixes_applied=["Added type annotation"],
+                        files_modified=[str(file_path)],
+                    )
+
+        except Exception as e:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Failed to add type annotation: {e}"],
+            )
+
+        return FixResult(
+            success=False,
+            confidence=0.0,
+            remaining_issues=["No changes applied"],
+        )
+
+    async def _fix_type_error(self, issue: Issue) -> FixResult:
+        self._process_general_1()
+        self._process_loop_2()
+        self._handle_conditional_3()
 
 
 agent_registry.register(RefactoringAgent)

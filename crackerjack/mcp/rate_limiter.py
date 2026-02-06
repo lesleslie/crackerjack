@@ -193,7 +193,7 @@ class ResourceMonitor:
                 start_time = self.active_jobs.pop(job_id)
                 duration = time.time() - start_time
                 console.print(
-                    f"[blue]🏁 Job {job_id} completed in {duration: .1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/ blue]",
+                    f"[blue]🏁 Job {job_id} completed in {duration:.1f}s ({len(self.active_jobs)} / {self.config.max_concurrent_jobs} active)[/ blue]",
                 )
 
         self.job_locks.release()
@@ -225,7 +225,7 @@ class ResourceMonitor:
             size_mb = file_path.stat().st_size / (1024 * 1024)
             if size_mb > self.config.max_file_size_mb:
                 console.print(
-                    f"[red]🚫 File {file_path} ({size_mb: .1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/ red]",
+                    f"[red]🚫 File {file_path} ({size_mb:.1f}MB) exceeds limit ({self.config.max_file_size_mb}MB)[/ red]",
                 )
                 return False
 

@@ -278,7 +278,7 @@ class LogManager:
 
         if total_files > 0:
             console.print(
-                f"\n[bold]Total: {total_files} files, {total_size: .2f}MB[/ bold]",
+                f"\n[bold]Total: {total_files} files, {total_size:.2f}MB[/ bold]",
             )
         else:
             console.print("\n[dim]No log files found[/ dim]")

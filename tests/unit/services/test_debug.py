@@ -249,7 +249,7 @@ class TestAIAgentDebuggerLogAgentActivity:
                 activity="fixing_complexity",
                 issue_id="issue_123",
                 confidence=0.85,
-                result={"changes_made": 5},
+                result={"changes_made":5},
                 metadata={"file": "test.py"},
             )
 
@@ -260,7 +260,7 @@ class TestAIAgentDebuggerLogAgentActivity:
             assert activity["activity"] == "fixing_complexity"
             assert activity["issue_id"] == "issue_123"
             assert activity["confidence"] == 0.85
-            assert activity["result"] == {"changes_made": 5}
+            assert activity["result"] == {"changes_made":5}
             assert activity["metadata"] == {"file": "test.py"}
 
     def test_log_agent_activity_minimal(self) -> None:
@@ -310,7 +310,7 @@ class TestAIAgentDebuggerLogWorkflowPhase:
             debugger.log_workflow_phase(
                 phase="fast_hooks",
                 status="completed",
-                details={"hooks_run": 5},
+                details={"hooks_run":5},
                 duration=2.5,
             )
 
@@ -319,7 +319,7 @@ class TestAIAgentDebuggerLogWorkflowPhase:
             assert phase["type"] == "workflow_phase"
             assert phase["phase"] == "fast_hooks"
             assert phase["status"] == "completed"
-            assert phase["details"] == {"hooks_run": 5}
+            assert phase["details"] == {"hooks_run":5}
             assert phase["duration"] == 2.5
 
     def test_log_workflow_phase_different_statuses(self) -> None:

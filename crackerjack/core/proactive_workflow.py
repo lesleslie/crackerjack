@@ -42,7 +42,7 @@ class ProactiveWorkflowPipeline:
                 result = await self._execute_standard_workflow(options)
 
             execution_time = time.time() - start_time
-            self.logger.info(f"Proactive workflow completed in {execution_time: .2f}s")
+            self.logger.info(f"Proactive workflow completed in {execution_time:.2f}s")
 
             return result
 

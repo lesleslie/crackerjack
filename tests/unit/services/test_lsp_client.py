@@ -509,8 +509,8 @@ class TestDiagnosticFormatting:
         """Test formatting diagnostics from multiple files."""
         client = LSPClient()
         diagnostics = {
-            "test1.py": [{"severity": "error", "message": "Error 1", "line": 10, "column": 1}],
-            "test2.py": [{"severity": "warning", "message": "Warning 1", "line": 20, "column": 1}]
+            "test1.py": [{"severity": "error", "message": "Error 1", "line": 10, "column":1}],
+            "test2.py": [{"severity": "warning", "message": "Warning 1", "line": 20, "column":1}]
         }
 
         formatted = client.format_diagnostics(diagnostics)
