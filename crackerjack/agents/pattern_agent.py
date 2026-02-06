@@ -124,25 +124,24 @@ class PatternAgent(SubAgent):
         return ast.fix_missing_locations(transformer.visit(tree))
 
     def _fix_unnecessary_lambda_ast(self, tree: ast.AST) -> ast.AST:
-        """Remove unnecessary lambda wrappers (FURB111)."""
 
         class LambdaWrapperTransformer(ast.NodeTransformer):
             def visit_Call(self, node: ast.Call) -> ast.Call | None:
-                # Check each argument to see if it's an unnecessary lambda wrapper
+
                 for i, arg in enumerate(node.args):
                     if (
                         isinstance(arg, ast.Lambda)
-                        and not arg.args.args  # Lambda takes no parameters
+                        and not arg.args.args
                     ):
                         lambda_body = arg.body
 
-                        # Check if lambda body is a simple call with no args
+
                         if (
                             isinstance(lambda_body, ast.Call)
                             and not lambda_body.args
                             and not lambda_body.keywords
                         ):
-                            # Replace lambda with the call itself
+
                             new_args = list(node.args)
                             new_args[i] = lambda_body
 
@@ -185,8 +184,6 @@ class PatternAgent(SubAgent):
                 lines.insert(0, "from contextlib import suppress")
             return "\n".join(lines)
         return content
-
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
 
     async def analyze_and_fix(self, issue: Issue) -> FixResult:
         if not issue.file_path:

@@ -350,7 +350,7 @@ def {fixture_name}():
                 modified_lines.append(line)
 
 
-                if re.match(r"^\s*def\s+test_\w+\s*\(", line):
+                if re.match(r"^\\s*def\\s+test_\\w+\\s*\\(", line):  # noqa: W605 (regex escape)
 
                     j = i
                     while j < len(lines):

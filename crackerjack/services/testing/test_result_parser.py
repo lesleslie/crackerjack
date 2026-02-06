@@ -286,7 +286,6 @@ class TestResultParser:
         }
 
 
-
     def _parse_json_test(self, test_data: dict) -> TestFailure | None:
         try:
             test_name = test_data.get("nodeid", "")
@@ -341,76 +340,85 @@ class TestResultParser:
         section_lower = section.lower()
 
 
+        for handler in [
+            self._check_fixture_error,
+            self._check_import_error,
+            self._check_mock_spec_error,
+            self._check_attribute_error,
+            self._check_validation_error,
+            self._check_type_error,
+            self._check_assertion_error,
+            self._check_hardcoded_path,
+            self._check_undefined_name,
+        ]:
+            result = handler(section, section_lower)
+            if result:
+                return result
 
+
+        return self._check_generic_error(section)
+
+    def _check_fixture_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "fixture" in section_lower and "not found" in section_lower:
             match = re.search(r"fixture '(\w+)' not found", section)
             fixture_name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.FIXTURE_ERROR,
-                f"Fixture '{fixture_name}' not found",
-            )
+            return (TestErrorType.FIXTURE_ERROR, f"Fixture '{fixture_name}' not found")
+        return None
 
-
+    def _check_import_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if any(
-            x in section_lower
-
-            for x in ("importerror", "modulenotfounderror", "no module named")
+            x in section_lower for x in ("importerror", "modulenotfounderror", "no module named")
         ):
             match = re.search(r"(?:No module named|import).*?'(\w+)'", section)
             module_name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.IMPORT_ERROR,
-                f"Cannot import module '{module_name}'",
-            )
+            return (TestErrorType.IMPORT_ERROR, f"Cannot import module '{module_name}'")
+        return None
 
-
-
+    def _check_mock_spec_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "mockspec" in section_lower or ("spec" in section_lower and "mock" in section_lower):
-            return (
-                TestErrorType.MOCK_SPEC_ERROR,
-                "Mock specification error",
-            )
+            return (TestErrorType.MOCK_SPEC_ERROR, "Mock specification error")
+        return None
 
-
+    def _check_attribute_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "attributeerror" in section_lower:
             match = re.search(r"AttributeError: (.+)", section)
             message = match.group(1) if match else "has no attribute"
-            return (
-                TestErrorType.ATTRIBUTE_ERROR,
-                message,
-            )
+            return (TestErrorType.ATTRIBUTE_ERROR, message)
+        return None
 
-
-
+    def _check_validation_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "validationerror" in section_lower or "validation error" in section_lower:
             match = re.search(r"(?:ValidationError|validation error): (.+)", section)
             message = match.group(1) if match else "Validation failed"
-            return (
-                TestErrorType.PYDANTIC_VALIDATION,
-                message,
-            )
+            return (TestErrorType.PYDANTIC_VALIDATION, message)
+        return None
 
-
-
+    def _check_type_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "typeerror" in section_lower or "type error" in section_lower:
             match = re.search(r"TypeError: (.+)", section)
             message = match.group(1) if match else "Type mismatch"
-            return (
-                TestErrorType.TYPE_ERROR,
-                message,
-            )
+            return (TestErrorType.TYPE_ERROR, message)
+        return None
 
-
-
+    def _check_assertion_error(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "assertionerror" in section_lower or "assert" in section_lower:
-
             match = re.search(r"AssertionError: (.+)", section)
             if match:
-                return (
-                    TestErrorType.ASSERTION_ERROR,
-                    match.group(1),
-                )
-
+                return (TestErrorType.ASSERTION_ERROR, match.group(1))
 
             if "assert " in section and " ==" in section:
                 return (
@@ -418,54 +426,39 @@ class TestResultParser:
                     "Assertion failed: values are not equal",
                 )
 
-            return (
-                TestErrorType.ASSERTION_ERROR,
-                "Assertion failed",
-            )
+            return (TestErrorType.ASSERTION_ERROR, "Assertion failed")
+        return None
 
-
+    def _check_hardcoded_path(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if re.search(r"['\"/]test/path['\"]", section):
-            return (
-                TestErrorType.HARDCODED_PATH,
-                "Hardcoded test path detected",
-            )
+            return (TestErrorType.HARDCODED_PATH, "Hardcoded test path detected")
+        return None
 
-
-
+    def _check_undefined_name(
+        self, section: str, section_lower: str
+    ) -> tuple[TestErrorType, str] | None:
         if "name '(.+?)' is not defined" in section or "is not defined" in section_lower:
             match = re.search(r"name '(\w+)' is not defined", section)
             name = match.group(1) if match else "unknown"
-            return (
-                TestErrorType.MISSING_IMPORT,
-                f"Name '{name}' is not defined",
-            )
+            return (TestErrorType.MISSING_IMPORT, f"Name '{name}' is not defined")
+        return None
 
-
+    def _check_generic_error(
+        self, section: str
+    ) -> tuple[TestErrorType, str]:
         match = re.search(r"(\w+Error): (.+)", section)
         if match:
-            return (
-                TestErrorType.RUNTIME_ERROR,
-                f"{match.group(1)}: {match.group(2)}",
-            )
+            return (TestErrorType.RUNTIME_ERROR, f"{match.group(1)}: {match.group(2)}")
 
-        return (
-            TestErrorType.UNKNOWN,
-            "Unknown test failure",
-        )
+        return (TestErrorType.UNKNOWN, "Unknown test failure")
 
     def _parse_json_test(self, test_data: dict) -> TestFailure | None:
         self._process_general_1()
         self._process_loop_2()
 
-    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
-        self._process_general_1()
-        self._handle_conditional_2()
-        self._process_loop_3()
-        self._handle_conditional_4()
-        self._handle_conditional_5()
-        self._handle_conditional_6()
-        self._handle_conditional_7()
-        self._handle_conditional_8()
+
 _default_parser: TestResultParser | None = None
 
 
