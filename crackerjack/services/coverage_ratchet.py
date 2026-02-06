@@ -88,7 +88,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         self.ratchet_file.write_text(json.dumps(ratchet_data, indent=2))
         self.console.print(
-            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage: .2f}% baseline",
+            f"[cyan]📊[/ cyan] Coverage ratchet initialized at {initial_coverage:.0f}% baseline",
         )
 
     def get_ratchet_data(self) -> dict[str, t.Any]:
@@ -130,9 +130,9 @@ class CoverageRatchetService(CoverageRatchetProtocol):
             self.initialize_baseline(new_coverage)
             return {
                 "status": "initialized",
-                "message": f"Coverage ratchet initialized at {new_coverage: .2f}%",
+                "message": f"Coverage ratchet initialized at {new_coverage:.0f}%",
                 "milestones": [],
-                "progress_to_100": f"{new_coverage: .1f}% of the way to 100 % coverage",
+                "progress_to_100": f"{new_coverage:.0f}% of the way to 100 % coverage",
                 "allowed": True,
                 "baseline_updated": True,
             }
@@ -144,7 +144,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         if new_coverage < tolerance_threshold:
             return {
                 "status": "regression",
-                "message": f"Coverage decreased from {current_baseline: .2f}% to {new_coverage: .2f}% (below {self.TOLERANCE_MARGIN}% tolerance margin)",
+                "message": f"Coverage decreased from {current_baseline:.0f}% to {new_coverage:.0f}% (below {self.TOLERANCE_MARGIN}% tolerance margin)",
                 "regression_amount": current_baseline - new_coverage,
                 "tolerance_threshold": tolerance_threshold,
                 "allowed": False,
@@ -161,10 +161,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
             return {
                 "status": "improved",
-                "message": f"Coverage improved from {current_baseline: .2f}% to {new_coverage: .2f}% !",
+                "message": f"Coverage improved from {current_baseline:.0f}% to {new_coverage:.0f}% !",
                 "improvement": new_coverage - current_baseline,
                 "milestones": milestones_hit,
-                "progress_to_100": f"{new_coverage: .1f}% of the way to 100 % coverage",
+                "progress_to_100": f"{new_coverage:.0f}% of the way to 100 % coverage",
                 "next_milestone": self._get_next_milestone(new_coverage),
                 "points_to_next": (next_milestone - new_coverage)
                 if (next_milestone := self._get_next_milestone(new_coverage))
@@ -176,7 +176,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
         return {
             "status": "maintained",
-            "message": f"Coverage maintained at {new_coverage: .2f}% (within {self.TOLERANCE_MARGIN}% tolerance margin)",
+            "message": f"Coverage maintained at {new_coverage:.0f}% (within {self.TOLERANCE_MARGIN}% tolerance margin)",
             "allowed": True,
             "baseline_updated": False,
         }
@@ -249,7 +249,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
 
                 self.pyproject_file.write_text(updated_content)
                 self.console.print(
-                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage: .0f}%",
+                    f"[cyan]📝[/ cyan] Updated pyproject.toml coverage requirement to {new_coverage:.0f}%",
                 )
 
         except Exception as e:
@@ -269,12 +269,12 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         progress_chars = int(current / target * 20)
         bar = "█" * progress_chars + "░" * (20 - progress_chars)
 
-        result = f"Coverage Progress: {current: .2f}% [{bar}] → 100 %\n"
-        result += f" Current ─┘{'': > 18} └─ Goal\n"
+        result = f"Coverage Progress: {current:.0f}% [{bar}] → 100%\n"
+        result += f" Current ─┘{'':18} └─ Goal\n"
 
         if next_milestone:
             points_needed = next_milestone - current
-            result += f"Next milestone: {next_milestone: .0f}% (+{points_needed: .2f}% needed)\n"
+            result += f"Next milestone: {next_milestone:.0f}% (+{points_needed:.0f}% needed)\n"
 
         return result
 
@@ -312,15 +312,15 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 )
             elif milestone >= 90:
                 self.console.print(
-                    f"[gold]🏆 Milestone achieved: {milestone: .0f}% coverage ! Approaching perfection ![/ gold]",
+                    f"[gold]🏆 Milestone achieved: {milestone:.0f}% coverage ! Approaching perfection ![/ gold]",
                 )
             elif milestone >= 50:
                 self.console.print(
-                    f"[green]🎯 Milestone achieved: {milestone: .0f}% coverage ! Great progress ![/ green]",
+                    f"[green]🎯 Milestone achieved: {milestone:.0f}% coverage ! Great progress ![/ green]",
                 )
             else:
                 self.console.print(
-                    f"[cyan]📈 Milestone achieved: {milestone: .0f}% coverage ! Keep it up ![/ cyan]",
+                    f"[cyan]📈 Milestone achieved: {milestone:.0f}% coverage ! Keep it up ![/ cyan]",
                 )
 
     def show_progress_with_spinner(self) -> None:
@@ -342,7 +342,7 @@ class CoverageRatchetService(CoverageRatchetProtocol):
                 total=target,
                 completed=current,
             )
-            progress.update(task, description=f"Coverage: {current: .1f}% / 100 %")
+            progress.update(task, description=f"Coverage: {current:.0f}% / 100 %")
 
     def get_coverage_report(self) -> str | None:
         data = self.get_ratchet_data()
@@ -352,12 +352,10 @@ class CoverageRatchetService(CoverageRatchetProtocol):
         current_coverage = data.get("baseline", 0.0)
         next_milestone = data.get("next_milestone")
 
-        report = f"Coverage: {current_coverage: .2f}%"
+        report = f"Coverage: {current_coverage:.0f}%"
         if next_milestone:
             progress = (current_coverage / next_milestone) * 100
-            report += (
-                f" (next milestone: {next_milestone: .0f}%, {progress: .1f}% there)"
-            )
+            report += f" (next milestone: {next_milestone:.0f}%, {progress:.0f}% there)"
 
         return report
 

@@ -337,7 +337,7 @@ class AutofixCoordinator:
     def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
-        self._get_max_iterations()
+        max_iterations = self._get_max_iterations()
 
         context = AgentContext(
             project_path=self.pkg_path,
@@ -371,7 +371,18 @@ class AutofixCoordinator:
         iteration = 0
         try:
             while True:
-                issues = self._get_iteration_issues(iteration, hook_results, stage)
+                # CRITICAL FIX: Re-run hooks for iterations > 0 to get fresh data
+                if iteration == 0:
+                    issues = self._get_iteration_issues(iteration, hook_results, stage)
+                    self.logger.info(
+                        f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
+                    )
+                else:
+                    issues = self._collect_current_issues(stage=stage)
+                    self.logger.info(
+                        f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
+                    )
+
                 current_issue_count = len(issues)
 
                 self.progress_manager.start_iteration(iteration, current_issue_count)
@@ -382,6 +393,15 @@ class AutofixCoordinator:
                         self.progress_manager.end_iteration()
                         self.progress_manager.finish_session(success=True)
                         return result
+
+                # Check max iterations limit
+                if iteration >= max_iterations:
+                    self.logger.warning(
+                        f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
+                    )
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
 
                 if self._should_stop_on_convergence(
                     current_issue_count,
@@ -413,10 +433,11 @@ class AutofixCoordinator:
 
                 previous_issue_count = current_issue_count
                 iteration += 1
-        except Exception:
+        except Exception as e:
+            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
             self.progress_manager.end_iteration()
             self.progress_manager.finish_session(
-                success=False, message="Error during AI fixing"
+                success=False, message=f"Error during AI fixing: {e}"
             )
             raise
 

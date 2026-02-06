@@ -19,7 +19,7 @@ from rich.table import Table
 def test_handle_clear_cache_success(mock_cache_class):
     """Test handle_clear_cache function with successful cleanup."""
     mock_cache = Mock()
-    mock_cache.cleanup_all.return_value = {"hook_cache": 5, "result_cache": 3}
+    mock_cache.cleanup_all.return_value = {"hook_cache": 5, "result_cache":3}
     mock_cache_class.return_value = mock_cache
 
     # Capture print output by patching the console

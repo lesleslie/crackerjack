@@ -66,7 +66,7 @@ def test_merge_config_data():
         # Create first config file
         config1_path = tmp_dir_path / "config1.yaml"
         with config1_path.open('w') as f:
-            yaml.dump({"name": "first", "value": 1}, f)
+            yaml.dump({"name": "first", "value":1}, f)
 
         # Create second config file
         config2_path = tmp_dir_path / "config2.yaml"

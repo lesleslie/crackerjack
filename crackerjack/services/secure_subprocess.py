@@ -254,7 +254,7 @@ class SecureSubprocessExecutor:
             self.security_logger.log_security_event(
                 SecurityEventType.SUBPROCESS_EXECUTION,
                 SecurityEventLevel.LOW,
-                f"Subprocess completed successfully in {execution_time: .2f}s",
+                f"Subprocess completed successfully in {execution_time:.2f}s",
                 command_preview=params["command"][:3],
                 execution_time=execution_time,
                 exit_code=result.returncode,

@@ -26,6 +26,9 @@ class PatternAgent(SubAgent):
         if "furb104" in message:
             return 0.95
 
+        if "furb111" in message and "lambda" in message:
+            return 0.95
+
         if "furb135" in message and "key is unused" in message:
             return 0.9
 
@@ -33,77 +36,6 @@ class PatternAgent(SubAgent):
             return 0.6
 
         return 0.0
-
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        if not issue.file_path:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=["No file path provided"],
-            )
-
-        file_path = Path(issue.file_path)
-
-        try:
-            content = self.context.get_file_content(file_path)
-            if not content:
-                return FixResult(
-                    success=False,
-                    confidence=0.0,
-                    remaining_issues=[f"Could not read file: {file_path}"],
-                )
-
-            tree = ast.parse(content)
-
-            if "furb107" in issue.message.lower():
-                tree = self._fix_try_except_pass_ast(tree)
-                self.log("Applied FURB107 fix (try/except/pass → suppress)")
-
-            if "furb115" in issue.message.lower():
-                tree = self._fix_len_check_ast(tree)
-                self.log("Applied FURB115 fix (len() > 0 → truthiness)")
-
-            if "furb104" in issue.message.lower():
-                tree = self._fix_os_getcwd_ast(tree)
-                self.log("Applied FURB104 fix (os.getcwd → Path.cwd)")
-
-            fixed_content = ast.unparse(tree)
-
-            if "furb104" in issue.message.lower():
-                fixed_content = self._ensure_pathlib_import(fixed_content)
-
-            if "furb107" in issue.message.lower():
-                fixed_content = self._ensure_contextlib_import(fixed_content)
-
-            if fixed_content != content:
-                success = self.context.write_file_content(file_path, fixed_content)
-                if success:
-                    return FixResult(
-                        success=True,
-                        confidence=0.9,
-                        fixes_applied=["Applied AST-based pattern fix"],
-                        files_modified=[str(file_path)],
-                    )
-
-            return FixResult(
-                success=True,
-                confidence=1.0,
-                fixes_applied=["Pattern already correct or not applicable"],
-                files_modified=[],
-            )
-
-        except SyntaxError as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Syntax error in file: {e}"],
-            )
-        except Exception as e:
-            return FixResult(
-                success=False,
-                confidence=0.0,
-                remaining_issues=[f"Error applying pattern fix: {e}"],
-            )
 
     def _fix_try_except_pass_ast(self, tree: ast.AST) -> ast.AST:
 
@@ -191,6 +123,40 @@ class PatternAgent(SubAgent):
         transformer = OsGetcwdTransformer()
         return ast.fix_missing_locations(transformer.visit(tree))
 
+    def _fix_unnecessary_lambda_ast(self, tree: ast.AST) -> ast.AST:
+        """Remove unnecessary lambda wrappers (FURB111)."""
+
+        class LambdaWrapperTransformer(ast.NodeTransformer):
+            def visit_Call(self, node: ast.Call) -> ast.Call | None:
+                # Check each argument to see if it's an unnecessary lambda wrapper
+                for i, arg in enumerate(node.args):
+                    if (
+                        isinstance(arg, ast.Lambda)
+                        and not arg.args.args  # Lambda takes no parameters
+                    ):
+                        lambda_body = arg.body
+
+                        # Check if lambda body is a simple call with no args
+                        if (
+                            isinstance(lambda_body, ast.Call)
+                            and not lambda_body.args
+                            and not lambda_body.keywords
+                        ):
+                            # Replace lambda with the call itself
+                            new_args = list(node.args)
+                            new_args[i] = lambda_body
+
+                            return ast.Call(
+                                func=node.func,
+                                args=new_args,
+                                keywords=node.keywords,
+                            )
+
+                return node
+
+        transformer = LambdaWrapperTransformer()
+        return ast.fix_missing_locations(transformer.visit(tree))
+
     def _ensure_pathlib_import(self, content: str) -> str:
         if (
             "from pathlib import Path" not in content
@@ -219,6 +185,85 @@ class PatternAgent(SubAgent):
                 lines.insert(0, "from contextlib import suppress")
             return "\n".join(lines)
         return content
+
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+
+    async def analyze_and_fix(self, issue: Issue) -> FixResult:
+        if not issue.file_path:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=["No file path provided"],
+            )
+
+        file_path = Path(issue.file_path)
+
+        try:
+            content = self.context.get_file_content(file_path)
+            if not content:
+                return FixResult(
+                    success=False,
+                    confidence=0.0,
+                    remaining_issues=[f"Could not read file: {file_path}"],
+                )
+
+            tree = ast.parse(content)
+
+            if "furb107" in issue.message.lower():
+                tree = self._fix_try_except_pass_ast(tree)
+                self.log("Applied FURB107 fix (try/except/pass → suppress)")
+
+            if "furb115" in issue.message.lower():
+                tree = self._fix_len_check_ast(tree)
+                self.log("Applied FURB115 fix (len() > 0 → truthiness)")
+
+            if "furb104" in issue.message.lower():
+                tree = self._fix_os_getcwd_ast(tree)
+                self.log("Applied FURB104 fix (os.getcwd → Path.cwd)")
+
+            if "furb111" in issue.message.lower():
+                tree = self._fix_unnecessary_lambda_ast(tree)
+                self.log("Applied FURB111 fix (remove unnecessary lambda wrapper)")
+
+            fixed_content = ast.unparse(tree)
+
+            if "furb104" in issue.message.lower():
+                fixed_content = self._ensure_pathlib_import(fixed_content)
+
+            if "furb107" in issue.message.lower():
+                fixed_content = self._ensure_contextlib_import(fixed_content)
+
+            if fixed_content != content:
+                success = self.context.write_file_content(file_path, fixed_content)
+                if success:
+                    return FixResult(
+                        success=True,
+                        confidence=0.9,
+                        fixes_applied=["Applied AST-based pattern fix"],
+                        files_modified=[str(file_path)],
+                    )
+
+            return FixResult(
+                success=True,
+                confidence=1.0,
+                fixes_applied=["Pattern already correct or not applicable"],
+                files_modified=[],
+            )
+
+        except SyntaxError as e:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Syntax error in file: {e}"],
+            )
+        except Exception as e:
+            return FixResult(
+                success=False,
+                confidence=0.0,
+                remaining_issues=[f"Error applying pattern fix: {e}"],
+            )
+        self._process_general_1()
+        self._process_general_1()
 
 
 agent_registry.register(PatternAgent)

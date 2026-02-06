@@ -107,9 +107,9 @@ All notable changes to this project will be documented in this file.
     def performance_benchmark_context(self):
         """Context for performance testing with realistic data sets."""
         return {
-            "small_codebase": {"files": 10, "issues": 25, "agents": 3},
-            "medium_codebase": {"files": 100, "issues": 150, "agents": 5},
-            "large_codebase": {"files": 1000, "issues": 500, "agents": 8},
+            "small_codebase": {"files": 10, "issues": 25, "agents":3},
+            "medium_codebase": {"files": 100, "issues": 150, "agents":5},
+            "large_codebase": {"files": 1000, "issues": 500, "agents":8},
         }
 
     def assert_performance_improvement(

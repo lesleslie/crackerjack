@@ -131,9 +131,17 @@ class IndexingProgress(BaseModel):
 
 
 class SemanticConfig(BaseModel):
+    embedding_backend: t.Literal["auto", "onnxruntime", "ollama", "fallback"] = Field(
+        default="auto",
+        description="Embedding backend: 'onnxruntime', 'ollama', 'fallback', or 'auto' to detect automatically",
+    )
     embedding_model: str = Field(
         default="all-MiniLM-L6-v2",
-        description="Sentence transformer model name",
+        description="Sentence transformer model name (for onnxruntime) or Ollama model name (e.g., 'nomic-embed-text')",
+    )
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="Ollama API endpoint URL",
     )
     chunk_size: int = Field(
         default=500,

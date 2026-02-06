@@ -284,8 +284,8 @@ from typing import Any, Dict
     def test_find_redundant_imports(self, agent) -> None:
         """Test finding redundant imports."""
         all_imports = [
-            {"module": "os", "name": "path", "line": 1},
-            {"module": "os", "name": "path", "line": 2},
+            {"module": "os", "name": "path", "line":1},
+            {"module": "os", "name": "path", "line":2},
         ]
 
         redundant = agent._find_redundant_imports(all_imports)

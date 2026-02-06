@@ -140,12 +140,12 @@ class TestSessionCoordinator:
 
     def test_get_session_summary_with_tracker(self, coordinator) -> None:
         mock_tracker = Mock(spec=SessionTracker)
-        mock_tracker.get_summary.return_value = {"completed": 5, "failed": 1}
+        mock_tracker.get_summary.return_value = {"completed": 5, "failed":1}
         coordinator.session_tracker = mock_tracker
 
         result = coordinator.get_session_summary()
 
-        assert result == {"completed": 5, "failed": 1}
+        assert result == {"completed": 5, "failed":1}
         mock_tracker.get_summary.assert_called_once()
 
     def test_get_session_summary_without_tracker(self, coordinator) -> None:

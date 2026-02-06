@@ -399,7 +399,7 @@ class AdaptiveLearningSystem:
                         insight_type="capability_strength",
                         agent_name=agent_name,
                         confidence=min(success_rate, len(successes) / 10.0),
-                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate: .1 %})",
+                        description=f"{agent_name} excels at {capability} tasks (success rate: {success_rate:.1 %})",
                         supporting_evidence={
                             "capability": capability,
                             "success_rate": success_rate,

@@ -38,7 +38,7 @@ ISSUE_TYPE_TO_AGENTS: dict[IssueType, list[str]] = {
         "TestSpecialistAgent",
         "ArchitectAgent",
     ],
-    IssueType.COMPLEXITY: ["RefactoringAgent", "ArchitectAgent"],
+    IssueType.COMPLEXITY: ["RefactoringAgent", "PatternAgent", "ArchitectAgent"],
     IssueType.DEAD_CODE: [
         "DeadCodeRemovalAgent",
         "RefactoringAgent",
@@ -207,9 +207,18 @@ class AgentCoordinator:
     ) -> SubAgent | None:
         candidates = await self._score_all_specialists(specialists, issue)
         if not candidates:
+            self.logger.warning(f"No candidates found for issue: {issue.message[:80]}")
             return None
 
         best_agent, best_score = self._find_highest_scoring_agent(candidates)
+        if best_agent:
+            self.logger.info(
+                f"Best agent for issue {issue.type.value}: {best_agent.name} (score: {best_score:.2f})"
+            )
+        else:
+            self.logger.warning(
+                f"No best agent found for issue {issue.type.value} (best_score: {best_score:.2f})"
+            )
         return self._apply_built_in_preference(candidates, best_agent, best_score)
 
     async def _score_all_specialists(
@@ -222,6 +231,9 @@ class AgentCoordinator:
         for agent in specialists:
             try:
                 score = await agent.can_handle(issue)
+                self.logger.debug(
+                    f"Agent {agent.name} scored {score:.2f} for issue: {issue.message[:60]}"
+                )
                 candidates.append((agent, score))
             except Exception as e:
                 self.logger.exception(f"Error evaluating specialist {agent.name}: {e}")

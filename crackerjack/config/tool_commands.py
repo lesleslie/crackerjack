@@ -122,6 +122,7 @@ def _build_tool_commands(package_name: str) -> dict[str, list[str]]:
             "--python=3.13",
             "semgrep",
             "scan",
+            "--quiet",  # Suppress segfault handler warnings to stderr
             "--error",
             "--json",
             "--config",

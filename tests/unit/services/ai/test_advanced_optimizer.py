@@ -80,7 +80,7 @@ class TestPerformanceProfileDataClass:
             concurrent_clients=10,
             data_retention_days=30,
             analysis_frequency_minutes=15,
-            resource_limits={"max_memory_gb": 8, "max_cpu_cores": 4},
+            resource_limits={"max_memory_gb": 8, "max_cpu_cores":4},
             optimization_strategy="balanced",
         )
 
@@ -241,13 +241,13 @@ class TestConnectionPool:
         pool = ConnectionPool(max_connections=2)
 
         # Add two connections to fill pool
-        pool.add_connection("conn_1", Mock(), metadata={"order": 1})
+        pool.add_connection("conn_1", Mock(), metadata={"order":1})
         import time
         time.sleep(0.01)  # Small delay to ensure different timestamps
-        pool.add_connection("conn_2", Mock(), metadata={"order": 2})
+        pool.add_connection("conn_2", Mock(), metadata={"order":2})
 
         # Add third connection - should evict conn_1 (oldest)
-        pool.add_connection("conn_3", Mock(), metadata={"order": 3})
+        pool.add_connection("conn_3", Mock(), metadata={"order":3})
 
         assert "conn_1" not in pool.connections  # Evicted
         assert "conn_2" in pool.connections

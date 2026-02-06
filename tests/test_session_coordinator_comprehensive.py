@@ -124,7 +124,7 @@ class TestSessionCoordinator:
         """Test get_session_summary method."""
         # Initially should return dict with tasks_count: 0
         summary = session.get_session_summary()
-        assert summary == {"tasks_count": 0}
+        assert summary == {"tasks_count":0}
 
         # Add some tasks
         session.track_task("task1", "Task 1")

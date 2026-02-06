@@ -205,13 +205,17 @@ class TestSelector:
 
         changed_tests = set(self._select_changed_tests(test_files, changed_files, test_mapping))
 
-
-        related = set()
+        related: set[Path] = set()
 
         for test_file in changed_tests:
 
             for source_file in test_mapping.get(str(test_file), []):
-                related.update(test_mapping.get(source_file, []))
+                source_tests: set[str] | list[str] = test_mapping.get(source_file, [])
+                for source_test in source_tests:
+                    if isinstance(source_test, Path):
+                        related.add(source_test)
+                    else:
+                        related.add(Path(source_test))
 
         return list(changed_tests | related)
 
@@ -261,7 +265,7 @@ class TestSelector:
 
             metrics = self._parse_pytest_output(result.stdout, result.returncode)
 
-        except subprocess.SubprocessError as e:
+        except subprocess.SubprocessError:
             metrics = TestMetrics(
                 total_tests=0,
                 passed=0,

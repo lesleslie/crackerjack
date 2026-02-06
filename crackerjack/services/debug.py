@@ -122,7 +122,7 @@ class AIAgentDebugger:
 
             if self.verbose:
                 self.console.print(
-                    f"[dim green]✅ {operation} completed ({duration: .2f}s)[/ dim green]",
+                    f"[dim green]✅ {operation} completed ({duration:.2f}s)[/ dim green]",
                 )
 
         except Exception as e:
@@ -134,7 +134,7 @@ class AIAgentDebugger:
 
             if self.verbose:
                 self.console.print(
-                    f"[dim red]❌ {operation} failed ({duration: .2f}s): {e}[/ dim red]",
+                    f"[dim red]❌ {operation} failed ({duration:.2f}s): {e}[/ dim red]",
                 )
             raise
 
@@ -182,7 +182,7 @@ class AIAgentDebugger:
             self.console.print(
                 f"[{status_color}]{status_icon} MCP {operation_type}[/{status_color}]: "
                 f"[bold]{tool_name}[/ bold]"
-                + (f" ({duration: .2f}s)" if duration else ""),
+                + (f" ({duration:.2f}s)" if duration else ""),
             )
 
             if error and self.verbose:
@@ -227,7 +227,7 @@ class AIAgentDebugger:
         )
 
         if self.verbose:
-            confidence_text = f" (confidence: {confidence: .2f})" if confidence else ""
+            confidence_text = f" (confidence: {confidence:.2f})" if confidence else ""
             issue_text = f" [issue: {issue_id}]" if issue_id else ""
 
             self.console.print(
@@ -271,7 +271,7 @@ class AIAgentDebugger:
             }
 
             color = status_colors.get(status, "white")
-            duration_text = f" ({duration: .2f}s)" if duration else ""
+            duration_text = f" ({duration:.2f}s)" if duration else ""
 
             self.console.print(
                 f"[{color}]📋 Workflow {status}: {phase}{duration_text}[/{color}]",
@@ -396,7 +396,7 @@ class AIAgentDebugger:
                 str(iteration["test_fixes"]),
                 str(iteration["hook_failures"]),
                 str(iteration["hook_fixes"]),
-                f"{iteration['duration']: .1f}s"
+                f"{iteration['duration']:.1f}s"
                 if iteration.get("duration")
                 else "N / A",
             )
@@ -436,7 +436,7 @@ class AIAgentDebugger:
 
         for agent, stats in sorted(agent_stats.items()):
             confidence_text = (
-                f"{stats['avg_confidence']: .2f}"
+                f"{stats['avg_confidence']:.2f}"
                 if stats["avg_confidence"] > 0
                 else "N / A"
             )
@@ -479,7 +479,7 @@ class AIAgentDebugger:
 
         table.add_row(
             "Overall Fix Rate",
-            f"{fix_rate: .1f}%",
+            f"{fix_rate:.1f}%",
             f"{total_fixes}/{total_issues} issues resolved",
         )
 
@@ -517,7 +517,7 @@ class AIAgentDebugger:
                 tool,
                 str(stats["calls"]),
                 str(stats["errors"]),
-                f"{avg_duration: .2f}s" if avg_duration > 0 else "N / A",
+                f"{avg_duration:.2f}s" if avg_duration > 0 else "N / A",
             )
 
         self.console.print(

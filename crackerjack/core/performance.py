@@ -79,9 +79,9 @@ class PerformanceMonitor:
             if stats:
                 self.console.print(
                     f"[cyan]📊 {name}: [/ cyan] "
-                    f"avg={stats['avg']: .3f}s, "
-                    f"min={stats['min']: .3f}s, "
-                    f"max={stats['max']: .3f}s, "
+                    f"avg={stats['avg']:.3f}s, "
+                    f"min={stats['min']:.3f}s, "
+                    f"max={stats['max']:.3f}s, "
                     f"count={stats['count']}",
                 )
         else:

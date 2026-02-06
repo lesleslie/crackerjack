@@ -293,11 +293,11 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.RESOURCE_EXHAUSTED,
                     level=SecurityEventLevel.HIGH,
-                    message=f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024: .1f}MB",
+                    message=f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024:.1f}MB",
                     client_id=client_id,
                     operation=operation_type,
                 )
-                msg = f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024: .1f}MB"
+                msg = f"Memory limit exceeded: {self._total_memory_usage / 1024 / 1024:.1f}MB"
                 raise OperationLimitExceededError(
                     msg,
                 )
@@ -361,7 +361,7 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                         self.security_logger.log_security_event(
                             event_type=SecurityEventType.RESOURCE_LIMIT_EXCEEDED,
                             level=SecurityEventLevel.MEDIUM,
-                            message=f"CPU time limit exceeded: {metrics.cpu_time: .2f}s",
+                            message=f"CPU time limit exceeded: {metrics.cpu_time:.2f}s",
                             client_id=metrics.client_id,
                             operation=metrics.operation_type,
                             additional_data={"operation_id": metrics.operation_id},
@@ -372,7 +372,7 @@ class BoundedStatusOperations(BoundedStatusOperationsProtocol, ServiceProtocol):
                         self.security_logger.log_security_event(
                             event_type=SecurityEventType.OPERATION_DURATION_EXCEEDED,
                             level=SecurityEventLevel.MEDIUM,
-                            message=f"Operation duration limit exceeded: {metrics.duration: .2f}s",
+                            message=f"Operation duration limit exceeded: {metrics.duration:.2f}s",
                             client_id=metrics.client_id,
                             operation=metrics.operation_type,
                             additional_data={"operation_id": metrics.operation_id},

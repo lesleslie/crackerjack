@@ -84,7 +84,7 @@ class ThreadSafeStatusCollector:
                 self.security_logger.log_security_event(
                     event_type=SecurityEventType.STATUS_COLLECTED,
                     level=SecurityEventLevel.INFO,
-                    message=f"Status collection completed in {snapshot.collection_duration: .2f}s",
+                    message=f"Status collection completed in {snapshot.collection_duration:.2f}s",
                     client_id=client_id,
                     operation="collect_status",
                     additional_data={

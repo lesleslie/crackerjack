@@ -39,20 +39,6 @@ def get_io_executor() -> ThreadPoolExecutor:
     return _io_executor
 
 
-async def async_read_file(file_path: Path) -> str:
-    loop = asyncio.get_event_loop()
-
-    try:
-        content = await loop.run_in_executor(
-            get_io_executor(),
-            file_path.read_text,
-        )
-        return content
-    except Exception as e:
-        logger.error(f"Failed to read file {file_path}: {e}")
-        raise
-
-
 async def async_write_file(
     file_path: Path,
     content: str,
@@ -99,3 +85,21 @@ __all__ = [
     "async_write_files_batch",
     "shutdown_io_executor",
 ]
+
+
+async def async_read_file(file_path: Path) -> str:
+    self._process_general_1()
+
+
+async def async_read_file(file_path: Path) -> str:
+    loop = asyncio.get_event_loop()
+
+    try:
+        content = await loop.run_in_executor(
+            None,
+            lambda: file_path.read_text(),
+        )
+        return content
+    except Exception as e:
+        logger.error(f"Failed to read file {file_path}: {e}")
+        raise

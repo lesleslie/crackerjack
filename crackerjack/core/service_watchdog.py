@@ -459,11 +459,11 @@ class ServiceWatchdog:
 
     def _format_uptime(self, uptime: float) -> str:
         if uptime > 3600:
-            return f"{uptime / 3600: .1f}h"
+            return f"{uptime / 3600:.1f}h"
         if uptime > 60:
-            return f"{uptime / 60: .1f}m"
+            return f"{uptime / 60:.1f}m"
         if uptime > 0:
-            return f"{uptime: .0f}s"
+            return f"{uptime:.0f}s"
         return "-"
 
 

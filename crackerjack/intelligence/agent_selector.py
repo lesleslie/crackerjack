@@ -121,7 +121,7 @@ class AgentSelector:
 
         self.logger.debug(
             f"Selected {len(selected)} agents for task '{task.description[:50]}...': "
-            f"{[f'{s.agent.metadata.name}({s.final_score: .2f})' for s in selected]}",
+            f"{[f'{s.agent.metadata.name}({s.final_score:.2f})' for s in selected]}",
         )
 
         return selected

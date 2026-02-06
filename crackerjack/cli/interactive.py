@@ -228,7 +228,7 @@ class InteractiveWorkflowManager:
             emoji = status_emoji.get(task.status, "❓")
             label = f"{emoji} {task.name}"
             if task.duration is not None:
-                label += f" ({task.duration: .1f}s)"
+                label += f" ({task.duration:.1f}s)"
             task_node = tree.add(label)
             task_node.add(f"📝 {task.description}")
             if task.error:
@@ -245,7 +245,7 @@ class InteractiveWorkflowManager:
             content.append(f"🔄 Running: {task.name}\n", style="bold cyan")
             content.append(f"📝 {task.description}\n")
             if task.duration is not None:
-                content.append(f"⏱️ Duration: {task.duration: .1f}s\n")
+                content.append(f"⏱️ Duration: {task.duration:.1f}s\n")
             if task.dependencies:
                 content.append("\n📋 Dependencies: \n", style="bold")
                 for dep in task.dependencies:
@@ -382,7 +382,7 @@ class InteractiveWorkflowManager:
             }
             status_text = task.status.name
             style = status_styles.get(task.status, "white")
-            duration_text = f"{task.duration: .1f}s" if task.duration else "-"
+            duration_text = f"{task.duration:.1f}s" if task.duration else "-"
             details = task.error.message if task.error else task.description
             table.add_row(
                 task.name,

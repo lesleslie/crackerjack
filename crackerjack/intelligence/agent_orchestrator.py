@@ -101,7 +101,7 @@ class AgentOrchestrator:
                 )
 
             self.logger.info(
-                f"Execution completed in {execution_time: .2f}s: "
+                f"Execution completed in {execution_time:.2f}s: "
                 f"{'success' if result.success else 'failure'} "
                 f"using {len(result.agents_used)} agents",
             )

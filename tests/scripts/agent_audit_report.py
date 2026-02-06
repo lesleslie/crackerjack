@@ -320,13 +320,13 @@ class AgentAuditor:
         avg_performance = sum(r.performance_score for r in self.agent_results) / len(
             self.agent_results,
         )
-        self.console.print(f"📊 Average Performance Score: {avg_performance: .1f}/ 100")
+        self.console.print(f"📊 Average Performance Score: {avg_performance:.1f}/ 100")
 
         top_performers = sorted(
             self.agent_results, key=lambda r: r.performance_score, reverse=True,
         )[:3]
         self.console.print(
-            f"🏆 Top Performers: {[(r.agent_name, f'{r.performance_score: .1f}') for r in top_performers]}",
+            f"🏆 Top Performers: {[(r.agent_name, f'{r.performance_score:.1f}') for r in top_performers]}",
         )
 
     def create_audit_table(self) -> Table:
@@ -366,7 +366,7 @@ class AgentAuditor:
 
             table.add_row(
                 result.agent_name,
-                f"{result.performance_score: .1f}",
+                f"{result.performance_score:.1f}",
                 str(result.method_count),
                 str(result.lines_of_code),
                 str(result.estimated_complexity),

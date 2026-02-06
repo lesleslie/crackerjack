@@ -441,7 +441,7 @@ class TestManager:
         options: OptionsProtocol,
         workers: int | str,
     ) -> bool:
-        self.console.print(f"[green]✅[/green] Tests passed in {duration: .1f}s")
+        self.console.print(f"[green]✅[/green] Tests passed in {duration:.1f}s")
 
 
         stats = self._parse_test_statistics(output)
@@ -520,7 +520,7 @@ class TestManager:
     def _handle_test_error(self, start_time: float, error: Exception) -> bool:
         duration = time.time() - start_time
         self.console.print(
-            f"[red]💥[/red] Test execution error after {duration: .1f}s: {error}",
+            f"[red]💥[/red] Test execution error after {duration:.1f}s: {error}",
         )
         return False
 
@@ -949,7 +949,7 @@ class TestManager:
             previous = ratchet_result.get("previous_coverage", 0)
             self.console.print(
                 f"[red]📉[/red] Coverage regression: "
-                f"{current: .2f}% < {previous: .2f}%",
+                f"{current:.2f}% < {previous:.2f}%",
             )
         return False
 
@@ -958,8 +958,8 @@ class TestManager:
         current = ratchet_result.get("current_coverage", 0)
 
         self.console.print(
-            f"[green]📈[/green] Coverage improved by {improvement: .2f}% "
-            f"to {current: .2f}%",
+            f"[green]📈[/green] Coverage improved by {improvement:.2f}% "
+            f"to {current:.2f}%",
         )
 
     def _extract_failure_lines(self, output: str) -> list[str]:

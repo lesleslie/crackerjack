@@ -141,11 +141,12 @@ class BatchProcessor:
         max_retries: int = 2,
         parallel: bool = True,
     ) -> BatchProcessingResult:
+        """Process a batch of issues and return detailed results."""
 
         if batch_id is None:
             batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
-        result = BatchProcessingResult(
+        result: BatchProcessingResult = BatchProcessingResult(
             batch_id=batch_id,
             status=BatchStatus.IN_PROGRESS,
             total_issues=len(issues),
@@ -165,8 +166,8 @@ class BatchProcessor:
             issue_results = []
             for issue in issues:
                 try:
-                    result = await self._process_single_issue(issue, max_retries)
-                    issue_results.append(result)
+                    issue_result = await self._process_single_issue(issue, max_retries)
+                    issue_results.append(issue_result)
                 except Exception as e:
                     logger.error(f"Error processing issue: {e}")
                     issue_results.append(
@@ -219,12 +220,56 @@ class BatchProcessor:
 
         return result
 
+    def _print_summary(self, result: BatchProcessingResult) -> None:
+        self.console.print("\n" + "=" * 80)
+        self.console.print(f"[bold]Batch Processing Summary: {result.batch_id}[/bold]")
+        self.console.print("=" * 80)
+
+        status_emoji = {
+            BatchStatus.COMPLETED: "✅",
+            BatchStatus.PARTIAL: "⚠️",
+            BatchStatus.FAILED: "❌",
+            BatchStatus.IN_PROGRESS: "🔄",
+        }.get(result.status, "❓")
+
+        self.console.print(
+            f"\n[bold]Status:[/bold] {result.status.value} {status_emoji}"
+        )
+
+        self.console.print("\n[bold]Metrics:[/bold]")
+        self.console.print(f"  Total issues: {result.total_issues}")
+        self.console.print(f"  [green]Successful:[/green] {result.successful}")
+        self.console.print(f"  [red]Failed:[/red] {result.failed}")
+        self.console.print(f"  [dim]Skipped:[/dim] {result.skipped}")
+        self.console.print(f"  Success rate: [bold]{result.success_rate:.1%}[/bold]")
+
+        if result.duration_seconds > 0:
+            duration_str = f"{result.duration_seconds:.1f}s"
+            self.console.print(f"  Duration: {duration_str}")
+
+        if result.failed > 0:
+            self.console.print("\n[bold]Failed Issues:[/bold]")
+            for r in result.results:
+                if not r.success and r.attempted:
+                    self.console.print(
+                        f"  [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"
+                    )
+
+        self.console.print("\n" + "=" * 80 + "\n")
+
+    async def _process_single_issue(
+        self._process_general_1()
+        self._process_loop_2()
+
+
+
     async def _process_single_issue(
         self,
         issue: Issue,
         max_retries: int,
     ) -> BatchIssueResult:
         issue_result = BatchIssueResult(issue=issue, success=False, attempted=False)
+
 
         for attempt in range(max_retries + 1):
             try:
@@ -287,45 +332,6 @@ class BatchProcessor:
                 continue
 
         return issue_result
-
-    def _print_summary(self, result: BatchProcessingResult) -> None:
-        self.console.print("\n" + "=" * 80)
-        self.console.print(f"[bold]Batch Processing Summary: {result.batch_id}[/bold]")
-        self.console.print("=" * 80)
-
-        status_emoji = {
-            BatchStatus.COMPLETED: "✅",
-            BatchStatus.PARTIAL: "⚠️",
-            BatchStatus.FAILED: "❌",
-            BatchStatus.IN_PROGRESS: "🔄",
-        }.get(result.status, "❓")
-
-        self.console.print(
-            f"\n[bold]Status:[/bold] {result.status.value} {status_emoji}"
-        )
-
-        self.console.print("\n[bold]Metrics:[/bold]")
-        self.console.print(f"  Total issues: {result.total_issues}")
-        self.console.print(f"  [green]Successful:[/green] {result.successful}")
-        self.console.print(f"  [red]Failed:[/red] {result.failed}")
-        self.console.print(f"  [dim]Skipped:[/dim] {result.skipped}")
-        self.console.print(f"  Success rate: [bold]{result.success_rate:.1%}[/bold]")
-
-        if result.duration_seconds > 0:
-            duration_str = f"{result.duration_seconds:.1f}s"
-            self.console.print(f"  Duration: {duration_str}")
-
-        if result.failed > 0:
-            self.console.print("\n[bold]Failed Issues:[/bold]")
-            for r in result.results:
-                if not r.success and r.attempted:
-                    self.console.print(
-                        f"  [red]✗[/red] {r.issue.message} ({r.error or 'Unknown error'})"
-                    )
-
-        self.console.print("\n" + "=" * 80 + "\n")
-
-
 def get_batch_processor(
     context: AgentContext,
     console: Console,

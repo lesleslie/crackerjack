@@ -355,7 +355,7 @@ class WorkflowManager:
 
     def _display_task_result(self, task: Task, success: bool) -> None:
         if success:
-            duration_str = f" ({task.duration: .1f}s)" if task.duration else ""
+            duration_str = f" ({task.duration:.1f}s)" if task.duration else ""
             self.console.print(f"[green]✅ {task.name}{duration_str}[/ green]")
         else:
             self.console.print(f"[red]❌ {task.name} failed[/ red]")
@@ -401,7 +401,7 @@ class WorkflowManager:
 
         status_branch = tree.add(f"[{color}]{label}[/{color}]")
         for task in status_tasks:
-            duration_str = f" ({task.duration: .1f}s)" if task.duration else ""
+            duration_str = f" ({task.duration:.1f}s)" if task.duration else ""
             status_branch.add(f"{task.name}{duration_str}")
 
     def get_workflow_summary(self) -> dict[str, int]:

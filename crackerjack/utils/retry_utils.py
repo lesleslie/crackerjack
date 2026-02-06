@@ -1,5 +1,6 @@
 import asyncio
 import functools
+import inspect
 import random
 import time
 from collections.abc import Callable
@@ -88,7 +89,7 @@ def retry(
                 logger_func,
             )
 
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             return cast("Callable[..., T]", async_wrapper)
         return cast("Callable[..., T]", sync_wrapper)
 

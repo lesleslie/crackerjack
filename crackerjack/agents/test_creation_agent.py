@@ -334,7 +334,7 @@ class TestCreationAgent(SubAgent):
         files_modified: list[str],
     ) -> tuple[list[str], list[str]]:
         self.log(
-            f"Coverage below threshold: {coverage_analysis['current_coverage']: .1%}",
+            f"Coverage below threshold: {coverage_analysis['current_coverage']:.1%}",
         )
 
         return await self._process_uncovered_modules_for_low_coverage(

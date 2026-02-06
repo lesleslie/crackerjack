@@ -22,8 +22,8 @@ def test_assertion_with_message() -> None:
 
 def test_comparison_assertion() -> None:
     """Test comparison that shows diff."""
-    expected = {"a": 1, "b": 2, "c": 3}
-    actual = {"a": 1, "b": 99, "c": 3}
+    expected = {"a": 1, "b": 2, "c":3}
+    actual = {"a": 1, "b": 99, "c":3}
     assert expected == actual
 
 

@@ -191,7 +191,7 @@ class PatternCache:
 
         self._save_patterns()
         self.logger.debug(
-            f"Updated pattern {pattern_id} success rate: {pattern.success_rate: .2f}",
+            f"Updated pattern {pattern_id} success rate: {pattern.success_rate:.2f}",
         )
 
     def get_pattern_statistics(self) -> dict[str, t.Any]:
