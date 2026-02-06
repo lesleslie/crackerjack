@@ -301,9 +301,6 @@ class ProviderChain:
             logger.debug(f"Failed to track provider selection: {e}")
 
     async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
-        self._process_general_1()
-
-    async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
         try:
             if not hasattr(provider, "_settings"):
                 return True
@@ -349,8 +346,3 @@ class ProviderChain:
         except Exception as e:
             logger.debug(f"Provider availability check failed: {e}")
             return False
-
-    async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
-        self._process_general_1()
-        self._handle_conditional_2()
-        self._handle_conditional_3()
