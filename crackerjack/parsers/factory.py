@@ -120,6 +120,10 @@ class ParserFactory:
 
         lines = output.split("\n")
 
+        # Special case: ruff's "[*]" empty output pattern
+        if output.strip() == "[*]":
+            return True
+
         for i, line in enumerate(lines):
             stripped_line = line.lstrip()
             if stripped_line.startswith(("{", "[")):
