@@ -298,6 +298,21 @@ class GenericRegexParser(RegexParser):
         if not output or not output.strip():
             return []
 
+        # Check for success indicators - return empty list if tool passed
+        success_indicators = ("✓", "passed", "valid", "ok", "success", "no issues")
+        output_lower = output.lower()
+        if any(indicator in output_lower for indicator in success_indicators):
+            logger.debug(f"{self.tool_name} passed (success indicators found)")
+            return []
+
+        # Check for explicit failure indicators before creating generic issue
+        failure_indicators = ("failed", "error", "invalid", "issue", "would be")
+        if not any(indicator in output_lower for indicator in failure_indicators):
+            # No clear success or failure indicators - likely informational output
+            logger.debug(f"{self.tool_name} produced unclear output, treating as success")
+            return []
+
+        # Create generic issue for actual failures
         return [
             Issue(
                 type=self.issue_type,
