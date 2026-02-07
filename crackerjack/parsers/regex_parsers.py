@@ -536,15 +536,6 @@ class LocalLinkCheckerRegexParser(RegexParser):
 
 
 def register_regex_parsers(factory: "ParserFactory") -> None:
-    CodespellRegexParser()
-    RefurbRegexParser()
-    PyscnRegexParser()
-    RuffFormatRegexParser()
-    ComplexityRegexParser()
-    CreosoteRegexParser()
-    StructuredDataParser()
-    LocalLinkCheckerRegexParser()
-
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("pyscn", PyscnRegexParser)
@@ -560,9 +551,23 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("check-toml", StructuredDataParser)
     factory.register_regex_parser("check-json", StructuredDataParser)
 
+    # Register generic parsers for tools without specific output formats
+    factory.register_regex_parser(
+        "validate-regex-patterns", ValidateRegexPatternsParser
+    )
+    factory.register_regex_parser("trailing-whitespace", TrailingWhitespaceParser)
+    factory.register_regex_parser("end-of-file-fixer", EndOfFileFixerParser)
+    factory.register_regex_parser("format-json", FormatJsonParser)
+    factory.register_regex_parser("mdformat", MdformatParser)
+    factory.register_regex_parser("uv-lock", UvLockParser)
+    factory.register_regex_parser("check-added-large-files", CheckAddedLargeFilesParser)
+    factory.register_regex_parser("check-ast", CheckAstParser)
+
     logger.info(
         "Registered regex parsers: codespell, refurb, pyscn, ruff-format, complexipy, "
-        "creosote, mypy, zuban, skylos, check-local-links, check-yaml, check-toml, check-json"
+        "creosote, mypy, zuban, skylos, check-local-links, check-yaml, check-toml, check-json, "
+        "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
+        "mdformat, uv-lock, check-added-large-files, check-ast"
     )
 
 
@@ -620,3 +625,44 @@ class SkylosRegexParser(RegexParser):
             details=[line],
             stage="skylos",
         )
+
+
+# Generic parsers for tools without specific output formats
+class ValidateRegexPatternsParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("validate-regex-patterns", IssueType.FORMATTING)
+
+
+class TrailingWhitespaceParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("trailing-whitespace", IssueType.FORMATTING)
+
+
+class EndOfFileFixerParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("end-of-file-fixer", IssueType.FORMATTING)
+
+
+class FormatJsonParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("format-json", IssueType.FORMATTING)
+
+
+class MdformatParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("mdformat", IssueType.FORMATTING)
+
+
+class UvLockParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("uv-lock", IssueType.DEPENDENCY)
+
+
+class CheckAddedLargeFilesParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("check-added-large-files", IssueType.FORMATTING)
+
+
+class CheckAstParser(GenericRegexParser):
+    def __init__(self) -> None:
+        super().__init__("check-ast", IssueType.FORMATTING)
