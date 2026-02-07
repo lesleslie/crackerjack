@@ -129,19 +129,14 @@ class PatternAgent(SubAgent):
             def visit_Call(self, node: ast.Call) -> ast.Call | None:
 
                 for i, arg in enumerate(node.args):
-                    if (
-                        isinstance(arg, ast.Lambda)
-                        and not arg.args.args
-                    ):
+                    if isinstance(arg, ast.Lambda) and not arg.args.args:
                         lambda_body = arg.body
-
 
                         if (
                             isinstance(lambda_body, ast.Call)
                             and not lambda_body.args
                             and not lambda_body.keywords
                         ):
-
                             new_args = list(node.args)
                             new_args[i] = lambda_body
 
@@ -259,8 +254,6 @@ class PatternAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=[f"Error applying pattern fix: {e}"],
             )
-        self._process_general_1()
-        self._process_general_1()
 
 
 agent_registry.register(PatternAgent)

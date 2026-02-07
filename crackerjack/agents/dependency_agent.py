@@ -91,12 +91,6 @@ class DependencyAgent(SubAgent):
         return None
 
     def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
-        self._process_general_1()
-
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        self._process_general_1()
-
-    def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
         lines = content.splitlines(keepends=True)
         in_dependencies = False
         removed = False
@@ -256,16 +250,6 @@ class DependencyAgent(SubAgent):
                 confidence=0.0,
                 remaining_issues=[f"Failed to parse pyproject.toml: {e}"],
             )
-
-    def _remove_dependency_from_toml(self, content: str, dep_name: str) -> str | None:
-        self._process_general_1()
-        self._process_loop_2()
-        self._handle_conditional_3()
-
-    async def analyze_and_fix(self, issue: Issue) -> FixResult:
-        self._process_general_1()
-        self._handle_conditional_2()
-        self._handle_conditional_3()
 
 
 agent_registry.register(DependencyAgent)

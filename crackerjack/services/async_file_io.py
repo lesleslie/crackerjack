@@ -78,19 +78,6 @@ def shutdown_io_executor() -> None:
         _io_executor = None
 
 
-__all__ = [
-    "async_read_file",
-    "async_write_file",
-    "async_read_files_batch",
-    "async_write_files_batch",
-    "shutdown_io_executor",
-]
-
-
-async def async_read_file(file_path: Path) -> str:
-    self._process_general_1()
-
-
 async def async_read_file(file_path: Path) -> str:
     loop = asyncio.get_event_loop()
 
@@ -103,3 +90,12 @@ async def async_read_file(file_path: Path) -> str:
     except Exception as e:
         logger.error(f"Failed to read file {file_path}: {e}")
         raise
+
+
+__all__ = [
+    "async_read_file",
+    "async_write_file",
+    "async_read_files_batch",
+    "async_write_files_batch",
+    "shutdown_io_executor",
+]

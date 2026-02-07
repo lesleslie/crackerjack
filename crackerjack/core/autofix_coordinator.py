@@ -334,113 +334,6 @@ class AutofixCoordinator:
         output_lower = raw_output.lower()
         return "importerror" in output_lower or "modulenotfounderror" in output_lower
 
-    def _apply_ai_agent_fixes(
-        self, hook_results: Sequence[object], stage: str = "fast"
-    ) -> bool:
-        max_iterations = self._get_max_iterations()
-
-        context = AgentContext(
-            project_path=self.pkg_path,
-            subprocess_timeout=300,
-        )
-        cache = CrackerjackCache()
-
-        if self._coordinator_factory is not None:
-            coordinator = self._coordinator_factory(context, cache)
-        else:
-            from crackerjack.agents.coordinator import AgentCoordinator
-            from crackerjack.agents.tracker import get_agent_tracker
-            from crackerjack.services.debug import get_ai_agent_debugger
-
-            coordinator = AgentCoordinator(
-                context=context,
-                tracker=get_agent_tracker(),
-                debugger=get_ai_agent_debugger(),
-                cache=cache,
-            )
-
-        initial_issues = self._parse_hook_results_to_issues(hook_results)
-        self.progress_manager.start_fix_session(
-            stage=stage,
-            initial_issue_count=len(initial_issues),
-        )
-
-        previous_issue_count = float("inf")
-        no_progress_count = 0
-
-        iteration = 0
-        try:
-            while True:
-                # CRITICAL FIX: Re-run hooks for iterations > 0 to get fresh data
-                if iteration == 0:
-                    issues = self._get_iteration_issues(iteration, hook_results, stage)
-                    self.logger.info(
-                        f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
-                    )
-                else:
-                    issues = self._collect_current_issues(stage=stage)
-                    self.logger.info(
-                        f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
-                    )
-
-                current_issue_count = len(issues)
-
-                self.progress_manager.start_iteration(iteration, current_issue_count)
-
-                if current_issue_count == 0:
-                    result = self._handle_zero_issues_case(iteration, stage)
-                    if result is not None:
-                        self.progress_manager.end_iteration()
-                        self.progress_manager.finish_session(success=True)
-                        return result
-
-                # Check max iterations limit
-                if iteration >= max_iterations:
-                    self.logger.warning(
-                        f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
-                    )
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                if self._should_stop_on_convergence(
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                ):
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                no_progress_count = self._update_progress_count(
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                )
-
-                self.progress_manager.update_iteration_progress(
-                    iteration,
-                    current_issue_count,
-                    no_progress_count,
-                )
-
-                if not self._run_ai_fix_iteration(coordinator, issues):
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                self.progress_manager.end_iteration()
-
-                previous_issue_count = current_issue_count
-                iteration += 1
-        except Exception as e:
-            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
-            self.progress_manager.end_iteration()
-            self.progress_manager.finish_session(
-                success=False, message=f"Error during AI fixing: {e}"
-            )
-            raise
-
     def _handle_zero_issues_case(
         self, iteration: int, stage: str = "fast"
     ) -> bool | None:
@@ -476,6 +369,51 @@ class AutofixCoordinator:
             f"Iteration {iteration}: Extracted {len(issues)} issues from hook results"
         )
         return issues
+
+    def _check_coverage_regression(self, hook_results: Sequence[object]) -> list[Issue]:
+        coverage_issues = []
+
+        ratchet_path = self.pkg_path / ".coverage-ratchet.json"
+        if not ratchet_path.exists():
+            self.logger.debug("No coverage ratchet file found, skipping coverage check")
+            return coverage_issues
+
+        try:
+            with open(ratchet_path) as f:
+                ratchet_data = json.load(f)
+
+            current_coverage = ratchet_data.get("current_coverage", 0)
+            baseline = ratchet_data.get("baseline_coverage", 0)
+            tolerance = ratchet_data.get("tolerance_margin", 2.0)
+
+            if current_coverage < (baseline - tolerance):
+                gap = baseline - current_coverage
+                self.logger.warning(
+                    f"📉 Coverage regression detected: {current_coverage:.1f}% "
+                    f"(baseline: {baseline:.1f}%, gap: {gap:.1f}%)"
+                )
+
+                coverage_issues.append(
+                    Issue(
+                        type=IssueType.COVERAGE_IMPROVEMENT,
+                        severity=Priority.HIGH,
+                        message=f"Coverage regression: {current_coverage:.1f}% (baseline: {baseline:.1f}%, gap: {gap:.1f}%)",
+                        file_path=str(ratchet_path),
+                        line_number=None,
+                        stage="coverage-ratchet",
+                        details=[
+                            f"baseline_coverage: {baseline:.1f}%",
+                            f"current_coverage: {current_coverage:.1f}%",
+                            f"regression_amount: {gap:.1f}%",
+                            f"tolerance_margin: {tolerance:.1f}%",
+                            f"action: Add tests to increase coverage by {gap:.1f}%",
+                        ],
+                    )
+                )
+        except Exception as e:
+            self.logger.error(f"Failed to check coverage regression: {e}")
+
+        return coverage_issues
 
     def _report_iteration_success(self, iteration: int) -> None:
         self.console.print(
@@ -543,7 +481,7 @@ class AutofixCoordinator:
         self.logger.info("📋 Sending issues to agents:")
         for i, issue in enumerate(issues[:5]):
             self.logger.info(
-                f"  [{i}] type={issue.type.value: 12s} | "
+                f"  [{i}] type={issue.type.value:15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )
@@ -1106,10 +1044,21 @@ class AutofixCoordinator:
 
         except ParsingError as e:
             self.logger.error(f"Parsing failed for '{hook_name}': {e}")
-            raise
+            self.logger.warning(
+                f"🔧 Continuing workflow despite parsing failure for '{hook_name}' "
+                f"(soft fail - stage will still be marked as failed)"
+            )
+            return []
 
     def _extract_issue_count(self, output: str, tool_name: str) -> int | None:
-        if tool_name in ("complexipy", "refurb", "creosote"):
+        if tool_name in (
+            "complexipy",
+            "refurb",
+            "creosote",
+            "pyscn",
+            "semgrep",
+            "pytest",
+        ):
             return None
 
         json_count = _extract_issue_count_from_json(output, tool_name)
@@ -1132,6 +1081,7 @@ class AutofixCoordinator:
             self.logger.info(f"  ... and {len(issues) - 5} more issues")
 
     def _validate_parsed_issues(self, issues: list[Issue]) -> None:
+
         for i, issue in enumerate(issues):
             errors = []
 
@@ -1168,6 +1118,120 @@ class AutofixCoordinator:
                 )
                 raise ValueError(f"Invalid issue object: {errors}")
 
+    def _apply_ai_agent_fixes(
+        self, hook_results: Sequence[object], stage: str = "fast"
+    ) -> bool:
+        max_iterations = self._get_max_iterations()
+
+        context = AgentContext(
+            project_path=self.pkg_path,
+            subprocess_timeout=300,
+        )
+        cache = CrackerjackCache()
+
+        if self._coordinator_factory is not None:
+            coordinator = self._coordinator_factory(context, cache)
+        else:
+            from crackerjack.agents.coordinator import AgentCoordinator
+            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.services.debug import get_ai_agent_debugger
+
+            coordinator = AgentCoordinator(
+                context=context,
+                tracker=get_agent_tracker(),
+                debugger=get_ai_agent_debugger(),
+                cache=cache,
+            )
+
+        initial_issues = self._parse_hook_results_to_issues(hook_results)
+
+        coverage_issues = self._check_coverage_regression(hook_results)
+        if coverage_issues:
+            self.logger.info(
+                f"🧪 Test AI Stage: Detected {len(coverage_issues)} coverage failures, "
+                f"adding to AI-fix queue for test creation"
+            )
+            initial_issues.extend(coverage_issues)
+
+        self.progress_manager.start_fix_session(
+            stage=stage,
+            initial_issue_count=len(initial_issues),
+        )
+
+        previous_issue_count = float("inf")
+        no_progress_count = 0
+
+        iteration = 0
+        try:
+            while True:
+                if iteration == 0:
+                    issues = self._get_iteration_issues(iteration, hook_results, stage)
+                    self.logger.info(
+                        f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
+                    )
+                else:
+                    issues = self._collect_current_issues(stage=stage)
+                    self.logger.info(
+                        f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
+                    )
+
+                current_issue_count = len(issues)
+
+                self.progress_manager.start_iteration(iteration, current_issue_count)
+
+                if current_issue_count == 0:
+                    result = self._handle_zero_issues_case(iteration, stage)
+                    if result is not None:
+                        self.progress_manager.end_iteration()
+                        self.progress_manager.finish_session(success=True)
+                        return result
+
+                if iteration >= max_iterations:
+                    self.logger.warning(
+                        f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
+                    )
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                if self._should_stop_on_convergence(
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                ):
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                no_progress_count = self._update_progress_count(
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                )
+
+                self.progress_manager.update_iteration_progress(
+                    iteration,
+                    current_issue_count,
+                    no_progress_count,
+                )
+
+                if not self._run_ai_fix_iteration(coordinator, issues):
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                self.progress_manager.end_iteration()
+
+                previous_issue_count = current_issue_count
+                iteration += 1
+        except Exception as e:
+            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
+            self.progress_manager.end_iteration()
+            self.progress_manager.finish_session(
+                success=False, message=f"Error during AI fixing: {e}"
+            )
+            raise
+
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:
     try:
@@ -1182,6 +1246,10 @@ def _count_issues_for_tool(data: object, tool_name: str) -> int | None:
         return _count_list_data(data)
     if tool_name == "bandit":
         return _count_bandit_results(data)
+    if tool_name == "semgrep":
+        return _count_semgrep_results(data)
+    if tool_name == "pytest":
+        return _count_pytest_results(data)
     return None
 
 
@@ -1193,6 +1261,24 @@ def _count_bandit_results(data: object) -> int | None:
     if isinstance(data, dict) and "results" in data:
         results = data["results"]
         return len(results) if isinstance(results, list) else None
+    return None
+
+
+def _count_semgrep_results(data: object) -> int | None:
+    if isinstance(data, dict) and "results" in data:
+        results = data["results"]
+        return len(results) if isinstance(results, list) else None
+    return None
+
+
+def _count_pytest_results(data: object) -> int | None:
+    if isinstance(data, dict) and "tests" in data:
+        tests = data["tests"]
+        if isinstance(tests, list):
+            failed = [
+                t for t in tests if isinstance(t, dict) and t.get("outcome") == "failed"
+            ]
+            return len(failed)
     return None
 
 

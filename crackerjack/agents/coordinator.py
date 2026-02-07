@@ -153,18 +153,35 @@ class AgentCoordinator:
     async def _find_specialist_agents(self, issue_type: IssueType) -> list[SubAgent]:
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
 
+        # 🔍 DETAILED LOGGING: Agent selection
+        self.logger.info(f"🔍 Finding agents for {issue_type.value}")
+        self.logger.info(f"   Preferred: {preferred_agent_names}")
+
         specialist_agents = [
             agent
             for agent in self.agents
             if agent.__class__.__name__ in preferred_agent_names
         ]
 
-        if not specialist_agents:
+        if specialist_agents:
+            self.logger.info(
+                f"   ✓ Found {len(specialist_agents)} specialists by name: {[a.__class__.__name__ for a in specialist_agents]}"
+            )
+        else:
+            self.logger.info(
+                "   ⚠️  No specialists by name, checking supported types..."
+            )
             specialist_agents = [
                 agent
                 for agent in self.agents
                 if issue_type in agent.get_supported_types()
             ]
+            if specialist_agents:
+                self.logger.info(
+                    f"   ✓ Found {len(specialist_agents)} specialists by supported type: {[a.__class__.__name__ for a in specialist_agents]}"
+                )
+            else:
+                self.logger.warning(f"   ❌ No agents found for {issue_type.value}")
 
         return specialist_agents
 
@@ -416,20 +433,48 @@ class AgentCoordinator:
     async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
         cache_key = self._get_cache_key(agent.name, issue)
 
+        # 🔍 DETAILED LOGGING: Issue details
+        self.logger.info(f"🔧 AGENT CALL: {agent.name} → issue {issue.id[:8]}")
+        self.logger.info(f"   Type: {issue.type.value}")
+        self.logger.info(f"   File: {issue.file_path}:{issue.line_number}")
+        self.logger.info(f"   Message: {issue.message[:80]}...")
+
         if cache_key in self._issue_cache:
             self.logger.debug(f"Using in-memory cache for {agent.name}")
-            return self._issue_cache[cache_key]
+            cached = self._issue_cache[cache_key]
+            self.logger.warning(
+                f"   ⚠️  RETURNING CACHED RESULT: success={cached.success}"
+            )
+            return cached
 
         cached_result = self._coerce_cached_decision(
             self.cache.get_agent_decision(agent.name, self._create_issue_hash(issue)),
         )
         if cached_result:
             self.logger.debug(f"Using persistent cache for {agent.name}")
+            self.logger.warning(
+                f"   ⚠️  RETURNING PERSISTENT CACHED RESULT: success={cached_result.success}"
+            )
 
             self._issue_cache[cache_key] = cached_result
             return cached_result
 
+        # 🔍 DETAILED LOGGING: Agent execution
+        self.logger.info("   ▶️  Calling agent.analyze_and_fix()...")
         result = await agent.analyze_and_fix(issue)
+
+        # 🔍 DETAILED LOGGING: Agent result
+        self.logger.info(f"   ✓ AGENT RESULT: {agent.name}")
+        self.logger.info(f"   Success: {result.success}")
+        self.logger.info(f"   Confidence: {result.confidence}")
+        self.logger.info(f"   Fixes applied: {len(result.fixes_applied)}")
+        if result.fixes_applied:
+            for fix in result.fixes_applied[:3]:
+                self.logger.info(f"     - {fix[:80]}")
+        if result.remaining_issues:
+            self.logger.warning(f"   Remaining issues: {len(result.remaining_issues)}")
+            for remaining in result.remaining_issues[:3]:
+                self.logger.warning(f"     - {remaining[:80]}")
 
         if result.success and result.confidence > 0.7:
             self._issue_cache[cache_key] = result

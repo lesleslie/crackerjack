@@ -15,12 +15,14 @@ Crackerjack now supports **Ollama** as an embedding backend, providing high-qual
 Crackerjack's `EmbeddingService` supports three backends:
 
 ### 1. **onnxruntime** (Production)
+
 - **Best for**: Production environments where available
 - **Requirements**: onnxruntime package, Python 3.8-3.12 (for macOS x86_64)
 - **Model**: Sentence Transformers models (e.g., `all-MiniLM-L6-v2`)
 - **Performance**: Fast, CPU-based inference
 
 ### 2. **ollama** (Cross-platform Alternative)
+
 - **Best for**: macOS x86_64, ARM64, Linux, Windows - anywhere onnxruntime isn't available
 - **Requirements**: Ollama service running locally
 - **Model**: Any Ollama embedding model (e.g., `nomic-embed-text`, `mxbai-embed-large`)
@@ -28,6 +30,7 @@ Crackerjack's `EmbeddingService` supports three backends:
 - **Setup**: See Ollama installation below
 
 ### 3. **fallback** (Last Resort)
+
 - **Best for**: Development, testing, when no other backend is available
 - **Requirements**: None
 - **Method**: Hash-based embeddings (deterministic but not semantic)
@@ -157,24 +160,27 @@ print(f"Similarity: {similarity:.2%}")  # e.g., "Similarity: 87.45%"
 **Problem**: System falls back to hash-based embeddings even though Ollama is installed.
 
 **Solution**:
+
 1. Verify Ollama is running: `curl http://localhost:11434/api/tags`
-2. Check the service is accessible: `ollama list`
-3. Review logs for connection errors
+1. Check the service is accessible: `ollama list`
+1. Review logs for connection errors
 
 ### 404 Error from Ollama
 
 **Problem**: `HTTP Error 404: Not Found` when generating embeddings.
 
 **Solution**:
+
 1. Pull the embedding model: `ollama pull nomic-embed-text`
-2. Verify model is available: `ollama list`
-3. Check the model name matches in your config
+1. Verify model is available: `ollama list`
+1. Check the model name matches in your config
 
 ### Wrong Embedding Dimension
 
 **Problem**: Embedding dimensions don't match between different runs.
 
 **Solution**:
+
 - Ollama models have varying dimensions (check with `ollama list`)
 - Configure `embedding_dimension` in `SemanticConfig` to match your model
 - Use `get_model_info()` to see the actual dimension being used
@@ -210,12 +216,14 @@ print(f"Similarity: {similarity:.2%}")  # e.g., "Similarity: 87.45%"
 ### From ONNX Runtime to Ollama
 
 1. **Install Ollama**:
+
    ```bash
    curl -fsSL https://ollama.com/install.sh | sh
    ollama pull nomic-embed-text
    ```
 
-2. **Update Configuration**:
+1. **Update Configuration**:
+
    ```python
    # Before
    config = SemanticConfig(
@@ -230,10 +238,9 @@ print(f"Similarity: {similarity:.2%}")  # e.g., "Similarity: 87.45%"
    )
    ```
 
-3. **No Code Changes Required**: The API is identical across backends
+1. **No Code Changes Required**: The API is identical across backends
 
 ## See Also
 
 - [Ollama Documentation](https://ollama.com/)
 - [Ollama Models Library](https://ollama.com/search)
-- [Semantic Models Reference](../reference/SEMANTIC_MODELS.md)

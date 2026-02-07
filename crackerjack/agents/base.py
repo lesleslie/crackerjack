@@ -111,7 +111,6 @@ class AgentContext:
             path = Path(file_path)
             path.write_text(content, encoding="utf-8")
 
-            # VERIFY: Read back and confirm content was written correctly
             written_content = path.read_text(encoding="utf-8")
             if written_content != content:
                 logger.error(
@@ -140,7 +139,6 @@ class AgentContext:
             path = Path(file_path)
             await async_write_file(path, content)
 
-            # VERIFY: Read back and confirm content was written correctly
             written_content = await async_read_file(path)
             if written_content != content:
                 logger.error(

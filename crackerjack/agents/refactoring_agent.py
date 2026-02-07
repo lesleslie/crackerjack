@@ -301,7 +301,7 @@ class RefactoringAgent(SubAgent):
 
         if not complex_functions:
             return FixResult(
-                success=False,  # FIXED: No fix applied = failure
+                success=False,
                 confidence=0.0,
                 remaining_issues=["No overly complex functions found to fix"],
                 recommendations=["Manual review required"],
@@ -404,13 +404,6 @@ class RefactoringAgent(SubAgent):
     async def _process_complexity_reduction_with_line_number(
         self, file_path: Path, line_number: int
     ) -> FixResult:
-        """Process complexity reduction using line number from complexipy.
-
-        When complexipy provides a line number, it means the function at that line
-        has cyclomatic complexity >15. We trust this assessment and find the function
-        directly, bypassing the internal cognitive complexity analyzer which uses a
-        different metric and might not find the same functions.
-        """
         content = self.context.get_file_content(file_path)
         if not content:
             return FixResult(
@@ -421,24 +414,20 @@ class RefactoringAgent(SubAgent):
 
         tree = ast.parse(content)
 
-        # Find the function at the specific line number from complexipy
         target_function = None
         for node in ast.walk(tree):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 func_start = node.lineno
                 func_end = node.end_lineno or func_start
                 if func_start <= line_number <= func_end:
-                    # Found the function - build dict trusting complexipy's assessment
                     target_function = self._build_function_dict(node, content)
                     if target_function:
-                        # Ensure complexity passes threshold (trust complexipy)
                         target_function["complexity"] = max(
                             target_function.get("complexity", 0), 16
                         )
                     break
 
         if not target_function:
-            # Fallback: try internal complexity analyzer
             self.log(
                 f"Could not find function at line {line_number}, trying internal analyzer"
             )
@@ -456,7 +445,7 @@ class RefactoringAgent(SubAgent):
 
             if not target_functions:
                 return FixResult(
-                    success=False,  # FIXED: No fix applied = failure
+                    success=False,
                     confidence=0.0,
                     remaining_issues=[
                         f"No complex functions found near line {line_number}"
@@ -514,9 +503,7 @@ class RefactoringAgent(SubAgent):
     def _build_function_dict(
         self, node: ast.FunctionDef | ast.AsyncFunctionDef, content: str
     ) -> dict[str, t.Any] | None:
-        # Trust the external tool's (complexipy) complexity assessment
-        # Don't recalculate internally as it uses a different metric (cognitive vs cyclomatic)
-        # If we found the function by name from a complexipy issue, it needs refactoring
+
         source_segment = ast.get_source_segment(content, node) or ""
         internal_complexity = self._complexity_analyzer._estimate_function_complexity(
             source_segment
@@ -525,15 +512,13 @@ class RefactoringAgent(SubAgent):
             "name": node.name,
             "line_start": node.lineno,
             "line_end": node.end_lineno or node.lineno,
-            # Use internal complexity for the refactoring engine
-            # but process regardless since complexipy flagged it
-            "complexity": max(internal_complexity, 16),  # Ensure it passes threshold
+            "complexity": max(internal_complexity, 16),
             "node": node,
         }
 
     def _create_function_not_found_result(self, function_name: str) -> FixResult:
         return FixResult(
-            success=False,  # Changed from True - function not found is a failure
+            success=False,
             confidence=0.0,
             remaining_issues=[f"Function '{function_name}' not found in file"],
             recommendations=[
@@ -762,9 +747,6 @@ class RefactoringAgent(SubAgent):
         )
 
     async def _fix_type_error(self, issue: Issue) -> FixResult:
-        self._process_general_1()
-
-    async def _fix_type_error(self, issue: Issue) -> FixResult:
         confidence = await self._is_fixable_type_error(issue)
         if confidence == 0.0:
             return FixResult(
@@ -834,11 +816,6 @@ class RefactoringAgent(SubAgent):
             confidence=0.0,
             remaining_issues=["No changes applied"],
         )
-
-    async def _fix_type_error(self, issue: Issue) -> FixResult:
-        self._process_general_1()
-        self._process_loop_2()
-        self._handle_conditional_3()
 
 
 agent_registry.register(RefactoringAgent)

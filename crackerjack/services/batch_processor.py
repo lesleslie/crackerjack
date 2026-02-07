@@ -141,7 +141,6 @@ class BatchProcessor:
         max_retries: int = 2,
         parallel: bool = True,
     ) -> BatchProcessingResult:
-        """Process a batch of issues and return detailed results."""
 
         if batch_id is None:
             batch_id = f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
@@ -258,18 +257,11 @@ class BatchProcessor:
         self.console.print("\n" + "=" * 80 + "\n")
 
     async def _process_single_issue(
-        self._process_general_1()
-        self._process_loop_2()
-
-
-
-    async def _process_single_issue(
         self,
         issue: Issue,
         max_retries: int,
     ) -> BatchIssueResult:
         issue_result = BatchIssueResult(issue=issue, success=False, attempted=False)
-
 
         for attempt in range(max_retries + 1):
             try:
@@ -332,6 +324,8 @@ class BatchProcessor:
                 continue
 
         return issue_result
+
+
 def get_batch_processor(
     context: AgentContext,
     console: Console,

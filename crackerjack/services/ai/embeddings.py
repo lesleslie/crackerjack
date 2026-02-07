@@ -48,7 +48,6 @@ class EmbeddingService:
         self._ollama_available: bool = False
 
     def _determine_backend(self) -> t.Literal["onnxruntime", "ollama", "fallback"]:
-        """Determine which embedding backend to use based on configuration and availability."""
         requested = self.config.embedding_backend
 
         if requested == "fallback":
@@ -65,12 +64,10 @@ class EmbeddingService:
             )
             return "fallback"
 
-        # Auto mode: try onnxruntime first, then ollama, then fallback
         if ONNXRUNTIME_AVAILABLE:
             logger.info("Using onnxruntime backend (auto-detected)")
             return "onnxruntime"
 
-        # Check if Ollama is available
         if self._check_ollama_available():
             logger.info("Using Ollama backend (auto-detected)")
             return "ollama"
@@ -79,7 +76,6 @@ class EmbeddingService:
         return "fallback"
 
     def _check_ollama_available(self) -> bool:
-        """Check if Ollama service is running and accessible."""
         try:
             import urllib.request
 
@@ -116,7 +112,6 @@ class EmbeddingService:
         return self._tokenizer
 
     def _load_model(self) -> None:
-        """Load the appropriate embedding model based on the selected backend."""
         if self._backend == "onnxruntime":
             self._load_onnx_model()
         elif self._backend == "ollama":
@@ -125,7 +120,6 @@ class EmbeddingService:
             self._load_fallback_model()
 
     def _load_onnx_model(self) -> None:
-        """Load ONNX embedding model."""
         try:
             logger.info(f"Loading ONNX embedding model: {self.config.embedding_model}")
 
@@ -155,7 +149,6 @@ class EmbeddingService:
             self._model_loaded = True
 
     def _load_ollama_model(self) -> None:
-        """Initialize Ollama backend (lazy loading)."""
         logger.info(f"Using Ollama backend at {self.config.ollama_base_url}")
         if not self._ollama_available:
             if not self._check_ollama_available():
@@ -166,7 +159,6 @@ class EmbeddingService:
         self._model_loaded = True
 
     def _load_fallback_model(self) -> None:
-        """Initialize fallback backend."""
         logger.info("Using fallback hash-based embeddings")
         self._model_loaded = True
 
@@ -189,17 +181,14 @@ class EmbeddingService:
             raise RuntimeError(msg) from e
 
     def _generate_onnx_embedding(self, text: str) -> list[float]:
-        """Generate embedding using ONNX runtime."""
-        # For now, use fallback as ONNX session is not fully implemented
+
         return self._generate_fallback_embedding(text)
 
     def _generate_ollama_embedding(self, text: str) -> list[float]:
-        """Generate embedding using Ollama API."""
         try:
             import json
             import urllib.request
 
-            # Ensure Ollama is still available
             if not self._ollama_available and not self._check_ollama_available():
                 logger.warning(
                     "Ollama became unavailable, falling back to hash-based embeddings"
@@ -207,7 +196,6 @@ class EmbeddingService:
                 self._backend = "fallback"
                 return self._generate_fallback_embedding(text)
 
-            # Prepare the request
             data = {
                 "model": self.config.embedding_model,
                 "prompt": text,
@@ -238,7 +226,7 @@ class EmbeddingService:
 
         except Exception as e:
             logger.exception(f"Failed to generate Ollama embedding: {e}")
-            # Fall back to hash-based embedding on error
+
             return self._generate_fallback_embedding(text)
 
     def _generate_fallback_embedding(self, text: str) -> list[float]:
@@ -419,11 +407,7 @@ class EmbeddingService:
 
         return sentences or [text]
 
-    def is_model_available(self) -> bool:
-        self._process_general_1()
-
     def get_model_info(self) -> dict[str, t.Any]:
-        """Get information about the current embedding backend."""
         if not self._model_loaded:
             try:
                 self._load_model()
@@ -442,7 +426,7 @@ class EmbeddingService:
                     "backend": "ollama",
                     "model_name": self.config.embedding_model,
                     "loaded": self._ollama_available,
-                    "embedding_dimension": None,  # Ollama models have varying dimensions
+                    "embedding_dimension": None,
                     "device": "ollama-server",
                     "base_url": self.config.ollama_base_url,
                 }
@@ -456,7 +440,7 @@ class EmbeddingService:
                     "embedding_dimension": len(test_embedding),
                     "device": "cpu",
                 }
-            else:  # fallback
+            else:
                 test_embedding = self._generate_fallback_embedding("test")
                 return {
                     "backend": "fallback",
@@ -474,18 +458,15 @@ class EmbeddingService:
             }
 
     def is_model_available(self) -> bool:
-        """Check if the embedding backend is available."""
         if not self._model_loaded:
             try:
                 self._load_model()
             except Exception:
                 return False
 
-        # Different availability checks for different backends
         if self._backend == "onnxruntime":
             return self._session is not None
         elif self._backend == "ollama":
             return self._ollama_available
         else:
-            # Fallback is always available
             return True

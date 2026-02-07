@@ -98,7 +98,6 @@ class SkylosAdapter(BaseToolAdapter):
         if self.settings.use_json_output:
             cmd.append("--json")
 
-        # CRITICAL: Exclude tests to prevent circular import hangs
         cmd.extend(["--exclude-folder", "tests"])
 
         if files is None and self.file_filter:
