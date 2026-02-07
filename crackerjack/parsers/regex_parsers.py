@@ -309,7 +309,9 @@ class GenericRegexParser(RegexParser):
         failure_indicators = ("failed", "error", "invalid", "issue", "would be")
         if not any(indicator in output_lower for indicator in failure_indicators):
             # No clear success or failure indicators - likely informational output
-            logger.debug(f"{self.tool_name} produced unclear output, treating as success")
+            logger.debug(
+                f"{self.tool_name} produced unclear output, treating as success"
+            )
             return []
 
         # Create generic issue for actual failures
@@ -554,6 +556,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("codespell", CodespellRegexParser)
     factory.register_regex_parser("refurb", RefurbRegexParser)
     factory.register_regex_parser("pyscn", PyscnRegexParser)
+    factory.register_regex_parser("ruff", RuffRegexParser)
     factory.register_regex_parser("ruff-format", RuffFormatRegexParser)
     factory.register_regex_parser("complexipy", ComplexityRegexParser)
     factory.register_regex_parser("creosote", CreosoteRegexParser)
@@ -579,7 +582,7 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("check-ast", CheckAstParser)
 
     logger.info(
-        "Registered regex parsers: codespell, refurb, pyscn, ruff-format, complexipy, "
+        "Registered regex parsers: codespell, refurb, pyscn, ruff, ruff-format, complexipy, "
         "creosote, mypy, zuban, skylos, check-local-links, check-yaml, check-toml, check-json, "
         "validate-regex-patterns, trailing-whitespace, end-of-file-fixer, format-json, "
         "mdformat, uv-lock, check-added-large-files, check-ast"
@@ -681,3 +684,70 @@ class CheckAddedLargeFilesParser(GenericRegexParser):
 class CheckAstParser(GenericRegexParser):
     def __init__(self) -> None:
         super().__init__("check-ast", IssueType.FORMATTING)
+
+
+class RuffRegexParser(RegexParser):
+    """Parser for ruff text output (not JSON format)."""
+
+    def __init__(self) -> None:
+        self.tool_name = "ruff"
+
+    def parse_text(self, output: str) -> list[Issue]:
+        from pathlib import Path
+
+        issues: list[Issue] = []
+        lines = output.strip().split("\n")
+
+        for line in lines:
+            if ":" not in line:
+                continue
+
+            issue = self._parse_line(line)
+            if issue:
+                issues.append(issue)
+
+        return issues
+
+    def _parse_line(self, line: str) -> Issue | None:
+        from pathlib import Path
+
+        # Ruff text format: file:line:col: code message
+        # Example: fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)
+        parts = line.split(":", maxsplit=3)
+        if len(parts) < 4:
+            return None
+
+        try:
+            file_path = Path(parts[0].strip())
+            line_number = int(parts[1].strip())
+            column_number = (
+                int(parts[2].strip()) if parts[2].strip().isdigit() else None
+            )
+
+            message_part = parts[3].strip()
+            code, message = self._extract_code_and_message(message_part)
+
+            return Issue(
+                type=IssueType.COMPLEXITY if code and code.startswith("C9") else IssueType.FORMATTING,
+                severity=Priority.HIGH if code and code.startswith(("C9", "S", "E")) else Priority.MEDIUM,
+                message=f"{code} {message}" if code else message,
+                file_path=file_path,
+                line_number=line_number,
+                stage="ruff-check",
+                details=[f"code: {code}"] if code else [],
+            )
+
+        except (ValueError, IndexError):
+            return None
+
+    def _extract_code_and_message(self, message_part: str) -> tuple[str | None, str]:
+        if " " not in message_part:
+            return None, message_part
+
+        code_candidate = message_part.split()[0]
+        if code_candidate.strip():
+            code = code_candidate
+            message = message_part[len(code) :].strip()
+            return code, message
+
+        return None, message_part
