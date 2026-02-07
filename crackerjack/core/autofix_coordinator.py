@@ -1384,6 +1384,9 @@ class AutofixCoordinator:
             "check-toml",
             "check-json",
             "pip-audit",
+            "check-ast",  # Reports ✓ for each file checked, not just failures
+            "format-json",  # Reports ✓ for each file formatted, not just failures
+            "ruff-format",  # Creates aggregate issues, not per-file issues
         ):
             return None
 
