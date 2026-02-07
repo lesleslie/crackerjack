@@ -91,16 +91,19 @@ oneiric.shell.AdminShell
 ### Key Components
 
 1. **Adapter** (`crackerjack/shell/adapter.py`)
+
    - Extends `AdminShell` with quality management features
    - Implements session tracking via Session-Buddy MCP
    - Provides quality check functions
 
-2. **Session Tracker** (`oneiric/shell/session_tracker.py`)
+1. **Session Tracker** (`oneiric/shell/session_tracker.py`)
+
    - Emits session start/end events
    - Tracks metadata (version, adapters, project root)
    - Integrates with Session-Buddy MCP
 
-3. **Namespace Helpers**
+1. **Namespace Helpers**
+
    - Quality functions (crack, test, lint, scan)
    - Inspection functions (show_adapters, show_hooks)
    - Configuration objects
@@ -207,8 +210,8 @@ def _get_banner(self) -> str:
 If session tracking is not working:
 
 1. Check Session-Buddy MCP is running on port 8678
-2. Verify oneiric dependency is installed: `pip list | grep oneiric`
-3. Check logs for errors: `journalctl -u crackerjack -f`
+1. Verify oneiric dependency is installed: `pip list | grep oneiric`
+1. Check logs for errors: `journalctl -u crackerjack -f`
 
 ### Quality Checks Failing
 
@@ -220,13 +223,13 @@ If quality checks fail:
    typecheck() # Check types
    scan()      # Check security
    ```
-2. Check tool installation:
+1. Check tool installation:
    ```bash
    which ruff
    which mypy
    which bandit
    ```
-3. Run checks directly for more detail:
+1. Run checks directly for more detail:
    ```bash
    ruff check .
    mypy crackerjack/
