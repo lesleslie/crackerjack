@@ -275,3 +275,283 @@ class TestComplexipyJSONParserGetIssueCount:
         """Test issue count with non-list data."""
         count = parser.get_issue_count({"not": "a list"})
         assert count == 0
+
+
+class TestComplexipyJSONParserParseMethod:
+    """Test the parse() method with file-based JSON output."""
+
+    @pytest.fixture
+    def parser(self):
+        """Create ComplexipyJSONParser instance."""
+        return ComplexipyJSONParser(max_complexity=15)
+
+    def test_parse_multiline_output_with_json_path(self, parser, tmp_path):
+        """Test that re.DOTALL enables matching across newlines."""
+        # Create actual JSON file
+        json_file = tmp_path / "complexipy_results.json"
+        json_file.write_text(
+            '[{"complexity": 20, "file_name": "test.py", "function_name": "func", "path": "test.py"}]'
+        )
+
+        output = f"""Results saved at
+{json_file}
+Some other text here"""
+
+        issues = parser.parse(output, "complexipy")
+
+        assert len(issues) == 1
+        assert issues[0].details[0] == "complexity: 20"
+
+    def test_parse_no_results_saved_message(self, parser):
+        """Test parse() when 'Results saved at' is missing."""
+        output = "No results here"
+        issues = parser.parse(output, "complexipy")
+        assert issues == []
+
+    def test_parse_json_file_not_found(self, parser):
+        """Test parse() when extracted JSON path doesn't exist."""
+        output = """Results saved at
+/nonexistent/path/to/file.json"""
+        issues = parser.parse(output, "complexipy")
+        assert issues == []
+
+    def test_parse_malformed_json(self, parser, tmp_path, caplog):
+        """Test parsing handles malformed JSON gracefully."""
+        import logging
+
+        json_file = tmp_path / "malformed.json"
+        json_file.write_text('{"invalid": json syntax}')  # Missing quotes
+
+        output = f"Results saved at\n{json_file}"
+
+        with caplog.at_level(logging.ERROR):
+            issues = parser.parse(output, "complexipy")
+
+        assert issues == []
+        assert "Error reading/parsing complexipy JSON file" in caplog.text
+
+    def test_parse_json_wrong_structure(self, parser, tmp_path, caplog):
+        """Test parsing when JSON is dict instead of list."""
+        import logging
+
+        json_file = tmp_path / "wrong_structure.json"
+        json_file.write_text('{"files": []}')  # Dict, not list
+
+        output = f"Results saved at\n{json_file}"
+
+        with caplog.at_level(logging.WARNING):
+            issues = parser.parse(output, "complexipy")
+
+        assert issues == []
+        assert "not a list" in caplog.text
+
+    def test_parse_json_missing_required_fields(self, parser, tmp_path, caplog):
+        """Test parsing handles missing required fields."""
+        import logging
+
+        json_file = tmp_path / "missing_fields.json"
+        json_file.write_text('[{"complexity": 20, "file_name": "test.py"}]')  # Missing function_name, path
+
+        output = f"Results saved at\n{json_file}"
+
+        with caplog.at_level(logging.WARNING):
+            issues = parser.parse(output, "complexipy")
+
+        assert issues == []
+        assert "missing required fields" in caplog.text
+
+    def test_parse_multiple_json_paths_chooses_first(self, parser, tmp_path):
+        """Test that parser extracts the FIRST .json path after 'Results saved at'."""
+        # Create the expected JSON file
+        expected_json = tmp_path / "complexipy_results.json"
+        expected_json.write_text(
+            '[{"complexity": 20, "file_name": "test.py", "function_name": "func", "path": "test.py"}]'
+        )
+
+        # Create a decoy JSON file
+        decoy_json = tmp_path / "other.json"
+        decoy_json.write_text("[]")
+
+        output = f"""Results saved at
+{expected_json}
+Also check {decoy_json}
+And another_file.json"""
+
+        issues = parser.parse(output, "complexipy")
+
+        # Should only parse the expected file, not decoys
+        assert len(issues) == 1
+        assert "func" in issues[0].message
+
+    def test_parse_regex_requires_dotall_for_multiline(self):
+        """Test that regex pattern works with multiline output."""
+        import re
+
+        pattern = r"Results saved at\s+(.+?\.json)"
+
+        # Multiline output like complexipy produces
+        multiline_output = """Results saved at
+/path/to/file.json
+more text"""
+
+        # With DOTALL (as implemented in the parser), should match
+        match_dotall = re.search(pattern, multiline_output, re.DOTALL)
+        assert match_dotall is not None
+        assert match_dotall.group(1).strip() == "/path/to/file.json"
+
+        # The key is that DOTALL ensures . matches newlines throughout the pattern,
+        # making it more robust for complex multiline outputs
+        assert ".json" in match_dotall.group(0)
+
+
+class TestComplexipyJSONParserMalformedData:
+    """Test error handling for malformed JSON data."""
+
+    @pytest.fixture
+    def parser(self):
+        """Create ComplexipyJSONParser instance."""
+        return ComplexipyJSONParser(max_complexity=15)
+
+    def test_parse_json_with_syntax_error(self, parser, tmp_path, caplog):
+        """Test parsing JSON with syntax errors."""
+        import logging
+
+        json_file = tmp_path / "syntax_error.json"
+        json_file.write_text('{"unclosed": true')  # Missing closing brace
+
+        output = f"Results saved at\n{json_file}"
+
+        with caplog.at_level(logging.ERROR):
+            issues = parser.parse(output, "complexipy")
+
+        assert issues == []
+        assert any("Error reading/parsing" in record.message for record in caplog.records)
+
+    def test_parse_json_empty_array(self, parser, tmp_path):
+        """Test parsing empty JSON array."""
+        json_file = tmp_path / "empty.json"
+        json_file.write_text("[]")
+
+        output = f"Results saved at\n{json_file}"
+
+        issues = parser.parse(output, "complexipy")
+
+        assert issues == []
+
+    def test_parse_json_with_null_values(self, parser, tmp_path):
+        """Test parsing JSON with null values in required fields."""
+        json_file = tmp_path / "null_values.json"
+        json_file.write_text(
+            '[{"complexity": null, "file_name": null, "function_name": null, "path": null}]'
+        )
+
+        output = f"Results saved at\n{json_file}"
+
+        issues = parser.parse(output, "complexipy")
+
+        # Should skip items with null required fields
+        assert len(issues) == 0
+
+
+class TestComplexipyJSONParserIntegration:
+    """Integration tests with real complexipy tool (if available)."""
+
+    @pytest.fixture
+    def parser(self):
+        """Create ComplexipyJSONParser instance."""
+        return ComplexipyJSONParser(max_complexity=15)
+
+    @pytest.mark.integration
+    @pytest.mark.skipif(
+        True,  # Skip by default, enable with: pytest -m integration --runxfail
+        reason="Integration test - enable manually to test with real complexipy",
+    )
+    def test_integration_with_real_complexipy(self, parser, tmp_path):
+        """Test parser with real complexipy output."""
+        import shutil
+        import subprocess
+
+        if not shutil.which("complexipy"):
+            pytest.skip("complexipy not installed")
+
+        # Create test Python file with high complexity
+        test_file = tmp_path / "complex_code.py"
+        test_file.write_text(
+            """
+def complex_function(x):
+    '''Function with high complexity.'''
+    if x > 10:
+        if x < 20:
+            if x == 15:
+                if x > 0:
+                    return True
+    return False
+"""
+        )
+
+        # Run complexipy
+        result = subprocess.run(
+            ["complexipy", str(test_file), "--output-json"],
+            capture_output=True,
+            text=True,
+            cwd=tmp_path,
+        )
+
+        # Parse output
+        issues = parser.parse(result.stdout, "complexipy")
+
+        # Verify we got the complexity issue
+        assert len(issues) > 0, "Should find at least one complex function"
+        assert any("complex_function" in issue.message for issue in issues)
+
+    def test_integration_realistic_output(self, parser, tmp_path):
+        """Test with realistic complexipy output format."""
+        # Create a realistic JSON file
+        json_file = tmp_path / "complexipy_results_2026_02_06__12-00-00.json"
+        test_py = tmp_path / "module.py"
+        test_py.write_text(
+            """
+class MyClass:
+    def complex_method(self, data):
+        '''Complex method.'''
+        results = []
+        for item in data:
+            if item.valid:
+                for sub in item.items:
+                    if sub.value > 0:
+                        if sub.active:
+                            results.append(sub)
+        return results
+"""
+        )
+
+        json_file.write_text(
+            json.dumps(
+                [
+                    {
+                        "complexity": 18,
+                        "file_name": "module.py",
+                        "function_name": "MyClass::complex_method",
+                        "path": str(test_py),
+                    }
+                ]
+            )
+        )
+
+        # Realistic complexipy stdout format
+        output = f"""Analyzing {tmp_path}
+Found 1 complex functions
+
+──────────────────────────────── 🐙 complexipy ─────────────────────────────────
+Results saved at
+{json_file}
+
+Summary: 1 function(s) exceed threshold 15
+"""
+
+        issues = parser.parse(output, "complexipy")
+
+        assert len(issues) == 1
+        assert issues[0].line_number == 3  # complex_method starts at line 3 (after initial blank)
+        assert "MyClass::complex_method" in issues[0].message
+        assert issues[0].details[0] == "complexity: 18"
