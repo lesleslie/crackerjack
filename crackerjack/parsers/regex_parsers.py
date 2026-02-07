@@ -549,6 +549,7 @@ class LocalLinkCheckerRegexParser(RegexParser):
             file_path=file_path,
             line_number=int(line_num) if line_num.isdigit() else None,
             stage="check-local-links",
+            details=[f"Target file: {link_target}"],
         )
 
 
@@ -720,9 +721,8 @@ class RuffRegexParser(RegexParser):
                     issues.append(issue)
                     i += 1  # Skip the arrow line
                     # Skip context lines (optional)
-                    while (
-                        i < len(lines)
-                        and (lines[i].startswith("|") or lines[i].strip() == "")
+                    while i < len(lines) and (
+                        lines[i].startswith("|") or lines[i].strip() == ""
                     ):
                         i += 1
                     continue
@@ -738,8 +738,8 @@ class RuffRegexParser(RegexParser):
         return issues
 
     def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
-        from pathlib import Path
         import re
+        from pathlib import Path
 
         # Parse code line: "C901 `fix_test_file` is too complex (23 > 15)"
         code_match = re.match(r"^([A-Z]+\d+)\s+(.+)$", code_line)
@@ -757,11 +757,15 @@ class RuffRegexParser(RegexParser):
         try:
             file_path = Path(arrow_match.group(1))
             line_number = int(arrow_match.group(2))
-            column_number = int(arrow_match.group(3))
+            int(arrow_match.group(3))
 
             return Issue(
-                type=IssueType.COMPLEXITY if code.startswith("C9") else IssueType.FORMATTING,
-                severity=Priority.HIGH if code.startswith(("C9", "S", "E")) else Priority.MEDIUM,
+                type=IssueType.COMPLEXITY
+                if code.startswith("C9")
+                else IssueType.FORMATTING,
+                severity=Priority.HIGH
+                if code.startswith(("C9", "S", "E"))
+                else Priority.MEDIUM,
                 message=f"{code} {message}",
                 file_path=file_path,
                 line_number=line_number,
@@ -782,9 +786,7 @@ class RuffRegexParser(RegexParser):
         try:
             file_path = Path(parts[0].strip())
             line_number = int(parts[1].strip())
-            column_number = (
-                int(parts[2].strip()) if parts[2].strip().isdigit() else None
-            )
+            (int(parts[2].strip()) if parts[2].strip().isdigit() else None)
 
             message_part = parts[3].strip()
             code, message = self._extract_code_and_message(message_part)
