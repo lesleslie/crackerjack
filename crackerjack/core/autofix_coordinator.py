@@ -1427,8 +1427,28 @@ class AutofixCoordinator:
             if not hasattr(issue, "message") or not issue.message:
                 errors.append("missing or empty message")
 
+            # Allow file_path=None for aggregate issues (mentions "file(s)" or "files")
             if not issue.file_path:
-                errors.append("missing file_path")
+                # Check if this is an aggregate issue (mentions multiple files)
+                msg_lower = issue.message.lower()
+                is_aggregate = (
+                    # Patterns that indicate aggregate issues:
+                    # "N files", "N file(s)", "multiple files", "would reformat"
+                    # "files require", "files formatted", etc.
+                    "file" in msg_lower and (
+                        "files" in msg_lower or  # plural "files"
+                        "file(" in msg_lower or  # "file(s)"
+                        "would be reformatted" in msg_lower or
+                        "require formatting" in msg_lower or
+                        "formatting error" in msg_lower
+                    )
+                )
+                if not is_aggregate:
+                    errors.append("missing file_path")
+                else:
+                    self.logger.debug(
+                        f"⚠️ Issue {issue.id} has no file_path but is aggregate: {issue.message[:60]}"
+                    )
 
             if issue.line_number is None:
                 self.logger.debug(

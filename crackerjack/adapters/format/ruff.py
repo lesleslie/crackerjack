@@ -155,6 +155,10 @@ class RuffAdapter(BaseToolAdapter):
         return issues
 
     def _parse_check_json(self, output: str) -> list[ToolIssue]:
+        # Handle ruff's "[*]" empty output pattern
+        if output.strip() == "[*]":
+            output = "[]"
+
         try:
             data = json.loads(output)
         except json.JSONDecodeError:
