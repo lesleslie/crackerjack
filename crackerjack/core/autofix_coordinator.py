@@ -1386,6 +1386,8 @@ class AutofixCoordinator:
             "pip-audit",
             "check-ast",  # Reports ✓ for each file checked, not just failures
             "format-json",  # Reports ✓ for each file formatted, not just failures
+            "ruff",  # Diagnostic format has context lines that confuse line counting
+            "ruff-check",  # Alias for ruff
             "ruff-format",  # Creates aggregate issues, not per-file issues
         ):
             return None
@@ -1435,12 +1437,13 @@ class AutofixCoordinator:
                     # Patterns that indicate aggregate issues:
                     # "N files", "N file(s)", "multiple files", "would reformat"
                     # "files require", "files formatted", etc.
-                    "file" in msg_lower and (
-                        "files" in msg_lower or  # plural "files"
-                        "file(" in msg_lower or  # "file(s)"
-                        "would be reformatted" in msg_lower or
-                        "require formatting" in msg_lower or
-                        "formatting error" in msg_lower
+                    "file" in msg_lower
+                    and (
+                        "files" in msg_lower  # plural "files"
+                        or "file(" in msg_lower  # "file(s)"
+                        or "would be reformatted" in msg_lower
+                        or "require formatting" in msg_lower
+                        or "formatting error" in msg_lower
                     )
                 )
                 if not is_aggregate:
