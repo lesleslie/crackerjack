@@ -687,32 +687,94 @@ class CheckAstParser(GenericRegexParser):
 
 
 class RuffRegexParser(RegexParser):
-    """Parser for ruff text output (not JSON format)."""
+    """Parser for ruff text output (not JSON format).
+
+    Handles both ruff's "full" (diagnostic) and "concise" formats.
+    """
 
     def __init__(self) -> None:
         self.tool_name = "ruff"
 
     def parse_text(self, output: str) -> list[Issue]:
-        from pathlib import Path
 
         issues: list[Issue] = []
         lines = output.strip().split("\n")
 
-        for line in lines:
-            if ":" not in line:
-                continue
+        # Ruff diagnostic format (full):
+        # C901 `fix_test_file` is too complex (23 > 15)
+        #  --> fix_test_imports.py:6:5
+        #
+        # Ruff concise format:
+        # fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)
 
-            issue = self._parse_line(line)
-            if issue:
-                issues.append(issue)
+        i = 0
+        while i < len(lines):
+            line = lines[i].strip()
+
+            # Check for diagnostic format (code on first line, arrow on second)
+            if line.startswith("-->") and i > 0:
+                # Previous line should have the code and message
+                prev_line = lines[i - 1].strip()
+                issue = self._parse_diagnostic_format(prev_line, line)
+                if issue:
+                    issues.append(issue)
+                    i += 1  # Skip the arrow line
+                    # Skip context lines (optional)
+                    while (
+                        i < len(lines)
+                        and (lines[i].startswith("|") or lines[i].strip() == "")
+                    ):
+                        i += 1
+                    continue
+
+            # Check for concise format (single line: file:line:col: CODE message)
+            if ":" in line and len(line.split(":")) >= 4:
+                issue = self._parse_concise_format(line)
+                if issue:
+                    issues.append(issue)
+
+            i += 1
 
         return issues
 
-    def _parse_line(self, line: str) -> Issue | None:
+    def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
+        from pathlib import Path
+        import re
+
+        # Parse code line: "C901 `fix_test_file` is too complex (23 > 15)"
+        code_match = re.match(r"^([A-Z]+\d+)\s+(.+)$", code_line)
+        if not code_match:
+            return None
+
+        code = code_match.group(1)
+        message = code_match.group(2).strip()
+
+        # Parse arrow line: " --> fix_test_imports.py:6:5"
+        arrow_match = re.search(r"-->\s+(\S+):(\d+):(\d+)", arrow_line)
+        if not arrow_match:
+            return None
+
+        try:
+            file_path = Path(arrow_match.group(1))
+            line_number = int(arrow_match.group(2))
+            column_number = int(arrow_match.group(3))
+
+            return Issue(
+                type=IssueType.COMPLEXITY if code.startswith("C9") else IssueType.FORMATTING,
+                severity=Priority.HIGH if code.startswith(("C9", "S", "E")) else Priority.MEDIUM,
+                message=f"{code} {message}",
+                file_path=file_path,
+                line_number=line_number,
+                stage="ruff-check",
+                details=[f"code: {code}"],
+            )
+        except (ValueError, IndexError):
+            return None
+
+    def _parse_concise_format(self, line: str) -> Issue | None:
         from pathlib import Path
 
-        # Ruff text format: file:line:col: code message
-        # Example: fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)
+        # Parse: "fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)"
         parts = line.split(":", maxsplit=3)
         if len(parts) < 4:
             return None
@@ -728,8 +790,12 @@ class RuffRegexParser(RegexParser):
             code, message = self._extract_code_and_message(message_part)
 
             return Issue(
-                type=IssueType.COMPLEXITY if code and code.startswith("C9") else IssueType.FORMATTING,
-                severity=Priority.HIGH if code and code.startswith(("C9", "S", "E")) else Priority.MEDIUM,
+                type=IssueType.COMPLEXITY
+                if code and code.startswith("C9")
+                else IssueType.FORMATTING,
+                severity=Priority.HIGH
+                if code and code.startswith(("C9", "S", "E"))
+                else Priority.MEDIUM,
                 message=f"{code} {message}" if code else message,
                 file_path=file_path,
                 line_number=line_number,
