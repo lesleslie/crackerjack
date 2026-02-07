@@ -22,31 +22,12 @@ class JSONParser(ABC):
     def get_issue_count(self, data: dict[str, object] | list[object]) -> int: ...
 
     def parse(self, output: str, tool_name: str) -> list[Issue]:
-        self._process_general_1()
-        self._process_loop_2()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
-        self._process_general_1()
-        self._process_loop_2()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
-        self._process_general_1()
-        self._process_loop_2()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
-        self._process_general_1()
-        self._process_loop_2()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
-        self._process_general_1()
-        self._process_loop_2()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
         import json
+        import logging
+
+        logger = logging.getLogger(__name__)
 
         try:
-            # Tool may output error messages or text before/after JSON
-            # Extract only the JSON portion by finding the first { and last }
             output = output.strip()
             if not output:
                 from crackerjack.parsers.factory import ParsingError
@@ -57,10 +38,17 @@ class JSONParser(ABC):
                     output=output,
                 )
 
-            # Find JSON object boundaries
-            start_idx = output.find("{")
-            if start_idx == -1:
-                start_idx = output.find("[")  # Handle JSON arrays
+            # Find both { and [, choose whichever comes first
+            brace_idx = output.find("{")
+            bracket_idx = output.find("[")
+
+            # Choose the earliest one that exists
+            if brace_idx == -1:
+                start_idx = bracket_idx
+            elif bracket_idx == -1:
+                start_idx = brace_idx
+            else:
+                start_idx = min(brace_idx, bracket_idx)
 
             if start_idx == -1:
                 from crackerjack.parsers.factory import ParsingError
@@ -71,9 +59,7 @@ class JSONParser(ABC):
                     output=output[:200],
                 )
 
-            # Find matching end bracket
             if output[start_idx] == "{":
-                # Find matching closing brace
                 depth = 0
 
                 for i in range(start_idx, len(output)):
@@ -84,7 +70,7 @@ class JSONParser(ABC):
                         if depth == 0:
                             output = output[start_idx : i + 1]
                             break
-            else:  # Array start
+            else:
                 depth = 0
                 for i in range(start_idx, len(output)):
                     if output[i] == "[":
@@ -96,6 +82,9 @@ class JSONParser(ABC):
                             break
 
             data = json.loads(output)
+            logger.debug(
+                f"🐛 PARSE DEBUG ({tool_name}): json.loads() returned {type(data).__name__}"
+            )
         except json.JSONDecodeError as e:
             from crackerjack.parsers.factory import ParsingError
 

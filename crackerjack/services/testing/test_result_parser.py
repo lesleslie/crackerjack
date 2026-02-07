@@ -220,10 +220,6 @@ class TestResultParser:
 
         return Path("unknown.py"), None
 
-    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
-        self._process_general_1()
-
-    def _extract_traceback(self, section: str) -> list[str]:
         traceback_lines = []
         in_traceback = False
 
@@ -249,9 +245,6 @@ class TestResultParser:
         if "error at setup" in section_lower or "setup error" in section_lower:
             return "setup"
         return "call"
-
-    def _parse_json_test(self, test_data: dict) -> TestFailure | None:
-        self._process_general_1()
 
     def _build_error_patterns(self) -> dict[TestErrorType, list[str]]:
         return {
@@ -335,28 +328,6 @@ class TestResultParser:
         except Exception as e:
             logger.warning(f"Failed to parse JSON test data: {e}")
             return None
-
-    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
-        section_lower = section.lower()
-
-
-        for handler in [
-            self._check_fixture_error,
-            self._check_import_error,
-            self._check_mock_spec_error,
-            self._check_attribute_error,
-            self._check_validation_error,
-            self._check_type_error,
-            self._check_assertion_error,
-            self._check_hardcoded_path,
-            self._check_undefined_name,
-        ]:
-            result = handler(section, section_lower)
-            if result:
-                return result
-
-
-        return self._check_generic_error(section)
 
     def _check_fixture_error(
         self, section: str, section_lower: str
@@ -454,11 +425,28 @@ class TestResultParser:
 
         return (TestErrorType.UNKNOWN, "Unknown test failure")
 
-    def _parse_json_test(self, test_data: dict) -> TestFailure | None:
-        self._process_general_1()
-        self._process_loop_2()
+    def _classify_error(self, section: str) -> tuple[TestErrorType, str]:
+        section_lower = section.lower()
 
 
+
+        for handler in [
+            self._check_fixture_error,
+            self._check_import_error,
+            self._check_mock_spec_error,
+            self._check_attribute_error,
+            self._check_validation_error,
+            self._check_type_error,
+            self._check_assertion_error,
+            self._check_hardcoded_path,
+            self._check_undefined_name,
+        ]:
+            result = handler(section, section_lower)
+            if result:
+                return result
+
+
+        return self._check_generic_error(section)
 _default_parser: TestResultParser | None = None
 
 

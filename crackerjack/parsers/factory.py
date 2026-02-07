@@ -117,32 +117,17 @@ class ParserFactory:
         return issues
 
     def _is_json_output(self, output: str) -> bool:
-        """Check if output contains JSON (handles leading/trailing text).
 
-        This is more strict than checking for keywords anywhere, because
-        text output can contain JSON-related terms in file paths or messages
-        (e.g., "JSONParser.parse" or "parsers/base.py").
-
-        Strategy: Strip common warning prefixes, then require JSON structure.
-        """
-        # Remove leading non-JSON content (common tool warnings/messages)
         lines = output.split("\n")
 
-        # Find first line that looks like start of JSON
         for i, line in enumerate(lines):
             stripped_line = line.lstrip()
             if stripped_line.startswith(("{", "[")):
-                # Found potential JSON start - verify it's not a false positive
-                # by checking the next 100 chars look like JSON
                 sample = "\n".join(lines[i:]).lstrip()[:200]
-                # Must have matching bracket structure indicators
-                if (
-                    ('"' in sample or "'" in sample)  # Has quoted strings
-                    and (":" in sample)  # Has key-value separators
-                ):
+
+                if ('"' in sample or "'" in sample) and (":" in sample):
                     return True
-                # If looks like JSON but no quotes yet, might be minified
-                # Check for common JSON keys
+
                 if any(k in sample for k in ('"version"', '"results"', '"errors"')):
                     return True
 
@@ -151,20 +136,18 @@ class ParserFactory:
     def _parse_json_output(
         self, parser: JSONParser | RegexParser, output: str, tool_name: str
     ) -> list[Issue]:
-        # JSONParser has parse() method with robust extraction
-        # RegexParser has parse_text() method
+
         try:
             if isinstance(parser, JSONParser):
                 return parser.parse(output, tool_name)
             else:
-                # This shouldn't happen - _is_json_output should route correctly
                 logger.warning(
                     f"JSON output detected but using RegexParser for '{tool_name}', "
                     "attempting direct JSON parse"
                 )
                 import json
 
-                json.loads(output)  # Will fail if there's leading text
+                json.loads(output)
                 return (
                     parser.parse_text(output) if isinstance(parser, RegexParser) else []
                 )

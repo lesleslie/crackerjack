@@ -11,6 +11,7 @@ logger = logging.getLogger(__name__)
 
 class RuffJSONParser(JSONParser):
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
+        logger.debug(f"🐛 RuffJSONParser.parse_json() received: {type(data).__name__}")
         if not isinstance(data, list):
             logger.warning(f"Expected list from ruff, got {type(data)}")
             return []
@@ -327,10 +328,6 @@ class ComplexipyJSONParser(JSONParser):
             )
             return None
 
-    def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
-        self._process_general_1()
-
-    def parse(self, output: str, tool_name: str) -> list[Issue]:
         import re
         from pathlib import Path
 
@@ -469,17 +466,13 @@ class ComplexipyJSONParser(JSONParser):
         return 0
 
     def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
-        """Find function in AST, handling class-qualified names like 'ClassName::method_name'."""
         import ast
 
-        # Handle class-qualified names: ClassName::method_name
         if "::" in search_name:
             class_name, method_name = search_name.split("::", 1)
 
-            # Search for method within specific class
             for node in ast.walk(t.cast(ast.AST, tree)):
                 if isinstance(node, ast.ClassDef) and node.name == class_name:
-                    # Found the class - now search for the method within it
                     for child in ast.walk(node):
                         if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
                             if child.name == method_name:
@@ -488,13 +481,11 @@ class ComplexipyJSONParser(JSONParser):
                                 )
                                 return child.lineno
 
-            # Class not found or method not in class - fall through to bare name search
             logger.debug(
                 f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"
             )
-            search_name = method_name  # Search for bare name instead
+            search_name = method_name
 
-        # Standard bare function name search
         for node in ast.walk(t.cast(ast.AST, tree)):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name == search_name:
@@ -503,7 +494,7 @@ class ComplexipyJSONParser(JSONParser):
         return None
 
     def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
-        # Implementation needed - return function line number from AST
+
         return None
 
 
@@ -767,6 +758,41 @@ class GitleaksJSONParser(JSONParser):
         return mapping.get(severity_str.upper(), Priority.MEDIUM)
 
 
+class PytestJSONParser(JSONParser):
+    def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
+        from crackerjack.services.testing.test_result_parser import TestResultParser
+
+        if not isinstance(data, dict):
+            logger.warning(f"Pytest JSON data is not a dict: {type(data)}")
+            return []
+
+        parser = TestResultParser()
+        json_str = json.dumps(data)
+        failures = parser.parse_json_output(json_str)
+
+        issues = []
+        for failure in failures:
+            try:
+                issues.append(failure.to_issue())
+            except Exception as e:
+                logger.error(f"Error converting test failure to issue: {e}")
+
+        logger.info(f"Parsed {len(issues)} test failures from pytest JSON output")
+        return issues
+
+    def get_issue_count(self, data: dict[str, object] | list[object]) -> int:
+        if isinstance(data, dict) and "tests" in data:
+            tests = data["tests"]
+            if isinstance(tests, list):
+                failed = [
+                    t
+                    for t in tests
+                    if isinstance(t, dict) and t.get("outcome") == "failed"
+                ]
+                return len(failed)
+        return 0
+
+
 def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("ruff", RuffJSONParser)
     factory.register_json_parser("ruff-check", RuffJSONParser)
@@ -776,6 +802,7 @@ def register_json_parsers(factory: ParserFactory) -> None:
     factory.register_json_parser("semgrep", SemgrepJSONParser)
     factory.register_json_parser("pip-audit", PipAuditJSONParser)
     factory.register_json_parser("gitleaks", GitleaksJSONParser)
+    factory.register_json_parser("pytest", PytestJSONParser)
     logger.info(
-        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks"
+        "Registered JSON parsers: ruff, mypy, bandit, complexipy, semgrep, pip-audit, gitleaks, pytest"
     )

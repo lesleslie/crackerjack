@@ -9,6 +9,7 @@
 ## Complete Execution Flow
 
 ### 1. Entry Point: CLI Handler
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/__main__.py`
 
 ```python
@@ -31,13 +32,15 @@ def run(
 ```
 
 **Key Points**:
+
 - `ai_fix=True` and `comp=True` flags are captured
 - Environment variables set for AI agent mode
 - Options object created with all flags
 
----
+______________________________________________________________________
 
 ### 2. Workflow Mode Selection
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/cli/facade.py`
 
 ```python
@@ -48,12 +51,14 @@ class CrackerjackCLIFacade:
 ```
 
 **Flow**:
-1. Create `WorkflowPipeline` with console and package path
-2. Call `run_complete_workflow_sync(options)` with the Options object
 
----
+1. Create `WorkflowPipeline` with console and package path
+1. Call `run_complete_workflow_sync(options)` with the Options object
+
+______________________________________________________________________
 
 ### 3. Pipeline Orchestration
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/workflow_orchestrator.py`
 
 ```python
@@ -79,13 +84,15 @@ class WorkflowPipeline:
 ```
 
 **Flow**:
-1. Build Oneiric runtime (DAG-based workflow engine)
-2. Register crackerjack workflow with phases
-3. Execute DAG asynchronously
 
----
+1. Build Oneiric runtime (DAG-based workflow engine)
+1. Register crackerjack workflow with phases
+1. Execute DAG asynchronously
+
+______________________________________________________________________
 
 ### 4. Workflow DAG Construction
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/runtime/oneiric_workflow.py`
 
 ```python
@@ -116,14 +123,16 @@ def _build_workflow_steps(options: t.Any) -> list[str]:
 ```
 
 **Result for `--comp --ai-fix`**:
+
 - `fast_hooks`: SKIPPED (because `comp=True`)
 - `tests`: SKIPPED (because `run_tests=False`)
 - `comprehensive_hooks`: EXECUTED
 - `publishing`, `commit`: EXECUTED
 
----
+______________________________________________________________________
 
 ### 5. Phase Coordinator - Comprehensive Hooks
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/phase_coordinator.py`
 
 ```python
@@ -174,14 +183,16 @@ def run_comprehensive_hooks_only(self, options: OptionsProtocol) -> bool:
 ```
 
 **Key Points**:
+
 - Comprehensive hooks run first (14 issues found)
 - `ai_fix=True` triggers AI-fix coordinator
 - `_last_hook_results` contains HookResult objects from failed hooks
 - If AI-fix succeeds, hooks are re-run (attempt=2)
 
----
+______________________________________________________________________
 
 ### 6. Autofix Coordinator Entry Point
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py`
 
 ```python
@@ -199,12 +210,14 @@ def _apply_comprehensive_stage_fixes(self, hook_results: Sequence[object]) -> bo
 ```
 
 **Flow**:
-1. Check `AI_AGENT` environment variable (set to "1" by CLI handler)
-2. Call `_apply_ai_agent_fixes()` with hook results
 
----
+1. Check `AI_AGENT` environment variable (set to "1" by CLI handler)
+1. Call `_apply_ai_agent_fixes()` with hook results
+
+______________________________________________________________________
 
 ### 7. AI Agent Fixing Loop
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py` (Lines 337-421)
 
 ```python
@@ -280,13 +293,15 @@ def _apply_ai_agent_fixes(
 ```
 
 **Key Points**:
+
 - Iterative loop with convergence detection
 - Convergence threshold: 3 iterations with no progress
 - Returns `False` when convergence reached (0% reduction)
 
----
+______________________________________________________________________
 
 ### 8. Issue Parsing
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py` (Lines 735-856)
 
 ```python
@@ -340,14 +355,16 @@ def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
 ```
 
 **Key Points**:
+
 - HookResult objects validated for status="failed"
 - Raw output extracted from HookResult
 - ParserFactory.parse_with_validation() called
 - **ParsingError propagates and breaks the loop**
 
----
+______________________________________________________________________
 
 ### 9. Parser Factory
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/parsers/factory.py` (Lines 100-158)
 
 ```python
@@ -394,14 +411,16 @@ def _validate_issue_count(
 ```
 
 **Key Points**:
+
 - Creates parser for tool name (e.g., "ruff", "mypy")
 - Parses JSON or text output
 - **Validates parsed count against expected count**
 - **Raises ParsingError on count mismatch** → This causes agent failure
 
----
+______________________________________________________________________
 
 ### 10. Agent Coordinator
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/agents/coordinator.py` (Lines 105-133)
 
 ```python
@@ -462,14 +481,16 @@ async def _handle_issues_by_type(
 ```
 
 **Key Points**:
+
 - Issues grouped by type (formatting, complexity, security, etc.)
 - Specialist agents found for each issue type
 - Tasks created and executed in parallel
 - Results merged into FixResult
 
----
+______________________________________________________________________
 
 ### 11. Agent Execution
+
 **File**: `/Users/les/Projects/crackerjack/crackerjack/agents/coordinator.py` (Lines 318-365)
 
 ```python
@@ -510,12 +531,13 @@ async def _handle_with_single_agent(
 ```
 
 **Key Points**:
+
 - Cache checked for previous decisions
 - Agent asked if it can handle the issue (confidence score)
 - Agent executed with issue context
 - Result tracked and returned
 
----
+______________________________________________________________________
 
 ### 12. Execution Flow Summary
 
@@ -565,7 +587,7 @@ async def _handle_with_single_agent(
    └─> Return success/failure
 ```
 
----
+______________________________________________________________________
 
 ## Where the Failure Occurs
 
@@ -584,12 +606,13 @@ if self._should_stop_on_convergence(
 ```
 
 **What happens**:
+
 1. Iteration 0: 14 issues parsed from hook results
-2. Agents execute, apply 0 fixes (confidence too low or other issues)
-3. Iteration 1: Still 14 issues (no progress)
-4. Iteration 2: Still 14 issues (no progress)
-5. Iteration 3: Still 14 issues (no progress)
-6. **Convergence reached** → Return False → 0% reduction
+1. Agents execute, apply 0 fixes (confidence too low or other issues)
+1. Iteration 1: Still 14 issues (no progress)
+1. Iteration 2: Still 14 issues (no progress)
+1. Iteration 3: Still 14 issues (no progress)
+1. **Convergence reached** → Return False → 0% reduction
 
 ### Secondary Failure Point: Parsing Errors
 
@@ -605,25 +628,28 @@ if actual_count != expected_count:
 ```
 
 **What happens**:
-1. HookResult contains raw output from tool (e.g., mypy, ruff)
-2. Expected count extracted from output (e.g., "Found 14 errors")
-3. Parser parses output and returns Issue objects
-4. **Count validation fails** (e.g., expected 14, got 12)
-5. **ParsingError raised** → Agent loop fails → 0% reduction
 
----
+1. HookResult contains raw output from tool (e.g., mypy, ruff)
+1. Expected count extracted from output (e.g., "Found 14 errors")
+1. Parser parses output and returns Issue objects
+1. **Count validation fails** (e.g., expected 14, got 12)
+1. **ParsingError raised** → Agent loop fails → 0% reduction
+
+______________________________________________________________________
 
 ## Why Agents Achieve 0% Reduction
 
 ### Hypothesis 1: Agents Refuse to Fix (Low Confidence)
 
 **Evidence**:
+
 - Agents evaluate issues with `can_handle(issue)`
 - Confidence threshold: ≥0.7 required
-- If confidence <0.7, agent refuses to fix
+- If confidence \<0.7, agent refuses to fix
 - Result: 0 fixes applied, convergence reached
 
 **Flow**:
+
 ```python
 confidence = await agent.can_handle(issue)
 if confidence < 0.7:
@@ -634,12 +660,14 @@ if confidence < 0.7:
 ### Hypothesis 2: Parsing Errors Prevent Agent Execution
 
 **Evidence**:
+
 - Format specifier error mentioned in context
 - ParsingError raises during issue parsing
 - Exception caught, but breaks iteration loop
 - Result: Agents never execute, 0 fixes applied
 
 **Flow**:
+
 ```python
 try:
     issues = self._parser_factory.parse_with_validation(...)
@@ -651,12 +679,14 @@ except ParsingError as e:
 ### Hypothesis 3: Agent Execution Fails Silently
 
 **Evidence**:
+
 - Agents execute but return FixResult(success=False)
 - Files not modified
 - Issues remain
 - Convergence reached after 3 iterations
 
 **Flow**:
+
 ```python
 result = await self._execute_agent(agent, issue)
 # result.success = False
@@ -664,69 +694,78 @@ result = await self._execute_agent(agent, issue)
 # result.remaining_issues = [issue]
 ```
 
----
+______________________________________________________________________
 
 ## Connection to Format Specifier Error
 
 The "format specifier error" mentioned in the context likely occurs in:
 
 1. **Hook Execution**: Tool output contains format specifiers in error messages
+
    - Example: `error: invalid format specifier %.0f in format string`
    - This becomes part of HookResult.raw_output
 
-2. **Parsing**: Parser tries to extract expected count from output
+1. **Parsing**: Parser tries to extract expected count from output
+
    - Example: `Found 14 errors` → expected_count = 14
    - But format specifier error breaks parsing
    - Result: expected_count=None or incorrect value
 
-3. **Validation**: Parser validates count, fails
+1. **Validation**: Parser validates count, fails
+
    - actual_count ≠ expected_count
    - **Raises ParsingError**
    - Agent loop breaks
    - **0% reduction**
 
----
+______________________________________________________________________
 
 ## Next Steps for Investigation
 
 1. **Enable Debug Logging**
+
    ```bash
    export AI_AGENT_DEBUG=1
    export AI_AGENT_VERBOSE=1
    python -m crackerjack run --comp --ai-fix --debug
    ```
 
-2. **Check Hook Results**
+1. **Check Hook Results**
+
    - Look at `HookResult.output` for each failed hook
    - Find format specifier errors in raw output
    - Verify expected_count extraction
 
-3. **Check Parser Logs**
+1. **Check Parser Logs**
+
    - Look for "Parsing failed" messages
    - Check "expected_count" vs "actual_count" mismatches
    - Find which tool/parser is failing
 
-4. **Check Agent Execution**
+1. **Check Agent Execution**
+
    - Look for "Handling issue with X agent" messages
    - Check confidence scores
    - Verify if agents execute at all
 
-5. **Check Fix Results**
+1. **Check Fix Results**
+
    - Look for "FixResult" messages
    - Check "fixes_applied" count
    - Verify files_modified list
 
----
+______________________________________________________________________
 
 ## Conclusion
 
 The AI-fix 0% reduction issue is caused by:
 
 1. **Primary**: Parsing errors during issue extraction (format specifier error breaks count validation)
-2. **Secondary**: Low agent confidence (agents refuse to fix issues)
-3. **Tertiary**: Agent execution failures (agents run but don't modify files)
+1. **Secondary**: Low agent confidence (agents refuse to fix issues)
+1. **Tertiary**: Agent execution failures (agents run but don't modify files)
 
 The most likely culprit is the **format specifier error in hook output**, which causes:
+
 - Incorrect expected_count extraction
 - Parser validation failure
 - ParsingError raised

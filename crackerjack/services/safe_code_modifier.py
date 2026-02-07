@@ -304,10 +304,6 @@ class SafeCodeModifier:
 
         return ValidationResult(success=len(issues) == 0, issues=issues)
 
-    async def _validate_quality(self, file_path: Path) -> ValidationResult:
-        self._process_general_1()
-
-    async def _run_smoke_test(self, command: list[str]) -> bool:
         try:
             result = subprocess.run(
                 command,
@@ -411,10 +407,6 @@ class SafeCodeModifier:
             logger.warning(f"Ruff check failed: {e}")
 
         return ValidationResult(success=True, issues=issues)
-
-    async def _validate_quality(self, file_path: Path) -> ValidationResult:
-        self._process_general_1()
-        self._process_loop_2()
 
 
 __all__ = [

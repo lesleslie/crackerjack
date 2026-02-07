@@ -140,7 +140,7 @@ class SemanticConfig(BaseModel):
         description="Sentence transformer model name (for onnxruntime) or Ollama model name (e.g., 'nomic-embed-text')",
     )
     ollama_base_url: str = Field(
-        default="http://localhost:11434",
+        default="http://localhost: 11434",
         description="Ollama API endpoint URL",
     )
     chunk_size: int = Field(
