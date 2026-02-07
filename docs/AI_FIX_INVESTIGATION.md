@@ -15,7 +15,7 @@ The AI-fix workflow has a **critical bug**: All agents fail 100% of the time dur
 | AI-Fix Workflow | ❌ **100% FAILURE** | 67 issues → 67 issues (0% reduction) |
 | Agent Orchestration | ❌ **BROKEN** | All agents report "failed to fix issue" |
 
----
+______________________________________________________________________
 
 ## Problem Analysis
 
@@ -41,6 +41,7 @@ class Bar:
 ```
 
 **Result**:
+
 ```
 ✅ Success: True
 ✅ Confidence: 0.9
@@ -51,7 +52,7 @@ class Bar:
 
 **Conclusion**: Agents **CAN** fix issues successfully.
 
----
+______________________________________________________________________
 
 ### 2. AI-Fix Workflow: FAILURE ❌
 
@@ -62,6 +63,7 @@ AI_AGENT=1 python -m crackerjack run --comp --ai-fix
 ```
 
 **Observed Behavior**:
+
 ```
 Comprehensive Hook Results:
  - pyscn :: FAILED | 19 issues
@@ -83,6 +85,7 @@ Agent Execution:
 ```
 
 **Logged Output**:
+
 ```
 {"logger": "crackerjack.agents.coordinator",
  "event": "RefactoringAgent failed to fix issue",
@@ -91,7 +94,7 @@ Agent Execution:
 
 **Pattern**: Every single issue, every single agent → failure.
 
----
+______________________________________________________________________
 
 ## Root Cause Analysis
 
@@ -100,6 +103,7 @@ Agent Execution:
 **Status**: RULED OUT - Agents ARE being called
 
 Evidence:
+
 - Logs show "RefactoringAgent failed to fix issue"
 - "ArchitectAgent failed to fix issue"
 - This log comes from line 367 in coordinator.py after agent execution
@@ -109,6 +113,7 @@ Evidence:
 **Status**: RULED OUT - Agents work when called directly
 
 Evidence:
+
 - Direct test of FormattingAgent: 100% success
 - Applied 5 fixes correctly
 - Returned proper FixResult with success=True
@@ -149,16 +154,18 @@ async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixRes
 ```
 
 **The Bug**:
+
 1. First attempt: Agent tries to fix issue → fails (for whatever reason)
-2. Failed result is NOT cached (because `success=False`)
-3. Second attempt: Agent tries again → fails again
-4. **BUT**: If persistent cache has old failed result, it might be returning that
+1. Failed result is NOT cached (because `success=False`)
+1. Second attempt: Agent tries again → fails again
+1. **BUT**: If persistent cache has old failed result, it might be returning that
 
 ### Hypothesis 4: Issues Not Properly Routed ❌
 
 **Status**: RULED OUT - Routing looks correct
 
 Evidence from ISSUE_TYPE_TO_AGENTS mapping:
+
 ```python
 IssueType.FORMATTING: ["FormattingAgent", "ArchitectAgent"]
 IssueType.COMPLEXITY: ["RefactoringAgent", "PatternAgent", "ArchitectAgent"]
@@ -174,7 +181,7 @@ IssueType.SECURITY: ["SecurityAgent", "ArchitectAgent"]
 
 If issues have missing `file_path` or `line_number`, agents might fail to handle them.
 
----
+______________________________________________________________________
 
 ## Critical Questions Requiring Investigation
 
@@ -183,6 +190,7 @@ If issues have missing `file_path` or `line_number`, agents might fail to handle
 Direct test shows agents work. Workflow shows they fail. What's different?
 
 **Possible Causes**:
+
 - ❌ Issue objects passed to agents are malformed (missing fields?)
 - ❌ AgentContext passed to agents is different/wrong
 - ❌ File paths in issues are absolute vs relative mismatch
@@ -200,12 +208,13 @@ With 67 issues across 6+ agent types, **statistical probability** of 0% success 
 ### 3. What About "Issues: 67 → 67"?
 
 If agents were succeeding, we'd expect:
+
 - `Issues: 67 → 50 → 30 → 10 → 0` (progressive improvement)
 - OR: `Issues: 67 → 67` (convergence limit reached)
 
 But we're seeing **convergence after 2 iterations with 0% reduction**, which suggests agents aren't applying any fixes.
 
----
+______________________________________________________________________
 
 ## Recommended Investigation Steps
 
@@ -235,9 +244,10 @@ async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixRes
 ### Step 2: Test with Simple Known-Fixable Issue
 
 Create a test that:
+
 1. Parses a ruff issue
-2. Passes to FormattingAgent through coordinator
-3. Checks if fix is applied
+1. Passes to FormattingAgent through coordinator
+1. Checks if fix is applied
 
 ```python
 # test_ai_fix_simple.py
@@ -285,7 +295,7 @@ self.logger.info(f"Command stderr: {result.stderr}")
 self.logger.info(f"Return code: {result.returncode}")
 ```
 
----
+______________________________________________________________________
 
 ## Workaround (Until Bug Is Fixed)
 
@@ -319,7 +329,7 @@ agent = FormattingAgent(context=context)
 result = await agent.analyze_and_fix(issue)
 ```
 
----
+______________________________________________________________________
 
 ## Conclusion
 
@@ -330,9 +340,10 @@ result = await agent.analyze_and_fix(issue)
 🔍 **Root cause**: Likely in issue parsing, agent orchestration, or subprocess execution context
 
 📋 **Next steps**:
+
 1. Add detailed logging to identify exact failure point
-2. Test with simple known-fixable issue
-3. Verify issue objects have all required fields
-4. Check subprocess execution in workflow context
+1. Test with simple known-fixable issue
+1. Verify issue objects have all required fields
+1. Check subprocess execution in workflow context
 
 **Priority**: CRITICAL - AI-fix is completely non-functional despite working agent implementations.

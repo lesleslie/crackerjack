@@ -153,7 +153,6 @@ class AgentCoordinator:
     async def _find_specialist_agents(self, issue_type: IssueType) -> list[SubAgent]:
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
 
-        # 🔍 DETAILED LOGGING: Agent selection
         self.logger.info(f"🔍 Finding agents for {issue_type.value}")
         self.logger.info(f"   Preferred: {preferred_agent_names}")
 
@@ -433,7 +432,6 @@ class AgentCoordinator:
     async def _cached_analyze_and_fix(self, agent: SubAgent, issue: Issue) -> FixResult:
         cache_key = self._get_cache_key(agent.name, issue)
 
-        # 🔍 DETAILED LOGGING: Issue details
         self.logger.info(f"🔧 AGENT CALL: {agent.name} → issue {issue.id[:8]}")
         self.logger.info(f"   Type: {issue.type.value}")
         self.logger.info(f"   File: {issue.file_path}:{issue.line_number}")
@@ -459,11 +457,9 @@ class AgentCoordinator:
             self._issue_cache[cache_key] = cached_result
             return cached_result
 
-        # 🔍 DETAILED LOGGING: Agent execution
         self.logger.info("   ▶️  Calling agent.analyze_and_fix()...")
         result = await agent.analyze_and_fix(issue)
 
-        # 🔍 DETAILED LOGGING: Agent result
         self.logger.info(f"   ✓ AGENT RESULT: {agent.name}")
         self.logger.info(f"   Success: {result.success}")
         self.logger.info(f"   Confidence: {result.confidence}")
