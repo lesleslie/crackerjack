@@ -429,7 +429,6 @@ class TestResultParser:
         section_lower = section.lower()
 
 
-
         for handler in [
             self._check_fixture_error,
             self._check_import_error,

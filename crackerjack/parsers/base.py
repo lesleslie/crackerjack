@@ -38,11 +38,9 @@ class JSONParser(ABC):
                     output=output,
                 )
 
-            # Find both { and [, choose whichever comes first
             brace_idx = output.find("{")
             bracket_idx = output.find("[")
 
-            # Choose the earliest one that exists
             if brace_idx == -1:
                 start_idx = bracket_idx
             elif bracket_idx == -1:

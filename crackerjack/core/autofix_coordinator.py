@@ -481,7 +481,7 @@ class AutofixCoordinator:
         self.logger.info("📋 Sending issues to agents:")
         for i, issue in enumerate(issues[:5]):
             self.logger.info(
-                f"  [{i}] type={issue.type.value:15s} | "
+                f"  [{i}] type={issue.type.value: 15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )

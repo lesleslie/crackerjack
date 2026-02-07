@@ -60,7 +60,7 @@ factory.register_json_parser("pytest", PytestJSONParser)
 
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py`
 
-#### _check_coverage_regression() Method (lines 488-545)
+#### \_check_coverage_regression() Method (lines 488-545)
 
 ```python
 def _check_coverage_regression(self, hook_results: Sequence[object]) -> list[Issue]:
@@ -145,7 +145,7 @@ self.progress_manager.start_fix_session(
 
 **File**: `/Users/les/Projects/crackerjack/crackerjack/core/autofix_coordinator.py`
 
-#### _count_pytest_results() (lines 1279-1287)
+#### \_count_pytest_results() (lines 1279-1287)
 
 ```python
 def _count_pytest_results(data: object) -> int | None:
@@ -178,12 +178,12 @@ if tool_name in (
 ### Workflow Integration
 
 1. **Tests Run** → pytest executes, coverage data collected
-2. **Coverage Check** → `CoverageRatchet.check_and_update_coverage()` writes to `.coverage-ratchet.json`
-3. **AI-Fix Starts** → `_apply_ai_agent_fixes()` called with hook results
-4. **Coverage Regression Check** → `_check_coverage_regression()` reads ratchet file
-5. **Issue Creation** → If `current_coverage < baseline - tolerance`, creates `COVERAGE_IMPROVEMENT` issue
-6. **Test Creation** → Issue routed to `TestCreationAgent` via agent mapping
-7. **Automatic Recovery** → Agent generates tests to recover lost coverage
+1. **Coverage Check** → `CoverageRatchet.check_and_update_coverage()` writes to `.coverage-ratchet.json`
+1. **AI-Fix Starts** → `_apply_ai_agent_fixes()` called with hook results
+1. **Coverage Regression Check** → `_check_coverage_regression()` reads ratchet file
+1. **Issue Creation** → If `current_coverage < baseline - tolerance`, creates `COVERAGE_IMPROVEMENT` issue
+1. **Test Creation** → Issue routed to `TestCreationAgent` via agent mapping
+1. **Automatic Recovery** → Agent generates tests to recover lost coverage
 
 ### Agent Routing
 
@@ -196,6 +196,7 @@ IssueType.COVERAGE_IMPROVEMENT: TestCreationAgent,
 ### Example Coverage Regression
 
 **Scenario**:
+
 - Baseline coverage: 25%
 - Current coverage: 22%
 - Tolerance margin: 2%
@@ -204,6 +205,7 @@ IssueType.COVERAGE_IMPROVEMENT: TestCreationAgent,
 **Result**: 22% < 23% → **Coverage regression detected!**
 
 **Issue Created**:
+
 ```python
 Issue(
     type=IssueType.COVERAGE_IMPROVEMENT,
@@ -221,6 +223,7 @@ Issue(
 ```
 
 **TestCreationAgent Action**:
+
 - Analyzes coverage gap (3%)
 - Identifies uncovered code paths
 - Generates targeted tests
@@ -233,6 +236,7 @@ Issue(
 **Decision**: Read `.coverage-ratchet.json` directly instead of injecting `CoverageRatchet` service.
 
 **Rationale**:
+
 - **Decoupling**: AutofixCoordinator depends on data files, not service implementations
 - **Dependency Direction**: Higher-level workflow code → data files (not services)
 - **Simplicity**: No need to modify constructor or dependency injection
@@ -243,6 +247,7 @@ Issue(
 **Decision**: Use existing `IssueType.COVERAGE_IMPROVEMENT` instead of creating new type.
 
 **Rationale**:
+
 - Type already existed in agent base (line 30)
 - Semantically correct: "coverage improvement needed"
 - Routes to TestCreationAgent correctly
@@ -252,6 +257,7 @@ Issue(
 **Decision**: Return empty list (not error) if `.coverage-ratchet.json` doesn't exist.
 
 **Rationale**:
+
 - Projects may not have coverage enabled
 - Non-blocking: doesn't prevent other fixes
 - Debug logging for visibility
@@ -280,9 +286,9 @@ python -m crackerjack run --ai-fix --run-tests --comp
 - [x] PytestJSONParser class implemented
 - [x] Pytest parser registered with factory
 - [x] Pytest added to skip validation list
-- [x] _count_pytest_results() function added
-- [x] _check_coverage_regression() method implemented
-- [x] Test AI Stage integrated in _apply_ai_agent_fixes()
+- [x] \_count_pytest_results() function added
+- [x] \_check_coverage_regression() method implemented
+- [x] Test AI Stage integrated in \_apply_ai_agent_fixes()
 - [ ] End-to-end test with actual coverage regression
 - [ ] Verification TestCreationAgent receives issues
 - [ ] Verification tests are generated and pass
@@ -312,15 +318,15 @@ python -m crackerjack run --ai-fix --run-tests --comp
 ### Potential Improvements
 
 1. **Per-File Coverage Issues**: Create separate issues for each file with coverage gaps
-2. **Line-Level Targeting**: Include specific uncovered line numbers in issue details
-3. **Test Type Detection**: Distinguish between unit, integration, and edge case tests needed
-4. **Historical Analysis**: Track coverage patterns to predict regression-prone areas
+1. **Line-Level Targeting**: Include specific uncovered line numbers in issue details
+1. **Test Type Detection**: Distinguish between unit, integration, and edge case tests needed
+1. **Historical Analysis**: Track coverage patterns to predict regression-prone areas
 
 ### Integration Opportunities
 
 1. **Semantic Analysis**: Use `SemanticAgent` to identify business logic gaps
-2. **ArchitectAgent**: Analyze architectural patterns for missing test scenarios
-3. **TestSpecialistAgent**: Generate complex integration tests for multi-file coverage gaps
+1. **ArchitectAgent**: Analyze architectural patterns for missing test scenarios
+1. **TestSpecialistAgent**: Generate complex integration tests for multi-file coverage gaps
 
 ## Related Documentation
 
@@ -334,8 +340,8 @@ python -m crackerjack run --ai-fix --run-tests --comp
 The Test AI Stage is now **fully implemented** and integrated into the AI-fix workflow. When coverage regresses below the baseline (minus tolerance margin), the system automatically:
 
 1. Detects the regression
-2. Creates actionable `COVERAGE_IMPROVEMENT` issues
-3. Routes to `TestCreationAgent`
-4. Generates tests to recover lost coverage
+1. Creates actionable `COVERAGE_IMPROVEMENT` issues
+1. Routes to `TestCreationAgent`
+1. Generates tests to recover lost coverage
 
 This completes the enrollment of **all hooks and tests** into the AI auto-fixing stages/iterations.
