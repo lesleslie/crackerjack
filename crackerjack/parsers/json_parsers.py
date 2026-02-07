@@ -245,6 +245,34 @@ class ComplexipyJSONParser(JSONParser):
         self.max_complexity = max_complexity
         self._line_number_cache: dict[str, dict[str, int]] = {}
 
+    def parse(self, output: str, tool_name: str) -> list[Issue]:
+        import re
+        from pathlib import Path
+
+        match = re.search(r"Results saved at\s+(.+?\.json)", output, re.DOTALL)
+        if not match:
+            logger.warning("Could not find complexipy JSON file path in output")
+            return []
+
+        json_path = match.group(1).strip()
+
+        if not Path(json_path).exists():
+            logger.warning(f"Complexipy JSON file not found: {json_path}")
+            return []
+
+        try:
+            json_content = Path(json_path).read_text()
+            data = json.loads(json_content)
+
+            logger.debug(
+                f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)"
+            )
+        except Exception as e:
+            logger.error(f"Error reading/parsing complexipy JSON file: {e}")
+            return []
+
+        return self.parse_json(data)
+
     def _extract_line_number_tier1(
         self, file_path: str, function_name: str
     ) -> int | None:
@@ -327,34 +355,6 @@ class ComplexipyJSONParser(JSONParser):
                 f"Unexpected error extracting line number for '{function_name}' in {file_path}: {e}"
             )
             return None
-
-        import re
-        from pathlib import Path
-
-        match = re.search(r"Results saved at\s+(.+?\.json)", output)
-        if not match:
-            logger.warning("Could not find complexipy JSON file path in output")
-            return []
-
-        json_path = match.group(1).strip()
-
-        if not Path(json_path).exists():
-            logger.warning(f"Complexipy JSON file not found: {json_path}")
-            return []
-
-        try:
-            json_content = Path(json_path).read_text()
-
-            data = json.loads(json_content)
-
-            logger.debug(
-                f"Read complexipy JSON file: {json_path} ({len(data) if isinstance(data, list) else 'N/A'} entries)"
-            )
-        except Exception as e:
-            logger.error(f"Error reading/parsing complexipy JSON file: {e}")
-            return []
-
-        return self.parse_json(data)
 
     def parse_json(self, data: dict[str, object] | list[object]) -> list[Issue]:
         if not isinstance(data, list):
@@ -490,10 +490,6 @@ class ComplexipyJSONParser(JSONParser):
             if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
                 if node.name == search_name:
                     return node.lineno
-
-        return None
-
-    def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
 
         return None
 

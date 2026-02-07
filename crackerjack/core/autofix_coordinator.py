@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import subprocess
+import typing as t
 from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -17,6 +18,7 @@ if TYPE_CHECKING:
     )
 
 from crackerjack.agents.base import AgentContext, FixResult, Issue, IssueType, Priority
+from crackerjack.models.qa_results import QAResult
 from crackerjack.parsers.factory import ParserFactory, ParsingError
 from crackerjack.services.ai_fix_progress import AIFixProgressManager
 from crackerjack.services.cache import CrackerjackCache
@@ -716,6 +718,214 @@ class AutofixCoordinator:
 
         return issues, parsed_counts_by_hook
 
+    def _run_qa_adapters_for_hooks(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, QAResult]:
+        """Run QA adapters for hooks to get QAResult with parsed_issues.
+
+        This bridges the gap between HookExecutor (used by workflow) and QA adapters
+        (which have superior parsing and file handling). Returns QAResult objects
+        that can be used directly by AI-fix instead of re-parsing raw output.
+
+        Args:
+            hook_results: Sequence of hook result objects from HookExecutor
+
+        Returns:
+            Dictionary mapping hook_name to QAResult with parsed_issues
+        """
+        qa_results: dict[str, QAResult] = {}
+
+        for result in hook_results:
+            if not self._validate_hook_result(result):
+                continue
+
+            status = getattr(result, "status", "")
+            if status.lower() != "failed":
+                continue  # Only process failed hooks
+
+            hook_name = getattr(result, "name", "")
+            if not hook_name:
+                continue
+
+            # Only run QA adapters for tools that have them
+            if not self._tool_has_qa_adapter(hook_name):
+                self.logger.debug(
+                    f"Skipping adapter run for '{hook_name}' (no QA adapter available)"
+                )
+                continue
+
+            try:
+                # Import adapter factory
+                from crackerjack.adapters.factory import DefaultAdapterFactory
+                from crackerjack.models.qa_config import QACheckConfig
+
+                # Create adapter
+                adapter_factory = DefaultAdapterFactory()
+                adapter = adapter_factory.create_adapter(hook_name)
+
+                if adapter is None:
+                    self.logger.debug(f"No QA adapter available for '{hook_name}'")
+                    continue
+
+                # Initialize adapter
+                import asyncio
+
+                asyncio.run(adapter.init())
+
+                # Create config
+                config = QACheckConfig(
+                    check_id=adapter.module_id,
+                    check_name=hook_name,
+                    check_type=adapter._get_check_type(),
+                    enabled=True,
+                    file_patterns=["**/*.py"],  # Use default patterns
+                    timeout_seconds=60,
+                )
+
+                # Run adapter check
+                qa_result: QAResult = asyncio.run(adapter.check(config=config))
+
+                # Store result if we got parsed issues
+                if qa_result.parsed_issues:
+                    qa_results[hook_name] = qa_result
+                    self.logger.info(
+                        f"✅ QA adapter for '{hook_name}' found "
+                        f"{len(qa_result.parsed_issues)} issues"
+                    )
+                else:
+                    self.logger.debug(f"QA adapter for '{hook_name}' found no issues")
+
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to run QA adapter for '{hook_name}': {e}. "
+                    f"Will fall back to raw output parsing."
+                )
+                continue
+
+        return qa_results
+
+    def _tool_has_qa_adapter(self, tool_name: str) -> bool:
+        """Check if a tool has a QA adapter available.
+
+        Args:
+            tool_name: Name of the tool
+
+        Returns:
+            True if adapter exists, False otherwise
+        """
+        # List of tools with QA adapters that support parsed_issues
+        tools_with_adapters = {
+            "complexipy",
+            "skylos",
+            "ruff",
+            "ruff-format",
+            "mypy",
+            "zuban",
+            "pyright",
+            "pylint",
+            "bandit",
+            "semgrep",
+            "codespell",
+            "refurb",
+            "creosote",
+            "pyscn",
+            "pytest",
+            "mdformat",
+            "check-yaml",
+            "check-toml",
+            "check-json",
+            "check-jsonschema",
+            "check-ast",
+            "trailing-whitespace",
+            "end-of-file-fixer",
+            "format-json",
+            "linkcheckmd",
+            "local-link-checker",
+            "validate-regex-patterns",
+        }
+
+        return tool_name in tools_with_adapters
+
+    def _parse_hook_results_to_issues_with_qa(
+        self, hook_results: Sequence[object]
+    ) -> list[Issue]:
+        """Parse hook results using QA adapters where available.
+
+        This is the NEW method that uses QAResult.parsed_issues instead of re-parsing.
+
+        Args:
+            hook_results: Sequence of hook result objects from HookExecutor
+
+        Returns:
+            List of Issue objects for AI-fix processing
+        """
+        self.logger.info(f"🔄 Running QA adapters for {len(hook_results)} hooks...")
+
+        # Run QA adapters to get QAResult objects
+        qa_results = self._run_qa_adapters_for_hooks(hook_results)
+
+        self.logger.info(
+            f"📦 Got QAResult for {len(qa_results)} hooks: {list(qa_results.keys())}"
+        )
+
+        # Parse hook results using both QA adapters and fallback
+        issues, parsed_counts_by_hook = self._parse_all_hook_results_with_qa(
+            hook_results, qa_results
+        )
+
+        self._update_hook_issue_counts(hook_results, parsed_counts_by_hook)
+        unique_issues = self._deduplicate_issues(issues)
+
+        self._log_parsing_summary(len(issues), len(unique_issues))
+        return unique_issues
+
+    def _parse_all_hook_results_with_qa(
+        self, hook_results: Sequence[object], qa_results: dict[str, QAResult]
+    ) -> tuple[list[Issue], dict[str, int]]:
+        """Parse all hook results, using QAResult where available.
+
+        Args:
+            hook_results: Sequence of hook result objects
+            qa_results: Dictionary of hook_name -> QAResult with parsed_issues
+
+        Returns:
+            Tuple of (list of all issues, parsed counts by hook)
+        """
+        issues: list[Issue] = []
+        parsed_counts_by_hook: dict[str, int] = {}
+
+        for result in hook_results:
+            hook_name = getattr(result, "name", "")
+            if not hook_name:
+                continue
+
+            # Use QA adapter result if available, otherwise parse raw output
+            qa_result = qa_results.get(hook_name)
+            raw_output = self._extract_raw_output(result)
+
+            if qa_result and qa_result.parsed_issues:
+                # ✅ Use already-parsed issues from QA adapter
+                hook_issues = self._convert_parsed_issues_to_issues(
+                    hook_name, qa_result.parsed_issues
+                )
+                self.logger.info(
+                    f"✅ Used QAResult for '{hook_name}': {len(hook_issues)} issues"
+                )
+            else:
+                # ❌ Fall back to parsing raw output
+                hook_issues = self._parse_hook_to_issues(
+                    hook_name, raw_output, qa_result
+                )
+                self.logger.info(
+                    f"🔄 Fallback to raw output parsing for '{hook_name}': "
+                    f"{len(hook_issues)} issues"
+                )
+
+            self._track_hook_issue_count(result, hook_issues, parsed_counts_by_hook)
+            issues.extend(hook_issues)
+
+        return issues, parsed_counts_by_hook
+
     def _track_hook_issue_count(
         self,
         result: object,
@@ -1009,7 +1219,200 @@ class AutofixCoordinator:
 
         return []
 
-    def _parse_hook_to_issues(self, hook_name: str, raw_output: str) -> list[Issue]:
+    def _convert_parsed_issues_to_issues(
+        self, tool_name: str, parsed_issues: list[dict[str, t.Any]]
+    ) -> list[Issue]:
+        """Convert ToolIssue dicts from QAResult.parsed_issues to Issue objects.
+
+        This is the primary method for using adapter-parsed issues in AI-fix,
+        eliminating the need to re-parse raw stdout/stderr.
+
+        Args:
+            tool_name: Name of the tool that produced the issues
+            parsed_issues: List of ToolIssue dicts from QAResult.parsed_issues
+
+        Returns:
+            List of Issue objects for AI-fix processing
+        """
+        issues = []
+
+        for tool_issue_dict in parsed_issues:
+            try:
+                # Validate required field: file_path must exist
+                file_path = tool_issue_dict.get("file_path")
+                if not file_path:
+                    self.logger.debug(
+                        f"Skipping issue from '{tool_name}': missing file_path. "
+                        f"Issue data: {tool_issue_dict}"
+                    )
+                    continue
+
+                # Map ToolIssue severity to Priority (handle None values)
+                severity_raw = tool_issue_dict.get("severity", "error")
+                severity_str = severity_raw.lower() if severity_raw else "error"
+                severity = self._map_severity_to_priority(severity_str)
+
+                # Determine issue type based on tool name and content
+                issue_type = self._determine_issue_type(tool_name, tool_issue_dict)
+
+                # Build details list
+                details = self._build_issue_details(tool_issue_dict)
+
+                # Create Issue object
+                issue = Issue(
+                    type=issue_type,
+                    severity=severity,
+                    message=tool_issue_dict.get("message", ""),
+                    file_path=file_path,
+                    line_number=tool_issue_dict.get("line_number"),
+                    details=details,
+                    stage=tool_name,
+                )
+
+                issues.append(issue)
+
+            except (KeyError, TypeError, ValueError) as e:
+                # Specific exception types for data conversion issues
+                self.logger.warning(
+                    f"Failed to convert parsed issue from '{tool_name}': {e}. "
+                    f"Issue data: {tool_issue_dict}",
+                    exc_info=True,
+                )
+                continue
+            except Exception as e:
+                # Unexpected errors - log with full traceback
+                self.logger.error(
+                    f"Unexpected error converting parsed issue from '{tool_name}': {e}. "
+                    f"Issue data: {tool_issue_dict}",
+                    exc_info=True,
+                )
+                continue
+
+        self.logger.info(
+            f"✅ Converted {len(issues)} issues from '{tool_name}' "
+            f"(from QAResult.parsed_issues)"
+        )
+
+        return issues
+
+    def _map_severity_to_priority(self, severity_str: str) -> Priority:
+        """Map ToolIssue severity string to Priority enum.
+
+        Args:
+            severity_str: Severity string from ToolIssue ("error", "warning", etc.)
+
+        Returns:
+            Priority enum value
+        """
+        severity_map = {
+            "error": Priority.HIGH,
+            "warning": Priority.MEDIUM,
+            "info": Priority.LOW,
+            "note": Priority.LOW,
+        }
+
+        return severity_map.get(severity_str, Priority.MEDIUM)
+
+    def _determine_issue_type(
+        self, tool_name: str, tool_issue_dict: dict[str, t.Any]
+    ) -> IssueType:
+        """Determine IssueType based on tool name and issue content.
+
+        Args:
+            tool_name: Name of the tool
+            tool_issue_dict: ToolIssue dict with potentially relevant fields
+
+        Returns:
+            Appropriate IssueType enum value
+        """
+        # Tool-specific type mapping
+        tool_type_map = {
+            "ruff": IssueType.FORMATTING,
+            "ruff-format": IssueType.FORMATTING,
+            "mdformat": IssueType.FORMATTING,
+            "codespell": IssueType.FORMATTING,
+            "mypy": IssueType.TYPE_ERROR,
+            "zuban": IssueType.TYPE_ERROR,
+            "pyright": IssueType.TYPE_ERROR,
+            "pylint": IssueType.TYPE_ERROR,
+            "bandit": IssueType.SECURITY,
+            "gitleaks": IssueType.SECURITY,
+            "semgrep": IssueType.SECURITY,
+            "safety": IssueType.SECURITY,
+            "pytest": IssueType.TEST_FAILURE,
+            "complexipy": IssueType.COMPLEXITY,
+            "refurb": IssueType.COMPLEXITY,
+            "skylos": IssueType.DEAD_CODE,
+            "creosote": IssueType.DEPENDENCY,
+            "pyscn": IssueType.DEPENDENCY,
+        }
+
+        # Check tool-specific mapping first
+        if tool_name in tool_type_map:
+            return tool_type_map[tool_name]
+
+        # Fallback based on message content
+        message = (
+            tool_issue_dict.get("message", "").lower()
+            if tool_issue_dict.get("message")
+            else ""
+        )
+        code = (
+            tool_issue_dict.get("code", "").lower()
+            if tool_issue_dict.get("code")
+            else ""
+        )
+
+        if any(word in message for word in ["test", "pytest", "unittest"]):
+            return IssueType.TEST_FAILURE
+        if any(word in message for word in ["complex", "cyclomatic"]):
+            return IssueType.COMPLEXITY
+        if any(word in message for word in ["dead", "unused", "redundant"]):
+            return IssueType.DEAD_CODE
+        if any(word in message for word in ["security", "vulnerability"]):
+            return IssueType.SECURITY
+        if any(word in message for word in ["import", "module"]):
+            return IssueType.IMPORT_ERROR
+        if "type" in message or "type:" in code:
+            return IssueType.TYPE_ERROR
+
+        # Default fallback
+        return IssueType.FORMATTING
+
+    def _build_issue_details(self, tool_issue_dict: dict[str, t.Any]) -> list[str]:
+        """Build details list from ToolIssue data.
+
+        Args:
+            tool_issue_dict: ToolIssue dict with various fields
+
+        Returns:
+            List of detail strings for Issue.details
+        """
+        details = []
+
+        # Add code if available
+        if code := tool_issue_dict.get("code"):
+            details.append(f"code: {code}")
+
+        # Add suggestion if available
+        if suggestion := tool_issue_dict.get("suggestion"):
+            details.append(f"suggestion: {suggestion}")
+
+        # Add column number if available
+        if column := tool_issue_dict.get("column_number"):
+            details.append(f"column: {column}")
+
+        # Add severity
+        details.append(f"severity: {tool_issue_dict.get('severity', 'unknown')}")
+
+        return details
+
+    def _parse_hook_to_issues(
+        self,
+        hook_name: str,
+        raw_output: str,
+        qa_result: QAResult | None = None,
+    ) -> list[Issue]:
         self.logger.debug(
             f"Parsing hook '{hook_name}': "
             f"raw_output_lines={len(raw_output.split(chr(10)))}"
@@ -1018,6 +1421,20 @@ class AutofixCoordinator:
         output_preview = raw_output[:500] if raw_output else "(empty)"
         self.logger.debug(f"Raw output preview from '{hook_name}':\n{output_preview!r}")
 
+        # ✅ NEW: Use already-parsed issues from QAResult if available
+        if qa_result and qa_result.parsed_issues:
+            self.logger.info(
+                f"📦 Using QAResult.parsed_issues for '{hook_name}' "
+                f"({len(qa_result.parsed_issues)} issues)"
+            )
+            return self._convert_parsed_issues_to_issues(
+                hook_name, qa_result.parsed_issues
+            )
+
+        # Fallback to parsing raw output (for tools without adapters)
+        self.logger.info(
+            f"🔄 QAResult not available for '{hook_name}', parsing raw output"
+        )
         expected_count = self._extract_issue_count(raw_output, hook_name)
         self.logger.info(f"Parsing '{hook_name}': expected_count={expected_count}")
 
@@ -1143,7 +1560,7 @@ class AutofixCoordinator:
                 cache=cache,
             )
 
-        initial_issues = self._parse_hook_results_to_issues(hook_results)
+        initial_issues = self._parse_hook_results_to_issues_with_qa(hook_results)
 
         coverage_issues = self._check_coverage_regression(hook_results)
         if coverage_issues:

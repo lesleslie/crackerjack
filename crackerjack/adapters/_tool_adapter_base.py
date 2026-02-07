@@ -504,6 +504,7 @@ class BaseToolAdapter(QAAdapterBase):
             status=status,
             message=message,
             details=details,
+            parsed_issues=[issue.to_dict() for issue in issues],
             files_checked=target_files,
             files_modified=exec_result.files_modified,
             issues_found=len(issues),

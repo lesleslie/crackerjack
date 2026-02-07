@@ -53,6 +53,10 @@ class QAResult(BaseModel):
         default="",
         description="Detailed output from the check (stdout/stderr)",
     )
+    parsed_issues: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="List of parsed issues from the tool output (ToolIssue as dicts)",
+    )
     files_checked: list[Path] = Field(
         default_factory=list,
         description="List of files that were checked",
