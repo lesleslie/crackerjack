@@ -853,16 +853,31 @@ class AutofixCoordinator:
 
         This is the NEW method that uses QAResult.parsed_issues instead of re-parsing.
 
+        PHASE 2 OPTIMIZATION: Uses cached QAResult from HookResult to avoid
+        re-running tools that were already executed during hook phase.
+
         Args:
             hook_results: Sequence of hook result objects from HookExecutor
 
         Returns:
             List of Issue objects for AI-fix processing
         """
-        self.logger.info(f"🔄 Running QA adapters for {len(hook_results)} hooks...")
+        self.logger.info(f"🔄 Processing {len(hook_results)} hook results...")
 
-        # Run QA adapters to get QAResult objects
-        qa_results = self._run_qa_adapters_for_hooks(hook_results)
+        # ✅ PHASE 2 OPTIMIZATION: Extract cached QAResult from HookResults
+        qa_results = self._extract_cached_qa_results(hook_results)
+
+        # Only run QA adapters for hooks that don't have cached results
+        if len(qa_results) < len(hook_results):
+            missing_hooks = [
+                r.name for r in hook_results if getattr(r, "name", "") not in qa_results
+            ]
+            if missing_hooks:
+                self.logger.debug(
+                    f"Running QA adapters for {len(missing_hooks)} hooks without cache: {missing_hooks}"
+                )
+                additional_results = self._run_qa_adapters_for_hooks(hook_results)
+                qa_results.update(additional_results)
 
         self.logger.info(
             f"📦 Got QAResult for {len(qa_results)} hooks: {list(qa_results.keys())}"
@@ -878,6 +893,48 @@ class AutofixCoordinator:
 
         self._log_parsing_summary(len(issues), len(unique_issues))
         return unique_issues
+
+    def _extract_cached_qa_results(
+        self, hook_results: Sequence[object]
+    ) -> dict[str, t.Any]:
+        """Extract cached QAResult objects from HookResults.
+
+        PHASE 2 OPTIMIZATION: Instead of re-running QA adapters, we use the
+        QAResult that was already captured during hook execution.
+
+        Args:
+            hook_results: Sequence of hook result objects from HookExecutor
+
+        Returns:
+            Dictionary mapping hook_name to cached QAResult (only for hooks with cached results)
+        """
+        cached_results: dict[str, t.Any] = {}
+        cache_hits = 0
+
+        for result in hook_results:
+            hook_name = getattr(result, "name", "")
+            if not hook_name:
+                continue
+
+            # Check if HookResult has cached QAResult
+            qa_result = getattr(result, "qa_result", None)
+
+            if qa_result and qa_result.parsed_issues:
+                # ✅ Cache hit - use this result instead of re-running adapter
+                cached_results[hook_name] = qa_result
+                cache_hits += 1
+                self.logger.info(
+                    f"✅ Cache hit for '{hook_name}': {len(qa_result.parsed_issues)} issues "
+                    f"(saved re-running QA adapter)"
+                )
+
+        if cache_hits > 0:
+            self.logger.info(
+                f"🎯 QAResult cache: {cache_hits}/{len(hook_results)} hooks "
+                f"({cache_hits / len(hook_results) * 100:.0f}% hit rate)"
+            )
+
+        return cached_results
 
     def _parse_all_hook_results_with_qa(
         self, hook_results: Sequence[object], qa_results: dict[str, QAResult]
