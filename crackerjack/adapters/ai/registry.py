@@ -301,49 +301,88 @@ class ProviderChain:
             logger.debug(f"Failed to track provider selection: {e}")
 
     async def _check_provider_availability(self, provider: BaseCodeFixer) -> bool:
+        """Check if a provider is available and properly configured.
+
+        Returns True if provider is available, False otherwise.
+        """
         try:
             if not hasattr(provider, "_settings"):
                 return True
 
-            from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
-            from crackerjack.adapters.ai.ollama import OllamaCodeFixerSettings
-            from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
-
             settings = provider._settings
-
-            if isinstance(settings, (ClaudeCodeFixerSettings, QwenCodeFixerSettings)):
-                if isinstance(settings, ClaudeCodeFixerSettings):
-                    key = (
-                        settings.anthropic_api_key.get_secret_value()
-                        if settings.anthropic_api_key
-                        else None
-                    )
-                else:
-                    key = (
-                        settings.qwen_api_key.get_secret_value()
-                        if settings.qwen_api_key
-                        else None
-                    )
-
-                if not key or key.startswith("placeholder") or len(key) < 10:
-                    return False
-
-            if isinstance(settings, OllamaCodeFixerSettings):
-                from crackerjack.services.connection_pool import get_http_pool
-
-                pool = await get_http_pool()
-                try:
-                    async with pool.get_session_context() as session:
-                        async with session.get(
-                            settings.base_url,
-                            timeout=5.0,
-                        ) as resp:
-                            return resp.status == 200
-                except Exception:
-                    return False
-
-            return True
+            return await self._validate_provider_settings(settings)
 
         except Exception as e:
             logger.debug(f"Provider availability check failed: {e}")
+            return False
+
+    async def _validate_provider_settings(self, settings: t.Any) -> bool:
+        """Validate provider settings based on type.
+
+        Strategy pattern for different provider types.
+        """
+        from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
+        from crackerjack.adapters.ai.ollama import OllamaCodeFixerSettings
+        from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
+
+        if isinstance(settings, (ClaudeCodeFixerSettings, QwenCodeFixerSettings)):
+            return self._validate_api_key_settings(settings)
+
+        if isinstance(settings, OllamaCodeFixerSettings):
+            return await self._validate_ollama_settings(settings)
+
+        return True
+
+    def _validate_api_key_settings(self, settings: t.Any) -> bool:
+        """Validate API key settings for Claude/Qwen providers."""
+        from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
+        from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
+
+        key = self._extract_api_key(settings)
+        return self._is_valid_api_key(key)
+
+    def _extract_api_key(self, settings: t.Any) -> str | None:
+        """Extract API key from provider settings."""
+        from crackerjack.adapters.ai.claude import ClaudeCodeFixerSettings
+        from crackerjack.adapters.ai.qwen import QwenCodeFixerSettings
+
+        if isinstance(settings, ClaudeCodeFixerSettings):
+            return (
+                settings.anthropic_api_key.get_secret_value()
+                if settings.anthropic_api_key
+                else None
+            )
+
+        if isinstance(settings, QwenCodeFixerSettings):
+            return (
+                settings.qwen_api_key.get_secret_value()
+                if settings.qwen_api_key
+                else None
+            )
+
+        return None
+
+    def _is_valid_api_key(self, key: str | None) -> bool:
+        """Validate API key format and length."""
+        if not key:
+            return False
+        if key.startswith("placeholder"):
+            return False
+        if len(key) < 10:
+            return False
+        return True
+
+    async def _validate_ollama_settings(self, settings: t.Any) -> bool:
+        """Validate Ollama settings by checking base URL connectivity."""
+        from crackerjack.services.connection_pool import get_http_pool
+
+        pool = await get_http_pool()
+        try:
+            async with pool.get_session_context() as session:
+                async with session.get(
+                    settings.base_url,
+                    timeout=aiohttp.ClientTimeout(total=5.0),
+                ) as resp:
+                    return resp.status == 200
+        except Exception:
             return False
