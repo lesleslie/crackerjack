@@ -8,13 +8,14 @@ from datetime import UTC, datetime
 if t.TYPE_CHECKING:
     from collections.abc import Mapping
 
+from crackerjack.models.enums import HealthStatus
 
 logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
 class HealthCheckResult:
-    status: t.Literal["healthy", "degraded", "unhealthy"]
+    status: HealthStatus
     message: str
     details: dict[str, t.Any] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
@@ -23,7 +24,7 @@ class HealthCheckResult:
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
-            "status": self.status,
+            "status": self.status.value,
             "message": self.message,
             "details": self.details,
             "timestamp": self.timestamp.isoformat(),
@@ -40,7 +41,7 @@ class HealthCheckResult:
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
         return cls(
-            status="healthy",
+            status=HealthStatus.HEALTHY,
             message=message,
             component_name=component_name,
             details=details or {},
@@ -56,7 +57,7 @@ class HealthCheckResult:
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
         return cls(
-            status="degraded",
+            status=HealthStatus.DEGRADED,
             message=message,
             component_name=component_name,
             details=details or {},
@@ -72,7 +73,7 @@ class HealthCheckResult:
         check_duration_ms: float | None = None,
     ) -> HealthCheckResult:
         return cls(
-            status="unhealthy",
+            status=HealthStatus.UNHEALTHY,
             message=message,
             component_name=component_name,
             details=details or {},
@@ -94,7 +95,7 @@ class HealthCheckProtocol(t.Protocol):
 @dataclass
 class ComponentHealth:
     category: str
-    overall_status: t.Literal["healthy", "degraded", "unhealthy"]
+    overall_status: HealthStatus
     total: int
     healthy: int
     degraded: int
@@ -105,7 +106,7 @@ class ComponentHealth:
     def to_dict(self) -> dict[str, t.Any]:
         return {
             "category": self.category,
-            "overall_status": self.overall_status,
+            "overall_status": self.overall_status.value,
             "total": self.total,
             "healthy": self.healthy,
             "degraded": self.degraded,
@@ -122,17 +123,17 @@ class ComponentHealth:
         category: str,
         results: Mapping[str, HealthCheckResult],
     ) -> ComponentHealth:
-        healthy = sum(1 for r in results.values() if r.status == "healthy")
-        degraded = sum(1 for r in results.values() if r.status == "degraded")
-        unhealthy = sum(1 for r in results.values() if r.status == "unhealthy")
+        healthy = sum(1 for r in results.values() if r.status == HealthStatus.HEALTHY)
+        degraded = sum(1 for r in results.values() if r.status == HealthStatus.DEGRADED)
+        unhealthy = sum(1 for r in results.values() if r.status == HealthStatus.UNHEALTHY)
         total = len(results)
 
         if unhealthy > 0:
-            overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
+            overall_status = HealthStatus.UNHEALTHY
         elif degraded > 0:
-            overall_status = "degraded"
+            overall_status = HealthStatus.DEGRADED
         else:
-            overall_status = "healthy"
+            overall_status = HealthStatus.HEALTHY
 
         return cls(
             category=category,
@@ -146,12 +147,12 @@ class ComponentHealth:
 
     @property
     def exit_code(self) -> int:
-        return {"healthy": 0, "degraded": 1, "unhealthy": 2}[self.overall_status]
+        return {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}[self.overall_status]
 
 
 @dataclass
 class SystemHealthReport:
-    overall_status: t.Literal["healthy", "degraded", "unhealthy"]
+    overall_status: HealthStatus
     categories: dict[str, ComponentHealth] = field(default_factory=dict)
     timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
     summary: str = ""
@@ -159,7 +160,7 @@ class SystemHealthReport:
 
     def to_dict(self) -> dict[str, t.Any]:
         return {
-            "overall_status": self.overall_status,
+            "overall_status": self.overall_status.value,
             "categories": {
                 name: health.to_dict() for name, health in self.categories.items()
             },
@@ -174,12 +175,12 @@ class SystemHealthReport:
         category_health: Mapping[str, ComponentHealth],
         metadata: dict[str, t.Any] | None = None,
     ) -> SystemHealthReport:
-        if any(h.overall_status == "unhealthy" for h in category_health.values()):
-            overall_status: t.Literal["healthy", "degraded", "unhealthy"] = "unhealthy"
-        elif any(h.overall_status == "degraded" for h in category_health.values()):
-            overall_status = "degraded"
+        if any(h.overall_status == HealthStatus.UNHEALTHY for h in category_health.values()):
+            overall_status = HealthStatus.UNHEALTHY
+        elif any(h.overall_status == HealthStatus.DEGRADED for h in category_health.values()):
+            overall_status = HealthStatus.DEGRADED
         else:
-            overall_status = "healthy"
+            overall_status = HealthStatus.HEALTHY
 
         total_components = sum(h.total for h in category_health.values())
         total_healthy = sum(h.healthy for h in category_health.values())
@@ -208,7 +209,7 @@ class SystemHealthReport:
 
     @property
     def exit_code(self) -> int:
-        return {"healthy": 0, "degraded": 1, "unhealthy": 2}[self.overall_status]
+        return {HealthStatus.HEALTHY: 0, HealthStatus.DEGRADED: 1, HealthStatus.UNHEALTHY: 2}[self.overall_status]
 
 
 def health_check_wrapper(
