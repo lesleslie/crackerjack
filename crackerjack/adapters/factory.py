@@ -83,14 +83,9 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
             return SkylosAdapter(settings)
 
         if adapter_name == "Zuban":
-            from crackerjack.adapters.lsp.zuban import ZubanAdapter
-            from crackerjack.config.execution import ExecutionContext
+            from crackerjack.adapters.type.zuban import ZubanAdapter
 
-            context = ExecutionContext(
-                pkg_path=self.pkg_path,
-                settings=self.settings,
-            )
-            return t.cast(AdapterProtocol, ZubanAdapter(context))
+            return ZubanAdapter(settings)
 
         if adapter_name == "Claude AI":
             from crackerjack.adapters.ai.claude import ClaudeCodeFixer
