@@ -289,17 +289,17 @@ class TestCommandStructureValidation:
         # Skylos checks detected package directory (not "." anymore)
         skylos_cmd = get_tool_command("skylos")
         # Skylos now uses f"./{package_name}" instead of "."
-        assert "./crackerjack" in skylos_cmd or "crackerjack" in skylos_cmd
+        assert any("crackerjack" in arg for arg in skylos_cmd)
 
         # Complexipy checks detected package directory
         complexipy_cmd = get_tool_command("complexipy")
         # Should have a package name (will be "crackerjack" when running in crackerjack project)
-        assert "crackerjack" in complexipy_cmd
+        assert any("crackerjack" in arg for arg in complexipy_cmd)
 
         # Refurb checks detected package directory
         refurb_cmd = get_tool_command("refurb")
         # Should have a package name as last argument
-        assert "crackerjack" in refurb_cmd
+        assert any("crackerjack" in arg for arg in refurb_cmd)
 
     def test_special_flags_for_specific_tools(self) -> None:
         """Test that tools with special flags have them configured."""

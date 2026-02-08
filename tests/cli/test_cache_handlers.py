@@ -22,12 +22,12 @@ def test_handle_clear_cache_success(mock_cache_class):
     mock_cache.cleanup_all.return_value = {"hook_cache": 5, "result_cache":3}
     mock_cache_class.return_value = mock_cache
 
-    # Capture print output by patching the console
-    with patch('crackerjack.cli.cache_handlers.console') as mock_console:
-        handle_clear_cache()
+    # Pass mock console as parameter (new dependency injection pattern)
+    mock_console = Mock()
+    handle_clear_cache(console=mock_console)
 
-        # Check that the console print methods were called appropriately
-        assert mock_console.print.call_count >= 2  # At least table and success message
+    # Check that the console print methods were called appropriately
+    assert mock_console.print.call_count >= 2  # At least table and success message
 
 
 @patch('crackerjack.cli.cache_handlers.CrackerjackCache')
@@ -35,11 +35,12 @@ def test_handle_clear_cache_error(mock_cache_class):
     """Test handle_clear_cache function when an error occurs."""
     mock_cache_class.side_effect = Exception("Cache error")
 
-    with patch('crackerjack.cli.cache_handlers.console') as mock_console:
-        handle_clear_cache()
+    # Pass mock console as parameter (new dependency injection pattern)
+    mock_console = Mock()
+    handle_clear_cache(console=mock_console)
 
-        # Check that error message was printed
-        mock_console.print.assert_called()
+    # Check that error message was printed
+    mock_console.print.assert_called()
 
 
 @patch('crackerjack.cli.cache_handlers.CrackerjackCache')
@@ -60,11 +61,12 @@ def test_handle_cache_stats_success(mock_cache_class):
     mock_cache.cache_dir.exists.return_value = True
     mock_cache_class.return_value = mock_cache
 
-    with patch('crackerjack.cli.cache_handlers.console') as mock_console:
-        handle_cache_stats()
+    # Pass mock console as parameter (new dependency injection pattern)
+    mock_console = Mock()
+    handle_cache_stats(console=mock_console)
 
-        # Check that the console print methods were called
-        assert mock_console.print.call_count >= 2
+    # Check that the console print methods were called
+    assert mock_console.print.call_count >= 2
 
 
 @patch('crackerjack.cli.cache_handlers.CrackerjackCache')
@@ -72,11 +74,12 @@ def test_handle_cache_stats_error(mock_cache_class):
     """Test handle_cache_stats function when an error occurs."""
     mock_cache_class.side_effect = Exception("Stats error")
 
-    with patch('crackerjack.cli.cache_handlers.console') as mock_console:
-        handle_cache_stats()
+    # Pass mock console as parameter (new dependency injection pattern)
+    mock_console = Mock()
+    handle_cache_stats(console=mock_console)
 
-        # Check that error message was printed
-        mock_console.print.assert_called()
+    # Check that error message was printed
+    mock_console.print.assert_called()
 
 
 def test_create_cache_stats_table():
@@ -182,19 +185,19 @@ def test_generate_performance_insights():
     assert large_cache_found
 
 
-@patch('crackerjack.cli.cache_handlers.console')
-def test_display_cache_directory_info(mock_console):
+def test_display_cache_directory_info():
     """Test displaying cache directory info."""
     mock_cache = Mock()
     mock_cache.enable_disk_cache = True
-    mock_cache.cache_dir = Mock()
-    mock_cache.cache_dir.__str__.return_value = "/tmp/cache"
+    mock_cache.cache_dir = Mock(spec=['exists', 'rglob', '__str__'])
     mock_cache.cache_dir.exists.return_value = True
 
     # Mock rglob to return some files
     mock_cache.cache_dir.rglob.return_value = [Mock(), Mock()]
 
-    _display_cache_directory_info(mock_cache)
+    # Pass mock console as parameter (new dependency injection pattern)
+    mock_console = Mock()
+    _display_cache_directory_info(mock_cache, console=mock_console)
 
     # Check that console.print was called
     mock_console.print.assert_called()
