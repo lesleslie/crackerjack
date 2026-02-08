@@ -242,6 +242,8 @@ def test_filter_relevant_data():
 
 def test_log_filtered_fields(caplog):
     """Test logging of filtered fields."""
+    import logging
+
     merged_data = {
         "name": "test",
         "value": 100,
@@ -253,7 +255,8 @@ def test_log_filtered_fields(caplog):
         "value": 100
     }
 
-    with caplog.at_level("DEBUG"):
+    # Target the specific logger for crackerjack.config.loader
+    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
         _log_filtered_fields(merged_data, relevant_data)
 
         # Check that the unknown field was logged
@@ -262,12 +265,15 @@ def test_log_filtered_fields(caplog):
 
 def test_log_load_info(caplog):
     """Test logging of load information."""
+    import logging
+
     relevant_data = {
         "name": "test",
         "value": 100
     }
 
-    with caplog.at_level("DEBUG"):
+    # Target the specific logger for crackerjack.config.loader
+    with caplog.at_level(logging.DEBUG, logger="crackerjack.config.loader"):
         _log_load_info(MockSettings, relevant_data)
 
         # Check that the load info was logged
