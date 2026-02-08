@@ -1,3 +1,4 @@
+import logging
 import subprocess
 import typing as t
 from contextlib import suppress
@@ -14,6 +15,12 @@ from crackerjack.models.protocols import (
     SecurityServiceProtocol,
     VersionAnalyzerProtocol,
 )
+from crackerjack.utils.error_handling import (
+    format_error_message,
+    log_and_return_error,
+)
+
+logger = logging.getLogger(__name__)
 
 if t.TYPE_CHECKING:
     from crackerjack.services.git import GitService
@@ -87,7 +94,13 @@ class PublishManagerImpl:
             from crackerjack.services.git import GitService
 
             return GitService(console=self.console, pkg_path=self.pkg_path)  # type: ignore[return-value]
-        except Exception:
+        except Exception as e:
+            # Log but return null service - git is optional for some operations
+            logger.warning(
+                f"Failed to initialize GitService, using null service: {e}",
+                exc_info=True,
+                extra={"pkg_path": str(self.pkg_path)},
+            )
             return _NullGitService()  # type: ignore[return-value]
 
     def _resolve_version_analyzer(
@@ -103,7 +116,13 @@ class PublishManagerImpl:
                 VersionAnalyzerProtocol,
                 VersionAnalyzer(t.cast("GitService", self._git_service)),
             )
-        except Exception:
+        except Exception as e:
+            # Log but return null service - version analysis is optional
+            logger.warning(
+                f"Failed to initialize VersionAnalyzer, using null service: {e}",
+                exc_info=True,
+                extra={"pkg_path": str(self.pkg_path)},
+            )
             return _NullVersionAnalyzer()  # type: ignore[return-value]
 
     def _resolve_changelog_generator(
@@ -116,7 +135,13 @@ class PublishManagerImpl:
             from crackerjack.services.changelog_automation import ChangelogGenerator
 
             return ChangelogGenerator(git_service=self._git_service)  # type: ignore[return-value]
-        except Exception:
+        except Exception as e:
+            # Log but return null service - changelog generation is optional
+            logger.warning(
+                f"Failed to initialize ChangelogGenerator, using null service: {e}",
+                exc_info=True,
+                extra={"pkg_path": str(self.pkg_path)},
+            )
             return _NullChangelogGenerator()  # type: ignore[return-value]
 
     def _resolve_regex_patterns(
