@@ -9,21 +9,21 @@
 Crackerjack's multi-agent system (12 agents) needed a way to route issues to the most appropriate agent based on the specific issue type, file context, and agent capabilities. A simple confidence-based routing system (ADR-002) was insufficient for nuanced scenarios where:
 
 1. **Issue types overlap** (e.g., a security issue could also be a performance issue)
-2. **File context matters** (test files need different handling than production code)
-3. **Agent capabilities vary** (some agents are generalists, others are specialists)
-4. **Learning from past successes** (agents should improve over time)
-5. **Collaborative scenarios** (some issues require multiple agents)
+1. **File context matters** (test files need different handling than production code)
+1. **Agent capabilities vary** (some agents are generalists, others are specialists)
+1. **Learning from past successes** (agents should improve over time)
+1. **Collaborative scenarios** (some issues require multiple agents)
 
 ### Problem Statement
 
 How should Crackerjack route issues to agents considering:
 
 1. **Issue type and severity**: Different issues require different expertise
-2. **File context**: Test files vs production code vs documentation
-3. **Agent specialization**: Some agents are generalists, others are specialists
-4. **Historical performance**: Past success rates for similar issues
-5. **Collaboration**: Some issues require multiple agents working together
-6. **Performance**: Routing should not add significant overhead
+1. **File context**: Test files vs production code vs documentation
+1. **Agent specialization**: Some agents are generalists, others are specialists
+1. **Historical performance**: Past success rates for similar issues
+1. **Collaboration**: Some issues require multiple agents working together
+1. **Performance**: Routing should not add significant overhead
 
 ### Key Requirements
 
@@ -39,7 +39,7 @@ How should Crackerjack route issues to agents considering:
 | Driver | Importance | Rationale |
 |--------|------------|-----------|
 | **Accuracy** | Critical | Right agent must handle the right issue |
-| **Performance** | High | Routing overhead must be minimal (<100ms) |
+| **Performance** | High | Routing overhead must be minimal (\<100ms) |
 | **Transparency** | High | Users should understand why an agent was selected |
 | **Learning** | High | System should improve over time |
 | **Flexibility** | High | Must handle edge cases and uncertainty |
@@ -51,11 +51,13 @@ How should Crackerjack route issues to agents considering:
 **Description**: Use if/else rules to route issues (e.g., "if issue type is 'security', route to SecurityAgent").
 
 **Pros**:
+
 - Simple to implement
 - Predictable behavior
 - Easy to debug
 
 **Cons**:
+
 - **Inflexible**: Hard to handle overlapping issue types
 - **No learning**: Cannot improve from past performance
 - **Brittle**: Breaks when new agents or issue types are added
@@ -79,11 +81,13 @@ def route_issue(issue):
 **Description**: Train a classifier to predict the best agent for each issue.
 
 **Pros**:
+
 - Can learn complex patterns
 - Handles overlapping issue types
 - Improves over time
 
 **Cons**:
+
 - **Training data required**: Need labeled dataset (issue → best agent)
 - **Black box**: Hard to explain why routing decision was made
 - **Cold start**: Poor performance until trained
@@ -97,6 +101,7 @@ def route_issue(issue):
 **Description**: Each agent advertises skills (capabilities) with confidence scores, and a routing engine matches issues to skills.
 
 **Pros**:
+
 - **Explicit skills**: Agents declare what they can do (transparent)
 - **Confidence scoring**: Quantifies how well an agent matches an issue
 - **Context awareness**: Can consider file context, issue severity, etc.
@@ -105,6 +110,7 @@ def route_issue(issue):
 - **Fallback**: Can fall back to generalist agents when specialists fail
 
 **Cons**:
+
 - More complex than rule-based routing
 - Requires skill definitions for each agent
 - Confidence scoring needs tuning
@@ -670,17 +676,17 @@ print(decision)
 ### Positive
 
 1. **Transparent Routing**: Decisions are explainable via reasoning field
-2. **Flexible**: Can handle overlapping issue types and edge cases
-3. **Learning**: Can track success rates and adjust confidence over time
-4. **Collaborative**: Supports parallel/sequential routing for complex issues
-5. **Fallback**: Graceful degradation when no specialist is available
+1. **Flexible**: Can handle overlapping issue types and edge cases
+1. **Learning**: Can track success rates and adjust confidence over time
+1. **Collaborative**: Supports parallel/sequential routing for complex issues
+1. **Fallback**: Graceful degradation when no specialist is available
 
 ### Negative
 
 1. **Complexity**: More complex than rule-based or single-agent routing
-2. **Skill Definitions**: Need to define skills for each agent (maintenance)
-3. **Confidence Tuning**: Requires tuning to avoid over/under-confidence
-4. **Performance**: Routing overhead (~50-100ms per issue)
+1. **Skill Definitions**: Need to define skills for each agent (maintenance)
+1. **Confidence Tuning**: Requires tuning to avoid over/under-confidence
+1. **Performance**: Routing overhead (~50-100ms per issue)
 
 ### Risks
 
@@ -712,9 +718,6 @@ print(decision)
 - **ADR-003**: Property-based testing with Hypothesis
 
 ## References
-
-- [Agent Skill System](../../crackerjack/intelligence/skills.py)
-- [Skill Registry Implementation](../../crackerjack/intelligence/skill_registry.py)
 
 ## Revision History
 

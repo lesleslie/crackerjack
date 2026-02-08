@@ -51,7 +51,7 @@ class HookResult:
     returncode: int | None = None
     output: str | None = None
     error: str | None = None
-    qa_result: t.Any | None = None  # QAResult from QA adapter (if available)
+    qa_result: t.Any | None = None
 
     def __post_init__(self) -> None:
         if self.hook_name and not self.name:

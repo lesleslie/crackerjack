@@ -12,6 +12,15 @@ if t.TYPE_CHECKING:
 
 
 class DefaultAdapterFactory(AdapterFactoryProtocol):
+    TOOL_TO_ADAPTER_NAME: t.ClassVar[dict[str, str]] = {
+        "ruff": "Ruff",
+        "bandit": "Bandit",
+        "semgrep": "Semgrep",
+        "refurb": "Refurb",
+        "skylos": "Skylos",
+        "zuban": "Zuban",
+    }
+
     def __init__(
         self,
         settings: t.Any | None = None,
@@ -37,6 +46,12 @@ class DefaultAdapterFactory(AdapterFactoryProtocol):
                 logger.info("Tool-native fixes enabled for Ruff (fix_enabled=True)")
 
         return settings
+
+    def tool_has_adapter(self, tool_name: str) -> bool:
+        return tool_name in self.TOOL_TO_ADAPTER_NAME
+
+    def get_adapter_name(self, tool_name: str) -> str | None:
+        return self.TOOL_TO_ADAPTER_NAME.get(tool_name)
 
     def create_adapter(
         self,

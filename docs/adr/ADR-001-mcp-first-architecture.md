@@ -13,10 +13,10 @@ Crackerjack needed to integrate with AI agents (Claude, Qwen) for autonomous cod
 How should Crackerjack expose its capabilities to AI agents while maintaining:
 
 1. **Performance**: Minimal overhead during quality checks
-2. **Security**: Safe code execution with proper validation
-3. **Extensibility**: Easy addition of new tools and capabilities
-4. **Developer Experience**: Simple integration for AI agents
-5. **Separation of Concerns**: Clear boundary between CLI and MCP interfaces
+1. **Security**: Safe code execution with proper validation
+1. **Extensibility**: Easy addition of new tools and capabilities
+1. **Developer Experience**: Simple integration for AI agents
+1. **Separation of Concerns**: Clear boundary between CLI and MCP interfaces
 
 ### Key Requirements
 
@@ -30,7 +30,7 @@ How should Crackerjack expose its capabilities to AI agents while maintaining:
 
 | Driver | Importance | Rationale |
 |--------|------------|-----------|
-| **Performance** | High | Quality checks must remain fast (<5s for fast hooks) |
+| **Performance** | High | Quality checks must remain fast (\<5s for fast hooks) |
 | **Developer Experience** | High | Simple API for AI agents to consume |
 | **Security** | Critical | Prevent arbitrary code execution |
 | **Extensibility** | High | Easy to add new tools without breaking changes |
@@ -43,11 +43,13 @@ How should Crackerjack expose its capabilities to AI agents while maintaining:
 **Description**: Use stdio transport for MCP communication.
 
 **Pros**:
+
 - Simpler setup (no network ports)
 - Built-in process isolation
 - Standard MCP pattern
 
 **Cons**:
+
 - No persistent connection across sessions
 - Difficult to query job status after initial request
 - Harder to debug connection issues
@@ -60,11 +62,13 @@ How should Crackerjack expose its capabilities to AI agents while maintaining:
 **Description**: Use HTTP transport with REST-like endpoints.
 
 **Pros**:
+
 - Easy to debug (can use curl/browser)
 - Stateful connections
 - Supports multiple concurrent clients
 
 **Cons**:
+
 - More complex deployment (port management)
 - HTTP overhead for every call
 - Authentication complexity
@@ -77,6 +81,7 @@ How should Crackerjack expose its capabilities to AI agents while maintaining:
 **Description**: Use FastMCP with both stdio and WebSocket transport, plus dedicated MCP server lifecycle commands.
 
 **Pros**:
+
 - **FastMCP**: Declarative tool registration with type safety
 - **WebSocket transport**: Real-time progress updates
 - **Dedicated lifecycle commands**: `start`, `stop`, `status`, `health`, `restart`
@@ -85,6 +90,7 @@ How should Crackerjack expose its capabilities to AI agents while maintaining:
 - **Security**: Localhost-only WebSocket by default
 
 **Cons**:
+
 - More complex implementation
 - Requires WebSocket dependency
 - Additional testing surface
@@ -325,20 +331,20 @@ async def run_quality_checks():
 ### Positive
 
 1. **Performance**: Direct Python API calls (no subprocess overhead) - 47% faster than pre-commit
-2. **Extensibility**: Adding new tools is trivial with `@mcp.tool()` decorator
-3. **Real-time Monitoring**: WebSocket enables live progress tracking
-4. **Type Safety**: FastMCP provides automatic type validation
-5. **Separation of Concerns**: MCP layer is isolated from core logic
-6. **Backward Compatible**: CLI commands remain unchanged
-7. **Security**: Localhost-only WebSocket prevents external access
+1. **Extensibility**: Adding new tools is trivial with `@mcp.tool()` decorator
+1. **Real-time Monitoring**: WebSocket enables live progress tracking
+1. **Type Safety**: FastMCP provides automatic type validation
+1. **Separation of Concerns**: MCP layer is isolated from core logic
+1. **Backward Compatible**: CLI commands remain unchanged
+1. **Security**: Localhost-only WebSocket prevents external access
 
 ### Negative
 
 1. **Complexity**: More moving parts (WebSocket server, job manager)
-2. **Dependency**: Requires FastMCP and websockets libraries
-3. **Testing Surface**: Need to test both stdio and WebSocket transports
-4. **Debugging**: WebSocket issues can be harder to debug than HTTP
-5. **Memory**: Job manager needs periodic cleanup to prevent memory leaks
+1. **Dependency**: Requires FastMCP and websockets libraries
+1. **Testing Surface**: Need to test both stdio and WebSocket transports
+1. **Debugging**: WebSocket issues can be harder to debug than HTTP
+1. **Memory**: Job manager needs periodic cleanup to prevent memory leaks
 
 ### Risks
 
@@ -394,7 +400,6 @@ python -m crackerjack run --ai-fix --run-tests  # Still works
 - [FastMCP Documentation](https://github.com/jlowin/fastmcp)
 - [MCP Protocol Specification](https://modelcontextprotocol.io)
 - [Phase 3 Implementation](../PHASE1_COMPLETE.md) - MCP server lifecycle modernization
-- [MCP Tools Specification](../MCP_TOOLS_SPECIFICATION.md)
 
 ## Revision History
 

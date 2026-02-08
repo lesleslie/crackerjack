@@ -171,6 +171,7 @@ python -m crackerjack run --fast
 ```
 
 **Fast Hooks**:
+
 - Ruff formatting
 - Trailing whitespace cleanup
 - UV lock file validation
@@ -188,6 +189,7 @@ python -m crackerjack run --comp
 ```
 
 **Comprehensive Hooks**:
+
 - Zuban type checking
 - Bandit security analysis
 - Dead code detection
@@ -240,11 +242,11 @@ python -m crackerjack run --ai-fix
 **How It Works**:
 
 1. Run all quality checks
-2. Collect all failures
-3. AI analyzes each issue
-4. Applies targeted fixes
-5. Re-runs checks
-6. Repeats until all pass (max 8 iterations)
+1. Collect all failures
+1. AI analyzes each issue
+1. Applies targeted fixes
+1. Re-runs checks
+1. Repeats until all pass (max 8 iterations)
 
 **Output**:
 
@@ -276,6 +278,7 @@ python -m crackerjack run --ai-fix --ai-debug --run-tests
 ```
 
 **Output Includes**:
+
 - AI agent selection reasoning
 - Confidence scores for each fix
 - Prompt/response details
@@ -365,6 +368,7 @@ python -m crackerjack run --xcode-tests --xcode-project MyProject.xcodeproj --xc
 ```
 
 **Options**:
+
 - `--xcode-project`: Path to Xcode project
 - `--xcode-scheme`: Scheme to test
 - `--xcode-destination`: Destination string
@@ -488,6 +492,7 @@ python -m crackerjack run --publish [VERSION_TYPE]
 ```
 
 **Version Types**:
+
 - `patch`: 1.0.0 → 1.0.1 (bug fixes)
 - `minor`: 1.0.0 → 1.1.0 (new features)
 - `major`: 1.0.0 → 2.0.0 (breaking changes)
@@ -590,6 +595,7 @@ python -m crackerjack run --enhanced-monitor
 ```
 
 **Features**:
+
 - Pattern detection
 - Anomaly detection
 - Predictive alerts
@@ -606,6 +612,7 @@ python -m crackerjack run --watchdog
 ```
 
 **Features**:
+
 - Monitors MCP server health
 - Auto-restart on failure
 - Crash detection
@@ -723,6 +730,7 @@ python -m crackerjack run --verbose
 ```
 
 **Output Includes**:
+
 - Detailed adapter execution
 - Cache hits/misses
 - Performance metrics
@@ -739,6 +747,7 @@ python -m crackerjack run --debug
 ```
 
 **Output Includes**:
+
 - Extremely verbose logging
 - Internal state dumps
 - Timing information
@@ -755,6 +764,7 @@ python -m crackerjack run --interactive
 ```
 
 **Features**:
+
 - Rich progress bars
 - Colored output
 - Interactive menus
@@ -783,6 +793,7 @@ python -m crackerjack run --dev --monitor
 ```
 
 **Features**:
+
 - Live reload
 - Debug logging
 - Profiling enabled
@@ -798,6 +809,7 @@ python -m crackerjack run --generate-docs
 ```
 
 **Options**:
+
 - `--docs-format`: Documentation format (markdown/rst/html)
 - `--validate-docs`: Validate existing documentation
 
@@ -812,6 +824,7 @@ python -m crackerjack run --orchestrated
 ```
 
 **Features**:
+
 - Complex workflow orchestration
 - Multi-phase coordination
 - Advanced error handling
@@ -923,11 +936,11 @@ python -m crackerjack run --publish patch
 ```
 
 **For More Information**:
+
 - [Quick Start Guide](QUICK_START.md)
-- [User Guide](USER_GUIDE.md)
 - [Architecture](ARCHITECTURE.md)
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-02-06
 **Crackerjack Version**: 0.51.0

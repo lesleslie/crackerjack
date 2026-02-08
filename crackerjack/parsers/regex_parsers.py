@@ -298,23 +298,19 @@ class GenericRegexParser(RegexParser):
         if not output or not output.strip():
             return []
 
-        # Check for success indicators - return empty list if tool passed
         success_indicators = ("✓", "passed", "valid", "ok", "success", "no issues")
         output_lower = output.lower()
         if any(indicator in output_lower for indicator in success_indicators):
             logger.debug(f"{self.tool_name} passed (success indicators found)")
             return []
 
-        # Check for explicit failure indicators before creating generic issue
         failure_indicators = ("failed", "error", "invalid", "issue", "would be")
         if not any(indicator in output_lower for indicator in failure_indicators):
-            # No clear success or failure indicators - likely informational output
             logger.debug(
                 f"{self.tool_name} produced unclear output, treating as success"
             )
             return []
 
-        # Create generic issue for actual failures
         return [
             Issue(
                 type=self.issue_type,
@@ -570,7 +566,6 @@ def register_regex_parsers(factory: "ParserFactory") -> None:
     factory.register_regex_parser("check-toml", StructuredDataParser)
     factory.register_regex_parser("check-json", StructuredDataParser)
 
-    # Register generic parsers for tools without specific output formats
     factory.register_regex_parser(
         "validate-regex-patterns", ValidateRegexPatternsParser
     )
@@ -646,7 +641,6 @@ class SkylosRegexParser(RegexParser):
         )
 
 
-# Generic parsers for tools without specific output formats
 class ValidateRegexPatternsParser(GenericRegexParser):
     def __init__(self) -> None:
         super().__init__("validate-regex-patterns", IssueType.FORMATTING)
@@ -688,11 +682,6 @@ class CheckAstParser(GenericRegexParser):
 
 
 class RuffRegexParser(RegexParser):
-    """Parser for ruff text output (not JSON format).
-
-    Handles both ruff's "full" (diagnostic) and "concise" formats.
-    """
-
     def __init__(self) -> None:
         self.tool_name = "ruff"
 
@@ -701,33 +690,23 @@ class RuffRegexParser(RegexParser):
         issues: list[Issue] = []
         lines = output.strip().split("\n")
 
-        # Ruff diagnostic format (full):
-        # C901 `fix_test_file` is too complex (23 > 15)
-        #  --> fix_test_imports.py:6:5
-        #
-        # Ruff concise format:
-        # fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)
-
         i = 0
         while i < len(lines):
             line = lines[i].strip()
 
-            # Check for diagnostic format (code on first line, arrow on second)
             if line.startswith("-->") and i > 0:
-                # Previous line should have the code and message
                 prev_line = lines[i - 1].strip()
                 issue = self._parse_diagnostic_format(prev_line, line)
                 if issue:
                     issues.append(issue)
-                    i += 1  # Skip the arrow line
-                    # Skip context lines (optional)
+                    i += 1
+
                     while i < len(lines) and (
                         lines[i].startswith("|") or lines[i].strip() == ""
                     ):
                         i += 1
                     continue
 
-            # Check for concise format (single line: file:line:col: CODE message)
             if ":" in line and len(line.split(":")) >= 4:
                 issue = self._parse_concise_format(line)
                 if issue:
@@ -741,7 +720,6 @@ class RuffRegexParser(RegexParser):
         import re
         from pathlib import Path
 
-        # Parse code line: "C901 `fix_test_file` is too complex (23 > 15)"
         code_match = re.match(r"^([A-Z]+\d+)\s+(.+)$", code_line)
         if not code_match:
             return None
@@ -749,7 +727,6 @@ class RuffRegexParser(RegexParser):
         code = code_match.group(1)
         message = code_match.group(2).strip()
 
-        # Parse arrow line: " --> fix_test_imports.py:6:5"
         arrow_match = re.search(r"-->\s+(\S+):(\d+):(\d+)", arrow_line)
         if not arrow_match:
             return None
@@ -778,7 +755,6 @@ class RuffRegexParser(RegexParser):
     def _parse_concise_format(self, line: str) -> Issue | None:
         from pathlib import Path
 
-        # Parse: "fix_test_imports.py:6:5: C901 `fix_test_file` is too complex (23 > 15)"
         parts = line.split(":", maxsplit=3)
         if len(parts) < 4:
             return None
