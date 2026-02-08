@@ -20,6 +20,7 @@ from crackerjack.models.protocols import (
     OptionsProtocol,
 )
 from crackerjack.services.lsp_client import LSPClient
+from crackerjack.services.testing.test_result_parser import TestResultParser
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
@@ -39,6 +40,7 @@ class TestManager:
         coverage_badge: CoverageBadgeServiceProtocol | None = None,
         command_builder: TestCommandBuilder | None = None,
         lsp_client: LSPClient | None = None,
+        result_parser: TestResultParser | None = None,
     ) -> None:
         if console is None:
             console = CrackerjackConsole()
@@ -51,6 +53,9 @@ class TestManager:
 
         if command_builder is None:
             command_builder = TestCommandBuilder()
+
+        if result_parser is None:
+            result_parser = TestResultParser()
 
         self.console = console
 
@@ -65,6 +70,7 @@ class TestManager:
 
         self.executor = TestExecutor(console, self.pkg_path)
         self.command_builder = command_builder
+        self.result_parser = result_parser
 
 
         self.coverage_ratchet = coverage_ratchet
@@ -524,190 +530,8 @@ class TestManager:
     def _parse_test_statistics(
         self, output: str, *, already_clean: bool = False,
     ) -> dict[str, t.Any]:
-        clean_output = output if already_clean else self._strip_ansi_codes(output)
-        stats = {
-            "total": 0,
-            "passed": 0,
-            "failed": 0,
-            "skipped": 0,
-            "errors": 0,
-            "xfailed": 0,
-            "xpassed": 0,
-            "duration": 0.0,
-            "coverage": None,
-        }
-
-        try:
-
-            summary_match = self._extract_pytest_summary(clean_output)
-            if summary_match:
-                summary_text, duration = self._parse_summary_match(
-                    summary_match, clean_output,
-                )
-                stats["duration"] = duration
-
-
-                self._extract_test_metrics(summary_text, stats)
-
-
-            self._calculate_total_tests(stats, clean_output)
-
-
-            stats["coverage"] = self._extract_coverage_from_output(clean_output)
-
-        except (ValueError, AttributeError) as e:
-            self.console.print(f"[dim]⚠️ Failed to parse test statistics: {e}[/dim]")
-
-        return stats
-
-    def _extract_pytest_summary(self, output: str) -> re.Match[str] | None:
-        summary_patterns = [
-            r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+",
-            r"(\d+\s+\w+)+\s+in\s+([\d.]+)s?",
-            r"(\d+.*)in\s+([\d.]+)s?",
-        ]
-
-        for pattern in summary_patterns:
-            match = re.search(pattern, output)
-            if match:
-                return match
-        return None
-
-    def _parse_summary_match(
-        self, match: re.Match[str], output: str,
-    ) -> tuple[str, float]:
-        if len(match.groups()) >= 2:
-            summary_text = match.group(1)
-            duration = float(match.group(2))
-        else:
-
-            duration = (
-                float(match.group(1))
-                if match.group(1).replace(".", "").isdigit()
-                else 0.0
-            )
-            summary_text = output
-
-        return summary_text, duration
-
-    def _extract_test_metrics(self, summary_text: str, stats: dict[str, t.Any]) -> None:
-        for metric in ("passed", "failed", "skipped", "error", "xfailed", "xpassed"):
-            metric_pattern = rf"(\d+)\s+{metric}"
-            metric_match = re.search(metric_pattern, summary_text, re.IGNORECASE)
-            if metric_match:
-                count = int(metric_match.group(1))
-                key = "errors" if metric == "error" else metric
-                stats[key] = count
-
-
-        if stats["passed"] == 0:
-            collected_match = re.search(r"(\d+)\s+collected", summary_text, re.IGNORECASE)
-            if collected_match and stats["skipped"] == 0:
-
-                stats["passed"] = int(collected_match.group(1))
-
-    def _calculate_total_tests(self, stats: dict[str, t.Any], output: str) -> None:
-        stats["total"] = sum(
-            [
-                stats["passed"],
-                stats["failed"],
-                stats["skipped"],
-                stats["errors"],
-                stats["xfailed"],
-                stats["xpassed"],
-            ],
-        )
-
-
-        if stats["total"] == 0:
-            self._fallback_count_tests(output, stats)
-
-    def _parse_test_lines_by_token(self, output: str, stats: dict[str, t.Any]) -> None:
-        status_tokens = [
-            ("passed", "PASSED"),
-            ("failed", "FAILED"),
-            ("skipped", "SKIPPED"),
-            ("errors", "ERROR"),
-            ("xfailed", "XFAIL"),
-            ("xpassed", "XPASS"),
-        ]
-
-        for raw_line in output.splitlines():
-            line = raw_line.strip()
-            if "::" not in line:
-                continue
-
-            line_upper = line.upper()
-            if line_upper.startswith(
-                ("FAILED", "ERROR", "XPASS", "XFAIL", "SKIPPED", "PASSED"),
-            ):
-                continue
-
-            for key, token in status_tokens:
-                if token in line_upper:
-                    stats[key] += 1
-                    break
-
-    def _calculate_total(self, stats: dict[str, t.Any]) -> None:
-        stats["total"] = sum(
-            [
-                stats["passed"],
-                stats["failed"],
-                stats["skipped"],
-                stats["errors"],
-                stats.get("xfailed", 0),
-                stats.get("xpassed", 0),
-            ],
-        )
-
-    def _parse_metric_patterns(self, output: str, stats: dict[str, t.Any]) -> bool:
-
-        for metric in ("passed", "failed", "skipped", "error"):
-
-            metric_pattern = rf"(\d+)\s+{metric}\b"
-            metric_match = re.search(metric_pattern, output, re.IGNORECASE)
-            if metric_match:
-                count = int(metric_match.group(1))
-                key = "errors" if metric == "error" else metric
-                stats[key] = count
-
-        return stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"] > 0
-
-    def _parse_legacy_patterns(self, output: str, stats: dict[str, t.Any]) -> None:
-        legacy_patterns = {
-            "passed": r"(?:\.|✓|✅)\s*(?:PASSED|pass|Tests\s+passed)",
-            "failed": r"(?:F|X|❌)\s*(?:FAILED|fail)",
-            "skipped": r"(?<!\w)(?:s|S)(?!\w)|\.SKIPPED|skip|\d+\s+skipped",
-            "errors": r"ERROR|E\s+",
-        }
-        for key, pattern in legacy_patterns.items():
-            stats[key] = len(re.findall(pattern, output, re.IGNORECASE))
-
-    def _fallback_count_tests(self, output: str, stats: dict[str, t.Any]) -> None:
-
-        if self._parse_metric_patterns(output, stats):
-            self._calculate_total(stats)
-            return
-
-
-        self._parse_test_lines_by_token(output, stats)
-        self._calculate_total(stats)
-
-        if stats["total"] != 0:
-            return
-
-
-        self._parse_legacy_patterns(output, stats)
-        stats["total"] = (
-            stats["passed"] + stats["failed"] + stats["skipped"] + stats["errors"]
-        )
-
-    def _extract_coverage_from_output(self, output: str) -> float | None:
-        coverage_pattern = r"TOTAL\s+\d+\s+\d+\s+(\d+)%"
-        coverage_match = re.search(coverage_pattern, output)
-        if coverage_match:
-            return float(coverage_match.group(1))
-        return None
+        """Parse test statistics using TestResultParser."""
+        return self.result_parser.parse_statistics(output, already_clean=already_clean)
 
     def _should_render_test_panel(self, stats: dict[str, t.Any]) -> bool:
         return any(

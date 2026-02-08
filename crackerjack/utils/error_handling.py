@@ -13,11 +13,12 @@ import traceback
 from pathlib import Path
 from typing import Any, Callable, TypeVar
 
-from crackerjack.models.protocols import Logger
-
 logger = logging.getLogger(__name__)
 
 T = TypeVar("T")
+
+# Type alias for logger
+Logger = logging.Logger
 
 
 def log_and_return_error(
