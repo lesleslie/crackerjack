@@ -63,9 +63,8 @@ class TestManager:
             self.pkg_path = Path(resolved_path)
 
 
-        from rich.console import Console as RichConsole
-        rich_console = console if isinstance(console, RichConsole) else RichConsole()
-        self.executor = TestExecutor(rich_console, self.pkg_path)
+        # console is guaranteed to be RichConsole (CrackerjackConsole or passed-in)
+        self.executor = TestExecutor(console, self.pkg_path)
         self.command_builder = command_builder
 
 
@@ -223,9 +222,8 @@ class TestManager:
         spinner = Spinner("dots", text="[cyan]Validating test environment...[/cyan]")
         try:
 
-            from rich.console import Console as RichConsole
-            rich_console = self.console if isinstance(self.console, RichConsole) else RichConsole()
-            with Live(spinner, console=rich_console, transient=True):
+            # self.console is guaranteed to be RichConsole (CrackerjackConsole)
+            with Live(spinner, console=self.console, transient=True):
                 result = subprocess.run(
                     cmd, check=False, cwd=self.pkg_path, capture_output=True, text=True,
                 )
