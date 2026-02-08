@@ -695,7 +695,7 @@ class RuffRegexParser(RegexParser):
         self.tool_name = "ruff"
 
     def parse_text(self, output: str) -> list[Issue]:
-
+        """Parse ruff output supporting both diagnostic and concise formats."""
         issues: list[Issue] = []
         lines = output.strip().split("\n")
 
@@ -703,27 +703,66 @@ class RuffRegexParser(RegexParser):
         while i < len(lines):
             line = lines[i].strip()
 
-            if line.startswith("-->") and i > 0:
-                prev_line = lines[i - 1].strip()
-                issue = self._parse_diagnostic_format(prev_line, line)
-                if issue:
-                    issues.append(issue)
-                    i += 1
+            # Try to parse diagnostic format (multiline)
+            diagnostic_issue = self._try_parse_diagnostic_format(lines, i)
+            if diagnostic_issue is not None:
+                issues.append(diagnostic_issue)
+                i = self._skip_multiline_context(lines, i)
+                continue
 
-                    while i < len(lines) and (
-                        lines[i].startswith("|") or lines[i].strip() == ""
-                    ):
-                        i += 1
-                    continue
-
-            if ":" in line and len(line.split(":")) >= 4:
-                issue = self._parse_concise_format(line)
-                if issue:
-                    issues.append(issue)
+            # Try to parse concise format (single line)
+            concise_issue = self._try_parse_concise_format(line)
+            if concise_issue:
+                issues.append(concise_issue)
 
             i += 1
 
         return issues
+
+    def _try_parse_diagnostic_format(
+        self, lines: list[str], current_index: int
+    ) -> Issue | None:
+        """Try to parse ruff's diagnostic format (-->) with code on previous line.
+
+        Returns Issue if successful, None if not a diagnostic format.
+        """
+        if current_index == 0:
+            return None
+
+        line = lines[current_index].strip()
+        if not line.startswith("-->"):
+            return None
+
+        prev_line = lines[current_index - 1].strip()
+        return self._parse_diagnostic_format(prev_line, line)
+
+    def _skip_multiline_context(self, lines: list[str], start_index: int) -> int:
+        """Skip multiline context (| and empty lines) after diagnostic format.
+
+        Returns new index after skipping context lines.
+        """
+        i = start_index + 1
+        while i < len(lines) and self._is_context_line(lines[i]):
+            i += 1
+        return i
+
+    def _is_context_line(self, line: str) -> bool:
+        """Check if line is part of multiline context (continuation or blank)."""
+        return line.startswith("|") or line.strip() == ""
+
+    def _try_parse_concise_format(self, line: str) -> Issue | None:
+        """Try to parse ruff's concise format (file:line:col: code message).
+
+        Returns Issue if successful, None if not a concise format.
+        """
+        if not self._is_concise_format_line(line):
+            return None
+
+        return self._parse_concise_format(line)
+
+    def _is_concise_format_line(self, line: str) -> bool:
+        """Check if line matches concise format pattern."""
+        return ":" in line and len(line.split(":")) >= 4
 
     def _parse_diagnostic_format(self, code_line: str, arrow_line: str) -> Issue | None:
         import re

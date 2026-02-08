@@ -1,0 +1,157 @@
+{
+  "functions": [
+    {
+      "complexity": 0,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::__init__",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_perform_extraction",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_should_apply_pattern",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 0,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::apply_enhanced_strategies",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_add_helper_definitions",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_apply_boolean_simplifications",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_apply_function_extraction",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_find_class_end",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_is_extraction_valid",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_replace_function_with_calls",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 1,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_simplify_boolean_expressions",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_create_section",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_extract_function_content",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 2,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_try_apply_pattern",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_find_class_indent",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_initialize_new_section",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 3,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_should_start_new_section",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_find_class_end_line",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 4,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::refactor_detect_agent_needs_pattern",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 6,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_simplify_data_structures",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_apply_enhanced_complexity_patterns",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 7,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_extract_validation_patterns",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 8,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_extract_logical_sections",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::_extract_nested_conditions",
+      "path": "code_transformer.py"
+    },
+    {
+      "complexity": 15,
+      "file_name": "code_transformer.py",
+      "function_name": "CodeTransformer::refactor_complex_functions",
+      "path": "code_transformer.py"
+    }
+  ],
+  "targets": [
+    "/Users/les/Projects/crackerjack/crackerjack/agents/helpers/refactoring/code_transformer.py"
+  ]
+}
