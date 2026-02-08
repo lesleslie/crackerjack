@@ -6,27 +6,54 @@ import yaml
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
+from crackerjack.services.config_parsers import ConfigParserRegistry
+
 
 class ConfigService:
     @staticmethod
     def load_config(path: str | Path) -> dict[str, Any]:
+        """Load configuration from file (format auto-detected from extension).
+
+        This uses the ConfigParserRegistry to select the appropriate parser,
+        eliminating the need for if-chains and making the system open for
+        extension (new formats can be added without modifying this method).
+
+        Args:
+            path: Path to config file (extension determines format)
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If file format is not supported
+        """
         path = Path(path)
 
         if not path.exists():
             msg = f"Configuration file does not exist: {path}"
             raise FileNotFoundError(msg)
 
-        if path.suffix.lower() == ".json":
-            return ConfigService._load_json(path)
-        if path.suffix.lower() in (".yml", ".yaml"):
-            return ConfigService._load_yaml(path)
-        if path.suffix.lower() == ".toml":
-            return ConfigService._load_toml(path)
-        msg = f"Unsupported config format: {path.suffix}"
-        raise ValueError(msg)
+        parser = ConfigParserRegistry.get_parser(path)
+        return parser.load(path)
 
     @staticmethod
     async def load_config_async(path: str | Path) -> dict[str, Any]:
+        """Load configuration from file asynchronously (format auto-detected).
+
+        This uses the ConfigParserRegistry to select the appropriate parser.
+        For async loading, we read the file content first, then parse it.
+
+        Args:
+            path: Path to config file (extension determines format)
+
+        Returns:
+            Configuration dictionary
+
+        Raises:
+            FileNotFoundError: If file doesn't exist
+            ValueError: If file format is not supported
+        """
         from crackerjack.services.file_io_service import FileIOService
 
         path = Path(path)
@@ -35,38 +62,44 @@ class ConfigService:
             msg = f"Configuration file does not exist: {path}"
             raise FileNotFoundError(msg)
 
-        if path.suffix.lower() == ".json":
-            content = await FileIOService.read_text_file(path)
-            return json.loads(content)
-        if path.suffix.lower() in (".yml", ".yaml"):
-            content = await FileIOService.read_text_file(path)
-            return yaml.safe_load(content)
-        if path.suffix.lower() == ".toml":
-            content = await FileIOService.read_text_file(path)
-            return _load_toml_from_text(content)
-        msg = f"Unsupported config format: {path.suffix}"
-        raise ValueError(msg)
+        # Read file content asynchronously
+        content = await FileIOService.read_text_file(path)
 
-    @staticmethod
-    def _load_json(path: Path) -> dict[str, Any]:
-        with path.open(encoding="utf-8") as f:
-            return json.load(f)
+        # Parse content synchronously (parsers are not async)
+        parser = ConfigParserRegistry.get_parser(path)
 
-    @staticmethod
-    def _load_yaml(path: Path) -> dict[str, Any]:
-        with path.open(encoding="utf-8") as f:
-            return yaml.safe_load(f)
+        # For YAML/JSON/TOML, we can parse from string
+        # This is a simplified approach - for true async we'd need async parsers
+        import tempfile
 
-    @staticmethod
-    def _load_toml(path: Path) -> dict[str, Any]:
-        with path.open("r", encoding="utf-8") as f:
-            return _load_toml_from_text(f.read())
+        # Write to temp file and use parser (not ideal but works)
+        # TODO: Implement async parsing in parsers
+        with tempfile.NamedTemporaryFile(mode="w", suffix=path.suffix, delete=False) as f:
+            f.write(content)
+            temp_path = Path(f.name)
+
+        try:
+            return parser.load(temp_path)
+        finally:
+            temp_path.unlink(missing_ok=True)
 
     @staticmethod
     def validate_config(
         config: dict[str, Any],
         model_class: type[BaseModel],
     ) -> BaseModel:
+        """Validate config against Pydantic model.
+
+        Args:
+            config: Configuration dictionary
+            model_class: Pydantic model class
+
+        Returns:
+            Validated model instance
+
+        Raises:
+            ValidationError: If config doesn't match model schema
+        """
         try:
             return model_class.model_validate(config)
         except ValidationError as e:
@@ -79,41 +112,39 @@ class ConfigService:
         path: str | Path,
         format: str | None = None,
     ) -> None:
+        """Save configuration to file (format auto-detected or specified).
+
+        This uses the ConfigParserRegistry to select the appropriate parser,
+        eliminating if-chains and making the system open for extension.
+
+        Args:
+            config: Configuration dictionary
+            path: Path to save config file
+            format: Optional format override (auto-detected from path if None)
+
+        Raises:
+            ValueError: If file format is not supported
+        """
         path = Path(path)
-        format = format or path.suffix.lower().lstrip(".")
+        format_name = format or path.suffix.lower().lstrip(".")
 
-        path.parent.mkdir(parents=True, exist_ok=True)
-
-        if format == "json":
-            ConfigService._save_json(config, path)
-        elif format in ("yml", "yaml"):
-            ConfigService._save_yaml(config, path)
-        elif format == "toml":
-            ConfigService._save_toml(config, path)
-        else:
-            msg = f"Unsupported config format: {format}"
-            raise ValueError(msg)
-
-    @staticmethod
-    def _save_json(config: dict[str, Any], path: Path) -> None:
-        with path.open("w", encoding="utf-8") as f:
-            json.dump(config, f, indent=2, ensure_ascii=False)
-
-    @staticmethod
-    def _save_yaml(config: dict[str, Any], path: Path) -> None:
-        with path.open("w", encoding="utf-8") as f:
-            yaml.dump(config, f, default_flow_style=False, allow_unicode=True)
-
-    @staticmethod
-    def _save_toml(config: dict[str, Any], path: Path) -> None:
-        with path.open("w", encoding="utf-8") as f:
-            f.write(_dump_toml(config))
+        parser = ConfigParserRegistry.get_parser_by_format(format_name)
+        parser.save(config, path)
 
     @staticmethod
     def merge_configs(
         base_config: dict[str, Any],
         override_config: dict[str, Any],
     ) -> dict[str, Any]:
+        """Deep merge two configuration dictionaries.
+
+        Args:
+            base_config: Base configuration
+            override_config: Override configuration (takes precedence)
+
+        Returns:
+            Merged configuration dictionary
+        """
         result = base_config.copy()
 
         for key, value in override_config.items():
@@ -127,89 +158,3 @@ class ConfigService:
                 result[key] = value
 
         return result
-
-
-def _load_toml_from_text(content: str) -> dict[str, Any]:
-    try:
-        import tomllib
-    except ImportError:
-        tomllib = None  # type: ignore[assignment]
-
-    if tomllib is not None:
-        return tomllib.loads(content)
-
-    import toml
-
-    return toml.loads(content)
-
-
-def _dump_toml(config: dict[str, Any]) -> str:
-    try:
-        import toml
-    except ImportError:
-        toml = None  # type: ignore[assignment]
-
-    if toml is not None:
-        return toml.dumps(config)
-
-    lines: list[str] = []
-    emit_table(config, [], lines)
-    return "\n".join(lines) + "\n"
-
-
-def emit_table(data: dict[str, Any], prefix: list[str], lines: list[str]) -> None:
-    scalars, tables = _separate_scalars_and_tables(data)
-
-    if prefix:
-        lines.append(f"[{'.'.join(prefix)}]")
-
-    _emit_scalar_values(scalars, lines)
-    _emit_nested_tables(tables, prefix, lines)
-
-
-def _separate_scalars_and_tables(
-    data: dict[str, Any],
-) -> tuple[list[tuple[str, Any]], list[tuple[str, dict[str, Any]]]]:
-    scalars: list[tuple[str, Any]] = []
-    tables: list[tuple[str, dict[str, Any]]] = []
-
-    for key, value in data.items():
-        if isinstance(value, dict):
-            tables.append((key, value))
-        else:
-            scalars.append((key, value))
-
-    return scalars, tables
-
-
-def _emit_scalar_values(scalars: list[tuple[str, Any]], lines: list[str]) -> None:
-    for key, value in scalars:
-        lines.append(f"{key} = {_format_toml_value(value)}")
-
-
-def _emit_nested_tables(
-    tables: list[tuple[str, dict[str, Any]]],
-    prefix: list[str],
-    lines: list[str],
-) -> None:
-    for key, value in tables:
-        if lines and lines[-1] != "":
-            lines.append("")
-        emit_table(value, [*prefix, key], lines)
-
-
-def _format_toml_value(value: Any) -> str:
-    if isinstance(value, bool):
-        return "true" if value else "false"
-    if isinstance(value, (int, float)):
-        return str(value)
-    if isinstance(value, str):
-        escaped = value.replace("\\", "\\\\").replace('"', '\\"')
-        return f'"{escaped}"'
-    if isinstance(value, list):
-        return "[" + ", ".join(_format_toml_value(item) for item in value) + "]"
-    if isinstance(value, dict):
-        items = [f"{k} = {_format_toml_value(v)}" for k, v in value.items()]
-        return "{" + ", ".join(items) + "}"
-    msg = f"Unsupported TOML value: {value!r}"
-    raise ValueError(msg)
