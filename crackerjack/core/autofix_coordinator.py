@@ -1479,6 +1479,7 @@ class AutofixCoordinator:
             "check-json",
             "pip-audit",
             "check-ast",
+            "check-local-links",  # Format varies, may have lines without link targets
             "format-json",
             "ruff",
             "ruff-check",
