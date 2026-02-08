@@ -532,16 +532,19 @@ class LocalLinkCheckerRegexParser(RegexParser):
         if ":" not in file_part:
             return None
 
-        file_path, line_num = file_part.rsplit(":", 1)
+        parts = file_part.split(":", 2)
+        if len(parts) != 3:
+            return None
+
+        file_path, line_num, link_target = parts
 
         link_parts = rest.split(None, 1)
-        link_target = link_parts[0] if link_parts else ""
-        message = rest[len(link_target) + 1 :].strip() if link_parts else rest
+        message = link_parts[1] if len(link_parts) > 1 else rest
 
         return Issue(
             type=IssueType.DOCUMENTATION,
             severity=Priority.MEDIUM,
-            message=f"Broken link in {file_path}:{line_num}: '{link_target}'' - {message}",
+            message=f"Broken link in {file_path}:{line_num}: '{link_target}' - {message}",
             file_path=file_path,
             line_number=int(line_num) if line_num.isdigit() else None,
             stage="check-local-links",

@@ -1,4 +1,7 @@
+import errno
+import os
 import re
+import select
 import subprocess
 import threading
 import time
@@ -518,9 +521,9 @@ class TestExecutor:
         )
 
         stdout_lines = self._read_stdout_with_progress(
-            process, progress, progress_callback,
+            process, progress, progress_callback, timeout,
         )
-        stderr_lines = self._read_stderr_lines(process)
+        stderr_lines = self._read_stderr_lines(process, timeout)
 
         return_code = self._wait_for_process_completion(process, timeout)
 
@@ -533,32 +536,188 @@ class TestExecutor:
         process: subprocess.Popen[str],
         progress: TestProgress,
         progress_callback: t.Callable[[dict[str, t.Any]], None],
+        timeout: int = 60,
     ) -> list[str]:
-        stdout_lines = []
+        """Read stdout with non-blocking I/O and timeout.
 
-        if process.stdout:
+        Args:
+            process: The subprocess to read from
+            progress: TestProgress object to update
+            progress_callback: Callback for progress updates
+            timeout: Seconds to wait without output before giving up
+
+        Returns:
+            List of stdout lines read
+        """
+        stdout_lines = []
+        start_time = time.time()
+        last_output_time = time.time()
+
+        if not process.stdout:
+            return stdout_lines
+
+        # Set stdout to non-blocking mode
+        import fcntl
+        try:
+            fd = process.stdout.fileno()
+            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        except (AttributeError, OSError):
+            # Windows or no fileno support - fall back to blocking with timeout
             for line in iter(process.stdout.readline, ""):
                 if not line:
                     break
-
                 line = line.strip()
                 if line:
                     stdout_lines.append(line)
                     self._process_test_output_line(line, progress)
                     self._emit_ai_progress(progress, progress_callback)
+                if time.time() - last_output_time > timeout:
+                    self.console.print(
+                        f"[yellow]No output for {timeout}s, terminating hung process[/yellow]"
+                    )
+                    process.terminate()
+                    break
+            return stdout_lines
+
+        while True:
+            # Check if process is still running
+            if process.poll() is not None:
+                # Process finished, read any remaining output
+                try:
+                    remaining = process.stdout.read()
+                    if remaining:
+                        for line in remaining.splitlines():
+                            line = line.strip()
+                            if line:
+                                stdout_lines.append(line)
+                                self._process_test_output_line(line, progress)
+                                self._emit_ai_progress(progress, progress_callback)
+                except:
+                    pass
+                break
+
+            # Use select to wait for data with timeout
+            try:
+                readable, _, _ = select.select([process.stdout], [], [], 1.0)
+            except (ValueError, select.error):
+                # File descriptor was closed
+                break
+
+            if not readable:
+                # No data available
+                elapsed_since_output = time.time() - last_output_time
+                if elapsed_since_output > timeout:
+                    self.console.print(
+                        f"[yellow]No stdout output for {timeout}s, "
+                        f"process may be hung (total elapsed: {time.time() - start_time:.1f}s)[/yellow]"
+                    )
+                    process.terminate()
+                    break
+                continue
+
+            # Data is available, read it
+            try:
+                line = process.stdout.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if line:
+                    stdout_lines.append(line)
+                    self._process_test_output_line(line, progress)
+                    self._emit_ai_progress(progress, progress_callback)
+                    last_output_time = time.time()
+            except IOError as e:
+                if e.errno == errno.EAGAIN:
+                    # No data available (non-blocking read)
+                    time.sleep(0.1)
+                    continue
+                else:
+                    break
 
         return stdout_lines
 
-    def _read_stderr_lines(self, process: subprocess.Popen[str]) -> list[str]:
-        stderr_lines = []
+    def _read_stderr_lines(
+        self, process: subprocess.Popen[str], timeout: int = 60
+    ) -> list[str]:
+        """Read stderr with non-blocking I/O and timeout.
 
-        if process.stderr:
+        Args:
+            process: The subprocess to read from
+            timeout: Seconds to wait without output before giving up
+
+        Returns:
+            List of stderr lines read
+        """
+        stderr_lines = []
+        start_time = time.time()
+        last_output_time = time.time()
+
+        if not process.stderr:
+            return stderr_lines
+
+        # Set stderr to non-blocking mode
+        import fcntl
+        try:
+            fd = process.stderr.fileno()
+            fl = fcntl.fcntl(fd, fcntl.F_GETFL)
+            fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
+        except (AttributeError, OSError):
+            # Windows or no fileno support - fall back to blocking with timeout
             for line in iter(process.stderr.readline, ""):
                 if not line:
                     break
                 line = line.strip()
                 if line:
                     stderr_lines.append(line)
+                if time.time() - last_output_time > timeout:
+                    break
+            return stderr_lines
+
+        while True:
+            # Check if process is still running
+            if process.poll() is not None:
+                try:
+                    remaining = process.stderr.read()
+                    if remaining:
+                        for line in remaining.splitlines():
+                            line = line.strip()
+                            if line:
+                                stderr_lines.append(line)
+                except:
+                    pass
+                break
+
+            # Use select to wait for data with timeout
+            try:
+                readable, _, _ = select.select([process.stderr], [], [], 1.0)
+            except (ValueError, select.error):
+                break
+
+            if not readable:
+                elapsed_since_output = time.time() - last_output_time
+                if elapsed_since_output > timeout:
+                    self.console.print(
+                        f"[yellow]No stderr output for {timeout}s, terminating[/yellow]"
+                    )
+                    process.terminate()
+                    break
+                continue
+
+            try:
+                line = process.stderr.readline()
+                if not line:
+                    break
+                line = line.strip()
+                if line:
+                    stderr_lines.append(line)
+                    last_output_time = time.time()
+            except IOError as e:
+                if e.errno == errno.EAGAIN:
+                    time.sleep(0.1)
+                    continue
+                else:
+                    break
 
         return stderr_lines
 

@@ -120,7 +120,8 @@ class ParserFactory:
 
         lines = output.split("\n")
 
-        if output.strip() == "[*]":
+        stripped = output.strip()
+        if stripped in ("[*]", "[^)]"):
             return True
 
         for i, line in enumerate(lines):
@@ -140,8 +141,14 @@ class ParserFactory:
         self, parser: JSONParser | RegexParser, output: str, tool_name: str
     ) -> list[Issue]:
 
-        if output.strip() == "[*]":
+        stripped = output.strip()
+
+        if stripped == "[*]":
             logger.debug(f"Detected ruff empty output pattern '[*]' for '{tool_name}'")
+            output = "[]"
+
+        if stripped == "[^)]":
+            logger.debug(f"Detected ruff empty output pattern '[^)]' for '{tool_name}'")
             output = "[]"
 
         try:

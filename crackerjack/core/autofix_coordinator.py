@@ -484,8 +484,9 @@ class AutofixCoordinator:
 
         self.logger.info("📋 Sending issues to agents:")
         for i, issue in enumerate(issues[:5]):
+            issue_type = issue.type.value
             self.logger.info(
-                f"  [{i}] type={issue.type.value: 15s} | "
+                f"  [{i}] type={issue_type: 15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )
@@ -837,6 +838,18 @@ class AutofixCoordinator:
                 if adapter is None:
                     self.logger.debug(f"No QA adapter available for '{hook_name}'")
                     continue
+
+                try:
+                    asyncio.get_running_loop()
+
+                    self.logger.warning(
+                        f"QA adapter for '{hook_name}' called from async context, "
+                        "this may indicate architectural issue"
+                    )
+
+                    continue
+                except RuntimeError:
+                    pass
 
                 asyncio.run(adapter.init())
 
