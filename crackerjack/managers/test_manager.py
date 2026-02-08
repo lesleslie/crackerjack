@@ -20,6 +20,7 @@ from crackerjack.models.protocols import (
     OptionsProtocol,
 )
 from crackerjack.services.lsp_client import LSPClient
+from crackerjack.services.testing.coverage_manager import CoverageManager
 from crackerjack.services.testing.test_result_parser import TestResultParser
 from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 
@@ -43,6 +44,7 @@ class TestManager:
         lsp_client: LSPClient | None = None,
         result_parser: TestResultParser | None = None,
         result_renderer: TestResultRenderer | None = None,
+        coverage_manager: CoverageManager | None = None,
     ) -> None:
         if console is None:
             console = CrackerjackConsole()
@@ -79,6 +81,16 @@ class TestManager:
         self.renderer = result_renderer
 
 
+        # Coverage manager
+        if coverage_manager is None:
+            coverage_manager = CoverageManager(
+                console,
+                self.pkg_path,
+                coverage_ratchet,
+                coverage_badge,
+            )
+
+        self.coverage_manager = coverage_manager
         self.coverage_ratchet = coverage_ratchet
         self._coverage_badge_service = coverage_badge
         self._lsp_client = lsp_client
@@ -571,144 +583,8 @@ class TestManager:
         )
 
     def _process_coverage_ratchet(self) -> bool:
-        if not self.coverage_ratchet_enabled or self.coverage_ratchet is None:
-            return True
-
-        ratchet_result = self.coverage_ratchet.check_and_update_coverage()
-
-
-        self._update_coverage_badge(ratchet_result)
-
-        return self._handle_ratchet_result(ratchet_result)
-
-    def _attempt_coverage_extraction(self) -> float | None:
-
-        current_coverage = self._get_coverage_from_file()
-        if current_coverage is not None:
-            return current_coverage
-
-        return None
-
-    def _handle_coverage_extraction_result(
-        self, current_coverage: float | None,
-    ) -> float | None:
-        if current_coverage is not None:
-            self.console.print(
-                f"[dim]📊 Coverage extracted from coverage.json: {current_coverage:.2f}%[/dim]",
-            )
-        return current_coverage
-
-    def _try_service_coverage(self) -> float | None:
-        try:
-            current_coverage = self.coverage_ratchet.get_baseline_coverage()
-            if current_coverage is not None and current_coverage > 0:
-                self.console.print(
-                    f"[dim]📊 Coverage from service fallback: {current_coverage:.2f}%[/dim]",
-                )
-                return current_coverage
-            return None
-        except (AttributeError, Exception):
-
-            return None
-
-    def _handle_zero_coverage_fallback(self, current_coverage: float | None) -> None:
-        coverage_json_path = self.pkg_path / "coverage.json"
-        if current_coverage is None and coverage_json_path.exists():
-            self.console.print(
-                "[yellow]⚠️[/yellow] Skipping 0.0% fallback when coverage.json exists",
-            )
-
-    def _get_fallback_coverage(
-        self, ratchet_result: dict[str, t.Any], current_coverage: float | None,
-    ) -> float | None:
-
-        if current_coverage is None and ratchet_result:
-
-            if "current_coverage" in ratchet_result:
-                current_coverage = ratchet_result["current_coverage"]
-                if current_coverage is not None and current_coverage > 0:
-                    self.console.print(
-                        f"[dim]📊 Coverage from ratchet result: {current_coverage:.2f}%[/dim]",
-                    )
-
-
-        if current_coverage is None:
-            current_coverage = self._try_service_coverage()
-            if current_coverage is None:
-                self._handle_zero_coverage_fallback(current_coverage)
-
-        return current_coverage
-
-    def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
-        try:
-
-            coverage_json_path = self.pkg_path / "coverage.json"
-            ratchet_path = self.pkg_path / ".coverage-ratchet.json"
-
-            if not coverage_json_path.exists():
-                self.console.print(
-                    "[yellow]ℹ️[/yellow] Coverage file doesn't exist yet, will be created after test run",
-                )
-            if not ratchet_path.exists():
-                self.console.print(
-                    "[yellow]ℹ️[/yellow] Coverage ratchet file doesn't exist yet, initializing...",
-                )
-
-
-            current_coverage = self._attempt_coverage_extraction()
-            current_coverage = self._handle_coverage_extraction_result(current_coverage)
-
-
-            current_coverage = self._get_fallback_coverage(
-                ratchet_result, current_coverage,
-            )
-
-
-            if current_coverage is not None and current_coverage >= 0:
-                if self._coverage_badge_service.should_update_badge(current_coverage):
-                    self._coverage_badge_service.update_readme_coverage_badge(
-                        current_coverage,
-                    )
-                    self.console.print(
-                        f"[green]✅[/green] Badge updated to {current_coverage:.2f}%",
-                    )
-                else:
-                    self.console.print(
-                        f"[dim]📊 Badge unchanged (current: {current_coverage:.2f}%)[/dim]",
-                    )
-            else:
-                self.console.print(
-                    "[yellow]⚠️[/yellow] No valid coverage data found for badge update",
-                )
-
-        except Exception as e:
-
-            self.console.print(f"[yellow]⚠️[/yellow] Badge update failed: {e}")
-
-    def _handle_ratchet_result(self, ratchet_result: dict[str, t.Any]) -> bool:
-        if ratchet_result.get("success", False):
-            if ratchet_result.get("improved", False):
-                self._handle_coverage_improvement(ratchet_result)
-            return True
-        if "message" in ratchet_result:
-            self.console.print(f"[red]📉[/red] {ratchet_result['message']}")
-        else:
-            current = ratchet_result.get("current_coverage", 0)
-            previous = ratchet_result.get("previous_coverage", 0)
-            self.console.print(
-                f"[red]📉[/red] Coverage regression: "
-                f"{current:.2f}% < {previous:.2f}%",
-            )
-        return False
-
-    def _handle_coverage_improvement(self, ratchet_result: dict[str, t.Any]) -> None:
-        improvement = ratchet_result.get("improvement", 0)
-        current = ratchet_result.get("current_coverage", 0)
-
-        self.console.print(
-            f"[green]📈[/green] Coverage improved by {improvement:.2f}% "
-            f"to {current:.2f}%",
-        )
+        """Process coverage ratchet using CoverageManager."""
+        return self.coverage_manager.process_coverage_ratchet()
 
     def _extract_failure_lines(self, output: str) -> list[str]:
         import re
