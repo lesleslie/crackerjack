@@ -466,32 +466,92 @@ class ComplexipyJSONParser(JSONParser):
         return 0
 
     def _find_function_in_ast(self, tree: t.Any, search_name: str) -> int | None:
+        """Find function definition in AST tree.
+
+        Strategy pattern: Handle class-qualified methods and simple functions differently.
+        """
+        if "::" in search_name:
+            return self._find_class_method_in_ast(tree, search_name)
+        return self._find_simple_function_in_ast(tree, search_name)
+
+    def _find_class_method_in_ast(self, tree: t.Any, search_name: str) -> int | None:
+        """Find class-qualified method (e.g., ClassName::method_name).
+
+        Returns line number if found, or falls back to simple search.
+        """
         import ast
 
-        if "::" in search_name:
-            class_name, method_name = search_name.split("::", 1)
+        class_name, method_name = search_name.split("::", 1)
 
-            for node in ast.walk(t.cast(ast.AST, tree)):
-                if isinstance(node, ast.ClassDef) and node.name == class_name:
-                    for child in ast.walk(node):
-                        if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                            if child.name == method_name:
-                                logger.debug(
-                                    f"Found class-qualified method: {class_name}::{method_name} at line {child.lineno}"
-                                )
-                                return child.lineno
+        # Try to find method in specific class
+        if line_number := self._search_method_in_class(tree, class_name, method_name):
+            return line_number
 
-            logger.debug(
-                f"Could not find class-qualified method '{search_name}', falling back to bare name '{method_name}'"
-            )
-            search_name = method_name
+        # Fallback to simple search
+        logger.debug(
+            f"Could not find class-qualified method '{search_name}', "
+            f"falling back to bare name '{method_name}'"
+        )
+        return self._find_simple_function_in_ast(tree, method_name)
+
+    def _search_method_in_class(
+        self, tree: t.Any, class_name: str, method_name: str
+    ) -> int | None:
+        """Search for method within a specific class.
+
+        Returns line number if found, None otherwise.
+        """
+        import ast
+
+        class_node = self._find_class_node(tree, class_name)
+        if class_node:
+            return self._find_method_in_class_node(class_node, method_name)
+        return None
+
+    def _find_class_node(self, tree: t.Any, class_name: str) -> t.Any | None:
+        """Find a class node by name in AST tree."""
+        import ast
 
         for node in ast.walk(t.cast(ast.AST, tree)):
-            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-                if node.name == search_name:
-                    return node.lineno
-
+            if self._is_class_def_with_name(node, class_name):
+                return node
         return None
+
+    def _is_class_def_with_name(self, node: t.Any, class_name: str) -> bool:
+        """Check if node is a ClassDef with the specified name."""
+        import ast
+
+        return isinstance(node, ast.ClassDef) and node.name == class_name
+
+    def _find_method_in_class_node(self, class_node: t.Any, method_name: str) -> int | None:
+        """Find method by name within a class node."""
+        import ast
+
+        for child in ast.walk(class_node):
+            if self._is_function_def_with_name(child, method_name):
+                logger.debug(
+                    f"Found class-qualified method at line {child.lineno}"
+                )
+                return child.lineno
+        return None
+
+    def _find_simple_function_in_ast(self, tree: t.Any, function_name: str) -> int | None:
+        """Find simple (non-class-qualified) function in AST tree.
+
+        Returns line number if found, None otherwise.
+        """
+        import ast
+
+        for node in ast.walk(t.cast(ast.AST, tree)):
+            if self._is_function_def_with_name(node, function_name):
+                return node.lineno
+        return None
+
+    def _is_function_def_with_name(self, node: t.Any, function_name: str) -> bool:
+        """Check if node is a FunctionDef or AsyncFunctionDef with the specified name."""
+        import ast
+
+        return isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == function_name
 
 
 class SemgrepJSONParser(JSONParser):

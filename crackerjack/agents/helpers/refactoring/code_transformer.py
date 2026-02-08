@@ -112,37 +112,57 @@ class CodeTransformer:
 
     @staticmethod
     def _simplify_boolean_expressions(content: str) -> str:
+        """Simplify boolean expressions using registered patterns.
+
+        Strategy pattern: Each boolean simplification is a separate strategy
+        that can be applied independently.
+        """
         lines = content.split("\n")
         modified_lines = []
 
         for line in lines:
-            simplified = line
-
-            if " not (not " in simplified or "not(not " in simplified:
-                if "simplify_double_negation" in SAFE_PATTERNS:
-                    simplified = SAFE_PATTERNS["simplify_double_negation"].apply(
-                        simplified
-                    )
-
-            if " and True" in simplified or "and True " in simplified:
-                if "simplify_and_true" in SAFE_PATTERNS:
-                    simplified = SAFE_PATTERNS["simplify_and_true"].apply(simplified)
-
-            if " or False" in simplified or "or False " in simplified:
-                if "simplify_or_false" in SAFE_PATTERNS:
-                    simplified = SAFE_PATTERNS["simplify_or_false"].apply(simplified)
-
-            if " is True" in simplified:
-                if "simplify_is_true" in SAFE_PATTERNS:
-                    simplified = SAFE_PATTERNS["simplify_is_true"].apply(simplified)
-
-            if " is False" in simplified:
-                if "simplify_is_false" in SAFE_PATTERNS:
-                    simplified = SAFE_PATTERNS["simplify_is_false"].apply(simplified)
-
+            simplified = self._apply_boolean_simplifications(line)
             modified_lines.append(simplified)
 
         return "\n".join(modified_lines)
+
+    @staticmethod
+    def _apply_boolean_simplifications(line: str) -> str:
+        """Apply all registered boolean simplification patterns to a line."""
+        patterns = [
+            ("simplify_double_negation", [" not (not ", "not(not "]),
+            ("simplify_and_true", [" and True", "and True "]),
+            ("simplify_or_false", [" or False", "or False "]),
+            ("simplify_is_true", [" is True"]),
+            ("simplify_is_false", [" is False"]),
+        ]
+
+        simplified = line
+        for pattern_name, indicators in patterns:
+            simplified = CodeTransformer._try_apply_pattern(
+                simplified, pattern_name, indicators
+            )
+
+        return simplified
+
+    @staticmethod
+    def _try_apply_pattern(line: str, pattern_name: str, indicators: list[str]) -> str:
+        """Try to apply a pattern if its indicators are present.
+
+        Guard clause pattern: Early return if pattern not applicable.
+        """
+        if not CodeTransformer._should_apply_pattern(line, indicators):
+            return line
+
+        if pattern_name in SAFE_PATTERNS:
+            return SAFE_PATTERNS[pattern_name].apply(line)
+
+        return line
+
+    @staticmethod
+    def _should_apply_pattern(line: str, indicators: list[str]) -> bool:
+        """Check if any indicator for the pattern exists in the line."""
+        return any(indicator in line for indicator in indicators)
 
     @staticmethod
     def _extract_validation_patterns(content: str) -> str:
