@@ -8,10 +8,9 @@ from contextlib import suppress
 from dataclasses import dataclass
 from pathlib import Path
 
-from rich.console import Console
-
 from crackerjack.config import get_console_width
 from crackerjack.config.hooks import HookDefinition, HookStrategy, RetryPolicy
+from crackerjack.models.protocols import ConsoleInterface
 from crackerjack.models.task import HookResult
 from crackerjack.services.security_logger import get_security_logger
 from crackerjack.utils.issue_detection import (
@@ -60,7 +59,7 @@ class HookExecutionResult:
 class HookExecutor:
     def __init__(
         self,
-        console: Console,
+        console: ConsoleInterface,
         pkg_path: Path,
         verbose: bool = False,
         quiet: bool = False,
@@ -779,7 +778,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx: end_idx])
+            return "\n".join(lines[start_idx:end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 

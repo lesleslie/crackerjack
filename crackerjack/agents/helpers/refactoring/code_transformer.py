@@ -1,3 +1,4 @@
+import logging
 import typing as t
 
 from crackerjack.agents.base import AgentContext
@@ -57,8 +58,6 @@ class CodeTransformer:
             if hasattr(self, method_name):
                 valid_operations.append(op)
             else:
-                import logging
-
                 logger = logging.getLogger(__name__)
                 logger.warning(
                     f"⚠️ CodeTransformer operation '{method_name}' not implemented - skipping"
@@ -98,7 +97,7 @@ class CodeTransformer:
                     j += 1
 
                 if action_start > 0:
-                    "\n".join(lines[i: action_start])
+                    "\n".join(lines[i:action_start])
                     action_body = "\n".join(lines[action_start : action_start + 5])
 
                     early_return = f"{line.lstrip()}\n{action_body.strip()}\n    return"
@@ -405,20 +404,3 @@ class CodeTransformer:
             if line.strip() and len(line) - len(line.lstrip()) <= class_indent:
                 return i
         return len(lines)
-
-        lines = content.split("\n")
-        modified_lines = []
-
-        for i, line in enumerate(lines):
-            if " and " in line and line.count(" and ") >= 2:
-                op_count = line.count(" and ") + line.count(" or ")
-                if op_count >= 2:
-                    if ":    #" in line or "return " in line:
-                        modified_lines.append(
-                            f"    # TODO: Extract complex boolean ({op_count} operators)"
-                        )
-                    modified_lines.append(line)
-            else:
-                modified_lines.append(line)
-
-        return "\n".join(modified_lines)
