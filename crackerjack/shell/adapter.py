@@ -1,15 +1,3 @@
-"""Crackerjack admin shell adapter.
-
-This module provides Crackerjack-specific admin shell functionality extending
-the base AdminShell with Crackerjack-specific features:
-
-- Quality check execution (crack, test, lint, scan)
-- Test suite management
-- Linting and formatting
-- Security scanning
-- Session tracking via Session-Buddy MCP
-"""
-
 from __future__ import annotations
 
 import asyncio
@@ -19,66 +7,32 @@ from pathlib import Path
 from typing import Any
 
 from oneiric.shell import AdminShell, ShellConfig
-from oneiric.shell.session_tracker import SessionEventEmitter
 from rich.console import Console
 from rich.table import Table
+
+from crackerjack.shell.session_compat import SessionEventEmitter
 
 logger = logging.getLogger(__name__)
 
 
 class CrackerjackShell(AdminShell):
-    """Crackerjack-specific admin shell.
-
-    Extends the base AdminShell with Crackerjack-specific namespace,
-    formatters, helpers, and magic commands for quality management.
-
-    Features:
-    - crack(): Run comprehensive quality checks
-    - test(): Run test suite
-    - lint(): Run linting
-    - scan(): Run security scan
-    - Session tracking via Session-Buddy MCP
-
-    Example:
-        >>> from crackerjack.shell.adapter import CrackerjackShell
-        >>> from crackerjack.config import load_settings
-        >>> from crackerjack.config.settings import CrackerjackSettings; settings = load_settings(CrackerjackSettings)
-        >>> shell = CrackerjackShell(settings)
-        >>> shell.start()
-    """
-
     def __init__(self, app: Any, config: ShellConfig | None = None) -> None:
-        """Initialize Crackerjack shell.
-
-        Args:
-            app: CrackerjackSettings instance or configuration object
-            config: Optional shell configuration
-        """
         super().__init__(app, config)
         self._add_crackerjack_namespace()
         self.console = Console()
 
-        # Override session tracker with Crackerjack-specific metadata
-        # SessionEventEmitter tracks shell sessions via Session-Buddy MCP
-        self.session_tracker = SessionEventEmitter(
-            component_name="crackerjack",
-        )
+        self.session_tracker = SessionEventEmitter(component_name="crackerjack")
         self._session_id: str | None = None
 
-        # Detect project root
         self._project_root = Path.cwd()
 
     def _add_crackerjack_namespace(self) -> None:
-        """Add Crackerjack-specific objects to shell namespace."""
         self.namespace.update(
             {
-                # Settings class
                 "CrackerjackSettings": self._try_import(
                     "crackerjack.config.settings", "CrackerjackSettings"
                 ),
-                # Convenience helper for config inspection
                 "config": self.app,
-                # Async helpers for quality operations
                 "crack": lambda: asyncio.run(self._run_crack()),
                 "test": lambda: asyncio.run(self._run_tests()),
                 "lint": lambda: asyncio.run(self._run_lint()),
@@ -91,24 +45,9 @@ class CrackerjackShell(AdminShell):
         )
 
     def _get_component_name(self) -> str:
-        """Return Crackerjack component name for session tracking.
-
-        Overrides base class method to provide component-specific name.
-
-        Returns:
-            Component name "crackerjack" for session tracking
-        """
         return "crackerjack"
 
     def _get_component_version(self) -> str:
-        """Get Crackerjack package version.
-
-        Overrides base class method to provide component-specific version
-        for session tracking metadata.
-
-        Returns:
-            Crackerjack version string or "unknown" if unavailable
-        """
         try:
             import importlib.metadata as importlib_metadata
 
@@ -117,28 +56,20 @@ class CrackerjackShell(AdminShell):
             return "unknown"
 
     def _get_adapters_info(self) -> list[str]:
-        """Get enabled Crackerjack QA adapters.
 
-        Crackerjack is an inspector component that validates other components.
-        It manages QA adapters but doesn't orchestrate workflows.
-
-        Returns:
-            List of enabled QA adapter names (e.g., ["pytest", "ruff", "mypy"])
-        """
-        # Try to get adapter information from settings
         try:
             if hasattr(self.app, "qa_adapters"):
                 return list(self.app.qa_adapters.keys())
         except Exception:
             pass
 
-        # Return default adapters
         return ["pytest", "ruff", "mypy", "bandit"]
 
     def _get_banner(self) -> str:
-        """Get Crackerjack-specific banner."""
         version = self._get_component_version()
         adapters = ", ".join(self._get_adapters_info())
+
+        session_status = "Enabled" if self.session_tracker.available else "Unavailable"
 
         return f"""
 Crackerjack Admin Shell v{version}
@@ -147,7 +78,7 @@ Quality & Testing Automation for Python Projects
 
 Role: Inspector (validates other components)
 
-Session Tracking: Enabled
+Session Tracking: {session_status}
   Shell sessions tracked via Session-Buddy MCP
   Metadata: version, adapters, quality metrics
 
@@ -170,14 +101,7 @@ Type 'help()' for Python help or %help_shell for shell commands
 {"=" * 60}
 """
 
-    # Quality check implementations
-
     async def _run_crack(self) -> None:
-        """Run comprehensive quality checks.
-
-        This is the main entry point for quality validation, running
-        all checks in the correct order with proper error handling.
-        """
         self.console.print(
             "\n[bold cyan]Running comprehensive quality checks...[/bold cyan]\n"
         )
@@ -200,7 +124,6 @@ Type 'help()' for Python help or %help_shell for shell commands
                 results.append((name, f"✗ FAIL: {e}", "red"))
                 self.console.print()
 
-        # Print summary
         self.console.print("[bold]Quality Check Summary:[/bold]\n")
 
         table = Table(title="Quality Check Results")
@@ -213,7 +136,6 @@ Type 'help()' for Python help or %help_shell for shell commands
 
         self.console.print(table)
 
-        # Exit code based on results
         failed = any("FAIL" in status for _, status, _ in results)
         if failed:
             self.console.print("\n[red]✗ Quality checks failed[/red]")
@@ -221,7 +143,6 @@ Type 'help()' for Python help or %help_shell for shell commands
             self.console.print("\n[green]✓ All quality checks passed[/green]")
 
     async def _run_tests(self) -> None:
-        """Run test suite with coverage."""
         self.console.print("[cyan]Running test suite...[/cyan]")
 
         cmd = ["pytest", "-v", "--cov=crackerjack", "--cov-report=term-missing"]
@@ -233,9 +154,7 @@ Type 'help()' for Python help or %help_shell for shell commands
             text=True,
         )
 
-        # Print output
         if result.stdout:
-            # Highlight test results
             lines = result.stdout.split("\n")
             for line in lines:
                 if "passed" in line.lower() and "%" in line:
@@ -251,10 +170,8 @@ Type 'help()' for Python help or %help_shell for shell commands
             raise subprocess.CalledProcessError(result.returncode, cmd)
 
     async def _run_lint(self) -> None:
-        """Run linting with ruff."""
         self.console.print("[cyan]Running linting...[/cyan]")
 
-        # First check
         cmd_check = ["ruff", "check", "."]
         result_check = subprocess.run(
             cmd_check,
@@ -266,7 +183,6 @@ Type 'help()' for Python help or %help_shell for shell commands
         if result_check.stdout:
             self.console.print(result_check.stdout)
 
-        # Then format check
         cmd_format = ["ruff", "format", "--check", "."]
         result_format = subprocess.run(
             cmd_format,
@@ -286,7 +202,6 @@ Type 'help()' for Python help or %help_shell for shell commands
         self.console.print("[green]✓ Linting passed[/green]")
 
     async def _run_scan(self) -> None:
-        """Run security scan with bandit."""
         self.console.print("[cyan]Running security scan...[/cyan]")
 
         cmd = ["bandit", "-r", "crackerjack/", "-f", "screen"]
@@ -307,10 +222,8 @@ Type 'help()' for Python help or %help_shell for shell commands
         self.console.print("[green]✓ Security scan passed[/green]")
 
     async def _run_format(self) -> None:
-        """Format code with ruff."""
         self.console.print("[cyan]Formatting code...[/cyan]")
 
-        # Format with ruff
         cmd_format = ["ruff", "format", "."]
         result_format = subprocess.run(
             cmd_format,
@@ -319,7 +232,6 @@ Type 'help()' for Python help or %help_shell for shell commands
             text=True,
         )
 
-        # Fix issues with ruff
         cmd_fix = ["ruff", "check", "--fix", "."]
         result_fix = subprocess.run(
             cmd_fix,
@@ -332,7 +244,6 @@ Type 'help()' for Python help or %help_shell for shell commands
             raise subprocess.CalledProcessError(result_format.returncode, cmd_format)
 
         if result_fix.returncode != 0:
-            # Non-fixable issues are OK, we just report them
             if result_fix.stdout:
                 self.console.print(
                     "[yellow]Some issues could not be auto-fixed:[/yellow]"
@@ -342,7 +253,6 @@ Type 'help()' for Python help or %help_shell for shell commands
         self.console.print("[green]✓ Code formatted[/green]")
 
     async def _run_typecheck(self) -> None:
-        """Run type checking with mypy."""
         self.console.print("[cyan]Running type checking...[/cyan]")
 
         cmd = ["mypy", "crackerjack/"]
@@ -363,7 +273,6 @@ Type 'help()' for Python help or %help_shell for shell commands
         self.console.print("[green]✓ Type checking passed[/green]")
 
     async def _show_adapters(self) -> None:
-        """Show enabled QA adapters."""
         from crackerjack.config import CrackerjackSettings, load_settings
 
         load_settings(CrackerjackSettings)
@@ -388,7 +297,6 @@ Type 'help()' for Python help or %help_shell for shell commands
         self.console.print(table)
 
     async def _show_hooks(self) -> None:
-        """Show configured pre-commit hooks."""
         self.console.print("[cyan]Checking pre-commit hooks...[/cyan]")
 
         import tomli
@@ -421,10 +329,7 @@ Type 'help()' for Python help or %help_shell for shell commands
 
         self.console.print(table)
 
-    # Session tracking
-
     async def _emit_session_start(self) -> None:
-        """Emit session start event with Crackerjack-specific metadata."""
         try:
             metadata = {
                 "version": self._get_component_version(),
@@ -448,7 +353,6 @@ Type 'help()' for Python help or %help_shell for shell commands
             logger.debug(f"Failed to emit session start: {e}")
 
     async def _emit_session_end(self) -> None:
-        """Emit session end event."""
         if not self._session_id:
             return
 
@@ -464,6 +368,5 @@ Type 'help()' for Python help or %help_shell for shell commands
             self._session_id = None
 
     async def close(self) -> None:
-        """Close shell and cleanup resources."""
         await self._emit_session_end()
         await self.session_tracker.close()

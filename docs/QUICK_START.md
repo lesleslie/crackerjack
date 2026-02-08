@@ -148,11 +148,11 @@ python -m crackerjack run --ai-fix --run-tests
 **What It Does**:
 
 1. Runs all quality checks
-2. Collects all failures
-3. AI analyzes each issue
-4. Applies targeted fixes
-5. Re-runs checks
-6. Repeats until all pass (max 8 iterations)
+1. Collects all failures
+1. AI analyzes each issue
+1. Applies targeted fixes
+1. Re-runs checks
+1. Repeats until all pass (max 8 iterations)
 
 **Expected Output**:
 
@@ -302,6 +302,7 @@ python -m crackerjack run
 ```
 
 **Default Settings**:
+
 - **Fast hooks**: ~5 seconds (formatting, basic checks)
 - **Comprehensive hooks**: ~30 seconds (type checking, security, complexity)
 - **Quality tier**: Silver (standard for production code)
@@ -375,7 +376,6 @@ ai:
 - **Full Documentation**: See [README.md](../README.md) for comprehensive documentation
 - **Architecture**: See [ARCHITECTURE.md](ARCHITECTURE.md) for system design
 - **Migration Guide**: See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md) if migrating from pre-commit
-- **Quality Gates**: See [QUALITY_GATE_SETUP.md](QUALITY_GATE_SETUP.md) for CI/CD integration
 
 ### Advanced Features
 
@@ -454,11 +454,10 @@ python -m crackerjack run --fast
 python -m crackerjack run --cache-stats
 ```
 
-See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more troubleshooting tips.
-
 ## Summary
 
 **You've learned**:
+
 - ✅ How to install Crackerjack
 - ✅ How to run quality checks
 - ✅ How to use AI auto-fixing
@@ -466,9 +465,9 @@ See [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for more troubleshooting tips.
 - ✅ Basic configuration
 
 **Ready to go deeper?**
+
 - Read [ARCHITECTURE.md](ARCHITECTURE.md) for system design
-- Read [USER_GUIDE.md](USER_GUIDE.md) for comprehensive usage
-- Read [AGENT_DEVELOPMENT.md](AGENT_DEVELOPMENT.md) for custom agents
+- Read [CLI_REFERENCE.md](CLI_REFERENCE.md) for complete command reference
 
 **Quick Reference**:
 
@@ -489,7 +488,7 @@ python -m crackerjack run --coverage-status
 python -m crackerjack run --help
 ```
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-02-06
 **Crackerjack Version**: 0.51.0

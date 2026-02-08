@@ -485,7 +485,7 @@ class AutofixCoordinator:
         self.logger.info("📋 Sending issues to agents:")
         for i, issue in enumerate(issues[:5]):
             self.logger.info(
-                f"  [{i}] type={issue.type.value:15s} | "
+                f"  [{i}] type={issue.type.value: 15s} | "
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )
@@ -523,6 +523,18 @@ class AutofixCoordinator:
             self.logger.info(
                 f"📝 Files modified: {', '.join(fix_result.files_modified)}"
             )
+
+        if fix_result.files_modified:
+            self.logger.info(
+                "🔍 Validating modified files for syntax and semantic errors"
+            )
+            if not self._validate_modified_files(fix_result.files_modified):
+                self.logger.error(
+                    "❌ AI agents introduced invalid code - rejecting fixes and rolling back"
+                )
+                self._revert_ai_fix_changes(fix_result.files_modified)
+                return False
+            self.logger.info("✅ All modified files validated successfully")
 
         return self._process_fix_result(fix_result)
 
@@ -570,6 +582,82 @@ class AutofixCoordinator:
             )
             if len(missing_files) > 3:
                 self.logger.error(f"  ... and {len(missing_files) - 3} more files")
+
+    def _validate_modified_files(self, modified_files: list[str]) -> bool:
+        import ast
+
+        for file_path_str in modified_files:
+            file_path = Path(file_path_str)
+
+            if not str(file_path).endswith(".py"):
+                self.logger.debug(f"⏭️ Skipping non-Python file: {file_path}")
+                continue
+
+            if not file_path.exists():
+                self.logger.warning(f"⚠️ File not found for validation: {file_path}")
+                continue
+
+            try:
+                content = file_path.read_text()
+
+                try:
+                    compile(content, str(file_path), "exec")
+                    self.logger.debug(f"✅ Syntax validation passed: {file_path}")
+                except SyntaxError as e:
+                    self.logger.error(
+                        f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}"
+                    )
+                    self.logger.error(f"   {e.text}")
+                    return False
+
+                try:
+                    tree = ast.parse(content)
+                    definitions = {}
+                    for node in ast.walk(tree):
+                        if isinstance(
+                            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                        ):
+                            name = node.name
+                            if name in definitions:
+                                self.logger.error(
+                                    f"❌ Duplicate definition '{name}' in {file_path} "
+                                    f"at line {node.lineno} (previous at line {definitions[name]})"
+                                )
+                                return False
+                            definitions[name] = node.lineno
+                    self.logger.debug(f"✅ No duplicate definitions: {file_path}")
+                except Exception as e:
+                    self.logger.warning(
+                        f"⚠️ Could not check for duplicates in {file_path}: {e}"
+                    )
+
+            except Exception as e:
+                self.logger.error(f"❌ Failed to validate {file_path}: {e}")
+                return False
+
+        return True
+
+    def _revert_ai_fix_changes(self, modified_files: list[str]) -> None:
+        import subprocess
+
+        self.logger.warning(f"🔄 Reverting AI changes to {len(modified_files)} files")
+
+        for file_path_str in modified_files:
+            try:
+                result = subprocess.run(
+                    ["git", "checkout", "--", file_path_str],
+                    capture_output=True,
+                    text=True,
+                    timeout=10,
+                )
+                if result.returncode == 0:
+                    self.logger.info(f"✅ Reverted changes: {file_path_str}")
+                else:
+                    self.logger.warning(
+                        f"⚠️ Could not revert {file_path_str}: {result.stderr}"
+                    )
+            except Exception as e:
+                self.logger.error(f"❌ Failed to revert {file_path_str}: {e}")
 
     def _run_in_threaded_loop(
         self,
@@ -736,12 +824,6 @@ class AutofixCoordinator:
 
             hook_name = getattr(result, "name", "")
             if not hook_name:
-                continue
-
-            if not adapter_factory.tool_has_adapter(hook_name):
-                self.logger.debug(
-                    f"Skipping adapter run for '{hook_name}' (no QA adapter available)"
-                )
                 continue
 
             try:
@@ -1379,16 +1461,15 @@ class AutofixCoordinator:
             "pyscn",
             "semgrep",
             "pytest",
-            # Validation tools that report "files checked" not "issues found"
             "check-yaml",
             "check-toml",
             "check-json",
             "pip-audit",
-            "check-ast",  # Reports ✓ for each file checked, not just failures
-            "format-json",  # Reports ✓ for each file formatted, not just failures
-            "ruff",  # Diagnostic format has context lines that confuse line counting
-            "ruff-check",  # Alias for ruff
-            "ruff-format",  # Creates aggregate issues, not per-file issues
+            "check-ast",
+            "format-json",
+            "ruff",
+            "ruff-check",
+            "ruff-format",
         ):
             return None
 
@@ -1412,7 +1493,189 @@ class AutofixCoordinator:
             self.logger.info(f"  ... and {len(issues) - 5} more issues")
 
     def _validate_parsed_issues(self, issues: list[Issue]) -> None:
+        for i, issue in enumerate(issues):
+            if not issue.file_path:
+                self.logger.warning(
+                    f"Issue {i} ({issue.id}) missing file_path: {issue.message[:50]}"
+                )
 
+            if not issue.message:
+                self.logger.warning(
+                    f"Issue {i} ({issue.id}) missing message, file={issue.file_path}"
+                )
+
+            if issue.severity not in Priority:
+                self.logger.warning(
+                    f"Issue {i} has invalid severity: {issue.severity.value}"
+                )
+
+            if issue.type not in IssueType:
+                self.logger.warning(f"Issue {i} has invalid type: {issue.type.value}")
+
+    def _setup_ai_fix_coordinator(self) -> "AgentCoordinatorProtocol":
+        context = AgentContext(
+            project_path=self.pkg_path,
+            subprocess_timeout=300,
+        )
+        cache = CrackerjackCache()
+
+        if self._coordinator_factory is not None:
+            coordinator = self._coordinator_factory(context, cache)
+        else:
+            from crackerjack.agents.coordinator import AgentCoordinator
+            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.services.debug import get_ai_agent_debugger
+
+            coordinator = AgentCoordinator(
+                context=context,
+                tracker=get_agent_tracker(),
+                debugger=get_ai_agent_debugger(),
+                cache=cache,
+            )
+
+        return coordinator
+
+    def _collect_fixable_issues(self, hook_results: Sequence[object]) -> list[Issue]:
+        initial_issues = self._parse_hook_results_to_issues_with_qa(hook_results)
+
+        coverage_issues = self._check_coverage_regression(hook_results)
+        if coverage_issues:
+            self.logger.info(
+                f"🧪 Test AI Stage: Detected {len(coverage_issues)} coverage failures, "
+                f"adding to AI-fix queue for test creation"
+            )
+            initial_issues.extend(coverage_issues)
+
+        return initial_issues
+
+    def _get_iteration_issues_with_log(
+        self,
+        iteration: int,
+        hook_results: Sequence[object],
+        stage: str,
+    ) -> list[Issue]:
+        if iteration == 0:
+            issues = self._get_iteration_issues(iteration, hook_results, stage)
+            self.logger.info(
+                f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
+            )
+        else:
+            issues = self._collect_current_issues(stage=stage)
+            self.logger.info(
+                f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
+            )
+
+        return issues
+
+    def _check_iteration_completion(
+        self,
+        iteration: int,
+        current_issue_count: int,
+        previous_issue_count: float,
+        no_progress_count: int,
+        max_iterations: int,
+        stage: str,
+    ) -> bool | None:
+        if current_issue_count == 0:
+            return self._handle_zero_issues_case(iteration, stage)
+
+        if iteration >= max_iterations:
+            self.logger.warning(
+                f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
+            )
+            return False
+
+        if self._should_stop_on_convergence(
+            current_issue_count,
+            previous_issue_count,
+            no_progress_count,
+        ):
+            return False
+
+        return None
+
+    def _update_iteration_progress_with_tracking(
+        self,
+        iteration: int,
+        current_issue_count: int,
+        previous_issue_count: float,
+        no_progress_count: int,
+    ) -> int:
+        no_progress_count = self._update_progress_count(
+            current_issue_count,
+            previous_issue_count,
+            no_progress_count,
+        )
+
+        self.progress_manager.update_iteration_progress(
+            iteration,
+            current_issue_count,
+            no_progress_count,
+        )
+
+        return no_progress_count
+
+    def _run_ai_fix_iteration_loop(
+        self,
+        coordinator: "AgentCoordinatorProtocol",
+        initial_issues: list[Issue],
+        hook_results: Sequence[object],
+        stage: str,
+    ) -> bool:
+        max_iterations = self._get_max_iterations()
+        previous_issue_count = float("inf")
+        no_progress_count = 0
+        iteration = 0
+
+        try:
+            while True:
+                issues = self._get_iteration_issues_with_log(
+                    iteration, hook_results, stage
+                )
+                current_issue_count = len(issues)
+
+                self.progress_manager.start_iteration(iteration, current_issue_count)
+
+                completion_result = self._check_iteration_completion(
+                    iteration,
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                    max_iterations,
+                    stage,
+                )
+
+                if completion_result is not None:
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=completion_result)
+                    return completion_result
+
+                no_progress_count = self._update_iteration_progress_with_tracking(
+                    iteration,
+                    current_issue_count,
+                    previous_issue_count,
+                    no_progress_count,
+                )
+
+                if not self._run_ai_fix_iteration(coordinator, issues):
+                    self.progress_manager.end_iteration()
+                    self.progress_manager.finish_session(success=False)
+                    return False
+
+                self.progress_manager.end_iteration()
+
+                previous_issue_count = current_issue_count
+                iteration += 1
+
+        except Exception as e:
+            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
+            self.progress_manager.end_iteration()
+            self.progress_manager.finish_session(
+                success=False, message=f"Error during AI fixing: {e}"
+            )
+            raise
+
+    def _validate_final_issues(self, issues: list[Issue]) -> None:
         for i, issue in enumerate(issues):
             errors = []
 
@@ -1429,22 +1692,14 @@ class AutofixCoordinator:
             if not hasattr(issue, "message") or not issue.message:
                 errors.append("missing or empty message")
 
-            # Allow file_path=None for aggregate issues (mentions "file(s)" or "files")
             if not issue.file_path:
-                # Check if this is an aggregate issue (mentions multiple files)
                 msg_lower = issue.message.lower()
-                is_aggregate = (
-                    # Patterns that indicate aggregate issues:
-                    # "N files", "N file(s)", "multiple files", "would reformat"
-                    # "files require", "files formatted", etc.
-                    "file" in msg_lower
-                    and (
-                        "files" in msg_lower  # plural "files"
-                        or "file(" in msg_lower  # "file(s)"
-                        or "would be reformatted" in msg_lower
-                        or "require formatting" in msg_lower
-                        or "formatting error" in msg_lower
-                    )
+                is_aggregate = "file" in msg_lower and (
+                    "files" in msg_lower
+                    or "file(" in msg_lower
+                    or "would be reformatted" in msg_lower
+                    or "require formatting" in msg_lower
+                    or "formatting error" in msg_lower
                 )
                 if not is_aggregate:
                     errors.append("missing file_path")
@@ -1473,116 +1728,23 @@ class AutofixCoordinator:
     def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
     ) -> bool:
-        max_iterations = self._get_max_iterations()
 
-        context = AgentContext(
-            project_path=self.pkg_path,
-            subprocess_timeout=300,
-        )
-        cache = CrackerjackCache()
-
-        if self._coordinator_factory is not None:
-            coordinator = self._coordinator_factory(context, cache)
-        else:
-            from crackerjack.agents.coordinator import AgentCoordinator
-            from crackerjack.agents.tracker import get_agent_tracker
-            from crackerjack.services.debug import get_ai_agent_debugger
-
-            coordinator = AgentCoordinator(
-                context=context,
-                tracker=get_agent_tracker(),
-                debugger=get_ai_agent_debugger(),
-                cache=cache,
-            )
-
-        initial_issues = self._parse_hook_results_to_issues_with_qa(hook_results)
-
-        coverage_issues = self._check_coverage_regression(hook_results)
-        if coverage_issues:
-            self.logger.info(
-                f"🧪 Test AI Stage: Detected {len(coverage_issues)} coverage failures, "
-                f"adding to AI-fix queue for test creation"
-            )
-            initial_issues.extend(coverage_issues)
+        coordinator = self._setup_ai_fix_coordinator()
+        issues = self._collect_fixable_issues(hook_results)
 
         self.progress_manager.start_fix_session(
             stage=stage,
-            initial_issue_count=len(initial_issues),
+            initial_issue_count=len(issues),
         )
 
-        previous_issue_count = float("inf")
-        no_progress_count = 0
+        result = self._run_ai_fix_iteration_loop(
+            coordinator, issues, hook_results, stage
+        )
 
-        iteration = 0
-        try:
-            while True:
-                if iteration == 0:
-                    issues = self._get_iteration_issues(iteration, hook_results, stage)
-                    self.logger.info(
-                        f"Iteration {iteration}: Using initial hook results ({len(issues)} issues)"
-                    )
-                else:
-                    issues = self._collect_current_issues(stage=stage)
-                    self.logger.info(
-                        f"Iteration {iteration}: Re-ran hooks, collected {len(issues)} current issues"
-                    )
+        if result:
+            self._validate_final_issues(issues)
 
-                current_issue_count = len(issues)
-
-                self.progress_manager.start_iteration(iteration, current_issue_count)
-
-                if current_issue_count == 0:
-                    result = self._handle_zero_issues_case(iteration, stage)
-                    if result is not None:
-                        self.progress_manager.end_iteration()
-                        self.progress_manager.finish_session(success=True)
-                        return result
-
-                if iteration >= max_iterations:
-                    self.logger.warning(
-                        f"Reached max iterations ({max_iterations}) with {current_issue_count} issues remaining"
-                    )
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                if self._should_stop_on_convergence(
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                ):
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                no_progress_count = self._update_progress_count(
-                    current_issue_count,
-                    previous_issue_count,
-                    no_progress_count,
-                )
-
-                self.progress_manager.update_iteration_progress(
-                    iteration,
-                    current_issue_count,
-                    no_progress_count,
-                )
-
-                if not self._run_ai_fix_iteration(coordinator, issues):
-                    self.progress_manager.end_iteration()
-                    self.progress_manager.finish_session(success=False)
-                    return False
-
-                self.progress_manager.end_iteration()
-
-                previous_issue_count = current_issue_count
-                iteration += 1
-        except Exception as e:
-            self.logger.exception(f"Error during AI fixing at iteration {iteration}")
-            self.progress_manager.end_iteration()
-            self.progress_manager.finish_session(
-                success=False, message=f"Error during AI fixing: {e}"
-            )
-            raise
+        return result
 
 
 def _extract_issue_count_from_json(output: str, tool_name: str) -> int | None:

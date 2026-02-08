@@ -7,7 +7,7 @@
 The AI-fix system can now automatically fix or remove broken documentation links. When `check-local-links` detects broken links, the `DocumentationAgent` will:
 
 1. **If target file exists elsewhere**: Update the link with the correct path
-2. **If target file was deleted**: Remove the broken link from the documentation
+1. **If target file was deleted**: Remove the broken link from the documentation
 
 ## Implementation
 
@@ -16,6 +16,7 @@ The AI-fix system can now automatically fix or remove broken documentation links
 **File**: `crackerjack/parsers/regex_parsers.py:545-552`
 
 **Before**:
+
 ```python
 return Issue(
     type=IssueType.DOCUMENTATION,
@@ -28,6 +29,7 @@ return Issue(
 ```
 
 **After**:
+
 ```python
 return Issue(
     type=IssueType.DOCUMENTATION,
@@ -47,11 +49,13 @@ return Issue(
 The `DocumentationAgent` already had the logic to fix broken links:
 
 1. **Extract target file** from `details`:
+
    ```python
    target_file = self._extract_target_file_from_details(issue.details)
    ```
 
-2. **Search for file** in multiple locations:
+1. **Search for file** in multiple locations:
+
    ```python
    search_paths = [
        Path(target_file),                              # Original path
@@ -62,14 +66,16 @@ The `DocumentationAgent` already had the logic to fix broken links:
    ]
    ```
 
-3. **If found**: Update the link with correct relative path
-4. **If not found**: Remove the line containing the broken link
+1. **If found**: Update the link with correct relative path
+
+1. **If not found**: Remove the line containing the broken link
 
 ## How It Works
 
 ### Example 1: Moved File (Gets Fixed)
 
 **Input** (docs/GUIDE.md):
+
 ```markdown
 See [Architecture](../reference/ARCHITECTURE.md) for details.
 ```
@@ -77,6 +83,7 @@ See [Architecture](../reference/ARCHITECTURE.md) for details.
 If `ARCHITECTURE.md` was moved to `docs/architecture/ARCHITECTURE.md`:
 
 **Output** (docs/GUIDE.md):
+
 ```markdown
 See [Architecture](../architecture/ARCHITECTURE.md) for details.
 ```
@@ -84,6 +91,7 @@ See [Architecture](../architecture/ARCHITECTURE.md) for details.
 ### Example 2: Deleted File (Gets Removed)
 
 **Input** (docs/GUIDE.md):
+
 ```markdown
 See [Old Design](../DELETED_DESIGN.md) for details.
 ```
@@ -91,6 +99,7 @@ See [Old Design](../DELETED_DESIGN.md) for details.
 If `DELETED_DESIGN.md` was deleted:
 
 **Output** (docs/GUIDE.md):
+
 ```markdown
 # Line removed entirely
 ```
@@ -151,11 +160,13 @@ python -m crackerjack run --ai-fix
 To verify the fix is working:
 
 1. **Run AI-fix**:
+
    ```bash
    python -m crackerjack run --ai-fix
    ```
 
-2. **Check results**:
+1. **Check results**:
+
    ```bash
    # Before
    check-local-links... ❌ issues=12
@@ -164,7 +175,8 @@ To verify the fix is working:
    check-local-links... ✅ issues=0
    ```
 
-3. **Review changes**:
+1. **Review changes**:
+
    ```bash
    git diff docs/  # Review what was changed
    ```
@@ -186,15 +198,16 @@ git revert <commit-hash>
 Potential enhancements:
 
 1. **Comment out instead of remove**: Add TODO comments for manual review
+
    ```markdown
    <!-- TODO: Fix broken link to DELETED_FILE.md -->
    ```
 
-2. **Suggest replacements**: If a file was deleted, suggest what to read instead
+1. **Suggest replacements**: If a file was deleted, suggest what to read instead
 
-3. **External link checker**: Add support for broken web links
+1. **External link checker**: Add support for broken web links
 
-4. **Anchor validation**: Check if `#section` anchors still exist
+1. **Anchor validation**: Check if `#section` anchors still exist
 
 ## Related Documentation
 
@@ -207,7 +220,7 @@ Potential enhancements:
 
 - `ae580125` - feat: populate details field for broken documentation links
 
----
+______________________________________________________________________
 
 **Status**: ✅ Production Ready
 **Date**: 2026-02-07

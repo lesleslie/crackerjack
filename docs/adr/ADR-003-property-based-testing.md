@@ -13,10 +13,10 @@ Crackerjack processes diverse codebases with varying configurations, file struct
 How can we ensure Crackerjack's core logic is correct across:
 
 1. **Diverse Inputs**: Different file structures, configurations, error patterns
-2. **Edge Cases**: Empty lists, single elements, duplicates, unicode, etc.
-3. **Invariants**: Properties that must always hold true (e.g., cache keys must be unique)
-4. **Stateful Interactions**: Cache lifecycle, job state transitions
-5. **Performance**: Scaling behavior with large inputs
+1. **Edge Cases**: Empty lists, single elements, duplicates, unicode, etc.
+1. **Invariants**: Properties that must always hold true (e.g., cache keys must be unique)
+1. **Stateful Interactions**: Cache lifecycle, job state transitions
+1. **Performance**: Scaling behavior with large inputs
 
 ### Key Requirements
 
@@ -43,11 +43,13 @@ How can we ensure Crackerjack's core logic is correct across:
 **Description**: Continue using pytest with hardcoded test cases.
 
 **Pros**:
+
 - Simple and familiar
 - Fast execution
 - Easy to debug
 
 **Cons**:
+
 - Only tests specific cases
 - Misses edge cases
 - Hard to reason about invariants
@@ -72,6 +74,7 @@ def test_batch_processor_groups_by_file():
 ```
 
 **Problem**: This only tests one specific case. What if:
+
 - Empty list?
 - Single issue?
 - All issues in same file?
@@ -83,6 +86,7 @@ def test_batch_processor_groups_by_file():
 **Description**: Use Hypothesis to generate hundreds of random test cases per property.
 
 **Pros**:
+
 - **Hundreds of test cases** per property (vs 1-2 for example-based)
 - **Edge case detection**: Automatically finds empty lists, duplicates, unicode, etc.
 - **Invariant specification**: Tests encode what must be true, not specific examples
@@ -91,6 +95,7 @@ def test_batch_processor_groups_by_file():
 - **Stateful testing**: Can test state machines (cache lifecycle, job state)
 
 **Cons**:
+
 - Slower than example-based (mitigated by limiting test runs)
 - Learning curve for writing good properties
 - Can be harder to debug (mitigated by shrinking)
@@ -102,10 +107,12 @@ def test_batch_processor_groups_by_file():
 **Description**: Use American Fuzzy Lop for coverage-guided fuzzing.
 
 **Pros**:
+
 - Extremely effective at finding crashes
 - Can find security vulnerabilities
 
 **Cons**:
+
 - Designed for C/C++, not Python
 - High performance overhead
 - Hard to integrate with pytest
@@ -509,18 +516,18 @@ def test_agent_selection_is_linear(num_agents):
 ### Positive
 
 1. **Bug Detection**: Found 8 edge cases that example-based tests missed
-2. **Confidence**: Tests encode invariants explicitly (self-documenting)
-3. **Regression Prevention**: Catches future edge cases automatically
-4. **Reduced Test Code**: 1 property test replaces 10-20 example tests
-5. **Stateful Testing**: Can test complex state machines (cache, jobs)
-6. **Shrinking**: Automatically minimizes failing cases for easy debugging
+1. **Confidence**: Tests encode invariants explicitly (self-documenting)
+1. **Regression Prevention**: Catches future edge cases automatically
+1. **Reduced Test Code**: 1 property test replaces 10-20 example tests
+1. **Stateful Testing**: Can test complex state machines (cache, jobs)
+1. **Shrinking**: Automatically minimizes failing cases for easy debugging
 
 ### Negative
 
 1. **Slower**: Property tests run 100 examples (vs 1 for example-based)
-2. **Learning Curve**: Requires training to write good properties
-3. **Debugging**: Can be harder to debug random failures (mitigated by shrinking)
-4. **Flakiness**: Can find rare heisenbugs (actually a benefit, but feels like flakiness)
+1. **Learning Curve**: Requires training to write good properties
+1. **Debugging**: Can be harder to debug random failures (mitigated by shrinking)
+1. **Flakiness**: Can find rare heisenbugs (actually a benefit, but feels like flakiness)
 
 ### Risks
 
@@ -549,6 +556,7 @@ def test_agent_selection_is_linear(num_agents):
 ### When to Use Property-Based Testing
 
 **✅ Use For**:
+
 - Complex business logic (batch processing, orchestration)
 - Stateful systems (cache, job manager)
 - Functions with many inputs (file parsing, configuration)
@@ -556,6 +564,7 @@ def test_agent_selection_is_linear(num_agents):
 - Refactoring safety (ensure invariants hold)
 
 **❌ Don't Use For**:
+
 - Simple CRUD operations
 - API endpoint tests (use integration tests)
 - UI tests (use E2E tests)
@@ -564,10 +573,10 @@ def test_agent_selection_is_linear(num_agents):
 ### Writing Good Properties
 
 1. **Specify Invariants, Not Examples**: Test what MUST be true, not specific cases
-2. **Use Appropriate Strategies**: `st.lists()`, `st.text()`, `st.integers()`, etc.
-3. **Limit Input Size**: Use `max_size` to avoid performance issues
-4. **Test Edge Cases**: Empty lists, None values, unicode, large inputs
-5. **Make Tests Deterministic**: Use `derandomize = true`
+1. **Use Appropriate Strategies**: `st.lists()`, `st.text()`, `st.integers()`, etc.
+1. **Limit Input Size**: Use `max_size` to avoid performance issues
+1. **Test Edge Cases**: Empty lists, None values, unicode, large inputs
+1. **Make Tests Deterministic**: Use `derandomize = true`
 
 ### Example: Bad vs Good Property
 

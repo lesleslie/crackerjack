@@ -529,8 +529,6 @@ class HookExecutor:
 
         issues_count = self._calculate_issues_count(status, issues_found)
 
-        # ✅ PHASE 2 OPTIMIZATION: Get QAResult from adapter if available
-        # This avoids re-running the tool later in AI-fix workflow
         qa_result = self._try_get_qa_result_for_hook(hook, result, duration)
 
         return HookResult(
@@ -547,7 +545,7 @@ class HookExecutor:
             is_timeout=False,
             output=result.stdout,
             error=result.stderr,
-            qa_result=qa_result,  # ← NEW: Attach QAResult for AI-fix
+            qa_result=qa_result,
         )
 
     def _determine_initial_status(
@@ -781,7 +779,7 @@ class HookExecutor:
                 break
 
         if start_idx is not None and end_idx is not None:
-            return "\n".join(lines[start_idx:end_idx])
+            return "\n".join(lines[start_idx: end_idx])
         elif start_idx is not None:
             return "\n".join(lines[start_idx:])
 
@@ -1303,25 +1301,10 @@ class HookExecutor:
         result: subprocess.CompletedProcess[str],
         duration: float,
     ) -> t.Any | None:
-        """Try to get QAResult from QA adapter for this hook.
 
-        This is a Phase 2 optimization: instead of re-running the tool later
-        in the AI-fix workflow, we capture the QAResult now and attach it
-        to the HookResult, eliminating redundant execution.
-
-        Args:
-            hook: The hook definition being executed
-            result: The subprocess result from running the hook
-            duration: Execution duration in seconds
-
-        Returns:
-            QAResult if adapter exists and runs successfully, None otherwise
-        """
-        # Only run QA adapters for tools that have them
         if not self._tool_has_qa_adapter(hook.name):
             return None
 
-        # Skip QA adapter if hook didn't fail (no issues to parse)
         if result.returncode == 0 and hook.name not in {
             "complexipy",
             "refurb",
@@ -1337,30 +1320,25 @@ class HookExecutor:
             from crackerjack.models.qa_config import QACheckConfig
             from crackerjack.models.qa_results import QACheckType
 
-            # Create adapter
             adapter_factory = DefaultAdapterFactory()
             adapter = adapter_factory.create_adapter(hook.name)
 
             if adapter is None:
                 return None
 
-            # Initialize adapter
             asyncio.run(adapter.init())
 
-            # Create config
             config = QACheckConfig(
                 check_id=adapter.module_id,
                 check_name=hook.name,
-                check_type=QACheckType.LINT,  # Default, will be overridden
+                check_type=QACheckType.LINT,
                 enabled=True,
                 file_patterns=["**/*.py"],
                 timeout_seconds=60,
             )
 
-            # Run adapter check
             qa_result = asyncio.run(adapter.check(config=config))
 
-            # Only return QAResult if it has parsed_issues
             if qa_result and qa_result.parsed_issues:
                 if self.verbose:
                     self.console.print(
@@ -1372,8 +1350,6 @@ class HookExecutor:
             return None
 
         except Exception as e:
-            # Don't fail the hook if QA adapter fails
-            # Just log and continue without caching
             if self.debug:
                 self.console.print(
                     f"[yellow]QA adapter failed for '{hook.name}': {e}[/yellow]"
@@ -1381,15 +1357,7 @@ class HookExecutor:
             return None
 
     def _tool_has_qa_adapter(self, tool_name: str) -> bool:
-        """Check if a tool has a QA adapter available.
 
-        Args:
-            tool_name: Name of the tool
-
-        Returns:
-            True if adapter exists, False otherwise
-        """
-        # List of tools with QA adapters that support parsed_issues
         tools_with_adapters = {
             "complexipy",
             "skylos",

@@ -673,10 +673,10 @@ CLI_OPTIONS = {
         ),
     ),
     "ai_fix_max_iterations": typer.Option(
-        5,
+        10,
         "--ai-fix-max-iterations",
         help=(
-            "Maximum iterations for AI fix retry loop (default: 5). "
+            "Maximum iterations for AI fix retry loop (default: 10). "
             "The loop will exit early if all issues are resolved or "
             "no progress is made for 3 consecutive iterations. "
             "Use with --ai-fix flag."

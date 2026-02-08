@@ -3,17 +3,15 @@ from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
-from alive_progress import alive_bar, config_handler
 from rich.console import Console
 from rich.panel import Panel
-
-config_handler.set_global(
-    theme="smooth",
-    bar="smooth",
-    spinner="waves",
-    stats="false",
-    force_tty=True,
-    enrich_print=False,
+from rich.progress import (
+    BarColumn,
+    Progress,
+    SpinnerColumn,
+    TaskProgressColumn,
+    TextColumn,
+    TimeRemainingColumn,
 )
 
 logger = logging.getLogger(__name__)
@@ -49,7 +47,10 @@ class AIFixProgressManager:
         self.max_agent_bars = max_agent_bars
 
         self.iteration_bar: Any = None
+        self.iteration_task_id: Any = None
         self.agent_bars: dict[str, Any] = {}
+        self.agent_progress: Any = None
+        self.agent_task_ids: dict[str, Any] = {}
         self.issue_history: list[int] = []
         self.current_iteration = 0
         self.stage = "fast"
@@ -82,21 +83,24 @@ class AIFixProgressManager:
         if issue_count > 0:
             self.issue_history.append(issue_count)
 
-        title = f"🤖 AI-FIX STAGE: {self.stage.upper()}"
-        self.iteration_bar = alive_bar(
-            total=100,
-            title=title,
-            title_length=50,
-            manual=True,
-            enrich_print=False,
-            force_tty=True,
-            stats=False,
+        self.iteration_bar = Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TaskProgressColumn(),
+            TextColumn("{task.percentage:>3.0f}%"),
+            TimeRemainingColumn(),
+            console=self.console,
+            expand=False,
         )
 
         self.iteration_bar = self.iteration_bar.__enter__()
 
-        with suppress(Exception):
-            self.iteration_bar(0)
+        title = f"🤖 AI-FIX STAGE: {self.stage.upper()}"
+        self.iteration_task_id = self.iteration_bar.add_task(
+            title,
+            total=100,
+        )
 
         self._update_iteration_display(iteration, issue_count, 0)
 
@@ -122,9 +126,11 @@ class AIFixProgressManager:
         else:
             reduction_pct = 0
 
-        if self.iteration_bar:
-            with suppress(Exception):
-                self.iteration_bar(reduction_pct)
+        if self.iteration_bar and hasattr(self, "iteration_task_id"):
+            self.iteration_bar.update(
+                self.iteration_task_id,
+                completed=reduction_pct,
+            )
 
         self._update_iteration_display(iteration, issues_remaining, no_progress_count)
 
@@ -132,10 +138,14 @@ class AIFixProgressManager:
         if not self.enabled or not self.iteration_bar:
             return
 
-        with suppress(Exception):
-            self.iteration_bar(100)
+        if hasattr(self, "iteration_task_id"):
+            self.iteration_bar.update(self.iteration_task_id, completed=100)
+
+        if hasattr(self.iteration_bar, "__exit__"):
+            self.iteration_bar.__exit__(None, None, None)
 
         self.iteration_bar = None
+        self.iteration_task_id = None
 
         if self.enable_agent_bars:
             self.end_agent_bars()
@@ -146,17 +156,26 @@ class AIFixProgressManager:
 
         limited_agents = agent_names[: self.max_agent_bars]
 
+        if not hasattr(self, "agent_progress") or self.agent_progress is None:
+            self.agent_progress = Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TaskProgressColumn(),
+                console=self.console,
+                expand=False,
+            )
+            self.agent_progress = self.agent_progress.__enter__()
+            self.agent_task_ids = {}
+
         for agent_name in limited_agents:
-            if agent_name not in self.agent_bars:
+            if agent_name not in self.agent_task_ids:
                 icon = AGENT_ICONS.get(agent_name, "🤖")
-                bar = alive_bar(
+                task_id = self.agent_progress.add_task(
+                    f"{icon} {agent_name}",
                     total=100,
-                    title=f"{icon} {agent_name}",
-                    title_length=40,
-                    manual=True,
-                    enrich_print=False,
                 )
-                self.agent_bars[agent_name] = bar.__enter__()
+                self.agent_task_ids[agent_name] = task_id
 
     def update_agent_progress(
         self,
@@ -169,7 +188,7 @@ class AIFixProgressManager:
         if not self.enabled or not self.enable_agent_bars:
             return
 
-        if agent_name not in self.agent_bars:
+        if agent_name not in getattr(self, "agent_task_ids", {}):
             self.start_agent_bars([agent_name])
 
         if total > 0:
@@ -177,9 +196,11 @@ class AIFixProgressManager:
         else:
             pct = 100
 
-        if agent_name in self.agent_bars:
-            with suppress(Exception):
-                self.agent_bars[agent_name](pct)
+        if hasattr(self, "agent_progress") and agent_name in self.agent_task_ids:
+            self.agent_progress.update(
+                self.agent_task_ids[agent_name],
+                completed=pct,
+            )
 
         if current_file or current_issue_type:
             self._print_current_operation(agent_name, current_file, current_issue_type)
@@ -188,11 +209,16 @@ class AIFixProgressManager:
         if not self.enabled:
             return
 
-        for bar in self.agent_bars.values():
-            with suppress(Exception):
-                bar(100)
+        if hasattr(self, "agent_progress") and self.agent_progress:
+            if hasattr(self, "agent_task_ids"):
+                for task_id in self.agent_task_ids.values():
+                    self.agent_progress.update(task_id, completed=100)
 
-        self.agent_bars.clear()
+            if hasattr(self.agent_progress, "__exit__"):
+                self.agent_progress.__exit__(None, None, None)
+
+        self.agent_progress = None
+        self.agent_task_ids = {}
         self.current_operation = ""
 
     def _print_current_operation(
@@ -325,5 +351,13 @@ class AIFixProgressManager:
         self.enabled = False
 
         if self.iteration_bar:
-            self.iteration_bar()
+            if hasattr(self.iteration_bar, "__exit__"):
+                self.iteration_bar.__exit__(None, None, None)
             self.iteration_bar = None
+            self.iteration_task_id = None
+
+        if self.agent_progress:
+            if hasattr(self.agent_progress, "__exit__"):
+                self.agent_progress.__exit__(None, None, None)
+            self.agent_progress = None
+            self.agent_task_ids = {}

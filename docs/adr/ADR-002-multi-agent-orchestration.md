@@ -13,11 +13,11 @@ Crackerjack's AI auto-fix feature needed to handle diverse code quality issues (
 How should Crackerjack orchestrate multiple specialized AI agents to:
 
 1. **Intelligently route issues** to the most appropriate agent
-2. **Avoid redundant work** when multiple agents could handle the same issue
-3. **Handle complex cross-cutting concerns** requiring multiple agents
-4. **Maintain performance** with async parallel execution
-5. **Provide confidence scores** for routing decisions
-6. **Support batch processing** of related issues
+1. **Avoid redundant work** when multiple agents could handle the same issue
+1. **Handle complex cross-cutting concerns** requiring multiple agents
+1. **Maintain performance** with async parallel execution
+1. **Provide confidence scores** for routing decisions
+1. **Support batch processing** of related issues
 
 ### Key Requirements
 
@@ -45,11 +45,13 @@ How should Crackerjack orchestrate multiple specialized AI agents to:
 **Description**: Use one large AI agent with if/else logic for different issue types.
 
 **Pros**:
+
 - Simple implementation
 - Single API call
 - Easier to debug
 
 **Cons**:
+
 - Prompt size grows unbounded
 - Context window issues
 - No specialization (security issues treated same as formatting)
@@ -63,10 +65,12 @@ How should Crackerjack orchestrate multiple specialized AI agents to:
 **Description**: User specifies which agent to use for each issue type.
 
 **Pros**:
+
 - Full user control
 - Predictable behavior
 
 **Cons**:
+
 - High cognitive load on users
 - Requires deep knowledge of agent capabilities
 - No intelligent routing
@@ -79,6 +83,7 @@ How should Crackerjack orchestrate multiple specialized AI agents to:
 **Description**: Automatic agent selection with confidence scoring, batch processing, and multiple execution strategies.
 
 **Pros**:
+
 - **Intelligent Routing**: Confidence scores ensure best-match agents
 - **Parallel Execution**: Independent agents run concurrently
 - **Batch Processing**: Related issues grouped for efficiency
@@ -87,6 +92,7 @@ How should Crackerjack orchestrate multiple specialized AI agents to:
 - **Transparent**: Detailed logging of agent selection
 
 **Cons**:
+
 - More complex architecture
 - Requires agent registry and scoring system
 - Potential for conflicting fixes (mitigated by sequential mode)
@@ -225,9 +231,9 @@ class AgentSelector:
 **Confidence Scoring Factors**:
 
 1. **Capability Match** (40%): Semantic similarity between task and agent capabilities
-2. **Past Success Rate** (30%): Historical success rate for similar tasks
-3. **Specialization Depth** (20%): How specialized the agent is for this issue type
-4. **Task Complexity** (10%): Match between task complexity and agent expertise
+1. **Past Success Rate** (30%): Historical success rate for similar tasks
+1. **Specialization Depth** (20%): How specialized the agent is for this issue type
+1. **Task Complexity** (10%): Match between task complexity and agent expertise
 
 #### 3. Agent Orchestrator
 
@@ -283,6 +289,7 @@ async def _execute_single_best(
 ```
 
 **Use Cases**:
+
 - Clear issue type (e.g., type error → TestCreationAgent)
 - Independent issues that don't affect each other
 - Fastest execution (single agent)
@@ -314,6 +321,7 @@ async def _execute_parallel(
 ```
 
 **Use Cases**:
+
 - Multiple independent fixes (e.g., formatting + linting)
 - Exploratory fixes (try multiple approaches)
 - Performance optimization (all agents run concurrently)
@@ -354,6 +362,7 @@ async def _execute_sequential(
 ```
 
 **Use Cases**:
+
 - Cascading fixes (formatting → type checking → security)
 - When earlier fixes enable later fixes
 - Avoiding conflicting changes
@@ -396,6 +405,7 @@ async def _execute_consensus(
 ```
 
 **Use Cases**:
+
 - Critical security fixes requiring verification
 - Architectural changes requiring multiple perspectives
 - High-stakes refactoring
@@ -452,9 +462,9 @@ class BatchProcessor:
 **Batching Strategies**:
 
 1. **By File**: All issues in the same file processed together
-2. **By Issue Type**: All type errors processed together
-3. **By Agent**: All issues handled by the same agent processed together
-4. **By Dependency**: Issues that depend on each other processed sequentially
+1. **By Issue Type**: All type errors processed together
+1. **By Agent**: All issues handled by the same agent processed together
+1. **By Dependency**: Issues that depend on each other processed sequentially
 
 ### Configuration
 
@@ -577,20 +587,20 @@ results = await batch_processor.execute_batches(batches)
 ### Positive
 
 1. **Intelligent Routing**: Confidence scores ensure best-match agents (≥0.7 threshold)
-2. **Performance**: Parallel execution for independent issues (3x speedup)
-3. **Efficiency**: Batch processing reduces API calls by 60%
-4. **Transparency**: Detailed logging shows which agents were used and why
-5. **Extensibility**: Adding new agents requires no code changes to orchestrator
-6. **Flexibility**: 4 execution strategies for different use cases
-7. **Reliability**: Fallback to safe defaults when no agent is suitable
+1. **Performance**: Parallel execution for independent issues (3x speedup)
+1. **Efficiency**: Batch processing reduces API calls by 60%
+1. **Transparency**: Detailed logging shows which agents were used and why
+1. **Extensibility**: Adding new agents requires no code changes to orchestrator
+1. **Flexibility**: 4 execution strategies for different use cases
+1. **Reliability**: Fallback to safe defaults when no agent is suitable
 
 ### Negative
 
 1. **Complexity**: More sophisticated architecture than single agent
-2. **Debugging**: Harder to debug when multiple agents are involved
-3. **Conflicting Fixes**: Parallel agents may make conflicting changes (mitigated by sequential mode)
-4. **Confidence Calibration**: Requires ongoing tuning of confidence scoring
-5. **Memory**: Batch processing can consume memory for large issue sets
+1. **Debugging**: Harder to debug when multiple agents are involved
+1. **Conflicting Fixes**: Parallel agents may make conflicting changes (mitigated by sequential mode)
+1. **Confidence Calibration**: Requires ongoing tuning of confidence scoring
+1. **Memory**: Batch processing can consume memory for large issue sets
 
 ### Risks
 
@@ -615,6 +625,7 @@ results = await batch_processor.execute_batches(batches)
 | **Batch Processing** | **180s** | **2.5x** | **40** |
 
 **Key Findings**:
+
 - Parallel execution provides 3x speedup for independent issues
 - Batch processing reduces API calls by 60%
 - Sequential mode is 18% faster than single agent due to cascading fixes

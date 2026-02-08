@@ -678,28 +678,11 @@ def qa_health() -> t.Never:
 
 @app.command()
 def shell() -> None:
-    """Start the interactive admin shell for quality management.
-
-    Provides an IPython environment pre-configured with:
-    - Quality check functions (crack, test, lint, scan)
-    - Code formatting and type checking
-    - Adapter and hook inspection
-    - Session tracking via Session-Buddy MCP
-
-    Example:
-        $ crackerjack shell
-        Crackerjack> crack()           # Run all quality checks
-        Crackerjack> test()            # Run test suite
-        Crackerjack> lint()            # Run linting
-        Crackerjack> scan()            # Security scan
-        Crackerjack> show_adapters()   # Show QA adapters
-    """
     from crackerjack.config import CrackerjackSettings, load_settings
     from crackerjack.shell import CrackerjackShell
 
     settings = load_settings(CrackerjackSettings)
 
-    # Create and start shell
     shell_instance = CrackerjackShell(settings)
     shell_instance.start()
 
@@ -711,5 +694,5 @@ def main() -> None:
 if __name__ == "__main__":
     main()
 
-# Entry point for CLI
+
 cli = app

@@ -51,8 +51,21 @@ class CodeTransformer:
             self._simplify_data_structures,
         ]
 
+        valid_operations = []
+        for op in operations:
+            method_name = op.__name__ if hasattr(op, "__name__") else str(op)
+            if hasattr(self, method_name):
+                valid_operations.append(op)
+            else:
+                import logging
+
+                logger = logging.getLogger(__name__)
+                logger.warning(
+                    f"⚠️ CodeTransformer operation '{method_name}' not implemented - skipping"
+                )
+
         modified_content = content
-        for operation in operations:
+        for operation in valid_operations:
             modified_content = operation(modified_content)
 
         return modified_content
@@ -85,7 +98,7 @@ class CodeTransformer:
                     j += 1
 
                 if action_start > 0:
-                    "\n".join(lines[i:action_start])
+                    "\n".join(lines[i: action_start])
                     action_body = "\n".join(lines[action_start : action_start + 5])
 
                     early_return = f"{line.lstrip()}\n{action_body.strip()}\n    return"
@@ -95,6 +108,40 @@ class CodeTransformer:
 
             modified_lines.append(line)
             i += 1
+
+        return "\n".join(modified_lines)
+
+    @staticmethod
+    def _simplify_boolean_expressions(content: str) -> str:
+        lines = content.split("\n")
+        modified_lines = []
+
+        for line in lines:
+            simplified = line
+
+            if " not (not " in simplified or "not(not " in simplified:
+                if "simplify_double_negation" in SAFE_PATTERNS:
+                    simplified = SAFE_PATTERNS["simplify_double_negation"].apply(
+                        simplified
+                    )
+
+            if " and True" in simplified or "and True " in simplified:
+                if "simplify_and_true" in SAFE_PATTERNS:
+                    simplified = SAFE_PATTERNS["simplify_and_true"].apply(simplified)
+
+            if " or False" in simplified or "or False " in simplified:
+                if "simplify_or_false" in SAFE_PATTERNS:
+                    simplified = SAFE_PATTERNS["simplify_or_false"].apply(simplified)
+
+            if " is True" in simplified:
+                if "simplify_is_true" in SAFE_PATTERNS:
+                    simplified = SAFE_PATTERNS["simplify_is_true"].apply(simplified)
+
+            if " is False" in simplified:
+                if "simplify_is_false" in SAFE_PATTERNS:
+                    simplified = SAFE_PATTERNS["simplify_is_false"].apply(simplified)
+
+            modified_lines.append(simplified)
 
         return "\n".join(modified_lines)
 

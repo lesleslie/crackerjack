@@ -92,8 +92,8 @@ class OptionsProtocol(t.Protocol):
     ai_agent: bool = False
     """Enable AI agent for suggestions."""
 
-    ai_fix_max_iterations: int = 5
-    """Maximum AI fix iterations (default: 5)."""
+    ai_fix_max_iterations: int = 10
+    """Maximum AI fix iterations (default: 10)."""
 
     publish: t.Any | None
     """Publish package to PyPI."""

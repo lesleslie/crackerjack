@@ -66,10 +66,10 @@ Crackerjack is built on a **multi-layer architecture** that separates concerns a
 ### Key Design Principles
 
 1. **Separation of Concerns**: Each layer has a clear responsibility
-2. **Dependency Injection**: Uses legacy framework for loose coupling
-3. **Async-First**: Non-blocking I/O for performance
-4. **Extensibility**: Plugin-based adapter and agent system
-5. **Type Safety**: Protocol-based interfaces with runtime checking
+1. **Dependency Injection**: Uses legacy framework for loose coupling
+1. **Async-First**: Non-blocking I/O for performance
+1. **Extensibility**: Plugin-based adapter and agent system
+1. **Type Safety**: Protocol-based interfaces with runtime checking
 
 ## Architecture Principles
 
@@ -78,6 +78,7 @@ Crackerjack is built on a **multi-layer architecture** that separates concerns a
 **Decision**: Use Model Context Protocol (MCP) as primary integration point for AI agents.
 
 **Rationale**:
+
 - Standard protocol for AI tool integration
 - Supports both stdio and WebSocket transports
 - Enables real-time progress tracking
@@ -105,6 +106,7 @@ async def execute_crackerjack(
 **Decision**: All quality tools implement `QAAdapter` protocol.
 
 **Rationale**:
+
 - Consistent interface across all tools
 - Easy to add new tools
 - Testable in isolation
@@ -132,6 +134,7 @@ class QAAdapter(Protocol):
 **Decision**: Use Hypothesis for critical business logic.
 
 **Rationale**:
+
 - Catches edge cases that example-based tests miss
 - Encodes invariants explicitly
 - Supports stateful testing
@@ -161,6 +164,7 @@ def test_batch_processor_groups_all_issues(issues: list[Issue]):
 **Decision**: Route issues to agents based on confidence scores (≥0.7 threshold).
 
 **Rationale**:
+
 - Automatic agent selection
 - Handles overlapping issue types
 - Supports learning from past performance
@@ -195,6 +199,7 @@ class SkillRouter:
 **File**: `crackerjack/__main__.py`
 
 **Responsibilities**:
+
 - Parse command-line arguments (Typer)
 - Delegate to workflow orchestrator
 - Provide user feedback (Rich console)
@@ -220,6 +225,7 @@ def run(
 **File**: `crackerjack/core/workflow_orchestrator.py`
 
 **Responsibilities**:
+
 - Coordinate workflow phases (fast → cleaning → comprehensive → tests)
 - Manage session lifecycle
 - Handle errors and retries
@@ -516,6 +522,7 @@ Return QAResult (passed, issues, modified_files)
 **Cache Key**: `{adapter_name}:{config_hash}:{content_hash}`
 
 **Cache Benefits**:
+
 - **70% cache hit rate** in typical workflows
 - **Content-aware**: Only re-runs when files actually change
 - **TTL**: 3600s (1 hour) default
@@ -606,9 +613,9 @@ routing_strategy = "single"
 **Execution Strategies**:
 
 1. **Single Best** (confidence ≥0.9): One agent handles issue
-2. **Parallel** (2+ agents ≥0.8): Multiple agents work concurrently
-3. **Sequential** (2+ agents ≥0.7): Agents work in order of confidence
-4. **Consensus**: All agents must agree on fix
+1. **Parallel** (2+ agents ≥0.8): Multiple agents work concurrently
+1. **Sequential** (2+ agents ≥0.7): Agents work in order of confidence
+1. **Consensus**: All agents must agree on fix
 
 **Performance**:
 
@@ -703,8 +710,8 @@ class JobState(Enum):
 **Cache Layers**:
 
 1. **Tool Proxy Cache**: Content-based caching for adapter results
-2. **Pattern Cache**: Error patterns for AI fix recommendations
-3. **Job Cache**: Job results for MCP clients
+1. **Pattern Cache**: Error patterns for AI fix recommendations
+1. **Job Cache**: Job results for MCP clients
 
 **Cache Performance**:
 
@@ -855,12 +862,13 @@ def handle_falco_event(event: FalcoEvent) -> None:
 Crackerjack's architecture is built on **5 key layers**:
 
 1. **Developer Layer**: CLI, MCP server, AI agents
-2. **Orchestration Layer**: Workflow pipeline, phase coordinator
-3. **Manager Layer**: Hook manager, test manager, job manager
-4. **Adapter Layer**: 18 quality adapters (format, lint, security, type, refactor)
-5. **Service Layer**: Cache, error cache, pattern management
+1. **Orchestration Layer**: Workflow pipeline, phase coordinator
+1. **Manager Layer**: Hook manager, test manager, job manager
+1. **Adapter Layer**: 18 quality adapters (format, lint, security, type, refactor)
+1. **Service Layer**: Cache, error cache, pattern management
 
 **Key Architectural Decisions**:
+
 - ✅ MCP-first design for AI integration
 - ✅ Adapter pattern for extensibility
 - ✅ Property-based testing for correctness
@@ -868,12 +876,13 @@ Crackerjack's architecture is built on **5 key layers**:
 - ✅ Async-first for performance
 
 **Performance Characteristics**:
+
 - ⚡ 47% faster than pre-commit (direct Python API)
 - 🚀 70% cache hit rate
 - 📈 11x parallelism (11 concurrent adapters)
 - 🎯 76% speedup for I/O-bound operations (async)
 
----
+______________________________________________________________________
 
 **Last Updated**: 2025-02-06
 **Crackerjack Version**: 0.51.0

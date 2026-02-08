@@ -354,6 +354,136 @@ class TestAgentContext:
 
         assert result is False
 
+    def test_write_file_content_rejects_syntax_errors(self, tmp_path) -> None:
+        """Test that syntax errors are rejected before writing."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "invalid.py"
+        invalid_content = "def foo(:\n    pass"  # Missing closing paren
+
+        result = context.write_file_content(test_file, invalid_content)
+
+        # Should reject the file
+        assert result is False
+        # File should not exist
+        assert not test_file.exists()
+
+    def test_write_file_content_rejects_duplicate_functions(self, tmp_path) -> None:
+        """Test that duplicate function definitions are detected and rejected."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "duplicates.py"
+        duplicate_content = """
+def foo():
+    pass
+
+def foo():
+    pass
+"""
+
+        result = context.write_file_content(test_file, duplicate_content)
+
+        # Should reject the file due to duplicate definitions
+        assert result is False
+        # File should not exist or be empty
+        assert not test_file.exists() or test_file.read_text() == ""
+
+    def test_write_file_content_rejects_duplicate_classes(self, tmp_path) -> None:
+        """Test that duplicate class definitions are detected and rejected."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "duplicates.py"
+        duplicate_content = """
+class Foo:
+    pass
+
+class Foo:
+    pass
+"""
+
+        result = context.write_file_content(test_file, duplicate_content)
+
+        # Should reject the file due to duplicate definitions
+        assert result is False
+        # File should not exist or be empty
+        assert not test_file.exists() or test_file.read_text() == ""
+
+    def test_write_file_content_rejects_duplicate_async_functions(
+        self, tmp_path
+    ) -> None:
+        """Test that duplicate async function definitions are detected and rejected."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "duplicates.py"
+        duplicate_content = """
+async def fetch():
+    pass
+
+async def fetch():
+    pass
+"""
+
+        result = context.write_file_content(test_file, duplicate_content)
+
+        # Should reject the file due to duplicate definitions
+        assert result is False
+        # File should not exist or be empty
+        assert not test_file.exists() or test_file.read_text() == ""
+
+    def test_write_file_content_accepts_valid_unique_definitions(
+        self, tmp_path
+    ) -> None:
+        """Test that valid code with unique definitions is accepted."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "valid.py"
+        valid_content = """
+def foo():
+    pass
+
+async def bar():
+    pass
+
+class Baz:
+    pass
+"""
+
+        result = context.write_file_content(test_file, valid_content)
+
+        # Should accept the file
+        assert result is True
+        # File should exist with correct content
+        assert test_file.exists()
+        assert test_file.read_text() == valid_content
+
+    def test_write_file_content_rejects_mixed_duplicates(self, tmp_path) -> None:
+        """Test that duplicates across function/class types are detected."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "mixed_duplicates.py"
+        # Function and class with same name should be detected
+        duplicate_content = """
+def Foo():
+    pass
+
+class Foo:
+    pass
+"""
+
+        result = context.write_file_content(test_file, duplicate_content)
+
+        # Should reject the file due to duplicate definitions
+        assert result is False
+        # File should not exist or be empty
+        assert not test_file.exists() or test_file.read_text() == ""
+
+    def test_write_file_content_handles_non_python_files(self, tmp_path) -> None:
+        """Test that non-Python files are written without AST validation."""
+        context = AgentContext(project_path=tmp_path)
+        test_file = tmp_path / "config.json"
+        json_content = '{"key": "value"}'
+
+        result = context.write_file_content(test_file, json_content)
+
+        # Should accept non-Python files
+        assert result is True
+        assert test_file.exists()
+        assert test_file.read_text() == json_content
+
 
 @pytest.mark.unit
 class TestSubAgentBase:

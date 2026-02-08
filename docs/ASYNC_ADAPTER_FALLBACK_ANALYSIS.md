@@ -459,7 +459,7 @@ From [PEP 3156 -- Async IO support](https://peps.python.org/pep-3156/):
 
 ### Crackerjack Code Standards
 
-From `/Users/les/Projects/crackerjack/CLAUDE.md`:
+From [CLAUDE.md](../CLAUDE.md):
 
 > **Code Standards**:
 > - **No hardcoded paths** (use `tempfile`)
@@ -570,8 +570,8 @@ done
 
 - [Python asyncio documentation](https://docs.python.org/3/library/asyncio-eventloop.html)
 - [PEP 3156 -- Async IO support](https://peps.python.org/pep-3156/)
-- [Crackerjack Code Standards](/Users/les/Projects/crackerjack/CLAUDE.md)
-- [Existing pattern in service_watchdog.py](/Users/les/Projects/crackerjack/crackerjack/core/service_watchdog.py)
+- [Crackerjack Code Standards](../CLAUDE.md)
+- [Existing pattern in service_watchdog.py](../crackerjack/core/service_watchdog.py)
 
 ---
 

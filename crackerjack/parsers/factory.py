@@ -120,7 +120,6 @@ class ParserFactory:
 
         lines = output.split("\n")
 
-        # Special case: ruff's "[*]" empty output pattern
         if output.strip() == "[*]":
             return True
 
@@ -141,7 +140,6 @@ class ParserFactory:
         self, parser: JSONParser | RegexParser, output: str, tool_name: str
     ) -> list[Issue]:
 
-        # Special handling for ruff's "[*]" empty output pattern
         if output.strip() == "[*]":
             logger.debug(f"Detected ruff empty output pattern '[*]' for '{tool_name}'")
             output = "[]"

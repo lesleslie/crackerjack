@@ -50,10 +50,10 @@ Crackerjack uses a **single source of truth** architecture for QA results, elimi
 ## Key Benefits
 
 1. **Zero Data Loss**: 100% issue preservation (61/61 vs. previous 44/61)
-2. **Single Parsing**: Tools run once, results used directly
-3. **Superior File Handling**: QA adapters handle file-based tools correctly
-4. **Graceful Degradation**: Falls back to raw parsing if QAResult unavailable
-5. **Better Error Handling**: Specific exceptions with full tracebacks
+1. **Single Parsing**: Tools run once, results used directly
+1. **Superior File Handling**: QA adapters handle file-based tools correctly
+1. **Graceful Degradation**: Falls back to raw parsing if QAResult unavailable
+1. **Better Error Handling**: Specific exceptions with full tracebacks
 
 ## ToolIssue Format
 
@@ -85,19 +85,21 @@ QA adapters populate `parsed_issues` with ToolIssue dictionaries:
 ### Issue Type Determination
 
 1. **Tool-specific** (highest priority):
+
    - `complexipy` → IssueType.COMPLEXITY
    - `skylos` → IssueType.DEAD_CODE
    - `mypy` → IssueType.TYPE_ERROR
    - `bandit` → IssueType.SECURITY
    - etc.
 
-2. **Content-based fallback** (message analysis):
+1. **Content-based fallback** (message analysis):
+
    - Contains "test" → IssueType.TEST_FAILURE
    - Contains "complex" → IssueType.COMPLEXITY
    - Contains "security" → IssueType.SECURITY
    - etc.
 
-3. **Default**: IssueType.FORMATTING
+1. **Default**: IssueType.FORMATTING
 
 ### Validation
 
@@ -233,14 +235,17 @@ def test_parse_hook_uses_qa_result(coordinator):
 As of the implementation date, the following tools support QAResult integration:
 
 ### Complexity
+
 - complexipy
 - refurb
 
 ### Dead Code
+
 - skylos
 - vulture
 
 ### Type Checking
+
 - mypy
 - zuban
 - pyright
@@ -248,25 +253,30 @@ As of the implementation date, the following tools support QAResult integration:
 - ty
 
 ### Security
+
 - bandit
 - semgrep
 - gitleaks
 - safety
 
 ### Dependencies
+
 - creosote
 - pyscn
 
 ### Formatting
+
 - ruff
 - ruff-format
 - mdformat
 - codespell
 
 ### Testing
+
 - pytest
 
 ### Utility Checks
+
 - check-yaml, check-toml, check-json, check-jsonschema, check-ast
 - trailing-whitespace, end-of-file-fixer
 - format-json
@@ -278,14 +288,16 @@ As of the implementation date, the following tools support QAResult integration:
 ### Phase 2: Eliminate Redundant Execution
 
 Currently, tools may run twice:
+
 1. Once during HookExecutor (for fast feedback)
-2. Once during QA Adapter (for parsed_issues)
+1. Once during QA Adapter (for parsed_issues)
 
 **Optimization**: Cache QAResult from HookExecutor and reuse in AI-fix.
 
 ### Monitoring
 
 Add metrics for:
+
 - QA adapter success rate
 - Fallback to raw parsing frequency
 - Issue count consistency (found vs. AI-fix)

@@ -104,9 +104,47 @@ class AgentContext:
             return None
 
     def write_file_content(self, file_path: str | Path, content: str) -> bool:
+        import ast
         import logging
 
         logger = logging.getLogger(__name__)
+
+        try:
+            compile(content, str(file_path), "exec")
+            logger.debug(f"✅ Syntax validation passed for {file_path}")
+        except SyntaxError as e:
+            logger.error(
+                f"❌ Syntax error in AI-generated code for {file_path}:{e.lineno}: {e.msg}"
+            )
+            logger.error(f"   {e.text}")
+            return False
+        except Exception as e:
+            logger.warning(f"⚠️ Could not validate syntax for {file_path}: {e}")
+
+        try:
+            tree = ast.parse(content)
+
+            definitions = {}
+            for node in ast.walk(tree):
+                if isinstance(
+                    node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+                ):
+                    name = node.name
+                    if name in definitions:
+                        logger.error(
+                            f"❌ Duplicate definition '{name}' at line {node.lineno} "
+                            f"(previous definition at line {definitions[name]}) in {file_path}"
+                        )
+                        logger.error(
+                            "   This creates shadowing damage where the first definition is dead code"
+                        )
+                        return False
+                    definitions[name] = node.lineno
+
+            logger.debug(f"✅ No duplicate definitions in {file_path}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not check for duplicates in {file_path}: {e}")
+
         try:
             path = Path(file_path)
             path.write_text(content, encoding="utf-8")

@@ -9,20 +9,20 @@
 Crackerjack runs multiple quality checks (type checking, security scanning, complexity analysis, etc.) and needed a way to enforce quality standards consistently across different project contexts. A flexible threshold system was required to:
 
 1. **Prevent merging code below quality standards**
-2. **Support gradual improvement** (allow temporary exceptions)
-3. **Handle different project contexts** (library vs application vs scripts)
-4. **Provide clear feedback** to developers about what needs fixing
-5. **Integrate with CI/CD pipelines**
+1. **Support gradual improvement** (allow temporary exceptions)
+1. **Handle different project contexts** (library vs application vs scripts)
+1. **Provide clear feedback** to developers about what needs fixing
+1. **Integrate with CI/CD pipelines**
 
 ### Problem Statement
 
 How should Crackerjack enforce quality standards while being:
 
 1. **Strict enough** to prevent low-quality code from merging
-2. **Flexible enough** to handle different project contexts
-3. **Supportive of gradual improvement** (not all code can be fixed immediately)
-4. **Clear** about what standards are enforced and why
-5. **Configurable** without requiring code changes
+1. **Flexible enough** to handle different project contexts
+1. **Supportive of gradual improvement** (not all code can be fixed immediately)
+1. **Clear** about what standards are enforced and why
+1. **Configurable** without requiring code changes
 
 ### Key Requirements
 
@@ -50,11 +50,13 @@ How should Crackerjack enforce quality standards while being:
 **Description**: Use fixed thresholds in code (e.g., "coverage must be ≥ 80%").
 
 **Pros**:
+
 - Simple implementation
 - Clear enforcement
 - Easy to understand
 
 **Cons**:
+
 - **Inflexible**: One size does not fit all (libraries need higher coverage than scripts)
 - **Hard to change**: Requires code modification
 - **No context awareness**: Same thresholds for all projects
@@ -77,11 +79,13 @@ if coverage < MIN_COVERAGE:
 **Description**: Use a configuration file (e.g., `.quality-gates.yml`) with project-specific overrides.
 
 **Pros**:
+
 - Per-project configuration
 - Easy to change without code modification
 - Can store in version control
 
 **Cons**:
+
 - **Configuration drift**: Different projects have different configs
 - **No standard**: Hard to know what "good" thresholds are
 - **No gradual improvement**: Still binary pass/fail
@@ -109,6 +113,7 @@ security:
 **Description**: Use tiered thresholds (Bronze/Silver/Gold) with a ratchet system that only allows improvement, never regression.
 
 **Pros**:
+
 - **Context-aware**: Different tiers for different project types
 - **Gradual improvement**: Ratchet system prevents regression
 - **Clear expectations**: Bronze → Silver → Gold progression
@@ -117,6 +122,7 @@ security:
 - **Temporary exemptions**: Can exempt specific files with tracking
 
 **Cons**:
+
 - More complex implementation
 - Requires tracking baseline metrics
 - Need to define tier boundaries
@@ -771,18 +777,18 @@ jobs:
 ### Positive
 
 1. **Context-Aware**: Different tiers for different project types
-2. **Gradual Improvement**: Ratchet system prevents regression while allowing improvement
-3. **Clear Expectations**: Bronze → Silver → Gold progression is intuitive
-4. **Flexible**: Can exempt specific files with tracking
-5. **CI/CD Ready**: Clear pass/fail with actionable feedback
-6. **Motivational**: Milestones encourage improvement (50% → 80% → 95%)
+1. **Gradual Improvement**: Ratchet system prevents regression while allowing improvement
+1. **Clear Expectations**: Bronze → Silver → Gold progression is intuitive
+1. **Flexible**: Can exempt specific files with tracking
+1. **CI/CD Ready**: Clear pass/fail with actionable feedback
+1. **Motivational**: Milestones encourage improvement (50% → 80% → 95%)
 
 ### Negative
 
 1. **Complexity**: More complex than simple pass/fail
-2. **Configuration**: Need to set initial tier and target tier
-3. **Exemption Tracking**: Requires discipline to review and expire exemptions
-4. **Baseline Management**: Need to commit baseline to version control
+1. **Configuration**: Need to set initial tier and target tier
+1. **Exemption Tracking**: Requires discipline to review and expire exemptions
+1. **Baseline Management**: Need to commit baseline to version control
 
 ### Risks
 
@@ -815,9 +821,6 @@ jobs:
 - **ADR-003**: Property-based testing with Hypothesis
 
 ## References
-
-- [Quality Gate Implementation](../../crackerjack/quality/)
-- [Coverage Ratchet System](../COVERAGE_RATCHET_GUIDE.md)
 
 ## Revision History
 
