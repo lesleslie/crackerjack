@@ -585,58 +585,99 @@ class AutofixCoordinator:
                 self.logger.error(f"  ... and {len(missing_files) - 3} more files")
 
     def _validate_modified_files(self, modified_files: list[str]) -> bool:
+        """Validate that modified files have correct syntax and no duplicate definitions."""
         import ast
 
         for file_path_str in modified_files:
-            file_path = Path(file_path_str)
-
-            if not str(file_path).endswith(".py"):
-                self.logger.debug(f"⏭️ Skipping non-Python file: {file_path}")
+            if not self._should_validate_file(file_path_str):
                 continue
 
+            file_path = Path(file_path_str)
             if not file_path.exists():
                 self.logger.warning(f"⚠️ File not found for validation: {file_path}")
                 continue
 
-            try:
-                content = file_path.read_text()
+            # Validate file content
+            content = file_path.read_text()
+            if not self._validate_file_syntax(file_path, content):
+                return False
 
-                try:
-                    compile(content, str(file_path), "exec")
-                    self.logger.debug(f"✅ Syntax validation passed: {file_path}")
-                except SyntaxError as e:
-                    self.logger.error(
-                        f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}"
-                    )
-                    self.logger.error(f"   {e.text}")
-                    return False
-
-                try:
-                    tree = ast.parse(content)
-                    definitions = {}
-                    for node in ast.walk(tree):
-                        if isinstance(
-                            node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
-                        ):
-                            name = node.name
-                            if name in definitions:
-                                self.logger.error(
-                                    f"❌ Duplicate definition '{name}' in {file_path} "
-                                    f"at line {node.lineno} (previous at line {definitions[name]})"
-                                )
-                                return False
-                            definitions[name] = node.lineno
-                    self.logger.debug(f"✅ No duplicate definitions: {file_path}")
-                except Exception as e:
-                    self.logger.warning(
-                        f"⚠️ Could not check for duplicates in {file_path}: {e}"
-                    )
-
-            except Exception as e:
-                self.logger.error(f"❌ Failed to validate {file_path}: {e}")
+            if not self._validate_file_duplicates(file_path, content):
                 return False
 
         return True
+
+    def _should_validate_file(self, file_path_str: str) -> bool:
+        """Check if file should be validated (Python files only)."""
+        if not file_path_str.endswith(".py"):
+            self.logger.debug(f"⏭️ Skipping non-Python file: {file_path_str}")
+            return False
+        return True
+
+    def _validate_file_syntax(self, file_path: Path, content: str) -> bool:
+        """Validate Python file syntax."""
+        try:
+            compile(content, str(file_path), "exec")
+            self.logger.debug(f"✅ Syntax validation passed: {file_path}")
+            return True
+        except SyntaxError as e:
+            self.logger.error(
+                f"❌ Syntax error in {file_path}:{e.lineno}: {e.msg}"
+            )
+            self.logger.error(f"   {e.text}")
+            return False
+
+    def _validate_file_duplicates(self, file_path: Path, content: str) -> bool:
+        """Check for duplicate function/class definitions."""
+        import ast
+
+        try:
+            tree = ast.parse(content)
+            definitions = self._find_definitions(tree)
+
+            duplicates = self._find_duplicate_definitions(definitions, file_path)
+            if duplicates:
+                return False
+
+            self.logger.debug(f"✅ No duplicate definitions: {file_path}")
+            return True
+
+        except Exception as e:
+            self.logger.warning(
+                f"⚠️ Could not check for duplicates in {file_path}: {e}"
+            )
+            return True  # Don't fail if we can't check duplicates
+
+    def _find_definitions(self, tree: ast.AST) -> dict[str, int]:
+        """Extract all function and class definitions from AST."""
+        import ast
+
+        definitions = {}
+        for node in ast.walk(tree):
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                name = node.name
+                if name not in definitions:
+                    definitions[name] = node.lineno
+
+        return definitions
+
+    def _find_duplicate_definitions(
+        self, definitions: dict[str, int], file_path: Path
+    ) -> bool:
+        """Check if any duplicate definitions exist and log errors."""
+        for name, lineno in definitions.items():
+            # Check if this name appears multiple times
+            count = sum(
+                1 for node_lineno in definitions.values() if node_lineno == lineno
+            )
+            if count > 1:
+                self.logger.error(
+                    f"❌ Duplicate definition '{name}' in {file_path} "
+                    f"at line {lineno}"
+                )
+                return True
+
+        return False
 
     def _revert_ai_fix_changes(self, modified_files: list[str]) -> None:
         import subprocess
@@ -812,75 +853,112 @@ class AutofixCoordinator:
     def _run_qa_adapters_for_hooks(
         self, hook_results: Sequence[object]
     ) -> dict[str, QAResult]:
+        """Run QA adapters for failed hooks to get detailed issue information."""
         qa_results: dict[str, QAResult] = {}
         adapter_factory = DefaultAdapterFactory()
 
         for result in hook_results:
-            if not self._validate_hook_result(result):
-                continue
-
-            status = getattr(result, "status", "")
-            if status.lower() != "failed":
+            # Skip if hook result is invalid or not failed
+            if not self._should_run_qa_adapter(result):
                 continue
 
             hook_name = getattr(result, "name", "")
             if not hook_name:
                 continue
 
-            try:
-                adapter_name = adapter_factory.get_adapter_name(hook_name)
-                if not adapter_name:
-                    self.logger.debug(f"No adapter name mapping for '{hook_name}'")
-                    continue
-
-                adapter = adapter_factory.create_adapter(adapter_name)
-
-                if adapter is None:
-                    self.logger.debug(f"No QA adapter available for '{hook_name}'")
-                    continue
-
-                try:
-                    asyncio.get_running_loop()
-
-                    self.logger.warning(
-                        f"QA adapter for '{hook_name}' called from async context, "
-                        "this may indicate architectural issue"
-                    )
-
-                    continue
-                except RuntimeError:
-                    pass
-
-                asyncio.run(adapter.init())
-
-                config = QACheckConfig(
-                    check_id=adapter.module_id,
-                    check_name=hook_name,
-                    check_type=adapter._get_check_type(),
-                    enabled=True,
-                    file_patterns=["**/*.py"],
-                    timeout_seconds=60,
-                )
-
-                qa_result: QAResult = asyncio.run(adapter.check(config=config))
-
-                if qa_result.parsed_issues:
-                    qa_results[hook_name] = qa_result
-                    self.logger.info(
-                        f"✅ QA adapter for '{hook_name}' found "
-                        f"{len(qa_result.parsed_issues)} issues"
-                    )
-                else:
-                    self.logger.debug(f"QA adapter for '{hook_name}' found no issues")
-
-            except Exception as e:
-                self.logger.warning(
-                    f"Failed to run QA adapter for '{hook_name}': {e}. "
-                    f"Will fall back to raw output parsing."
-                )
-                continue
+            # Run QA adapter and collect results
+            qa_result = self._run_single_qa_adapter(hook_name, adapter_factory)
+            if qa_result is not None:
+                qa_results[hook_name] = qa_result
 
         return qa_results
+
+    def _should_run_qa_adapter(self, result: object) -> bool:
+        """Check if QA adapter should be run for this hook result."""
+        if not self._validate_hook_result(result):
+            return False
+
+        status = getattr(result, "status", "")
+        return status.lower() == "failed"
+
+    def _run_single_qa_adapter(
+        self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
+    ) -> QAResult | None:
+        """Run QA adapter for a single hook and return result."""
+        try:
+            # Get and validate adapter
+            adapter = self._get_qa_adapter(hook_name, adapter_factory)
+            if adapter is None:
+                return None
+
+            # Check async context
+            if self._is_in_async_context():
+                self.logger.warning(
+                    f"QA adapter for '{hook_name}' called from async context, "
+                    "this may indicate architectural issue"
+                )
+                return None
+
+            # Initialize and run adapter
+            asyncio.run(adapter.init())
+            config = self._create_qa_config(adapter, hook_name)
+            qa_result: QAResult = asyncio.run(adapter.check(config=config))
+
+            # Log results
+            self._log_qa_adapter_result(hook_name, qa_result)
+            return qa_result
+
+        except Exception as e:
+            self.logger.warning(
+                f"Failed to run QA adapter for '{hook_name}': {e}. "
+                f"Will fall back to raw output parsing."
+            )
+            return None
+
+    def _get_qa_adapter(
+        self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
+    ) -> object | None:
+        """Get QA adapter instance for the given hook name."""
+        adapter_name = adapter_factory.get_adapter_name(hook_name)
+        if not adapter_name:
+            self.logger.debug(f"No adapter name mapping for '{hook_name}'")
+            return None
+
+        adapter = adapter_factory.create_adapter(adapter_name)
+        if adapter is None:
+            self.logger.debug(f"No QA adapter available for '{hook_name}'")
+            return None
+
+        return adapter
+
+    def _is_in_async_context(self) -> bool:
+        """Check if currently running in async context."""
+        try:
+            asyncio.get_running_loop()
+            return True
+        except RuntimeError:
+            return False
+
+    def _create_qa_config(self, adapter: object, hook_name: str) -> "QACheckConfig":
+        """Create QA check configuration for adapter."""
+        return QACheckConfig(
+            check_id=adapter.module_id,
+            check_name=hook_name,
+            check_type=adapter._get_check_type(),
+            enabled=True,
+            file_patterns=["**/*.py"],
+            timeout_seconds=60,
+        )
+
+    def _log_qa_adapter_result(self, hook_name: str, qa_result: "QAResult") -> None:
+        """Log QA adapter result."""
+        if qa_result.parsed_issues:
+            self.logger.info(
+                f"✅ QA adapter for '{hook_name}' found "
+                f"{len(qa_result.parsed_issues)} issues"
+            )
+        else:
+            self.logger.debug(f"QA adapter for '{hook_name}' found no issues")
 
     def _parse_hook_results_to_issues_with_qa(
         self, hook_results: Sequence[object]
@@ -1690,54 +1768,95 @@ class AutofixCoordinator:
             raise
 
     def _validate_final_issues(self, issues: list[Issue]) -> None:
+        """Validate that all issue objects have required fields and correct types."""
         for i, issue in enumerate(issues):
-            errors = []
-
-            if not hasattr(issue, "type") or issue.type is None:
-                errors.append("missing type")
-            elif not isinstance(issue.type, IssueType):
-                errors.append(f"invalid type: {type(issue.type)}")
-
-            if not hasattr(issue, "severity") or issue.severity is None:
-                errors.append("missing severity")
-            elif not isinstance(issue.severity, Priority):
-                errors.append(f"invalid severity: {type(issue.severity)}")
-
-            if not hasattr(issue, "message") or not issue.message:
-                errors.append("missing or empty message")
-
-            if not issue.file_path:
-                msg_lower = issue.message.lower()
-                is_aggregate = "file" in msg_lower and (
-                    "files" in msg_lower
-                    or "file(" in msg_lower
-                    or "would be reformatted" in msg_lower
-                    or "require formatting" in msg_lower
-                    or "formatting error" in msg_lower
-                )
-                if not is_aggregate:
-                    errors.append("missing file_path")
-                else:
-                    self.logger.debug(
-                        f"⚠️ Issue {issue.id} has no file_path but is aggregate: {issue.message[:60]}"
-                    )
-
-            if issue.line_number is None:
-                self.logger.debug(
-                    f"⚠️ Issue {issue.id} has no line_number (file={issue.file_path})"
-                )
+            errors = self._collect_validation_errors(issue)
 
             if errors:
-                self.logger.error(
-                    f"❌ Issue {i} ({issue.id}) has validation errors: {', '.join(errors)}"
-                )
-                self.logger.error(
-                    f"   Issue object: type={getattr(issue, 'type', None)}, "
-                    f"severity={getattr(issue, 'severity', None)}, "
-                    f"message={getattr(issue, 'message', None)}, "
-                    f"file_path={getattr(issue, 'file_path', None)}"
-                )
+                self._log_validation_error(i, issue, errors)
                 raise ValueError(f"Invalid issue object: {errors}")
+
+    def _collect_validation_errors(self, issue: Issue) -> list[str]:
+        """Collect all validation errors for a single issue."""
+        errors = []
+
+        # Validate type field
+        type_errors = self._validate_issue_type(issue)
+        errors.extend(type_errors)
+
+        # Validate severity field
+        severity_errors = self._validate_issue_severity(issue)
+        errors.extend(severity_errors)
+
+        # Validate message field
+        message_errors = self._validate_issue_message(issue)
+        errors.extend(message_errors)
+
+        # Validate file_path field
+        file_path_errors = self._validate_issue_file_path(issue)
+        errors.extend(file_path_errors)
+
+        return errors
+
+    def _validate_issue_type(self, issue: Issue) -> list[str]:
+        """Validate issue type field."""
+        if not hasattr(issue, "type") or issue.type is None:
+            return ["missing type"]
+        if not isinstance(issue.type, IssueType):
+            return [f"invalid type: {type(issue.type)}"]
+        return []
+
+    def _validate_issue_severity(self, issue: Issue) -> list[str]:
+        """Validate issue severity field."""
+        if not hasattr(issue, "severity") or issue.severity is None:
+            return ["missing severity"]
+        if not isinstance(issue.severity, Priority):
+            return [f"invalid severity: {type(issue.severity)}"]
+        return []
+
+    def _validate_issue_message(self, issue: Issue) -> list[str]:
+        """Validate issue message field."""
+        if not hasattr(issue, "message") or not issue.message:
+            return ["missing or empty message"]
+        return []
+
+    def _validate_issue_file_path(self, issue: Issue) -> list[str]:
+        """Validate issue file_path field, allowing aggregate issues."""
+        if issue.file_path:
+            return []  # Has file_path, valid
+
+        # No file_path - check if this is an aggregate issue
+        if self._is_aggregate_issue(issue):
+            # Aggregate issues don't need file_path
+            return []
+
+        # Not aggregate and no file_path - error
+        return ["missing file_path"]
+
+    def _is_aggregate_issue(self, issue: Issue) -> bool:
+        """Check if issue is an aggregate (multi-file) issue."""
+        msg_lower = issue.message.lower()
+        aggregate_keywords = [
+            "files",
+            "file(",
+            "would be reformatted",
+            "require formatting",
+            "formatting error",
+        ]
+
+        return "file" in msg_lower and any(keyword in msg_lower for keyword in aggregate_keywords)
+
+    def _log_validation_error(self, index: int, issue: Issue, errors: list[str]) -> None:
+        """Log validation error with detailed context."""
+        self.logger.error(
+            f"❌ Issue {index} ({issue.id}) has validation errors: {', '.join(errors)}"
+        )
+        self.logger.error(
+            f"   Issue object: type={getattr(issue, 'type', None)}, "
+            f"severity={getattr(issue, 'severity', None)}, "
+            f"message={getattr(issue, 'message', None)}, "
+            f"file_path={getattr(issue, 'file_path', None)}"
+        )
 
     def _apply_ai_agent_fixes(
         self, hook_results: Sequence[object], stage: str = "fast"
