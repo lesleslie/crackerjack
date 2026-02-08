@@ -6,10 +6,11 @@ import time
 from contextlib import suppress
 from typing import Any
 
-import aiohttp
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
+
+from crackerjack.services.connection_pool import get_http_pool
 
 watchdog_event_queue: asyncio.Queue[dict[str, Any]] | None = None
 
@@ -52,7 +53,6 @@ class ServiceWatchdog:
         self.services = services
         self.console = console or Console()
         self.is_running = True
-        self.session: aiohttp.ClientSession | None = None
         self.event_queue = event_queue
 
         global watchdog_event_queue
@@ -60,7 +60,8 @@ class ServiceWatchdog:
             watchdog_event_queue = event_queue
 
     async def start(self) -> None:
-        self.session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=10.0))
+
+        await get_http_pool()
 
         for service in self.services:
             await self._start_service(service)
@@ -88,9 +89,6 @@ class ServiceWatchdog:
                     service.process.wait(timeout=10)
                 except subprocess.TimeoutExpired:
                     service.process.kill()
-
-        if self.session:
-            await self.session.close()
 
     def _is_port_in_use(self, port: int) -> bool:
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -231,12 +229,14 @@ class ServiceWatchdog:
         await asyncio.sleep(10.0)
 
     async def _health_check(self, service: ServiceConfig) -> bool:
-        if not service.health_check_url or not self.session:
+        if not service.health_check_url:
             return True
 
         try:
-            async with self.session.get(service.health_check_url) as response:
-                return response.status == 200
+            pool = await get_http_pool()
+            async with pool.get_session_context() as session:
+                async with session.get(service.health_check_url) as response:
+                    return response.status == 200
         except Exception:
             return False
 
@@ -389,8 +389,7 @@ class ServiceWatchdog:
                 await self.event_queue.put(event)
 
     async def _cleanup(self) -> None:
-        if self.session and not self.session.closed:
-            await self.session.close()
+        pass
 
 
 async def create_default_watchdog(

@@ -10,6 +10,7 @@ from enum import Enum
 from rich.panel import Panel
 from rich.table import Table
 
+from crackerjack.services.connection_pool import get_http_pool
 from crackerjack.services.security_logger import get_security_logger
 
 from .console import CrackerjackConsole
@@ -114,6 +115,9 @@ class ServiceWatchdog:
             return
 
         self.is_running = True
+
+        # Initialize connection pool for health checks
+        await get_http_pool()
 
         for service_id, config in self.default_configs.items():
             self.add_service(service_id, config)
@@ -340,15 +344,14 @@ class ServiceWatchdog:
             return True
 
         try:
-            import aiohttp
-
+            pool = await get_http_pool()
             async with (
                 self.timeout_manager.timeout_context(
                     "health_check",
                     timeout=service.config.health_check_timeout,
                     strategy=TimeoutStrategy.FAIL_FAST,
                 ),
-                aiohttp.ClientSession() as session,
+                pool.get_session_context() as session,
             ):
                 async with session.get(service.config.health_check_url) as response:
                     return response.status == 200

@@ -534,9 +534,12 @@ class LocalLinkCheckerRegexParser(RegexParser):
 
         parts = file_part.split(":", 2)
         if len(parts) != 3:
-            # Log lines that don't match expected format for debugging
             import sys
-            print(f"DEBUG: Skipping line (len={len(parts)}): {line[:100]}", file=sys.stderr)
+
+            print(
+                f"DEBUG: Skipping line (len={len(parts)}): {line[:100]}",
+                file=sys.stderr,
+            )
             return None
 
         file_path, line_num, link_target = parts

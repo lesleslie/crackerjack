@@ -1,9 +1,10 @@
 # Complexity Refactoring Plan - TEAM GAMMA
 
 **Target Files (from performance audit):**
+
 1. `test_manager.py` - Complexity: 266 (target: ≤15, 16.7x over)
-2. `autofix_coordinator.py` - Complexity: 231 (target: ≤15, 15.4x over)
-3. `oneiric_workflow.py` - Complexity: 182 (target: ≤15, 12.1x over)
+1. `autofix_coordinator.py` - Complexity: 231 (target: ≤15, 15.4x over)
+1. `oneiric_workflow.py` - Complexity: 182 (target: ≤15, 12.1x over)
 
 ## Analysis Summary
 
@@ -12,26 +13,31 @@
 **High-Complexity Functions Identified:**
 
 1. **`_parse_test_statistics` (lines 527-564)** - ~25 complexity
+
    - Multiple conditional branches
    - Nested try/except with multiple parsing attempts
    - Multiple data transformation steps
 
-2. **`_render_test_results_panel` (lines 730-799)** - ~20 complexity
+1. **`_render_test_results_panel` (lines 730-799)** - ~20 complexity
+
    - Complex table building logic
    - Multiple conditional metric additions
    - Nested data structure handling
 
-3. **`_extract_structured_failures` (lines 1325-1368)** - ~35 complexity
+1. **`_extract_structured_failures` (lines 1325-1368)** - ~35 complexity
+
    - Complex state machine for parsing
    - Nested conditional logic
    - Multiple parsing modes
 
-4. **`_parse_failure_line` (lines 1556-1609)** - ~30 complexity
+1. **`_parse_failure_line` (lines 1556-1609)** - ~30 complexity
+
    - Multi-stage parsing logic
    - Multiple conditional branches
    - State tracking complexity
 
-5. **`_update_coverage_badge` (lines 894-938)** - ~20 complexity
+1. **`_update_coverage_badge` (lines 894-938)** - ~20 complexity
+
    - Multiple fallback strategies
    - Nested conditional logic
    - Complex validation flow
@@ -41,26 +47,31 @@
 **High-Complexity Functions Identified:**
 
 1. **`_run_ai_fix_iteration_loop` (lines 1632-1690)** - ~25 complexity
+
    - Complex iteration state management
    - Multiple completion checks
    - Progress tracking integration
 
-2. **`_validate_modified_files` (lines 587-639)** - ~20 complexity
+1. **`_validate_modified_files` (lines 587-639)** - ~20 complexity
+
    - Multiple validation checks
    - Nested error handling
    - Complex AST parsing
 
-3. **`_determine_issue_type` (lines 1341-1393)** - ~25 complexity
+1. **`_determine_issue_type` (lines 1341-1393)** - ~25 complexity
+
    - Large conditional mapping
    - Multiple fallback strategies
    - Complex pattern matching
 
-4. **`_convert_parsed_issues_to_issues` (lines 1274-1329)** - ~18 complexity
+1. **`_convert_parsed_issues_to_issues` (lines 1274-1329)** - ~18 complexity
+
    - Multiple validation steps
    - Complex data transformation
    - Extensive error handling
 
-5. **`_run_qa_adapters_for_hooks` (lines 812-883)** - ~20 complexity
+1. **`_run_qa_adapters_for_hooks` (lines 812-883)** - ~20 complexity
+
    - Async/sync compatibility checks
    - Multiple adapter instantiation paths
    - Complex error recovery
@@ -68,11 +79,13 @@
 ### oneiric_workflow.py (325 lines, complexity: 182)
 
 **Note:** This file is actually much simpler than the complexity score suggests. The complexity comes from:
+
 - Many small helper functions (each ≤5 complexity)
 - Function call overhead in complexity calculation
 - The file is well-structured already
 
 **Functions to Review:**
+
 1. **`_build_workflow_steps` (lines 190-226)** - ~15 complexity
    - Multiple conditional checks
    - Step accumulation logic
@@ -86,6 +99,7 @@
 **Current Function:** `_parse_test_statistics`
 
 **Refactoring Plan:**
+
 ```python
 def _parse_test_statistics(self, output: str, *, already_clean: bool = False) -> dict[str, t.Any]:
     """Parse test statistics from pytest output."""
@@ -118,6 +132,7 @@ def _parse_summary_section(self, output: str, stats: dict[str, t.Any]) -> None:
 ```
 
 **Complexity Reduction:**
+
 - `_parse_test_statistics`: 25 → 8
 - `_initialize_test_stats`: 1
 - `_parse_summary_section`: 5
@@ -127,6 +142,7 @@ def _parse_summary_section(self, output: str, stats: dict[str, t.Any]) -> None:
 **Current Function:** `_extract_structured_failures`
 
 **Refactoring Plan:**
+
 ```python
 def _extract_structured_failures(self, output: str) -> list["TestFailure"]:
     """Extract structured test failures from output."""
@@ -172,6 +188,7 @@ def _initialize_parser_state(self) -> dict[str, t.Any]:
 ```
 
 **Complexity Reduction:**
+
 - `_extract_structured_failures`: 35 → 12
 - `_initialize_parser_state`: 1
 
@@ -180,6 +197,7 @@ def _initialize_parser_state(self) -> dict[str, t.Any]:
 **Current Function:** `_update_coverage_badge`
 
 **Refactoring Plan:**
+
 ```python
 def _update_coverage_badge(self, ratchet_result: dict[str, t.Any]) -> None:
     """Update coverage badge based on ratchet result."""
@@ -221,6 +239,7 @@ def _update_badge_if_needed(self, current_coverage: float) -> None:
 ```
 
 **Complexity Reduction:**
+
 - `_update_coverage_badge`: 20 → 7
 - `_verify_coverage_files_exist`: 5
 - `_extract_coverage_with_fallbacks`: 3
@@ -231,6 +250,7 @@ def _update_badge_if_needed(self, current_coverage: float) -> None:
 **Current Function:** `_render_test_results_panel`
 
 **Refactoring Plan:**
+
 ```python
 def _render_test_results_panel(
     self, stats: dict[str, t.Any], workers: int | str, success: bool
@@ -273,6 +293,7 @@ def _add_metadata_to_table(
 ```
 
 **Complexity Reduction:**
+
 - `_render_test_results_panel`: 20 → 6
 - `_create_test_results_table`: 3
 - `_add_test_metrics_to_table`: 8
@@ -285,6 +306,7 @@ def _add_metadata_to_table(
 **Current Function:** `_run_ai_fix_iteration_loop`
 
 **Refactoring Plan:**
+
 ```python
 def _run_ai_fix_iteration_loop(
     self,
@@ -343,6 +365,7 @@ def _handle_iteration_error(self, error: Exception, iteration: int) -> bool:
 ```
 
 **Complexity Reduction:**
+
 - `_run_ai_fix_iteration_loop`: 25 → 10
 - `_initialize_iteration_state`: 2
 - `_finalize_iteration_session`: 3
@@ -353,6 +376,7 @@ def _handle_iteration_error(self, error: Exception, iteration: int) -> bool:
 **Current Function:** `_determine_issue_type`
 
 **Refactoring Plan:**
+
 ```python
 def _determine_issue_type(
     self, tool_name: str, tool_issue_dict: dict[str, t.Any]
@@ -411,6 +435,7 @@ def _detect_issue_type_from_content(self, tool_issue_dict: dict[str, t.Any]) -> 
 ```
 
 **Complexity Reduction:**
+
 - `_determine_issue_type`: 25 → 5
 - `_map_tool_to_issue_type`: 1
 - `_detect_issue_type_from_content`: 12
@@ -420,6 +445,7 @@ def _detect_issue_type_from_content(self, tool_issue_dict: dict[str, t.Any]) -> 
 **Current Function:** `_run_qa_adapters_for_hooks`
 
 **Refactoring Plan:**
+
 ```python
 def _run_qa_adapters_for_hooks(
     self, hook_results: Sequence[object]
@@ -509,6 +535,7 @@ def _run_qa_adapter_sync(self, adapter, hook_name: str) -> "QAResult":
 ```
 
 **Complexity Reduction:**
+
 - `_run_qa_adapters_for_hooks`: 20 → 7
 - `_should_run_qa_adapter_for_hook`: 5
 - `_execute_single_qa_adapter`: 10
@@ -520,6 +547,7 @@ def _run_qa_adapter_sync(self, adapter, hook_name: str) -> "QAResult":
 **Current Function:** `_validate_modified_files`
 
 **Refactoring Plan:**
+
 ```python
 def _validate_modified_files(self, modified_files: list[str]) -> bool:
     """Validate all modified files for syntax and semantic errors."""
@@ -595,6 +623,7 @@ def _validate_no_duplicates(self, content: str, file_path: Path) -> bool:
 ```
 
 **Complexity Reduction:**
+
 - `_validate_modified_files`: 20 → 3
 - `_validate_single_file`: 8
 - `_should_validate_file`: 3
@@ -611,6 +640,7 @@ def _validate_no_duplicates(self, content: str, file_path: Path) -> bool:
 **Current Function:** `_build_workflow_steps`
 
 **Refactoring Plan:**
+
 ```python
 def _build_workflow_steps(options: t.Any) -> list[str]:
     """Build list of workflow steps based on options."""
@@ -675,6 +705,7 @@ def _get_post_test_steps(options: t.Any) -> list[str]:
 ```
 
 **Complexity Reduction:**
+
 - `_build_workflow_steps`: 15 → 6
 - `_get_cleanup_steps`: 8
 - `_get_test_steps`: 10
@@ -685,29 +716,33 @@ def _get_post_test_steps(options: t.Any) -> list[str]:
 ### Execution Order
 
 1. **test_manager.py** (highest impact, 266 → ~150 complexity)
+
    - Extract test statistics parsing
    - Extract structured failure parsing
    - Extract coverage badge update logic
    - Extract test results panel rendering
 
-2. **autofix_coordinator.py** (231 → ~140 complexity)
+1. **autofix_coordinator.py** (231 → ~140 complexity)
+
    - Extract AI fix iteration loop
    - Extract issue type determination
    - Extract QA adapter execution
    - Extract file validation logic
 
-3. **oneiric_workflow.py** (182 → ~120 complexity)
+1. **oneiric_workflow.py** (182 → ~120 complexity)
+
    - Extract workflow step building
    - Minor helper method extraction
 
 ### Validation Strategy
 
 For each refactored function:
+
 1. Extract complexity into helper methods
-2. Ensure all helpers have complexity ≤15
-3. Verify behavior preserved with existing tests
-4. Run quality gates after each file
-5. Commit changes incrementally
+1. Ensure all helpers have complexity ≤15
+1. Verify behavior preserved with existing tests
+1. Run quality gates after each file
+1. Commit changes incrementally
 
 ### Success Metrics
 
@@ -720,12 +755,14 @@ For each refactored function:
 ## Complexity Tracking
 
 ### Before Metrics
+
 - test_manager.py: 266 complexity (16.7x target)
 - autofix_coordinator.py: 231 complexity (15.4x target)
 - oneiric_workflow.py: 182 complexity (12.1x target)
 - **Total: 679 complexity**
 
 ### After Metrics (Target)
+
 - test_manager.py: ~150 complexity
 - autofix_coordinator.py: ~140 complexity
 - oneiric_workflow.py: ~120 complexity

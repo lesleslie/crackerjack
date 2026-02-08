@@ -170,12 +170,12 @@ class PhaseCoordinator:
             from crackerjack.agents.enhanced_coordinator import (
                 EnhancedAgentCoordinator,
             )
-            from crackerjack.agents.tracker import get_agent_tracker
+            from crackerjack.agents.tracker import AgentTracker
             from crackerjack.services.debug import get_ai_agent_debugger
 
             return EnhancedAgentCoordinator(
                 context=context,
-                tracker=get_agent_tracker(),
+                tracker=AgentTracker(),
                 debugger=get_ai_agent_debugger(),
                 cache=cache,
                 enable_external_agents=True,
@@ -466,12 +466,12 @@ class PhaseCoordinator:
         )
         cache = CrackerjackCache()
 
-        from crackerjack.agents.tracker import get_agent_tracker
+        from crackerjack.agents.tracker import AgentTracker
         from crackerjack.services.debug import get_ai_agent_debugger
 
         coordinator = AgentCoordinator(
             context=context,
-            tracker=get_agent_tracker(),
+            tracker=AgentTracker(),
             debugger=get_ai_agent_debugger(),
             cache=cache,
         )

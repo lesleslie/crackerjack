@@ -1,29 +1,34 @@
 # Test Coverage Plan: Core Infrastructure Modules
 
 ## Overview
+
 This document outlines the comprehensive test coverage strategy for crackerjack's 5 core infrastructure modules that currently have **zero coverage**.
 
 ## Target Modules
 
 ### 1. Workflow Orchestrator (`workflow_orchestrator.py`)
+
 **Lines of Code**: 167
 **Current Coverage**: 0%
 
 **Key Classes/Functions**:
+
 - `WorkflowPipeline`: Main orchestration class
 - `WorkflowResult`: Dataclass for results
 - `_workflow_result_success()`: Result validation helper
 - `_adapt_options()`: Options adaptation
 
 **Test Strategy**:
+
 1. **Initialization Tests**: Verify proper setup of console, settings, session, phases
-2. **Workflow Execution Tests**: Test async/sync workflow execution paths
-3. **Phase Delegation Tests**: Ensure proper delegation to PhaseCoordinator
-4. **Cache Clearing Tests**: Verify Oneiric cache clearing functionality
-5. **Error Handling Tests**: Test exception handling and session finalization
-6. **Helper Function Tests**: Test result success logic and options adaptation
+1. **Workflow Execution Tests**: Test async/sync workflow execution paths
+1. **Phase Delegation Tests**: Ensure proper delegation to PhaseCoordinator
+1. **Cache Clearing Tests**: Verify Oneiric cache clearing functionality
+1. **Error Handling Tests**: Test exception handling and session finalization
+1. **Helper Function Tests**: Test result success logic and options adaptation
 
 **Test Cases** (20+ tests):
+
 - `test_workflow_pipeline_initialization`: Verify all dependencies injected
 - `test_run_complete_workflow_success`: Happy path workflow execution
 - `test_run_complete_workflow_failure`: Exception handling and session finalization
@@ -41,13 +46,15 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `test_verbose_logging`: Verify verbose mode logging
 - `test_non_verbose_logging`: Verify non-verbose mode logging
 
----
+______________________________________________________________________
 
 ### 2. Phase Coordinator (`phase_coordinator.py`)
+
 **Lines of Code**: 1,670
 **Current Coverage**: 0%
 
 **Key Classes/Functions**:
+
 - `PhaseCoordinator`: Main phase orchestration class
 - Hook execution methods: `run_fast_hooks_only()`, `run_comprehensive_hooks_only()`
 - Phase methods: `run_testing_phase()`, `run_cleaning_phase()`, `run_configuration_phase()`
@@ -55,19 +62,21 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - Progress tracking and result rendering
 
 **Test Strategy**:
+
 1. **Initialization Tests**: Verify all services and dependencies setup
-2. **Fast Hooks Tests**: Test fast hook execution with retry logic
-3. **Comprehensive Hooks Tests**: Test comprehensive hook execution
-4. **Testing Phase Tests**: Test test execution and AI fix integration
-5. **Cleaning Phase Tests**: Test code cleaning functionality
-6. **AI Fix Tests**: Test AI agent fix application for hooks and tests
-7. **Progress Tracking Tests**: Test progress bar and callback setup
-8. **Result Rendering Tests**: Test table/rendering for plain and rich output
-9. **Configuration Phase Tests**: Test config cleanup and updates
-10. **Publishing Phase Tests**: Test version bump and publishing workflow
-11. **Commit Phase Tests**: Test git commit and push functionality
+1. **Fast Hooks Tests**: Test fast hook execution with retry logic
+1. **Comprehensive Hooks Tests**: Test comprehensive hook execution
+1. **Testing Phase Tests**: Test test execution and AI fix integration
+1. **Cleaning Phase Tests**: Test code cleaning functionality
+1. **AI Fix Tests**: Test AI agent fix application for hooks and tests
+1. **Progress Tracking Tests**: Test progress bar and callback setup
+1. **Result Rendering Tests**: Test table/rendering for plain and rich output
+1. **Configuration Phase Tests**: Test config cleanup and updates
+1. **Publishing Phase Tests**: Test version bump and publishing workflow
+1. **Commit Phase Tests**: Test git commit and push functionality
 
 **Test Cases** (40+ tests):
+
 - `test_phase_coordinator_initialization`: Verify all dependencies
 - `test_logger_property`: Logger getter/setter functionality
 - `test_run_fast_hooks_only_success`: Happy path fast hooks
@@ -110,29 +119,33 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `test_execute_publishing_workflow`: Publishing workflow
 - `test_run_commit_phase`: Commit and push workflow
 
----
+______________________________________________________________________
 
 ### 3. Performance Monitor (`performance_monitor.py`)
+
 **Lines of Code**: 358
 **Current Coverage**: 0%
 
 **Key Classes/Functions**:
+
 - `OperationMetrics`: Dataclass for operation metrics
 - `TimeoutEvent`: Dataclass for timeout tracking
 - `AsyncPerformanceMonitor`: Main performance tracking class
 - Global functions: `get_performance_monitor()`, `reset_performance_monitor()`
 
 **Test Strategy**:
+
 1. **Metrics Tests**: Test operation metric recording and calculations
-2. **Timeout Tests**: Test timeout event tracking
-3. **Performance Alert Tests**: Test threshold-based alerting
-4. **Summary Stats Tests**: Test aggregate statistics
-5. **Export Tests**: Test JSON export functionality
-6. **Reporting Tests**: Test console report generation
-7. **Circuit Breaker Tests**: Test circuit breaker event tracking
-8. **Thread Safety Tests**: Test lock-based concurrent access
+1. **Timeout Tests**: Test timeout event tracking
+1. **Performance Alert Tests**: Test threshold-based alerting
+1. **Summary Stats Tests**: Test aggregate statistics
+1. **Export Tests**: Test JSON export functionality
+1. **Reporting Tests**: Test console report generation
+1. **Circuit Breaker Tests**: Test circuit breaker event tracking
+1. **Thread Safety Tests**: Test lock-based concurrent access
 
 **Test Cases** (30+ tests):
+
 - `test_operation_metrics_initialization`: Metrics dataclass setup
 - `test_operation_metrics_success_rate`: Success rate calculation
 - `test_operation_metrics_average_time`: Average time calculation
@@ -166,13 +179,15 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `test_thread_safety_metrics_recording`: Concurrent access safety
 - `test_recent_times_maxlen`: Deque max length enforcement
 
----
+______________________________________________________________________
 
 ### 4. Resource Manager (`resource_manager.py`)
+
 **Lines of Code**: 430
 **Current Coverage**: 0%
 
 **Key Classes/Functions**:
+
 - `ResourceManager`: Main resource lifecycle management
 - `ManagedResource`: Abstract base for managed resources
 - `ManagedTemporaryFile`: Managed temp file
@@ -184,18 +199,20 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `ResourceLeakDetector`: Leak detection utility
 
 **Test Strategy**:
+
 1. **ResourceManager Tests**: Test resource registration and cleanup
-2. **ManagedResource Tests**: Test base class functionality
-3. **ManagedTemporaryFile Tests**: Test temp file lifecycle
-4. **ManagedTemporaryDirectory Tests**: Test temp dir lifecycle
-5. **ManagedProcess Tests**: Test process cleanup
-6. **ManagedTask Tests**: Test task cancellation
-7. **ManagedFileHandle Tests**: Test file handle cleanup
-8. **ResourceContext Tests**: Test context manager usage
-9. **Global Manager Tests**: Test global manager registration
-10. **Leak Detector Tests**: Test leak detection functionality
+1. **ManagedResource Tests**: Test base class functionality
+1. **ManagedTemporaryFile Tests**: Test temp file lifecycle
+1. **ManagedTemporaryDirectory Tests**: Test temp dir lifecycle
+1. **ManagedProcess Tests**: Test process cleanup
+1. **ManagedTask Tests**: Test task cancellation
+1. **ManagedFileHandle Tests**: Test file handle cleanup
+1. **ResourceContext Tests**: Test context manager usage
+1. **Global Manager Tests**: Test global manager registration
+1. **Leak Detector Tests**: Test leak detection functionality
 
 **Test Cases** (35+ tests):
+
 - `test_resource_manager_initialization`: Manager setup
 - `test_register_resource`: Resource registration
 - `test_register_cleanup_callback`: Callback registration
@@ -240,23 +257,27 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `test_enable_leak_detection`: Enable detector
 - `test_disable_leak_detection`: Disable and get report
 
----
+______________________________________________________________________
 
 ### 5. Async Workflow Orchestrator (`async_workflow_orchestrator.py`)
+
 **Lines of Code**: 50
 **Current Coverage**: 0%
 
 **Key Classes/Functions**:
+
 - `AsyncWorkflowPipeline`: Async wrapper around WorkflowPipeline
 - `run_complete_workflow_async()`: Standalone async runner
 
 **Test Strategy**:
+
 1. **Initialization Tests**: Verify proper setup
-2. **Async Execution Tests**: Test async workflow execution
-3. **Delegation Tests**: Verify delegation to WorkflowPipeline
-4. **Timeout Manager Tests**: Verify timeout manager integration
+1. **Async Execution Tests**: Test async workflow execution
+1. **Delegation Tests**: Verify delegation to WorkflowPipeline
+1. **Timeout Manager Tests**: Verify timeout manager integration
 
 **Test Cases** (10+ tests):
+
 - `test_async_workflow_pipeline_initialization`: Verify setup
 - `test_run_complete_workflow_async_success`: Happy path async execution
 - `test_run_complete_workflow_async_failure`: Exception handling
@@ -264,7 +285,7 @@ This document outlines the comprehensive test coverage strategy for crackerjack'
 - `test_timeout_manager_initialization`: Timeout manager setup
 - `test_delegation_to_workflow_pipeline`: Verify delegation
 
----
+______________________________________________________________________
 
 ## Test File Structure
 
@@ -295,13 +316,13 @@ tests/integration/core/
 ## Testing Principles
 
 1. **Protocol-Based DI**: Mock protocols, not concrete classes
-2. **Async Testing**: Use `pytest-asyncio` for async methods
-3. **Simplicity**: Prefer simple synchronous config tests over complex async tests
-4. **Complexity ≤15**: Extract helpers if test complexity exceeds 15
-5. **Docstrings**: All tests must have docstrings explaining what they verify
-6. **Both Paths**: Test both success and failure paths
-7. **Edge Cases**: Test edge cases (empty inputs, None values, etc.)
-8. **Thread Safety**: Test concurrent access where applicable
+1. **Async Testing**: Use `pytest-asyncio` for async methods
+1. **Simplicity**: Prefer simple synchronous config tests over complex async tests
+1. **Complexity ≤15**: Extract helpers if test complexity exceeds 15
+1. **Docstrings**: All tests must have docstrings explaining what they verify
+1. **Both Paths**: Test both success and failure paths
+1. **Edge Cases**: Test edge cases (empty inputs, None values, etc.)
+1. **Thread Safety**: Test concurrent access where applicable
 
 ## Execution Commands
 

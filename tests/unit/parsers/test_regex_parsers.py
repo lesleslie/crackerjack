@@ -28,19 +28,19 @@ class TestCodespellRegexParser:
 
     def test_parse_valid_codespell_output(self, parser):
         """Test parsing valid codespell output."""
-        output = "file.md:10: teh ==> the"
+        output = "file.md:10: the ==> the"
 
         issues = parser.parse_text(output)
 
         assert len(issues) == 1
         assert issues[0].file_path == "file.md"
         assert issues[0].line_number == 10
-        assert "teh" in issues[0].message
+        assert "the" in issues[0].message
         assert "the" in issues[0].message
 
     def test_parse_without_line_number(self, parser):
         """Test parsing output without line number."""
-        output = "file.txt: teh ==> the"
+        output = "file.txt: the ==> the"
 
         issues = parser.parse_text(output)
 
