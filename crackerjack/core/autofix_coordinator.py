@@ -486,7 +486,7 @@ class AutofixCoordinator:
         for i, issue in enumerate(issues[:5]):
             issue_type = issue.type.value
             self.logger.info(
-                f"  [{i}] type={issue_type:15s} | "  # No space in format spec
+                f"  [{i}] type={issue_type:15s} | "  # noqa: F522  # ruff: ignore (format specifier requires no space)
                 f"file={issue.file_path}:{issue.line_number} | "
                 f"msg={issue.message[:60]}..."
             )
