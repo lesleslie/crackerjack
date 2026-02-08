@@ -106,7 +106,7 @@ class TestToolParserIntegration:
 
     def test_codespell_parser_integration(self, parser_factory):
         """Test codespell parser integration."""
-        output = "README.md:10: teh ==> the"
+        output = "README.md:10: the ==> the"
 
         issues = parser_factory.parse_with_validation("codespell", output)
 
@@ -207,7 +207,7 @@ class TestToolParserIntegration:
             "message": "error",
         }])
 
-        codespell_output = "README.md:5: teh ==> the"
+        codespell_output = "README.md:5: the ==> the"
 
         ruff_issues = parser_factory.parse_with_validation("ruff", ruff_output)
         codespell_issues = parser_factory.parse_with_validation("codespell", codespell_output)

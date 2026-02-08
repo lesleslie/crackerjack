@@ -329,17 +329,18 @@ class ProviderChain:
                     return False
 
             if isinstance(settings, OllamaCodeFixerSettings):
-                import aiohttp
+                from crackerjack.services.connection_pool import get_http_pool
 
-                async with aiohttp.ClientSession() as session:
-                    try:
+                pool = await get_http_pool()
+                try:
+                    async with pool.get_session_context() as session:
                         async with session.get(
                             settings.base_url,
-                            timeout=aiohttp.ClientTimeout(total=5),
+                            timeout=5.0,
                         ) as resp:
                             return resp.status == 200
-                    except Exception:
-                        return False
+                except Exception:
+                    return False
 
             return True
 

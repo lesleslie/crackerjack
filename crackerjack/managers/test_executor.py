@@ -538,17 +538,6 @@ class TestExecutor:
         progress_callback: t.Callable[[dict[str, t.Any]], None],
         timeout: int = 60,
     ) -> list[str]:
-        """Read stdout with non-blocking I/O and timeout.
-
-        Args:
-            process: The subprocess to read from
-            progress: TestProgress object to update
-            progress_callback: Callback for progress updates
-            timeout: Seconds to wait without output before giving up
-
-        Returns:
-            List of stdout lines read
-        """
         stdout_lines = []
         start_time = time.time()
         last_output_time = time.time()
@@ -556,14 +545,14 @@ class TestExecutor:
         if not process.stdout:
             return stdout_lines
 
-        # Set stdout to non-blocking mode
+
         import fcntl
         try:
             fd = process.stdout.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         except (AttributeError, OSError):
-            # Windows or no fileno support - fall back to blocking with timeout
+
             for line in iter(process.stdout.readline, ""):
                 if not line:
                     break
@@ -581,9 +570,9 @@ class TestExecutor:
             return stdout_lines
 
         while True:
-            # Check if process is still running
+
             if process.poll() is not None:
-                # Process finished, read any remaining output
+
                 try:
                     remaining = process.stdout.read()
                     if remaining:
@@ -597,15 +586,15 @@ class TestExecutor:
                     pass
                 break
 
-            # Use select to wait for data with timeout
+
             try:
                 readable, _, _ = select.select([process.stdout], [], [], 1.0)
             except (ValueError, select.error):
-                # File descriptor was closed
+
                 break
 
             if not readable:
-                # No data available
+
                 elapsed_since_output = time.time() - last_output_time
                 if elapsed_since_output > timeout:
                     self.console.print(
@@ -616,7 +605,7 @@ class TestExecutor:
                     break
                 continue
 
-            # Data is available, read it
+
             try:
                 line = process.stdout.readline()
                 if not line:
@@ -629,7 +618,7 @@ class TestExecutor:
                     last_output_time = time.time()
             except IOError as e:
                 if e.errno == errno.EAGAIN:
-                    # No data available (non-blocking read)
+
                     time.sleep(0.1)
                     continue
                 else:
@@ -640,15 +629,6 @@ class TestExecutor:
     def _read_stderr_lines(
         self, process: subprocess.Popen[str], timeout: int = 60
     ) -> list[str]:
-        """Read stderr with non-blocking I/O and timeout.
-
-        Args:
-            process: The subprocess to read from
-            timeout: Seconds to wait without output before giving up
-
-        Returns:
-            List of stderr lines read
-        """
         stderr_lines = []
         start_time = time.time()
         last_output_time = time.time()
@@ -656,14 +636,14 @@ class TestExecutor:
         if not process.stderr:
             return stderr_lines
 
-        # Set stderr to non-blocking mode
+
         import fcntl
         try:
             fd = process.stderr.fileno()
             fl = fcntl.fcntl(fd, fcntl.F_GETFL)
             fcntl.fcntl(fd, fcntl.F_SETFL, fl | os.O_NONBLOCK)
         except (AttributeError, OSError):
-            # Windows or no fileno support - fall back to blocking with timeout
+
             for line in iter(process.stderr.readline, ""):
                 if not line:
                     break
@@ -675,7 +655,7 @@ class TestExecutor:
             return stderr_lines
 
         while True:
-            # Check if process is still running
+
             if process.poll() is not None:
                 try:
                     remaining = process.stderr.read()
@@ -688,7 +668,7 @@ class TestExecutor:
                     pass
                 break
 
-            # Use select to wait for data with timeout
+
             try:
                 readable, _, _ = select.select([process.stderr], [], [], 1.0)
             except (ValueError, select.error):

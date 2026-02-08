@@ -7,6 +7,7 @@ The AI agents are generating broken function definitions during the fixing proce
 ## Broken Patterns Generated
 
 The agents generate code with calls to these non-existent methods:
+
 - `self._process_general_1()`
 - `self._process_loop_2()`
 - `self._handle_conditional_3()`
@@ -32,9 +33,10 @@ async def _process_single_issue(
 ## Root Cause
 
 The AI agents (likely the LLM-based ones) are generating these placeholder method calls as part of their code generation process. They appear to be:
+
 1. Intermediate representation markers
-2. Template placeholders that should be replaced
-3. Flawed prompting/instructions to the LLM
+1. Template placeholders that should be replaced
+1. Flawed prompting/instructions to the LLM
 
 ## Temporary Workaround
 
@@ -49,12 +51,13 @@ python fix_broken_functions.py
 The AI agent code or prompts need to be updated to NOT generate these placeholder method calls. This likely requires:
 
 1. Reviewing agent prompts/templates
-2. Fixing the code generation logic in agents
-3. Adding validation to prevent generating non-existent method calls
+1. Fixing the code generation logic in agents
+1. Adding validation to prevent generating non-existent method calls
 
 ## Affected Agents
 
 Based on the patterns found, this affects:
+
 - RefactoringAgent
 - PatternAgent
 - DependencyAgent
@@ -63,6 +66,7 @@ Based on the patterns found, this affects:
 ## Files Affected
 
 During AI-fix runs, these patterns appear in:
+
 - `crackerjack/agents/refactoring_agent.py`
 - `crackerjack/agents/pattern_agent.py`
 - `crackerjack/agents/dependency_agent.py`
@@ -87,6 +91,6 @@ During AI-fix runs, these patterns appear in:
 ## Next Steps
 
 1. Investigate which agent(s) are generating these patterns
-2. Review agent prompts and code generation logic
-3. Add validation to prevent generating non-existent method calls
-4. Test fixes thoroughly before deploying
+1. Review agent prompts and code generation logic
+1. Add validation to prevent generating non-existent method calls
+1. Test fixes thoroughly before deploying

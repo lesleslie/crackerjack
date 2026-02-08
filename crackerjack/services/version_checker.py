@@ -2,7 +2,6 @@ import subprocess
 import typing as t
 from dataclasses import dataclass
 
-import aiohttp
 from rich.console import Console
 
 from crackerjack.core.retry import retry_api_call
@@ -125,6 +124,8 @@ class VersionChecker:
     @retry_api_call(max_attempts=3, delay=1.0, backoff=2.0, max_delay=30.0)
     async def _fetch_latest_version(self, tool_name: str) -> str | None:
         try:
+            from crackerjack.services.connection_pool import get_http_pool
+
             pypi_urls = {
                 "ruff": "https://pypi.org/pypi/ruff/json",
                 "pyright": "https://pypi.org/pypi/pyright/json",
@@ -135,8 +136,8 @@ class VersionChecker:
             if not url:
                 return None
 
-            timeout = aiohttp.ClientTimeout(total=10.0)
-            async with aiohttp.ClientSession(timeout=timeout) as session:
+            pool = await get_http_pool()
+            async with pool.get_session_context() as session:
                 async with session.get(url) as response:
                     response.raise_for_status()
                     data: dict[str, t.Any] = await response.json()

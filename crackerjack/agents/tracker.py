@@ -90,21 +90,3 @@ class AgentTracker:
         self.cache_stats = {"hits": 0, "misses": 0}
         self.total_issues_processed = 0
         self.coordinator_status = "idle"
-
-
-_global_tracker = None
-
-
-def get_agent_tracker() -> AgentTracker:
-    global _global_tracker
-    if _global_tracker is None:
-        _global_tracker = AgentTracker()
-    return _global_tracker
-
-
-def reset_agent_tracker() -> None:
-    global _global_tracker
-    if _global_tracker:
-        _global_tracker.reset()
-    else:
-        _global_tracker = AgentTracker()
