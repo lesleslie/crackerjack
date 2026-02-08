@@ -2,6 +2,29 @@
 
 This module handles coverage extraction, ratchet system integration,
 and badge updates for test coverage reporting.
+
+The CoverageManager class encapsulates all coverage-related logic,
+providing a clean separation from test orchestration. It handles
+multiple data sources for coverage information and integrates with
+both the coverage ratchet system (for enforcement) and badge services
+(for reporting).
+
+Coverage Data Flow:
+    1. Extract from coverage.json (primary source)
+    2. Fallback to ratchet service (secondary source)
+    3. Update badge with current coverage
+    4. Report coverage improvements/regressions
+
+Typical usage:
+    >>> from crackerjack.services.testing.coverage_manager import CoverageManager
+    >>> manager = CoverageManager(console, pkg_path, ratchet, badge_service)
+    >>> success = manager.process_coverage_ratchet()
+    >>> if not success:
+    ...     # Coverage regression detected
+    ...     pass
+
+The manager is designed to be fault-tolerant, gracefully handling
+missing coverage files or service unavailability.
 """
 
 import json
@@ -18,11 +41,37 @@ from crackerjack.models.protocols import (
 class CoverageManager:
     """Manage test coverage data and reporting.
 
-    This class handles:
-    - Coverage extraction from coverage.json
-    - Coverage ratchet system integration
-    - Badge updates
-    - Fallback coverage retrieval
+    This class encapsulates all coverage-related operations, providing a
+    single point of responsibility for coverage data management. It handles
+    extraction from multiple sources, ratchet system integration, and badge
+    updates with proper error handling and fallback mechanisms.
+
+    Core Responsibilities:
+        - Extract coverage from coverage.json file
+        - Integrate with coverage ratchet system for enforcement
+        - Update coverage badges in README
+        - Provide fallback coverage retrieval when primary sources fail
+        - Report coverage improvements and regressions
+
+    Design Patterns:
+        - Dependency Injection: All services injected via __init__
+        - Fault Tolerance: Graceful degradation when sources unavailable
+        - Multi-Source Fallback: Tries multiple coverage data sources
+        - Protocol-Based: Works with any Console/CoverageRatchet/CoverageBadge
+
+    Attributes:
+        console: Console interface for user feedback
+        pkg_path: Package path for locating coverage files
+        coverage_ratchet: Coverage ratchet service (optional)
+        _coverage_badge_service: Badge update service (optional)
+
+    Example:
+        >>> from crackerjack.services.testing.coverage_manager import CoverageManager
+        >>> manager = CoverageManager(console, Path("/project"), ratchet, badge)
+        >>> # Process ratchet check and update badge
+        >>> success = manager.process_coverage_ratchet()
+        >>> if not success:
+        ...     print("Coverage regression detected!")
     """
 
     def __init__(
@@ -32,13 +81,20 @@ class CoverageManager:
         coverage_ratchet: CoverageRatchetProtocol | None = None,
         coverage_badge: CoverageBadgeServiceProtocol | None = None,
     ) -> None:
-        """Initialize the coverage manager.
+        """Initialize the coverage manager with dependencies.
 
         Args:
-            console: Console interface for output
-            pkg_path: Package path for coverage files
-            coverage_ratchet: Coverage ratchet service (optional)
-            coverage_badge: Coverage badge service (optional)
+            console: Console interface for output and user feedback
+            pkg_path: Package path for locating coverage.json and ratchet files
+            coverage_ratchet: Coverage ratchet service for enforcement (optional)
+            coverage_badge: Coverage badge service for README updates (optional)
+
+        The manager accepts optional services to support different usage scenarios:
+            - With ratchet: Enforces coverage minimums and detects regressions
+            - With badge: Updates README badges with current coverage
+            - Without services: Basic coverage extraction only
+
+        All services are protocol-based, enabling easy testing with mocks.
         """
         self.console = console
         self.pkg_path = pkg_path
@@ -48,8 +104,27 @@ class CoverageManager:
     def process_coverage_ratchet(self) -> bool:
         """Process coverage ratchet check and update.
 
+        Orchestrates the complete coverage ratchet workflow:
+            1. Check coverage against ratchet baseline
+            2. Update ratchet state if coverage improved
+            3. Update README badge with new coverage
+            4. Report results to console
+
         Returns:
-            True if coverage passed ratchet check, False otherwise
+            True if coverage passed ratchet check (no regression),
+            False if coverage regressed below baseline
+
+        Example:
+            >>> manager = CoverageManager(console, pkg_path, ratchet, badge)
+            >>> success = manager.process_coverage_ratchet()
+            >>> if success:
+            ...     print("Coverage check passed!")
+            >>> else:
+            ...     print("Coverage regression detected!")
+
+        Note:
+            If no ratchet service is configured, this method returns True
+            (coverage check is effectively skipped).
         """
         if self.coverage_ratchet is None:
             return True
