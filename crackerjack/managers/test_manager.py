@@ -21,6 +21,7 @@ from crackerjack.models.protocols import (
 )
 from crackerjack.services.lsp_client import LSPClient
 from crackerjack.services.testing.test_result_parser import TestResultParser
+from crackerjack.services.testing.test_result_renderer import TestResultRenderer
 
 from .test_command_builder import TestCommandBuilder
 from .test_executor import TestExecutor
@@ -41,6 +42,7 @@ class TestManager:
         command_builder: TestCommandBuilder | None = None,
         lsp_client: LSPClient | None = None,
         result_parser: TestResultParser | None = None,
+        result_renderer: TestResultRenderer | None = None,
     ) -> None:
         if console is None:
             console = CrackerjackConsole()
@@ -57,6 +59,9 @@ class TestManager:
         if result_parser is None:
             result_parser = TestResultParser()
 
+        if result_renderer is None:
+            result_renderer = TestResultRenderer(console)
+
         self.console = console
 
 
@@ -71,6 +76,7 @@ class TestManager:
         self.executor = TestExecutor(console, self.pkg_path)
         self.command_builder = command_builder
         self.result_parser = result_parser
+        self.renderer = result_renderer
 
 
         self.coverage_ratchet = coverage_ratchet
@@ -534,19 +540,8 @@ class TestManager:
         return self.result_parser.parse_statistics(output, already_clean=already_clean)
 
     def _should_render_test_panel(self, stats: dict[str, t.Any]) -> bool:
-        return any(
-            [
-                stats.get("total", 0) > 0,
-                stats.get("passed", 0) > 0,
-                stats.get("failed", 0) > 0,
-                stats.get("errors", 0) > 0,
-                stats.get("skipped", 0) > 0,
-                stats.get("xfailed", 0) > 0,
-                stats.get("xpassed", 0) > 0,
-                stats.get("duration", 0.0) > 0.0,
-                stats.get("coverage") is not None,
-            ],
-        )
+        """Check if test panel should be rendered using TestResultRenderer."""
+        return self.renderer.should_render_test_panel(stats)
 
     def _render_test_results_panel(
         self,
@@ -554,70 +549,8 @@ class TestManager:
         workers: int | str,
         success: bool,
     ) -> None:
-        table = Table(box=box.SIMPLE, header_style="bold bright_white")
-        table.add_column("Metric", style="cyan", overflow="fold")
-        table.add_column("Count", justify="right", style="bright_white")
-        table.add_column("Percentage", justify="right", style="magenta")
-
-        total = stats["total"]
-
-
-        metrics = [
-            ("✅ Passed", stats["passed"], "green"),
-            ("❌ Failed", stats["failed"], "red"),
-            ("⏭ Skipped", stats["skipped"], "yellow"),
-            ("💥 Errors", stats["errors"], "red"),
-        ]
-
-
-        if stats.get("xfailed", 0) > 0:
-            metrics.append(("📌 XFailed", stats["xfailed"], "yellow"))
-        if stats.get("xpassed", 0) > 0:
-            metrics.append(("⭐ XPassed", stats["xpassed"], "green"))
-
-        for label, count, _ in metrics:
-            percentage = f"{(count / total * 100):.1f}%" if total > 0 else "0.0%"
-            table.add_row(label, str(count), percentage)
-
-
-        table.add_row("─" * 20, "─" * 10, "─" * 15, style="dim")
-        table.add_row("📊 Total Tests", str(total), "100.0%", style="bold")
-        table.add_row(
-            "⏱ Duration",
-            f"{stats['duration']:.2f}s",
-            "",
-            style="bold magenta",
-        )
-        table.add_row(
-            "👥 Workers",
-            str(workers),
-            "",
-            style="bold cyan",
-        )
-
-
-        if stats.get("coverage") is not None:
-            table.add_row(
-                "📈 Coverage",
-                f"{stats['coverage']:.1f}%",
-                "",
-                style="bold green",
-            )
-
-
-        border_style = "green" if success else "red"
-        title_icon = "✅" if success else "❌"
-        title_text = "Test Results" if success else "Test Results (Failed)"
-
-        panel = Panel(
-            table,
-            title=f"[bold]{title_icon} {title_text}[/bold]",
-            border_style=border_style,
-            padding=(0, 1),
-            width=get_console_width(),
-        )
-
-        self.console.print(panel)
+        """Render test results panel using TestResultRenderer."""
+        self.renderer.render_test_results_panel(stats, workers, success)
 
     def _render_banner(
         self,
@@ -628,20 +561,14 @@ class TestManager:
         char: str = "━",
         padding: bool = True,
     ) -> None:
-        width = max(20, get_console_width())
-        line_text = Text(char * width, style=line_style)
-        resolved_title_style = title_style or ("bold " + line_style).strip()
-        title_text = Text(title, style=resolved_title_style)
-
-        if padding:
-            self.console.print()
-
-        self.console.print(line_text)
-        self.console.print(title_text)
-        self.console.print(line_text)
-
-        if padding:
-            self.console.print()
+        """Render banner using TestResultRenderer."""
+        self.renderer.render_banner(
+            title,
+            line_style=line_style,
+            title_style=title_style,
+            char=char,
+            padding=padding,
+        )
 
     def _process_coverage_ratchet(self) -> bool:
         if not self.coverage_ratchet_enabled or self.coverage_ratchet is None:
@@ -991,12 +918,8 @@ class TestManager:
             self._render_structured_failure_panels(skipped_tests)
 
     def _render_parsing_error_message(self, error: Exception) -> None:
-        self.console.print(
-            f"[dim yellow]⚠️ Structured parsing failed: {error}[/dim yellow]",
-        )
-        self.console.print(
-            "[dim yellow]Falling back to standard formatting...[/dim yellow]\n",
-        )
+        """Render parsing error message using TestResultRenderer."""
+        self.renderer.render_parsing_error_message(error)
 
     def _render_fallback_sections(
         self, clean_output: str, options: OptionsProtocol,
