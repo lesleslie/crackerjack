@@ -23,6 +23,8 @@ class HookSettings(Settings):
 
 
 class TestSettings(Settings):
+    __test__ = False
+
     test: bool = False
     benchmark: bool = False
     test_workers: int = 0

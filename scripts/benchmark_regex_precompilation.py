@@ -3,7 +3,6 @@
 import re
 import timeit
 
-
 test_outputs = [
     "==== 150 passed in 2.5s ====",
     "150 passed in 2.5s",
@@ -33,11 +32,15 @@ def inline_summary(text):
 
 COMPILED_SUMMARY = re.compile(summary_pattern)
 
+
 def precompiled_summary(text):
     return COMPILED_SUMMARY.search(text)
 
+
 inline_time = timeit.timeit(lambda: inline_summary(test_outputs[0]), number=100000)
-precompiled_time = timeit.timeit(lambda: precompiled_summary(test_outputs[0]), number=100000)
+precompiled_time = timeit.timeit(
+    lambda: precompiled_summary(test_outputs[0]), number=100000
+)
 
 print(f"  Inline:      {inline_time:.4f}s for 100k calls")
 print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
@@ -48,16 +51,22 @@ print("\n2. Metric Pattern (test_manager.py)")
 
 metric_pattern = r"(\d+)\s+(\w+)"
 
+
 def inline_metric(text):
     return re.search(metric_pattern, text, re.IGNORECASE)
 
+
 COMPILED_METRIC = re.compile(metric_pattern, re.IGNORECASE)
+
 
 def precompiled_metric(text):
     return COMPILED_METRIC.search(text)
 
+
 inline_time = timeit.timeit(lambda: inline_metric(test_outputs[4]), number=100000)
-precompiled_time = timeit.timeit(lambda: precompiled_metric(test_outputs[4]), number=100000)
+precompiled_time = timeit.timeit(
+    lambda: precompiled_metric(test_outputs[4]), number=100000
+)
 
 print(f"  Inline:      {inline_time:.4f}s for 100k calls")
 print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
@@ -68,10 +77,13 @@ print("\n3. File Count Pattern (regex_parsers.py)")
 
 file_count_pattern = r"(\d+) files?"
 
+
 def inline_file_count(text):
     return re.search(file_count_pattern, text)
 
+
 COMPILED_FILE_COUNT = re.compile(file_count_pattern)
+
 
 def precompiled_file_count(text):
     return COMPILED_FILE_COUNT.search(text)
@@ -80,7 +92,9 @@ def precompiled_file_count(text):
 parser_output = "5 files require formatting"
 
 inline_time = timeit.timeit(lambda: inline_file_count(parser_output), number=100000)
-precompiled_time = timeit.timeit(lambda: precompiled_file_count(parser_output), number=100000)
+precompiled_time = timeit.timeit(
+    lambda: precompiled_file_count(parser_output), number=100000
+)
 
 print(f"  Inline:      {inline_time:.4f}s for 100k calls")
 print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
@@ -91,18 +105,24 @@ print("\n4. Complex Match Pattern (regex_parsers.py)")
 
 code_match_pattern = r"^([A-Z]+\d+)\s+(.+)$"
 
+
 def inline_code_match(text):
     return re.match(code_match_pattern, text)
 
+
 COMPILED_CODE_MATCH = re.compile(code_match_pattern)
+
 
 def precompiled_code_match(text):
     return COMPILED_CODE_MATCH.match(text)
 
+
 code_line = "E501 line too long"
 
 inline_time = timeit.timeit(lambda: inline_code_match(code_line), number=100000)
-precompiled_time = timeit.timeit(lambda: precompiled_code_match(code_line), number=100000)
+precompiled_time = timeit.timeit(
+    lambda: precompiled_code_match(code_line), number=100000
+)
 
 print(f"  Inline:      {inline_time:.4f}s for 100k calls")
 print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")
@@ -113,18 +133,24 @@ print("\n5. Arrow Match Pattern (regex_parsers.py)")
 
 arrow_match_pattern = r"-->\s+(\S+):(\d+):(\d+)"
 
+
 def inline_arrow_match(text):
     return re.search(arrow_match_pattern, text)
 
+
 COMPILED_ARROW_MATCH = re.compile(arrow_match_pattern)
+
 
 def precompiled_arrow_match(text):
     return COMPILED_ARROW_MATCH.search(text)
 
+
 arrow_line = "--> tests/test_example.py: 123:10"
 
 inline_time = timeit.timeit(lambda: inline_arrow_match(arrow_line), number=100000)
-precompiled_time = timeit.timeit(lambda: precompiled_arrow_match(arrow_line), number=100000)
+precompiled_time = timeit.timeit(
+    lambda: precompiled_arrow_match(arrow_line), number=100000
+)
 
 print(f"  Inline:      {inline_time:.4f}s for 100k calls")
 print(f"  Precompiled: {precompiled_time:.4f}s for 100k calls")

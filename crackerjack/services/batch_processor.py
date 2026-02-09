@@ -141,17 +141,14 @@ class BatchProcessor:
         max_retries: int = 2,
         parallel: bool = True,
     ) -> BatchProcessingResult:
-        """Process a batch of issues with retry logic and parallel execution support."""
         batch_id = self._generate_batch_id(batch_id)
         result = self._initialize_batch_result(batch_id, len(issues))
         self._print_batch_header(batch_id, issues, max_retries, parallel)
 
-        # Execute batch (parallel or sequential)
         issue_results = await self._execute_batch_processing(
             issues, max_retries, parallel
         )
 
-        # Aggregate results and update metrics
         self._aggregate_results(result, issue_results)
         self._finalize_batch_metrics(result)
 
@@ -159,7 +156,6 @@ class BatchProcessor:
         return result
 
     def _generate_batch_id(self, batch_id: str | None) -> str:
-        """Generate batch ID if not provided."""
         if batch_id is None:
             return f"batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
         return batch_id
@@ -167,7 +163,6 @@ class BatchProcessor:
     def _initialize_batch_result(
         self, batch_id: str, total_issues: int
     ) -> BatchProcessingResult:
-        """Initialize batch result object."""
         return BatchProcessingResult(
             batch_id=batch_id,
             status=BatchStatus.IN_PROGRESS,
@@ -182,7 +177,6 @@ class BatchProcessor:
         max_retries: int,
         parallel: bool,
     ) -> None:
-        """Print batch processing header information."""
         self.console.print(f"\n[bold cyan]🔄 Batch Processing: {batch_id}[/bold cyan]")
         self.console.print(f"Total issues: {len(issues)}")
         self.console.print(f"Max retries: {max_retries}")
@@ -195,10 +189,6 @@ class BatchProcessor:
         max_retries: int,
         parallel: bool,
     ) -> list[t.Any]:
-        """Execute batch processing in parallel or sequential mode.
-
-        Strategy pattern: Different execution strategies based on parallel flag.
-        """
         if parallel and len(issues) > 1:
             return await self._execute_parallel_batch(issues, max_retries)
         return await self._execute_sequential_batch(issues, max_retries)
@@ -206,14 +196,12 @@ class BatchProcessor:
     async def _execute_parallel_batch(
         self, issues: list[Issue], max_retries: int
     ) -> list[t.Any]:
-        """Execute issues in parallel using asyncio.gather."""
         tasks = [self._process_single_issue(issue, max_retries) for issue in issues]
         return await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _execute_sequential_batch(
         self, issues: list[Issue], max_retries: int
     ) -> list[t.Any]:
-        """Execute issues sequentially with error handling."""
         issue_results: list[t.Any] = []
         for issue in issues:
             try:
@@ -234,10 +222,6 @@ class BatchProcessor:
     def _aggregate_results(
         self, result: BatchProcessingResult, issue_results: list[t.Any]
     ) -> None:
-        """Aggregate issue results into batch result.
-
-        Guard clause pattern: Skip invalid results with early continue.
-        """
         for issue_result in issue_results:
             if not self._is_valid_result(issue_result):
                 continue
@@ -246,7 +230,6 @@ class BatchProcessor:
             self._update_batch_counters(result, issue_result)
 
     def _is_valid_result(self, issue_result: t.Any) -> bool:
-        """Check if result is valid BatchIssueResult."""
         if isinstance(issue_result, Exception):
             logger.error(f"Exception during processing: {issue_result}")
             return False
@@ -260,7 +243,6 @@ class BatchProcessor:
     def _update_batch_counters(
         self, result: BatchProcessingResult, issue_result: BatchIssueResult
     ) -> None:
-        """Update batch counters based on issue result."""
         if issue_result.attempted:
             if issue_result.success:
                 result.successful += 1
@@ -270,23 +252,17 @@ class BatchProcessor:
             result.skipped += 1
 
     def _finalize_batch_metrics(self, result: BatchProcessingResult) -> None:
-        """Finalize batch metrics (duration, status, success rate)."""
         result.end_time = datetime.now()
         result.duration_seconds = self._calculate_duration(result)
         result.status = self._determine_batch_status(result)
         result.success_rate = self._calculate_success_rate(result)
 
     def _calculate_duration(self, result: BatchProcessingResult) -> float:
-        """Calculate batch processing duration."""
         if result.end_time and result.start_time:
             return (result.end_time - result.start_time).total_seconds()
         return 0
 
     def _determine_batch_status(self, result: BatchProcessingResult) -> BatchStatus:
-        """Determine final batch status based on results.
-
-        Guard clause pattern: Return early for complete success.
-        """
         if result.successful == result.total_issues:
             return BatchStatus.COMPLETED
         if result.successful > 0:
@@ -294,7 +270,6 @@ class BatchProcessor:
         return BatchStatus.FAILED
 
     def _calculate_success_rate(self, result: BatchProcessingResult) -> float:
-        """Calculate batch success rate."""
         if result.total_issues > 0:
             return result.successful / result.total_issues
         return 0.0
@@ -341,22 +316,15 @@ class BatchProcessor:
         issue: Issue,
         max_retries: int,
     ) -> BatchIssueResult:
-        """Process a single issue with retry logic and agent fallback.
-
-        Strategy pattern: Try multiple agents with confidence-based selection.
-        """
         issue_result = BatchIssueResult(issue=issue, success=False, attempted=False)
 
         for attempt in range(max_retries + 1):
             try:
-                # Try to fix with available agents
                 fix_success = await self._try_fix_with_agents(issue, issue_result)
 
                 if fix_success or issue_result.error:
-                    # Either succeeded or no agents available
                     return issue_result
 
-                # All agents failed, check if we should retry
                 if not self._should_retry(issue_result, attempt, max_retries):
                     issue_result.error = "No agent could successfully fix this issue"
                     return issue_result
@@ -371,24 +339,19 @@ class BatchProcessor:
     async def _try_fix_with_agents(
         self, issue: Issue, issue_result: BatchIssueResult
     ) -> bool:
-        """Try to fix issue with available agents.
-
-        Returns True if issue was fixed or no agents available.
-        """
         from crackerjack.agents.coordinator import ISSUE_TYPE_TO_AGENTS
 
         agent_names = ISSUE_TYPE_TO_AGENTS.get(issue.type, [])
 
         if not agent_names:
             issue_result.error = f"No agents available for issue type: {issue.type}"
-            return True  # No agents, stop trying
+            return True
 
-        # Try each agent in priority order
         for agent_name in agent_names:
             if await self._attempt_agent_fix(issue, agent_name, issue_result):
-                return True  # Issue fixed successfully
+                return True
 
-        return False  # All agents failed
+        return False
 
     async def _attempt_agent_fix(
         self,
@@ -396,18 +359,12 @@ class BatchProcessor:
         agent_name: str,
         issue_result: BatchIssueResult,
     ) -> bool:
-        """Attempt to fix issue with a single agent.
-
-        Returns True if issue was fixed, False otherwise.
-
-        Guard clause pattern: Early return on low confidence or exceptions.
-        """
         try:
             agent = self._get_agent(agent_name)
             confidence = await agent.can_handle(issue)
 
             if confidence < 0.7:
-                return False  # Agent not confident, try next
+                return False
 
             self.console.print(
                 f"[dim]→ Attempting {agent_name} (confidence: {confidence:.2f})[/dim]"
@@ -415,7 +372,6 @@ class BatchProcessor:
 
             fix_result = await agent.analyze_and_fix(issue)
 
-            # Update issue result metadata
             issue_result.attempted = True
             issue_result.agent_used = agent_name
             issue_result.confidence = fix_result.confidence
@@ -438,7 +394,6 @@ class BatchProcessor:
     def _should_retry(
         self, issue_result: BatchIssueResult, attempt: int, max_retries: int
     ) -> bool:
-        """Check if we should retry the issue processing."""
         if attempt < max_retries:
             issue_result.retry_count += 1
             return True
@@ -451,16 +406,12 @@ class BatchProcessor:
         max_retries: int,
         error: Exception,
     ) -> bool:
-        """Handle error during retry attempt.
-
-        Returns True if should continue retrying, False if should stop.
-        """
         if attempt == max_retries:
             issue_result.error = f"Failed after {max_retries} attempts: {error}"
-            return False  # Stop retrying
+            return False
 
         issue_result.retry_count += 1
-        return True  # Continue retrying
+        return True
 
 
 def get_batch_processor(

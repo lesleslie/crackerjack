@@ -491,6 +491,7 @@ class TestSubAgentBase:
 
     class TestAgent(SubAgent):
         """Concrete test agent for testing."""
+        __test__ = False  # Prevent pytest from trying to collect this as a test class
 
         async def can_handle(self, issue: Issue) -> float:
             return 0.9

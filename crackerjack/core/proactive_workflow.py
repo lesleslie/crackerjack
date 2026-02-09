@@ -15,8 +15,9 @@ class ProactiveWorkflowPipeline:
         self.logger = logging.getLogger(__name__)
         self._architect_agent_coordinator: AgentCoordinator | None = None
 
-        # Phase handler registry (Strategy Pattern)
-        self._phase_handlers: dict[str, t.Callable[[OptionsProtocol, dict[str, t.Any]], t.Awaitable[bool]]] = {
+        self._phase_handlers: dict[
+            str, t.Callable[[OptionsProtocol, dict[str, t.Any]], t.Awaitable[bool]]
+        ] = {
             WorkflowPhase.CONFIGURATION_SETUP: self._setup_with_architecture,
             WorkflowPhase.FAST_HOOKS_WITH_ARCHITECTURE: self._run_fast_hooks_with_planning,
             WorkflowPhase.ARCHITECTURAL_REFACTORING: self._perform_architectural_refactoring,
@@ -192,7 +193,6 @@ class ProactiveWorkflowPipeline:
         for phase in phases:
             success = await self._execute_workflow_phase(phase, options, plan)
 
-            # Check for critical phase failures
             try:
                 phase_enum = WorkflowPhase.from_string(phase)
                 if not success and phase_enum in (
@@ -202,7 +202,6 @@ class ProactiveWorkflowPipeline:
                     self.logger.error(f"Critical phase {phase} failed")
                     return False
             except ValueError:
-                # Unknown phase - don't treat as critical
                 pass
 
             if not success:
@@ -216,36 +215,23 @@ class ProactiveWorkflowPipeline:
         options: OptionsProtocol,
         plan: dict[str, t.Any],
     ) -> bool:
-        """Execute a workflow phase using the registered phase handler.
-
-        This implements the Strategy Pattern via registry lookup, eliminating
-        the if-chain anti-pattern and making the system open for extension
-        (new phases can be added without modifying this method).
-
-        Args:
-            phase: Phase identifier (string for backward compatibility)
-            options: Execution options
-            plan: Architectural plan data
-
-        Returns:
-            True if phase succeeded, False otherwise
-        """
         self.logger.info(f"Executing phase: {phase}")
 
-        # Try to parse as WorkflowPhase enum
         try:
             phase_enum = WorkflowPhase.from_string(phase)
         except ValueError:
-            self.logger.warning(f"Unknown phase: {phase}, falling back to standard workflow")
+            self.logger.warning(
+                f"Unknown phase: {phase}, falling back to standard workflow"
+            )
             return await self._execute_standard_workflow(options)
 
-        # Look up handler in registry
         handler = self._phase_handlers.get(phase_enum.value)
         if handler is None:
-            self.logger.warning(f"No handler for phase: {phase}, using standard workflow")
+            self.logger.warning(
+                f"No handler for phase: {phase}, using standard workflow"
+            )
             return await self._execute_standard_workflow(options)
 
-        # Execute phase via registered handler
         return await handler(options, plan)
 
     async def _setup_with_architecture(

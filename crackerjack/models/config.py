@@ -79,6 +79,8 @@ class HookConfig:
 
 @dataclass
 class TestConfig:
+    __test__ = False
+
     test: bool = False
     benchmark: bool = False
     benchmark_regression: bool = False

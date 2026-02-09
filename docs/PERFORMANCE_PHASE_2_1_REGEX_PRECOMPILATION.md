@@ -23,6 +23,7 @@ Crackerjack has a comprehensive pattern registry system at `crackerjack/services
 #### 1.1 test_manager.py (12 inline patterns)
 
 **Current inline patterns:**
+
 ```python
 # Line 572-574: Summary patterns (3 patterns)
 re.search(r"=+\s+(.+?)\s+in\s+([\d.]+)s?\s*=+", output)
@@ -55,6 +56,7 @@ re.search(r"FAILED\s+(.+?)\s+-", line)
 ```
 
 **Precompiled version:**
+
 ```python
 # At module level (after line 30)
 SUMMARY_PATTERNS = [
@@ -74,6 +76,7 @@ FAILED_PATTERN = re.compile(r"FAILED\s+(.+?)\s+-")
 ```
 
 **Usage changes:**
+
 ```python
 # Before
 match = re.search(pattern, output)
@@ -85,6 +88,7 @@ match = SUMMARY_PATTERNS[0].search(output)
 #### 1.2 regex_parsers.py (5 inline patterns)
 
 **Current inline patterns:**
+
 ```python
 # Line 204: File count pattern
 re.search(r"(\d+) files?", output)
@@ -103,6 +107,7 @@ re.search(r"-->\s+(\S+):(\d+):(\d+)", arrow_line)
 ```
 
 **Precompiled version:**
+
 ```python
 # At module level
 FILE_COUNT_PATTERN = re.compile(r"(\d+) files?")
@@ -156,6 +161,7 @@ print(f"Improvement: {(inline_time - precompiled_time) / inline_time * 100:.1f}%
 ```
 
 **Expected Results:**
+
 - Inline: ~2.5ms for 10k calls
 - Precompiled: ~1.0ms for 10k calls
 - **Improvement: 60%**
@@ -178,16 +184,19 @@ print(f"Improvement: {(inline_time - precompiled_time) / inline_time * 100:.1f}%
 After implementation:
 
 1. **Run quality checks:**
+
    ```bash
    python -m crackerjack run --run-tests -c
    ```
 
-2. **Run performance benchmark:**
+1. **Run performance benchmark:**
+
    ```bash
    python scripts/benchmark_regex_precompilation.py
    ```
 
-3. **Verify no regressions:**
+1. **Verify no regressions:**
+
    - All tests pass
    - No new complexity issues
    - No import errors

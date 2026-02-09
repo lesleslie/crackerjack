@@ -34,6 +34,8 @@ ANSI_ESCAPE_RE = re.compile(r"\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 root_path = Path.cwd()
 
 class TestManager:
+    __test__ = False
+
     def __init__(
         self,
         console: ConsoleInterface | None = None,
@@ -81,7 +83,6 @@ class TestManager:
         self.renderer = result_renderer
 
 
-        # Coverage manager
         if coverage_manager is None:
             coverage_manager = CoverageManager(
                 console,
@@ -548,11 +549,9 @@ class TestManager:
     def _parse_test_statistics(
         self, output: str, *, already_clean: bool = False,
     ) -> dict[str, t.Any]:
-        """Parse test statistics using TestResultParser."""
         return self.result_parser.parse_statistics(output, already_clean=already_clean)
 
     def _should_render_test_panel(self, stats: dict[str, t.Any]) -> bool:
-        """Check if test panel should be rendered using TestResultRenderer."""
         return self.renderer.should_render_test_panel(stats)
 
     def _render_test_results_panel(
@@ -561,7 +560,6 @@ class TestManager:
         workers: int | str,
         success: bool,
     ) -> None:
-        """Render test results panel using TestResultRenderer."""
         self.renderer.render_test_results_panel(stats, workers, success)
 
     def _render_banner(
@@ -573,7 +571,6 @@ class TestManager:
         char: str = "━",
         padding: bool = True,
     ) -> None:
-        """Render banner using TestResultRenderer."""
         self.renderer.render_banner(
             title,
             line_style=line_style,
@@ -583,7 +580,6 @@ class TestManager:
         )
 
     def _process_coverage_ratchet(self) -> bool:
-        """Process coverage ratchet using CoverageManager."""
         return self.coverage_manager.process_coverage_ratchet()
 
     def _extract_failure_lines(self, output: str) -> list[str]:
@@ -768,6 +764,10 @@ class TestManager:
                 return True
             return False
         except Exception as e:
+            logger.exception(
+                "Structured parsing failed, falling back to standard formatting",
+                extra={"output_length": len(clean_output)}
+            )
             self._render_parsing_error_message(e)
             return False
 
@@ -794,7 +794,6 @@ class TestManager:
             self._render_structured_failure_panels(skipped_tests)
 
     def _render_parsing_error_message(self, error: Exception) -> None:
-        """Render parsing error message using TestResultRenderer."""
         self.renderer.render_parsing_error_message(error)
 
     def _render_fallback_sections(
@@ -1507,7 +1506,12 @@ class TestManager:
             return not has_errors
 
         except Exception as e:
-
+            logger.exception(
+                "LSP diagnostics failed",
+                extra={
+                    "lsp_client": str(self.lsp_client) if self.lsp_client else None,
+                }
+            )
             self.console.print(f"[dim]LSP diagnostics failed: {e}[/dim]")
             return True
 

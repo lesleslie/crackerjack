@@ -18,6 +18,8 @@ from .test_progress import TestProgress
 
 
 class TestExecutor:
+    __test__ = False
+
     def __init__(self, console: RichConsole, pkg_path: Path) -> None:
         self.console = console
         self.pkg_path = pkg_path

@@ -1,3 +1,5 @@
+import hashlib
+import json
 import typing as t
 from dataclasses import dataclass
 from pathlib import Path
@@ -6,6 +8,8 @@ from ._base import BaseRustToolAdapter, Issue, ToolResult
 
 if t.TYPE_CHECKING:
     from crackerjack.orchestration.execution_strategies import ExecutionContext
+
+CACHE_DIR_NAME = ".skylos_cache"
 
 
 @dataclass
@@ -159,8 +163,71 @@ class SkylosAdapter(BaseRustToolAdapter):
 
     def parse_output(self, output: str) -> ToolResult:
         if self._should_use_json_output():
-            return self._parse_json_output(output)
+            return self._parse_json_output_with_cache(output)
         return self._parse_text_output(output)
+
+    def _parse_json_output_with_cache(self, output: str) -> ToolResult:
+        """Parse JSON output and cache results for incremental runs."""
+        data = self._parse_json_output_safe(output)
+        if data is None:
+            return self._create_error_result(
+                "Invalid JSON output from Skylos",
+                raw_output=output,
+            )
+
+        # Cache the results
+        self._cache_results(data)
+
+        try:
+            issues: list[Issue] = [
+                DeadCodeIssue(
+                    file_path=Path(item["file"]),
+                    line_number=item.get("line", 1),
+                    message=f"Dead {item['type']}: {item['name']}",
+                    severity="warning",
+                    issue_type=item["type"],
+                    name=item["name"],
+                    confidence=item.get("confidence", 0.0),
+                )
+                for item in data.get("dead_code", [])
+            ]
+
+            success = len(issues) == 0
+
+            return ToolResult(
+                success=success,
+                issues=issues,
+                raw_output=output,
+                tool_version=self.get_tool_version(),
+            )
+
+        except (KeyError, TypeError, ValueError) as e:
+            return self._create_error_result(
+                f"Failed to parse Skylos JSON output: {e}",
+                raw_output=output,
+            )
+
+    def _cache_results(self, data: dict[str, t.Any]) -> None:
+        """Cache skylos results for incremental analysis."""
+        try:
+            cache_dir = Path.cwd() / CACHE_DIR_NAME
+            cache_dir.mkdir(exist_ok=True)
+
+            # Use version + timestamp as cache key
+            version = self.get_tool_version() or "unknown"
+            cache_key = hashlib.blake2b(
+                f"{version}_{data.get('target', 'default')}".encode(),
+                digest_size=16
+            ).hexdigest()
+
+            cache_file = cache_dir / f"{cache_key}.json"
+            cache_file.write_text(
+                json.dumps(data, indent=2, sort_keys=True),
+                encoding="utf-8"
+            )
+        except (OSError, json.JSONDecodeError):
+            # Failing to cache should not break the main analysis
+            pass
 
     def _parse_json_output(self, output: str) -> ToolResult:
         data = self._parse_json_output_safe(output)

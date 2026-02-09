@@ -123,12 +123,10 @@ def health(
 
 @app.command()
 def shell() -> None:
-    import asyncio
 
     from crackerjack.shell import CrackerjackShell
 
     settings = load_settings(CrackerjackSettings)
-
 
     shell = CrackerjackShell(settings)
     shell.start()

@@ -72,14 +72,15 @@ class FormattingAgent(SubAgent):
                 if spelling_fixes and issue.file_path:
                     files_modified.append(issue.file_path)
 
-            # Pass file_path to fix methods so they can track modifications
             target = [issue.file_path] if issue.file_path else ["."]
 
             ruff_fixes, ruff_files = await self._apply_ruff_fixes(target)
             fixes_applied.extend(ruff_fixes)
             files_modified.extend(ruff_files)
 
-            whitespace_fixes, whitespace_files = await self._apply_whitespace_fixes(target)
+            whitespace_fixes, whitespace_files = await self._apply_whitespace_fixes(
+                target
+            )
             fixes_applied.extend(whitespace_fixes)
             files_modified.extend(whitespace_files)
 
@@ -100,7 +101,7 @@ class FormattingAgent(SubAgent):
                 success=success,
                 confidence=confidence,
                 fixes_applied=fixes_applied,
-                files_modified=list(set(files_modified)),  # Dedupe
+                files_modified=list(set(files_modified)),
                 recommendations=[
                     "Run ruff format regularly for consistent styling",
                     "Configure pre-commit hooks for automatic formatting",
@@ -121,7 +122,6 @@ class FormattingAgent(SubAgent):
         fixes: list[str] = []
         files_modified: list[str] = []
 
-        # Get file state before changes
         files_before = self._get_file_state(target)
 
         returncode, _, stderr = await self.run_command(
@@ -146,13 +146,14 @@ class FormattingAgent(SubAgent):
         else:
             self.log(f"Ruff check --fix had issues: {stderr}", "WARN")
 
-        return fixes, list(set(files_modified))  # Dedupe
+        return fixes, list(set(files_modified))
 
-    async def _apply_whitespace_fixes(self, target: list[str]) -> tuple[list[str], list[str]]:
+    async def _apply_whitespace_fixes(
+        self, target: list[str]
+    ) -> tuple[list[str], list[str]]:
         fixes: list[str] = []
         files_modified: list[str] = []
 
-        # Get file state before changes
         files_before = self._get_file_state(target)
 
         returncode, _, _ = await self.run_command(
@@ -187,13 +188,14 @@ class FormattingAgent(SubAgent):
             self.log("Fixed end-of-file formatting")
             files_modified.extend(self._get_modified_files(files_before, target))
 
-        return fixes, list(set(files_modified))  # Dedupe
+        return fixes, list(set(files_modified))
 
-    async def _apply_import_fixes(self, target: list[str]) -> tuple[list[str], list[str]]:
+    async def _apply_import_fixes(
+        self, target: list[str]
+    ) -> tuple[list[str], list[str]]:
         fixes: list[str] = []
         files_modified: list[str] = []
 
-        # Get file state before changes
         files_before = self._get_file_state(target)
 
         returncode, _, _ = await self.run_command(
@@ -214,7 +216,7 @@ class FormattingAgent(SubAgent):
             self.log("Fixed import organization")
             files_modified.extend(self._get_modified_files(files_before, target))
 
-        return fixes, list(set(files_modified))  # Dedupe
+        return fixes, list(set(files_modified))
 
     async def _apply_spelling_fixes(self, issue: Issue) -> list[str]:
         fixes: list[str] = []
@@ -296,26 +298,24 @@ class FormattingAgent(SubAgent):
         return "\n".join(fixed_lines)
 
     def _get_file_state(self, target: list[str]) -> dict[str, float]:
-        """Get modification times for target files to detect changes."""
         files_before: dict[str, float] = {}
 
         for t in target:
             if t == ".":
-                # For project-wide operations, track all Python files in project
                 project_path = self.context.project_path
                 for py_file in project_path.rglob("*.py"):
                     if py_file.is_file():
                         files_before[str(py_file)] = py_file.stat().st_mtime
             else:
-                # For specific file targets
                 file_path = Path(t)
                 if file_path.exists() and file_path.is_file():
                     files_before[t] = file_path.stat().st_mtime
 
         return files_before
 
-    def _get_modified_files(self, files_before: dict[str, float], target: list[str]) -> list[str]:
-        """Compare file states to detect which files were modified."""
+    def _get_modified_files(
+        self, files_before: dict[str, float], target: list[str]
+    ) -> list[str]:
         modified: list[str] = []
 
         for file_path, mtime_before in files_before.items():
@@ -326,7 +326,6 @@ class FormattingAgent(SubAgent):
                     if mtime_after > mtime_before:
                         modified.append(file_path)
                 except OSError:
-                    # File might have been deleted, skip it
                     pass
 
         return modified

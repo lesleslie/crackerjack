@@ -100,6 +100,8 @@ class ExecutionError(CrackerjackError):
 
 
 class TestExecutionError(CrackerjackError):
+    __test__ = False
+
     def __init__(
         self,
         message: str,

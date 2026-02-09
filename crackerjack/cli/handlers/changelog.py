@@ -227,7 +227,7 @@ def setup_debug_and_verbose_flags(
         verbose = True
         options.verbose = True
 
-    if ai_fix or ai_debug:
+    if ai_debug:
         from crackerjack.services.logging import setup_structured_logging
 
         setup_structured_logging(level="DEBUG", json_output=True)

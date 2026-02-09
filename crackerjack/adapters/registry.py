@@ -10,7 +10,7 @@ but open for extension via registration.
 import logging
 import typing as t
 
-from crackerjack.adapters.base import Adapter
+from crackerjack.adapters._qa_adapter_base import QAAdapterBase
 
 logger = logging.getLogger(__name__)
 
@@ -22,32 +22,32 @@ class AdapterRegistry:
     themselves without requiring modification of core factory code.
 
     Usage:
-        # Adapters self-register on module import
-        AdapterRegistry.register("ruff", RuffAdapter)
 
-        # Factory code uses registry
+        AdapterRegistry.register("ruff", RuffQAAdapterBase)
+
+
         adapter = AdapterRegistry.create("ruff", settings)
     """
 
-    _adapters: dict[str, type[Adapter]] = {}
+    _adapters: dict[str, type[QAAdapterBase]] = {}
 
     @classmethod
-    def register(cls, name: str, adapter_class: type[Adapter]) -> None:
+    def register(cls, name: str, adapter_class: type[QAAdapterBase]) -> None:
         """Register an adapter class.
 
         Args:
             name: Unique name for the adapter
-            adapter_class: Adapter class (not instance)
+            adapter_class: QAAdapterBase class (not instance)
 
         Raises:
             ValueError: If adapter name already registered
 
         Example:
-            >>> AdapterRegistry.register("ruff", RuffAdapter)
+            >>> AdapterRegistry.register("ruff", RuffQAAdapterBase)
         """
         if name in cls._adapters:
             logger.warning(
-                f"Adapter '{name}' already registered, skipping duplicate registration"
+                f"QAAdapterBase '{name}' already registered, skipping duplicate registration"
             )
             return
 
@@ -55,7 +55,7 @@ class AdapterRegistry:
         logger.debug(f"Registered adapter: {name}")
 
     @classmethod
- def create(cls, name: str, settings: t.Any | None = None) -> Adapter:
+    def create(cls, name: str, settings: t.Any | None = None) -> QAAdapterBase:
         """Create an adapter instance by name.
 
         Args:
@@ -63,7 +63,7 @@ class AdapterRegistry:
             settings: Optional settings to pass to adapter constructor
 
         Returns:
-            Adapter instance
+            QAAdapterBase instance
 
         Raises:
             ValueError: If adapter name not registered
@@ -73,19 +73,17 @@ class AdapterRegistry:
         """
         if name not in cls._adapters:
             available = ", ".join(sorted(cls._adapters.keys()))
-            raise ValueError(
-                f"Unknown adapter: {name}. Available: {available}"
-            )
+            raise ValueError(f"Unknown adapter: {name}. Available: {available}")
 
         adapter_class = cls._adapters[name]
         return adapter_class(settings)
 
     @classmethod
- def is_registered(cls, name: str) -> bool:
+    def is_registered(cls, name: str) -> bool:
         """Check if an adapter is registered.
 
         Args:
-            name: Adapter name to check
+            name: QAAdapterBase name to check
 
         Returns:
             True if adapter is registered, False otherwise
@@ -110,14 +108,14 @@ class AdapterRegistry:
         """Get information about a registered adapter.
 
         Args:
-            name: Adapter name
+            name: QAAdapterBase name
 
         Returns:
             Dictionary with adapter info, or None if not found
 
         Example:
             >>> info = AdapterRegistry.get_adapter_info("ruff")
-            >>> print(f"Adapter: {info['name']}, Class: {info['class']}")
+            >>> print(f"QAAdapterBase: {info['name']}, Class: {info['class']}")
         """
         if name not in cls._adapters:
             return None

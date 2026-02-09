@@ -66,6 +66,8 @@ class HookConfig(BaseModel):
 
 
 class TestConfig(BaseModel):
+    __test__ = False
+
     test: bool = False
     benchmark: bool = False
     benchmark_regression: bool = False
