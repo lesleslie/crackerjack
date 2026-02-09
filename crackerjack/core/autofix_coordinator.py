@@ -438,10 +438,12 @@ class AutofixCoordinator:
         current_count: int,
         previous_count: float,
         no_progress_count: int,
+        fixes_applied: int = 0,
     ) -> bool:
         convergence_threshold = self._get_convergence_threshold()
 
-        if current_count >= previous_count:
+        # Only check for convergence if NO fixes were applied this iteration
+        if fixes_applied == 0 and current_count >= previous_count:
             if no_progress_count + 1 >= convergence_threshold:
                 issue_word = "issue" if current_count == 1 else "issues"
                 # Skip console printing when Live display is active
@@ -462,9 +464,19 @@ class AutofixCoordinator:
         current_count: int,
         previous_count: float,
         no_progress_count: int,
+        fixes_applied: int = 0,
     ) -> int:
+        # Reset no_progress_count if ANY fixes were applied (progress made!)
+        if fixes_applied > 0:
+            self.logger.info(
+                f"✓ Progress made: {fixes_applied} fix(es) applied, resetting convergence counter"
+            )
+            return 0  # Reset - we made progress!
+
+        # Only increment no_progress_count if NO fixes were applied
         if current_count >= previous_count:
             return no_progress_count + 1
+
         return 0
 
     def _report_iteration_progress(
@@ -488,7 +500,7 @@ class AutofixCoordinator:
         self,
         coordinator: "AgentCoordinatorProtocol | AgentCoordinator",
         issues: list[Issue],
-    ) -> bool:
+    ) -> tuple[bool, int]:  # Returns (success, fixes_applied)
         self.logger.info(
             f"🤖 Starting AI agent fixing iteration with {len(issues)} issues"
         )
@@ -511,13 +523,15 @@ class AutofixCoordinator:
 
         if fix_result is None:
             self.logger.error("❌ AI agent fixing iteration failed - returned None")
-            return False
+            return False, 0
+
+        fixes_applied = len(fix_result.fixes_applied)
 
         self.logger.info(
             f"✅ AI agent fixing iteration completed:\n"
             f"   - Success: {fix_result.success}\n"
             f"   - Confidence: {fix_result.confidence:.2f}\n"
-            f"   - Fixes applied: {len(fix_result.fixes_applied)}\n"
+            f"   - Fixes applied: {fixes_applied}\n"
             f"   - Files modified: {len(fix_result.files_modified)}\n"
             f"   - Remaining issues: {len(fix_result.remaining_issues)}"
         )
@@ -545,10 +559,11 @@ class AutofixCoordinator:
                     "❌ AI agents introduced invalid code - rejecting fixes and rolling back"
                 )
                 self._revert_ai_fix_changes(fix_result.files_modified)
-                return False
+                return False, 0
             self.logger.info("✅ All modified files validated successfully")
 
-        return self._process_fix_result(fix_result)
+        success = self._process_fix_result(fix_result)
+        return success, fixes_applied
 
     def _execute_ai_fix(
         self,
@@ -880,7 +895,8 @@ class AutofixCoordinator:
             return False
 
         status = getattr(result, "status", "")
-        return status.lower() == "failed"
+        # Run QA adapters for both failed and timeout results
+        return status.lower() in ("failed", "timeout")
 
     def _run_single_qa_adapter(
         self, hook_name: str, adapter_factory: "DefaultAdapterFactory"
@@ -1125,8 +1141,11 @@ class AutofixCoordinator:
             return []
 
         status = getattr(result, "status", "")
-        if status.lower() != "failed":
-            self.logger.debug(f"Skipping hook with status '{status}' (not failed)")
+        # Process both failed and timeout results - timeout may have partial issues
+        if status.lower() not in ("failed", "timeout"):
+            self.logger.debug(
+                f"Skipping hook with status '{status}' (not failed/timeout)"
+            )
             return []
 
         hook_name = getattr(result, "name", "")
@@ -1134,9 +1153,7 @@ class AutofixCoordinator:
             self.logger.warning("Hook result has no name attribute")
             return []
 
-        self.logger.debug(
-            f"Parsing failed hook result: name='{hook_name}', status='{status}'"
-        )
+        self.logger.debug(f"Parsing hook result: name='{hook_name}', status='{status}'")
 
         raw_output = self._extract_raw_output(result)
         self._log_hook_parsing_start(hook_name, result, raw_output)
@@ -1173,7 +1190,9 @@ class AutofixCoordinator:
         return int(os.environ.get("CRACKERJACK_AI_FIX_MAX_ITERATIONS", "5"))
 
     def _get_convergence_threshold(self) -> int:
-        return int(os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "3"))
+        return int(
+            os.environ.get("CRACKERJACK_AI_FIX_CONVERGENCE_THRESHOLD", "5")
+        )  # Increased from 3
 
     def _collect_current_issues(self, stage: str = "fast") -> list[Issue]:
         pkg_dir = self._detect_package_directory()
@@ -1658,6 +1677,7 @@ class AutofixCoordinator:
         no_progress_count: int,
         max_iterations: int,
         stage: str,
+        fixes_applied: int = 0,
     ) -> bool | None:
         if current_issue_count == 0:
             return self._handle_zero_issues_case(iteration, stage)
@@ -1672,6 +1692,7 @@ class AutofixCoordinator:
             current_issue_count,
             previous_issue_count,
             no_progress_count,
+            fixes_applied,
         ):
             return False
 
@@ -1683,11 +1704,13 @@ class AutofixCoordinator:
         current_issue_count: int,
         previous_issue_count: float,
         no_progress_count: int,
+        fixes_applied: int = 0,
     ) -> int:
         no_progress_count = self._update_progress_count(
             current_issue_count,
             previous_issue_count,
             no_progress_count,
+            fixes_applied,
         )
 
         self.progress_manager.update_iteration_progress(
@@ -1719,6 +1742,8 @@ class AutofixCoordinator:
 
                 self.progress_manager.start_iteration(iteration, current_issue_count)
 
+                # Note: fixes_applied will be updated after running the iteration
+                # For the completion check, we use 0 (not yet known)
                 completion_result = self._check_iteration_completion(
                     iteration,
                     current_issue_count,
@@ -1726,6 +1751,7 @@ class AutofixCoordinator:
                     no_progress_count,
                     max_iterations,
                     stage,
+                    fixes_applied=0,  # Will be checked after iteration runs
                 )
 
                 if completion_result is not None:
@@ -1733,14 +1759,19 @@ class AutofixCoordinator:
                     self.progress_manager.finish_session(success=completion_result)
                     return completion_result
 
+                # Run the AI fix iteration and get success + fixes_applied
+                success, fixes_applied = self._run_ai_fix_iteration(coordinator, issues)
+
+                # Update progress tracking with the actual fixes_applied count
                 no_progress_count = self._update_iteration_progress_with_tracking(
                     iteration,
                     current_issue_count,
                     previous_issue_count,
                     no_progress_count,
+                    fixes_applied,
                 )
 
-                if not self._run_ai_fix_iteration(coordinator, issues):
+                if not success:
                     self.progress_manager.end_iteration()
                     self.progress_manager.finish_session(success=False)
                     return False

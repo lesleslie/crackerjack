@@ -61,7 +61,7 @@ class GitSettings(Settings):
 class AISettings(Settings):
     ai_agent: bool = False
     start_mcp_server: bool = False
-    max_iterations: int = 5
+    max_iterations: int = 20  # Increased from 5 to allow more fixing attempts
     autofix: bool = True
     ai_agent_autofix: bool = False
 
@@ -173,14 +173,14 @@ class GlobalLockSettings(Settings):
 
 class AdapterTimeouts(Settings):
     zuban_lsp_timeout: float = 120.0
-    skylos_timeout: int = 600
+    skylos_timeout: int = 60
     refurb_timeout: int = 600
-    zuban_timeout: int = 120
+    zuban_timeout: int = 60
     bandit_timeout: int = 300
     semgrep_timeout: int = 300
     pip_audit_timeout: int = 120
     creosote_timeout: int = 300
-    complexipy_timeout: int = 60
+    complexipy_timeout: int = 600
     pyscn_timeout: int = 60
     gitleaks_timeout: int = 60
 

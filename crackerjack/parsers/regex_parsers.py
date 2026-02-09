@@ -300,12 +300,12 @@ class GenericRegexParser(RegexParser):
 
         success_indicators = ("✓", "passed", "valid", "ok", "success", "no issues")
         output_lower = output.lower()
-        if any(indicator in output_lower for indicator in success_indicators):
+        if Any(indicator in output_lower for indicator in success_indicators):
             logger.debug(f"{self.tool_name} passed (success indicators found)")
             return []
 
         failure_indicators = ("failed", "error", "invalid", "issue", "would be")
-        if not any(indicator in output_lower for indicator in failure_indicators):
+        if not Any(indicator in output_lower for indicator in failure_indicators):
             logger.debug(
                 f"{self.tool_name} produced unclear output, treating as success"
             )
@@ -532,25 +532,24 @@ class LocalLinkCheckerRegexParser(RegexParser):
         if ":" not in file_part:
             return None
 
-        parts = file_part.split(":", 2)
-        if len(parts) != 3:
-            import sys
-
-            print(
-                f"DEBUG: Skipping line (len={len(parts)}): {line[:100]}",
-                file=sys.stderr,
-            )
+        # Split into parts - handle both "file:line" and "file:line:other" formats
+        parts = file_part.split(":")
+        if len(parts) < 2:
             return None
 
-        file_path, line_num, link_target = parts
+        file_path = parts[0]
+        line_num = parts[1]
 
-        link_parts = rest.split(None, 1)
-        message = link_parts[1] if len(link_parts) > 1 else rest
+        # The rest after " - " contains "link_target - message"
+        # Split it to get link_target and message
+        link_parts = rest.split(" - ", 1) if " - " in rest else [rest]
+        link_target = link_parts[0]
+        message = link_parts[1] if len(link_parts) > 1 else "Broken link"
 
         return Issue(
             type=IssueType.DOCUMENTATION,
             severity=Priority.MEDIUM,
-            message=f"Broken link in {file_path}:{line_num}: '{link_target}' - {message}",
+            message=f"Broken link: {link_target} - {message}",
             file_path=file_path,
             line_number=int(line_num) if line_num.isdigit() else None,
             stage="check-local-links",

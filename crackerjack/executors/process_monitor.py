@@ -19,6 +19,9 @@ class ProcessMetrics:
 
 
 class ProcessMonitor:
+    # Timeout warning thresholds (as percentage of timeout)
+    WARNING_THRESHOLDS = [0.50, 0.75, 0.90]
+
     def __init__(
         self,
         check_interval: float = 30.0,
@@ -30,7 +33,12 @@ class ProcessMonitor:
         self.stall_timeout = stall_timeout
         self._stop_event = threading.Event()
         self._monitor_thread: threading.Thread | None = None
-        self._warned_hooks: set[str] = set()  # Track hooks we've already warned about
+        self._warned_hooks: set[str] = (
+            set()
+        )  # Track hooks we've already warned about (stall detection)
+        self._timeout_warned: set[tuple[str, float]] = (
+            set()
+        )  # Track (hook_name, threshold) warned
 
     def monitor_process(
         self,
@@ -40,7 +48,11 @@ class ProcessMonitor:
         on_stall: Callable[[str, ProcessMetrics], None] | None = None,
     ) -> None:
         self._stop_event.clear()
-        self._warned_hooks.discard(hook_name)  # Reset warning state for new run
+        self._warned_hooks.discard(hook_name)  # Reset stall warning state for new run
+        # Clear timeout warnings for this hook
+        self._timeout_warned = {
+            (h, t) for (h, t) in self._timeout_warned if h != hook_name
+        }
         self._monitor_thread = threading.Thread(
             target=self._monitor_loop,
             args=(process, hook_name, timeout, on_stall),
@@ -69,6 +81,9 @@ class ProcessMonitor:
 
             if self._should_stop_monitoring(process, hook_name, elapsed, timeout):
                 return
+
+            # Check timeout warning thresholds
+            self._check_timeout_warnings(hook_name, elapsed, timeout)
 
             if time.time() - last_cpu_check >= self.check_interval:
                 consecutive_zero_cpu = self._perform_health_check(
@@ -216,3 +231,24 @@ class ProcessMonitor:
         except (subprocess.TimeoutExpired, ValueError, IndexError) as e:
             logger.debug(f"Failed to get metrics for PID {pid}: {e}")
             return None
+
+    def _check_timeout_warnings(
+        self,
+        hook_name: str,
+        elapsed: float,
+        timeout: int,
+    ) -> None:
+        """Check and emit progressive timeout warnings at configured thresholds."""
+        timeout_percent = elapsed / timeout
+
+        for threshold in self.WARNING_THRESHOLDS:
+            if timeout_percent >= threshold:
+                warning_key = (hook_name, threshold)
+                if warning_key not in self._timeout_warned:
+                    self._timeout_warned.add(warning_key)
+                    percent_str = f"{threshold * 100:.0f}%"
+                    remaining = timeout - elapsed
+                    logger.warning(
+                        f"⏱️ {hook_name}: {percent_str} of timeout elapsed "
+                        f"({elapsed:.1f}s / {timeout}s), {remaining:.1f}s remaining"
+                    )

@@ -76,7 +76,7 @@ DEFAULT_MIN_WORKERS: Final[int] = 2
 #: Ruff checks to run by default
 #: Rationale: Balance between thoroughness and false positives
 #: Categories: Error-prone code, style, complexity, imports
-DEFAULT_RUFF_SELECT: Final[list[str]] = [
+DEFAULT_RUFF_SELECT: Final[List[str]] = [
     "E",  # pycodestyle errors
     "W",  # pycodestyle warnings
     "F",  # Pyflakes
@@ -91,7 +91,7 @@ DEFAULT_RUFF_SELECT: Final[list[str]] = [
 
 #: Ruff checks to ignore by default
 #: Rationale: These rules tend to have high false positive rates
-DEFAULT_RUFF_IGNORE: Final[list[str]] = [
+DEFAULT_RUFF_IGNORE: Final[List[str]] = [
     "E502",  # Line too long (handled by formatter)
 ]
 
@@ -101,7 +101,7 @@ DEFAULT_ENABLE_COVERAGE: Final[bool] = True
 
 #: Coverage report formats
 #: Rationale: HTML for detailed review, terminal for quick summary
-DEFAULT_COVERAGE_REPORTS: Final[list[str]] = [
+DEFAULT_COVERAGE_REPORTS: Final[List[str]] = [
     "term",
     "html",
 ]
@@ -112,7 +112,7 @@ DEFAULT_ENABLE_SECURITY: Final[bool] = True
 
 #: Security check tools to run
 #: Rationale: Bandit for static analysis, Safety for dependencies
-DEFAULT_SECURITY_TOOLS: Final[list[str]] = [
+DEFAULT_SECURITY_TOOLS: Final[List[str]] = [
     "bandit",
     "safety",
 ]
@@ -132,7 +132,7 @@ DEFAULT_PACKAGE_NAME: Final[str] = None  # Auto-detect
 
 #: Directories to exclude from analysis
 #: Rationale: Standard Python project structure
-DEFAULT_EXCLUDE_DIRS: Final[list[str]] = [
+DEFAULT_EXCLUDE_DIRS: Final[List[str]] = [
     ".git",
     ".venv",
     "venv",
@@ -258,7 +258,7 @@ DEFAULT_UPDATE_PRECOMMIT: Final[bool] = False
 # =============================================================================
 
 
-def get_all_defaults() -> dict[str, any]:
+def get_all_defaults() -> Dict[str, any]:
     """
     Get all default values as a dictionary.
 

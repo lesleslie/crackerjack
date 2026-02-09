@@ -222,6 +222,19 @@ qa_run_formatters_first: true
 qa_enable_incremental: true
 
 # Adapter-specific settings
+adapter_timeouts:
+  zuban_lsp_timeout: 120.0
+  skylos_timeout: 60
+  refurb_timeout: 600
+  zuban_timeout: 60
+  bandit_timeout: 300
+  semgrep_timeout: 300
+  pip_audit_timeout: 120
+  creosote_timeout: 300
+  complexipy_timeout: 600
+  pyscn_timeout: 60
+  gitleaks_timeout: 60
+
 pip_audit:
   ignore_vulns:
     - "CVE-2025-53000"

@@ -154,7 +154,10 @@ class AgentCoordinator:
         preferred_agent_names = ISSUE_TYPE_TO_AGENTS.get(issue_type, [])
 
         self.logger.info(f"🔍 Finding agents for {issue_type.value}")
-        self.logger.info(f"   Preferred: {preferred_agent_names}")
+        self.logger.info(f"   Preferred agents: {preferred_agent_names}")
+        self.logger.info(
+            f"   Available agents ({len(self.agents)}): {[a.__class__.__name__ for a in self.agents]}"
+        )
 
         specialist_agents = [
             agent
@@ -198,11 +201,22 @@ class AgentCoordinator:
         issues: list[Issue],
     ) -> list[t.Coroutine[t.Any, t.Any, FixResult]]:
         tasks: list[t.Coroutine[t.Any, t.Any, FixResult]] = []
+        skipped_count = 0
         for issue in issues:
             best_specialist = await self._find_best_specialist(specialist_agents, issue)
             if best_specialist:
                 task = self._handle_with_single_agent(best_specialist, issue)
                 tasks.append(task)
+            else:
+                skipped_count += 1
+                self.logger.warning(
+                    f"   ⚠️  No specialist found for issue: {issue.file_path}:{issue.line_number} - {issue.message[:60]}..."
+                )
+
+        if skipped_count > 0:
+            self.logger.warning(
+                f"   ⚠️  Skipped {skipped_count}/{len(issues)} issues (no suitable agent)"
+            )
         return tasks
 
     def _merge_fix_results(self, results: list[t.Any]) -> FixResult:
@@ -247,8 +261,8 @@ class AgentCoordinator:
         for agent in specialists:
             try:
                 score = await agent.can_handle(issue)
-                self.logger.debug(
-                    f"Agent {agent.name} scored {score:.2f} for issue: {issue.message[:60]}"
+                self.logger.info(
+                    f"   📊 Agent {agent.name} scored {score:.2f} for: {issue.message[:60]}"
                 )
                 candidates.append((agent, score))
             except Exception as e:
@@ -277,6 +291,14 @@ class AgentCoordinator:
         best_score: float,
     ) -> SubAgent | None:
         if not best_agent or best_score <= 0:
+            # Log why no agent is being selected
+            if best_agent and best_score <= 0:
+                self.logger.warning(
+                    f"   ⚠️  Best agent score ({best_score:.2f}) <= 0, returning None"
+                )
+                self.logger.info(
+                    f"   All candidate scores: {[f'{a.name}:{s:.2f}' for a, s in candidates]}"
+                )
             return best_agent
 
         CLOSE_SCORE_THRESHOLD = 0.05
