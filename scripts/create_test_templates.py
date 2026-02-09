@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Generate test file templates for Crackerjack test coverage expansion."""
 
-import sys
 from pathlib import Path
 
 
