@@ -216,6 +216,12 @@ class AIFixProgressManager:
 
         # Stop Live display
         if self._live_display:
+            # Update with final renderable before stopping to avoid lambda reference issues
+            try:
+                final_dashboard = self._render_dashboard()
+                self._live_display.update(final_dashboard, refresh=False)
+            except Exception:
+                pass  # Ignore errors during final update
             self._live_display.stop()
             self._live_display = None
 
@@ -655,6 +661,12 @@ class AIFixProgressManager:
 
         # Stop Live display
         if self._live_display:
+            # Update with final renderable before stopping to avoid lambda reference issues
+            try:
+                final_dashboard = self._render_dashboard()
+                self._live_display.update(final_dashboard, refresh=False)
+            except Exception:
+                pass  # Ignore errors during final update
             self._live_display.stop()
             self._live_display = None
 
