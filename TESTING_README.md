@@ -34,22 +34,26 @@ open htmlcov/index.html
 ## Daily Workflow
 
 **Day 1**: Coverage audit and setup
+
 ```bash
 ./scripts/run_coverage_audit.sh
 python scripts/create_test_templates.py
 ```
 
 **Day 2-3**: Adapter tests
+
 ```bash
 pytest tests/unit/adapters/ -v --cov=crackerjack/adapters
 ```
 
 **Day 4-5**: Agent tests
+
 ```bash
 pytest tests/unit/agents/ -v --cov=crackerjack/agents
 ```
 
 **Day 6**: CLI tests + final review
+
 ```bash
 pytest tests/unit/cli/ -v --cov=crackerjack/cli
 pytest --cov=crackerjack --cov-report=html
@@ -131,7 +135,7 @@ Current: **21.6%**
 Target: **60%+**
 Timeline: **6 days**
 
----
+______________________________________________________________________
 
 **Start here**: `TESTING_QUICK_REFERENCE.md`
 **Full plan**: `CRACKERJACK_TEST_COVERAGE_PLAN.md`

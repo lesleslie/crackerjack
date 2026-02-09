@@ -502,7 +502,17 @@ class AIFixProgressManager:
         current_file: str | None,
         current_issue_type: str | None,
     ) -> None:
-        """Print current operation (legacy method, kept for compatibility)."""
+        """Print current operation (legacy method, kept for compatibility).
+
+        Note: When Live display is active, this method skips console printing
+        to avoid NotRenderableError. The Live display shows this information
+        via activity events logged to the feed.
+        """
+        # Skip console printing when Live display is active
+        # (Live display handles rendering via activity feed)
+        if self._live_display is not None:
+            return
+
         if not current_file and not current_issue_type:
             return
 
@@ -578,7 +588,17 @@ class AIFixProgressManager:
         issues_remaining: int,
         no_progress_count: int,
     ) -> None:
-        """Update iteration progress display (legacy, kept for compatibility)."""
+        """Update iteration progress display (legacy, kept for compatibility).
+
+        Note: When Live display is active, this method skips console printing
+        to avoid NotRenderableError. The Live display shows this information
+        via _render_dashboard() instead.
+        """
+        # Skip console printing when Live display is active
+        # (Live display handles rendering via _render_dashboard)
+        if self._live_display is not None:
+            return
+
         if self.issue_history:
             history_str = " → ".join(str(count) for count in self.issue_history)
             reduction_pct = self._calculate_reduction()

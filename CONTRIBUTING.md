@@ -541,6 +541,7 @@ Fixes #123, Related to #456
 ## Recognition
 
 Contributors are recognized in:
+
 - **CONTRIBUTORS.md** - List of all contributors
 - **Release notes** - Credits for each release
 - **Documentation** - Specific contributions acknowledged

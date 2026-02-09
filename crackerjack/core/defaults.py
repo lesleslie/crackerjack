@@ -3,13 +3,13 @@ Crackerjack Sensible Defaults
 
 This module defines production-ready default values for Crackerjack settings.
 These defaults are designed to work well for 80% of Python projects while
-being easily overrideable via configuration files or CLI arguments.
+being easily overridable via configuration files or CLI arguments.
 
 Design Principles:
 1. **Conservative**: Err on the side of safety and quality
 2. **Performant**: Balance thoroughness with speed
 3. **Standard**: Follow industry best practices
-4. **Overrideable**: All defaults can be overridden
+4. **Overridable**: All defaults can be overridden
 5. **Documented**: Rationale provided for each default
 
 Author: Crackerjack UX Team

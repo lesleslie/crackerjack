@@ -162,11 +162,11 @@ crackerjack run --gate strict
 Crackerjack uses a hierarchical configuration system:
 
 1. **Profile defaults** (built-in: quick, standard, comprehensive)
-2. **Default values** (sensible production defaults)
-3. `crackerjack.toml` (project-level, committed)
-4. `~/.crackerjack/config.toml` (user-level, local)
-5. Environment variables (`CRACKERJACK_*`)
-6. Command-line arguments (highest priority)
+1. **Default values** (sensible production defaults)
+1. `crackerjack.toml` (project-level, committed)
+1. `~/.crackerjack/config.toml` (user-level, local)
+1. Environment variables (`CRACKERJACK_*`)
+1. Command-line arguments (highest priority)
 
 ### Example Configuration
 
@@ -295,8 +295,8 @@ crackerjack monitor stop
 Crackerjack is designed for **progressive complexity** - start simple and add features as needed:
 
 1. **Start with `--quick`**: Fast feedback during development (1 minute)
-2. **Use `standard`**: Pre-commit and push validation (2-5 minutes)
-3. **Use `--thorough`**: Full CI/CD pipeline (10-15 minutes)
+1. **Use `standard`**: Pre-commit and push validation (2-5 minutes)
+1. **Use `--thorough`**: Full CI/CD pipeline (10-15 minutes)
 
 For detailed guidance, see [docs/guides/progressive-complexity.md](docs/guides/progressive-complexity.md).
 
@@ -393,6 +393,6 @@ crackerjack logs --filter ai-fix
 | `crackerjack history` | View execution history |
 | `crackerjack config show` | View configuration |
 
----
+______________________________________________________________________
 
 **Ready to learn more?** See [docs/guides/progressive-complexity.md](docs/guides/progressive-complexity.md) for a detailed guide on progressive complexity.

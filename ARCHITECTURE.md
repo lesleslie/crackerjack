@@ -7,10 +7,10 @@ Crackerjack is a quality control and CI/CD automation platform designed to enfor
 ## Core Principles
 
 1. **Quality-First**: Enforce standards before code reaches production
-2. **Developer Experience**: Fast, intuitive, and non-intrusive
-3. **Extensibility**: Easy to add custom checks and quality gates
-4. **Integration**: Works with existing tools and CI/CD platforms
-5. **AI-Assisted**: Optional AI-powered auto-fix capabilities
+1. **Developer Experience**: Fast, intuitive, and non-intrusive
+1. **Extensibility**: Easy to add custom checks and quality gates
+1. **Integration**: Works with existing tools and CI/CD platforms
+1. **AI-Assisted**: Optional AI-powered auto-fix capabilities
 
 ## System Architecture
 
@@ -89,6 +89,7 @@ The CLI provides the primary user interface for interacting with Crackerjack:
 - **Progress tracking**: Real-time progress updates
 
 **Key Commands**:
+
 - `crackerjack run` - Execute quality checks
 - `crackerjack status` - View quality metrics
 - `crackerjack config` - Manage configuration
@@ -107,6 +108,7 @@ FastMCP-based server for integration with AI tools and IDEs:
 - **Protocol compliance**: Standard MCP protocol implementation
 
 **MCP Tools**:
+
 - `run_check` - Execute specific quality check
 - `run_all_checks` - Execute all configured checks
 - `get_status` - Get current quality status
@@ -120,13 +122,15 @@ FastMCP-based server for integration with AI tools and IDEs:
 Hierarchical configuration management:
 
 **Configuration Layers** (highest to lowest priority):
+
 1. Command-line arguments
-2. Environment variables (`CRACKERJACK_*`)
-3. User config (`~/.crackerjack/config.toml`)
-4. Project config (`crackerjack.toml`)
-5. Default values
+1. Environment variables (`CRACKERJACK_*`)
+1. User config (`~/.crackerjack/config.toml`)
+1. Project config (`crackerjack.toml`)
+1. Default values
 
 **Key Features**:
+
 - Type validation with Pydantic
 - Environment variable interpolation
 - Profile-based configuration
@@ -139,12 +143,14 @@ Hierarchical configuration management:
 Quality gate management and enforcement:
 
 **Gate Components**:
+
 - **Checks**: Required quality checks
 - **Thresholds**: Minimum quality thresholds (coverage, complexity, etc.)
 - **Dependencies**: Check execution order
 - **Actions**: Pass/fail actions
 
 **Gate Types**:
+
 - `default` - Standard quality requirements
 - `strict` - Enforced for production branches
 - `minimal` - Basic checks only
@@ -159,28 +165,33 @@ Orchestrates execution of quality checks:
 **Check Types**:
 
 **Linting**:
+
 - `ruff` - Fast Python linter and formatter
 - `flake8` - Style guide enforcement
 - `black` - Code formatting
 - `isort` - Import sorting
 
 **Testing**:
+
 - `pytest` - Test framework
 - `unittest` - Standard library testing
 - `hypothesis` - Property-based testing
 
 **Security**:
+
 - `bandit` - Security linter
 - `safety` - Dependency vulnerability scanning
 - `creosote` - Unused dependency detection
 
 **Quality**:
+
 - `coverage` - Code coverage reporting
 - `complexipy` - Cyclomatic complexity analysis
 - `refurb` - Modern Python suggestions
 - `codespell` - Typo detection
 
 **Execution Features**:
+
 - Parallel execution
 - Dependency resolution
 - Timeout management
@@ -194,6 +205,7 @@ Orchestrates execution of quality checks:
 Manages test execution and result aggregation:
 
 **Responsibilities**:
+
 - Test discovery and collection
 - Test execution (pytest, unittest, etc.)
 - Result aggregation and reporting
@@ -201,6 +213,7 @@ Manages test execution and result aggregation:
 - Test history tracking
 
 **Test Integration**:
+
 - pytest: Primary test framework
 - unittest: Standard library tests
 - Integration tests: Cross-component testing
@@ -215,22 +228,26 @@ Optional AI-powered code fixing:
 **Components**:
 
 **Agent Orchestration**:
+
 - Multiple specialized AI agents
 - Agent selection and routing
 - Context-aware fixing
 
 **Supported Providers**:
+
 - OpenAI (GPT-4, GPT-3.5)
 - Anthropic (Claude)
 - Local models (via Ollama)
 
 **Fix Strategies**:
+
 - Automatic fixes for simple issues
 - Interactive fixes for complex issues
 - Dry-run mode for preview
 - Rollback capability
 
 **Safety Features**:
+
 - Change validation
 - Test verification
 - Rollback on failure
@@ -243,12 +260,14 @@ Optional AI-powered code fixing:
 Results aggregation and metrics:
 
 **Output Formats**:
+
 - Console output (human-readable)
 - JSON (machine-readable)
 - HTML (detailed reports)
 - JUnit XML (CI/CD integration)
 
 **Metrics Tracking**:
+
 - Check pass/fail rates
 - Coverage trends
 - Complexity trends
@@ -256,6 +275,7 @@ Results aggregation and metrics:
 - Historical data
 
 **Storage**:
+
 - Local file system (JSON, SQLite)
 - Remote storage (optional)
 - Time-series data for trends
@@ -509,7 +529,7 @@ class CustomFormatter(ReportFormatter):
 
 - Test individual components
 - Mock external dependencies
-- Fast execution (<1s per test)
+- Fast execution (\<1s per test)
 
 ### Integration Tests
 

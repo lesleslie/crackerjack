@@ -129,6 +129,7 @@ crackerjack mcp stop
 Crackerjack uses FastMCP for MCP server functionality. The server is **self-contained** and does not require external MCP infrastructure.
 
 **MCP Tools Exposed**:
+
 - `run_check` - Execute specific quality check
 - `run_all_checks` - Execute all configured checks
 - `get_status` - Get current quality status
@@ -384,30 +385,30 @@ crackerjack mcp restart
 ### Development
 
 1. **Use local storage** for development (no services required)
-2. **Install all tools** for comprehensive checking: `pip install crackerjack[all]`
-3. **Enable AI auto-fix** only when needed (adds latency and cost)
-4. **Use quality gates** to enforce standards before commits
+1. **Install all tools** for comprehensive checking: `pip install crackerjack[all]`
+1. **Enable AI auto-fix** only when needed (adds latency and cost)
+1. **Use quality gates** to enforce standards before commits
 
 ### CI/CD
 
 1. **Minimal installation** in CI/CD: `pip install crackerjack`
-2. **Generate CI/CD config** with `crackerjack init-ci`
-3. **Use strict quality gates** for production branches
-4. **Cache dependencies** between runs for faster execution
+1. **Generate CI/CD config** with `crackerjack init-ci`
+1. **Use strict quality gates** for production branches
+1. **Cache dependencies** between runs for faster execution
 
 ### Team Collaboration
 
 1. **Commit crackerjack.toml** to repository for consistent configuration
-2. **Use shared storage backend** (PostgreSQL, Redis) for team metrics
-3. **Standardize quality gates** across all projects
-4. **Integrate with pre-commit hooks** for immediate feedback
+1. **Use shared storage backend** (PostgreSQL, Redis) for team metrics
+1. **Standardize quality gates** across all projects
+1. **Integrate with pre-commit hooks** for immediate feedback
 
 ### Production
 
 1. **Run in offline mode** when possible (no AI services)
-2. **Use dedicated storage backend** for metrics and history
-3. **Monitor execution time** and optimize check configuration
-4. **Set appropriate timeouts** for each check
+1. **Use dedicated storage backend** for metrics and history
+1. **Monitor execution time** and optimize check configuration
+1. **Set appropriate timeouts** for each check
 
 ## Related Documentation
 
@@ -419,6 +420,7 @@ crackerjack mcp restart
 ## Support
 
 For issues related to:
+
 - **Crackerjack itself**: Create issue on GitHub
 - **External tools**: Check tool documentation (ruff, pytest, etc.)
 - **AI services**: Check provider status (OpenAI, Anthropic)
