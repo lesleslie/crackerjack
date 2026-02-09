@@ -34,7 +34,7 @@ def fix_broken_functions(file_path: Path) -> int:
                 ):
                     k += 1
 
-                del lines[i: k]
+                del lines[i:k]
                 fixes += 1
 
                 continue

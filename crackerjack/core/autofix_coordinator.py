@@ -420,11 +420,17 @@ class AutofixCoordinator:
 
         return coverage_issues
 
+    def _should_skip_console_print(self) -> bool:
+        """Check if console printing should be skipped (Live display is active)."""
+        return self.progress_manager._live_display is not None
+
     def _report_iteration_success(self, iteration: int) -> None:
-        self.console.print(
-            f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
-        )
-        self.console.print()
+        # Skip console printing when Live display is active
+        if not self._should_skip_console_print():
+            self.console.print(
+                f"[green]✓ All issues resolved in {iteration} iteration(s)![/green]"
+            )
+            self.console.print()
         self.logger.info(f"All issues resolved in {iteration} iteration(s)")
 
     def _should_stop_on_convergence(
@@ -438,10 +444,12 @@ class AutofixCoordinator:
         if current_count >= previous_count:
             if no_progress_count + 1 >= convergence_threshold:
                 issue_word = "issue" if current_count == 1 else "issues"
-                self.console.print(
-                    f"[yellow]⚠ No progress for {convergence_threshold} iterations "
-                    f"({current_count} {issue_word} remain)[/yellow]"
-                )
+                # Skip console printing when Live display is active
+                if not self._should_skip_console_print():
+                    self.console.print(
+                        f"[yellow]⚠ No progress for {convergence_threshold} iterations "
+                        f"({current_count} {issue_word} remain)[/yellow]"
+                    )
                 self.logger.warning(
                     f"No progress for {convergence_threshold} iterations, "
                     f"{current_count} {issue_word} remain"
@@ -465,11 +473,13 @@ class AutofixCoordinator:
         issue_count: int,
     ) -> None:
         issue_word = "issue" if issue_count == 1 else "issues"
-        self.console.print(
-            f"[cyan]→ Iteration {iteration + 1}: "
-            f"{issue_count} {issue_word} to fix[/cyan]"
-        )
-        self.console.print()
+        # Skip console printing when Live display is active
+        if not self._should_skip_console_print():
+            self.console.print(
+                f"[cyan]→ Iteration {iteration + 1}: "
+                f"{issue_count} {issue_word} to fix[/cyan]"
+            )
+            self.console.print()
         self.logger.info(
             f"Iteration {iteration + 1}: {issue_count} {issue_word} to fix"
         )
@@ -749,7 +759,9 @@ class AutofixCoordinator:
             )
 
         if not fix_result.success and remaining_count > 0:
-            self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
+            # Skip console printing when Live display is active
+            if not self._should_skip_console_print():
+                self.console.print("[yellow]⚠ Agents cannot fix remaining issues[/yellow]")
             self.logger.warning("AI agents cannot fix remaining issues")
 
             for i, issue in enumerate(fix_result.remaining_issues[:3]):
@@ -786,10 +798,12 @@ class AutofixCoordinator:
             return True
 
         issue_word = "issue" if remaining_count == 1 else "issues"
-        self.console.print(
-            f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
-            f"{remaining_count} {issue_word} remain[/yellow]"
-        )
+        # Skip console printing when Live display is active
+        if not self._should_skip_console_print():
+            self.console.print(
+                f"[yellow]⚠ Partial progress: {fixes_count} fixes applied, "
+                f"{remaining_count} {issue_word} remain[/yellow]"
+            )
         self.logger.info(
             f"Partial progress: {fixes_count} fixes applied, "
             f"{remaining_count} {issue_word} remain"
@@ -802,11 +816,13 @@ class AutofixCoordinator:
     ) -> bool:
         final_issue_count = len(self._collect_current_issues(stage=stage))
         issue_word = "issue" if final_issue_count == 1 else "issues"
-        self.console.print(
-            f"[yellow]⚠ Reached {max_iterations} iterations with "
-            f"{final_issue_count} {issue_word} remaining[/yellow]"
-        )
-        self.console.print()
+        # Skip console printing when Live display is active
+        if not self._should_skip_console_print():
+            self.console.print(
+                f"[yellow]⚠ Reached {max_iterations} iterations with "
+                f"{final_issue_count} {issue_word} remaining[/yellow]"
+            )
+            self.console.print()
         self.logger.warning(
             f"Reached {max_iterations} iterations with {final_issue_count} {issue_word} remaining"
         )
