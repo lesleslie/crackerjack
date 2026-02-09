@@ -1530,6 +1530,7 @@ class AutofixCoordinator:
             "pip-audit",
             "check-ast",
             "check-local-links",
+            "check-added-large-files",
             "format-json",
             "ruff",
             "ruff-check",
