@@ -12,6 +12,13 @@ from .hooks import (
 )
 from .loader import load_settings, load_settings_async
 from .mcp_settings_adapter import CrackerjackMCPSettings
+from .profile_loader import (
+    ProfileConfig,
+    ProfileLoader,
+    get_profile_loader,
+    list_profiles,
+    load_profile,
+)
 from .settings import CrackerjackSettings
 
 logger = logging.getLogger(__name__)
@@ -63,4 +70,10 @@ __all__ = [
     "load_settings",
     "load_settings_async",
     "register_services",
+    # Profile support
+    "ProfileConfig",
+    "ProfileLoader",
+    "get_profile_loader",
+    "load_profile",
+    "list_profiles",
 ]

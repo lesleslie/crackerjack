@@ -2,7 +2,7 @@ import asyncio
 import logging
 from collections import deque
 from contextlib import suppress
-from datetime import datetime
+from io import StringIO
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -134,14 +134,20 @@ class AIFixProgressManager:
             self.issue_history.append(issue_count)
 
         # Create Live display for activity feed
+        # Note: Pass lambda to call the method, not the method itself
         self._live_display = Live(
-            self._render_dashboard,
+            lambda: self._render_dashboard(),
             console=self.console,
             refresh_per_second=self.refresh_per_second,
         )
         self._live_display.start()
 
-        # Create iteration progress bar (embedded in Live display)
+        # Create iteration progress bar for tracking state only
+        # Note: We use a separate console to avoid Live display conflicts.
+        # The actual rendering is done by _get_progress_text() in the Live dashboard.
+        from io import StringIO
+
+        tracking_console = Console(file=StringIO(), force_terminal=True)
         self.iteration_bar = Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -150,7 +156,7 @@ class AIFixProgressManager:
             TextColumn("{task.percentage:>3.0f}%"),
             TimeElapsedColumn(),
             TimeRemainingColumn(),
-            console=self.console,
+            console=tracking_console,
             expand=False,
         )
 
@@ -288,12 +294,16 @@ class AIFixProgressManager:
         limited_agents = agent_names[: self.max_agent_bars]
 
         if not hasattr(self, "agent_progress") or self.agent_progress is None:
+            # Create agent progress bar for tracking state only
+            # Note: Use a separate console to avoid Live display conflicts.
+            # The actual rendering is done manually in the Live dashboard.
+            tracking_console = Console(file=StringIO(), force_terminal=True)
             self.agent_progress = Progress(
                 SpinnerColumn(),
                 TextColumn("[progress.description]{task.description}"),
                 BarColumn(),
                 TaskProgressColumn(),
-                console=self.console,
+                console=tracking_console,
                 expand=False,
             )
             self.agent_progress = self.agent_progress.__enter__()
@@ -340,11 +350,15 @@ class AIFixProgressManager:
             severity = "info"
             if current_issue_type:
                 issue_lower = current_issue_type.lower()
-                if any(term in issue_lower for term in ("error", "critical", "security")):
+                if any(
+                    term in issue_lower for term in ("error", "critical", "security")
+                ):
                     severity = "error"
                 elif any(term in issue_lower for term in ("warning", "deprecated")):
                     severity = "warning"
-                elif any(term in issue_lower for term in ("fixed", "resolved", "success")):
+                elif any(
+                    term in issue_lower for term in ("fixed", "resolved", "success")
+                ):
                     severity = "success"
 
             action = current_issue_type or "processing"
@@ -507,9 +521,7 @@ class AIFixProgressManager:
                 short_file = "..." + short_file[-47:]
 
         if current_file and current_issue_type:
-            operation = (
-                f"{icon} Processing: {current_issue_type} → {agent_name}\n    File: {short_file}"
-            )
+            operation = f"{icon} Processing: {current_issue_type} → {agent_name}\n    File: {short_file}"
         elif current_file:
             operation = f"{icon} Processing: {agent_name}\n    File: {short_file}"
         elif current_issue_type:

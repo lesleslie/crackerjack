@@ -1,0 +1,90 @@
+# Standard Profile - Balanced Pre-Commit Checks
+# Target: 2-5 minutes execution time
+# Use case: Pre-commit hooks, standard CI/CD pipeline
+
+profile:
+  name: "standard"
+  description: "Balanced checks for pre-commit and CI (2-5 minutes)"
+  execution_time: "2-5 minutes"
+
+# Enable essential checks
+checks:
+  enabled:
+    - ruff          # Linting and formatting
+    - pytest        # Unit tests
+    - coverage      # Coverage tracking
+
+  disabled:
+    - bandit        # Optional: enable if needed
+    - safety        # Optional: enable for CI
+    - mypy          # Optional: enable if using type hints
+    - complexipy    # Optional: enable for complexity monitoring
+
+# Quality gates (balanced)
+quality_gates:
+  fail_on_ruff_errors: true
+  fail_on_test_errors: true
+  fail_on_coverage: true
+  coverage_threshold: 80
+  fail_on_complexity: false
+
+# Ruff configuration (standard checks)
+ruff:
+  select:
+    - "E"     # pycodestyle errors
+    - "W"     # pycodestyle warnings
+    - "F"     # Pyflakes
+    - "I"     # isort
+    - "N"     # pep8-naming
+    - "UP"    # pyupgrade
+    - "B"     # flake8-bugbear
+    - "C4"    # flake8-comprehensions
+    - "SIM"   # flake8-simplify
+  ignore:
+    - "E502"  # Line too long
+
+# Test configuration (incremental)
+testing:
+  enabled: true
+  coverage: true
+  coverage_threshold: 80
+  parallel: true
+  auto_detect_workers: true
+  max_workers: 8
+  min_workers: 2
+  timeout: 300
+  incremental: true  # Only run tests for changed files
+
+# Complexity (optional monitoring)
+complexity:
+  enabled: false
+  max_complexity: 15
+
+# Security (optional)
+security:
+  enabled: false
+
+# Performance optimizations
+performance:
+  parallel_execution: true
+  cache_enabled: true
+  incremental: true
+  timeout: 300
+
+# Output (balanced)
+output:
+  verbose: false
+  show_progress: true
+  color: true
+  format: "console"
+
+# Documentation (cleanup on publish)
+documentation:
+  cleanup: false
+  backup_before_cleanup: true
+
+# Git integration
+git:
+  commit: false
+  create_pr: false
+  update_hooks: false

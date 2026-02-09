@@ -5,7 +5,7 @@
 **Agents Consulted**: Frontend Developer, Python Pro, Performance Engineer
 **Rich API Reference**: https://rich.readthedocs.io/en/stable/
 
----
+______________________________________________________________________
 
 ## Executive Summary
 
@@ -13,7 +13,7 @@ After consulting three specialist agents and reviewing Rich's official documenta
 
 **Key Decision**: Use Rich's `Live` display (not `Progress`) for unified dashboard with activity ticker.
 
----
+______________________________________________________________________
 
 ## Design Overview
 
@@ -34,7 +34,7 @@ After consulting three specialist agents and reviewing Rich's official documenta
 
 **Fixed at bottom of terminal** - scrolls above, panel stays visible.
 
----
+______________________________________________________________________
 
 ## Implementation Architecture
 
@@ -69,6 +69,7 @@ class ActivityEvent(NamedTuple):
 ```
 
 **Benefits**:
+
 - IDE autocomplete works
 - Type checking validates structure
 - Self-documenting code
@@ -86,6 +87,7 @@ class ActivityEvent(NamedTuple):
 ```
 
 **Changes**:
+
 - Remove timestamp (redundant with wall clock)
 - Shorten agent name ("RefactoringAgent" → "Refactoring")
 - Remove parentheses (harder to scan)
@@ -129,6 +131,7 @@ class AIFixProgressManager:
 ```
 
 **Recommended values**:
+
 - `4` (default) - Smooth updates, Rich-optimized
 - `2` - Conservative, less CPU
 - `1` - Minimal updates, event-driven preferred
@@ -152,7 +155,7 @@ with Live(..., refresh_per_second=1) as live:  # 1Hz instead of 4Hz
 
 **Recommended**: `refresh_per_second=1` with `auto_refresh=True` (balanced approach).
 
----
+______________________________________________________________________
 
 ## Code Structure
 
@@ -365,44 +368,50 @@ def _render_activity_feed(self) -> str:
     return "\n".join(lines)
 ```
 
----
+______________________________________________________________________
 
 ## Agent Recommendations Summary
 
 ### Frontend Developer ✅
 
 **Accepted**:
+
 - ✅ Simplify event format (remove timestamps, shorten names)
 - ✅ Color-code severity (red for errors, green for success)
 - ✅ Add stage context header
 - ✅ Make refresh rate configurable
 
 **Rejected** (Rich API differs):
+
 - ❌ 4Hz is too aggressive → Rich's default is 4Hz (optimized)
 - ❌ Need adaptive terminal sizing → Keep simple for now (future enhancement)
 
 ### Python Pro ✅
 
 **Accepted**:
+
 - ✅ Use NamedTuple for type-safe events
 - ✅ Proper lifecycle management (start()/stop())
 - ✅ Async-safe API (async_log_event with run_in_executor)
 
 **Rejected** (Rich handles it):
+
 - ❌ Add threading.Lock → Rich's Live.update() already thread-safe
 - ❌ Replace Progress with Live → Keep Progress for iteration bar, use Live for dashboard
 
 ### Performance Engineer ✅
 
 **Accepted**:
+
 - ✅ Event-driven updates (refresh=True on update)
 - ✅ Configurable refresh rate (default to 1Hz)
 - ✅ deque(maxlen=5) prevents memory bloat
 
 **Accepted with modification**:
+
 - ✅ String allocations → strftime() per event is acceptable (only 5 events max)
 
----
+______________________________________________________________________
 
 ## Implementation Checklist
 
@@ -419,17 +428,17 @@ def _render_activity_feed(self) -> str:
 - [ ] Test with async agent operations
 - [ ] Verify refresh rate behavior
 
----
+______________________________________________________________________
 
 ## Migration Strategy
 
 1. **Phase 1**: Add Live display alongside existing Progress (no breaking changes)
-2. **Phase 2**: Migrate activity logging to use Live display
-3. **Phase 3**: Deprecate old Progress-based iteration bar (optional)
+1. **Phase 2**: Migrate activity logging to use Live display
+1. **Phase 3**: Deprecate old Progress-based iteration bar (optional)
 
 **Recommended**: Start with Phase 1, validate UX, then complete migration.
 
----
+______________________________________________________________________
 
 ## Configuration
 
@@ -444,7 +453,7 @@ ai_fix_progress:
   refresh_per_second: 1  # 1Hz = balanced, 4Hz = smoother
 ```
 
----
+______________________________________________________________________
 
 ## Testing Strategy
 
@@ -500,7 +509,7 @@ async def test_async_log_event():
     assert len(manager._activity_events) == 1
 ```
 
----
+______________________________________________________________________
 
 ## Performance Considerations
 
@@ -514,7 +523,7 @@ async def test_async_log_event():
 
 - Refresh rate: 1Hz = 1 render/second
 - Event-driven updates: Only on new events
-- **Estimated cost**: <1% CPU on modern hardware
+- **Estimated cost**: \<1% CPU on modern hardware
 
 ### Thread Safety
 
@@ -522,17 +531,17 @@ async def test_async_log_event():
 - No additional synchronization needed
 - Safe for concurrent agent operations
 
----
+______________________________________________________________________
 
 ## Future Enhancements
 
 1. **Adaptive Terminal Sizing** - Hide panel on small terminals (< 30 rows)
-2. **Detailed Event View** - Expand to show full event details on demand
-3. **Event Filtering** - Filter by severity, agent, or file pattern
-4. **Historical Timeline** - Show complete event history after session
-5. **Export Progress** - Save progress to JSON for later analysis
+1. **Detailed Event View** - Expand to show full event details on demand
+1. **Event Filtering** - Filter by severity, agent, or file pattern
+1. **Historical Timeline** - Show complete event history after session
+1. **Export Progress** - Save progress to JSON for later analysis
 
----
+______________________________________________________________________
 
 ## References
 
@@ -542,7 +551,7 @@ async def test_async_log_event():
 - **Thread Safety**: Rich source code `rich/live.py` (lines 1-50)
 - **Existing Implementation**: `crackerjack/services/ai_fix_progress.py`
 
----
+______________________________________________________________________
 
 ## Summary
 

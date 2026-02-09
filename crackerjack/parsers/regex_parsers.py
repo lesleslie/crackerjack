@@ -680,9 +680,73 @@ class UvLockParser(GenericRegexParser):
         super().__init__("uv-lock", IssueType.DEPENDENCY)
 
 
-class CheckAddedLargeFilesParser(GenericRegexParser):
+class CheckAddedLargeFilesParser(RegexParser):
+    """Parser for check-added-large-files hook output.
+
+    Expected output format:
+        Large files detected:
+         window: 1.2 MB
+         src/file.py: 500 KB
+    """
+
     def __init__(self) -> None:
-        super().__init__("check-added-large-files", IssueType.FORMATTING)
+        self.tool_name = "check-added-large-files"
+
+    def parse_text(self, output: str) -> list[Issue]:
+        """Parse check-added-large-files output.
+
+        Args:
+            output: Raw hook output
+
+        Returns:
+            List of Issue objects for each large file detected
+        """
+        issues: list[Issue] = []
+
+        if not output or not output.strip():
+            return []
+
+        # Check if large files were detected
+        if "Large files detected:" not in output:
+            return []
+
+        lines = output.strip().split("\n")
+        parsing_files = False
+
+        for line in lines:
+            line = line.strip()
+
+            # Start parsing files after "Large files detected:"
+            if "Large files detected:" in line:
+                parsing_files = True
+                continue
+
+            if not parsing_files:
+                continue
+
+            # Parse file entries (format: "  file: size")
+            if line and not line.startswith("Large files"):
+                # Extract file path and size
+                parts = line.split(":", 1)
+                if len(parts) == 2:
+                    file_path = parts[0].strip()
+                    size_str = parts[1].strip()
+
+                    # Create issue for large file
+                    issues.append(
+                        Issue(
+                            type=IssueType.FORMATTING,
+                            severity=Priority.MEDIUM,
+                            message=f"Large file detected: {file_path} ({size_str})",
+                            file_path=file_path,
+                            line_number=None,
+                        )
+                    )
+
+        logger.debug(
+            f"Parsed {len(issues)} large file issues from check-added-large-files"
+        )
+        return issues
 
 
 class CheckAstParser(GenericRegexParser):

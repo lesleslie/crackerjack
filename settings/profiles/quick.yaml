@@ -1,0 +1,74 @@
+# Quick Profile - Fast Development Feedback
+# Target: < 1 minute execution time
+# Use case: Rapid development iterations, quick validation
+
+profile:
+  name: "quick"
+  description: "Fast checks for rapid development feedback (1 minute)"
+  execution_time: "< 1 minute"
+
+# Enable only fast, high-value checks
+checks:
+  enabled:
+    - ruff          # Fast linting (5-10 seconds)
+
+  disabled:
+    - pytest        # Tests are slower
+    - coverage      # Coverage adds overhead
+    - bandit        # Security scanning takes time
+    - safety        # Dependency checks are slow
+    - mypy          # Type checking is slow
+    - complexipy    # Complexity analysis is slow
+
+# Quality gates (lenient for development)
+quality_gates:
+  fail_on_ruff_errors: true
+  fail_on_test_errors: false
+  fail_on_coverage: false
+  fail_on_complexity: false
+
+# Ruff configuration (fast checks only)
+ruff:
+  select:
+    - "E"     # pycodestyle errors only
+    - "F"     # Pyflakes only
+  ignore:
+    - "E502"  # Ignore line length (handled by formatter)
+
+# Test configuration (disabled)
+testing:
+  enabled: false
+  coverage: false
+  parallel: false
+
+# Complexity (disabled)
+complexity:
+  enabled: false
+  max_complexity: null
+
+# Security (disabled)
+security:
+  enabled: false
+
+# Performance optimizations
+performance:
+  parallel_execution: false
+  cache_enabled: true
+  incremental: true
+  timeout: 60  # Quick timeout
+
+# Output (minimal)
+output:
+  verbose: false
+  show_progress: false
+  color: true
+
+# Documentation (no cleanup)
+documentation:
+  cleanup: false
+
+# Git integration
+git:
+  commit: false
+  create_pr: false
+  update_hooks: false
